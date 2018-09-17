@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
@@ -116,6 +115,7 @@ func (c *HAProxyController) watchChanges(namespaces watch.Interface,
 			eventChan <- SyncDataEvent{SyncType: INGRESS, EventType: msg.Type, Ingress: &ingress}
 		case msg := <-configMapWatch.ResultChan():
 			obj := msg.Object.(*corev1.ConfigMap)
+			//only config with name=haproxy-configmap is interesting
 			if obj.ObjectMeta.GetName() == "haproxy-configmap" {
 				configMap := ConfigMap{
 					Name: obj.GetName(),
@@ -145,20 +145,23 @@ func (c *HAProxyController) SyncData(jobChan <-chan SyncDataEvent) {
 				hadChanges = false
 			}
 		case NAMESPACE:
-			if job.EventType == watch.Added {
+			switch job.EventType {
+			case watch.Added:
 				ns := c.GetNamespace(job.Namespace.Name)
 				log.Println("Namespace added", ns.Name)
 				hadChanges = true
 			}
 		case INGRESS:
-			if job.EventType == watch.Added {
+			switch job.EventType {
+			case watch.Added:
 				ns := c.GetNamespace(job.Ingress.Namespace)
 				ns.Ingresses[job.Ingress.Name] = job.Ingress
 				log.Println("Ingress added", job.Ingress.Name)
 				hadChanges = true
 			}
 		case SERVICE:
-			if job.EventType == watch.Added {
+			switch job.EventType {
+			case watch.Added:
 				ns := c.GetNamespace(job.Service.Namespace)
 				log.Println("namespace:", ns)
 				ns.Services[job.Service.Name] = job.Service
@@ -166,14 +169,38 @@ func (c *HAProxyController) SyncData(jobChan <-chan SyncDataEvent) {
 				hadChanges = true
 			}
 		case POD:
-			if job.EventType == watch.Added {
+			switch job.EventType {
+			case watch.Modified:
+				newPod := job.Pod
+				ns := c.GetNamespace(job.Pod.Namespace)
+				oldPod, ok := ns.Pods[job.Pod.Name]
+				if !ok {
+					//intentionally do not add it. TODO see if our idea of only watching is ok
+					log.Println("Pod not registered with controller, cannot modify !", job.Pod.Name)
+				}
+				ns.Pods[job.Pod.Name] = newPod
+				log.Println("Pod modified", job.Pod.Name, oldPod.Status, newPod.Status)
+				hadChanges = true
+			case watch.Added:
 				ns := c.GetNamespace(job.Pod.Namespace)
 				ns.Pods[job.Pod.Name] = job.Pod
 				log.Println("Pod added", job.Pod.Name)
 				hadChanges = true
+			case watch.Deleted:
+				ns := c.GetNamespace(job.Pod.Namespace)
+				_, ok := ns.Pods[job.Pod.Name]
+				if ok {
+					delete(ns.Pods, job.Pod.Name)
+				} else {
+					log.Println("Pod not registered with controller, cannot delete !", job.Pod.Name)
+				}
+				log.Println("Pod deleted", job.Pod.Name)
+				//update immediately
+				c.UpdateHAProxy()
 			}
 		case CONFIGMAP:
-			if job.EventType == watch.Added {
+			switch job.EventType {
+			case watch.Added:
 				c.ConfigMap[job.ConfigMap.Name] = job.ConfigMap
 				log.Println("ConfigMap added", job.ConfigMap.Name)
 				hadChanges = true
@@ -218,8 +245,6 @@ func (c *HAProxyController) UpdateHAProxy() {
 		if !namespace.Watch {
 			continue
 		}
-		log.Println(NAMESPACE, namespace.Name)
-
 		for _, ingress := range namespace.Ingresses {
 			for _, rule := range ingress.Rules {
 				WriteBufferedString(&acls, "    acl host-", rule.Host, " var(txn.hdr_host) -i ", rule.Host)
@@ -251,9 +276,9 @@ func (c *HAProxyController) UpdateHAProxy() {
 							"    mode http\n",
 							"    balance leastconn\n")
 						index := 0
-						for podName, pod := range namespace.Pods {
-							if hasSelectors(selector, pod.Labels) {
-								log.Println(service.Name, podName, "#", selector, pod.Labels)
+						for _, pod := range namespace.Pods {
+							//TODO what about state unknown, should we do something about it?
+							if pod.Status == corev1.PodRunning && hasSelectors(selector, pod.Labels) {
 								WriteBufferedString(&backends,
 									"    server server000", strconv.Itoa(index), " ", pod.IP, ":", path.Backend.ServicePort.String(),
 									" weight 1 check port ", path.Backend.ServicePort.String(), "\n")
@@ -270,20 +295,8 @@ func (c *HAProxyController) UpdateHAProxy() {
 	var config strings.Builder
 	WriteBufferedString(&config, getGlobal(), "\n\n", getDefault(), "\n\n", frontend.String(), "\n", acls.String(), "\n", useBackend.String(), "\n\n", backends.String())
 	cfg := config.String()
-	fmt.Println(cfg)
+	//fmt.Println(cfg)
 	os.MkdirAll("/etc/haproxy/", 0644)
-	f, err := os.Create("/etc/haproxy/haproxy.cfg")
-	defer f.Close()
-	//err := ioutil.WriteFile("/etc/haproxy/haproxy.cfg", []byte(cfg), 0644)
-	if err != nil {
-		log.Println("ERROR")
-		log.Println(err)
-	}
-	_, err = f.WriteString(cfg)
-	if err != nil {
-		log.Println("ERROR")
-		log.Println(err)
-	}
 
 	tmpfile, err := ioutil.TempFile("", "haproxy-*.cfg")
 	if err != nil {
@@ -296,11 +309,19 @@ func (c *HAProxyController) UpdateHAProxy() {
 	if err := tmpfile.Close(); err != nil {
 		log.Println(err)
 	}
+	cfgPath := tmpfile.Name()
 
-	cmd := exec.Command("haproxy", "-c", "-f", "/etc/haproxy/haproxy.cfg")
+	log.Println("The file path : ", cfgPath)
+	cmd := exec.Command("haproxy", "-c", "-f", cfgPath)
 	log.Printf("Running command and waiting for it to finish...")
 	err = cmd.Run()
-	log.Printf("Command finished with error: %v", err)
+	if err != nil {
+		//there is no point of looking what because this controller will communicate with api
+		log.Println("haproxy", "-c", "-f", cfgPath)
+		log.Println("Command finished with error: %v", err)
+	} else {
+		log.Println("it looks as everything is ok with config")
+	}
 
-	defer os.Remove(tmpfile.Name()) // clean up
+	//defer os.Remove(tmpfile.Name()) // clean up
 }
