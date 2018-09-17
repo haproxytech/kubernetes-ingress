@@ -101,21 +101,21 @@ func (k *K8s) GetServices() ([]string, watch.Interface, error) {
 	return itemList, watchChanges, nil
 }
 
-/*
-	nss, err := clientset.CoreV1().Namespaces().List(metav1.ListOptions{})
-	//lista := nss.List(metav1.ListOptions{})
-	for i, ns := range nss.Items {
-		fmt.Println(i, ns.GetName(), ns.GetAnnotations())
-
-		//cm, _ := clientset.CoreV1().ConfigMaps(ns.GetName()).List(metav1.ListOptions{})
-		//fmt.Println("CONFIG MAP", ns.GetName())
-		//for _, m := range cm.Items {
-		//	fmt.Println(m)
-		//}
-		gledaj, _ := clientset.CoreV1().ConfigMaps(ns.GetName()).Watch(metav1.ListOptions{})
-		go observeConfigMap(ns.GetName(), gledaj)
-
-		ingressChan, _ := clientset.Extensions().Ingresses(ns.GetName()).Watch(metav1.ListOptions{})
-		go observeIngress(ns.GetName(), ingressChan)
+//GetConfigMap returns config map for controller
+func (k *K8s) GetConfigMap() ([]string, watch.Interface, error) {
+	items, err := k.API.CoreV1().ConfigMaps("").List(metav1.ListOptions{})
+	if err != nil {
+		panic(err.Error())
 	}
-*/
+
+	watchChanges, err := k.API.CoreV1().ConfigMaps("").Watch(metav1.ListOptions{})
+	if err != nil {
+		return nil, nil, err
+	}
+	num := len(items.Items)
+	itemList := make([]string, num, num)
+	for i, ns := range items.Items {
+		itemList[i] = ns.GetName()
+	}
+	return itemList, watchChanges, nil
+}

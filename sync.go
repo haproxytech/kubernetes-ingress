@@ -13,12 +13,14 @@ const (
 	INGRESS   SyncType = 1
 	NAMESPACE SyncType = 2
 	SERVICE   SyncType = 3
-	POD       SyncType = 4*/
+	POD       SyncType = 4
+	CONFIGMAP SyncType = 5*/
 	COMMAND   SyncType = "COMMAND"
 	INGRESS   SyncType = "INGRESS"
 	NAMESPACE SyncType = "NAMESPACE"
 	SERVICE   SyncType = "SERVICE"
 	POD       SyncType = "POD"
+	CONFIGMAP SyncType = "CONFIGMAP"
 )
 
 type SyncDataEvent struct {
@@ -28,4 +30,5 @@ type SyncDataEvent struct {
 	Service   *Service
 	Pod       *Pod
 	Ingress   *Ingress
+	ConfigMap *ConfigMap
 }

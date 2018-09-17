@@ -40,3 +40,8 @@ type Ingress struct {
 	Annotations map[string]string
 	Rules       []v1beta1.IngressRule
 }
+
+type ConfigMap struct {
+	Name string
+	Data map[string]string
+}

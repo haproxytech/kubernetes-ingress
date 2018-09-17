@@ -19,6 +19,7 @@ import (
 type HAProxyController struct {
 	k8s        *K8s
 	Namespaces map[string]*Namespace
+	ConfigMap  map[string]*ConfigMap
 }
 
 // Start initialize and run HAProxyController
@@ -50,14 +51,19 @@ func (c *HAProxyController) Start() {
 		log.Panic(err)
 	}
 
+	_, configMapWatch, err := k8s.GetConfigMap()
+	if err != nil {
+		log.Panic(err)
+	}
+
 	//TODO
 	//configmap
 
-	go c.watchChanges(nsWatch, svcWatch, podWatch, ingressWatch)
+	go c.watchChanges(nsWatch, svcWatch, podWatch, ingressWatch, configMapWatch)
 }
 
-func (c *HAProxyController) watchChanges(namespaces watch.Interface, services watch.Interface, pods watch.Interface, ingresses watch.Interface) {
-
+func (c *HAProxyController) watchChanges(namespaces watch.Interface,
+	services watch.Interface, pods watch.Interface, ingresses watch.Interface, configMapWatch watch.Interface) {
 	syncEveryNSeconds := 5
 	eventChan := make(chan SyncDataEvent, watch.DefaultChanSize)
 	go c.SyncData(eventChan)
@@ -89,7 +95,7 @@ func (c *HAProxyController) watchChanges(namespaces watch.Interface, services wa
 			eventChan <- SyncDataEvent{SyncType: SERVICE, EventType: msg.Type, Service: &svc}
 		case msg := <-pods.ResultChan():
 			obj := msg.Object.(*corev1.Pod)
-			LogWatchEvent(msg.Type, POD, obj)
+			//LogWatchEvent(msg.Type, POD, obj)
 			pod := Pod{
 				Name:      obj.GetName(),
 				Namespace: obj.GetNamespace(),
@@ -108,6 +114,15 @@ func (c *HAProxyController) watchChanges(namespaces watch.Interface, services wa
 				Rules:       obj.Spec.Rules,
 			}
 			eventChan <- SyncDataEvent{SyncType: INGRESS, EventType: msg.Type, Ingress: &ingress}
+		case msg := <-configMapWatch.ResultChan():
+			obj := msg.Object.(*corev1.ConfigMap)
+			if obj.ObjectMeta.GetName() == "haproxy-configmap" {
+				configMap := ConfigMap{
+					Name: obj.GetName(),
+					Data: obj.Data,
+				}
+				eventChan <- SyncDataEvent{SyncType: CONFIGMAP, EventType: msg.Type, ConfigMap: &configMap}
+			}
 		case <-time.After(time.Duration(syncEveryNSeconds) * time.Second):
 			//TODO syncEveryNSeconds sec is hardcoded, change that (annotation?)
 			//do sync of data every syncEveryNSeconds sec
@@ -120,6 +135,7 @@ func (c *HAProxyController) watchChanges(namespaces watch.Interface, services wa
 func (c *HAProxyController) SyncData(jobChan <-chan SyncDataEvent) {
 	hadChanges := false
 	c.Namespaces = make(map[string]*Namespace)
+	c.ConfigMap = make(map[string]*ConfigMap)
 	for job := range jobChan {
 		switch job.SyncType {
 		case COMMAND:
@@ -154,6 +170,12 @@ func (c *HAProxyController) SyncData(jobChan <-chan SyncDataEvent) {
 				ns := c.GetNamespace(job.Pod.Namespace)
 				ns.Pods[job.Pod.Name] = job.Pod
 				log.Println("Pod added", job.Pod.Name)
+				hadChanges = true
+			}
+		case CONFIGMAP:
+			if job.EventType == watch.Added {
+				c.ConfigMap[job.ConfigMap.Name] = job.ConfigMap
+				log.Println("ConfigMap added", job.ConfigMap.Name)
 				hadChanges = true
 			}
 		}
