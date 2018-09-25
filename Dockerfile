@@ -26,6 +26,11 @@ RUN wget -O/dumb-init https://github.com/Yelp/dumb-init/releases/download/v1.2.0
  && echo "$DUMB_INIT_SHA256  /dumb-init" | sha256sum -c -\
  && chmod +x /dumb-init
 
-COPY . /
+#RUN git clone git@gitlab.int.haproxy.com:HAPEE/lbctl.git /usr/sbin/lbctl
+COPY /lbctl /usr/sbin/lbctl
+RUN chmod 755 /usr/sbin/lbctl
+RUN mkdir /tmp/lbctl
+
+COPY /fs /
 
 ENTRYPOINT ["/dumb-init", "--", "/start.sh"]

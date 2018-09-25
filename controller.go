@@ -12,6 +12,10 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
 	"k8s.io/apimachinery/pkg/watch"
+
+	clientnative "github.com/haproxytech/client-native"
+	"github.com/haproxytech/client-native/configuration"
+	"github.com/haproxytech/client-native/stats"
 )
 
 //HAProxyController is ingress controller
@@ -19,16 +23,23 @@ type HAProxyController struct {
 	k8s        *K8s
 	Namespaces map[string]*Namespace
 	ConfigMap  map[string]*ConfigMap
+	NativeAPI  *clientnative.HAProxyClient
 }
 
 // Start initialize and run HAProxyController
 func (c *HAProxyController) Start() {
+
+	go c.ReloadHAProxy()
 
 	k8s, err := GetKubernetesClient()
 	if err != nil {
 		log.Panic(err)
 	}
 	c.k8s = k8s
+
+	x := k8s.API.Discovery()
+	k8sVersion, _ := x.ServerVersion()
+	log.Printf("Running on Kubernetes version: %s %s", k8sVersion.String(), k8sVersion.Platform)
 
 	_, nsWatch, err := k8s.GetNamespaces()
 	if err != nil {
@@ -55,10 +66,23 @@ func (c *HAProxyController) Start() {
 		log.Panic(err)
 	}
 
-	//TODO
-	//configmap
+	confClient := configuration.NewLBCTLClient(HAProxyCFG, "", "")
+	statsClient := stats.NewStatsClient(HAProxySocket)
+	//client := client_native.New(confClient, statsClient)
+	c.NativeAPI = clientnative.New(confClient, statsClient)
 
 	go c.watchChanges(nsWatch, svcWatch, podWatch, ingressWatch, configMapWatch)
+}
+
+//InitializeHAProxy runs HAProxy for the first time so native client can have access to it
+func (c *HAProxyController) ReloadHAProxy() {
+	//cmd := exec.Command("haproxy", "-f", HAProxyCFG)
+	log.Println("Starting HAProxy with", HAProxyCFG)
+	cmd := exec.Command("haproxy", "-f", HAProxyCFG)
+	err := cmd.Run()
+	if err != nil {
+		log.Println(err)
+	}
 }
 
 func (c *HAProxyController) watchChanges(namespaces watch.Interface,
@@ -158,15 +182,35 @@ func (c *HAProxyController) SyncData(jobChan <-chan SyncDataEvent) {
 				ns.Ingresses[job.Ingress.Name] = job.Ingress
 				log.Println("Ingress added", job.Ingress.Name)
 				hadChanges = true
+			case watch.Deleted:
+				ns := c.GetNamespace(job.Ingress.Namespace)
+				_, ok := ns.Ingresses[job.Ingress.Name]
+				if ok {
+					delete(ns.Ingresses, job.Ingress.Name)
+					log.Println("Ingress deleted", job.Ingress.Name)
+					//update immediately
+					c.UpdateHAProxy()
+				} else {
+					log.Println("Ingress not registered with controller, cannot delete !", job.Ingress.Name)
+				}
 			}
 		case SERVICE:
 			switch job.EventType {
 			case watch.Added:
 				ns := c.GetNamespace(job.Service.Namespace)
-				log.Println("namespace:", ns)
 				ns.Services[job.Service.Name] = job.Service
 				log.Println("Service added", job.Service.Name)
 				hadChanges = true
+			case watch.Deleted:
+				ns := c.GetNamespace(job.Service.Namespace)
+				_, ok := ns.Services[job.Service.Name]
+				if ok {
+					delete(ns.Services, job.Service.Name)
+					log.Println("Service deleted", job.Service.Name)
+					c.UpdateHAProxy()
+				} else {
+					log.Println("Service not registered with controller, cannot delete !", job.Service.Name)
+				}
 			}
 		case POD:
 			switch job.EventType {
@@ -191,12 +235,12 @@ func (c *HAProxyController) SyncData(jobChan <-chan SyncDataEvent) {
 				_, ok := ns.Pods[job.Pod.Name]
 				if ok {
 					delete(ns.Pods, job.Pod.Name)
+					log.Println("Pod deleted", job.Pod.Name)
+					//update immediately
+					c.UpdateHAProxy()
 				} else {
 					log.Println("Pod not registered with controller, cannot delete !", job.Pod.Name)
 				}
-				log.Println("Pod deleted", job.Pod.Name)
-				//update immediately
-				c.UpdateHAProxy()
 			}
 		case CONFIGMAP:
 			switch job.EventType {
@@ -204,6 +248,15 @@ func (c *HAProxyController) SyncData(jobChan <-chan SyncDataEvent) {
 				c.ConfigMap[job.ConfigMap.Name] = job.ConfigMap
 				log.Println("ConfigMap added", job.ConfigMap.Name)
 				hadChanges = true
+			case watch.Deleted:
+				_, ok := c.ConfigMap[job.ConfigMap.Name]
+				if ok {
+					delete(c.ConfigMap, job.ConfigMap.Name)
+					log.Println("ConfigMap deleted", job.Service.Name)
+					c.UpdateHAProxy()
+				} else {
+					log.Println("ConfigMap not registered with controller, cannot delete !", job.ConfigMap.Name)
+				}
 			}
 		}
 	}
@@ -234,6 +287,10 @@ func (c *HAProxyController) NewNamespace(name string) *Namespace {
 //UpdateHAProxy this need to generate API call/calls for HAProxy API
 //currently it only generates direct cfg file for checking
 func (c *HAProxyController) UpdateHAProxy() {
+
+	nativeAPI := c.NativeAPI
+	backend, err := nativeAPI.Configuration.GetBackend("some name")
+	log.Println(backend, err)
 
 	var frontend strings.Builder
 	var acls strings.Builder
@@ -314,14 +371,23 @@ func (c *HAProxyController) UpdateHAProxy() {
 	log.Println("The file path : ", cfgPath)
 	cmd := exec.Command("haproxy", "-c", "-f", cfgPath)
 	log.Printf("Running command and waiting for it to finish...")
+	log.Println("haproxy", "-c", "-f", cfgPath)
 	err = cmd.Run()
 	if err != nil {
 		//there is no point of looking what because this controller will communicate with api
-		log.Println("haproxy", "-c", "-f", cfgPath)
 		log.Println("Command finished with error: %v", err)
 	} else {
 		log.Println("it looks as everything is ok with config")
 	}
-
+	err = os.Remove(HAProxyCFG)
+	if err != nil {
+		log.Println(err)
+	}
+	err = os.Rename(cfgPath, HAProxyCFG)
+	if err != nil {
+		log.Println(err)
+	}
+	log.Println("Config changed. reloading")
+	c.ReloadHAProxy()
 	//defer os.Remove(tmpfile.Name()) // clean up
 }

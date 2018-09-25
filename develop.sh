@@ -6,7 +6,7 @@ while true; do
 
   while true; do
     set +e
-    CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o haproxy-ingress-controller . 
+    CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o fs/haproxy-ingress-controller . 
     ret_code=$?
     if [[ $ret_code -ne 0 ]]
     then
