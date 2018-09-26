@@ -45,3 +45,8 @@ type ConfigMap struct {
 	Name string
 	Data map[string]string
 }
+
+type Secret struct {
+	Name string
+	Data map[string][]byte
+}

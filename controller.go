@@ -21,10 +21,11 @@ import (
 
 //HAProxyController is ingress controller
 type HAProxyController struct {
-	k8s        *K8s
-	Namespaces map[string]*Namespace
-	ConfigMap  map[string]*ConfigMap
-	NativeAPI  *clientnative.HAProxyClient
+	k8s       *K8s
+	Namespace map[string]*Namespace
+	ConfigMap map[string]*ConfigMap
+	Secret    map[string]*Secret
+	NativeAPI *clientnative.HAProxyClient
 }
 
 // Start initialize and run HAProxyController
@@ -67,12 +68,17 @@ func (c *HAProxyController) Start() {
 		log.Panic(err)
 	}
 
+	_, secretsWatch, err := k8s.GetSecrets()
+	if err != nil {
+		log.Panic(err)
+	}
+
 	confClient := configuration.NewLBCTLClient(HAProxyCFG, "", "")
 	statsClient := stats.NewStatsClient(HAProxySocket)
 	//client := client_native.New(confClient, statsClient)
 	c.NativeAPI = clientnative.New(confClient, statsClient)
 
-	go c.watchChanges(nsWatch, svcWatch, podWatch, ingressWatch, configMapWatch)
+	go c.watchChanges(nsWatch, svcWatch, podWatch, ingressWatch, configMapWatch, secretsWatch)
 }
 
 //InitializeHAProxy runs HAProxy for the first time so native client can have access to it
@@ -86,8 +92,8 @@ func (c *HAProxyController) ReloadHAProxy() {
 	}
 }
 
-func (c *HAProxyController) watchChanges(namespaces watch.Interface,
-	services watch.Interface, pods watch.Interface, ingresses watch.Interface, configMapWatch watch.Interface) {
+func (c *HAProxyController) watchChanges(namespaces watch.Interface, services watch.Interface, pods watch.Interface,
+	ingresses watch.Interface, configMapWatch watch.Interface, secretsWatch watch.Interface) {
 	syncEveryNSeconds := 5
 	eventChan := make(chan SyncDataEvent, watch.DefaultChanSize)
 	go c.SyncData(eventChan)
@@ -148,6 +154,13 @@ func (c *HAProxyController) watchChanges(namespaces watch.Interface,
 				}
 				eventChan <- SyncDataEvent{SyncType: CONFIGMAP, EventType: msg.Type, ConfigMap: &configMap}
 			}
+		case msg := <-secretsWatch.ResultChan():
+			obj := msg.Object.(*corev1.Secret)
+			secret := Secret{
+				Name: obj.ObjectMeta.GetName(),
+				Data: obj.Data,
+			}
+			eventChan <- SyncDataEvent{SyncType: SECRET, EventType: msg.Type, Secret: &secret}
 		case <-time.After(time.Duration(syncEveryNSeconds) * time.Second):
 			//TODO syncEveryNSeconds sec is hardcoded, change that (annotation?)
 			//do sync of data every syncEveryNSeconds sec
@@ -160,8 +173,9 @@ func (c *HAProxyController) watchChanges(namespaces watch.Interface,
 //All the changes must come through this function
 func (c *HAProxyController) SyncData(jobChan <-chan SyncDataEvent) {
 	hadChanges := false
-	c.Namespaces = make(map[string]*Namespace)
+	c.Namespace = make(map[string]*Namespace)
 	c.ConfigMap = make(map[string]*ConfigMap)
+	c.Secret = make(map[string]*Secret)
 	for job := range jobChan {
 		switch job.SyncType {
 		case COMMAND:
@@ -180,6 +194,8 @@ func (c *HAProxyController) SyncData(jobChan <-chan SyncDataEvent) {
 			hadChanges = c.eventPod(job.EventType, job.Pod)
 		case CONFIGMAP:
 			hadChanges = c.eventConfigMap(job.EventType, job.ConfigMap)
+		case SECRET:
+			hadChanges = c.eventSecret(job.EventType, job.Secret)
 		}
 	}
 }
@@ -192,9 +208,9 @@ func (c *HAProxyController) eventNamespace(eventType watch.EventType, data *Name
 		log.Println("Namespace added", ns.Name)
 		updateRequired = true
 	case watch.Deleted:
-		_, ok := c.Namespaces[data.Name]
+		_, ok := c.Namespace[data.Name]
 		if ok {
-			delete(c.Namespaces, data.Name)
+			delete(c.Namespace, data.Name)
 			log.Println("Namespace deleted", data.Name)
 			updateRequired = true
 			c.UpdateHAProxy()
@@ -310,6 +326,7 @@ func (c *HAProxyController) eventPod(eventType watch.EventType, data *Pod) bool 
 	}
 	return updateRequired
 }
+
 func (c *HAProxyController) eventConfigMap(eventType watch.EventType, data *ConfigMap) bool {
 	updateRequired := false
 	switch eventType {
@@ -321,7 +338,7 @@ func (c *HAProxyController) eventConfigMap(eventType watch.EventType, data *Conf
 			log.Println("ConfigMap not registered with controller, cannot modify !", data.Name)
 		}
 		c.ConfigMap[data.Name] = newConfigMap
-		result := cmp.Diff(newConfigMap, oldConfigMap)
+		result := cmp.Diff(oldConfigMap, newConfigMap)
 		log.Println("ConfigMap modified", data.Name, "\n", result)
 		updateRequired = true
 	case watch.Added:
@@ -340,14 +357,44 @@ func (c *HAProxyController) eventConfigMap(eventType watch.EventType, data *Conf
 	}
 	return updateRequired
 }
+func (c *HAProxyController) eventSecret(eventType watch.EventType, data *Secret) bool {
+	updateRequired := false
+	switch eventType {
+	case watch.Modified:
+		newSecret := data
+		oldSecret, ok := c.Secret[data.Name]
+		if !ok {
+			//intentionally do not add it. TODO see if our idea of only watching is ok
+			log.Println("Secret not registered with controller, cannot modify !", data.Name)
+		}
+		c.Secret[data.Name] = newSecret
+		result := cmp.Diff(oldSecret, newSecret)
+		log.Println("Secret modified", data.Name, "\n", result)
+		updateRequired = true
+	case watch.Added:
+		c.Secret[data.Name] = data
+		log.Println("Secret added", data.Name)
+		updateRequired = true
+	case watch.Deleted:
+		_, ok := c.Secret[data.Name]
+		if ok {
+			delete(c.Secret, data.Name)
+			log.Println("Secret deleted", data.Name)
+			c.UpdateHAProxy()
+		} else {
+			log.Println("Secret not registered with controller, cannot delete !", data.Name)
+		}
+	}
+	return updateRequired
+}
 
 func (c *HAProxyController) GetNamespace(name string) *Namespace {
-	namespace, ok := c.Namespaces[name]
+	namespace, ok := c.Namespace[name]
 	if ok {
 		return namespace
 	}
 	newNamespace := c.NewNamespace(name)
-	c.Namespaces[name] = newNamespace
+	c.Namespace[name] = newNamespace
 	return newNamespace
 }
 
@@ -377,7 +424,7 @@ func (c *HAProxyController) UpdateHAProxy() {
 	var backends strings.Builder
 	createdBackends := make(map[string]bool)
 	WriteBufferedString(&frontend, "frontend http\n", "    mode http\n    bind *:80\n")
-	for _, namespace := range c.Namespaces {
+	for _, namespace := range c.Namespace {
 		if !namespace.Watch {
 			continue
 		}

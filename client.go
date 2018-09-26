@@ -119,3 +119,22 @@ func (k *K8s) GetConfigMap() ([]string, watch.Interface, error) {
 	}
 	return itemList, watchChanges, nil
 }
+
+//GetSecrets returns kubernetes secrets
+func (k *K8s) GetSecrets() ([]string, watch.Interface, error) {
+	items, err := k.API.CoreV1().Secrets("").List(metav1.ListOptions{})
+	if err != nil {
+		panic(err.Error())
+	}
+
+	watchChanges, err := k.API.CoreV1().Secrets("").Watch(metav1.ListOptions{})
+	if err != nil {
+		return nil, nil, err
+	}
+	num := len(items.Items)
+	itemList := make([]string, num, num)
+	for i, ns := range items.Items {
+		itemList[i] = ns.GetName()
+	}
+	return itemList, watchChanges, nil
+}
