@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/go-cmp/cmp"
 	corev1 "k8s.io/api/core/v1"
 	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
 	"k8s.io/apimachinery/pkg/watch"
@@ -155,7 +156,8 @@ func (c *HAProxyController) watchChanges(namespaces watch.Interface,
 	}
 }
 
-//SyncData gets all kubernetes changes, aggregates them and apply to HAProxy
+//SyncData gets all kubernetes changes, aggregates them and apply to HAProxy.
+//All the changes must come through this function
 func (c *HAProxyController) SyncData(jobChan <-chan SyncDataEvent) {
 	hadChanges := false
 	c.Namespaces = make(map[string]*Namespace)
@@ -169,97 +171,174 @@ func (c *HAProxyController) SyncData(jobChan <-chan SyncDataEvent) {
 				hadChanges = false
 			}
 		case NAMESPACE:
-			switch job.EventType {
-			case watch.Added:
-				ns := c.GetNamespace(job.Namespace.Name)
-				log.Println("Namespace added", ns.Name)
-				hadChanges = true
-			}
+			hadChanges = c.eventNamespace(job.EventType, job.Namespace)
 		case INGRESS:
-			switch job.EventType {
-			case watch.Added:
-				ns := c.GetNamespace(job.Ingress.Namespace)
-				ns.Ingresses[job.Ingress.Name] = job.Ingress
-				log.Println("Ingress added", job.Ingress.Name)
-				hadChanges = true
-			case watch.Deleted:
-				ns := c.GetNamespace(job.Ingress.Namespace)
-				_, ok := ns.Ingresses[job.Ingress.Name]
-				if ok {
-					delete(ns.Ingresses, job.Ingress.Name)
-					log.Println("Ingress deleted", job.Ingress.Name)
-					//update immediately
-					c.UpdateHAProxy()
-				} else {
-					log.Println("Ingress not registered with controller, cannot delete !", job.Ingress.Name)
-				}
-			}
+			hadChanges = c.eventIngress(job.EventType, job.Ingress)
 		case SERVICE:
-			switch job.EventType {
-			case watch.Added:
-				ns := c.GetNamespace(job.Service.Namespace)
-				ns.Services[job.Service.Name] = job.Service
-				log.Println("Service added", job.Service.Name)
-				hadChanges = true
-			case watch.Deleted:
-				ns := c.GetNamespace(job.Service.Namespace)
-				_, ok := ns.Services[job.Service.Name]
-				if ok {
-					delete(ns.Services, job.Service.Name)
-					log.Println("Service deleted", job.Service.Name)
-					c.UpdateHAProxy()
-				} else {
-					log.Println("Service not registered with controller, cannot delete !", job.Service.Name)
-				}
-			}
+			hadChanges = c.eventService(job.EventType, job.Service)
 		case POD:
-			switch job.EventType {
-			case watch.Modified:
-				newPod := job.Pod
-				ns := c.GetNamespace(job.Pod.Namespace)
-				oldPod, ok := ns.Pods[job.Pod.Name]
-				if !ok {
-					//intentionally do not add it. TODO see if our idea of only watching is ok
-					log.Println("Pod not registered with controller, cannot modify !", job.Pod.Name)
-				}
-				ns.Pods[job.Pod.Name] = newPod
-				log.Println("Pod modified", job.Pod.Name, oldPod.Status, newPod.Status)
-				hadChanges = true
-			case watch.Added:
-				ns := c.GetNamespace(job.Pod.Namespace)
-				ns.Pods[job.Pod.Name] = job.Pod
-				log.Println("Pod added", job.Pod.Name)
-				hadChanges = true
-			case watch.Deleted:
-				ns := c.GetNamespace(job.Pod.Namespace)
-				_, ok := ns.Pods[job.Pod.Name]
-				if ok {
-					delete(ns.Pods, job.Pod.Name)
-					log.Println("Pod deleted", job.Pod.Name)
-					//update immediately
-					c.UpdateHAProxy()
-				} else {
-					log.Println("Pod not registered with controller, cannot delete !", job.Pod.Name)
-				}
-			}
+			hadChanges = c.eventPod(job.EventType, job.Pod)
 		case CONFIGMAP:
-			switch job.EventType {
-			case watch.Added:
-				c.ConfigMap[job.ConfigMap.Name] = job.ConfigMap
-				log.Println("ConfigMap added", job.ConfigMap.Name)
-				hadChanges = true
-			case watch.Deleted:
-				_, ok := c.ConfigMap[job.ConfigMap.Name]
-				if ok {
-					delete(c.ConfigMap, job.ConfigMap.Name)
-					log.Println("ConfigMap deleted", job.Service.Name)
-					c.UpdateHAProxy()
-				} else {
-					log.Println("ConfigMap not registered with controller, cannot delete !", job.ConfigMap.Name)
-				}
-			}
+			hadChanges = c.eventConfigMap(job.EventType, job.ConfigMap)
 		}
 	}
+}
+
+func (c *HAProxyController) eventNamespace(eventType watch.EventType, data *Namespace) bool {
+	updateRequired := false
+	switch eventType {
+	case watch.Added:
+		ns := c.GetNamespace(data.Name)
+		log.Println("Namespace added", ns.Name)
+		updateRequired = true
+	case watch.Deleted:
+		_, ok := c.Namespaces[data.Name]
+		if ok {
+			delete(c.Namespaces, data.Name)
+			log.Println("Namespace deleted", data.Name)
+			updateRequired = true
+			c.UpdateHAProxy()
+		} else {
+			log.Println("Namespace not registered with controller, cannot delete !", data.Name)
+		}
+	}
+	return updateRequired
+}
+
+func (c *HAProxyController) eventIngress(eventType watch.EventType, data *Ingress) bool {
+	updateRequired := false
+	switch eventType {
+	case watch.Modified:
+		newIngress := data
+		ns := c.GetNamespace(data.Namespace)
+		oldIngress, ok := ns.Ingresses[data.Name]
+		if !ok {
+			//intentionally do not add it. TODO see if our idea of only watching is ok
+			log.Println("Ingress not registered with controller, cannot modify !", data.Name)
+		}
+		ns.Ingresses[data.Name] = newIngress
+		diffStr := cmp.Diff(oldIngress, newIngress)
+		log.Println("Ingress modified", data.Name, "\n", diffStr)
+		diff := cmp.Equal(oldIngress, newIngress)
+		log.Println(diff)
+		updateRequired = true
+	case watch.Added:
+		ns := c.GetNamespace(data.Namespace)
+		ns.Ingresses[data.Name] = data
+		log.Println("Ingress added", data.Name)
+		updateRequired = true
+	case watch.Deleted:
+		ns := c.GetNamespace(data.Namespace)
+		_, ok := ns.Ingresses[data.Name]
+		if ok {
+			delete(ns.Ingresses, data.Name)
+			log.Println("Ingress deleted", data.Name)
+			//update immediately
+			c.UpdateHAProxy()
+		} else {
+			log.Println("Ingress not registered with controller, cannot delete !", data.Name)
+		}
+	}
+	return updateRequired
+}
+
+func (c *HAProxyController) eventService(eventType watch.EventType, data *Service) bool {
+	updateRequired := false
+	switch eventType {
+	case watch.Modified:
+		newService := data
+		ns := c.GetNamespace(data.Namespace)
+		oldService, ok := ns.Services[data.Name]
+		if !ok {
+			//intentionally do not add it. TODO see if our idea of only watching is ok
+			log.Println("Service not registered with controller, cannot modify !", data.Name)
+		}
+		ns.Services[data.Name] = newService
+		result := cmp.Diff(oldService, newService)
+		log.Println("Service modified", data.Name, "\n", result)
+		updateRequired = true
+	case watch.Added:
+		ns := c.GetNamespace(data.Namespace)
+		ns.Services[data.Name] = data
+		log.Println("Service added", data.Name)
+		updateRequired = true
+	case watch.Deleted:
+		ns := c.GetNamespace(data.Namespace)
+		_, ok := ns.Services[data.Name]
+		if ok {
+			delete(ns.Services, data.Name)
+			log.Println("Service deleted", data.Name)
+			c.UpdateHAProxy()
+		} else {
+			log.Println("Service not registered with controller, cannot delete !", data.Name)
+		}
+	}
+	return updateRequired
+}
+
+func (c *HAProxyController) eventPod(eventType watch.EventType, data *Pod) bool {
+	updateRequired := false
+	switch eventType {
+	case watch.Modified:
+		newPod := data
+		ns := c.GetNamespace(data.Namespace)
+		oldPod, ok := ns.Pods[data.Name]
+		if !ok {
+			//intentionally do not add it. TODO see if our idea of only watching is ok
+			log.Println("Pod not registered with controller, cannot modify !", data.Name)
+		}
+		ns.Pods[data.Name] = newPod
+		result := cmp.Diff(oldPod, newPod)
+		log.Println("Pod modified", data.Name, oldPod.Status, "\n", result)
+		updateRequired = true
+	case watch.Added:
+		ns := c.GetNamespace(data.Namespace)
+		ns.Pods[data.Name] = data
+		log.Println("Pod added", data.Name)
+		updateRequired = true
+	case watch.Deleted:
+		ns := c.GetNamespace(data.Namespace)
+		_, ok := ns.Pods[data.Name]
+		if ok {
+			delete(ns.Pods, data.Name)
+			log.Println("Pod deleted", data.Name)
+			//update immediately
+			c.UpdateHAProxy()
+		} else {
+			log.Println("Pod not registered with controller, cannot delete !", data.Name)
+		}
+	}
+	return updateRequired
+}
+func (c *HAProxyController) eventConfigMap(eventType watch.EventType, data *ConfigMap) bool {
+	updateRequired := false
+	switch eventType {
+	case watch.Modified:
+		newConfigMap := data
+		oldConfigMap, ok := c.ConfigMap[data.Name]
+		if !ok {
+			//intentionally do not add it. TODO see if our idea of only watching is ok
+			log.Println("ConfigMap not registered with controller, cannot modify !", data.Name)
+		}
+		c.ConfigMap[data.Name] = newConfigMap
+		result := cmp.Diff(newConfigMap, oldConfigMap)
+		log.Println("ConfigMap modified", data.Name, "\n", result)
+		updateRequired = true
+	case watch.Added:
+		c.ConfigMap[data.Name] = data
+		log.Println("ConfigMap added", data.Name)
+		updateRequired = true
+	case watch.Deleted:
+		_, ok := c.ConfigMap[data.Name]
+		if ok {
+			delete(c.ConfigMap, data.Name)
+			log.Println("ConfigMap deleted", data.Name)
+			c.UpdateHAProxy()
+		} else {
+			log.Println("ConfigMap not registered with controller, cannot delete !", data.Name)
+		}
+	}
+	return updateRequired
 }
 
 func (c *HAProxyController) GetNamespace(name string) *Namespace {
