@@ -11,14 +11,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-#FROM haproxy:1.8-alpine
-#RUN apk --no-cache add socat openssl
-#FROM debian
-#COPY . /
-#COPY /home/zlatko/src/kubernetes/client-go/examples/in-cluster-client-configuration/app /app
-#ENTRYPOINT /haproxy-ingress-controller
 FROM haproxy:1.8-alpine
 RUN apk --no-cache add socat openssl
+RUN apk update && apk add bash make
 
 # dumb-init kindly manages SIGCHLD from forked HAProxy processes
 ARG DUMB_INIT_SHA256=81231da1cd074fdc81af62789fead8641ef3f24b6b07366a1c34e5b059faf363
@@ -26,11 +21,14 @@ RUN wget -O/dumb-init https://github.com/Yelp/dumb-init/releases/download/v1.2.0
  && echo "$DUMB_INIT_SHA256  /dumb-init" | sha256sum -c -\
  && chmod +x /dumb-init
 
-#RUN git clone git@gitlab.int.haproxy.com:HAPEE/lbctl.git /usr/sbin/lbctl
-COPY /lbctl /usr/sbin/lbctl
-RUN chmod 755 /usr/sbin/lbctl
+COPY /lbctl /usr/lbctl/
 RUN mkdir /tmp/lbctl
+RUN cd /usr/lbctl/ && make install
+RUN ln -s /opt/lbctl/scripts/lbctl /usr/sbin/lbctl
+RUN chmod +x /usr/sbin/lbctl
 
 COPY /fs /
+
+#ENV LBCTL_MODULES=l7
 
 ENTRYPOINT ["/dumb-init", "--", "/start.sh"]

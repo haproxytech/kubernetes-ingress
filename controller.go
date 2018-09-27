@@ -17,6 +17,7 @@ import (
 	clientnative "github.com/haproxytech/client-native"
 	"github.com/haproxytech/client-native/configuration"
 	"github.com/haproxytech/client-native/stats"
+	"github.com/haproxytech/models"
 )
 
 //HAProxyController is ingress controller
@@ -73,7 +74,7 @@ func (c *HAProxyController) Start() {
 		log.Panic(err)
 	}
 
-	confClient := configuration.NewLBCTLClient(HAProxyCFG, "", "")
+	confClient := configuration.NewLBCTLClient(HAProxyCFG, "/usr/sbin/lbctl", "")
 	statsClient := stats.NewStatsClient(HAProxySocket)
 	//client := client_native.New(confClient, statsClient)
 	c.NativeAPI = clientnative.New(confClient, statsClient)
@@ -410,13 +411,98 @@ func (c *HAProxyController) NewNamespace(name string) *Namespace {
 	return &namespace
 }
 
-//UpdateHAProxy this need to generate API call/calls for HAProxy API
+func (c *HAProxyController) NewUpdateHAProxy() {
+	nativeAPI := c.NativeAPI
+	//backend, err := nativeAPI.Configuration.GetBackend("default-http-svc-8080")
+	//log.Println(backend, err)
+	version, err := nativeAPI.Configuration.GetVersion()
+	if err != nil {
+		//silently fallback to 1
+		version = 1
+	}
+	transaction, err := nativeAPI.Configuration.StartTransaction(version)
+	var frontendHTTP *models.Frontend
+	frontendHTTPGet, err := nativeAPI.Configuration.GetFrontend("http")
+	if err != nil {
+		log.Println("frontend http does not exists, creating one")
+		frontendHTTP = &models.Frontend{
+			Name: "http",
+			//Mode: "http",
+			Protocol: "http",
+		}
+		nativeAPI.Configuration.CreateFrontend(frontendHTTP, transaction.ID, transaction.Version)
+	} else {
+		frontendHTTP = frontendHTTPGet.Data
+	}
+	for _, namespace := range c.Namespace {
+		if !namespace.Watch {
+			continue
+		}
+		for _, ingress := range namespace.Ingresses {
+			for _, rule := range ingress.Rules {
+				/*var acl *models.ACL
+				//TODO get fetch system
+				acl = &models.ACL{
+					Criterion: "var(txn.hdr_host) -i",
+					//ID int64 `json:"id"`
+					Name:  "acl host-" + rule.Host,
+					Value: rule.Host,
+				}
+				//WriteBufferedString(&acls, "    acl host-", rule.Host, " var(txn.hdr_host) -i ", rule.Host)
+				log.Println(acl)*/
+				//checkACL, err := nativeAPI.Configuration.
+				for _, path := range rule.HTTP.Paths {
+					log.Println(path)
+					/*
+						service, ok := namespace.Services[path.Backend.ServiceName]
+						if !ok {
+							log.Println("service", path.Backend.ServiceName, "does not exists")
+							continue
+						}
+						WriteBufferedString(&useBackend,
+							"    use_backend ", namespace.Name, "-", path.Backend.ServiceName, "-", path.Backend.ServicePort.String(),
+							" if host-", rule.Host, " { var(txn.path) -m beg ", path.Path, " }\n")
+
+						selector := service.Selector
+						if len(selector) == 0 {
+							log.Println("service", service.Name, "no selector")
+							continue
+						}
+						backendName := namespace.Name + "-" + service.Name + "-" + path.Backend.ServicePort.String()
+						_, ok = createdBackends[backendName]
+						if !ok {
+							WriteBufferedString(&backends,
+								"backend ", backendName, "\n",
+								"    mode http\n",
+								"    balance leastconn\n")
+							index := 0
+							for _, pod := range namespace.Pods {
+								//TODO what about state unknown, should we do something about it?
+								if pod.Status == corev1.PodRunning && hasSelectors(selector, pod.Labels) {
+									WriteBufferedString(&backends,
+										"    server server000", strconv.Itoa(index), " ", pod.IP, ":", path.Backend.ServicePort.String(),
+										" weight 1 check port ", path.Backend.ServicePort.String(), "\n")
+									index++
+								}
+							}
+							createdBackends[backendName] = true
+						}
+						backends.WriteString("\n")
+						/* */
+				}
+			}
+		}
+	}
+	//err = nativeAPI.Configuration.CommitTransaction(transaction.ID)
+	if err != nil {
+		log.Println(err)
+	}
+}
+
+//SimpleUpdateHAProxy this need to generate API call/calls for HAProxy API
 //currently it only generates direct cfg file for checking
 func (c *HAProxyController) UpdateHAProxy() {
-
-	nativeAPI := c.NativeAPI
-	backend, err := nativeAPI.Configuration.GetBackend("some name")
-	log.Println(backend, err)
+	c.NewUpdateHAProxy()
 
 	var frontend strings.Builder
 	var acls strings.Builder
@@ -476,7 +562,7 @@ func (c *HAProxyController) UpdateHAProxy() {
 		}
 	}
 	var config strings.Builder
-	WriteBufferedString(&config, getGlobal(), "\n\n", getDefault(), "\n\n", frontend.String(), "\n", acls.String(), "\n", useBackend.String(), "\n\n", backends.String())
+	WriteBufferedString(&config, "# _version=1\n\n", getGlobal(), "\n\n", getDefault(), "\n\n", frontend.String(), "\n", acls.String(), "\n", useBackend.String(), "\n\n", backends.String())
 	cfg := config.String()
 	//fmt.Println(cfg)
 	os.MkdirAll("/etc/haproxy/", 0644)
