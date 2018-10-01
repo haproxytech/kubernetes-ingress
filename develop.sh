@@ -6,7 +6,7 @@ while true; do
 
   while true; do
     set +e
-    CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o fs/haproxy-ingress-controller . 
+    make
     ret_code=$?
     if [[ $ret_code -ne 0 ]]
     then
@@ -20,6 +20,7 @@ while true; do
   docker build -t localhost:5000/haproxy-ingress-demo . 
   docker push localhost:5000/haproxy-ingress-demo
   kubectl run -i haproxy-ingress-demo --image=localhost:5000/haproxy-ingress-demo &
+  fs/haproxy-ingress-controller -v
   set +e
   while true; do 
     echo -n ">>>>>> [r] rebuild, [p] pod, [enter] for log: "
