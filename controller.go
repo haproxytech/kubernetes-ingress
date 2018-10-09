@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
@@ -78,6 +79,7 @@ func (c *HAProxyController) Start() {
 	statsClient := stats.NewStatsClient(HAProxySocket)
 	//client := client_native.New(confClient, statsClient)
 	c.NativeAPI = clientnative.New(confClient, statsClient)
+	log.Println("created native cfg client", c.NativeAPI)
 
 	go c.watchChanges(nsWatch, svcWatch, podWatch, ingressWatch, configMapWatch, secretsWatch)
 }
@@ -411,17 +413,22 @@ func (c *HAProxyController) NewNamespace(name string) *Namespace {
 	return &namespace
 }
 
-func (c *HAProxyController) NewUpdateHAProxy() {
+func (c *HAProxyController) NewUpdateHAProxy() error {
 	nativeAPI := c.NativeAPI
 	//backend, err := nativeAPI.Configuration.GetBackend("default-http-svc-8080")
 	//log.Println(backend, err)
 	version, err := nativeAPI.Configuration.GetVersion()
-	if err != nil {
+	if err != nil || version < 1 {
 		//silently fallback to 1
 		version = 1
 	}
+	log.Println(version)
 	transaction, err := nativeAPI.Configuration.StartTransaction(version)
-	var frontendHTTP *models.Frontend
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+	/*var frontendHTTP *models.Frontend
 	frontendHTTPGet, err := nativeAPI.Configuration.GetFrontend("http")
 	if err != nil {
 		log.Println("frontend http does not exists, creating one")
@@ -430,10 +437,48 @@ func (c *HAProxyController) NewUpdateHAProxy() {
 			//Mode: "http",
 			Protocol: "http",
 		}
-		nativeAPI.Configuration.CreateFrontend(frontendHTTP, transaction.ID, transaction.Version)
+		log.Println(nativeAPI.Configuration.CreateFrontend, transaction)
+		err = nativeAPI.Configuration.CreateFrontend(frontendHTTP, transaction.ID, 0)
+		if err != nil {
+			log.Println(err)
+			return err
+		}
 	} else {
 		frontendHTTP = frontendHTTPGet.Data
+	}*/
+
+	var site *models.Site
+	if siteOK, err := nativeAPI.Configuration.GetSite("http"); err != nil {
+		log.Println(err)
+		return err
+	} else {
+		site = siteOK.Data
 	}
+	//bla bla, some check for this
+	//create backend
+	/*backend := &models.SiteBackendsItems{
+		Balance:  "roundrobin",
+		Name:     "default_backend",
+		Protocol: "http",
+		Servers:  []*models.SiteBackendsItemsServersItems{},
+		UseAs:    "default",
+	}
+	site.Backends = append(site.Backends, backend)
+	log.Println("SITE", site)                                             //todo remove
+	log.Println("DEFAULT", site.Backends[0].UseAs, site.Backends[0].Name) //todo remove*/
+
+	/*getListeners, err := nativeAPI.Configuration.GetListeners(frontendHTTP.Name)
+	listeners := getListeners.Data
+	log.Println(listeners, err)*/
+	/*var backends models.Backends
+	if backendsOK, err := nativeAPI.Configuration.GetBackends(); err != nil {
+		log.Println(err)
+		return err
+	} else {
+		backends = backendsOK.Data
+	}
+	log.Println(backends)*/
+
 	for _, namespace := range c.Namespace {
 		if !namespace.Watch {
 			continue
@@ -451,8 +496,78 @@ func (c *HAProxyController) NewUpdateHAProxy() {
 				//WriteBufferedString(&acls, "    acl host-", rule.Host, " var(txn.hdr_host) -i ", rule.Host)
 				log.Println(acl)*/
 				//checkACL, err := nativeAPI.Configuration.
+				//condName := "var(txn.hdr_host) -i"
 				for _, path := range rule.HTTP.Paths {
-					log.Println(path)
+					//log.Println(path)
+					service, ok := namespace.Services[path.Backend.ServiceName]
+					if !ok {
+						log.Println("service", path.Backend.ServiceName, "does not exists")
+						continue
+					}
+					selector := service.Selector
+					if len(selector) == 0 {
+						log.Println("service", service.Name, "no selector")
+						continue
+					}
+					backendName := fmt.Sprintf("%s-%s-%s", namespace.Name, service.Name, path.Backend.ServicePort.String())
+					var backend *models.SiteBackendsItems
+					for _, b := range site.Backends {
+						//log.Println("comparing", b.Name, backendName)
+						if b.Name == backendName {
+							backend = b
+							//log.Println("FOUND", backendName)
+							break
+						}
+					}
+					if backend == nil {
+						log.Println("new backend", backendName)
+						servers := []*models.SiteBackendsItemsServersItems{}
+						//TODO setup ordering and be carefull about index positions
+						index := 1
+						for _, pod := range namespace.Pods {
+							//TODO what about state unknown, should we do something about it?
+							if pod.Status == corev1.PodRunning && hasSelectors(selector, pod.Labels) {
+								port := int64(path.Backend.ServicePort.IntVal)
+								serverName := strings.TrimLeft(pod.Name, service.Name+"-")
+								server := &models.SiteBackendsItemsServersItems{
+									Address: pod.IP,
+									Name:    serverName,
+									Port:    &port,
+									//Name:    fmt.Sprintf("%06d", index),
+									// ssl
+									// Enum: [enabled]
+									//Ssl string `json:"ssl,omitempty"`
+									//Weight: 1,
+								}
+								index++
+								servers = append(servers, server)
+							}
+						}
+						//create backend
+						backend = &models.SiteBackendsItems{
+							Balance: "roundrobin",
+							Cond:    "if",
+							//use_backend default-http-svc-8080 if { req.hdr(host) -i foo.bar } { req.hdr(path) -m beg /app }
+							CondTest: "{ req.hdr(host) -i " + rule.Host + " } { var(txn.path) -m beg " + path.Path + " } ",
+							Name:     backendName,
+							Protocol: "http", //Enum: [http tcp]
+							Servers:  servers,
+							UseAs:    "conditional",
+						}
+						site.Backends = append(site.Backends, backend)
+						/*
+							// http xff header insert
+							// Enum: [enabled]
+							//HTTPXffHeaderInsert string `json:"http_xff_header_insert,omitempty"`
+
+							// log
+							// Enum: [enabled]
+							//Log string `json:"log,omitempty"`
+						*/
+					}
+					//log.Println(backendName, site.Backends)
+					//func (c *LBCTLConfigurationClient) getUseFarms(parent string) ([]*models.BackendSwitchingRule, error) {
+
 					/*
 						service, ok := namespace.Services[path.Backend.ServiceName]
 						if !ok {
@@ -493,16 +608,29 @@ func (c *HAProxyController) NewUpdateHAProxy() {
 			}
 		}
 	}
-	//err = nativeAPI.Configuration.CommitTransaction(transaction.ID)
+	log.Println("START OF EDITING")
+	if err := nativeAPI.Configuration.EditSite("http", site, transaction.ID, 0); err != nil {
+		log.Println(err)
+		return err
+	}
+	log.Println("END OF EDITING")
+	log.Println("CommitTransaction ...")
+	err = nativeAPI.Configuration.CommitTransaction(transaction.ID)
 	if err != nil {
 		log.Println(err)
+		return err
+	} else {
+		log.Println("Transaction successfull")
 	}
+	log.Println("UpdateHAProxy ended")
+	return nil
 }
 
 //SimpleUpdateHAProxy this need to generate API call/calls for HAProxy API
 //currently it only generates direct cfg file for checking
 func (c *HAProxyController) UpdateHAProxy() {
 	c.NewUpdateHAProxy()
+	return
 
 	var frontend strings.Builder
 	var acls strings.Builder
