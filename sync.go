@@ -1,9 +1,5 @@
 package main
 
-import (
-	"k8s.io/apimachinery/pkg/watch"
-)
-
 type SyncType string
 
 //SyncType values
@@ -19,11 +15,11 @@ const (
 
 type SyncDataEvent struct {
 	SyncType
-	EventType watch.EventType
-	Namespace *Namespace
-	Service   *Service
-	Pod       *Pod
-	Ingress   *Ingress
-	ConfigMap *ConfigMap
-	Secret    *Secret
+	Data interface{}
+	/*Namespace Namespace
+	Service   Service
+	Pod       Pod
+	Ingress   Ingress
+	ConfigMap ConfigMap
+	Secret    Secret*/
 }

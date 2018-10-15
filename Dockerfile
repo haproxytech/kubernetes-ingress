@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 FROM haproxy:1.8-alpine
-RUN apk --no-cache add socat openssl
+RUN apk --no-cache add socat openssl util-linux
 RUN apk update && apk add bash make
 
 # dumb-init kindly manages SIGCHLD from forked HAProxy processes

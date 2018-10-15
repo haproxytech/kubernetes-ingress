@@ -23,7 +23,7 @@ while true; do
   fs/haproxy-ingress-controller -v
   set +e
   while true; do 
-    echo -n ">>>>>> [r] rebuild, [p] pod, [enter] for log: "
+    echo -n ">>>>>> [r] rebuild, [p] pod, [h] haproxy cfg, [enter] for log: "
     read something;
     name=$(kubectl get pods -o go-template --template '{{range .items}}{{.metadata.name}}{{"\n"}}{{end}}' --sort-by='.status.containerStatuses[0].restartCount' | grep haproxy-ingress-demo | head -1);
     name2=$(microk8s.kubectl get pods -o go-template --template '{{range .items}}{{.metadata.name}}{{"\n"}}{{end}}' --sort-by='.status.containerStatuses[0].restartCount' | grep haproxy-ingress-demo | head -1);
@@ -33,9 +33,13 @@ while true; do
     p)
       kubectl describe pod $name;;
     m)
-      kubectl logs $name2 ;;
+      kubectl logs $name ;;
     n)
-      kubectl describe pod $name2 ;;
+      kubectl describe pod $name ;;
+    h)
+      kubectl exec -it $name cat /etc/haproxy/haproxy.cfg ;;
+    ])
+      kubectl exec -it $name cat /etc/haproxy/haproxy.cfg ;;
     *)
       kubectl logs $name
     esac
