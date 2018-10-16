@@ -543,10 +543,10 @@ func (c *HAProxyController) handlePath(frontendHTTP string, namespace *Namespace
 	backendName := fmt.Sprintf("%s-%s-%d", namespace.Name, service.Name, path.ServicePort)
 	backendsUsed[backendName]++
 	condTest := "{ req.hdr(host) -i " + rule.Host + " } { var(txn.path) -m beg " + path.Path + " } "
-	//log.Println("SERVICE", service.Name, service.Watch)
 	switch service.Watch {
 	case watch.Added:
-		if _, ok := backendsUsed[backendName]; !ok {
+		if numberOfTimesBackendUsed := backendsUsed[backendName]; numberOfTimesBackendUsed < 2 {
+			// 1 was just being added
 			backend := &models.Backend{
 				Balance:  "roundrobin",
 				Name:     backendName,
@@ -575,7 +575,7 @@ func (c *HAProxyController) handlePath(frontendHTTP string, namespace *Namespace
 		backendsUsed[backendName]--
 		return
 	}
-	if numberOfTimesBackendUsed := backendsUsed[backendName]; numberOfTimesBackendUsed > 0 {
+	if numberOfTimesBackendUsed := backendsUsed[backendName]; numberOfTimesBackendUsed > 1 {
 		return //we have already went through pods
 	}
 	for _, pod := range namespace.Pods {
