@@ -7,15 +7,11 @@ import (
 
 type Configuration struct {
 	Namespace map[string]*Namespace
-	ConfigMap map[string]*ConfigMap
-	Secret    map[string]*Secret
 	NativeAPI *clientnative.HAProxyClient
 }
 
 func (c *Configuration) Init(api *clientnative.HAProxyClient) {
 	c.Namespace = make(map[string]*Namespace)
-	c.ConfigMap = make(map[string]*ConfigMap)
-	c.Secret = make(map[string]*Secret)
 	c.NativeAPI = api
 }
 
@@ -38,7 +34,9 @@ func (c *Configuration) NewNamespace(name string) *Namespace {
 		PodNames:  make(map[string]bool),
 		Services:  make(map[string]*Service),
 		Ingresses: make(map[string]*Ingress),
-		Watch:     "",
+		ConfigMap: make(map[string]*ConfigMap),
+		Secret:    make(map[string]*Secret),
+		Watch:     watch.Added,
 	}
 	return namespace
 }

@@ -14,6 +14,8 @@ const (
 )
 
 type SyncDataEvent struct {
+	_ [0]int
 	SyncType
-	Data interface{}
+	Namespace string
+	Data      interface{}
 }

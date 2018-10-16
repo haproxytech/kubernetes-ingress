@@ -20,7 +20,6 @@ const (
 )*/
 
 type Pod struct {
-	Namespace   string
 	IP          string
 	Labels      map[string]string
 	Status      v1.PodPhase
@@ -33,7 +32,6 @@ type Pod struct {
 
 type Service struct {
 	Name       string
-	Namespace  string
 	ClusterIP  string
 	ExternalIP string
 	Ports      []v1.ServicePort
@@ -44,13 +42,16 @@ type Service struct {
 }
 
 type Namespace struct {
+	_           [0]int
 	Name        string
 	Relevant    bool
 	Annotations map[string]string
 	Ingresses   map[string]*Ingress
 	Pods        map[string]*Pod
 	PodNames    map[string]bool
+	ConfigMap   map[string]*ConfigMap
 	Services    map[string]*Service
+	Secret      map[string]*Secret
 	Watch       watch.EventType
 }
 
@@ -88,7 +89,6 @@ type IngressRule struct {
 
 type Ingress struct {
 	Name        string
-	Namespace   string
 	Annotations map[string]string
 	Rules       map[string]*IngressRule
 	//Rules       []v1beta1.IngressRule
@@ -96,10 +96,9 @@ type Ingress struct {
 }
 
 type ConfigMap struct {
-	Name      string
-	Namespace string
-	Data      map[string]string
-	Watch     watch.EventType
+	Name  string
+	Data  map[string]string
+	Watch watch.EventType
 }
 
 type Secret struct {
