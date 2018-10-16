@@ -11,6 +11,7 @@ import (
 // fixed paths to haproxy items
 const (
 	HAProxyCFG    = "/etc/haproxy/haproxy.cfg"
+	HAProxyCERT   = "/etc/haproxy/default.pem"
 	HAProxySocket = "/var/run/haproxy-runtime-api.sock"
 )
 

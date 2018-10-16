@@ -1,8 +1,10 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"log"
+	"os"
 	"os/exec"
 	"time"
 
@@ -478,7 +480,7 @@ func (c *HAProxyController) UpdateHAProxy() error {
 		//silently fallback to 1
 		version = 1
 	}
-	log.Println(version)
+	log.Println("Config version:", version)
 	transaction, err := nativeAPI.Configuration.StartTransaction(version)
 	if err != nil {
 		log.Println(err)
@@ -489,6 +491,64 @@ func (c *HAProxyController) UpdateHAProxy() error {
 	for _, namespace := range c.cfg.Namespace {
 		if !namespace.Relevant {
 			continue
+		}
+		if c.osArgs.DefaultCertificate.Name != "" {
+			if secret, ok := namespace.Secret[c.osArgs.DefaultCertificate.Name]; ok {
+				key, ok := secret.Data["tls.key"]
+				if !ok {
+					log.Println("missing tls.key")
+					return errors.New("missing tls.key")
+				}
+				crt, ok := secret.Data["tls.crt"]
+				if !ok {
+					log.Println("missing tls.crt")
+					return errors.New("missing tls.crt")
+				}
+				if f, err := os.Create(HAProxyCERT); err != nil {
+					log.Println(err)
+					return err
+				} else {
+					defer f.Close()
+					if _, err = f.Write(key); err != nil {
+						log.Println(err)
+						return err
+					}
+					if _, err = f.Write(crt); err != nil {
+						log.Println(err)
+						return err
+					}
+					if err = f.Sync(); err != nil {
+						log.Println(err)
+						return err
+					}
+					if err = f.Close(); err != nil {
+						log.Println(err)
+						return err
+					}
+					port := int64(443)
+					listener := &models.Listener{
+						Address:        "0.0.0.0",
+						Name:           "https",
+						Port:           &port,
+						Ssl:            "enabled",
+						SslCertificate: HAProxyCERT,
+					}
+					switch secret.Watch {
+					case watch.Added:
+						if err = nativeAPI.Configuration.CreateListener(frontendHTTP, listener, transaction.ID, 0); err != nil {
+							return err
+						}
+					case watch.Modified:
+						if err = nativeAPI.Configuration.EditListener(listener.Name, frontendHTTP, listener, transaction.ID, 0); err != nil {
+							return err
+						}
+					case watch.Deleted:
+						if err = nativeAPI.Configuration.DeleteListener(listener.Name, frontendHTTP, transaction.ID, 0); err != nil {
+							return err
+						}
+					}
+				}
+			}
 		}
 		//TODO, do not just go through them, sort them to handle /web,/ option maybe?
 		for _, ingress := range namespace.Ingresses {
