@@ -1,31 +1,25 @@
-/*
-Copyright 2016 The Kubernetes Authors.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
-
 package main
 
 import (
 	"fmt"
 	"log"
-	"os"
 	"time"
+
+	"github.com/jessevdk/go-flags"
+)
+
+// fixed paths to haproxy items
+const (
+	HAProxyCFG    = "/etc/haproxy/haproxy.cfg"
+	HAProxySocket = "/var/run/haproxy-runtime-api.sock"
 )
 
 func main() {
 
-	if len(os.Args) > 1 && (os.Args[1] == "-v" || os.Args[1] == "-vv") {
+	var osArgs OSArgs
+	var parser = flags.NewParser(&osArgs, flags.Default)
+	parser.Parse()
+	if len(osArgs.Version) > 0 {
 		fmt.Printf("HAProxy Ingress Controller %s %s%s\n\n", GitTag, GitCommit, GitDirty)
 		fmt.Printf("Build from: %s\n", GitRepo)
 		fmt.Printf("Build date: %s\n\n", BuildTime)
@@ -41,7 +35,7 @@ func main() {
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
 
 	hAProxyController := HAProxyController{}
-	hAProxyController.Start()
+	hAProxyController.Start(osArgs)
 
 	//TODO wait channel
 	for {

@@ -21,11 +21,14 @@ import (
 type HAProxyController struct {
 	k8s       *K8s
 	cfg       Configuration
+	osArgs    OSArgs
 	NativeAPI *clientnative.HAProxyClient
 }
 
 // Start initialize and run HAProxyController
-func (c *HAProxyController) Start() {
+func (c *HAProxyController) Start(osArgs OSArgs) {
+
+	c.osArgs = osArgs
 
 	go c.ReloadHAProxy()
 
@@ -151,9 +154,10 @@ func (c *HAProxyController) watchChanges(namespaces watch.Interface, services wa
 			//only config with name=haproxy-configmap is interesting
 			if obj.ObjectMeta.GetName() == "haproxy-configmap" {
 				configMap := &ConfigMap{
-					Name:  obj.GetName(),
-					Data:  obj.Data,
-					Watch: msg.Type,
+					Name:      obj.GetName(),
+					Namespace: obj.Namespace,
+					Data:      obj.Data,
+					Watch:     msg.Type,
 				}
 				eventChan <- SyncDataEvent{SyncType: CONFIGMAP, Data: configMap}
 			}
@@ -207,14 +211,15 @@ func (c *HAProxyController) eventNamespace(data *Namespace) bool {
 	updateRequired := false
 	switch data.Watch {
 	case watch.Added:
-		ns := c.cfg.GetNamespace(data.Name)
-		log.Println("Namespace added", ns.Name)
+		_ = c.cfg.GetNamespace(data.Name)
+		//ns := c.cfg.GetNamespace(data.Name)
+		//log.Println("Namespace added", ns.Name)
 		updateRequired = true
 	case watch.Deleted:
 		_, ok := c.cfg.Namespace[data.Name]
 		if ok {
 			delete(c.cfg.Namespace, data.Name)
-			log.Println("Namespace deleted", data.Name)
+			//log.Println("Namespace deleted", data.Name)
 			updateRequired = true
 		} else {
 			log.Println("Namespace not registered with controller, cannot delete !", data.Name)
@@ -272,21 +277,20 @@ func (c *HAProxyController) eventIngress(data *Ingress) bool {
 			}
 		}
 		ns.Ingresses[data.Name] = newIngress
-		diffStr := cmp.Diff(oldIngress, newIngress)
-		log.Println("Ingress modified", data.Name, "\n", diffStr)
+		//diffStr := cmp.Diff(oldIngress, newIngress)
+		//log.Println("Ingress modified", data.Name, "\n", diffStr)
 		diff := cmp.Equal(oldIngress, newIngress)
 		log.Println(diff)
 		updateRequired = true
 	case watch.Added:
 		ns := c.cfg.GetNamespace(data.Namespace)
 		ns.Ingresses[data.Name] = data
-		log.Println("Ingress added", data.Name)
+		//log.Println("Ingress added", data.Name)
 		updateRequired = true
 	case watch.Deleted:
 		ns := c.cfg.GetNamespace(data.Namespace)
 		ingress, ok := ns.Ingresses[data.Name]
 		if ok {
-			//delete(ns.Ingresses, data.Name)
 			ingress.Watch = watch.Deleted
 			for _, rule := range ingress.Rules {
 				rule.Watch = watch.Deleted
@@ -294,7 +298,7 @@ func (c *HAProxyController) eventIngress(data *Ingress) bool {
 					path.Watch = watch.Deleted
 				}
 			}
-			log.Println("Ingress deleted", data.Name)
+			//log.Println("Ingress deleted", data.Name)
 			updateRequired = true
 		} else {
 			log.Println("Ingress not registered with controller, cannot delete !", data.Name)
@@ -309,27 +313,27 @@ func (c *HAProxyController) eventService(data *Service) bool {
 	case watch.Modified:
 		newService := data
 		ns := c.cfg.GetNamespace(data.Namespace)
-		oldService, ok := ns.Services[data.Name]
+		//oldService, ok := ns.Services[data.Name]
+		_, ok := ns.Services[data.Name]
 		if !ok {
 			//intentionally do not add it. TODO see if our idea of only watching is ok
 			log.Println("Service not registered with controller, cannot modify !", data.Name)
 		}
 		ns.Services[data.Name] = newService
-		result := cmp.Diff(oldService, newService)
-		log.Println("Service modified", data.Name, "\n", result)
+		//result := cmp.Diff(oldService, newService)
+		//log.Println("Service modified", data.Name, "\n", result)
 		updateRequired = true
 	case watch.Added:
 		ns := c.cfg.GetNamespace(data.Namespace)
 		ns.Services[data.Name] = data
-		log.Println("Service added", data.Name)
+		//log.Println("Service added", data.Name)
 		updateRequired = true
 	case watch.Deleted:
 		ns := c.cfg.GetNamespace(data.Namespace)
 		_, ok := ns.Services[data.Name]
 		if ok {
 			ns.Services[data.Name] = data
-			//delete(ns.Services, data.Name)
-			log.Println("Service deleted", data.Name)
+			//log.Println("Service deleted", data.Name)
 			updateRequired = true
 		} else {
 			log.Println("Service not registered with controller, cannot delete !", data.Name)
@@ -356,8 +360,8 @@ func (c *HAProxyController) eventPod(data *Pod) bool {
 			newPod.Watch = watch.Added
 		}
 		ns.Pods[data.Name] = newPod
-		result := cmp.Diff(oldPod, newPod)
-		log.Println("Pod modified", data.Name, oldPod.Status, "\n", newPod.HAProxyName, oldPod.HAProxyName, "/n", result)
+		//result := cmp.Diff(oldPod, newPod)
+		//log.Println("Pod modified", data.Name, oldPod.Status, "\n", newPod.HAProxyName, oldPod.HAProxyName, "/n", result)
 		updateRequired = true
 	case watch.Added:
 		ns := c.cfg.GetNamespace(data.Namespace)
@@ -388,7 +392,7 @@ func (c *HAProxyController) eventPod(data *Pod) bool {
 			}
 			ns.PodNames[data.HAProxyName] = true
 			ns.Pods[data.Name] = data
-			log.Println("Pod added", data.Name)
+			//log.Println("Pod added", data.Name)
 			updateRequired = true
 		}
 	case watch.Deleted:
@@ -400,7 +404,7 @@ func (c *HAProxyController) eventPod(data *Pod) bool {
 			oldPod.Maintenance = true
 			//delete(ns.Pods, data.Name)
 			oldPod, _ = ns.Pods[data.Name]
-			log.Println("Pod set for deletion", oldPod)
+			//log.Println("Pod set for deletion", oldPod)
 			//update immediately
 			updateRequired = true
 		} else {
@@ -412,28 +416,32 @@ func (c *HAProxyController) eventPod(data *Pod) bool {
 
 func (c *HAProxyController) eventConfigMap(data *ConfigMap) bool {
 	updateRequired := false
+	if data.Namespace != c.osArgs.ConfigMap.Namespace ||
+		data.Name != c.osArgs.ConfigMap.Name {
+		return updateRequired
+	}
 	switch data.Watch {
 	case watch.Modified:
 		newConfigMap := data
-		oldConfigMap, ok := c.cfg.ConfigMap[data.Name]
+		//oldConfigMap, ok := c.cfg.ConfigMap[data.Name]
+		_, ok := c.cfg.ConfigMap[data.Name]
 		if !ok {
 			//intentionally do not add it. TODO see if our idea of only watching is ok
 			log.Println("ConfigMap not registered with controller, cannot modify !", data.Name)
 		}
 		c.cfg.ConfigMap[data.Name] = newConfigMap
-		result := cmp.Diff(oldConfigMap, newConfigMap)
-		log.Println("ConfigMap modified", data.Name, "\n", result)
+		//result := cmp.Diff(oldConfigMap, newConfigMap)
+		//log.Println("ConfigMap modified", data.Name, "\n", result)
 		updateRequired = true
 	case watch.Added:
 		c.cfg.ConfigMap[data.Name] = data
-		log.Println("ConfigMap added", data.Name)
+		//log.Println("ConfigMap added", data.Name)
 		updateRequired = true
 	case watch.Deleted:
 		_, ok := c.cfg.ConfigMap[data.Name]
 		if ok {
 			c.cfg.ConfigMap[data.Name] = data
-			//delete(c.cfg.ConfigMap, data.Name)
-			log.Println("ConfigMap set for deletion", data.Name)
+			//log.Println("ConfigMap set for deletion", data.Name)
 			updateRequired = true
 		} else {
 			log.Println("ConfigMap not registered with controller, cannot delete !", data.Name)
@@ -446,24 +454,24 @@ func (c *HAProxyController) eventSecret(data *Secret) bool {
 	switch data.Watch {
 	case watch.Modified:
 		newSecret := data
-		oldSecret, ok := c.cfg.Secret[data.Name]
+		//oldSecret, ok := c.cfg.Secret[data.Name]
+		_, ok := c.cfg.Secret[data.Name]
 		if !ok {
 			//intentionally do not add it. TODO see if our idea of only watching is ok
 			log.Println("Secret not registered with controller, cannot modify !", data.Name)
 		}
 		c.cfg.Secret[data.Name] = newSecret
-		result := cmp.Diff(oldSecret, newSecret)
-		log.Println("Secret modified", data.Name, "\n", result)
+		//result := cmp.Diff(oldSecret, newSecret)
+		//log.Println("Secret modified", data.Name, "\n", result)
 		updateRequired = true
 	case watch.Added:
 		c.cfg.Secret[data.Name] = data
-		log.Println("Secret added", data.Name)
+		//log.Println("Secret added", data.Name)
 		updateRequired = true
 	case watch.Deleted:
 		_, ok := c.cfg.Secret[data.Name]
 		if ok {
-			//delete(c.cfg.Secret, data.Name)
-			log.Println("Secret set for deletion", data.Name)
+			//log.Println("Secret set for deletion", data.Name)
 			updateRequired = true
 		} else {
 			log.Println("Secret not registered with controller, cannot delete !", data.Name)

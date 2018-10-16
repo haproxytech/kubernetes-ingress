@@ -2,7 +2,6 @@ package main
 
 import (
 	"errors"
-	"log"
 
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/watch"
@@ -56,11 +55,9 @@ type Namespace struct {
 }
 
 func (n *Namespace) GetServiceForPod(labels map[string]string) (*Service, error) {
-	log.Println("GetServiceForPod", labels)
 	for _, service := range n.Services {
 		if hasSelectors(labels, service.Selector) {
 			return service, nil
-			log.Println("GetServiceForPod FOUND", labels, service)
 		}
 	}
 	return nil, errors.New("service not found")
@@ -99,9 +96,10 @@ type Ingress struct {
 }
 
 type ConfigMap struct {
-	Name  string
-	Data  map[string]string
-	Watch watch.EventType
+	Name      string
+	Namespace string
+	Data      map[string]string
+	Watch     watch.EventType
 }
 
 type Secret struct {

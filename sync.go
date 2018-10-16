@@ -16,10 +16,4 @@ const (
 type SyncDataEvent struct {
 	SyncType
 	Data interface{}
-	/*Namespace Namespace
-	Service   Service
-	Pod       Pod
-	Ingress   Ingress
-	ConfigMap ConfigMap
-	Secret    Secret*/
 }
