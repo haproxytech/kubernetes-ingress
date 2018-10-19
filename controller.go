@@ -646,7 +646,9 @@ func (c *HAProxyController) handleService(frontendHTTP string, namespace *Namesp
 	backendName = fmt.Sprintf("%s-%s-%d", namespace.Name, service.Name, path.ServicePort)
 	backendsUsed[backendName]++
 	condTest := "{ req.hdr(host) -i " + rule.Host + " } { var(txn.path) -m beg " + path.Path + " } "
+	//both load-balance and forwarded-for have default values, so no need for error checking
 	balanceAlg, _ := GetValueFromAnnotations("load-balance", service.Annotations, c.cfg.ConfigMap.Annotations)
+	forwardedFor, _ := GetValueFromAnnotations("forwarded-for", service.Annotations, c.cfg.ConfigMap.Annotations)
 
 	switch service.Status {
 	case watch.Added:
@@ -655,6 +657,9 @@ func (c *HAProxyController) handleService(frontendHTTP string, namespace *Namesp
 				Balance:  balanceAlg.Value,
 				Name:     backendName,
 				Protocol: "http",
+			}
+			if forwardedFor.Value == "enabled" { //disabled with anything else is ok
+				backend.HTTPXffHeaderInsert = "enabled"
 			}
 			if err := nativeAPI.Configuration.CreateBackend(backend, transaction.ID, 0); err != nil {
 				log.Println("CreateBackend", err)
@@ -683,18 +688,25 @@ func (c *HAProxyController) handleService(frontendHTTP string, namespace *Namesp
 		return "", nil, nil
 	}
 
-	log.Println(backendName, "load-balance", balanceAlg)
-	if balanceAlg.Status != "" {
-		// don't worry about deleted state, load-balance has default value
-		backend := &models.Backend{
-			Balance:  balanceAlg.Value,
-			Name:     backendName,
-			Protocol: "http",
-		}
-		if err := nativeAPI.Configuration.EditBackend(backend.Name, backend, transaction.ID, 0); err != nil {
-			log.Println("EditBackend", err)
+	if balanceAlg.Status != "" || forwardedFor.Status != "" {
+		if err = c.handleBackendAnnotations(balanceAlg, forwardedFor, backendName, transaction); err != nil {
 			return "", nil, err
 		}
 	}
 	return backendName, selector, nil
+}
+
+func (c *HAProxyController) handleBackendAnnotations(balanceAlg, forwardedFor *StringW, backendName string, transaction *models.Transaction) error {
+	backend := &models.Backend{
+		Balance:  balanceAlg.Value,
+		Name:     backendName,
+		Protocol: "http",
+	}
+	if forwardedFor.Value == "enabled" { //disabled with anything else is ok
+		backend.HTTPXffHeaderInsert = "enabled"
+	}
+	if err := c.NativeAPI.Configuration.EditBackend(backend.Name, backend, transaction.ID, 0); err != nil {
+		return err
+	}
+	return nil
 }

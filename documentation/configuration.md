@@ -11,9 +11,14 @@
 | Option        | Anotation | Type | Default | Dependencies | Config map | Ingress | Service | Example |
 | - | - |:-:|:-:|:-:|:-:|:-:|:-:|:-:|
 | Balance Algorithm | [load-balance](#load-balance) | string | "roundrobin" |  |:large_blue_circle:|:white_circle:|:large_blue_circle:||
-| Force Https   | [ssl-redirect](#ssl-redirect) | bool | "true" | [tls-secret](#tls-secret) |:large_blue_circle:|:white_circle:|:white_circle:||
+| Force Https | [ssl-redirect](#ssl-redirect) | bool | "true" | [tls-secret](#tls-secret) |:large_blue_circle:|:white_circle:|:white_circle:||
+| X-Forwarded-For | [forwarded-for](#forwarded-for) | ["enabled", "disabled"] | "enabled" |  |:large_blue_circle:|:white_circle:|:large_blue_circle:||
 
 ### Options
+
+#### forwarded-for
+
+- by default enabled, can be disabled per service
 
 #### load-balance
 
