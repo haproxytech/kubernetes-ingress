@@ -3,7 +3,6 @@ package main
 import (
 	"log"
 	"math/rand"
-	"strings"
 
 	"k8s.io/api/extensions/v1beta1"
 	"k8s.io/apimachinery/pkg/watch"
@@ -36,12 +35,6 @@ func hasSelectors(selectors MapStringW, values MapStringW) bool {
 		}
 	}
 	return true
-}
-
-func WriteBufferedString(builder *strings.Builder, data ...string) {
-	for _, chunk := range data {
-		builder.WriteString(chunk)
-	}
 }
 
 var chars = []rune("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")

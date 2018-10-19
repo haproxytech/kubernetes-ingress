@@ -1,5 +1,6 @@
 package main
 
+//SyncType represents type of k8s received message
 type SyncType string
 
 //SyncType values
@@ -13,6 +14,7 @@ const (
 	SECRET    SyncType = "SECRET"
 )
 
+//SyncDataEvent represents converted k8s received message
 type SyncDataEvent struct {
 	_ [0]int
 	SyncType

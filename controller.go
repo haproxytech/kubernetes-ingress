@@ -32,7 +32,7 @@ func (c *HAProxyController) Start(osArgs OSArgs) {
 
 	c.osArgs = osArgs
 
-	go c.ReloadHAProxy()
+	go c.InitializeHAProxy()
 
 	k8s, err := GetKubernetesClient()
 	if err != nil {
@@ -83,7 +83,7 @@ func (c *HAProxyController) Start(osArgs OSArgs) {
 }
 
 //InitializeHAProxy runs HAProxy for the first time so native client can have access to it
-func (c *HAProxyController) ReloadHAProxy() {
+func (c *HAProxyController) InitializeHAProxy() {
 	//cmd := exec.Command("haproxy", "-f", HAProxyCFG)
 	log.Println("Starting HAProxy with", HAProxyCFG)
 	cmd := exec.Command("haproxy", "-f", HAProxyCFG)
@@ -187,7 +187,7 @@ func (c *HAProxyController) SyncData(jobChan <-chan SyncDataEvent) {
 		case COMMAND:
 			if hadChanges {
 				log.Println("job processing", job.SyncType)
-				c.UpdateHAProxy()
+				c.updateHAProxy()
 				hadChanges = false
 			}
 		case NAMESPACE:
@@ -462,7 +462,7 @@ func (c *HAProxyController) eventSecret(ns *Namespace, data *Secret) bool {
 	return updateRequired
 }
 
-func (c *HAProxyController) UpdateHAProxy() error {
+func (c *HAProxyController) updateHAProxy() error {
 	nativeAPI := c.NativeAPI
 	//backend, err := nativeAPI.Configuration.GetBackend("default-http-svc-8080")
 	//log.Println(backend, err)
@@ -495,48 +495,48 @@ func (c *HAProxyController) UpdateHAProxy() error {
 					log.Println("missing tls.crt")
 					return errors.New("missing tls.crt")
 				}
-				if f, err := os.Create(HAProxyCERT); err != nil {
+				var f *os.File
+				if f, err = os.Create(HAProxyCERT); err != nil {
 					log.Println(err)
 					return err
-				} else {
-					defer f.Close()
-					if _, err = f.Write(key); err != nil {
-						log.Println(err)
+				}
+				defer f.Close()
+				if _, err = f.Write(key); err != nil {
+					log.Println(err)
+					return err
+				}
+				if _, err = f.Write(crt); err != nil {
+					log.Println(err)
+					return err
+				}
+				if err = f.Sync(); err != nil {
+					log.Println(err)
+					return err
+				}
+				if err = f.Close(); err != nil {
+					log.Println(err)
+					return err
+				}
+				port := int64(443)
+				listener := &models.Listener{
+					Address:        "0.0.0.0",
+					Name:           "https",
+					Port:           &port,
+					Ssl:            "enabled",
+					SslCertificate: HAProxyCERT,
+				}
+				switch secret.Status {
+				case watch.Added:
+					if err = nativeAPI.Configuration.CreateListener(frontendHTTP, listener, transaction.ID, 0); err != nil {
 						return err
 					}
-					if _, err = f.Write(crt); err != nil {
-						log.Println(err)
+				case watch.Modified:
+					if err = nativeAPI.Configuration.EditListener(listener.Name, frontendHTTP, listener, transaction.ID, 0); err != nil {
 						return err
 					}
-					if err = f.Sync(); err != nil {
-						log.Println(err)
+				case watch.Deleted:
+					if err = nativeAPI.Configuration.DeleteListener(listener.Name, frontendHTTP, transaction.ID, 0); err != nil {
 						return err
-					}
-					if err = f.Close(); err != nil {
-						log.Println(err)
-						return err
-					}
-					port := int64(443)
-					listener := &models.Listener{
-						Address:        "0.0.0.0",
-						Name:           "https",
-						Port:           &port,
-						Ssl:            "enabled",
-						SslCertificate: HAProxyCERT,
-					}
-					switch secret.Status {
-					case watch.Added:
-						if err = nativeAPI.Configuration.CreateListener(frontendHTTP, listener, transaction.ID, 0); err != nil {
-							return err
-						}
-					case watch.Modified:
-						if err = nativeAPI.Configuration.EditListener(listener.Name, frontendHTTP, listener, transaction.ID, 0); err != nil {
-							return err
-						}
-					case watch.Deleted:
-						if err = nativeAPI.Configuration.DeleteListener(listener.Name, frontendHTTP, transaction.ID, 0); err != nil {
-							return err
-						}
 					}
 				}
 
@@ -579,7 +579,7 @@ func (c *HAProxyController) UpdateHAProxy() error {
 	log.Println("Transaction successfull")
 	c.cfg.Clean()
 
-	log.Println("UpdateHAProxy ended")
+	log.Println("updateHAProxy ended")
 	return nil
 }
 

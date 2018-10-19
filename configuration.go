@@ -5,17 +5,20 @@ import (
 	"k8s.io/apimachinery/pkg/watch"
 )
 
+//Configuration represents k8s state
 type Configuration struct {
 	Namespace map[string]*Namespace
 	ConfigMap *ConfigMap
 	NativeAPI *clientnative.HAProxyClient
 }
 
+//Init itialize configuration
 func (c *Configuration) Init(api *clientnative.HAProxyClient) {
 	c.Namespace = make(map[string]*Namespace)
 	c.NativeAPI = api
 }
 
+//GetNamespace returns Namespace. Creates one if not existing
 func (c *Configuration) GetNamespace(name string) *Namespace {
 	namespace, ok := c.Namespace[name]
 	if ok {
@@ -26,6 +29,7 @@ func (c *Configuration) GetNamespace(name string) *Namespace {
 	return newNamespace
 }
 
+//NewNamespace returns new initialized Namespace
 func (c *Configuration) NewNamespace(name string) *Namespace {
 	namespace := &Namespace{
 		Name:     name,

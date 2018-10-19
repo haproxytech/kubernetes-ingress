@@ -7,18 +7,7 @@ import (
 	"k8s.io/apimachinery/pkg/watch"
 )
 
-/*//StructStatus state of the struck in any given moment
-//mostly used to distinguish processed ones from one that are OK
-type StructStatus string
-
-//StructStatus possible states
-const (
-	StructStatusNormal   StructStatus = "NORMAL"
-	StructStatusAdded    StructStatus = "ADDED"
-	StructStatusModified StructStatus = "MODIFIED"
-	StructStatusDeleted  StructStatus = "DELETED"
-)*/
-
+//Pod is usefull data from k8s structures about pod
 type Pod struct {
 	IP          string
 	Labels      MapStringW
@@ -30,6 +19,7 @@ type Pod struct {
 	Status      watch.EventType
 }
 
+//Service is usefull data from k8s structures about service
 type Service struct {
 	Name       string
 	ClusterIP  string
@@ -41,6 +31,7 @@ type Service struct {
 	Status      watch.EventType
 }
 
+//Namespace is usefull data from k8s structures about namespace
 type Namespace struct {
 	_         [0]int
 	Name      string
@@ -53,6 +44,7 @@ type Namespace struct {
 	Status    watch.EventType
 }
 
+//GetServiceForPod returns all services that are using this pod
 func (n *Namespace) GetServiceForPod(labels MapStringW) (*Service, error) {
 	for _, service := range n.Services {
 		if hasSelectors(labels, service.Selector) {
@@ -62,6 +54,7 @@ func (n *Namespace) GetServiceForPod(labels MapStringW) (*Service, error) {
 	return nil, errors.New("service not found")
 }
 
+//GetPodsForSelector returns all pod for defined selector
 func (n *Namespace) GetPodsForSelector(selector MapStringW) map[string]*Pod {
 	pods := make(map[string]*Pod)
 	for _, pod := range n.Pods {
@@ -72,6 +65,7 @@ func (n *Namespace) GetPodsForSelector(selector MapStringW) map[string]*Pod {
 	return pods
 }
 
+//IngressPath is usefull data from k8s structures about ingress path
 type IngressPath struct {
 	ServiceName string
 	ServicePort int
@@ -79,26 +73,29 @@ type IngressPath struct {
 	Status      watch.EventType
 }
 
+//IngressRule is usefull data from k8s structures about ingress rule
 type IngressRule struct {
 	Host   string
 	Paths  map[string]*IngressPath
 	Status watch.EventType
 }
 
+//Ingress is usefull data from k8s structures about ingress
 type Ingress struct {
 	Name        string
 	Annotations MapStringW
 	Rules       map[string]*IngressRule
-	//Rules       []v1beta1.IngressRule
-	Status watch.EventType
+	Status      watch.EventType
 }
 
+//ConfigMap is usefull data from k8s structures about configmap
 type ConfigMap struct {
 	Name        string
 	Annotations MapStringW
 	Status      watch.EventType
 }
 
+//Secret is usefull data from k8s structures about secret
 type Secret struct {
 	Name   string
 	Data   map[string][]byte
