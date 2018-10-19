@@ -31,7 +31,7 @@ func (n NamespaceValue) MarshalFlag() (string, error) {
 //OSArgs contains arguments that can be sent to controller
 type OSArgs struct {
 	Version            []bool         `short:"v" long:"version" description:"Verbose output"`
-	DefaultService     NamespaceValue `long:"default-backend-service" description:"default service to serve 404 page. If not specified HAProxy serves http 400" default:"default/ingress-default-backend"`
+	DefaultService     NamespaceValue `long:"default-backend-service" description:"default service to serve 404 page. If not specified HAProxy serves http 400" default:""`
 	DefaultCertificate NamespaceValue `long:"default-ssl-certificate" description:"secret name of the certificate" default:"default/tls-secret"`
 	ConfigMap          NamespaceValue `long:"configmap" description:"configmap designated for HAProxy" default:"default/haproxy-configmap"`
 }

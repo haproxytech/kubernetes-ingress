@@ -7,6 +7,7 @@ import (
 
 type Configuration struct {
 	Namespace map[string]*Namespace
+	ConfigMap *ConfigMap
 	NativeAPI *clientnative.HAProxyClient
 }
 
@@ -34,9 +35,8 @@ func (c *Configuration) NewNamespace(name string) *Namespace {
 		PodNames:  make(map[string]bool),
 		Services:  make(map[string]*Service),
 		Ingresses: make(map[string]*Ingress),
-		ConfigMap: make(map[string]*ConfigMap),
 		Secret:    make(map[string]*Secret),
-		Watch:     watch.Added,
+		Status:    watch.Added,
 	}
 	return namespace
 }
@@ -47,45 +47,62 @@ func (c *Configuration) Clean() {
 	for _, namespace := range c.Namespace {
 		for _, data := range namespace.Ingresses {
 			for _, rule := range data.Rules {
-				switch rule.Watch {
+				switch rule.Status {
 				case watch.Deleted:
 					delete(data.Rules, rule.Host)
 					continue
 				default:
-					rule.Watch = ""
+					rule.Status = ""
 					for _, path := range rule.Paths {
-						switch path.Watch {
+						switch path.Status {
 						case watch.Deleted:
 							delete(rule.Paths, path.Path)
 						default:
-							path.Watch = ""
+							path.Status = ""
 						}
 					}
 				}
 			}
-			switch data.Watch {
+			data.Annotations.SetStatusState("")
+			switch data.Status {
 			case watch.Deleted:
 				delete(namespace.Ingresses, data.Name)
 			default:
-				data.Watch = ""
+				data.Status = ""
 			}
 		}
 		for _, data := range namespace.Services {
-			switch data.Watch {
+			data.Annotations.SetStatusState("")
+			switch data.Status {
 			case watch.Deleted:
 				delete(namespace.Services, data.Name)
 			default:
-				data.Watch = ""
+				data.Status = ""
 			}
 		}
 		for _, data := range namespace.Pods {
-			switch data.Watch {
+			switch data.Status {
 			case watch.Deleted:
 				delete(namespace.PodNames, data.HAProxyName)
 				delete(namespace.Pods, data.Name)
 			default:
-				data.Watch = ""
+				data.Status = ""
 			}
 		}
+		for _, data := range namespace.Secret {
+			switch data.Status {
+			case watch.Deleted:
+				delete(namespace.Secret, data.Name)
+			default:
+				data.Status = ""
+			}
+		}
+	}
+	c.ConfigMap.Annotations.SetStatusState("")
+	switch c.ConfigMap.Status {
+	case watch.Deleted:
+		c.ConfigMap = nil
+	default:
+		c.ConfigMap.Status = ""
 	}
 }

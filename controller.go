@@ -110,9 +110,8 @@ func (c *HAProxyController) watchChanges(namespaces watch.Interface, services wa
 				PodNames:  make(map[string]bool),
 				Services:  make(map[string]*Service),
 				Ingresses: make(map[string]*Ingress),
-				ConfigMap: make(map[string]*ConfigMap),
 				Secret:    make(map[string]*Secret),
-				Watch:     msg.Type,
+				Status:    msg.Type,
 			}
 			eventChan <- SyncDataEvent{SyncType: NAMESPACE, Namespace: obj.GetName(), Data: namespace}
 		case msg := <-services.ResultChan():
@@ -123,30 +122,30 @@ func (c *HAProxyController) watchChanges(namespaces watch.Interface, services wa
 				//ExternalIP: "string",
 				Ports: obj.Spec.Ports,
 
-				Annotations: obj.ObjectMeta.Annotations,
-				Selector:    obj.Spec.Selector,
-				Watch:       msg.Type,
+				Annotations: ConvertToMapStringW(obj.ObjectMeta.Annotations),
+				Selector:    ConvertToMapStringW(obj.Spec.Selector),
+				Status:      msg.Type,
 			}
 			eventChan <- SyncDataEvent{SyncType: SERVICE, Namespace: obj.GetNamespace(), Data: svc}
 		case msg := <-pods.ResultChan():
 			obj := msg.Object.(*corev1.Pod)
 			//LogWatchEvent(msg.Type, POD, obj)
 			pod := &Pod{
-				Name:   obj.GetName(),
-				Labels: obj.Labels,
-				IP:     obj.Status.PodIP,
-				Status: obj.Status.Phase,
+				Name:     obj.GetName(),
+				Labels:   ConvertToMapStringW(obj.Labels),
+				IP:       obj.Status.PodIP,
+				PodPhase: obj.Status.Phase,
 				//Port:      obj.Status. ? yes no, check
-				Watch: msg.Type,
+				Status: msg.Type,
 			}
 			eventChan <- SyncDataEvent{SyncType: POD, Namespace: obj.GetNamespace(), Data: pod}
 		case msg := <-ingresses.ResultChan():
 			obj := msg.Object.(*extensionsv1beta1.Ingress)
 			ingress := &Ingress{
 				Name:        obj.GetName(),
-				Annotations: obj.ObjectMeta.Annotations,
+				Annotations: ConvertToMapStringW(obj.ObjectMeta.Annotations),
 				Rules:       ConvertIngressRules(obj.Spec.Rules),
-				Watch:       msg.Type,
+				Status:      msg.Type,
 			}
 			eventChan <- SyncDataEvent{SyncType: INGRESS, Namespace: obj.GetNamespace(), Data: ingress}
 		case msg := <-configMapWatch.ResultChan():
@@ -154,18 +153,18 @@ func (c *HAProxyController) watchChanges(namespaces watch.Interface, services wa
 			//only config with name=haproxy-configmap is interesting
 			if obj.ObjectMeta.GetName() == "haproxy-configmap" {
 				configMap := &ConfigMap{
-					Name:  obj.GetName(),
-					Data:  obj.Data,
-					Watch: msg.Type,
+					Name:        obj.GetName(),
+					Annotations: ConvertToMapStringW(obj.Data),
+					Status:      msg.Type,
 				}
 				eventChan <- SyncDataEvent{SyncType: CONFIGMAP, Namespace: obj.GetNamespace(), Data: configMap}
 			}
 		case msg := <-secretsWatch.ResultChan():
 			obj := msg.Object.(*corev1.Secret)
 			secret := &Secret{
-				Name:  obj.ObjectMeta.GetName(),
-				Data:  obj.Data,
-				Watch: msg.Type,
+				Name:   obj.ObjectMeta.GetName(),
+				Data:   obj.Data,
+				Status: msg.Type,
 			}
 			eventChan <- SyncDataEvent{SyncType: SECRET, Namespace: obj.GetNamespace(), Data: secret}
 		case <-time.After(time.Duration(syncEveryNSeconds) * time.Second):
@@ -209,7 +208,7 @@ func (c *HAProxyController) SyncData(jobChan <-chan SyncDataEvent) {
 
 func (c *HAProxyController) eventNamespace(ns *Namespace, data *Namespace) bool {
 	updateRequired := false
-	switch data.Watch {
+	switch data.Status {
 	case watch.Added:
 		_ = c.cfg.GetNamespace(data.Name)
 		//ns := c.cfg.GetNamespace(data.Name)
@@ -230,10 +229,11 @@ func (c *HAProxyController) eventNamespace(ns *Namespace, data *Namespace) bool 
 
 func (c *HAProxyController) eventIngress(ns *Namespace, data *Ingress) bool {
 	updateRequired := false
-	switch data.Watch {
+	switch data.Status {
 	case watch.Modified:
 		newIngress := data
 		oldIngress, ok := ns.Ingresses[data.Name]
+		newIngress.Annotations.SetStatus(oldIngress.Annotations)
 		if !ok {
 			//intentionally do not add it. TODO see if idea of only watching is ok
 			log.Println("Ingress not registered with controller, cannot modify !", data.Name)
@@ -248,29 +248,29 @@ func (c *HAProxyController) eventIngress(ns *Namespace, data *Ingress) bool {
 						//compare path for differences
 						if newPath.ServiceName != oldPath.ServiceName ||
 							newPath.ServicePort != oldPath.ServicePort {
-							newPath.Watch = watch.Modified
-							newRule.Watch = watch.Modified
+							newPath.Status = watch.Modified
+							newRule.Status = watch.Modified
 						}
 					} else {
-						newPath.Watch = watch.Modified
-						newRule.Watch = watch.Modified
+						newPath.Status = watch.Modified
+						newRule.Status = watch.Modified
 					}
 				}
 				for _, oldPath := range oldRule.Paths {
 					if _, ok := newRule.Paths[oldPath.Path]; ok {
-						oldPath.Watch = watch.Deleted
+						oldPath.Status = watch.Deleted
 						newRule.Paths[oldPath.Path] = oldPath
 					}
 				}
 			} else {
-				newRule.Watch = watch.Added
+				newRule.Status = watch.Added
 			}
 		}
 		for _, oldRule := range oldIngress.Rules {
 			if _, ok := newIngress.Rules[oldRule.Host]; !ok {
-				oldRule.Watch = watch.Deleted
+				oldRule.Status = watch.Deleted
 				for _, path := range oldRule.Paths {
-					path.Watch = watch.Deleted
+					path.Status = watch.Deleted
 				}
 				newIngress.Rules[oldRule.Host] = oldRule
 			}
@@ -288,13 +288,14 @@ func (c *HAProxyController) eventIngress(ns *Namespace, data *Ingress) bool {
 	case watch.Deleted:
 		ingress, ok := ns.Ingresses[data.Name]
 		if ok {
-			ingress.Watch = watch.Deleted
+			ingress.Status = watch.Deleted
 			for _, rule := range ingress.Rules {
-				rule.Watch = watch.Deleted
+				rule.Status = watch.Deleted
 				for _, path := range rule.Paths {
-					path.Watch = watch.Deleted
+					path.Status = watch.Deleted
 				}
 			}
+			ingress.Annotations.SetStatusState(watch.Deleted)
 			//log.Println("Ingress deleted", data.Name)
 			updateRequired = true
 		} else {
@@ -306,11 +307,11 @@ func (c *HAProxyController) eventIngress(ns *Namespace, data *Ingress) bool {
 
 func (c *HAProxyController) eventService(ns *Namespace, data *Service) bool {
 	updateRequired := false
-	switch data.Watch {
+	switch data.Status {
 	case watch.Modified:
 		newService := data
-		//oldService, ok := ns.Services[data.Name]
-		_, ok := ns.Services[data.Name]
+		oldService, ok := ns.Services[data.Name]
+		newService.Annotations.SetStatus(oldService.Annotations)
 		if !ok {
 			//intentionally do not add it. TODO see if our idea of only watching is ok
 			log.Println("Service not registered with controller, cannot modify !", data.Name)
@@ -324,9 +325,10 @@ func (c *HAProxyController) eventService(ns *Namespace, data *Service) bool {
 		//log.Println("Service added", data.Name)
 		updateRequired = true
 	case watch.Deleted:
-		_, ok := ns.Services[data.Name]
+		service, ok := ns.Services[data.Name]
 		if ok {
-			ns.Services[data.Name] = data
+			service.Status = watch.Deleted
+			service.Annotations.SetStatusState(watch.Deleted)
 			//log.Println("Service deleted", data.Name)
 			updateRequired = true
 		} else {
@@ -338,7 +340,7 @@ func (c *HAProxyController) eventService(ns *Namespace, data *Service) bool {
 
 func (c *HAProxyController) eventPod(ns *Namespace, data *Pod) bool {
 	updateRequired := false
-	switch data.Watch {
+	switch data.Status {
 	case watch.Modified:
 		newPod := data
 		var oldPod *Pod
@@ -349,8 +351,8 @@ func (c *HAProxyController) eventPod(ns *Namespace, data *Pod) bool {
 			return updateRequired
 		}
 		newPod.HAProxyName = oldPod.HAProxyName
-		if oldPod.Watch == watch.Added {
-			newPod.Watch = watch.Added
+		if oldPod.Status == watch.Added {
+			newPod.Status = watch.Added
 		}
 		ns.Pods[data.Name] = newPod
 		//result := cmp.Diff(oldPod, newPod)
@@ -368,7 +370,7 @@ func (c *HAProxyController) eventPod(ns *Namespace, data *Pod) bool {
 					log.Println("found pod in maintenace mode", pod.Name, pod.HAProxyName, service.Name, hasSelectors(service.Selector, pod.Labels), service.Selector, pod.Labels)
 					createNew = false
 					data.Maintenance = false
-					data.Watch = watch.Modified
+					data.Status = watch.Modified
 					data.HAProxyName = pod.HAProxyName
 					ns.Pods[data.Name] = data
 					delete(ns.Pods, pod.Name)
@@ -391,7 +393,7 @@ func (c *HAProxyController) eventPod(ns *Namespace, data *Pod) bool {
 		oldPod, ok := ns.Pods[data.Name]
 		if ok {
 			oldPod.IP = "127.0.0.1"
-			oldPod.Watch = watch.Modified //we replace it with disabled one
+			oldPod.Status = watch.Modified //we replace it with disabled one
 			oldPod.Maintenance = true
 			//delete(ns.Pods, data.Name)
 			oldPod, _ = ns.Pods[data.Name]
@@ -411,38 +413,27 @@ func (c *HAProxyController) eventConfigMap(ns *Namespace, data *ConfigMap) bool 
 		data.Name != c.osArgs.ConfigMap.Name {
 		return updateRequired
 	}
-	switch data.Watch {
+	switch data.Status {
 	case watch.Modified:
-		newConfigMap := data
-		//oldConfigMap, ok := c.cfg.ConfigMap[data.Name]
-		_, ok := ns.ConfigMap[data.Name]
-		if !ok {
-			//intentionally do not add it. TODO see if our idea of only watching is ok
-			log.Println("ConfigMap not registered with controller, cannot modify !", data.Name)
+		different := data.Annotations.SetStatus(c.cfg.ConfigMap.Annotations)
+		c.cfg.ConfigMap = data
+		if !different {
+			data.Status = ""
+		} else {
+			updateRequired = true
 		}
-		ns.ConfigMap[data.Name] = newConfigMap
-		//result := cmp.Diff(oldConfigMap, newConfigMap)
-		//log.Println("ConfigMap modified", data.Name, "\n", result)
-		updateRequired = true
 	case watch.Added:
-		ns.ConfigMap[data.Name] = data
-		//log.Println("ConfigMap added", data.Name)
+		c.cfg.ConfigMap = data
 		updateRequired = true
 	case watch.Deleted:
-		_, ok := ns.ConfigMap[data.Name]
-		if ok {
-			ns.ConfigMap[data.Name] = data
-			//log.Println("ConfigMap set for deletion", data.Name)
-			updateRequired = true
-		} else {
-			log.Println("ConfigMap not registered with controller, cannot delete !", data.Name)
-		}
+		c.cfg.ConfigMap.Annotations.SetStatusState(watch.Deleted)
+		c.cfg.ConfigMap.Status = watch.Deleted
 	}
 	return updateRequired
 }
 func (c *HAProxyController) eventSecret(ns *Namespace, data *Secret) bool {
 	updateRequired := false
-	switch data.Watch {
+	switch data.Status {
 	case watch.Modified:
 		newSecret := data
 		//oldSecret, ok := c.cfg.Secret[data.Name]
@@ -533,7 +524,7 @@ func (c *HAProxyController) UpdateHAProxy() error {
 						Ssl:            "enabled",
 						SslCertificate: HAProxyCERT,
 					}
-					switch secret.Watch {
+					switch secret.Status {
 					case watch.Added:
 						if err = nativeAPI.Configuration.CreateListener(frontendHTTP, listener, transaction.ID, 0); err != nil {
 							return err
@@ -547,6 +538,16 @@ func (c *HAProxyController) UpdateHAProxy() error {
 							return err
 						}
 					}
+				}
+
+				//see if we need to add redirect to https redirect scheme https if !{ ssl_fc }
+				// no need for error checking, we have default value
+				sslRedirect, _ := GetValueFromAnnotations("ssl-redirect", c.cfg.ConfigMap.Annotations)
+				switch sslRedirect.Status {
+				case watch.Added:
+				case watch.Modified:
+				case watch.Deleted:
+				case "":
 				}
 			}
 		}
@@ -574,10 +575,10 @@ func (c *HAProxyController) UpdateHAProxy() error {
 	if err != nil {
 		log.Println(err)
 		return err
-	} else {
-		log.Println("Transaction successfull")
-		c.cfg.Clean()
 	}
+	log.Println("Transaction successfull")
+	c.cfg.Clean()
+
 	log.Println("UpdateHAProxy ended")
 	return nil
 }
@@ -586,51 +587,11 @@ func (c *HAProxyController) handlePath(frontendHTTP string, namespace *Namespace
 	transaction *models.Transaction, backendsUsed map[string]int) {
 	nativeAPI := c.NativeAPI
 	//log.Println("PATH", path)
-	service, ok := namespace.Services[path.ServiceName]
-	if !ok {
-		log.Println("service", path.ServiceName, "does not exists")
+	backendName, selector, err := c.handleService(frontendHTTP, namespace, rule, path, backendsUsed, transaction)
+	if err != nil {
 		return
 	}
-	selector := service.Selector
-	if len(selector) == 0 {
-		log.Println("service", service.Name, "no selector")
-		return
-	}
-	backendName := fmt.Sprintf("%s-%s-%d", namespace.Name, service.Name, path.ServicePort)
-	backendsUsed[backendName]++
-	condTest := "{ req.hdr(host) -i " + rule.Host + " } { var(txn.path) -m beg " + path.Path + " } "
-	switch service.Watch {
-	case watch.Added:
-		if numberOfTimesBackendUsed := backendsUsed[backendName]; numberOfTimesBackendUsed < 2 {
-			// 1 was just being added
-			backend := &models.Backend{
-				Balance:  "roundrobin",
-				Name:     backendName,
-				Protocol: "http",
-			}
-			if err := nativeAPI.Configuration.CreateBackend(backend, transaction.ID, 0); err != nil {
-				log.Println("CreateBackend", err)
-				return
-			}
-		}
-		//log.Println("use_backend", condTest)
-		backendSwitchingRule := &models.BackendSwitchingRule{
-			Cond:       "if",
-			CondTest:   condTest,
-			TargetFarm: backendName,
-			ID:         1,
-		}
-		if err := nativeAPI.Configuration.CreateBackendSwitchingRule(frontendHTTP, backendSwitchingRule, transaction.ID, 0); err != nil {
-			log.Println("CreateBackendSwitchingRule", err)
-			return
-		}
-	case watch.Modified:
-		// nothing to do here for now
-		log.Println("MODIFIED", service.Name)
-	case watch.Deleted:
-		backendsUsed[backendName]--
-		return
-	}
+
 	if numberOfTimesBackendUsed := backendsUsed[backendName]; numberOfTimesBackendUsed > 1 {
 		return //we have already went through pods
 	}
@@ -651,7 +612,7 @@ func (c *HAProxyController) handlePath(frontendHTTP string, namespace *Namespace
 			/*if pod.Sorry != "" {
 				data.Sorry = pod.Sorry
 			}*/
-			switch pod.Watch {
+			switch pod.Status {
 			case watch.Added:
 				if err := nativeAPI.Configuration.CreateServer(backendName, data, transaction.ID, 0); err != nil {
 					log.Println("CreateServer", err)
@@ -665,4 +626,75 @@ func (c *HAProxyController) handlePath(frontendHTTP string, namespace *Namespace
 			}
 		} //if pod.Status...
 	} //for pod
+}
+
+func (c *HAProxyController) handleService(frontendHTTP string, namespace *Namespace, rule *IngressRule, path *IngressPath,
+	backendsUsed map[string]int, transaction *models.Transaction) (backendName string, selector MapStringW, err error) {
+	nativeAPI := c.NativeAPI
+
+	service, ok := namespace.Services[path.ServiceName]
+	if !ok {
+		log.Println("service", path.ServiceName, "does not exists")
+		return "", nil, nil
+	}
+	selector = service.Selector
+	if len(selector) == 0 {
+		log.Println("service", service.Name, "no selector")
+		return "", nil, nil
+	}
+
+	backendName = fmt.Sprintf("%s-%s-%d", namespace.Name, service.Name, path.ServicePort)
+	backendsUsed[backendName]++
+	condTest := "{ req.hdr(host) -i " + rule.Host + " } { var(txn.path) -m beg " + path.Path + " } "
+	balanceAlg, _ := GetValueFromAnnotations("load-balance", service.Annotations, c.cfg.ConfigMap.Annotations)
+
+	switch service.Status {
+	case watch.Added:
+		if numberOfTimesBackendUsed := backendsUsed[backendName]; numberOfTimesBackendUsed < 2 {
+			backend := &models.Backend{
+				Balance:  balanceAlg.Value,
+				Name:     backendName,
+				Protocol: "http",
+			}
+			if err := nativeAPI.Configuration.CreateBackend(backend, transaction.ID, 0); err != nil {
+				log.Println("CreateBackend", err)
+				return "", nil, err
+			}
+		}
+		//log.Println("use_backend", condTest)
+		backendSwitchingRule := &models.BackendSwitchingRule{
+			Cond:       "if",
+			CondTest:   condTest,
+			TargetFarm: backendName,
+			ID:         1,
+		}
+		if err := nativeAPI.Configuration.CreateBackendSwitchingRule(frontendHTTP, backendSwitchingRule, transaction.ID, 0); err != nil {
+			log.Println("CreateBackendSwitchingRule", err)
+			return "", nil, err
+		}
+	//case watch.Modified:
+	//nothing to do for now
+	case watch.Deleted:
+		backendsUsed[backendName]--
+		if err := nativeAPI.Configuration.DeleteBackend(backendName, transaction.ID, 0); err != nil {
+			log.Println("DeleteBackend", err)
+			return "", nil, err
+		}
+		return "", nil, nil
+	}
+
+	log.Println(backendName, "load-balance", balanceAlg)
+	if balanceAlg.Status != "" {
+		// don't worry about deleted state, load-balance has default value
+		backend := &models.Backend{
+			Balance:  balanceAlg.Value,
+			Name:     backendName,
+			Protocol: "http",
+		}
+		if err := nativeAPI.Configuration.EditBackend(backend.Name, backend, transaction.ID, 0); err != nil {
+			log.Println("EditBackend", err)
+			return "", nil, err
+		}
+	}
+	return backendName, selector, nil
 }

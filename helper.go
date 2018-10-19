@@ -22,7 +22,7 @@ func LogWatchEvent(t watch.EventType, watchType SyncType, ObjData ...interface{}
 	}
 }
 
-func hasSelectors(selectors map[string]string, values map[string]string) bool {
+func hasSelectors(selectors MapStringW, values MapStringW) bool {
 	if len(selectors) == 0 {
 		return false
 	}
@@ -31,7 +31,7 @@ func hasSelectors(selectors map[string]string, values map[string]string) bool {
 		if !ok {
 			return false
 		}
-		if value1 != value2 {
+		if value1.Value != value2.Value {
 			return false
 		}
 	}
@@ -66,13 +66,13 @@ func ConvertIngressRules(ingressRules []v1beta1.IngressRule) map[string]*Ingress
 				Path:        k8sPath.Path,
 				ServiceName: k8sPath.Backend.ServiceName,
 				ServicePort: k8sPath.Backend.ServicePort.IntValue(),
-				Watch:       "",
+				Status:      "",
 			}
 		}
 		rules[k8sRule.Host] = &IngressRule{
-			Host:  k8sRule.Host,
-			Paths: paths,
-			Watch: "",
+			Host:   k8sRule.Host,
+			Paths:  paths,
+			Status: "",
 		}
 	}
 	return rules

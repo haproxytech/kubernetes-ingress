@@ -21,13 +21,13 @@ const (
 
 type Pod struct {
 	IP          string
-	Labels      map[string]string
-	Status      v1.PodPhase
+	Labels      MapStringW
+	PodPhase    v1.PodPhase
 	Name        string
 	HAProxyName string
 	Maintenance bool //disabled
 	Sorry       bool //backup
-	Watch       watch.EventType
+	Status      watch.EventType
 }
 
 type Service struct {
@@ -36,26 +36,24 @@ type Service struct {
 	ExternalIP string
 	Ports      []v1.ServicePort
 
-	Annotations map[string]string
-	Selector    map[string]string
-	Watch       watch.EventType
+	Annotations MapStringW
+	Selector    MapStringW
+	Status      watch.EventType
 }
 
 type Namespace struct {
-	_           [0]int
-	Name        string
-	Relevant    bool
-	Annotations map[string]string
-	Ingresses   map[string]*Ingress
-	Pods        map[string]*Pod
-	PodNames    map[string]bool
-	ConfigMap   map[string]*ConfigMap
-	Services    map[string]*Service
-	Secret      map[string]*Secret
-	Watch       watch.EventType
+	_         [0]int
+	Name      string
+	Relevant  bool
+	Ingresses map[string]*Ingress
+	Pods      map[string]*Pod
+	PodNames  map[string]bool
+	Services  map[string]*Service
+	Secret    map[string]*Secret
+	Status    watch.EventType
 }
 
-func (n *Namespace) GetServiceForPod(labels map[string]string) (*Service, error) {
+func (n *Namespace) GetServiceForPod(labels MapStringW) (*Service, error) {
 	for _, service := range n.Services {
 		if hasSelectors(labels, service.Selector) {
 			return service, nil
@@ -64,7 +62,7 @@ func (n *Namespace) GetServiceForPod(labels map[string]string) (*Service, error)
 	return nil, errors.New("service not found")
 }
 
-func (n *Namespace) GetPodsForSelector(selector map[string]string) map[string]*Pod {
+func (n *Namespace) GetPodsForSelector(selector MapStringW) map[string]*Pod {
 	pods := make(map[string]*Pod)
 	for _, pod := range n.Pods {
 		if hasSelectors(selector, pod.Labels) {
@@ -78,31 +76,31 @@ type IngressPath struct {
 	ServiceName string
 	ServicePort int
 	Path        string
-	Watch       watch.EventType
+	Status      watch.EventType
 }
 
 type IngressRule struct {
-	Host  string
-	Paths map[string]*IngressPath
-	Watch watch.EventType
+	Host   string
+	Paths  map[string]*IngressPath
+	Status watch.EventType
 }
 
 type Ingress struct {
 	Name        string
-	Annotations map[string]string
+	Annotations MapStringW
 	Rules       map[string]*IngressRule
 	//Rules       []v1beta1.IngressRule
-	Watch watch.EventType
+	Status watch.EventType
 }
 
 type ConfigMap struct {
-	Name  string
-	Data  map[string]string
-	Watch watch.EventType
+	Name        string
+	Annotations MapStringW
+	Status      watch.EventType
 }
 
 type Secret struct {
-	Name  string
-	Data  map[string][]byte
-	Watch watch.EventType
+	Name   string
+	Data   map[string][]byte
+	Status watch.EventType
 }
