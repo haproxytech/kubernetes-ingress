@@ -558,7 +558,7 @@ func (c *HAProxyController) updateHAProxy() error {
 			for _, rule := range ingress.Rules {
 				//nothing to switch/case for now
 				for _, path := range rule.Paths {
-					c.handlePath(frontendHTTP, namespace, rule, path, transaction, backendsUsed)
+					c.handlePath(frontendHTTP, namespace, ingress, rule, path, transaction, backendsUsed)
 				}
 			}
 			for backendName, numberOfTimesBackendUsed := range backendsUsed {
@@ -583,11 +583,11 @@ func (c *HAProxyController) updateHAProxy() error {
 	return nil
 }
 
-func (c *HAProxyController) handlePath(frontendHTTP string, namespace *Namespace, rule *IngressRule, path *IngressPath,
+func (c *HAProxyController) handlePath(frontendHTTP string, namespace *Namespace, ingress *Ingress, rule *IngressRule, path *IngressPath,
 	transaction *models.Transaction, backendsUsed map[string]int) {
 	nativeAPI := c.NativeAPI
 	//log.Println("PATH", path)
-	backendName, selector, err := c.handleService(frontendHTTP, namespace, rule, path, backendsUsed, transaction)
+	backendName, selector, err := c.handleService(frontendHTTP, namespace, ingress, rule, path, backendsUsed, transaction)
 	if err != nil {
 		return
 	}
@@ -628,7 +628,7 @@ func (c *HAProxyController) handlePath(frontendHTTP string, namespace *Namespace
 	} //for pod
 }
 
-func (c *HAProxyController) handleService(frontendHTTP string, namespace *Namespace, rule *IngressRule, path *IngressPath,
+func (c *HAProxyController) handleService(frontendHTTP string, namespace *Namespace, ingress *Ingress, rule *IngressRule, path *IngressPath,
 	backendsUsed map[string]int, transaction *models.Transaction) (backendName string, selector MapStringW, err error) {
 	nativeAPI := c.NativeAPI
 
@@ -647,8 +647,8 @@ func (c *HAProxyController) handleService(frontendHTTP string, namespace *Namesp
 	backendsUsed[backendName]++
 	condTest := "{ req.hdr(host) -i " + rule.Host + " } { var(txn.path) -m beg " + path.Path + " } "
 	//both load-balance and forwarded-for have default values, so no need for error checking
-	balanceAlg, _ := GetValueFromAnnotations("load-balance", service.Annotations, c.cfg.ConfigMap.Annotations)
-	forwardedFor, _ := GetValueFromAnnotations("forwarded-for", service.Annotations, c.cfg.ConfigMap.Annotations)
+	balanceAlg, _ := GetValueFromAnnotations("load-balance", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
+	forwardedFor, _ := GetValueFromAnnotations("forwarded-for", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
 
 	switch service.Status {
 	case watch.Added:

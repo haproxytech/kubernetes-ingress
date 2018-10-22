@@ -2,6 +2,8 @@
 
 ## HAProxy kubernetes ingress controller
 
+Options for starting controller can be found in [controller.md](controller.md)
+
 ### Avaliable options
 
 > :information_source: Ingress and service annotations can have `ingress.kubernetes.io`, `haproxy.org` and `haproxy.com` prefixes
@@ -10,15 +12,15 @@
 
 | Option        | Anotation | Type | Default | Dependencies | Config map | Ingress | Service | Example |
 | - | - |:-:|:-:|:-:|:-:|:-:|:-:|:-:|
-| Balance Algorithm | [load-balance](#load-balance) | string | "roundrobin" |  |:large_blue_circle:|:white_circle:|:large_blue_circle:||
+| Balance Algorithm | [load-balance](#load-balance) | string | "roundrobin" |  |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:||
 | Force Https | [ssl-redirect](#ssl-redirect) | bool | "true" | [tls-secret](#tls-secret) |:large_blue_circle:|:white_circle:|:white_circle:||
-| X-Forwarded-For | [forwarded-for](#forwarded-for) | ["enabled", "disabled"] | "enabled" |  |:large_blue_circle:|:white_circle:|:large_blue_circle:||
+| X-Forwarded-For | [forwarded-for](#forwarded-for) | ["enabled", "disabled"] | "enabled" |  |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:||
 
 ### Options
 
 #### forwarded-for
 
-- by default enabled, can be disabled per service
+- by default enabled, can be disabled per service or globally
 
 #### load-balance
 
