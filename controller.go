@@ -6,9 +6,9 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"strconv"
 	"time"
 
-	"github.com/google/go-cmp/cmp"
 	corev1 "k8s.io/api/core/v1"
 	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
 	"k8s.io/apimachinery/pkg/watch"
@@ -278,8 +278,6 @@ func (c *HAProxyController) eventIngress(ns *Namespace, data *Ingress) bool {
 		ns.Ingresses[data.Name] = newIngress
 		//diffStr := cmp.Diff(oldIngress, newIngress)
 		//log.Println("Ingress modified", data.Name, "\n", diffStr)
-		diff := cmp.Equal(oldIngress, newIngress)
-		log.Println(diff)
 		updateRequired = true
 	case watch.Added:
 		ns.Ingresses[data.Name] = data
@@ -478,6 +476,23 @@ func (c *HAProxyController) updateHAProxy() error {
 		return err
 	}
 
+	if maxconnAnn, err := GetValueFromAnnotations("maxconn", c.cfg.ConfigMap.Annotations); err == nil {
+		if maxconn, err := strconv.ParseInt(maxconnAnn.Value, 10, 64); err == nil {
+			if maxconnAnn.Status == watch.Deleted {
+				maxconnAnn, _ = GetValueFromAnnotations("maxconn", c.cfg.ConfigMap.Annotations) // has default
+				maxconn, _ = strconv.ParseInt(maxconnAnn.Value, 10, 64)
+			}
+			if maxconnAnn.Status != "" {
+				if frontend, err := nativeAPI.Configuration.GetFrontend("http", transaction.ID); err == nil {
+					frontend.Data.MaxConnections = &maxconn
+					nativeAPI.Configuration.EditFrontend("http", frontend.Data, transaction.ID, 0)
+				} else {
+					return err
+				}
+			}
+		}
+	}
+
 	frontendHTTP := "http"
 	for _, namespace := range c.cfg.Namespace {
 		if !namespace.Relevant {
@@ -584,17 +599,18 @@ func (c *HAProxyController) updateHAProxy() error {
 }
 
 func (c *HAProxyController) handlePath(frontendHTTP string, namespace *Namespace, ingress *Ingress, rule *IngressRule, path *IngressPath,
-	transaction *models.Transaction, backendsUsed map[string]int) {
+	transaction *models.Transaction, backendsUsed map[string]int) error {
 	nativeAPI := c.NativeAPI
 	//log.Println("PATH", path)
-	backendName, selector, err := c.handleService(frontendHTTP, namespace, ingress, rule, path, backendsUsed, transaction)
+	backendName, selector, service, err := c.handleService(frontendHTTP, namespace, ingress, rule, path, backendsUsed, transaction)
 	if err != nil {
-		return
+		return err
 	}
-
 	if numberOfTimesBackendUsed := backendsUsed[backendName]; numberOfTimesBackendUsed > 1 {
-		return //we have already went through pods
+		return nil
 	}
+	podsMaxconn, _ := GetValueFromAnnotations("pod-maxconn", service.Annotations)
+
 	for _, pod := range namespace.Pods {
 		if hasSelectors(selector, pod.Labels) {
 			port := int64(path.ServicePort)
@@ -612,6 +628,14 @@ func (c *HAProxyController) handlePath(frontendHTTP string, namespace *Namespace
 			/*if pod.Sorry != "" {
 				data.Sorry = pod.Sorry
 			}*/
+			if podsMaxconn != nil && podsMaxconn.Status != watch.Deleted {
+				if maxconn, err := strconv.ParseInt(podsMaxconn.Value, 10, 64); err == nil {
+					data.MaxConnections = &maxconn
+				}
+				if podsMaxconn.Status == watch.Modified {
+					pod.Status = watch.Modified
+				}
+			}
 			switch pod.Status {
 			case watch.Added:
 				if err := nativeAPI.Configuration.CreateServer(backendName, data, transaction.ID, 0); err != nil {
@@ -626,21 +650,21 @@ func (c *HAProxyController) handlePath(frontendHTTP string, namespace *Namespace
 			}
 		} //if pod.Status...
 	} //for pod
+	return nil
 }
 
 func (c *HAProxyController) handleService(frontendHTTP string, namespace *Namespace, ingress *Ingress, rule *IngressRule, path *IngressPath,
-	backendsUsed map[string]int, transaction *models.Transaction) (backendName string, selector MapStringW, err error) {
+	backendsUsed map[string]int, transaction *models.Transaction) (backendName string, selector MapStringW, service *Service, err error) {
 	nativeAPI := c.NativeAPI
 
 	service, ok := namespace.Services[path.ServiceName]
 	if !ok {
 		log.Println("service", path.ServiceName, "does not exists")
-		return "", nil, nil
+		return "", nil, nil, fmt.Errorf("service %s does not exists", path.ServiceName)
 	}
 	selector = service.Selector
 	if len(selector) == 0 {
-		log.Println("service", service.Name, "no selector")
-		return "", nil, nil
+		return "", nil, nil, fmt.Errorf("service %s has no selector", service.Name)
 	}
 
 	backendName = fmt.Sprintf("%s-%s-%d", namespace.Name, service.Name, path.ServicePort)
@@ -663,7 +687,7 @@ func (c *HAProxyController) handleService(frontendHTTP string, namespace *Namesp
 			}
 			if err := nativeAPI.Configuration.CreateBackend(backend, transaction.ID, 0); err != nil {
 				log.Println("CreateBackend", err)
-				return "", nil, err
+				return "", nil, nil, err
 			}
 		}
 		//log.Println("use_backend", condTest)
@@ -675,7 +699,7 @@ func (c *HAProxyController) handleService(frontendHTTP string, namespace *Namesp
 		}
 		if err := nativeAPI.Configuration.CreateBackendSwitchingRule(frontendHTTP, backendSwitchingRule, transaction.ID, 0); err != nil {
 			log.Println("CreateBackendSwitchingRule", err)
-			return "", nil, err
+			return "", nil, nil, err
 		}
 	//case watch.Modified:
 	//nothing to do for now
@@ -683,17 +707,17 @@ func (c *HAProxyController) handleService(frontendHTTP string, namespace *Namesp
 		backendsUsed[backendName]--
 		if err := nativeAPI.Configuration.DeleteBackend(backendName, transaction.ID, 0); err != nil {
 			log.Println("DeleteBackend", err)
-			return "", nil, err
+			return "", nil, nil, err
 		}
-		return "", nil, nil
+		return "", nil, service, nil
 	}
 
 	if balanceAlg.Status != "" || forwardedFor.Status != "" {
 		if err = c.handleBackendAnnotations(balanceAlg, forwardedFor, backendName, transaction); err != nil {
-			return "", nil, err
+			return "", nil, nil, err
 		}
 	}
-	return backendName, selector, nil
+	return backendName, selector, service, nil
 }
 
 func (c *HAProxyController) handleBackendAnnotations(balanceAlg, forwardedFor *StringW, backendName string, transaction *models.Transaction) error {
@@ -705,6 +729,7 @@ func (c *HAProxyController) handleBackendAnnotations(balanceAlg, forwardedFor *S
 	if forwardedFor.Value == "enabled" { //disabled with anything else is ok
 		backend.HTTPXffHeaderInsert = "enabled"
 	}
+
 	if err := c.NativeAPI.Configuration.EditBackend(backend.Name, backend, transaction.ID, 0); err != nil {
 		return err
 	}

@@ -112,5 +112,7 @@ var defaultAnnotationValues = MapStringW{
 
 	"forwarded-for": &StringW{Value: "enabled"},
 	"load-balance":  &StringW{Value: "roundrobin"},
+	"pod-maxconn":   &StringW{Value: "2000"},
+	"maxconn":       &StringW{Value: "2000"},
 	"ssl-redirect":  &StringW{Value: ""},
 }

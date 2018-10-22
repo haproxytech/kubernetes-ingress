@@ -1,7 +1,7 @@
 package main
 
 import (
-	"errors"
+	"fmt"
 
 	"k8s.io/apimachinery/pkg/watch"
 )
@@ -20,7 +20,7 @@ type MapStringW map[string]*StringW
 func (a MapStringW) Get(name string) (data *StringW, err error) {
 	var ok bool
 	if data, ok = a[name]; !ok {
-		return nil, errors.New("StringW does not exist")
+		return nil, fmt.Errorf("StringW %s does not exist", name)
 	}
 	return data, nil
 }
