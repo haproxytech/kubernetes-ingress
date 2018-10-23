@@ -67,7 +67,7 @@ func (c *Configuration) Clean() {
 					}
 				}
 			}
-			data.Annotations.SetStatusState("")
+			data.Annotations.Clean()
 			switch data.Status {
 			case watch.Deleted:
 				delete(namespace.Ingresses, data.Name)
@@ -76,7 +76,7 @@ func (c *Configuration) Clean() {
 			}
 		}
 		for _, data := range namespace.Services {
-			data.Annotations.SetStatusState("")
+			data.Annotations.Clean()
 			switch data.Status {
 			case watch.Deleted:
 				delete(namespace.Services, data.Name)
@@ -102,7 +102,7 @@ func (c *Configuration) Clean() {
 			}
 		}
 	}
-	c.ConfigMap.Annotations.SetStatusState("")
+	c.ConfigMap.Annotations.Clean()
 	switch c.ConfigMap.Status {
 	case watch.Deleted:
 		c.ConfigMap = nil

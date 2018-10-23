@@ -31,14 +31,10 @@ func (a *MapStringW) SetStatus(old MapStringW) (different bool) {
 	for name, currentValue := range *a {
 		if oldValue, err := old.Get(name); err != nil {
 			currentValue.Status = watch.Added
-			if name == "load-balance" {
-			}
 		} else {
-			if name == "load-balance" {
-			}
 			if currentValue.Value != oldValue.Value {
 				currentValue.Status = watch.Modified
-				currentValue.OldValue = oldValue.OldValue
+				currentValue.OldValue = oldValue.Value
 				different = true
 			} else {
 				currentValue.Status = ""
@@ -62,4 +58,14 @@ func (a *MapStringW) SetStatusState(state watch.EventType) {
 		currentValue.Status = state
 		currentValue.OldValue = ""
 	}
+}
+
+//Clean removes all with status
+func (a *MapStringW) Clean() {
+	for name, currentValue := range *a {
+		if currentValue.Status == watch.Deleted {
+			delete(*a, name)
+		}
+	}
+	a.SetStatusState("")
 }
