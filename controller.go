@@ -609,7 +609,10 @@ func (c *HAProxyController) handlePath(frontendHTTP string, namespace *Namespace
 	if numberOfTimesBackendUsed := backendsUsed[backendName]; numberOfTimesBackendUsed > 1 {
 		return nil
 	}
-	podsMaxconn, _ := GetValueFromAnnotations("pod-maxconn", service.Annotations)
+	annMaxconn, _ := GetValueFromAnnotations("pod-maxconn", service.Annotations)
+	annCheck, _ := GetValueFromAnnotations("check", service.Annotations, c.cfg.ConfigMap.Annotations)
+	//annCheckPort, _ := GetValueFromAnnotations("check-port", service.Annotations)
+	//annCheckInterval, _ := GetValueFromAnnotations("check-interval", service.Annotations)
 
 	for _, pod := range namespace.Pods {
 		if hasSelectors(selector, pod.Labels) {
@@ -618,7 +621,6 @@ func (c *HAProxyController) handlePath(frontendHTTP string, namespace *Namespace
 			data := &models.Server{
 				Name:    pod.HAProxyName,
 				Address: pod.IP,
-				Check:   "enabled",
 				Port:    &port,
 				Weight:  &weight,
 			}
@@ -628,13 +630,30 @@ func (c *HAProxyController) handlePath(frontendHTTP string, namespace *Namespace
 			/*if pod.Sorry != "" {
 				data.Sorry = pod.Sorry
 			}*/
-			if podsMaxconn != nil && podsMaxconn.Status != watch.Deleted {
-				if maxconn, err := strconv.ParseInt(podsMaxconn.Value, 10, 64); err == nil {
-					data.MaxConnections = &maxconn
+			annnotationsActive := false
+			if annMaxconn != nil {
+				if annMaxconn.Status != watch.Deleted {
+					if maxconn, err := strconv.ParseInt(annMaxconn.Value, 10, 64); err == nil {
+						data.MaxConnections = &maxconn
+					}
 				}
-				if podsMaxconn.Status == watch.Modified {
-					pod.Status = watch.Modified
+				if annMaxconn.Status != "" {
+					annnotationsActive = true
 				}
+			}
+			if annCheck != nil {
+				if annCheck.Status != watch.Deleted {
+					if annCheck.Value == "enabled" {
+						data.Check = "enabled"
+						//see if we have port and interval defined
+					}
+				}
+				if annCheck.Status != "" {
+					annnotationsActive = true
+				}
+			}
+			if pod.Status == "" && annnotationsActive {
+				pod.Status = watch.Modified
 			}
 			switch pod.Status {
 			case watch.Added:

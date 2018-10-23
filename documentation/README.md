@@ -12,10 +12,13 @@ Options for starting controller can be found in [controller.md](controller.md)
 
 | Anotation | Type | Default | Dependencies | Config map | Ingress | Service | Example |
 | - |:-:|:-:|:-:|:-:|:-:|:-:|:-:|
+| [check](#backend-checks) | ["enabled"] |  |  |:large_blue_circle:|:white_circle:|:large_blue_circle:||
+| :construction: [check-port](#backend-checks) | [port](#port) |  | [check](#backend-checks) |:white_circle:|:white_circle:|:large_blue_circle:||
+| :construction: [check-interval](#backend-checks) | [time interval](#time-interval) |  | [check](#backend-checks) |:large_blue_circle:|:white_circle:|:large_blue_circle:||
 | [load-balance](#balance-algorithm) | string | "roundrobin" |  |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:||
 | [maxconn](#maximum-concurent-connections) | number | "2000" |  |:large_blue_circle:|:white_circle:|:white_circle:||
 | [pod-maxconn](#maximum-concurent-backend-connections) | number | "2000" |  |:white_circle:|:white_circle:|:large_blue_circle:||
-| [ssl-redirect](#force-https) | bool | "true" | [tls-secret](#tls-secret) |:large_blue_circle:|:white_circle:|:white_circle:|:construction:|
+| :construction: [ssl-redirect](#force-https) | bool | "true" | [tls-secret](#tls-secret) |:large_blue_circle:|:white_circle:|:white_circle:||
 | [forwarded-for](#x-forwarded-for) | ["enabled", "disabled"] | "enabled" |  |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:||
 
 ### Options
@@ -23,6 +26,13 @@ Options for starting controller can be found in [controller.md](controller.md)
 #### Balance Algorithm
 
 - Annotation: `load-balance`
+- use in format  `haproxy.org/load-balance: <algorithm> [ <arguments> ]`
+
+#### Backend Checks
+
+- Annotation: `check` - activate pod check
+- :construction: Annotation: `check-port` - port to use when checking [`check` must be "enabled"]
+- :construction: Annotation: `check-interval` - interval between checks [`check` must be "enabled"]
 - use in format  `haproxy.org/load-balance: <algorithm> [ <arguments> ]`
 
 #### Force Https
@@ -53,3 +63,14 @@ Options for starting controller can be found in [controller.md](controller.md)
 - tls-secret contains two items:
   - tls.crt
   - tls.key
+
+### Data types
+
+#### Port
+
+- value between <0, 65535]
+
+#### Time interval
+
+- number + type
+- example: "1s"
