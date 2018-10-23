@@ -10,16 +10,24 @@ Options for starting controller can be found in [controller.md](controller.md)
 >
 > Example: `haproxy.com/ssl-redirect` and `haproxy.org/ssl-redirect are same annotation`
 
-| Anotation | Type | Default | Dependencies | Config map | Ingress | Service | Example |
-| - |:-:|:-:|:-:|:-:|:-:|:-:|:-:|
-| [check](#backend-checks) | ["enabled"] |  |  |:large_blue_circle:|:white_circle:|:large_blue_circle:||
-| :construction: [check-port](#backend-checks) | [port](#port) |  | [check](#backend-checks) |:white_circle:|:white_circle:|:large_blue_circle:||
-| :construction: [check-interval](#backend-checks) | [time interval](#time-interval) |  | [check](#backend-checks) |:large_blue_circle:|:white_circle:|:large_blue_circle:||
-| [load-balance](#balance-algorithm) | string | "roundrobin" |  |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:||
-| [maxconn](#maximum-concurent-connections) | number | "2000" |  |:large_blue_circle:|:white_circle:|:white_circle:||
-| [pod-maxconn](#maximum-concurent-backend-connections) | number | "2000" |  |:white_circle:|:white_circle:|:large_blue_circle:||
-| :construction: [ssl-redirect](#force-https) | bool | "true" | [tls-secret](#tls-secret) |:large_blue_circle:|:white_circle:|:white_circle:||
-| [forwarded-for](#x-forwarded-for) | ["enabled", "disabled"] | "enabled" |  |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:||
+| Anotation | Type | Default | Dependencies | Config map | Ingress | Service |
+| - |:-:|:-:|:-:|:-:|:-:|:-:|
+| [check](#backend-checks) | ["enabled"] | "enabled" |  |:large_blue_circle:|:white_circle:|:large_blue_circle:|
+| :construction: [check-port](#backend-checks) | [port](#port) |  | [check](#backend-checks) |:white_circle:|:white_circle:|:large_blue_circle:|
+| :construction: [check-interval](#backend-checks) | [time interval](#time-interval) |  | [check](#backend-checks) |:large_blue_circle:|:white_circle:|:large_blue_circle:|
+| [healthz](#healthz-check) | ["enabled"] | "enabled" | |:large_blue_circle:|:white_circle:|:white_circle:|
+| [healthz-port](#healthz-check) | ["enabled"] | "1042" | [healtz](#healthz-check) |:large_blue_circle:|:white_circle:|:white_circle:|
+| [load-balance](#balance-algorithm) | string | "roundrobin" |  |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:|
+| [maxconn](#maximum-concurent-connections) | number | "2000" |  |:large_blue_circle:|:white_circle:|:white_circle:|
+| [pod-maxconn](#maximum-concurent-backend-connections) | number | "2000" |  |:white_circle:|:white_circle:|:large_blue_circle:|
+| :construction: [ssl-redirect](#force-https) | bool | "true" | [tls-secret](#tls-secret) |:large_blue_circle:|:white_circle:|:white_circle:|
+| [forwarded-for](#x-forwarded-for) | ["enabled", "disabled"] | "enabled" |  |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:|
+
+> :information_source: Annotations have hierarchy: `default` <- `Configmap` <- `Ingress` <- `Service`
+>
+> Service annotations have highest priority. If they are not defined, controller goes one level up until it finds value.
+>
+> This is usefull if we want, for instance, to change default behaviour, but want to keep default for some service. etc.
 
 ### Options
 
@@ -39,6 +47,12 @@ Options for starting controller can be found in [controller.md](controller.md)
 
 - Annotation: `ssl-redirect`
 - by default this is activated if tls key is provided
+
+#### Healthz Check
+
+- Annotation: `healthz` - enable or disable service
+- Annotation: `healthz-port` - port where HAProxy responds to checks
+- default "enabled"- haproxy responds to health checks
 
 #### Maximum Concurent Connections
 

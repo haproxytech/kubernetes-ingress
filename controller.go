@@ -187,7 +187,9 @@ func (c *HAProxyController) SyncData(jobChan <-chan SyncDataEvent) {
 		case COMMAND:
 			if hadChanges {
 				log.Println("job processing", job.SyncType)
-				c.updateHAProxy()
+				if err := c.updateHAProxy(); err != nil {
+					log.Println(err)
+				}
 				hadChanges = false
 			}
 		case NAMESPACE:
@@ -476,6 +478,10 @@ func (c *HAProxyController) updateHAProxy() error {
 		return err
 	}
 
+	if err := c.checkHealthzStatus(transaction); err != nil {
+		return err
+	}
+
 	if maxconnAnn, err := GetValueFromAnnotations("maxconn", c.cfg.ConfigMap.Annotations); err == nil {
 		if maxconn, err := strconv.ParseInt(maxconnAnn.Value, 10, 64); err == nil {
 			if maxconnAnn.Status == watch.Deleted {
@@ -751,6 +757,66 @@ func (c *HAProxyController) handleBackendAnnotations(balanceAlg, forwardedFor *S
 
 	if err := c.NativeAPI.Configuration.EditBackend(backend.Name, backend, transaction.ID, 0); err != nil {
 		return err
+	}
+	return nil
+}
+
+func (c *HAProxyController) checkHealthzStatus(transaction *models.Transaction) error {
+	cfg := c.NativeAPI.Configuration
+	frontendName := "healthz"
+	if annHealthz, err := GetValueFromAnnotations("healthz", c.cfg.ConfigMap.Annotations); err == nil {
+		enabled := annHealthz.Value == "enabled"
+		enabledOld := annHealthz.OldValue == "enabled"
+		port := int64(1042) //only default if user inputs invalid data
+
+		annHealthzPort, _ := GetValueFromAnnotations("healthz-port", c.cfg.ConfigMap.Annotations)
+		if annPort, err := strconv.ParseInt(annHealthzPort.Value, 10, 64); err == nil {
+			port = annPort
+		}
+		listener := &models.Listener{
+			Address: "0.0.0.0",
+			Name:    "health-bind-name",
+			Port:    &port,
+		}
+		switch annHealthz.Status {
+		case watch.Added:
+			if !enabled {
+				return nil
+			}
+			if err := cfg.CreateListener(frontendName, listener, transaction.ID, 0); err != nil {
+				return err
+			}
+		case watch.Modified:
+			if enabled {
+				if !enabledOld {
+					if err := cfg.CreateListener(frontendName, listener, transaction.ID, 0); err != nil {
+						return err
+					}
+				} else {
+					if err := cfg.EditListener(listener.Name, frontendName, listener, transaction.ID, 0); err != nil {
+						return err
+					}
+				}
+			} else {
+				if enabledOld {
+					if err := cfg.DeleteListener(listener.Name, frontendName, transaction.ID, 0); err != nil {
+						return err
+					}
+					lst, err := cfg.GetListener(listener.Name, frontendName, transaction.ID)
+					log.Println(lst, err)
+				}
+			}
+		case watch.Deleted:
+			if err := cfg.DeleteListener(listener.Name, frontendName, transaction.ID, 0); err != nil {
+				return err
+			}
+		case "":
+			if annHealthzPort.Status != "" {
+				if err := cfg.EditListener(listener.Name, frontendName, listener, transaction.ID, 0); err != nil {
+					return err
+				}
+			}
+		}
 	}
 	return nil
 }
