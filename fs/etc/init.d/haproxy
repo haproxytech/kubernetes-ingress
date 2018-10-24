@@ -1,0 +1,49 @@
+#!/bin/bash
+
+case "$1" in 
+start)
+   if [ -e /var/run/haproxy.pid ]; then
+      echo haproxy is running, pid=`cat /var/run/haproxy.pid`
+      exit 1
+   else
+      haproxy -f /etc/haproxy/haproxy.cfg -f /etc/haproxy/stats.cfg -p /var/run/haproxy.pid
+   fi   
+   ;;
+stop)
+   kill `cat /var/run/haproxy.pid`
+   rm /var/run/haproxy.pid
+   ;;
+restart)
+   $0 stop
+   $0 start
+   ;;
+reload)
+   $0 apply
+   ;;
+status)
+   if [ -e /var/run/haproxy.pid ]; then
+      echo haproxy is running, pid=`cat /var/run/haproxy.pid`
+   else
+      echo haproxy is NOT running
+      exit 1
+   fi
+   ;;
+apply)   
+   if [ -e /var/run/haproxy.pid ]; then
+      kill -USR2 `cat /var/run/haproxy.pid`
+      echo haproxy is running, pid=`cat /var/run/haproxy.pid`
+   else
+      $0 start
+   fi
+   ;;
+push_apply)   
+   $0 apply
+   ;;
+validate)   
+   haproxy -c -f /etc/haproxy/haproxy.cfg -f /etc/haproxy/stats.cfg -p /var/run/haproxy.pid
+   ;;
+*)
+   echo "Usage: $0 {start|stop|status|restart}"
+esac
+
+exit 0

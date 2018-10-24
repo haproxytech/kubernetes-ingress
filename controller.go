@@ -32,7 +32,7 @@ func (c *HAProxyController) Start(osArgs OSArgs) {
 
 	c.osArgs = osArgs
 
-	go c.InitializeHAProxy()
+	go c.HAProxyInitialize()
 
 	k8s, err := GetKubernetesClient()
 	if err != nil {
@@ -82,15 +82,33 @@ func (c *HAProxyController) Start(osArgs OSArgs) {
 	go c.watchChanges(nsWatch, svcWatch, podWatch, ingressWatch, configMapWatch, secretsWatch)
 }
 
-//InitializeHAProxy runs HAProxy for the first time so native client can have access to it
-func (c *HAProxyController) InitializeHAProxy() {
+//HAProxyInitialize runs HAProxy for the first time so native client can have access to it
+func (c *HAProxyController) HAProxyInitialize() {
 	//cmd := exec.Command("haproxy", "-f", HAProxyCFG)
 	log.Println("Starting HAProxy with", HAProxyCFG)
-	cmd := exec.Command("haproxy", "-f", HAProxyCFG)
+	cmd := exec.Command("service", "haproxy", "start")
 	err := cmd.Run()
 	if err != nil {
 		log.Println(err)
 	}
+}
+
+//HAProxyReload reloads HAProxy
+func (c *HAProxyController) HAProxyReload() error {
+	//cmd := exec.Command("haproxy", "-f", HAProxyCFG)
+	log.Println("HAProxy reload with", HAProxyCFG)
+	cmd := exec.Command("service", "haproxy", "reload")
+	err := cmd.Run()
+	return err
+}
+
+//HAProxyRestart restarts HAProxy
+func (c *HAProxyController) HAProxyRestart() error {
+	//cmd := exec.Command("haproxy", "-f", HAProxyCFG)
+	log.Println("HAProxy restart with", HAProxyCFG)
+	cmd := exec.Command("service", "haproxy", "restart")
+	err := cmd.Run()
+	return err
 }
 
 func (c *HAProxyController) watchChanges(namespaces watch.Interface, services watch.Interface, pods watch.Interface,
@@ -600,6 +618,9 @@ func (c *HAProxyController) updateHAProxy() error {
 	log.Println("Transaction successfull")
 	c.cfg.Clean()
 
+	if err := c.HAProxyRestart(); err != nil {
+		log.Println(err)
+	}
 	log.Println("updateHAProxy ended")
 	return nil
 }
@@ -694,7 +715,7 @@ func (c *HAProxyController) handleService(frontendHTTP string, namespace *Namesp
 
 	backendName = fmt.Sprintf("%s-%s-%d", namespace.Name, service.Name, path.ServicePort)
 	backendsUsed[backendName]++
-	condTest := "{ req.hdr(host) -i " + rule.Host + " } { var(txn.path) -m beg " + path.Path + " } "
+	condTest := "{ req.hdr(host) -i " + rule.Host + " } { path_beg " + path.Path + " } "
 	//both load-balance and forwarded-for have default values, so no need for error checking
 	balanceAlg, _ := GetValueFromAnnotations("load-balance", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
 	forwardedFor, _ := GetValueFromAnnotations("forwarded-for", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)

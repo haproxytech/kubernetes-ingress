@@ -10,9 +10,10 @@ import (
 
 // fixed paths to haproxy items
 const (
-	HAProxyCFG    = "/etc/haproxy/haproxy.cfg"
-	HAProxyCERT   = "/etc/haproxy/default.pem"
-	HAProxySocket = "/var/run/haproxy-runtime-api.sock"
+	HAProxyCFG     = "/etc/haproxy/haproxy.cfg"
+	HAProxyStatCFG = "/etc/haproxy/stats.cfg"
+	HAProxyCERT    = "/etc/haproxy/default.pem"
+	HAProxySocket  = "/var/run/haproxy-runtime-api.sock"
 )
 
 func main() {

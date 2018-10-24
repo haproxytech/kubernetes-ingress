@@ -12,14 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 FROM haproxy:1.8-alpine
-RUN apk --no-cache add socat openssl util-linux
+
+RUN apk --no-cache add socat openssl util-linux openrc
 RUN apk update && apk add bash make
 
-# dumb-init kindly manages SIGCHLD from forked HAProxy processes
-ARG DUMB_INIT_SHA256=81231da1cd074fdc81af62789fead8641ef3f24b6b07366a1c34e5b059faf363
-RUN wget -O/dumb-init https://github.com/Yelp/dumb-init/releases/download/v1.2.0/dumb-init_1.2.0_amd64\
- && echo "$DUMB_INIT_SHA256  /dumb-init" | sha256sum -c -\
- && chmod +x /dumb-init
+ARG DUMB_INIT_SHA256=37f2c1f0372a45554f1b89924fbb134fc24c3756efaedf11e07f599494e0eff9
+RUN wget --no-check-certificate -O /dumb-init https://github.com/Yelp/dumb-init/releases/download/v1.2.2/dumb-init_1.2.2_amd64 && \
+	echo "$DUMB_INIT_SHA256  /dumb-init" | sha256sum -c - && \
+	chmod +x /dumb-init
+
 
 COPY /lbctl /usr/lbctl/
 RUN mkdir /tmp/lbctl
@@ -28,7 +29,6 @@ RUN ln -s /opt/lbctl/scripts/lbctl /usr/sbin/lbctl
 RUN chmod +x /usr/sbin/lbctl
 
 COPY /fs /
-
-#ENV LBCTL_MODULES=l7
+RUN chmod +x /etc/init.d/haproxy
 
 ENTRYPOINT ["/dumb-init", "--", "/start.sh"]
