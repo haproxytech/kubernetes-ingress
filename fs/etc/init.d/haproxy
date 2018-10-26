@@ -10,12 +10,11 @@ start)
    fi   
    ;;
 stop)
-   kill `cat /var/run/haproxy.pid`
+   kill -USR1 `cat /var/run/haproxy.pid`
    rm /var/run/haproxy.pid
    ;;
 restart)
-   $0 stop
-   $0 start
+   $0 apply
    ;;
 reload)
    $0 apply
@@ -30,8 +29,7 @@ status)
    ;;
 apply)   
    if [ -e /var/run/haproxy.pid ]; then
-      kill -USR2 `cat /var/run/haproxy.pid`
-      echo haproxy is running, pid=`cat /var/run/haproxy.pid`
+      haproxy -f /etc/haproxy/haproxy.cfg -f /etc/haproxy/stats.cfg -p /var/run/haproxy.pid -sf $(cat /var/run/haproxy.pid)
    else
       $0 start
    fi

@@ -1,7 +1,7 @@
 package main
 
 import (
-	"errors"
+	"fmt"
 
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/watch"
@@ -44,14 +44,18 @@ type Namespace struct {
 	Status    watch.EventType
 }
 
-//GetServiceForPod returns all services that are using this pod
-func (n *Namespace) GetServiceForPod(labels MapStringW) (*Service, error) {
+//GetServicesForPod returns all services that are using this pod
+func (n *Namespace) GetServicesForPod(labels MapStringW) ([]*Service, error) {
+	result := []*Service{}
 	for _, service := range n.Services {
-		if hasSelectors(labels, service.Selector) {
-			return service, nil
+		if hasSelectors(service.Selector, labels) {
+			result = append(result, service)
 		}
 	}
-	return nil, errors.New("service not found")
+	if len(result) == 0 {
+		return nil, fmt.Errorf("services not found for labels %s", labels.String())
+	}
+	return result, nil
 }
 
 //GetPodsForSelector returns all pod for defined selector

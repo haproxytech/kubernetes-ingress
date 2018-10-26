@@ -14,12 +14,14 @@ Options for starting controller can be found in [controller.md](controller.md)
 | - |:-:|:-:|:-:|:-:|:-:|:-:|
 | [check](#backend-checks) | ["enabled"] | "enabled" |  |:large_blue_circle:|:white_circle:|:large_blue_circle:|
 | :construction: [check-port](#backend-checks) | [port](#port) |  | [check](#backend-checks) |:white_circle:|:white_circle:|:large_blue_circle:|
-| :construction: [check-interval](#backend-checks) | [time interval](#time-interval) |  | [check](#backend-checks) |:large_blue_circle:|:white_circle:|:large_blue_circle:|
+| :construction: [check-interval](#backend-checks) | [time](#time) |  | [check](#backend-checks) |:large_blue_circle:|:white_circle:|:large_blue_circle:|
 | [healthz](#healthz-check) | ["enabled"] | "enabled" | |:large_blue_circle:|:white_circle:|:white_circle:|
 | [healthz-port](#healthz-check) | ["enabled"] | "1042" | [healtz](#healthz-check) |:large_blue_circle:|:white_circle:|:white_circle:|
 | [load-balance](#balance-algorithm) | string | "roundrobin" |  |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:|
 | [maxconn](#maximum-concurent-connections) | number | "2000" |  |:large_blue_circle:|:white_circle:|:white_circle:|
 | [pod-maxconn](#maximum-concurent-backend-connections) | number | "2000" |  |:white_circle:|:white_circle:|:large_blue_circle:|
+| [servers-increment](#servers-slots-increment) | number | "42" |  |:large_blue_circle:|:white_circle:|:white_circle:|
+| [servers-increment-max-disabled](#servers-slots-increment) | number | "66" |  |:large_blue_circle:|:white_circle:|:white_circle:|
 | :construction: [ssl-redirect](#force-https) | bool | "true" | [tls-secret](#tls-secret) |:large_blue_circle:|:white_circle:|:white_circle:|
 | [forwarded-for](#x-forwarded-for) | ["enabled", "disabled"] | "enabled" |  |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:|
 
@@ -65,6 +67,13 @@ Options for starting controller can be found in [controller.md](controller.md)
 - related to backend servers (pods)
 - by default this is set to 2000 for every backend server (pod)
 
+### Servers slots increment
+- Annotation `servers-increment`- determines how much backend servers should we 
+        put in `maintenance` mode so controller can 
+        dynamically insert new pods without hitless reload
+- Annotation `servers-increment-max-disabled` - maximum allowed number of 
+        disabled servers in backend. Greater number triggers HAProxy reload
+
 #### X-Forwarded-For
 
 - Annotation: `forwarded-for`
@@ -84,7 +93,8 @@ Options for starting controller can be found in [controller.md](controller.md)
 
 - value between <0, 65535]
 
-#### Time interval
+#### Time
 
 - number + type
+- in miliseconds, "s" suffix denotes seconds
 - example: "1s"

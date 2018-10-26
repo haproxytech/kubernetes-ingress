@@ -13,7 +13,7 @@
 # limitations under the License.
 FROM haproxy:1.8-alpine
 
-RUN apk --no-cache add socat openssl util-linux openrc
+RUN apk --no-cache add socat openssl util-linux openrc htop
 RUN apk update && apk add bash make
 
 ARG DUMB_INIT_SHA256=37f2c1f0372a45554f1b89924fbb134fc24c3756efaedf11e07f599494e0eff9

@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"strings"
 
 	"k8s.io/apimachinery/pkg/watch"
 )
@@ -17,12 +18,29 @@ type StringW struct {
 type MapStringW map[string]*StringW
 
 //Get checks if name exists and if not, returns default value if defined
-func (a MapStringW) Get(name string) (data *StringW, err error) {
+func (a *MapStringW) Get(name string) (data *StringW, err error) {
 	var ok bool
-	if data, ok = a[name]; !ok {
+	if data, ok = (*a)[name]; !ok {
 		return nil, fmt.Errorf("StringW %s does not exist", name)
 	}
 	return data, nil
+}
+
+//Get checks if name exists and if not, returns default value if defined
+func (a *MapStringW) String() string {
+	var s strings.Builder
+	first := true
+	for key := range *a {
+		if first {
+			first = false
+			s.WriteString("[")
+		} else {
+			s.WriteString(", ")
+		}
+		s.WriteString(key)
+	}
+	s.WriteString("]")
+	return s.String()
 }
 
 //SetStatus sets Status state for all items in map
@@ -68,4 +86,17 @@ func (a *MapStringW) Clean() {
 		}
 	}
 	a.SetStatusState("")
+}
+
+//Clone removes all with status
+func (a *MapStringW) Clone() MapStringW {
+	result := MapStringW{}
+	for name, currentValue := range *a {
+		result[name] = &StringW{
+			Value:    currentValue.Value,
+			OldValue: currentValue.OldValue,
+			Status:   currentValue.Status,
+		}
+	}
+	return result
 }

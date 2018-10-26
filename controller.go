@@ -115,9 +115,32 @@ func (c *HAProxyController) watchChanges(namespaces watch.Interface, services wa
 	ingresses watch.Interface, configMapWatch watch.Interface, secretsWatch watch.Interface) {
 	syncEveryNSeconds := 5
 	eventChan := make(chan SyncDataEvent, watch.DefaultChanSize)
-	go c.SyncData(eventChan)
+	configMapReceivedAndProccesed := make(chan bool)
+	//initOver := true
+	eventsIngress := []SyncDataEvent{}
+	eventsServices := []SyncDataEvent{}
+	eventsPods := []SyncDataEvent{}
+
+	go c.SyncData(eventChan, configMapReceivedAndProccesed)
+	configMapOk := false
+
 	for {
 		select {
+		case _ = <-configMapReceivedAndProccesed:
+			for _, event := range eventsIngress {
+				eventChan <- event
+			}
+			for _, event := range eventsServices {
+				eventChan <- event
+			}
+			for _, event := range eventsPods {
+				eventChan <- event
+			}
+			time.Sleep(1 * time.Second)
+			eventsIngress = []SyncDataEvent{}
+			eventsServices = []SyncDataEvent{}
+			eventsPods = []SyncDataEvent{}
+			configMapOk = true
 		case msg := <-namespaces.ResultChan():
 			obj := msg.Object.(*corev1.Namespace)
 			namespace := &Namespace{
@@ -144,7 +167,12 @@ func (c *HAProxyController) watchChanges(namespaces watch.Interface, services wa
 				Selector:    ConvertToMapStringW(obj.Spec.Selector),
 				Status:      msg.Type,
 			}
-			eventChan <- SyncDataEvent{SyncType: SERVICE, Namespace: obj.GetNamespace(), Data: svc}
+			event := SyncDataEvent{SyncType: SERVICE, Namespace: obj.GetNamespace(), Data: svc}
+			if configMapOk {
+				eventChan <- event
+			} else {
+				eventsServices = append(eventsServices, event)
+			}
 		case msg := <-pods.ResultChan():
 			obj := msg.Object.(*corev1.Pod)
 			//LogWatchEvent(msg.Type, POD, obj)
@@ -156,7 +184,12 @@ func (c *HAProxyController) watchChanges(namespaces watch.Interface, services wa
 				//Port:      obj.Status. ? yes no, check
 				Status: msg.Type,
 			}
-			eventChan <- SyncDataEvent{SyncType: POD, Namespace: obj.GetNamespace(), Data: pod}
+			event := SyncDataEvent{SyncType: POD, Namespace: obj.GetNamespace(), Data: pod}
+			if configMapOk {
+				eventChan <- event
+			} else {
+				eventsPods = append(eventsPods, event)
+			}
 		case msg := <-ingresses.ResultChan():
 			obj := msg.Object.(*extensionsv1beta1.Ingress)
 			ingress := &Ingress{
@@ -165,7 +198,12 @@ func (c *HAProxyController) watchChanges(namespaces watch.Interface, services wa
 				Rules:       ConvertIngressRules(obj.Spec.Rules),
 				Status:      msg.Type,
 			}
-			eventChan <- SyncDataEvent{SyncType: INGRESS, Namespace: obj.GetNamespace(), Data: ingress}
+			event := SyncDataEvent{SyncType: INGRESS, Namespace: obj.GetNamespace(), Data: ingress}
+			if configMapOk {
+				eventChan <- event
+			} else {
+				eventsIngress = append(eventsIngress, event)
+			}
 		case msg := <-configMapWatch.ResultChan():
 			obj := msg.Object.(*corev1.ConfigMap)
 			//only config with name=haproxy-configmap is interesting
@@ -188,7 +226,9 @@ func (c *HAProxyController) watchChanges(namespaces watch.Interface, services wa
 		case <-time.After(time.Duration(syncEveryNSeconds) * time.Second):
 			//TODO syncEveryNSeconds sec is hardcoded, change that (annotation?)
 			//do sync of data every syncEveryNSeconds sec
-			eventChan <- SyncDataEvent{SyncType: COMMAND}
+			if configMapOk && len(eventsIngress) == 0 && len(eventsServices) == 0 && len(eventsPods) == 0 {
+				eventChan <- SyncDataEvent{SyncType: COMMAND}
+			}
 		}
 	}
 }
@@ -196,7 +236,7 @@ func (c *HAProxyController) watchChanges(namespaces watch.Interface, services wa
 //SyncData gets all kubernetes changes, aggregates them and apply to HAProxy.
 //All the changes must come through this function
 //TODO this is not necessary, remove it later
-func (c *HAProxyController) SyncData(jobChan <-chan SyncDataEvent) {
+func (c *HAProxyController) SyncData(jobChan <-chan SyncDataEvent, chConfigMapReceivedAndProccesed chan bool) {
 	hadChanges := false
 	c.cfg.Init(c.NativeAPI)
 	for job := range jobChan {
@@ -219,7 +259,7 @@ func (c *HAProxyController) SyncData(jobChan <-chan SyncDataEvent) {
 		case POD:
 			hadChanges = c.eventPod(ns, job.Data.(*Pod))
 		case CONFIGMAP:
-			hadChanges = c.eventConfigMap(ns, job.Data.(*ConfigMap))
+			hadChanges = c.eventConfigMap(ns, job.Data.(*ConfigMap), chConfigMapReceivedAndProccesed)
 		case SECRET:
 			hadChanges = c.eventSecret(ns, job.Data.(*Secret))
 		}
@@ -380,15 +420,21 @@ func (c *HAProxyController) eventPod(ns *Namespace, data *Pod) bool {
 		//first see if we have spare place in servers
 		//INFO if same pod used in multiple services, this will not work
 		createNew := true
-		if service, err := ns.GetServiceForPod(data.Labels); err == nil {
-			pods := ns.GetPodsForSelector(service.Selector)
+		var pods map[string]*Pod
+		if services, err := ns.GetServicesForPod(data.Labels); err == nil {
+			// we will see if we need to support behaviour where same pod is shared between services
+			service := services[0]
+			pods = ns.GetPodsForSelector(service.Selector)
 			//now see if we have some free place where we can place pod
 			for _, pod := range pods {
 				if pod.Maintenance {
-					log.Println("found pod in maintenace mode", pod.Name, pod.HAProxyName, service.Name, hasSelectors(service.Selector, pod.Labels), service.Selector, pod.Labels)
 					createNew = false
 					data.Maintenance = false
-					data.Status = watch.Modified
+					if pod.Status == watch.Added {
+						data.Status = watch.Added
+					} else {
+						data.Status = watch.Modified
+					}
 					data.HAProxyName = pod.HAProxyName
 					ns.Pods[data.Name] = data
 					delete(ns.Pods, pod.Name)
@@ -406,17 +452,63 @@ func (c *HAProxyController) eventPod(ns *Namespace, data *Pod) bool {
 			ns.Pods[data.Name] = data
 			//log.Println("Pod added", data.Name)
 			updateRequired = true
+
+			annIncrement, _ := GetValueFromAnnotations("servers-increment", c.cfg.ConfigMap.Annotations)
+			incrementSize := int64(128)
+			if increment, err := strconv.ParseInt(annIncrement.Value, 10, 64); err == nil {
+				incrementSize = increment
+			}
+			podsNumber := int64(len(pods) + 1)
+			if podsNumber%incrementSize != 0 {
+				for index := podsNumber % incrementSize; index < incrementSize; index++ {
+					pod := &Pod{
+						IP:          "127.0.0.1",
+						Labels:      data.Labels.Clone(),
+						PodPhase:    data.PodPhase,
+						Maintenance: true,
+						Status:      watch.Added,
+					}
+					pod.HAProxyName = fmt.Sprintf("SRV_%s", RandomString(5))
+					for _, ok := ns.PodNames[pod.HAProxyName]; ok; {
+						pod.HAProxyName = fmt.Sprintf("SRV_%s", RandomString(5))
+					}
+					pod.Name = pod.HAProxyName
+					ns.PodNames[pod.HAProxyName] = true
+					ns.Pods[pod.Name] = pod
+				}
+			}
 		}
 	case watch.Deleted:
 		oldPod, ok := ns.Pods[data.Name]
 		if ok {
-			oldPod.IP = "127.0.0.1"
-			oldPod.Status = watch.Modified //we replace it with disabled one
-			oldPod.Maintenance = true
-			//delete(ns.Pods, data.Name)
-			oldPod, _ = ns.Pods[data.Name]
-			//log.Println("Pod set for deletion", oldPod)
-			//update immediately
+			annIncrement, _ := GetValueFromAnnotations("servers-increment-max-disabled", c.cfg.ConfigMap.Annotations)
+			maxDisabled := int64(8)
+			if increment, err := strconv.ParseInt(annIncrement.Value, 10, 64); err == nil {
+				maxDisabled = increment
+			}
+			var service *Service
+			convertToMaintPod := true
+			if services, err := ns.GetServicesForPod(data.Labels); err == nil {
+				// we will see if we need to support behaviour where same pod is shared between services
+				service = services[0]
+				pods := ns.GetPodsForSelector(service.Selector)
+				//first count number of disabled pods
+				numDisabled := int64(0)
+				for _, pod := range pods {
+					if pod.Maintenance {
+						numDisabled++
+					}
+				}
+				if numDisabled >= maxDisabled {
+					convertToMaintPod = false
+					oldPod.Status = watch.Deleted
+				}
+			}
+			if convertToMaintPod {
+				oldPod.IP = "127.0.0.1"
+				oldPod.Status = watch.Modified //we replace it with disabled one
+				oldPod.Maintenance = true
+			}
 			updateRequired = true
 		} else {
 			log.Println("Pod not registered with controller, cannot delete !", data.Name)
@@ -425,7 +517,7 @@ func (c *HAProxyController) eventPod(ns *Namespace, data *Pod) bool {
 	return updateRequired
 }
 
-func (c *HAProxyController) eventConfigMap(ns *Namespace, data *ConfigMap) bool {
+func (c *HAProxyController) eventConfigMap(ns *Namespace, data *ConfigMap, chConfigMapReceivedAndProccesed chan bool) bool {
 	updateRequired := false
 	if ns.Name != c.osArgs.ConfigMap.Namespace ||
 		data.Name != c.osArgs.ConfigMap.Name {
@@ -447,6 +539,7 @@ func (c *HAProxyController) eventConfigMap(ns *Namespace, data *ConfigMap) bool 
 		c.cfg.ConfigMap.Annotations.SetStatusState(watch.Deleted)
 		c.cfg.ConfigMap.Status = watch.Deleted
 	}
+	chConfigMapReceivedAndProccesed <- true
 	return updateRequired
 }
 func (c *HAProxyController) eventSecret(ns *Namespace, data *Secret) bool {
@@ -618,7 +711,7 @@ func (c *HAProxyController) updateHAProxy() error {
 	log.Println("Transaction successfull")
 	c.cfg.Clean()
 
-	if err := c.HAProxyRestart(); err != nil {
+	if err := c.HAProxyReload(); err != nil {
 		log.Println(err)
 	}
 	log.Println("updateHAProxy ended")
@@ -685,14 +778,16 @@ func (c *HAProxyController) handlePath(frontendHTTP string, namespace *Namespace
 			switch pod.Status {
 			case watch.Added:
 				if err := nativeAPI.Configuration.CreateServer(backendName, data, transaction.ID, 0); err != nil {
-					log.Println("CreateServer", err)
+					return err
 				}
 			case watch.Modified:
 				if err := nativeAPI.Configuration.EditServer(data.Name, backendName, data, transaction.ID, 0); err != nil {
-					log.Println("EditServer", err)
+					return err
 				}
 			case watch.Deleted:
-				log.Printf("Unsupported state for POD [%s]", pod.Name)
+				if err := nativeAPI.Configuration.DeleteServer(data.Name, backendName, transaction.ID, 0); err != nil {
+					return err
+				}
 			}
 		} //if pod.Status...
 	} //for pod
