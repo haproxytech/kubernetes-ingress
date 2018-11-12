@@ -49,6 +49,7 @@ func (a *MapStringW) SetStatus(old MapStringW) (different bool) {
 	for name, currentValue := range *a {
 		if oldValue, err := old.Get(name); err != nil {
 			currentValue.Status = watch.Added
+			different = true
 		} else {
 			if currentValue.Value != oldValue.Value {
 				currentValue.Status = watch.Modified
