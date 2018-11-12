@@ -4,17 +4,18 @@
 
 Options for starting controller can be found in [controller.md](controller.md)
 
-### Avaliable anotations
+### Available annotations
 
 > :information_source: Ingress and service annotations can have `ingress.kubernetes.io`, `haproxy.org` and `haproxy.com` prefixes
 >
-> Example: `haproxy.com/ssl-redirect` and `haproxy.org/ssl-redirect are same annotation`
+> Example: `haproxy.com/ssl-redirect` and `haproxy.org/ssl-redirect` are same annotation
 
-| Anotation | Type | Default | Dependencies | Config map | Ingress | Service |
+| Annotation | Type | Default | Dependencies | Config map | Ingress | Service |
 | - |:-:|:-:|:-:|:-:|:-:|:-:|
 | [check](#backend-checks) | ["enabled"] | "enabled" |  |:large_blue_circle:|:white_circle:|:large_blue_circle:|
 | :construction: [check-port](#backend-checks) | [port](#port) |  | [check](#backend-checks) |:white_circle:|:white_circle:|:large_blue_circle:|
 | :construction: [check-interval](#backend-checks) | [time](#time) |  | [check](#backend-checks) |:large_blue_circle:|:white_circle:|:large_blue_circle:|
+| [forwarded-for](#x-forwarded-for) | ["enabled", "disabled"] | "enabled" |  |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:|
 | [healthz](#healthz-check) | ["enabled"] | "enabled" | |:large_blue_circle:|:white_circle:|:white_circle:|
 | [healthz-port](#healthz-check) | ["enabled"] | "1042" | [healtz](#healthz-check) |:large_blue_circle:|:white_circle:|:white_circle:|
 | [load-balance](#balance-algorithm) | string | "roundrobin" |  |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:|
@@ -23,7 +24,13 @@ Options for starting controller can be found in [controller.md](controller.md)
 | [servers-increment](#servers-slots-increment) | number | "42" |  |:large_blue_circle:|:white_circle:|:white_circle:|
 | [servers-increment-max-disabled](#servers-slots-increment) | number | "66" |  |:large_blue_circle:|:white_circle:|:white_circle:|
 | :construction: [ssl-redirect](#force-https) | bool | "true" | [tls-secret](#tls-secret) |:large_blue_circle:|:white_circle:|:white_circle:|
-| [forwarded-for](#x-forwarded-for) | ["enabled", "disabled"] | "enabled" |  |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:|
+| [timeout-http-request](#timeouts) | [time](#time) | "5s" |  |:large_blue_circle:|:white_circle:|:white_circle:|
+| [timeout-connect](#timeouts) | [time](#time) | "5s" |  |:large_blue_circle:|:white_circle:|:white_circle:|
+| [timeout-client](#timeouts) | [time](#time) | "50s" |  |:large_blue_circle:|:white_circle:|:white_circle:|
+| [timeout-queue](#timeouts) | [time](#time) | "5s" |  |:large_blue_circle:|:white_circle:|:white_circle:|
+| [timeout-server](#timeouts) | [time](#time) | "50s" |  |:large_blue_circle:|:white_circle:|:white_circle:|
+| [timeout-tunnel](#timeouts) | [time](#time) | "1h" |  |:large_blue_circle:|:white_circle:|:white_circle:|
+| [timeout-http-keep-alive](#timeouts) | [time](#time) | "1m" |  |:large_blue_circle:|:white_circle:|:white_circle:|
 
 > :information_source: Annotations have hierarchy: `default` <- `Configmap` <- `Ingress` <- `Service`
 >
@@ -68,11 +75,22 @@ Options for starting controller can be found in [controller.md](controller.md)
 - by default this is set to 2000 for every backend server (pod)
 
 ### Servers slots increment
+
 - Annotation `servers-increment`- determines how much backend servers should we 
         put in `maintenance` mode so controller can 
         dynamically insert new pods without hitless reload
 - Annotation `servers-increment-max-disabled` - maximum allowed number of 
         disabled servers in backend. Greater number triggers HAProxy reload
+
+### Timeouts
+
+- Annotation `http-request`
+- Annotation `connect`
+- Annotation `client`
+- Annotation `queue`
+- Annotation `server`
+- Annotation `tunnel`
+- Annotation `http-keep-alive`
 
 #### X-Forwarded-For
 

@@ -120,4 +120,11 @@ var defaultAnnotationValues = MapStringW{
 	"ssl-redirect":                   &StringW{Value: ""},
 	"servers-increment":              &StringW{Value: "42"},
 	"servers-increment-max-disabled": &StringW{Value: "66"},
+	"timeout-http-request":           &StringW{Value: "5s"},
+	"timeout-connect":                &StringW{Value: "5s"},
+	"timeout-client":                 &StringW{Value: "50s"},
+	"timeout-queue":                  &StringW{Value: "5s"},
+	"timeout-server":                 &StringW{Value: "50s"},
+	"timeout-tunnel":                 &StringW{Value: "1h"},
+	"timeout-http-keep-alive":        &StringW{Value: "1m"},
 }

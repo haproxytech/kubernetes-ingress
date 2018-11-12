@@ -9,6 +9,8 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/haproxytech/config-parser/parsers/simple"
+
 	corev1 "k8s.io/api/core/v1"
 	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
 	"k8s.io/apimachinery/pkg/watch"
@@ -16,15 +18,17 @@ import (
 	clientnative "github.com/haproxytech/client-native"
 	"github.com/haproxytech/client-native/configuration"
 	"github.com/haproxytech/client-native/stats"
+	"github.com/haproxytech/config-parser"
 	"github.com/haproxytech/models"
 )
 
 //HAProxyController is ingress controller
 type HAProxyController struct {
-	k8s       *K8s
-	cfg       Configuration
-	osArgs    OSArgs
-	NativeAPI *clientnative.HAProxyClient
+	k8s          *K8s
+	cfg          Configuration
+	osArgs       OSArgs
+	NativeAPI    *clientnative.HAProxyClient
+	NativeParser parser.Parser
 }
 
 // Start initialize and run HAProxyController
@@ -74,10 +78,15 @@ func (c *HAProxyController) Start(osArgs OSArgs) {
 		log.Panic(err)
 	}
 
-	confClient := configuration.NewLBCTLClient(HAProxyCFG, "/usr/sbin/lbctl", "")
+	confClient := configuration.NewLBCTLClient(HAProxyCFG, HAProxyGlobalCFG, "haproxy", "/usr/sbin/lbctl", "")
 	statsClient := stats.NewStatsClient(HAProxySocket)
 	//client := client_native.New(confClient, statsClient)
 	c.NativeAPI = clientnative.New(confClient, statsClient)
+	c.NativeParser = parser.Parser{}
+	err = c.NativeParser.LoadData(HAProxyGlobalCFG)
+	if err != nil {
+		log.Panic(err)
+	}
 
 	go c.watchChanges(nsWatch, svcWatch, podWatch, ingressWatch, configMapWatch, secretsWatch)
 }
@@ -98,15 +107,6 @@ func (c *HAProxyController) HAProxyReload() error {
 	//cmd := exec.Command("haproxy", "-f", HAProxyCFG)
 	log.Println("HAProxy reload with", HAProxyCFG)
 	cmd := exec.Command("service", "haproxy", "reload")
-	err := cmd.Run()
-	return err
-}
-
-//HAProxyRestart restarts HAProxy
-func (c *HAProxyController) HAProxyRestart() error {
-	//cmd := exec.Command("haproxy", "-f", HAProxyCFG)
-	log.Println("HAProxy restart with", HAProxyCFG)
-	cmd := exec.Command("service", "haproxy", "restart")
 	err := cmd.Run()
 	return err
 }
@@ -533,13 +533,15 @@ func (c *HAProxyController) eventConfigMap(ns *Namespace, data *ConfigMap, chCon
 			updateRequired = true
 		}
 	case watch.Added:
+		if c.cfg.ConfigMap == nil {
+			chConfigMapReceivedAndProccesed <- true
+		}
 		c.cfg.ConfigMap = data
 		updateRequired = true
 	case watch.Deleted:
 		c.cfg.ConfigMap.Annotations.SetStatusState(watch.Deleted)
 		c.cfg.ConfigMap.Status = watch.Deleted
 	}
-	chConfigMapReceivedAndProccesed <- true
 	return updateRequired
 }
 func (c *HAProxyController) eventSecret(ns *Namespace, data *Secret) bool {
@@ -575,6 +577,8 @@ func (c *HAProxyController) eventSecret(ns *Namespace, data *Secret) bool {
 
 func (c *HAProxyController) updateHAProxy() error {
 	nativeAPI := c.NativeAPI
+
+	c.handleGlobalTimeouts()
 	//backend, err := nativeAPI.Configuration.GetBackend("default-http-svc-8080")
 	//log.Println(backend, err)
 	version, err := nativeAPI.Configuration.GetVersion()
@@ -861,7 +865,44 @@ func (c *HAProxyController) handleService(frontendHTTP string, namespace *Namesp
 	return backendName, selector, service, nil
 }
 
-func (c *HAProxyController) handleBackendAnnotations(balanceAlg, forwardedFor *StringW, backendName string, transaction *models.Transaction) error {
+func (c *HAProxyController) handleGlobalTimeouts() bool {
+	hasChanges := false
+	hasChanges = c.handleGlobalTimeout("http-request") || hasChanges
+	hasChanges = c.handleGlobalTimeout("connect") || hasChanges
+	hasChanges = c.handleGlobalTimeout("client") || hasChanges
+	hasChanges = c.handleGlobalTimeout("queue") || hasChanges
+	hasChanges = c.handleGlobalTimeout("server") || hasChanges
+	hasChanges = c.handleGlobalTimeout("tunnel") || hasChanges
+	hasChanges = c.handleGlobalTimeout("http-keep-alive") || hasChanges
+	if hasChanges {
+		c.NativeParser.Save(HAProxyGlobalCFG)
+	}
+	return hasChanges
+}
+
+func (c *HAProxyController) handleGlobalTimeout(timeout string) bool {
+	client := c.NativeParser
+	annTimeout, err := GetValueFromAnnotations(fmt.Sprintf("timeout-%s", timeout), c.cfg.ConfigMap.Annotations)
+	if err != nil {
+		log.Println(err)
+		return false
+	}
+	if annTimeout.Status != "" {
+		//log.Println(fmt.Sprintf("timeout [%s]", timeout), annTimeout.Value, annTimeout.OldValue, annTimeout.Status)
+		data, err := client.GetAttr("defaults", fmt.Sprintf("timeout %s", timeout))
+		if err != nil {
+			log.Println(err)
+			return false
+		}
+		timeout := data.(*simple.SimpleTimeout)
+		timeout.Value = annTimeout.Value
+		return true
+	}
+	return false
+}
+
+func (c *HAProxyController) handleBackendAnnotations(balanceAlg, forwardedFor *StringW,
+	backendName string, transaction *models.Transaction) error {
 	backend := &models.Backend{
 		Balance:  balanceAlg.Value,
 		Name:     backendName,
