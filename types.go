@@ -11,11 +11,10 @@ import (
 type Pod struct {
 	IP          string
 	Labels      MapStringW
-	PodPhase    v1.PodPhase
 	Name        string
 	HAProxyName string
 	Maintenance bool //disabled
-	Sorry       bool //backup
+	Backends    map[string]struct{}
 	Status      watch.EventType
 }
 
