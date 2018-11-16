@@ -274,7 +274,7 @@ func (c *HAProxyController) SyncData(jobChan <-chan SyncDataEvent, chConfigMapRe
 		switch job.SyncType {
 		case COMMAND:
 			if hadChanges {
-				log.Println("job processing", job.SyncType, hadChanges, needsReload)
+				//log.Println("job processing", job.SyncType, hadChanges, needsReload)
 				if err := c.updateHAProxy(needsReload); err != nil {
 					log.Println(err)
 				}
@@ -452,16 +452,14 @@ func (c *HAProxyController) eventPod(ns *Namespace, data *Pod) (updateRequired, 
 			// issue socket command to change ip ad set it to ready
 			if newPod.IP != oldPod.IP && len(oldPod.Backends) > 0 {
 				for backendName := range newPod.Backends {
-					response, err := c.RuntimeClient.SetServerAddr(backendName, newPod.HAProxyName, newPod.IP, 0)
-					responseOK := response.HTTPLikeStatus == runtime.HTTPLikeStatusOK ||
-						response.HTTPLikeStatus == runtime.HTTPLikeStatusNotModified
-					if err != nil || !responseOK {
-						log.Println(response, err)
+					err := c.RuntimeClient.SetServerAddr(backendName, newPod.HAProxyName, newPod.IP, 0)
+					if err != nil {
+						log.Println(backendName, newPod.HAProxyName, newPod.IP, err)
 						needsReload = true
 					}
-					response, err = c.RuntimeClient.SetServerState(backendName, newPod.HAProxyName, "ready")
-					if err != nil || response.HTTPLikeStatus != runtime.HTTPLikeStatusOK {
-						log.Println(response, err)
+					err = c.RuntimeClient.SetServerState(backendName, newPod.HAProxyName, "ready")
+					if err != nil {
+						log.Println(backendName, newPod.HAProxyName, err)
 						needsReload = true
 					}
 				}
@@ -498,17 +496,15 @@ func (c *HAProxyController) eventPod(ns *Namespace, data *Pod) (updateRequired, 
 					needsReload = false
 					for backendName := range data.Backends {
 						if data.IP != "" {
-							response, err := c.RuntimeClient.SetServerAddr(backendName, data.HAProxyName, data.IP, 0)
-							responseOK := response.HTTPLikeStatus == runtime.HTTPLikeStatusOK ||
-								response.HTTPLikeStatus == runtime.HTTPLikeStatusNotModified
-							if err != nil || !responseOK {
-								log.Println(response, err)
+							err := c.RuntimeClient.SetServerAddr(backendName, data.HAProxyName, data.IP, 0)
+							if err != nil {
+								log.Println(backendName, data.HAProxyName, data.IP, err)
 								needsReload = true
 							}
 						}
-						response, err := c.RuntimeClient.SetServerState(backendName, data.HAProxyName, "ready")
-						if err != nil || response.HTTPLikeStatus != runtime.HTTPLikeStatusOK {
-							log.Println(response, err)
+						err := c.RuntimeClient.SetServerState(backendName, data.HAProxyName, "ready")
+						if err != nil {
+							log.Println(backendName, data.HAProxyName, err)
 							needsReload = true
 						}
 					}
@@ -592,9 +588,9 @@ func (c *HAProxyController) eventPod(ns *Namespace, data *Pod) (updateRequired, 
 				for backendName := range oldPod.Backends {
 					//response, err := c.RuntimeClient.SetServerAddr(backendName, oldPod.HAProxyName, oldPod.IP, 0)
 					//log.Println(response, err)
-					response, err := c.RuntimeClient.SetServerState(backendName, oldPod.HAProxyName, "maint")
-					if err != nil || response.HTTPLikeStatus != runtime.HTTPLikeStatusOK {
-						log.Println(response, err)
+					err := c.RuntimeClient.SetServerState(backendName, oldPod.HAProxyName, "maint")
+					if err != nil {
+						log.Println(backendName, oldPod.HAProxyName, err)
 					}
 				}
 			}
@@ -666,14 +662,12 @@ func (c *HAProxyController) updateHAProxy(reloadRequired bool) error {
 	nativeAPI := c.NativeAPI
 
 	c.handleGlobalTimeouts()
-	//backend, err := nativeAPI.Configuration.GetBackend("default-http-svc-8080")
-	//log.Println(backend, err)
 	version, err := nativeAPI.Configuration.GetVersion()
 	if err != nil || version < 1 {
 		//silently fallback to 1
 		version = 1
 	}
-	log.Println("Config version:", version)
+	//log.Println("Config version:", version)
 	transaction, err := nativeAPI.Configuration.StartTransaction(version)
 	if err != nil {
 		log.Println(err)
@@ -793,13 +787,11 @@ func (c *HAProxyController) updateHAProxy(reloadRequired bool) error {
 			}
 		}
 	}
-	log.Println("CommitTransaction ...")
 	err = nativeAPI.Configuration.CommitTransaction(transaction.ID)
 	if err != nil {
 		log.Println(err)
 		return err
 	}
-	log.Println("Transaction successfull")
 	c.cfg.Clean()
 	if reloadRequired {
 		if err := c.HAProxyReload(); err != nil {
@@ -810,7 +802,6 @@ func (c *HAProxyController) updateHAProxy(reloadRequired bool) error {
 	} else {
 		log.Println("HAProxy updated without reload")
 	}
-	log.Println("updateHAProxy ended")
 	return nil
 }
 
@@ -827,8 +818,6 @@ func (c *HAProxyController) handlePath(frontendHTTP string, namespace *Namespace
 	}
 	annMaxconn, _ := GetValueFromAnnotations("pod-maxconn", service.Annotations)
 	annCheck, _ := GetValueFromAnnotations("check", service.Annotations, c.cfg.ConfigMap.Annotations)
-	//annCheckPort, _ := GetValueFromAnnotations("check-port", service.Annotations)
-	//annCheckInterval, _ := GetValueFromAnnotations("check-interval", service.Annotations)
 
 	for _, pod := range namespace.Pods {
 		if hasSelectors(selector, pod.Labels) {
@@ -985,7 +974,7 @@ func (c *HAProxyController) handleGlobalTimeout(timeout string) bool {
 	}
 	if annTimeout.Status != "" {
 		//log.Println(fmt.Sprintf("timeout [%s]", timeout), annTimeout.Value, annTimeout.OldValue, annTimeout.Status)
-		data, err := client.GetAttr("defaults", fmt.Sprintf("timeout %s", timeout))
+		data, err := client.GetDefaultsAttr(fmt.Sprintf("timeout %s", timeout))
 		if err != nil {
 			log.Println(err)
 			return false
