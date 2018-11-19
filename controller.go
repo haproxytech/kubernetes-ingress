@@ -18,19 +18,17 @@ import (
 	clientnative "github.com/haproxytech/client-native"
 	"github.com/haproxytech/client-native/configuration"
 	"github.com/haproxytech/client-native/runtime"
-	"github.com/haproxytech/client-native/stats"
 	"github.com/haproxytech/config-parser"
 	"github.com/haproxytech/models"
 )
 
-//HAProxyController is ingress controller
+// HAProxyController is ingress controller
 type HAProxyController struct {
-	k8s           *K8s
-	cfg           Configuration
-	osArgs        OSArgs
-	NativeAPI     *clientnative.HAProxyClient
-	RuntimeClient *runtime.SingleRuntime
-	NativeParser  parser.Parser
+	k8s          *K8s
+	cfg          Configuration
+	osArgs       OSArgs
+	NativeAPI    *clientnative.HAProxyClient
+	NativeParser parser.Parser
 }
 
 // Start initialize and run HAProxyController
@@ -80,16 +78,6 @@ func (c *HAProxyController) Start(osArgs OSArgs) {
 		log.Panic(err)
 	}
 
-	confClient := configuration.NewLBCTLClient(HAProxyCFG, HAProxyGlobalCFG, "haproxy", "/usr/sbin/lbctl", "")
-	statsClient := stats.NewStatsClient(HAProxySocket)
-	//client := client_native.New(confClient, statsClient)
-	c.NativeAPI = clientnative.New(confClient, statsClient)
-	c.NativeParser = parser.Parser{}
-	err = c.NativeParser.LoadData(HAProxyGlobalCFG)
-	if err != nil {
-		log.Panic(err)
-	}
-
 	go c.watchChanges(nsWatch, svcWatch, podWatch, ingressWatch, configMapWatch, secretsWatch)
 }
 
@@ -102,12 +90,26 @@ func (c *HAProxyController) HAProxyInitialize() {
 	if err != nil {
 		log.Println(err)
 	}
-	client := runtime.SingleRuntime{}
-	err = client.Init("/var/run/haproxy-runtime-api.sock", true)
+
+	c.NativeParser = parser.Parser{}
+	err = c.NativeParser.LoadData(HAProxyGlobalCFG)
+	if err != nil {
+		log.Panic(err)
+	}
+
+	runtimeClient := runtime.Client{}
+	err = runtimeClient.Init([]string{"/var/run/haproxy-runtime-api.sock"}, true)
 	if err != nil {
 		log.Println(err)
 	}
-	c.RuntimeClient = &client
+
+	confClient := configuration.LBCTLClient{}
+	confClient.Init(HAProxyCFG, HAProxyGlobalCFG, "haproxy", "/usr/sbin/lbctl", "")
+
+	c.NativeAPI = &clientnative.HAProxyClient{
+		Configuration: &confClient,
+		Runtime:       &runtimeClient,
+	}
 }
 
 //HAProxyReload reloads HAProxy
@@ -433,6 +435,7 @@ func (c *HAProxyController) eventService(ns *Namespace, data *Service) (updateRe
 func (c *HAProxyController) eventPod(ns *Namespace, data *Pod) (updateRequired, needsReload bool) {
 	updateRequired = false
 	needsReload = false
+	runtimeClient := c.cfg.NativeAPI.Runtime
 	switch data.Status {
 	case watch.Modified:
 		newPod := data
@@ -452,12 +455,12 @@ func (c *HAProxyController) eventPod(ns *Namespace, data *Pod) (updateRequired, 
 			// issue socket command to change ip ad set it to ready
 			if newPod.IP != oldPod.IP && len(oldPod.Backends) > 0 {
 				for backendName := range newPod.Backends {
-					err := c.RuntimeClient.SetServerAddr(backendName, newPod.HAProxyName, newPod.IP, 0)
+					err := runtimeClient.SetServerAddr(backendName, newPod.HAProxyName, newPod.IP, 0)
 					if err != nil {
 						log.Println(backendName, newPod.HAProxyName, newPod.IP, err)
 						needsReload = true
 					}
-					err = c.RuntimeClient.SetServerState(backendName, newPod.HAProxyName, "ready")
+					err = runtimeClient.SetServerState(backendName, newPod.HAProxyName, "ready")
 					if err != nil {
 						log.Println(backendName, newPod.HAProxyName, err)
 						needsReload = true
@@ -496,13 +499,13 @@ func (c *HAProxyController) eventPod(ns *Namespace, data *Pod) (updateRequired, 
 					needsReload = false
 					for backendName := range data.Backends {
 						if data.IP != "" {
-							err := c.RuntimeClient.SetServerAddr(backendName, data.HAProxyName, data.IP, 0)
+							err := runtimeClient.SetServerAddr(backendName, data.HAProxyName, data.IP, 0)
 							if err != nil {
 								log.Println(backendName, data.HAProxyName, data.IP, err)
 								needsReload = true
 							}
 						}
-						err := c.RuntimeClient.SetServerState(backendName, data.HAProxyName, "ready")
+						err := runtimeClient.SetServerState(backendName, data.HAProxyName, "ready")
 						if err != nil {
 							log.Println(backendName, data.HAProxyName, err)
 							needsReload = true
@@ -586,9 +589,7 @@ func (c *HAProxyController) eventPod(ns *Namespace, data *Pod) (updateRequired, 
 				oldPod.Status = watch.Modified //we replace it with disabled one
 				oldPod.Maintenance = true
 				for backendName := range oldPod.Backends {
-					//response, err := c.RuntimeClient.SetServerAddr(backendName, oldPod.HAProxyName, oldPod.IP, 0)
-					//log.Println(response, err)
-					err := c.RuntimeClient.SetServerState(backendName, oldPod.HAProxyName, "maint")
+					err := runtimeClient.SetServerState(backendName, oldPod.HAProxyName, "maint")
 					if err != nil {
 						log.Println(backendName, oldPod.HAProxyName, err)
 					}
