@@ -902,18 +902,23 @@ func (c *HAProxyController) handleService(frontendHTTP string, namespace *Namesp
 	backendsUsed[backendName]++
 	condTest := "{ req.hdr(host) -i " + rule.Host + " } { path_beg " + path.Path + " } "
 	//both load-balance and forwarded-for have default values, so no need for error checking
-	balanceAlg, _ := GetValueFromAnnotations("load-balance", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
-	forwardedFor, _ := GetValueFromAnnotations("forwarded-for", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
+	annBalanceAlg, _ := GetValueFromAnnotations("load-balance", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
+	annForwardedFor, _ := GetValueFromAnnotations("forwarded-for", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
+	balanceAlg, err := ConvertLoadBalanceAlgorithm(annBalanceAlg.Value)
+	if err != nil {
+		log.Println(err)
+		log.Printf("%s, using %s \n", err, balanceAlg)
+	}
 
 	switch service.Status {
 	case watch.Added:
 		if numberOfTimesBackendUsed := backendsUsed[backendName]; numberOfTimesBackendUsed < 2 {
 			backend := &models.Backend{
-				Balance:  balanceAlg.Value,
+				Balance:  balanceAlg,
 				Name:     backendName,
 				Protocol: "http",
 			}
-			if forwardedFor.Value == "enabled" { //disabled with anything else is ok
+			if annForwardedFor.Value == "enabled" { //disabled with anything else is ok
 				backend.HTTPXffHeaderInsert = "enabled"
 			}
 			if err := nativeAPI.Configuration.CreateBackend(backend, transaction.ID, 0); err != nil {
@@ -943,8 +948,8 @@ func (c *HAProxyController) handleService(frontendHTTP string, namespace *Namesp
 		return "", nil, service, nil
 	}
 
-	if balanceAlg.Status != "" || forwardedFor.Status != "" {
-		if err = c.handleBackendAnnotations(balanceAlg, forwardedFor, backendName, transaction); err != nil {
+	if annBalanceAlg.Status != "" || annForwardedFor.Status != "" {
+		if err = c.handleBackendAnnotations(balanceAlg, annForwardedFor, backendName, transaction); err != nil {
 			return "", nil, nil, err
 		}
 	}
@@ -987,10 +992,10 @@ func (c *HAProxyController) handleGlobalTimeout(timeout string) bool {
 	return false
 }
 
-func (c *HAProxyController) handleBackendAnnotations(balanceAlg, forwardedFor *StringW,
+func (c *HAProxyController) handleBackendAnnotations(balanceAlg string, forwardedFor *StringW,
 	backendName string, transaction *models.Transaction) error {
 	backend := &models.Backend{
-		Balance:  balanceAlg.Value,
+		Balance:  balanceAlg,
 		Name:     backendName,
 		Protocol: "http",
 	}

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"math/rand"
 
@@ -69,4 +70,21 @@ func ConvertIngressRules(ingressRules []v1beta1.IngressRule) map[string]*Ingress
 		}
 	}
 	return rules
+}
+
+//ConvertLoadBalanceAlgorithm needed as lbctl has its own naming sistem
+func ConvertLoadBalanceAlgorithm(algorithm string) (string, error) {
+	//roundrobin least-connections hash-uri hash-source
+	switch algorithm {
+	case "roundrobin":
+		return "roundrobin", nil
+	case "leastconn":
+		return "least-connections", nil
+	case "uri":
+		return "hash-uri", nil
+	case "source":
+		return "hash-source", nil
+	default:
+		return "roundrobin", fmt.Errorf("Balance algorithm %s not supported", algorithm)
+	}
 }
