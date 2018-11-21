@@ -15,6 +15,8 @@ const (
 	HAProxyStatCFG   = "/etc/haproxy/stats.cfg"
 	HAProxyCERT      = "/etc/haproxy/default.pem"
 	HAProxySocket    = "/var/run/haproxy-runtime-api.sock"
+	FrontendHTTP     = "http"
+	FrontendHTTPS    = "https"
 )
 
 func main() {
@@ -34,7 +36,6 @@ func main() {
 	log.Printf("Build from: %s\n", GitRepo)
 	log.Printf("Build date: %s\n\n", BuildTime)
 	//TODO currently using default log, switch to something more convenient
-	//log.SetFlags(log.LstdFlags | log.Llongfile)
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
 
 	hAProxyController := HAProxyController{}

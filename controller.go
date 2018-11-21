@@ -696,7 +696,6 @@ func (c *HAProxyController) updateHAProxy(reloadRequired bool) error {
 		}
 	}
 
-	frontendHTTP := "http"
 	for _, namespace := range c.cfg.Namespace {
 		if !namespace.Relevant {
 			continue
@@ -745,15 +744,15 @@ func (c *HAProxyController) updateHAProxy(reloadRequired bool) error {
 				}
 				switch secret.Status {
 				case watch.Added:
-					if err = nativeAPI.Configuration.CreateListener(frontendHTTP, listener, transaction.ID, 0); err != nil {
+					if err = nativeAPI.Configuration.CreateListener(FrontendHTTPS, listener, transaction.ID, 0); err != nil {
 						return err
 					}
 				case watch.Modified:
-					if err = nativeAPI.Configuration.EditListener(listener.Name, frontendHTTP, listener, transaction.ID, 0); err != nil {
+					if err = nativeAPI.Configuration.EditListener(listener.Name, FrontendHTTPS, listener, transaction.ID, 0); err != nil {
 						return err
 					}
 				case watch.Deleted:
-					if err = nativeAPI.Configuration.DeleteListener(listener.Name, frontendHTTP, transaction.ID, 0); err != nil {
+					if err = nativeAPI.Configuration.DeleteListener(listener.Name, FrontendHTTPS, transaction.ID, 0); err != nil {
 						return err
 					}
 				}
@@ -776,7 +775,7 @@ func (c *HAProxyController) updateHAProxy(reloadRequired bool) error {
 			for _, rule := range ingress.Rules {
 				//nothing to switch/case for now
 				for _, path := range rule.Paths {
-					c.handlePath(frontendHTTP, namespace, ingress, rule, path, transaction, backendsUsed)
+					c.handlePath(namespace, ingress, rule, path, transaction, backendsUsed)
 				}
 			}
 			for backendName, numberOfTimesBackendUsed := range backendsUsed {
@@ -806,11 +805,11 @@ func (c *HAProxyController) updateHAProxy(reloadRequired bool) error {
 	return nil
 }
 
-func (c *HAProxyController) handlePath(frontendHTTP string, namespace *Namespace, ingress *Ingress, rule *IngressRule, path *IngressPath,
+func (c *HAProxyController) handlePath(namespace *Namespace, ingress *Ingress, rule *IngressRule, path *IngressPath,
 	transaction *models.Transaction, backendsUsed map[string]int) error {
 	nativeAPI := c.NativeAPI
 	//log.Println("PATH", path)
-	backendName, selector, service, err := c.handleService(frontendHTTP, namespace, ingress, rule, path, backendsUsed, transaction)
+	backendName, selector, service, err := c.handleService(namespace, ingress, rule, path, backendsUsed, transaction)
 	if err != nil {
 		return err
 	}
@@ -884,7 +883,7 @@ func (c *HAProxyController) handlePath(frontendHTTP string, namespace *Namespace
 	return nil
 }
 
-func (c *HAProxyController) handleService(frontendHTTP string, namespace *Namespace, ingress *Ingress, rule *IngressRule, path *IngressPath,
+func (c *HAProxyController) handleService(namespace *Namespace, ingress *Ingress, rule *IngressRule, path *IngressPath,
 	backendsUsed map[string]int, transaction *models.Transaction) (backendName string, selector MapStringW, service *Service, err error) {
 	nativeAPI := c.NativeAPI
 
@@ -906,7 +905,6 @@ func (c *HAProxyController) handleService(frontendHTTP string, namespace *Namesp
 	annForwardedFor, _ := GetValueFromAnnotations("forwarded-for", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
 	balanceAlg, err := ConvertLoadBalanceAlgorithm(annBalanceAlg.Value)
 	if err != nil {
-		log.Println(err)
 		log.Printf("%s, using %s \n", err, balanceAlg)
 	}
 
@@ -926,15 +924,18 @@ func (c *HAProxyController) handleService(frontendHTTP string, namespace *Namesp
 				return "", nil, nil, err
 			}
 		}
-		//log.Println("use_backend", condTest)
 		backendSwitchingRule := &models.BackendSwitchingRule{
 			Cond:       "if",
 			CondTest:   condTest,
 			TargetFarm: backendName,
 			ID:         1,
 		}
-		if err := nativeAPI.Configuration.CreateBackendSwitchingRule(frontendHTTP, backendSwitchingRule, transaction.ID, 0); err != nil {
-			log.Println("CreateBackendSwitchingRule", err)
+		if err := nativeAPI.Configuration.CreateBackendSwitchingRule(FrontendHTTP, backendSwitchingRule, transaction.ID, 0); err != nil {
+			log.Println("CreateBackendSwitchingRule http", err)
+			return "", nil, nil, err
+		}
+		if err := nativeAPI.Configuration.CreateBackendSwitchingRule(FrontendHTTPS, backendSwitchingRule, transaction.ID, 0); err != nil {
+			log.Println("CreateBackendSwitchingRule https", err)
 			return "", nil, nil, err
 		}
 	//case watch.Modified:
