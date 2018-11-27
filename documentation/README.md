@@ -23,7 +23,8 @@ Options for starting controller can be found in [controller.md](controller.md)
 | [pod-maxconn](#maximum-concurent-backend-connections) | number | "2000" |  |:white_circle:|:white_circle:|:large_blue_circle:|
 | [servers-increment](#servers-slots-increment) | number | "42" |  |:large_blue_circle:|:white_circle:|:white_circle:|
 | [servers-increment-max-disabled](#servers-slots-increment) | number | "66" |  |:large_blue_circle:|:white_circle:|:white_circle:|
-| :construction: [ssl-redirect](#force-https) | bool | "true" | [tls-secret](#tls-secret) |:large_blue_circle:|:white_circle:|:white_circle:|
+| [ssl-numproc](#https) | int | "" | [tls-secret](#tls-secret) |:large_blue_circle:|:white_circle:|:white_circle:|
+| :construction: [ssl-redirect](#https) | bool | "true" | [tls-secret](#tls-secret) |:large_blue_circle:|:white_circle:|:white_circle:|
 | [timeout-http-request](#timeouts) | [time](#time) | "5s" |  |:large_blue_circle:|:white_circle:|:white_circle:|
 | [timeout-connect](#timeouts) | [time](#time) | "5s" |  |:large_blue_circle:|:white_circle:|:white_circle:|
 | [timeout-client](#timeouts) | [time](#time) | "50s" |  |:large_blue_circle:|:white_circle:|:white_circle:|
@@ -52,10 +53,13 @@ Options for starting controller can be found in [controller.md](controller.md)
 - :construction: Annotation: `check-interval` - interval between checks [`check` must be "enabled"]
 - use in format  `haproxy.org/load-balance: <algorithm> [ <arguments> ]`
 
-#### Force Https
+#### Https
 
-- Annotation: `ssl-redirect`
-- by default this is activated if tls key is provided
+- Annotation: `ssl-redirect` - by default this is activated if tls key is provided
+- Annotation: `ssl-numproc` 
+  - default value: number of procesors - computed from system
+  - limit max number of processes used for ssl termination
+  - process 1 is used only if max number of processes is 1
 
 #### Healthz Check
 

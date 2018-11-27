@@ -118,6 +118,7 @@ var defaultAnnotationValues = MapStringW{
 	"maxconn":                        &StringW{Value: "2000"},
 	"pod-maxconn":                    &StringW{Value: "2000"},
 	"ssl-redirect":                   &StringW{Value: ""},
+	"ssl-numproc":                    &StringW{Value: ""},
 	"servers-increment":              &StringW{Value: "42"},
 	"servers-increment-max-disabled": &StringW{Value: "66"},
 	"timeout-http-request":           &StringW{Value: "5s"},
