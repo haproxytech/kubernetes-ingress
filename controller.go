@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/haproxytech/config-parser/parsers/global"
 	"github.com/haproxytech/config-parser/parsers/simple"
 
 	corev1 "k8s.io/api/core/v1"
@@ -701,10 +702,12 @@ func (c *HAProxyController) updateHAProxy(reloadRequired bool) error {
 		if !namespace.Relevant {
 			continue
 		}
-		if err = c.handleHttps(namespace, transaction); err != nil {
+		reload, err := c.handleHttps(namespace, transaction)
+		if err != nil {
 			return err
 		}
-		//TODO, do not just go through them, sort them to handle /web,/ option maybe?
+		reloadRequired = reloadRequired || reload
+		//TODO, do not just go through them, sort them to handle /web,/ maybe?
 		for _, ingress := range namespace.Ingresses {
 			//no need for switch/case for now
 			backendsUsed := map[string]int{}
@@ -741,47 +744,47 @@ func (c *HAProxyController) updateHAProxy(reloadRequired bool) error {
 	return nil
 }
 
-func (c *HAProxyController) handleHttps(namespace *Namespace, transaction *models.Transaction) error {
+func (c *HAProxyController) handleHttps(namespace *Namespace, transaction *models.Transaction) (reloadRequired bool, err error) {
 	nativeAPI := c.NativeAPI
+	reloadRequired = false
 	if c.osArgs.DefaultCertificate.Name == "" {
-		return nil
+		return reloadRequired, nil
 	}
 	secret, ok := namespace.Secret[c.osArgs.DefaultCertificate.Name]
 	if !ok {
-		return nil
+		return reloadRequired, nil
 	}
 	key, ok := secret.Data["tls.key"]
 	if !ok {
 		log.Println("missing tls.key")
-		return errors.New("missing tls.key")
+		return reloadRequired, errors.New("missing tls.key")
 	}
 	crt, ok := secret.Data["tls.crt"]
 	if !ok {
 		log.Println("missing tls.crt")
-		return errors.New("missing tls.crt")
+		return reloadRequired, errors.New("missing tls.crt")
 	}
 	var f *os.File
-	var err error
 	if f, err = os.Create(HAProxyCERT); err != nil {
 		log.Println(err)
-		return err
+		return reloadRequired, err
 	}
 	defer f.Close()
 	if _, err = f.Write(key); err != nil {
 		log.Println(err)
-		return err
+		return reloadRequired, err
 	}
 	if _, err = f.Write(crt); err != nil {
 		log.Println(err)
-		return err
+		return reloadRequired, err
 	}
 	if err = f.Sync(); err != nil {
 		log.Println(err)
-		return err
+		return reloadRequired, err
 	}
 	if err = f.Close(); err != nil {
 		log.Println(err)
-		return err
+		return reloadRequired, err
 	}
 	port := int64(443)
 	listener := &models.Listener{
@@ -807,17 +810,55 @@ func (c *HAProxyController) handleHttps(namespace *Namespace, transaction *model
 		switch secret.Status {
 		case watch.Added:
 			if err = nativeAPI.Configuration.CreateListener(FrontendHTTPS, listener, transaction.ID, 0); err != nil {
-				return err
+				return reloadRequired, err
 			}
 		case watch.Modified:
 			if err = nativeAPI.Configuration.EditListener(listener.Name, FrontendHTTPS, listener, transaction.ID, 0); err != nil {
-				return err
+				return reloadRequired, err
 			}
 		case watch.Deleted:
 			if err = nativeAPI.Configuration.DeleteListener(listener.Name, FrontendHTTPS, transaction.ID, 0); err != nil {
-				return err
+				return reloadRequired, err
 			}
 		}
+	}
+
+	//see global config
+	p := c.NativeParser
+	var nbproc *global.NbProc
+	data, err := p.GetGlobalAttr("nbproc")
+	if err == nil {
+		nbproc = data.(*global.NbProc)
+		if nbproc.Value != int64(maxProcs) {
+			reloadRequired = true
+			nbproc.Value = int64(maxProcs)
+		}
+	} else {
+		nbproc := &global.NbProc{
+			Enabled: true,
+			Value:   int64(maxProcs),
+		}
+		p.NewGlobalAttr(nbproc)
+		reloadRequired = true
+	}
+	data, err = p.GetGlobalAttr("cpu-map")
+	cpuMap := make([]*global.CpuMap, maxProcs)
+	for index := 0; index < maxProcs; index++ {
+		cpuMap[index] = &global.CpuMap{
+			Name:  strconv.Itoa(index + 1),
+			Value: strconv.Itoa(index),
+		}
+	}
+	cpuMaps := &global.CpuMapLines{CpuMapLines: cpuMap}
+	if err == nil {
+		mapLines := data.(*global.CpuMapLines)
+		if !mapLines.Equal(cpuMaps) {
+			reloadRequired = true
+			mapLines.CpuMapLines = cpuMaps.CpuMapLines
+		}
+	} else {
+		reloadRequired = true
+		p.NewGlobalAttr(cpuMaps)
 	}
 
 	//see if we need to add redirect to https redirect scheme https if !{ ssl_fc }
@@ -829,7 +870,12 @@ func (c *HAProxyController) handleHttps(namespace *Namespace, transaction *model
 	case watch.Deleted:
 	case "":
 	}
-	return nil
+	if reloadRequired {
+		if err := c.NativeParser.Save(HAProxyGlobalCFG); err != nil {
+			return false, err
+		}
+	}
+	return false, nil
 }
 
 func (c *HAProxyController) handlePath(namespace *Namespace, ingress *Ingress, rule *IngressRule, path *IngressPath,
