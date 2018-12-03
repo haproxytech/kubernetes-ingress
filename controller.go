@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/haproxytech/config-parser/parsers/global"
 	"github.com/haproxytech/config-parser/parsers/simple"
 
@@ -50,35 +51,7 @@ func (c *HAProxyController) Start(osArgs OSArgs) {
 	k8sVersion, _ := x.ServerVersion()
 	log.Printf("Running on Kubernetes version: %s %s", k8sVersion.String(), k8sVersion.Platform)
 
-	_, nsWatch, err := k8s.GetNamespaces()
-	if err != nil {
-		log.Panic(err)
-	}
-
-	_, svcWatch, err := k8s.GetServices()
-	if err != nil {
-		log.Panic(err)
-	}
-
-	_, podWatch, err := k8s.GetPods()
-	if err != nil {
-		log.Panic(err)
-	}
-
-	_, ingressWatch, err := k8s.GetIngresses()
-	if err != nil {
-		log.Panic(err)
-	}
-
-	_, configMapWatch, err := k8s.GetConfigMap()
-	if err != nil {
-		log.Panic(err)
-	}
-
-	_, secretsWatch, err := k8s.GetSecrets()
-	if err != nil {
-		log.Panic(err)
-	}
+	nsWatch, svcWatch, podWatch, ingressWatch, configMapWatch, secretsWatch := k8s.GetAll()
 
 	go c.watchChanges(nsWatch, svcWatch, podWatch, ingressWatch, configMapWatch, secretsWatch)
 }
@@ -125,7 +98,7 @@ func (c *HAProxyController) HAProxyReload() error {
 func (c *HAProxyController) watchChanges(namespaces watch.Interface, services watch.Interface, pods watch.Interface,
 	ingresses watch.Interface, configMapWatch watch.Interface, secretsWatch watch.Interface) {
 	syncEveryNSeconds := 5
-	eventChan := make(chan SyncDataEvent, watch.DefaultChanSize)
+	eventChan := make(chan SyncDataEvent, watch.DefaultChanSize*6)
 	configMapReceivedAndProccesed := make(chan bool)
 	//initOver := true
 	eventsIngress := []SyncDataEvent{}
@@ -152,8 +125,10 @@ func (c *HAProxyController) watchChanges(namespaces watch.Interface, services wa
 			eventsServices = []SyncDataEvent{}
 			eventsPods = []SyncDataEvent{}
 			configMapOk = true
-		case msg := <-namespaces.ResultChan():
-			if msg.Object == nil {
+		case msg, ok := <-namespaces.ResultChan():
+			if !ok || msg.Object == nil {
+				namespaces, services, pods, ingresses, configMapWatch, secretsWatch = c.k8s.GetAll()
+				goruntime.GC()
 				continue
 			}
 			obj := msg.Object.(*corev1.Namespace)
@@ -169,8 +144,10 @@ func (c *HAProxyController) watchChanges(namespaces watch.Interface, services wa
 				Status:    msg.Type,
 			}
 			eventChan <- SyncDataEvent{SyncType: NAMESPACE, Namespace: obj.GetName(), Data: namespace}
-		case msg := <-services.ResultChan():
-			if msg.Object == nil {
+		case msg, ok := <-services.ResultChan():
+			if !ok || msg.Object == nil {
+				namespaces, services, pods, ingresses, configMapWatch, secretsWatch = c.k8s.GetAll()
+				goruntime.GC()
 				continue
 			}
 			obj := msg.Object.(*corev1.Service)
@@ -190,8 +167,10 @@ func (c *HAProxyController) watchChanges(namespaces watch.Interface, services wa
 			} else {
 				eventsServices = append(eventsServices, event)
 			}
-		case msg := <-pods.ResultChan():
-			if msg.Object == nil {
+		case msg, ok := <-pods.ResultChan():
+			if !ok || msg.Object == nil {
+				namespaces, services, pods, ingresses, configMapWatch, secretsWatch = c.k8s.GetAll()
+				goruntime.GC()
 				continue
 			}
 			obj := msg.Object.(*corev1.Pod)
@@ -212,8 +191,10 @@ func (c *HAProxyController) watchChanges(namespaces watch.Interface, services wa
 			} else {
 				eventsPods = append(eventsPods, event)
 			}
-		case msg := <-ingresses.ResultChan():
-			if msg.Object == nil {
+		case msg, ok := <-ingresses.ResultChan():
+			if !ok || msg.Object == nil {
+				namespaces, services, pods, ingresses, configMapWatch, secretsWatch = c.k8s.GetAll()
+				goruntime.GC()
 				continue
 			}
 			obj := msg.Object.(*extensionsv1beta1.Ingress)
@@ -229,8 +210,10 @@ func (c *HAProxyController) watchChanges(namespaces watch.Interface, services wa
 			} else {
 				eventsIngress = append(eventsIngress, event)
 			}
-		case msg := <-configMapWatch.ResultChan():
-			if msg.Object == nil {
+		case msg, ok := <-configMapWatch.ResultChan():
+			if !ok || msg.Object == nil {
+				namespaces, services, pods, ingresses, configMapWatch, secretsWatch = c.k8s.GetAll()
+				goruntime.GC()
 				continue
 			}
 			obj := msg.Object.(*corev1.ConfigMap)
@@ -243,8 +226,10 @@ func (c *HAProxyController) watchChanges(namespaces watch.Interface, services wa
 				}
 				eventChan <- SyncDataEvent{SyncType: CONFIGMAP, Namespace: obj.GetNamespace(), Data: configMap}
 			}
-		case msg := <-secretsWatch.ResultChan():
-			if msg.Object == nil {
+		case msg, ok := <-secretsWatch.ResultChan():
+			if !ok || msg.Object == nil {
+				namespaces, services, pods, ingresses, configMapWatch, secretsWatch = c.k8s.GetAll()
+				goruntime.GC()
 				continue
 			}
 			obj := msg.Object.(*corev1.Secret)
@@ -278,7 +263,6 @@ func (c *HAProxyController) SyncData(jobChan <-chan SyncDataEvent, chConfigMapRe
 		switch job.SyncType {
 		case COMMAND:
 			if hadChanges {
-				//log.Println("job processing", job.SyncType, hadChanges, needsReload)
 				if err := c.updateHAProxy(needsReload); err != nil {
 					log.Println(err)
 				}
@@ -378,6 +362,13 @@ func (c *HAProxyController) eventIngress(ns *Namespace, data *Ingress) (updateRe
 		//log.Println("Ingress modified", data.Name, "\n", diffStr)
 		updateRequired = true
 	case watch.Added:
+		if old, ok := ns.Ingresses[data.Name]; ok {
+			if !cmp.Equal(old, data) {
+				ns.Ingresses[data.Name] = data
+				updateRequired = true
+			}
+			return updateRequired, updateRequired
+		}
 		ns.Ingresses[data.Name] = data
 		//log.Println("Ingress added", data.Name)
 		updateRequired = true
@@ -417,6 +408,13 @@ func (c *HAProxyController) eventService(ns *Namespace, data *Service) (updateRe
 		//log.Println("Service modified", data.Name, "\n", result)
 		updateRequired = true
 	case watch.Added:
+		if old, ok := ns.Services[data.Name]; ok {
+			if !cmp.Equal(old, data) {
+				ns.Services[data.Name] = data
+				updateRequired = true
+			}
+			return updateRequired, updateRequired
+		}
 		ns.Services[data.Name] = data
 		//log.Println("Service added", data.Name)
 		updateRequired = true
@@ -475,6 +473,15 @@ func (c *HAProxyController) eventPod(ns *Namespace, data *Pod) (updateRequired, 
 		//log.Println("Pod modified", data.Name, oldPod.Status, "\n", newPod.HAProxyName, oldPod.HAProxyName, "/n", result)
 		updateRequired = true
 	case watch.Added:
+		if old, ok := ns.Pods[data.Name]; ok {
+			data.HAProxyName = old.HAProxyName
+			if !cmp.Equal(old, data) {
+				//so this is actually modified
+				data.Status = watch.Modified
+				return c.eventPod(ns, data)
+			}
+			return updateRequired, needsReload
+		}
 		//first see if we have spare place in servers
 		//INFO if same pod used in multiple services, this will not work
 		createNew := true
@@ -621,9 +628,12 @@ func (c *HAProxyController) eventConfigMap(ns *Namespace, data *ConfigMap, chCon
 	case watch.Added:
 		if c.cfg.ConfigMap == nil {
 			chConfigMapReceivedAndProccesed <- true
+			updateRequired = true
 		}
-		c.cfg.ConfigMap = data
-		updateRequired = true
+		if !cmp.Equal(c.cfg.ConfigMap, data) {
+			c.cfg.ConfigMap = data
+			updateRequired = true
+		}
 	case watch.Deleted:
 		c.cfg.ConfigMap.Annotations.SetStatusState(watch.Deleted)
 		c.cfg.ConfigMap.Status = watch.Deleted
@@ -635,7 +645,6 @@ func (c *HAProxyController) eventSecret(ns *Namespace, data *Secret) (updateRequ
 	switch data.Status {
 	case watch.Modified:
 		newSecret := data
-		//oldSecret, ok := c.cfg.Secret[data.Name]
 		_, ok := ns.Secret[data.Name]
 		if !ok {
 			//intentionally do not add it. TODO see if our idea of only watching is ok
@@ -646,8 +655,14 @@ func (c *HAProxyController) eventSecret(ns *Namespace, data *Secret) (updateRequ
 		//log.Println("Secret modified", data.Name, "\n", result)
 		updateRequired = true
 	case watch.Added:
+		if old, ok := ns.Secret[data.Name]; ok {
+			if !cmp.Equal(old, data) {
+				ns.Secret[data.Name] = data
+				updateRequired = true
+			}
+			return updateRequired, updateRequired
+		}
 		ns.Secret[data.Name] = data
-		//log.Println("Secret added", data.Name)
 		updateRequired = true
 	case watch.Deleted:
 		_, ok := ns.Secret[data.Name]
@@ -674,10 +689,6 @@ func (c *HAProxyController) updateHAProxy(reloadRequired bool) error {
 	transaction, err := nativeAPI.Configuration.StartTransaction(version)
 	if err != nil {
 		log.Println(err)
-		return err
-	}
-
-	if err := c.checkHealthzStatus(transaction); err != nil {
 		return err
 	}
 
@@ -1079,66 +1090,6 @@ func (c *HAProxyController) handleBackendAnnotations(balanceAlg string, forwarde
 
 	if err := c.NativeAPI.Configuration.EditBackend(backend.Name, backend, transaction.ID, 0); err != nil {
 		return err
-	}
-	return nil
-}
-
-func (c *HAProxyController) checkHealthzStatus(transaction *models.Transaction) error {
-	cfg := c.NativeAPI.Configuration
-	frontendName := "healthz"
-	if annHealthz, err := GetValueFromAnnotations("healthz", c.cfg.ConfigMap.Annotations); err == nil {
-		enabled := annHealthz.Value == "enabled"
-		enabledOld := annHealthz.OldValue == "enabled"
-		port := int64(1042) //only default if user inputs invalid data
-
-		annHealthzPort, _ := GetValueFromAnnotations("healthz-port", c.cfg.ConfigMap.Annotations)
-		if annPort, err := strconv.ParseInt(annHealthzPort.Value, 10, 64); err == nil {
-			port = annPort
-		}
-		listener := &models.Listener{
-			Address: "0.0.0.0",
-			Name:    "health-bind-name",
-			Port:    &port,
-		}
-		switch annHealthz.Status {
-		case watch.Added:
-			if !enabled {
-				return nil
-			}
-			if err := cfg.CreateListener(frontendName, listener, transaction.ID, 0); err != nil {
-				return err
-			}
-		case watch.Modified:
-			if enabled {
-				if !enabledOld {
-					if err := cfg.CreateListener(frontendName, listener, transaction.ID, 0); err != nil {
-						return err
-					}
-				} else {
-					if err := cfg.EditListener(listener.Name, frontendName, listener, transaction.ID, 0); err != nil {
-						return err
-					}
-				}
-			} else {
-				if enabledOld {
-					if err := cfg.DeleteListener(listener.Name, frontendName, transaction.ID, 0); err != nil {
-						return err
-					}
-					lst, err := cfg.GetListener(listener.Name, frontendName, transaction.ID)
-					log.Println(lst, err)
-				}
-			}
-		case watch.Deleted:
-			if err := cfg.DeleteListener(listener.Name, frontendName, transaction.ID, 0); err != nil {
-				return err
-			}
-		case "":
-			if annHealthzPort.Status != "" {
-				if err := cfg.EditListener(listener.Name, frontendName, listener, transaction.ID, 0); err != nil {
-					return err
-				}
-			}
-		}
 	}
 	return nil
 }

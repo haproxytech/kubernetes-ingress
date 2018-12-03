@@ -1,6 +1,8 @@
 package main
 
 import (
+	"log"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/kubernetes"
@@ -25,116 +27,91 @@ func GetKubernetesClient() (*K8s, error) {
 	return &K8s{API: clientset}, nil
 }
 
-//GetNamespaces returns namespaces
-func (k *K8s) GetNamespaces() ([]string, watch.Interface, error) {
-	items, err := k.API.CoreV1().Namespaces().List(metav1.ListOptions{})
+func (k *K8s) GetAll() (ns, svc, pod, ingress, config, secrets watch.Interface) {
+	nsWatch, err := k.GetNamespaces()
 	if err != nil {
-		return nil, nil, err
+		log.Panic(err)
 	}
+
+	svcWatch, err := k.GetServices()
+	if err != nil {
+		log.Panic(err)
+	}
+
+	podWatch, err := k.GetPods()
+	if err != nil {
+		log.Panic(err)
+	}
+
+	ingressWatch, err := k.GetIngresses()
+	if err != nil {
+		log.Panic(err)
+	}
+
+	configMapWatch, err := k.GetConfigMap()
+	if err != nil {
+		log.Panic(err)
+	}
+
+	secretsWatch, err := k.GetSecrets()
+	if err != nil {
+		log.Panic(err)
+	}
+
+	return nsWatch, svcWatch, podWatch, ingressWatch, configMapWatch, secretsWatch
+}
+
+//GetNamespaces returns namespaces
+func (k *K8s) GetNamespaces() (watch.Interface, error) {
 	watchChanges, err := k.API.CoreV1().Namespaces().Watch(metav1.ListOptions{})
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
-	num := len(items.Items)
-	itemList := make([]string, num, num)
-	for i, ns := range items.Items {
-		itemList[i] = ns.GetName()
-	}
-	return itemList, watchChanges, nil
+	return watchChanges, nil
 }
 
 //GetPods returns pods
-func (k *K8s) GetPods() ([]string, watch.Interface, error) {
-	items, err := k.API.CoreV1().Pods("").List(metav1.ListOptions{})
-	if err != nil {
-		panic(err.Error())
-	}
-
+func (k *K8s) GetPods() (watch.Interface, error) {
 	watchChanges, err := k.API.CoreV1().Pods("").Watch(metav1.ListOptions{})
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
-	num := len(items.Items)
-	itemList := make([]string, num, num)
-	for i, ns := range items.Items {
-		itemList[i] = ns.GetName()
-	}
-	return itemList, watchChanges, nil
+	return watchChanges, nil
 }
 
 //GetIngresses returns ingresses
-func (k *K8s) GetIngresses() ([]string, watch.Interface, error) {
-
-	items, err := k.API.Extensions().Ingresses("").List(metav1.ListOptions{})
-	if err != nil {
-		panic(err.Error())
-	}
-
+func (k *K8s) GetIngresses() (watch.Interface, error) {
 	watchChanges, err := k.API.Extensions().Ingresses("").Watch(metav1.ListOptions{})
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
-	num := len(items.Items)
-	itemList := make([]string, num, num)
-	for i, ns := range items.Items {
-		itemList[i] = ns.GetName()
-	}
-	return itemList, watchChanges, nil
+	return watchChanges, nil
 }
 
 //GetServices returns services
-func (k *K8s) GetServices() ([]string, watch.Interface, error) {
-	items, err := k.API.CoreV1().Services("").List(metav1.ListOptions{})
-	if err != nil {
-		panic(err.Error())
-	}
-
+func (k *K8s) GetServices() (watch.Interface, error) {
 	watchChanges, err := k.API.CoreV1().Services("").Watch(metav1.ListOptions{})
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
-	num := len(items.Items)
-	itemList := make([]string, num, num)
-	for i, ns := range items.Items {
-		itemList[i] = ns.GetName()
-	}
-	return itemList, watchChanges, nil
+	return watchChanges, nil
 }
 
 //GetConfigMap returns config map for controller
-func (k *K8s) GetConfigMap() ([]string, watch.Interface, error) {
-	items, err := k.API.CoreV1().ConfigMaps("").List(metav1.ListOptions{})
-	if err != nil {
-		panic(err.Error())
-	}
+func (k *K8s) GetConfigMap() (watch.Interface, error) {
 
 	watchChanges, err := k.API.CoreV1().ConfigMaps("").Watch(metav1.ListOptions{})
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
-	num := len(items.Items)
-	itemList := make([]string, num, num)
-	for i, ns := range items.Items {
-		itemList[i] = ns.GetName()
-	}
-	return itemList, watchChanges, nil
+	return watchChanges, nil
 }
 
 //GetSecrets returns kubernetes secrets
-func (k *K8s) GetSecrets() ([]string, watch.Interface, error) {
-	items, err := k.API.CoreV1().Secrets("").List(metav1.ListOptions{})
-	if err != nil {
-		panic(err.Error())
-	}
-
+func (k *K8s) GetSecrets() (watch.Interface, error) {
 	watchChanges, err := k.API.CoreV1().Secrets("").Watch(metav1.ListOptions{})
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
-	num := len(items.Items)
-	itemList := make([]string, num, num)
-	for i, ns := range items.Items {
-		itemList[i] = ns.GetName()
-	}
-	return itemList, watchChanges, nil
+	return watchChanges, nil
 }
