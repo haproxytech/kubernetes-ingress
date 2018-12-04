@@ -628,6 +628,7 @@ func (c *HAProxyController) eventConfigMap(ns *Namespace, data *ConfigMap, chCon
 	}
 	switch data.Status {
 	case watch.Modified:
+
 		different := data.Annotations.SetStatus(c.cfg.ConfigMap.Annotations)
 		c.cfg.ConfigMap = data
 		if !different {
@@ -638,7 +639,9 @@ func (c *HAProxyController) eventConfigMap(ns *Namespace, data *ConfigMap, chCon
 	case watch.Added:
 		if c.cfg.ConfigMap == nil {
 			chConfigMapReceivedAndProccesed <- true
+			c.cfg.ConfigMap = data
 			updateRequired = true
+			return updateRequired, updateRequired
 		}
 		if !c.cfg.ConfigMap.Equal(data) {
 			data.Status = watch.Modified

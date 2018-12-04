@@ -3,6 +3,9 @@ package main
 import "bytes"
 
 func (a *IngressPath) Equal(b *IngressPath) bool {
+	if a == nil || b == nil {
+		return false
+	}
 	if a.Path != b.Path {
 		return false
 	}
@@ -16,6 +19,9 @@ func (a *IngressPath) Equal(b *IngressPath) bool {
 }
 
 func (a *IngressRule) Equal(b *IngressRule) bool {
+	if a == nil || b == nil {
+		return false
+	}
 	if a.Host != b.Host {
 		return false
 	}
@@ -34,6 +40,9 @@ func (a *IngressRule) Equal(b *IngressRule) bool {
 
 //Equal compares two Ingresses, ignores
 func (a *Ingress) Equal(b *Ingress) bool {
+	if a == nil || b == nil {
+		return false
+	}
 	if a.Name != b.Name {
 		return false
 	}
@@ -54,6 +63,9 @@ func (a *Ingress) Equal(b *Ingress) bool {
 
 //Equal compares two services, ignores statuses and old values
 func (a *Service) Equal(b *Service) bool {
+	if a == nil || b == nil {
+		return false
+	}
 	if a.Name != b.Name {
 		return false
 	}
@@ -74,6 +86,9 @@ func (a *Service) Equal(b *Service) bool {
 
 //Equal compares two config maps, ignores statuses and old values
 func (a *ConfigMap) Equal(b *ConfigMap) bool {
+	if a == nil || b == nil {
+		return false
+	}
 	if a.Name != b.Name {
 		return false
 	}
@@ -85,6 +100,9 @@ func (a *ConfigMap) Equal(b *ConfigMap) bool {
 
 //Equal compares two secrets, ignores statuses and old values
 func (a *Secret) Equal(b *Secret) bool {
+	if a == nil || b == nil {
+		return false
+	}
 	if a.Name != b.Name {
 		return false
 	}
@@ -104,6 +122,9 @@ func (a *Secret) Equal(b *Secret) bool {
 }
 
 func (a *Pod) Equal(b *Pod) bool {
+	if a == nil || b == nil {
+		return false
+	}
 	if a.Name != b.Name {
 		return false
 	}
