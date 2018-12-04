@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 
-	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/watch"
 )
 
@@ -23,7 +22,7 @@ type Service struct {
 	Name       string
 	ClusterIP  string
 	ExternalIP string
-	Ports      []v1.ServicePort
+	//Ports      []v1.ServicePort
 
 	Annotations MapStringW
 	Selector    MapStringW

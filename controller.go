@@ -8,9 +8,9 @@ import (
 	"os/exec"
 	goruntime "runtime"
 	"strconv"
+	"strings"
 	"time"
 
-	"github.com/google/go-cmp/cmp"
 	"github.com/haproxytech/config-parser/parsers/global"
 	"github.com/haproxytech/config-parser/parsers/simple"
 
@@ -155,7 +155,7 @@ func (c *HAProxyController) watchChanges(namespaces watch.Interface, services wa
 				Name: obj.GetName(),
 				//ClusterIP:  "string",
 				//ExternalIP: "string",
-				Ports: obj.Spec.Ports,
+				//Ports: obj.Spec.Ports,
 
 				Annotations: ConvertToMapStringW(obj.ObjectMeta.Annotations),
 				Selector:    ConvertToMapStringW(obj.Spec.Selector),
@@ -315,12 +315,15 @@ func (c *HAProxyController) eventIngress(ns *Namespace, data *Ingress) (updateRe
 	case watch.Modified:
 		newIngress := data
 		oldIngress, ok := ns.Ingresses[data.Name]
-		newIngress.Annotations.SetStatus(oldIngress.Annotations)
 		if !ok {
 			//intentionally do not add it. TODO see if idea of only watching is ok
 			log.Println("Ingress not registered with controller, cannot modify !", data.Name)
 			return false, false
 		}
+		if oldIngress.Equal(data) {
+			return false, false
+		}
+		newIngress.Annotations.SetStatus(oldIngress.Annotations)
 		//so see what exactly has changed in there
 		for _, newRule := range newIngress.Rules {
 			if oldRule, ok := oldIngress.Rules[newRule.Host]; ok {
@@ -363,9 +366,10 @@ func (c *HAProxyController) eventIngress(ns *Namespace, data *Ingress) (updateRe
 		updateRequired = true
 	case watch.Added:
 		if old, ok := ns.Ingresses[data.Name]; ok {
-			if !cmp.Equal(old, data) {
-				ns.Ingresses[data.Name] = data
-				updateRequired = true
+			data.Status = old.Status
+			if !old.Equal(data) {
+				data.Status = watch.Modified
+				return c.eventIngress(ns, data)
 			}
 			return updateRequired, updateRequired
 		}
@@ -398,20 +402,23 @@ func (c *HAProxyController) eventService(ns *Namespace, data *Service) (updateRe
 	case watch.Modified:
 		newService := data
 		oldService, ok := ns.Services[data.Name]
-		newService.Annotations.SetStatus(oldService.Annotations)
 		if !ok {
 			//intentionally do not add it. TODO see if our idea of only watching is ok
 			log.Println("Service not registered with controller, cannot modify !", data.Name)
 		}
+		if oldService.Equal(newService) {
+			return updateRequired, updateRequired
+		}
+		newService.Annotations.SetStatus(oldService.Annotations)
 		ns.Services[data.Name] = newService
 		//result := cmp.Diff(oldService, newService)
 		//log.Println("Service modified", data.Name, "\n", result)
 		updateRequired = true
 	case watch.Added:
 		if old, ok := ns.Services[data.Name]; ok {
-			if !cmp.Equal(old, data) {
-				ns.Services[data.Name] = data
-				updateRequired = true
+			if !old.Equal(data) {
+				data.Status = watch.Modified
+				return c.eventService(ns, data)
 			}
 			return updateRequired, updateRequired
 		}
@@ -446,6 +453,9 @@ func (c *HAProxyController) eventPod(ns *Namespace, data *Pod) (updateRequired, 
 			log.Println("Pod not registered with controller, cannot modify !", data.Name)
 			return updateRequired, needsReload
 		}
+		if oldPod.Equal(data) {
+			return updateRequired, needsReload
+		}
 		newPod.HAProxyName = oldPod.HAProxyName
 		newPod.Backends = oldPod.Backends
 		if oldPod.Status == watch.Added {
@@ -475,7 +485,7 @@ func (c *HAProxyController) eventPod(ns *Namespace, data *Pod) (updateRequired, 
 	case watch.Added:
 		if old, ok := ns.Pods[data.Name]; ok {
 			data.HAProxyName = old.HAProxyName
-			if !cmp.Equal(old, data) {
+			if old.Equal(data) {
 				//so this is actually modified
 				data.Status = watch.Modified
 				return c.eventPod(ns, data)
@@ -630,9 +640,9 @@ func (c *HAProxyController) eventConfigMap(ns *Namespace, data *ConfigMap, chCon
 			chConfigMapReceivedAndProccesed <- true
 			updateRequired = true
 		}
-		if !cmp.Equal(c.cfg.ConfigMap, data) {
-			c.cfg.ConfigMap = data
-			updateRequired = true
+		if !c.cfg.ConfigMap.Equal(data) {
+			data.Status = watch.Modified
+			return c.eventConfigMap(ns, data, chConfigMapReceivedAndProccesed)
 		}
 	case watch.Deleted:
 		c.cfg.ConfigMap.Annotations.SetStatusState(watch.Deleted)
@@ -645,10 +655,14 @@ func (c *HAProxyController) eventSecret(ns *Namespace, data *Secret) (updateRequ
 	switch data.Status {
 	case watch.Modified:
 		newSecret := data
-		_, ok := ns.Secret[data.Name]
+		oldSecret, ok := ns.Secret[data.Name]
 		if !ok {
 			//intentionally do not add it. TODO see if our idea of only watching is ok
 			log.Println("Secret not registered with controller, cannot modify !", data.Name)
+			return updateRequired, updateRequired
+		}
+		if oldSecret.Equal(data) {
+			return updateRequired, updateRequired
 		}
 		ns.Secret[data.Name] = newSecret
 		//result := cmp.Diff(oldSecret, newSecret)
@@ -656,9 +670,9 @@ func (c *HAProxyController) eventSecret(ns *Namespace, data *Secret) (updateRequ
 		updateRequired = true
 	case watch.Added:
 		if old, ok := ns.Secret[data.Name]; ok {
-			if !cmp.Equal(old, data) {
-				ns.Secret[data.Name] = data
-				updateRequired = true
+			if !old.Equal(data) {
+				data.Status = watch.Modified
+				return c.eventSecret(ns, data)
 			}
 			return updateRequired, updateRequired
 		}
@@ -821,7 +835,13 @@ func (c *HAProxyController) handleHttps(namespace *Namespace, transaction *model
 		switch secret.Status {
 		case watch.Added:
 			if err = nativeAPI.Configuration.CreateListener(FrontendHTTPS, listener, transaction.ID, 0); err != nil {
-				return reloadRequired, err
+				if strings.Contains(err.Error(), "already exists") {
+					if err = nativeAPI.Configuration.EditListener(listener.Name, FrontendHTTPS, listener, transaction.ID, 0); err != nil {
+						return reloadRequired, err
+					}
+				} else {
+					return reloadRequired, err
+				}
 			}
 		case watch.Modified:
 			if err = nativeAPI.Configuration.EditListener(listener.Name, FrontendHTTPS, listener, transaction.ID, 0); err != nil {

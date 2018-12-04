@@ -14,6 +14,14 @@ type StringW struct {
 	Status   watch.EventType
 }
 
+//Equal compares only Value, rest is not relevant
+func (a *StringW) Equal(b *StringW) bool {
+	if a.Value != b.Value {
+		return false
+	}
+	return true
+}
+
 //MapStringW stores values and enables
 type MapStringW map[string]*StringW
 
@@ -100,4 +108,18 @@ func (a *MapStringW) Clone() MapStringW {
 		}
 	}
 	return result
+}
+
+//Equal comapres if two maps are equal
+func (a *MapStringW) Equal(b MapStringW) bool {
+	if len(*a) != len(b) {
+		return false
+	}
+	for k, v := range *a {
+		value, ok := (b)[k]
+		if !ok || !v.Equal(value) {
+			return false
+		}
+	}
+	return true
 }
