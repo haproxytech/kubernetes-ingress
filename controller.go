@@ -1,7 +1,6 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -39,7 +38,7 @@ func (c *HAProxyController) Start(osArgs OSArgs) {
 
 	c.osArgs = osArgs
 
-	go c.HAProxyInitialize()
+	c.HAProxyInitialize()
 
 	k8s, err := GetKubernetesClient()
 	if err != nil {
@@ -59,9 +58,14 @@ func (c *HAProxyController) Start(osArgs OSArgs) {
 //HAProxyInitialize runs HAProxy for the first time so native client can have access to it
 func (c *HAProxyController) HAProxyInitialize() {
 	//cmd := exec.Command("haproxy", "-f", HAProxyCFG)
+	err := os.MkdirAll(HAProxyCertDir, 0644)
+	if err != nil {
+		log.Panic(err.Error())
+	}
+
 	log.Println("Starting HAProxy with", HAProxyCFG)
 	cmd := exec.Command("service", "haproxy", "start")
-	err := cmd.Run()
+	err = cmd.Run()
 	if err != nil {
 		log.Println(err)
 	}
@@ -730,7 +734,7 @@ func (c *HAProxyController) updateHAProxy(reloadRequired bool) error {
 		if !namespace.Relevant {
 			continue
 		}
-		reload, err := c.handleHttps(namespace, transaction)
+		reload, err := c.handleHTTPS(namespace, transaction)
 		if err != nil {
 			return err
 		}
@@ -771,55 +775,95 @@ func (c *HAProxyController) updateHAProxy(reloadRequired bool) error {
 	}
 	return nil
 }
+func (c *HAProxyController) writeCert(filename string, key, crt []byte) error {
+	var f *os.File
+	var err error
+	if f, err = os.Create(filename); err != nil {
+		log.Println(err)
+		return err
+	}
+	defer f.Close()
+	if _, err = f.Write(key); err != nil {
+		log.Println(err)
+		return err
+	}
+	if _, err = f.Write(crt); err != nil {
+		log.Println(err)
+		return err
+	}
+	if err = f.Sync(); err != nil {
+		log.Println(err)
+		return err
+	}
+	if err = f.Close(); err != nil {
+		log.Println(err)
+		return err
+	}
+	return nil
+}
 
-func (c *HAProxyController) handleHttps(namespace *Namespace, transaction *models.Transaction) (reloadRequired bool, err error) {
+func (c *HAProxyController) handleHTTPS(namespace *Namespace, transaction *models.Transaction) (reloadRequired bool, err error) {
 	nativeAPI := c.NativeAPI
 	reloadRequired = false
 	if c.osArgs.DefaultCertificate.Name == "" {
 		return reloadRequired, nil
 	}
-	secret, ok := namespace.Secret[c.osArgs.DefaultCertificate.Name]
+	secretName, err := GetValueFromAnnotations("ssl-certificate", c.cfg.ConfigMap.Annotations)
+	if err != nil {
+		log.Println("no ssl-certificate defined, using default secret:", c.osArgs.DefaultCertificate.Name)
+		secretName = &StringW{Value: c.osArgs.DefaultCertificate.Name}
+	}
+	secret, ok := namespace.Secret[secretName.Value]
 	if !ok {
+		log.Println("secret not found", secretName.Value)
 		return reloadRequired, nil
 	}
-	key, ok := secret.Data["tls.key"]
-	if !ok {
-		log.Println("missing tls.key")
-		return reloadRequired, errors.New("missing tls.key")
+
+	//two options are allowed, tls, rsa+ecdsa
+	rsaKey, rsaKeyOK := secret.Data["rsa.key"]
+	rsaCrt, rsaCrtOK := secret.Data["rsa.crt"]
+	ecdsaKey, ecdsaKeyOK := secret.Data["ecdsa.key"]
+	ecdsaCrt, ecdsaCrtOK := secret.Data["ecdsa.crt"]
+	haveCert := false
+	if rsaKeyOK && rsaCrtOK || ecdsaKeyOK && ecdsaCrtOK {
+		if rsaKeyOK && rsaCrtOK {
+			err := c.writeCert(HAProxyCertDir+"cert.pem.rsa", rsaKey, rsaCrt)
+			if err != nil {
+				return reloadRequired, err
+			} else {
+				haveCert = true
+			}
+		}
+		if ecdsaKeyOK && ecdsaCrtOK {
+			err := c.writeCert(HAProxyCertDir+"cert.pem.ecdsa", ecdsaKey, ecdsaCrt)
+			if err != nil {
+				return reloadRequired, err
+			} else {
+				haveCert = true
+			}
+		}
+	} else {
+		tlsKey, tlsKeyOK := secret.Data["tls.key"]
+		tlsCrt, tlsCrtOK := secret.Data["tls.crt"]
+		if tlsKeyOK && tlsCrtOK {
+			err := c.writeCert(HAProxyCertDir+"cert.pem", tlsKey, tlsCrt)
+			if err != nil {
+				return reloadRequired, err
+			} else {
+				haveCert = true
+			}
+		}
 	}
-	crt, ok := secret.Data["tls.crt"]
-	if !ok {
-		log.Println("missing tls.crt")
-		return reloadRequired, errors.New("missing tls.crt")
+	if !haveCert {
+		return reloadRequired, fmt.Errorf("no certificate")
 	}
-	var f *os.File
-	if f, err = os.Create(HAProxyCERT); err != nil {
-		log.Println(err)
-		return reloadRequired, err
-	}
-	defer f.Close()
-	if _, err = f.Write(key); err != nil {
-		log.Println(err)
-		return reloadRequired, err
-	}
-	if _, err = f.Write(crt); err != nil {
-		log.Println(err)
-		return reloadRequired, err
-	}
-	if err = f.Sync(); err != nil {
-		log.Println(err)
-		return reloadRequired, err
-	}
-	if err = f.Close(); err != nil {
-		log.Println(err)
-		return reloadRequired, err
-	}
+
 	port := int64(443)
 	listener := &models.Listener{
 		Address:        "0.0.0.0",
 		Port:           &port,
 		Ssl:            "enabled",
-		SslCertificate: HAProxyCERT,
+		SslCertificate: HAProxyCertDir,
 	}
 	maxProcs := goruntime.GOMAXPROCS(0)
 	annNumProc, _ := GetValueFromAnnotations("ssl-numproc", c.cfg.ConfigMap.Annotations)
