@@ -477,6 +477,8 @@ func (c *HAProxyController) eventPod(ns *Namespace, data *Pod) (updateRequired, 
 					if err != nil {
 						log.Println(err)
 						needsReload = true
+					} else {
+						log.Printf("POD modified through runtime: %s\n", data.Name)
 					}
 					err = runtimeClient.SetServerState(backendName, newPod.HAProxyName, "ready")
 					if err != nil {
@@ -536,6 +538,8 @@ func (c *HAProxyController) eventPod(ns *Namespace, data *Pod) (updateRequired, 
 						if err != nil {
 							log.Println(backendName, data.HAProxyName, err)
 							needsReload = true
+						} else {
+							log.Printf("POD added through runtime: %s\n", data.Name)
 						}
 					}
 					break
@@ -619,6 +623,8 @@ func (c *HAProxyController) eventPod(ns *Namespace, data *Pod) (updateRequired, 
 					err := runtimeClient.SetServerState(backendName, oldPod.HAProxyName, "maint")
 					if err != nil {
 						log.Println(backendName, oldPod.HAProxyName, err)
+					} else {
+						log.Printf("POD disabled through runtime: %s\n", oldPod.Name)
 					}
 				}
 			}
