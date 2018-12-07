@@ -96,6 +96,10 @@ func (c *HAProxyController) HAProxyReload() error {
 	//cmd := exec.Command("haproxy", "-f", HAProxyCFG)
 	cmd := exec.Command("service", "haproxy", "reload")
 	err := cmd.Run()
+	runtime := c.NativeAPI.Runtime.Reload()
+	if runtime != nil && err == nil {
+		err = runtime
+	}
 	return err
 }
 
@@ -471,12 +475,12 @@ func (c *HAProxyController) eventPod(ns *Namespace, data *Pod) (updateRequired, 
 				for backendName := range newPod.Backends {
 					err := runtimeClient.SetServerAddr(backendName, newPod.HAProxyName, newPod.IP, 0)
 					if err != nil {
-						log.Println(backendName, newPod.HAProxyName, newPod.IP, err)
+						log.Println(err)
 						needsReload = true
 					}
 					err = runtimeClient.SetServerState(backendName, newPod.HAProxyName, "ready")
 					if err != nil {
-						log.Println(backendName, newPod.HAProxyName, err)
+						log.Println(err)
 						needsReload = true
 					}
 				}

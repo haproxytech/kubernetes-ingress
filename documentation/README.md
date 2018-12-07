@@ -21,7 +21,7 @@ Options for starting controller can be found in [controller.md](controller.md)
 | [pod-maxconn](#maximum-concurent-backend-connections) | number | "2000" |  |:white_circle:|:white_circle:|:large_blue_circle:|
 | [servers-increment](#servers-slots-increment) | number | "42" |  |:large_blue_circle:|:white_circle:|:white_circle:|
 | [servers-increment-max-disabled](#servers-slots-increment) | number | "66" |  |:large_blue_circle:|:white_circle:|:white_circle:|
-| [ssl-certificate](#tls-secret) | int |  |  |:large_blue_circle:|:white_circle:|:white_circle:|
+| [ssl-certificate](#tls-secret) | string |  |  |:large_blue_circle:|:white_circle:|:white_circle:|
 | [ssl-numproc](#https) | int | "" | [tls-secret](#tls-secret) |:large_blue_circle:|:white_circle:|:white_circle:|
 | :construction: [ssl-redirect](#https) | bool | "true" | [tls-secret](#tls-secret) |:large_blue_circle:|:white_circle:|:white_circle:|
 | [timeout-http-request](#timeouts) | [time](#time) | "5s" |  |:large_blue_circle:|:white_circle:|:white_circle:|
@@ -106,7 +106,7 @@ Options for starting controller can be found in [controller.md](controller.md)
   - tls.key
   - tls.crt
 - certificate secret with `rsa` and `ecdsa` certificates:
-  - > :information_source: only one certificate is also acceptable setup
+  - :information_source: only one certificate is also acceptable setup
   - rsa.key
   - rsa.crt
   - ecdsa.key
