@@ -27,6 +27,7 @@ func GetKubernetesClient() (*K8s, error) {
 	return &K8s{API: clientset}, nil
 }
 
+//GetAll fetches all k8s resources
 func (k *K8s) GetAll() (ns, svc, pod, ingress, config, secrets watch.Interface) {
 	nsWatch, err := k.GetNamespaces()
 	if err != nil {

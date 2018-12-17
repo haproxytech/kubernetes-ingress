@@ -2,6 +2,7 @@ package main
 
 import "bytes"
 
+//Equal checks if Ingress Paths are equal
 func (a *IngressPath) Equal(b *IngressPath) bool {
 	if a == nil || b == nil {
 		return false
@@ -18,6 +19,7 @@ func (a *IngressPath) Equal(b *IngressPath) bool {
 	return true
 }
 
+//Equal checks if Ingress Rules are equal
 func (a *IngressRule) Equal(b *IngressRule) bool {
 	if a == nil || b == nil {
 		return false
@@ -121,6 +123,7 @@ func (a *Secret) Equal(b *Secret) bool {
 	return true
 }
 
+//Equal checks if pods are equal
 func (a *Pod) Equal(b *Pod) bool {
 	if a == nil || b == nil {
 		return false
@@ -134,7 +137,7 @@ func (a *Pod) Equal(b *Pod) bool {
 	if !a.Labels.Equal(b.Labels) {
 		return false
 	}
-	for key, _ := range a.Backends {
+	for key := range a.Backends {
 		if _, ok := b.Backends[key]; !ok {
 			return false
 		}

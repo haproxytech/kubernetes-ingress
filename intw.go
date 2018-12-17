@@ -30,7 +30,7 @@ type MapIntW map[int]*IntW
 func (a *MapIntW) Get(name int) (data *IntW, err error) {
 	var ok bool
 	if data, ok = (*a)[name]; !ok {
-		return nil, fmt.Errorf("IntW %s does not exist", name)
+		return nil, fmt.Errorf("IntW %d does not exist", name)
 	}
 	return data, nil
 }

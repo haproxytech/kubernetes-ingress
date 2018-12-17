@@ -18,6 +18,7 @@ Options for starting controller can be found in [controller.md](controller.md)
 | [forwarded-for](#x-forwarded-for) | ["enabled", "disabled"] | "enabled" |  |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:|
 | [load-balance](#balance-algorithm) | string | "roundrobin" |  |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:|
 | [maxconn](#maximum-concurent-connections) | number | "2000" |  |:large_blue_circle:|:white_circle:|:white_circle:|
+| [nbthread](#number-of-threads) | number | |  |:large_blue_circle:|:white_circle:|:white_circle:|
 | [pod-maxconn](#maximum-concurent-backend-connections) | number | "2000" |  |:white_circle:|:white_circle:|:large_blue_circle:|
 | [servers-increment](#servers-slots-increment) | number | "42" |  |:large_blue_circle:|:white_circle:|:white_circle:|
 | [servers-increment-max-disabled](#servers-slots-increment) | number | "66" |  |:large_blue_circle:|:white_circle:|:white_circle:|
@@ -70,6 +71,11 @@ Options for starting controller can be found in [controller.md](controller.md)
 - Annotation: `pod-maxconn`
 - related to backend servers (pods)
 - by default this is set to 2000 for every backend server (pod)
+
+#### Number of threads
+
+- Annotation: `nbthread`
+- default value is number of CPUs available
 
 ### Servers slots increment
 

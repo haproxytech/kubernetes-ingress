@@ -737,17 +737,18 @@ func (c *HAProxyController) updateHAProxy(reloadRequired bool) error {
 		}
 	}
 
-	maxProcs, reload, err := c.handleGlobalAnnotations(transaction)
+	maxProcs, maxThreads, reload, err := c.handleGlobalAnnotations(transaction)
 	reloadRequired = reloadRequired || reload
 
 	for _, namespace := range c.cfg.Namespace {
 		if !namespace.Relevant {
 			continue
 		}
-		reload, err = c.handleHTTPS(namespace, maxProcs, false, transaction)
+		reload, err = c.handleHTTPS(namespace, maxProcs, maxThreads, transaction)
 		if err != nil {
 			return err
 		}
+
 		reloadRequired = reloadRequired || reload
 		//TODO, do not just go through them, sort them to handle /web,/ maybe?
 		for _, ingress := range namespace.Ingresses {
@@ -813,17 +814,26 @@ func (c *HAProxyController) writeCert(filename string, key, crt []byte) error {
 	return nil
 }
 
-func (c *HAProxyController) handleGlobalAnnotations(transaction *models.Transaction) (maxProcsStat *StringW, reloadRequired bool, err error) {
+func (c *HAProxyController) handleGlobalAnnotations(transaction *models.Transaction) (maxProcsStat *StringW, maxThreadsStat *StringW, reloadRequired bool, err error) {
 	reloadRequired = false
 	maxProcs := goruntime.GOMAXPROCS(0)
+	numThreads := maxProcs
 	annNumProc, _ := GetValueFromAnnotations("ssl-numproc", c.cfg.ConfigMap.Annotations)
+	annNbthread, _ := GetValueFromAnnotations("nbthread", c.cfg.ConfigMap.Annotations)
 	maxProcsStat = &StringW{}
+	maxThreadsStat = &StringW{}
+	if numthr, err := strconv.Atoi(annNbthread.Value); err == nil {
+		if numthr < maxProcs {
+			numThreads = numthr
+		}
+	}
 	if numproc, err := strconv.Atoi(annNumProc.Value); err == nil {
 		if numproc < maxProcs {
 			maxProcs = numproc
 		}
 	}
 	log.Println("ssl-numproc", annNumProc.Value, maxProcs)
+	log.Println("nbthread", annNbthread.Value, numThreads)
 
 	//see global config
 	p := c.NativeParser
@@ -837,7 +847,7 @@ func (c *HAProxyController) handleGlobalAnnotations(transaction *models.Transact
 			maxProcsStat.Status = watch.Modified
 		}
 	} else {
-		nbproc := &global.NbProc{
+		nbproc = &global.NbProc{
 			Enabled: true,
 			Value:   int64(maxProcs),
 		}
@@ -845,12 +855,40 @@ func (c *HAProxyController) handleGlobalAnnotations(transaction *models.Transact
 		maxProcsStat.Status = watch.Added
 		reloadRequired = true
 	}
+	if maxProcs > 1 {
+		numThreads = 1
+	}
+
+	var nbthread *global.NbThread
+	data, err = p.GetGlobalAttr("nbthread")
+	if err == nil {
+		nbthread = data.(*global.NbThread)
+		if nbthread.Value != int64(numThreads) {
+			reloadRequired = true
+			nbthread.Value = int64(numThreads)
+			maxThreadsStat.Status = watch.Modified
+		}
+	} else {
+		nbthread = &global.NbThread{
+			Enabled: true,
+			Value:   int64(numThreads),
+		}
+		p.NewGlobalAttr(nbthread)
+		maxThreadsStat.Status = watch.Added
+		reloadRequired = true
+	}
 
 	data, err = p.GetGlobalAttr("cpu-map")
-	cpuMap := make([]*global.CpuMap, maxProcs)
-	for index := 0; index < maxProcs; index++ {
+	numCPUMap := numThreads
+	namePrefix := "1/"
+	if nbthread.Value < 2 {
+		numCPUMap = maxProcs
+		namePrefix = ""
+	}
+	cpuMap := make([]*global.CpuMap, numCPUMap)
+	for index := 0; index < numCPUMap; index++ {
 		cpuMap[index] = &global.CpuMap{
-			Name:  strconv.Itoa(index + 1),
+			Name:  fmt.Sprintf("%s%d", namePrefix, index+1),
 			Value: strconv.Itoa(index),
 		}
 	}
@@ -866,7 +904,8 @@ func (c *HAProxyController) handleGlobalAnnotations(transaction *models.Transact
 		p.NewGlobalAttr(cpuMaps)
 	}
 	maxProcsStat.Value = strconv.Itoa(maxProcs)
-	return maxProcsStat, reloadRequired, err
+	maxThreadsStat.Value = strconv.Itoa(numThreads)
+	return maxProcsStat, maxThreadsStat, reloadRequired, err
 }
 
 func (c *HAProxyController) removeHTTPSListeners(transaction *models.Transaction) (err error) {
@@ -881,7 +920,7 @@ func (c *HAProxyController) removeHTTPSListeners(transaction *models.Transaction
 	return nil
 }
 
-func (c *HAProxyController) handleHTTPS(namespace *Namespace, maxProcsStatus *StringW, useThreads bool, transaction *models.Transaction) (reloadRequired bool, err error) {
+func (c *HAProxyController) handleHTTPS(namespace *Namespace, maxProcsStatus, numThreadsStat *StringW, transaction *models.Transaction) (reloadRequired bool, err error) {
 	nativeAPI := c.NativeAPI
 	reloadRequired = false
 	if c.osArgs.DefaultCertificate.Name == "" {
@@ -892,8 +931,11 @@ func (c *HAProxyController) handleHTTPS(namespace *Namespace, maxProcsStatus *St
 	sslRedirect, _ := GetValueFromAnnotations("ssl-redirect", c.cfg.ConfigMap.Annotations)
 	minProc := 1
 	maxProcs, _ := strconv.Atoi(maxProcsStatus.Value) // always number
+	numThreads, _ := strconv.Atoi(numThreadsStat.Value)
 	if maxProcs < 2 {
-		minProc = 0
+		if numThreads < 2 {
+			minProc = 0
+		}
 	}
 	log.Println("maxProcsStatus", maxProcsStatus)
 
@@ -956,6 +998,9 @@ func (c *HAProxyController) handleHTTPS(namespace *Namespace, maxProcsStatus *St
 			SslCertificate: HAProxyCertDir,
 		}
 		maxIndex := maxProcs
+		if maxProcs < 2 {
+			maxIndex = numThreads
+		}
 		listeners := *c.cfg.HTTPSListeners
 		if len(listeners) > maxIndex {
 			maxIndex = len(listeners)
@@ -974,11 +1019,16 @@ func (c *HAProxyController) handleHTTPS(namespace *Namespace, maxProcsStatus *St
 					data.Status = maxProcsStatus.Status
 				}
 			}
-			if index >= maxProcs {
+			if index >= maxProcs && index >= numThreads {
 				data.Status = watch.Deleted
 			}
-			listener.Process = strconv.Itoa(index + 1)
+			if numThreads < 2 {
+				listener.Process = strconv.Itoa(index + 1)
+			} else {
+				listener.Process = fmt.Sprintf("1/%d", index+1)
+			}
 			listener.Name = "https_" + strconv.Itoa(index+1)
+			log.Println("##=", listener.Process, listener.Name, data.Status)
 			switch data.Status {
 			case watch.Added:
 				if err = nativeAPI.Configuration.CreateListener(FrontendHTTPS, listener, transaction.ID, 0); err != nil {
