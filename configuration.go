@@ -7,14 +7,16 @@ import (
 
 //Configuration represents k8s state
 type Configuration struct {
-	Namespace map[string]*Namespace
-	ConfigMap *ConfigMap
-	NativeAPI *clientnative.HAProxyClient
+	Namespace      map[string]*Namespace
+	ConfigMap      *ConfigMap
+	NativeAPI      *clientnative.HAProxyClient
+	HTTPSListeners *MapIntW
 }
 
 //Init itialize configuration
 func (c *Configuration) Init(api *clientnative.HAProxyClient) {
 	c.Namespace = make(map[string]*Namespace)
+	c.HTTPSListeners = &MapIntW{}
 	c.NativeAPI = api
 }
 
@@ -109,4 +111,5 @@ func (c *Configuration) Clean() {
 	default:
 		c.ConfigMap.Status = ""
 	}
+	c.HTTPSListeners.Clean()
 }

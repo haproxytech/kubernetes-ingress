@@ -93,13 +93,10 @@ func (c *HAProxyController) HAProxyInitialize() {
 
 //HAProxyReload reloads HAProxy
 func (c *HAProxyController) HAProxyReload() error {
+	c.NativeParser.Save(HAProxyGlobalCFG)
 	//cmd := exec.Command("haproxy", "-f", HAProxyCFG)
 	cmd := exec.Command("service", "haproxy", "reload")
 	err := cmd.Run()
-	runtime := c.NativeAPI.Runtime.Reload()
-	if runtime != nil && err == nil {
-		err = runtime
-	}
 	return err
 }
 
@@ -740,11 +737,14 @@ func (c *HAProxyController) updateHAProxy(reloadRequired bool) error {
 		}
 	}
 
+	maxProcs, reload, err := c.handleGlobalAnnotations(transaction)
+	reloadRequired = reloadRequired || reload
+
 	for _, namespace := range c.cfg.Namespace {
 		if !namespace.Relevant {
 			continue
 		}
-		reload, err := c.handleHTTPS(namespace, transaction)
+		reload, err = c.handleHTTPS(namespace, maxProcs, false, transaction)
 		if err != nil {
 			return err
 		}
@@ -785,6 +785,7 @@ func (c *HAProxyController) updateHAProxy(reloadRequired bool) error {
 	}
 	return nil
 }
+
 func (c *HAProxyController) writeCert(filename string, key, crt []byte) error {
 	var f *os.File
 	var err error
@@ -812,104 +813,17 @@ func (c *HAProxyController) writeCert(filename string, key, crt []byte) error {
 	return nil
 }
 
-func (c *HAProxyController) handleHTTPS(namespace *Namespace, transaction *models.Transaction) (reloadRequired bool, err error) {
-	nativeAPI := c.NativeAPI
+func (c *HAProxyController) handleGlobalAnnotations(transaction *models.Transaction) (maxProcsStat *StringW, reloadRequired bool, err error) {
 	reloadRequired = false
-	if c.osArgs.DefaultCertificate.Name == "" {
-		return reloadRequired, nil
-	}
-	secretName, err := GetValueFromAnnotations("ssl-certificate", c.cfg.ConfigMap.Annotations)
-	if err != nil {
-		log.Println("no ssl-certificate defined, using default secret:", c.osArgs.DefaultCertificate.Name)
-		secretName = &StringW{Value: c.osArgs.DefaultCertificate.Name}
-	}
-	secret, ok := namespace.Secret[secretName.Value]
-	if !ok {
-		log.Println("secret not found", secretName.Value)
-		return reloadRequired, nil
-	}
-
-	//two options are allowed, tls, rsa+ecdsa
-	rsaKey, rsaKeyOK := secret.Data["rsa.key"]
-	rsaCrt, rsaCrtOK := secret.Data["rsa.crt"]
-	ecdsaKey, ecdsaKeyOK := secret.Data["ecdsa.key"]
-	ecdsaCrt, ecdsaCrtOK := secret.Data["ecdsa.crt"]
-	haveCert := false
-	if rsaKeyOK && rsaCrtOK || ecdsaKeyOK && ecdsaCrtOK {
-		if rsaKeyOK && rsaCrtOK {
-			err := c.writeCert(HAProxyCertDir+"cert.pem.rsa", rsaKey, rsaCrt)
-			if err != nil {
-				return reloadRequired, err
-			} else {
-				haveCert = true
-			}
-		}
-		if ecdsaKeyOK && ecdsaCrtOK {
-			err := c.writeCert(HAProxyCertDir+"cert.pem.ecdsa", ecdsaKey, ecdsaCrt)
-			if err != nil {
-				return reloadRequired, err
-			} else {
-				haveCert = true
-			}
-		}
-	} else {
-		tlsKey, tlsKeyOK := secret.Data["tls.key"]
-		tlsCrt, tlsCrtOK := secret.Data["tls.crt"]
-		if tlsKeyOK && tlsCrtOK {
-			err := c.writeCert(HAProxyCertDir+"cert.pem", tlsKey, tlsCrt)
-			if err != nil {
-				return reloadRequired, err
-			} else {
-				haveCert = true
-			}
-		}
-	}
-	if !haveCert {
-		return reloadRequired, fmt.Errorf("no certificate")
-	}
-
-	port := int64(443)
-	listener := &models.Listener{
-		Address:        "0.0.0.0",
-		Port:           &port,
-		Ssl:            "enabled",
-		SslCertificate: HAProxyCertDir,
-	}
 	maxProcs := goruntime.GOMAXPROCS(0)
 	annNumProc, _ := GetValueFromAnnotations("ssl-numproc", c.cfg.ConfigMap.Annotations)
+	maxProcsStat = &StringW{}
 	if numproc, err := strconv.Atoi(annNumProc.Value); err == nil {
 		if numproc < maxProcs {
 			maxProcs = numproc
 		}
 	}
-	minProc := 1
-	if maxProcs < 2 {
-		minProc = 0
-	}
-	for index := minProc; index < maxProcs; index++ {
-		listener.Process = strconv.Itoa(index + 1)
-		listener.Name = "https_" + strconv.Itoa(index+1)
-		switch secret.Status {
-		case watch.Added:
-			if err = nativeAPI.Configuration.CreateListener(FrontendHTTPS, listener, transaction.ID, 0); err != nil {
-				if strings.Contains(err.Error(), "already exists") {
-					if err = nativeAPI.Configuration.EditListener(listener.Name, FrontendHTTPS, listener, transaction.ID, 0); err != nil {
-						return reloadRequired, err
-					}
-				} else {
-					return reloadRequired, err
-				}
-			}
-		case watch.Modified:
-			if err = nativeAPI.Configuration.EditListener(listener.Name, FrontendHTTPS, listener, transaction.ID, 0); err != nil {
-				return reloadRequired, err
-			}
-		case watch.Deleted:
-			if err = nativeAPI.Configuration.DeleteListener(listener.Name, FrontendHTTPS, transaction.ID, 0); err != nil {
-				return reloadRequired, err
-			}
-		}
-	}
+	log.Println("ssl-numproc", annNumProc.Value, maxProcs)
 
 	//see global config
 	p := c.NativeParser
@@ -920,6 +834,7 @@ func (c *HAProxyController) handleHTTPS(namespace *Namespace, transaction *model
 		if nbproc.Value != int64(maxProcs) {
 			reloadRequired = true
 			nbproc.Value = int64(maxProcs)
+			maxProcsStat.Status = watch.Modified
 		}
 	} else {
 		nbproc := &global.NbProc{
@@ -927,8 +842,10 @@ func (c *HAProxyController) handleHTTPS(namespace *Namespace, transaction *model
 			Value:   int64(maxProcs),
 		}
 		p.NewGlobalAttr(nbproc)
+		maxProcsStat.Status = watch.Added
 		reloadRequired = true
 	}
+
 	data, err = p.GetGlobalAttr("cpu-map")
 	cpuMap := make([]*global.CpuMap, maxProcs)
 	for index := 0; index < maxProcs; index++ {
@@ -948,10 +865,145 @@ func (c *HAProxyController) handleHTTPS(namespace *Namespace, transaction *model
 		reloadRequired = true
 		p.NewGlobalAttr(cpuMaps)
 	}
+	maxProcsStat.Value = strconv.Itoa(maxProcs)
+	return maxProcsStat, reloadRequired, err
+}
+
+func (c *HAProxyController) removeHTTPSListeners(transaction *models.Transaction) (err error) {
+	listeners := *c.cfg.HTTPSListeners
+	for index, data := range listeners {
+		data.Status = watch.Deleted
+		listenerName := "https_" + strconv.Itoa(index+1)
+		if err = c.NativeAPI.Configuration.DeleteListener(listenerName, FrontendHTTPS, transaction.ID, 0); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (c *HAProxyController) handleHTTPS(namespace *Namespace, maxProcsStatus *StringW, useThreads bool, transaction *models.Transaction) (reloadRequired bool, err error) {
+	nativeAPI := c.NativeAPI
+	reloadRequired = false
+	if c.osArgs.DefaultCertificate.Name == "" {
+		err := c.removeHTTPSListeners(transaction)
+		return reloadRequired, err
+	}
+	secretName, err := GetValueFromAnnotations("ssl-certificate", c.cfg.ConfigMap.Annotations)
+	sslRedirect, _ := GetValueFromAnnotations("ssl-redirect", c.cfg.ConfigMap.Annotations)
+	minProc := 1
+	maxProcs, _ := strconv.Atoi(maxProcsStatus.Value) // always number
+	if maxProcs < 2 {
+		minProc = 0
+	}
+	log.Println("maxProcsStatus", maxProcsStatus)
+
+	if secretName.Status != "" || maxProcsStatus.Status != "" {
+		if err != nil {
+			log.Println("no ssl-certificate defined, using default secret:", c.osArgs.DefaultCertificate.Name)
+			secretName = &StringW{Value: c.osArgs.DefaultCertificate.Name}
+		}
+		secret, ok := namespace.Secret[secretName.Value]
+		if !ok {
+			log.Println("secret not found", secretName.Value)
+			err := c.removeHTTPSListeners(transaction)
+			return reloadRequired, err
+		}
+		//two options are allowed, tls, rsa+ecdsa
+		rsaKey, rsaKeyOK := secret.Data["rsa.key"]
+		rsaCrt, rsaCrtOK := secret.Data["rsa.crt"]
+		ecdsaKey, ecdsaKeyOK := secret.Data["ecdsa.key"]
+		ecdsaCrt, ecdsaCrtOK := secret.Data["ecdsa.crt"]
+		haveCert := false
+		if rsaKeyOK && rsaCrtOK || ecdsaKeyOK && ecdsaCrtOK {
+			if rsaKeyOK && rsaCrtOK {
+				err := c.writeCert(HAProxyCertDir+"cert.pem.rsa", rsaKey, rsaCrt)
+				if err != nil {
+					c.removeHTTPSListeners(transaction)
+					return reloadRequired, err
+				}
+				haveCert = true
+			}
+			if ecdsaKeyOK && ecdsaCrtOK {
+				err := c.writeCert(HAProxyCertDir+"cert.pem.ecdsa", ecdsaKey, ecdsaCrt)
+				if err != nil {
+					c.removeHTTPSListeners(transaction)
+					return reloadRequired, err
+				}
+				haveCert = true
+			}
+		} else {
+			tlsKey, tlsKeyOK := secret.Data["tls.key"]
+			tlsCrt, tlsCrtOK := secret.Data["tls.crt"]
+			if tlsKeyOK && tlsCrtOK {
+				err := c.writeCert(HAProxyCertDir+"cert.pem", tlsKey, tlsCrt)
+				if err != nil {
+					c.removeHTTPSListeners(transaction)
+					return reloadRequired, err
+				}
+				haveCert = true
+			}
+		}
+		if !haveCert {
+			c.removeHTTPSListeners(transaction)
+			return reloadRequired, fmt.Errorf("no certificate")
+		}
+
+		port := int64(443)
+		listener := &models.Listener{
+			Address:        "0.0.0.0",
+			Port:           &port,
+			Ssl:            "enabled",
+			SslCertificate: HAProxyCertDir,
+		}
+		maxIndex := maxProcs
+		listeners := *c.cfg.HTTPSListeners
+		if len(listeners) > maxIndex {
+			maxIndex = len(listeners)
+		}
+		for index := minProc; index < maxIndex; index++ {
+			data, ok := listeners[index]
+			if !ok {
+				data = &IntW{
+					Status: watch.Added,
+				}
+				listeners[index] = data
+			} else {
+				if secret.Status != "" {
+					data.Status = secret.Status
+				} else if maxProcsStatus.Status != "" {
+					data.Status = maxProcsStatus.Status
+				}
+			}
+			if index >= maxProcs {
+				data.Status = watch.Deleted
+			}
+			listener.Process = strconv.Itoa(index + 1)
+			listener.Name = "https_" + strconv.Itoa(index+1)
+			switch data.Status {
+			case watch.Added:
+				if err = nativeAPI.Configuration.CreateListener(FrontendHTTPS, listener, transaction.ID, 0); err != nil {
+					if strings.Contains(err.Error(), "already exists") {
+						if err = nativeAPI.Configuration.EditListener(listener.Name, FrontendHTTPS, listener, transaction.ID, 0); err != nil {
+							return reloadRequired, err
+						}
+					} else {
+						return reloadRequired, err
+					}
+				}
+			case watch.Modified:
+				if err = nativeAPI.Configuration.EditListener(listener.Name, FrontendHTTPS, listener, transaction.ID, 0); err != nil {
+					return reloadRequired, err
+				}
+			case watch.Deleted:
+				if err = nativeAPI.Configuration.DeleteListener(listener.Name, FrontendHTTPS, transaction.ID, 0); err != nil {
+					return reloadRequired, err
+				}
+			}
+		}
+	}
 
 	//see if we need to add redirect to https redirect scheme https if !{ ssl_fc }
 	// no need for error checking, we have default value
-	sslRedirect, _ := GetValueFromAnnotations("ssl-redirect", c.cfg.ConfigMap.Annotations)
 	switch sslRedirect.Status {
 	case watch.Added:
 	case watch.Modified:
