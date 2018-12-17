@@ -744,11 +744,34 @@ func (c *HAProxyController) updateHAProxy(reloadRequired bool) error {
 		if !namespace.Relevant {
 			continue
 		}
-		reload, err = c.handleHTTPS(namespace, maxProcs, maxThreads, transaction)
+		var usingHTTPS bool
+		reload, usingHTTPS, err = c.handleHTTPS(namespace, maxProcs, maxThreads, transaction)
 		if err != nil {
 			return err
 		}
-
+		numProcs, _ := strconv.Atoi(maxProcs.Value)
+		numThreads, _ := strconv.Atoi(maxThreads.Value)
+		port := int64(80)
+		listener := &models.Listener{
+			Name:    "http_1",
+			Address: "0.0.0.0",
+			Port:    &port,
+			Process: "1/1",
+		}
+		if !usingHTTPS {
+			if numProcs > 1 {
+				listener.Process = "all"
+			}
+			if numThreads > 1 {
+				listener.Process = "all"
+			}
+		}
+		if listener.Process != c.cfg.HTTPBindProcess {
+			if err = nativeAPI.Configuration.EditListener(listener.Name, FrontendHTTP, listener, transaction.ID, 0); err != nil {
+				return err
+			}
+			c.cfg.HTTPBindProcess = listener.Process
+		}
 		reloadRequired = reloadRequired || reload
 		//TODO, do not just go through them, sort them to handle /web,/ maybe?
 		for _, ingress := range namespace.Ingresses {
@@ -832,8 +855,6 @@ func (c *HAProxyController) handleGlobalAnnotations(transaction *models.Transact
 			maxProcs = numproc
 		}
 	}
-	log.Println("ssl-numproc", annNumProc.Value, maxProcs)
-	log.Println("nbthread", annNbthread.Value, numThreads)
 
 	//see global config
 	p := c.NativeParser
@@ -920,12 +941,13 @@ func (c *HAProxyController) removeHTTPSListeners(transaction *models.Transaction
 	return nil
 }
 
-func (c *HAProxyController) handleHTTPS(namespace *Namespace, maxProcsStatus, numThreadsStat *StringW, transaction *models.Transaction) (reloadRequired bool, err error) {
+func (c *HAProxyController) handleHTTPS(namespace *Namespace, maxProcsStatus, numThreadsStat *StringW, transaction *models.Transaction) (reloadRequired bool, usingHTTPS bool, err error) {
+	usingHTTPS = false
 	nativeAPI := c.NativeAPI
 	reloadRequired = false
 	if c.osArgs.DefaultCertificate.Name == "" {
 		err := c.removeHTTPSListeners(transaction)
-		return reloadRequired, err
+		return reloadRequired, usingHTTPS, err
 	}
 	secretName, err := GetValueFromAnnotations("ssl-certificate", c.cfg.ConfigMap.Annotations)
 	sslRedirect, _ := GetValueFromAnnotations("ssl-redirect", c.cfg.ConfigMap.Annotations)
@@ -937,7 +959,6 @@ func (c *HAProxyController) handleHTTPS(namespace *Namespace, maxProcsStatus, nu
 			minProc = 0
 		}
 	}
-	log.Println("maxProcsStatus", maxProcsStatus)
 
 	if secretName.Status != "" || maxProcsStatus.Status != "" {
 		if err != nil {
@@ -948,7 +969,7 @@ func (c *HAProxyController) handleHTTPS(namespace *Namespace, maxProcsStatus, nu
 		if !ok {
 			log.Println("secret not found", secretName.Value)
 			err := c.removeHTTPSListeners(transaction)
-			return reloadRequired, err
+			return reloadRequired, usingHTTPS, err
 		}
 		//two options are allowed, tls, rsa+ecdsa
 		rsaKey, rsaKeyOK := secret.Data["rsa.key"]
@@ -961,7 +982,7 @@ func (c *HAProxyController) handleHTTPS(namespace *Namespace, maxProcsStatus, nu
 				err := c.writeCert(HAProxyCertDir+"cert.pem.rsa", rsaKey, rsaCrt)
 				if err != nil {
 					c.removeHTTPSListeners(transaction)
-					return reloadRequired, err
+					return reloadRequired, usingHTTPS, err
 				}
 				haveCert = true
 			}
@@ -969,7 +990,7 @@ func (c *HAProxyController) handleHTTPS(namespace *Namespace, maxProcsStatus, nu
 				err := c.writeCert(HAProxyCertDir+"cert.pem.ecdsa", ecdsaKey, ecdsaCrt)
 				if err != nil {
 					c.removeHTTPSListeners(transaction)
-					return reloadRequired, err
+					return reloadRequired, usingHTTPS, err
 				}
 				haveCert = true
 			}
@@ -980,14 +1001,14 @@ func (c *HAProxyController) handleHTTPS(namespace *Namespace, maxProcsStatus, nu
 				err := c.writeCert(HAProxyCertDir+"cert.pem", tlsKey, tlsCrt)
 				if err != nil {
 					c.removeHTTPSListeners(transaction)
-					return reloadRequired, err
+					return reloadRequired, usingHTTPS, err
 				}
 				haveCert = true
 			}
 		}
 		if !haveCert {
 			c.removeHTTPSListeners(transaction)
-			return reloadRequired, fmt.Errorf("no certificate")
+			return reloadRequired, usingHTTPS, fmt.Errorf("no certificate")
 		}
 
 		port := int64(443)
@@ -1005,6 +1026,7 @@ func (c *HAProxyController) handleHTTPS(namespace *Namespace, maxProcsStatus, nu
 		if len(listeners) > maxIndex {
 			maxIndex = len(listeners)
 		}
+		usingHTTPS = true
 		for index := minProc; index < maxIndex; index++ {
 			data, ok := listeners[index]
 			if !ok {
@@ -1028,25 +1050,24 @@ func (c *HAProxyController) handleHTTPS(namespace *Namespace, maxProcsStatus, nu
 				listener.Process = fmt.Sprintf("1/%d", index+1)
 			}
 			listener.Name = "https_" + strconv.Itoa(index+1)
-			log.Println("##=", listener.Process, listener.Name, data.Status)
 			switch data.Status {
 			case watch.Added:
 				if err = nativeAPI.Configuration.CreateListener(FrontendHTTPS, listener, transaction.ID, 0); err != nil {
 					if strings.Contains(err.Error(), "already exists") {
 						if err = nativeAPI.Configuration.EditListener(listener.Name, FrontendHTTPS, listener, transaction.ID, 0); err != nil {
-							return reloadRequired, err
+							return reloadRequired, usingHTTPS, err
 						}
 					} else {
-						return reloadRequired, err
+						return reloadRequired, usingHTTPS, err
 					}
 				}
 			case watch.Modified:
 				if err = nativeAPI.Configuration.EditListener(listener.Name, FrontendHTTPS, listener, transaction.ID, 0); err != nil {
-					return reloadRequired, err
+					return reloadRequired, usingHTTPS, err
 				}
 			case watch.Deleted:
 				if err = nativeAPI.Configuration.DeleteListener(listener.Name, FrontendHTTPS, transaction.ID, 0); err != nil {
-					return reloadRequired, err
+					return reloadRequired, usingHTTPS, err
 				}
 			}
 		}
@@ -1062,10 +1083,10 @@ func (c *HAProxyController) handleHTTPS(namespace *Namespace, maxProcsStatus, nu
 	}
 	if reloadRequired {
 		if err := c.NativeParser.Save(HAProxyGlobalCFG); err != nil {
-			return false, err
+			return reloadRequired, usingHTTPS, err
 		}
 	}
-	return false, nil
+	return reloadRequired, usingHTTPS, nil
 }
 
 func (c *HAProxyController) handlePath(namespace *Namespace, ingress *Ingress, rule *IngressRule, path *IngressPath,
