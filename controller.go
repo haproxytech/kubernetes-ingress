@@ -77,7 +77,7 @@ func (c *HAProxyController) HAProxyInitialize() {
 	}
 
 	runtimeClient := runtime.Client{}
-	err = runtimeClient.Init([]string{"/var/run/haproxy-runtime-api.sock"}, true)
+	err = runtimeClient.Init([]string{"/var/run/haproxy-runtime-api.sock"})
 	if err != nil {
 		log.Println(err)
 	}
