@@ -773,6 +773,11 @@ func (c *HAProxyController) updateHAProxy(reloadRequired bool) error {
 			c.cfg.HTTPBindProcess = listener.Process
 		}
 		reloadRequired = reloadRequired || reload
+		reload, err = c.handleHTTPRedirect(usingHTTPS, transaction)
+		if err != nil {
+			return err
+		}
+		reloadRequired = reloadRequired || reload
 		//TODO, do not just go through them, sort them to handle /web,/ maybe?
 		for _, ingress := range namespace.Ingresses {
 			//no need for switch/case for now
@@ -941,6 +946,73 @@ func (c *HAProxyController) removeHTTPSListeners(transaction *models.Transaction
 	return nil
 }
 
+func (c *HAProxyController) handleHTTPRedirect(usingHTTPS bool, transaction *models.Transaction) (reloadRequired bool, err error) {
+	//see if we need to add redirect to https redirect scheme https if !{ ssl_fc }
+	// no need for error checking, we have default value,
+	//if not defined as OFF, we always do redirect
+	reloadRequired = false
+	sslRedirect, _ := GetValueFromAnnotations("ssl-redirect", c.cfg.ConfigMap.Annotations)
+	useSSLRedirect := sslRedirect.Value != "OFF"
+	if !usingHTTPS {
+		useSSLRedirect = false
+	}
+	var state watch.EventType
+	if useSSLRedirect {
+		if c.cfg.SSLRedirect == "" {
+			c.cfg.SSLRedirect = "ON"
+			state = watch.Added
+		} else if c.cfg.SSLRedirect == "OFF" {
+			c.cfg.SSLRedirect = "ON"
+			state = watch.Added
+		}
+	} else {
+		if c.cfg.SSLRedirect == "" {
+			c.cfg.SSLRedirect = "OFF"
+			state = ""
+		} else if c.cfg.SSLRedirect != "OFF" {
+			c.cfg.SSLRedirect = "OFF"
+			state = watch.Deleted
+		}
+	}
+	redirectCode := int64(302)
+	annRedirectCode, _ := GetValueFromAnnotations("ssl-redirect-code", c.cfg.ConfigMap.Annotations)
+	if value, err := strconv.ParseInt(annRedirectCode.Value, 10, 64); err == nil {
+		redirectCode = value
+	}
+	if state == "" && annRedirectCode.Status != "" {
+		state = watch.Modified
+	}
+	rule := &models.HTTPRequestRule{
+		ID:        1,
+		Type:      "redirect",
+		RedirCode: redirectCode,
+		RedirTo:   "https",
+		RedirType: "scheme",
+		Cond:      "if",
+		CondTest:  "!{ ssl_fc }",
+	}
+	switch state {
+	case watch.Added:
+		if err = c.NativeAPI.Configuration.CreateHTTPRequestRule("frontend", "http", rule, transaction.ID, 0); err != nil {
+			return reloadRequired, err
+		}
+		c.cfg.SSLRedirect = "ON"
+		reloadRequired = true
+	case watch.Modified:
+		if err = c.NativeAPI.Configuration.EditHTTPRequestRule(rule.ID, "frontend", "http", rule, transaction.ID, 0); err != nil {
+			return reloadRequired, err
+		}
+		reloadRequired = true
+	case watch.Deleted:
+		if err = c.NativeAPI.Configuration.DeleteHTTPRequestRule(rule.ID, "frontend", "http", transaction.ID, 0); err != nil {
+			return reloadRequired, err
+		}
+		c.cfg.SSLRedirect = "OFF"
+		reloadRequired = true
+	}
+	return reloadRequired, nil
+}
+
 func (c *HAProxyController) handleHTTPS(namespace *Namespace, maxProcsStatus, numThreadsStat *StringW, transaction *models.Transaction) (reloadRequired bool, usingHTTPS bool, err error) {
 	usingHTTPS = false
 	nativeAPI := c.NativeAPI
@@ -950,7 +1022,6 @@ func (c *HAProxyController) handleHTTPS(namespace *Namespace, maxProcsStatus, nu
 		return reloadRequired, usingHTTPS, err
 	}
 	secretName, err := GetValueFromAnnotations("ssl-certificate", c.cfg.ConfigMap.Annotations)
-	sslRedirect, _ := GetValueFromAnnotations("ssl-redirect", c.cfg.ConfigMap.Annotations)
 	minProc := 1
 	maxProcs, _ := strconv.Atoi(maxProcsStatus.Value) // always number
 	numThreads, _ := strconv.Atoi(numThreadsStat.Value)
@@ -1073,17 +1144,10 @@ func (c *HAProxyController) handleHTTPS(namespace *Namespace, maxProcsStatus, nu
 		}
 	}
 
-	//see if we need to add redirect to https redirect scheme https if !{ ssl_fc }
-	// no need for error checking, we have default value
-	switch sslRedirect.Status {
-	case watch.Added:
-	case watch.Modified:
-	case watch.Deleted:
-	case "":
-	}
-	if reloadRequired {
-		if err := c.NativeParser.Save(HAProxyGlobalCFG); err != nil {
-			return reloadRequired, usingHTTPS, err
+	listeners := *c.cfg.HTTPSListeners
+	for _, listener := range listeners {
+		if listener.Status != watch.Deleted {
+			return reloadRequired, true, nil
 		}
 	}
 	return reloadRequired, usingHTTPS, nil

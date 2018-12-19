@@ -12,6 +12,7 @@ type Configuration struct {
 	NativeAPI       *clientnative.HAProxyClient
 	HTTPSListeners  *MapIntW
 	HTTPBindProcess string
+	SSLRedirect     string
 }
 
 //Init itialize configuration
@@ -19,6 +20,7 @@ func (c *Configuration) Init(api *clientnative.HAProxyClient) {
 	c.Namespace = make(map[string]*Namespace)
 	c.HTTPSListeners = &MapIntW{}
 	c.HTTPBindProcess = "1/1"
+	c.SSLRedirect = ""
 	c.NativeAPI = api
 }
 
