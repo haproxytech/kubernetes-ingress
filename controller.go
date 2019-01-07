@@ -331,7 +331,6 @@ func (c *HAProxyController) eventNamespace(ns *Namespace, data *Namespace) (upda
 	switch data.Status {
 	case watch.Added:
 		_ = c.cfg.GetNamespace(data.Name)
-		updateRequired = true
 	case watch.Deleted:
 		_, ok := c.cfg.Namespace[data.Name]
 		if ok {
