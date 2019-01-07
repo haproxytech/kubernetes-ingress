@@ -14,6 +14,7 @@ const (
 	HAProxyGlobalCFG = "/etc/haproxy/global.cfg"
 	HAProxyStatCFG   = "/etc/haproxy/stats.cfg"
 	HAProxyCertDir   = "/etc/haproxy/certs/"
+	HAProxyStateDir  = "/var/state/haproxy/"
 	HAProxySocket    = "/var/run/haproxy-runtime-api.sock"
 	FrontendHTTP     = "http"
 	FrontendHTTPS    = "https"

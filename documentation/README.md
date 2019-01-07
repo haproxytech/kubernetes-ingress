@@ -24,7 +24,8 @@ Options for starting controller can be found in [controller.md](controller.md)
 | [servers-increment-max-disabled](#servers-slots-increment) | number | "66" |  |:large_blue_circle:|:white_circle:|:white_circle:|
 | [ssl-certificate](#tls-secret) | string |  |  |:large_blue_circle:|:white_circle:|:white_circle:|
 | [ssl-numproc](#https) | int | "" | [tls-secret](#tls-secret) |:large_blue_circle:|:white_circle:|:white_circle:|
-| :construction: [ssl-redirect](#https) | bool | "true" | [tls-secret](#tls-secret) |:large_blue_circle:|:white_circle:|:white_circle:|
+| [ssl-redirect](#https) | "ON"/"OFF" | "ON" | [tls-secret](#tls-secret) |:large_blue_circle:|:white_circle:|:white_circle:|
+| [ssl-redirect-code](#https) | [301, 302, 303] | "302" | [tls-secret](#tls-secret) |:large_blue_circle:|:white_circle:|:white_circle:|
 | [timeout-http-request](#timeouts) | [time](#time) | "5s" |  |:large_blue_circle:|:white_circle:|:white_circle:|
 | [timeout-connect](#timeouts) | [time](#time) | "5s" |  |:large_blue_circle:|:white_circle:|:white_circle:|
 | [timeout-client](#timeouts) | [time](#time) | "50s" |  |:large_blue_circle:|:white_circle:|:white_circle:|
@@ -55,11 +56,17 @@ Options for starting controller can be found in [controller.md](controller.md)
 
 #### Https
 
-- Annotation: `ssl-redirect` - by default this is activated if tls key is provided
 - Annotation: `ssl-numproc` 
+  - :information_source: recomended setup is using [nbthread](#number-of-threads) not `ssl-numproc`
   - default value: number of procesors - computed from system
   - limit max number of processes used for ssl termination
   - process 1 is used only if max number of processes is 1
+- Annotation `ssl-redirect`
+  - by default this is activated if tls key is provided
+  - redirects http trafic to https
+  - default `ON`, can be set to "OFF" to disable
+- Annotation `ssl-redirect-code`
+  - HTTP status code on redirect
 
 #### Maximum Concurent Connections
 
