@@ -87,7 +87,7 @@ func (c *HAProxyController) HAProxyInitialize() {
 	}
 
 	confClient := configuration.LBCTLClient{}
-	confClient.Init(HAProxyCFG, HAProxyGlobalCFG, "haproxy", false, "/usr/sbin/lbctl", "")
+	confClient.Init(HAProxyCFG, HAProxyGlobalCFG, "haproxy", false, false, "/usr/sbin/lbctl", "")
 
 	c.NativeAPI = &clientnative.HAProxyClient{
 		Configuration: &confClient,
