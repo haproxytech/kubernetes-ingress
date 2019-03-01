@@ -2,7 +2,6 @@ package main
 
 import (
 	clientnative "github.com/haproxytech/client-native"
-	"k8s.io/apimachinery/pkg/watch"
 )
 
 //Configuration represents k8s state
@@ -46,7 +45,7 @@ func (c *Configuration) NewNamespace(name string) *Namespace {
 		Services:  make(map[string]*Service),
 		Ingresses: make(map[string]*Ingress),
 		Secret:    make(map[string]*Secret),
-		Status:    watch.Added,
+		Status:    ADDED,
 	}
 	return namespace
 }
@@ -58,14 +57,14 @@ func (c *Configuration) Clean() {
 		for _, data := range namespace.Ingresses {
 			for _, rule := range data.Rules {
 				switch rule.Status {
-				case watch.Deleted:
+				case DELETED:
 					delete(data.Rules, rule.Host)
 					continue
 				default:
 					rule.Status = ""
 					for _, path := range rule.Paths {
 						switch path.Status {
-						case watch.Deleted:
+						case DELETED:
 							delete(rule.Paths, path.Path)
 						default:
 							path.Status = ""
@@ -75,7 +74,7 @@ func (c *Configuration) Clean() {
 			}
 			data.Annotations.Clean()
 			switch data.Status {
-			case watch.Deleted:
+			case DELETED:
 				delete(namespace.Ingresses, data.Name)
 			default:
 				data.Status = ""
@@ -84,7 +83,7 @@ func (c *Configuration) Clean() {
 		for _, data := range namespace.Services {
 			data.Annotations.Clean()
 			switch data.Status {
-			case watch.Deleted:
+			case DELETED:
 				delete(namespace.Services, data.Name)
 			default:
 				data.Status = ""
@@ -92,7 +91,7 @@ func (c *Configuration) Clean() {
 		}
 		for _, data := range namespace.Pods {
 			switch data.Status {
-			case watch.Deleted:
+			case DELETED:
 				delete(namespace.PodNames, data.HAProxyName)
 				delete(namespace.Pods, data.Name)
 			default:
@@ -101,7 +100,7 @@ func (c *Configuration) Clean() {
 		}
 		for _, data := range namespace.Secret {
 			switch data.Status {
-			case watch.Deleted:
+			case DELETED:
 				delete(namespace.Secret, data.Name)
 			default:
 				data.Status = ""
@@ -110,7 +109,7 @@ func (c *Configuration) Clean() {
 	}
 	c.ConfigMap.Annotations.Clean()
 	switch c.ConfigMap.Status {
-	case watch.Deleted:
+	case DELETED:
 		c.ConfigMap = nil
 	default:
 		c.ConfigMap.Status = ""

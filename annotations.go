@@ -2,8 +2,6 @@ package main
 
 import (
 	"strings"
-
-	"k8s.io/apimachinery/pkg/watch"
 )
 
 //ConvertToMapStringW removes prefixes in annotation
@@ -12,7 +10,7 @@ func ConvertToMapStringW(anotations map[string]string) MapStringW {
 	for name, value := range anotations {
 		newAnnotations[convertAnnotationName(name)] = &StringW{
 			Value:  value,
-			Status: watch.Added,
+			Status: ADDED,
 		}
 	}
 	return newAnnotations
@@ -31,10 +29,10 @@ func GetValueFromAnnotations(annotationName string, annotations ...MapStringW) (
 	oldValue := ""
 	for _, a := range annotations {
 		if item, err := a.Get(annotationName); err == nil {
-			if item.Status == watch.Error {
+			if item.Status == ERROR {
 				continue
 			}
-			if item.Status == watch.Deleted {
+			if item.Status == DELETED {
 				if data == nil && !deleted {
 					oldValue = item.Value
 					deleted = true
@@ -43,7 +41,7 @@ func GetValueFromAnnotations(annotationName string, annotations ...MapStringW) (
 			}
 			if data == nil {
 				if deleted {
-					watchState := watch.Modified
+					watchState := MODIFIED
 					if item.Value == oldValue {
 						watchState = ""
 					}
@@ -51,10 +49,10 @@ func GetValueFromAnnotations(annotationName string, annotations ...MapStringW) (
 					item.Status = watchState
 					return item, nil
 				}
-				if item.Status == watch.Modified {
+				if item.Status == MODIFIED {
 					return item, err
 				}
-				if item.Status == "" {
+				if item.Status == EMPTY {
 					return item, err
 				}
 				watchState := item.Status // Added
@@ -65,10 +63,10 @@ func GetValueFromAnnotations(annotationName string, annotations ...MapStringW) (
 				}
 			} else {
 				// so we have some data from previous annotations
-				if item.Status == watch.Modified || item.Status == "" {
+				if item.Status == MODIFIED || item.Status == EMPTY {
 					if item.Value != data.Value {
 						data.OldValue = item.Value
-						data.Status = watch.Modified
+						data.Status = MODIFIED
 					} else {
 						data.Status = ""
 					}
@@ -90,12 +88,12 @@ func GetValueFromAnnotations(annotationName string, annotations ...MapStringW) (
 		data = &StringW{
 			Value:    oldValue,
 			OldValue: oldValue,
-			Status:   watch.Deleted,
+			Status:   DELETED,
 		}
 		return data, nil
 	}
 	// default exists, just set flags correctly
-	watchState := watch.Modified
+	watchState := MODIFIED
 	if data.Value == oldValue {
 		watchState = ""
 	}

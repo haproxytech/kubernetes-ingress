@@ -6,18 +6,17 @@ import (
 	"math/rand"
 
 	"k8s.io/api/extensions/v1beta1"
-	"k8s.io/apimachinery/pkg/watch"
 )
 
 //LogWatchEvent log what kind of event occured
-func LogWatchEvent(t watch.EventType, watchType SyncType, ObjData ...interface{}) {
-	if t == watch.Added {
+func LogWatchEvent(status Status, watchType SyncType, ObjData ...interface{}) {
+	if status == ADDED {
 		log.Println(watchType, "added", ObjData)
 	}
-	if t == watch.Deleted {
+	if status == DELETED {
 		log.Println(watchType, "deleted", ObjData)
 	}
-	if t == watch.Modified {
+	if status == MODIFIED {
 		log.Println(watchType, "modified", ObjData)
 	}
 }

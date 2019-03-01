@@ -4,15 +4,13 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
-
-	"k8s.io/apimachinery/pkg/watch"
 )
 
 //IntW string value that has modified flag
 type IntW struct {
 	Value    string
 	OldValue string
-	Status   watch.EventType
+	Status   Status
 }
 
 //Equal compares only Value, rest is not relevant
@@ -57,11 +55,11 @@ func (a *MapIntW) SetStatus(old MapIntW) (different bool) {
 	different = false
 	for name, currentValue := range *a {
 		if oldValue, err := old.Get(name); err != nil {
-			currentValue.Status = watch.Added
+			currentValue.Status = ADDED
 			different = true
 		} else {
 			if currentValue.Value != oldValue.Value {
-				currentValue.Status = watch.Modified
+				currentValue.Status = MODIFIED
 				currentValue.OldValue = oldValue.Value
 				different = true
 			} else {
@@ -71,7 +69,7 @@ func (a *MapIntW) SetStatus(old MapIntW) (different bool) {
 	}
 	for name, oldValue := range old {
 		if _, err := a.Get(name); err != nil {
-			oldValue.Status = watch.Deleted
+			oldValue.Status = DELETED
 			oldValue.OldValue = oldValue.Value
 			(*a)[name] = oldValue
 			different = true
@@ -81,7 +79,7 @@ func (a *MapIntW) SetStatus(old MapIntW) (different bool) {
 }
 
 //SetStatusState sets all watches to desired state
-func (a *MapIntW) SetStatusState(state watch.EventType) {
+func (a *MapIntW) SetStatusState(state Status) {
 	for _, currentValue := range *a {
 		currentValue.Status = state
 		currentValue.OldValue = ""
@@ -91,7 +89,7 @@ func (a *MapIntW) SetStatusState(state watch.EventType) {
 //Clean removes all with status
 func (a *MapIntW) Clean() {
 	for name, currentValue := range *a {
-		if currentValue.Status == watch.Deleted {
+		if currentValue.Status == DELETED {
 			delete(*a, name)
 		}
 	}

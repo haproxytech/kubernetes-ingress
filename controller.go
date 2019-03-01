@@ -10,8 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/haproxytech/config-parser/parsers/global"
-	"github.com/haproxytech/config-parser/parsers/simple"
+	"github.com/haproxytech/config-parser/types"
 
 	corev1 "k8s.io/api/core/v1"
 	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
@@ -138,10 +137,38 @@ func (c *HAProxyController) HAProxyReload() error {
 	return err
 }
 
+func (c *HAProxyController) monitorChanges() {
+
+	configMapReceivedAndProcessed := make(chan bool)
+	syncEveryNSeconds := 5
+	eventChan := make(chan SyncDataEvent, watch.DefaultChanSize*6)
+	go c.SyncData(eventChan, configMapReceivedAndProccesed)
+	configMapOk := false
+
+	podChan := make(chan Pod, 100)
+
+	for {
+		select {
+		case _ = <-configMapReceivedAndProcessed:
+
+		case pod := <-podChan:
+			status := msg.Type
+			event := SyncDataEvent{SyncType: POD, Namespace: obj.GetNamespace(), Data: pod}
+			if configMapOk {
+				eventChan <- event
+			} else {
+				eventsPods = append(eventsPods, event)
+			}
+		}
+	}
+
+}
+
 func (c *HAProxyController) watchChanges(namespaces watch.Interface, services watch.Interface, pods watch.Interface,
 	ingresses watch.Interface, configMapWatch watch.Interface, secretsWatch watch.Interface) {
 	syncEveryNSeconds := 5
 	eventChan := make(chan SyncDataEvent, watch.DefaultChanSize*6)
+
 	configMapReceivedAndProccesed := make(chan bool)
 	//initOver := true
 	eventsIngress := []SyncDataEvent{}
@@ -220,7 +247,7 @@ func (c *HAProxyController) watchChanges(namespaces watch.Interface, services wa
 			status := msg.Type
 			if obj.ObjectMeta.GetDeletionTimestamp() != nil {
 				//detetct pods that are in terminating state
-				status = watch.Deleted
+				status = DELETED
 			}
 			pod := &Pod{
 				Name:   obj.GetName(),
@@ -303,6 +330,10 @@ func (c *HAProxyController) SyncData(jobChan <-chan SyncDataEvent, chConfigMapRe
 		ns := c.cfg.GetNamespace(job.Namespace)
 		change := false
 		reload := false
+		if job.SyncType != SECRET && job.SyncType != COMMAND {
+			log.Println(job)
+		}
+		//log.Println(job)
 		switch job.SyncType {
 		case COMMAND:
 			if hadChanges {
@@ -334,9 +365,9 @@ func (c *HAProxyController) SyncData(jobChan <-chan SyncDataEvent, chConfigMapRe
 func (c *HAProxyController) eventNamespace(ns *Namespace, data *Namespace) (updateRequired, needsReload bool) {
 	updateRequired = false
 	switch data.Status {
-	case watch.Added:
+	case ADDED:
 		_ = c.cfg.GetNamespace(data.Name)
-	case watch.Deleted:
+	case DELETED:
 		_, ok := c.cfg.Namespace[data.Name]
 		if ok {
 			delete(c.cfg.Namespace, data.Name)
@@ -351,7 +382,7 @@ func (c *HAProxyController) eventNamespace(ns *Namespace, data *Namespace) (upda
 func (c *HAProxyController) eventIngress(ns *Namespace, data *Ingress) (updateRequired, needsReload bool) {
 	updateRequired = false
 	switch data.Status {
-	case watch.Modified:
+	case MODIFIED:
 		newIngress := data
 		oldIngress, ok := ns.Ingresses[data.Name]
 		if !ok {
@@ -372,29 +403,29 @@ func (c *HAProxyController) eventIngress(ns *Namespace, data *Ingress) (updateRe
 						//compare path for differences
 						if newPath.ServiceName != oldPath.ServiceName ||
 							newPath.ServicePort != oldPath.ServicePort {
-							newPath.Status = watch.Modified
-							newRule.Status = watch.Modified
+							newPath.Status = MODIFIED
+							newRule.Status = MODIFIED
 						}
 					} else {
-						newPath.Status = watch.Modified
-						newRule.Status = watch.Modified
+						newPath.Status = MODIFIED
+						newRule.Status = MODIFIED
 					}
 				}
 				for _, oldPath := range oldRule.Paths {
 					if _, ok := newRule.Paths[oldPath.Path]; ok {
-						oldPath.Status = watch.Deleted
+						oldPath.Status = DELETED
 						newRule.Paths[oldPath.Path] = oldPath
 					}
 				}
 			} else {
-				newRule.Status = watch.Added
+				newRule.Status = ADDED
 			}
 		}
 		for _, oldRule := range oldIngress.Rules {
 			if _, ok := newIngress.Rules[oldRule.Host]; !ok {
-				oldRule.Status = watch.Deleted
+				oldRule.Status = DELETED
 				for _, path := range oldRule.Paths {
-					path.Status = watch.Deleted
+					path.Status = DELETED
 				}
 				newIngress.Rules[oldRule.Host] = oldRule
 			}
@@ -403,11 +434,11 @@ func (c *HAProxyController) eventIngress(ns *Namespace, data *Ingress) (updateRe
 		//diffStr := cmp.Diff(oldIngress, newIngress)
 		//log.Println("Ingress modified", data.Name, "\n", diffStr)
 		updateRequired = true
-	case watch.Added:
+	case ADDED:
 		if old, ok := ns.Ingresses[data.Name]; ok {
 			data.Status = old.Status
 			if !old.Equal(data) {
-				data.Status = watch.Modified
+				data.Status = MODIFIED
 				return c.eventIngress(ns, data)
 			}
 			return updateRequired, updateRequired
@@ -415,17 +446,17 @@ func (c *HAProxyController) eventIngress(ns *Namespace, data *Ingress) (updateRe
 		ns.Ingresses[data.Name] = data
 		//log.Println("Ingress added", data.Name)
 		updateRequired = true
-	case watch.Deleted:
+	case DELETED:
 		ingress, ok := ns.Ingresses[data.Name]
 		if ok {
-			ingress.Status = watch.Deleted
+			ingress.Status = DELETED
 			for _, rule := range ingress.Rules {
-				rule.Status = watch.Deleted
+				rule.Status = DELETED
 				for _, path := range rule.Paths {
-					path.Status = watch.Deleted
+					path.Status = DELETED
 				}
 			}
-			ingress.Annotations.SetStatusState(watch.Deleted)
+			ingress.Annotations.SetStatusState(DELETED)
 			//log.Println("Ingress deleted", data.Name)
 			updateRequired = true
 		} else {
@@ -438,7 +469,7 @@ func (c *HAProxyController) eventIngress(ns *Namespace, data *Ingress) (updateRe
 func (c *HAProxyController) eventService(ns *Namespace, data *Service) (updateRequired, needsReload bool) {
 	updateRequired = false
 	switch data.Status {
-	case watch.Modified:
+	case MODIFIED:
 		newService := data
 		oldService, ok := ns.Services[data.Name]
 		if !ok {
@@ -451,10 +482,10 @@ func (c *HAProxyController) eventService(ns *Namespace, data *Service) (updateRe
 		newService.Annotations.SetStatus(oldService.Annotations)
 		ns.Services[data.Name] = newService
 		updateRequired = true
-	case watch.Added:
+	case ADDED:
 		if old, ok := ns.Services[data.Name]; ok {
 			if !old.Equal(data) {
-				data.Status = watch.Modified
+				data.Status = MODIFIED
 				return c.eventService(ns, data)
 			}
 			return updateRequired, updateRequired
@@ -462,11 +493,11 @@ func (c *HAProxyController) eventService(ns *Namespace, data *Service) (updateRe
 		ns.Services[data.Name] = data
 		//log.Println("Service added", data.Name)
 		updateRequired = true
-	case watch.Deleted:
+	case DELETED:
 		service, ok := ns.Services[data.Name]
 		if ok {
-			service.Status = watch.Deleted
-			service.Annotations.SetStatusState(watch.Deleted)
+			service.Status = DELETED
+			service.Annotations.SetStatusState(DELETED)
 			//log.Println("Service deleted", data.Name)
 			updateRequired = true
 		} else {
@@ -481,7 +512,7 @@ func (c *HAProxyController) eventPod(ns *Namespace, data *Pod) (updateRequired, 
 	needsReload = false
 	runtimeClient := c.cfg.NativeAPI.Runtime
 	switch data.Status {
-	case watch.Modified:
+	case MODIFIED:
 		newPod := data
 		var oldPod *Pod
 		oldPod, ok := ns.Pods[data.Name]
@@ -495,8 +526,8 @@ func (c *HAProxyController) eventPod(ns *Namespace, data *Pod) (updateRequired, 
 		}
 		newPod.HAProxyName = oldPod.HAProxyName
 		newPod.Backends = oldPod.Backends
-		if oldPod.Status == watch.Added {
-			newPod.Status = watch.Added
+		if oldPod.Status == ADDED {
+			newPod.Status = ADDED
 		} else {
 			//so, old is not just added, see diff and if only ip is different
 			// issue socket command to change ip ad set it to ready
@@ -519,12 +550,12 @@ func (c *HAProxyController) eventPod(ns *Namespace, data *Pod) (updateRequired, 
 		}
 		ns.Pods[data.Name] = newPod
 		updateRequired = true
-	case watch.Added:
+	case ADDED:
 		if old, ok := ns.Pods[data.Name]; ok {
 			data.HAProxyName = old.HAProxyName
 			if old.Equal(data) {
 				//so this is actually modified
-				data.Status = watch.Modified
+				data.Status = MODIFIED
 				return c.eventPod(ns, data)
 			}
 			return updateRequired, needsReload
@@ -542,10 +573,10 @@ func (c *HAProxyController) eventPod(ns *Namespace, data *Pod) (updateRequired, 
 				if pod.Maintenance {
 					createNew = false
 					data.Maintenance = false
-					if pod.Status == watch.Added {
-						data.Status = watch.Added
+					if pod.Status == ADDED {
+						data.Status = ADDED
 					} else {
-						data.Status = watch.Modified
+						data.Status = MODIFIED
 					}
 					data.HAProxyName = pod.HAProxyName
 					data.Backends = pod.Backends
@@ -597,7 +628,7 @@ func (c *HAProxyController) eventPod(ns *Namespace, data *Pod) (updateRequired, 
 						IP:          "127.0.0.1",
 						Labels:      data.Labels.Clone(),
 						Maintenance: true,
-						Status:      watch.Added,
+						Status:      ADDED,
 					}
 					pod.HAProxyName = fmt.Sprintf("SRV_%s", RandomString(5))
 					for _, ok := ns.PodNames[pod.HAProxyName]; ok; {
@@ -609,7 +640,7 @@ func (c *HAProxyController) eventPod(ns *Namespace, data *Pod) (updateRequired, 
 				}
 			}
 		}
-	case watch.Deleted:
+	case DELETED:
 		oldPod, ok := ns.Pods[data.Name]
 		if ok {
 			if oldPod.Maintenance {
@@ -638,13 +669,13 @@ func (c *HAProxyController) eventPod(ns *Namespace, data *Pod) (updateRequired, 
 				}
 				if numDisabled >= maxDisabled {
 					convertToMaintPod = false
-					oldPod.Status = watch.Deleted
+					oldPod.Status = DELETED
 					needsReload = true
 				}
 			}
 			if convertToMaintPod {
 				oldPod.IP = "127.0.0.1"
-				oldPod.Status = watch.Modified //we replace it with disabled one
+				oldPod.Status = MODIFIED //we replace it with disabled one
 				oldPod.Maintenance = true
 				for backendName := range oldPod.Backends {
 					err := runtimeClient.SetServerState(backendName, oldPod.HAProxyName, "maint")
@@ -668,16 +699,15 @@ func (c *HAProxyController) eventConfigMap(ns *Namespace, data *ConfigMap, chCon
 		return updateRequired, needsReload
 	}
 	switch data.Status {
-	case watch.Modified:
-
+	case MODIFIED:
 		different := data.Annotations.SetStatus(c.cfg.ConfigMap.Annotations)
 		c.cfg.ConfigMap = data
 		if !different {
-			data.Status = ""
+			data.Status = EMPTY
 		} else {
 			updateRequired = true
 		}
-	case watch.Added:
+	case ADDED:
 		if c.cfg.ConfigMap == nil {
 			chConfigMapReceivedAndProccesed <- true
 			c.cfg.ConfigMap = data
@@ -685,19 +715,19 @@ func (c *HAProxyController) eventConfigMap(ns *Namespace, data *ConfigMap, chCon
 			return updateRequired, updateRequired
 		}
 		if !c.cfg.ConfigMap.Equal(data) {
-			data.Status = watch.Modified
+			data.Status = MODIFIED
 			return c.eventConfigMap(ns, data, chConfigMapReceivedAndProccesed)
 		}
-	case watch.Deleted:
-		c.cfg.ConfigMap.Annotations.SetStatusState(watch.Deleted)
-		c.cfg.ConfigMap.Status = watch.Deleted
+	case DELETED:
+		c.cfg.ConfigMap.Annotations.SetStatusState(DELETED)
+		c.cfg.ConfigMap.Status = DELETED
 	}
 	return updateRequired, updateRequired
 }
 func (c *HAProxyController) eventSecret(ns *Namespace, data *Secret) (updateRequired, needsReload bool) {
 	updateRequired = false
 	switch data.Status {
-	case watch.Modified:
+	case MODIFIED:
 		newSecret := data
 		oldSecret, ok := ns.Secret[data.Name]
 		if !ok {
@@ -712,17 +742,17 @@ func (c *HAProxyController) eventSecret(ns *Namespace, data *Secret) (updateRequ
 		//result := cmp.Diff(oldSecret, newSecret)
 		//log.Println("Secret modified", data.Name, "\n", result)
 		updateRequired = true
-	case watch.Added:
+	case ADDED:
 		if old, ok := ns.Secret[data.Name]; ok {
 			if !old.Equal(data) {
-				data.Status = watch.Modified
+				data.Status = MODIFIED
 				return c.eventSecret(ns, data)
 			}
 			return updateRequired, updateRequired
 		}
 		ns.Secret[data.Name] = data
 		updateRequired = true
-	case watch.Deleted:
+	case DELETED:
 		_, ok := ns.Secret[data.Name]
 		if ok {
 			//log.Println("Secret set for deletion", data.Name)
@@ -737,7 +767,7 @@ func (c *HAProxyController) eventSecret(ns *Namespace, data *Secret) (updateRequ
 func (c *HAProxyController) updateHAProxy(reloadRequested bool) error {
 	nativeAPI := c.NativeAPI
 
-	c.handleGlobalTimeouts()
+	c.handleDefaultTimeouts()
 	version, err := nativeAPI.Configuration.GetVersion()
 	if err != nil || version < 1 {
 		//silently fallback to 1
@@ -752,7 +782,7 @@ func (c *HAProxyController) updateHAProxy(reloadRequested bool) error {
 
 	if maxconnAnn, err := GetValueFromAnnotations("maxconn", c.cfg.ConfigMap.Annotations); err == nil {
 		if maxconn, err := strconv.ParseInt(maxconnAnn.Value, 10, 64); err == nil {
-			if maxconnAnn.Status == watch.Deleted {
+			if maxconnAnn.Status == DELETED {
 				maxconnAnn, _ = GetValueFromAnnotations("maxconn", c.cfg.ConfigMap.Annotations) // has default
 				maxconn, _ = strconv.ParseInt(maxconnAnn.Value, 10, 64)
 			}
@@ -893,72 +923,60 @@ func (c *HAProxyController) handleGlobalAnnotations(transaction *models.Transact
 
 	//see global config
 	p := c.NativeParser
-	var nbproc *global.NbProc
-	data, err := p.GetGlobalAttr("nbproc")
+	var nbproc *types.Int64C
+	data, err := p.Get(parser.Global, parser.GlobalSectionName, "nbproc")
 	if err == nil {
-		nbproc = data.(*global.NbProc)
+		nbproc = data.(*types.Int64C)
 		if nbproc.Value != int64(maxProcs) {
 			reloadRequested = true
 			nbproc.Value = int64(maxProcs)
-			maxProcsStat.Status = watch.Modified
+			maxProcsStat.Status = MODIFIED
 		}
 	} else {
-		nbproc = &global.NbProc{
-			Enabled: true,
-			Value:   int64(maxProcs),
+		nbproc = &types.Int64C{
+			Value: int64(maxProcs),
 		}
-		p.NewGlobalAttr(nbproc)
-		maxProcsStat.Status = watch.Added
+		p.Set(parser.Global, parser.GlobalSectionName, "nbproc", nbproc)
+		maxProcsStat.Status = ADDED
 		reloadRequested = true
 	}
 	if maxProcs > 1 {
 		numThreads = 1
 	}
 
-	var nbthread *global.NbThread
-	data, err = p.GetGlobalAttr("nbthread")
+	var nbthread *types.Int64C
+	data, err = p.Get(parser.Global, parser.GlobalSectionName, "nbthread")
 	if err == nil {
-		nbthread = data.(*global.NbThread)
+		nbthread = data.(*types.Int64C)
 		if nbthread.Value != int64(numThreads) {
 			reloadRequested = true
 			nbthread.Value = int64(numThreads)
-			maxThreadsStat.Status = watch.Modified
+			maxThreadsStat.Status = MODIFIED
 		}
 	} else {
-		nbthread = &global.NbThread{
-			Enabled: true,
-			Value:   int64(numThreads),
+		nbthread = &types.Int64C{
+			Value: int64(numThreads),
 		}
-		p.NewGlobalAttr(nbthread)
-		maxThreadsStat.Status = watch.Added
+		p.Set(parser.Global, parser.GlobalSectionName, "nbthread", nbthread)
+		maxThreadsStat.Status = ADDED
 		reloadRequested = true
 	}
 
-	data, err = p.GetGlobalAttr("cpu-map")
+	data, err = p.Get(parser.Global, parser.GlobalSectionName, "cpu-map")
 	numCPUMap := numThreads
 	namePrefix := "1/"
 	if nbthread.Value < 2 {
 		numCPUMap = maxProcs
 		namePrefix = ""
 	}
-	cpuMap := make([]*global.CpuMap, numCPUMap)
+	cpuMap := make([]types.CpuMap, numCPUMap)
 	for index := 0; index < numCPUMap; index++ {
-		cpuMap[index] = &global.CpuMap{
+		cpuMap[index] = types.CpuMap{
 			Name:  fmt.Sprintf("%s%d", namePrefix, index+1),
 			Value: strconv.Itoa(index),
 		}
 	}
-	cpuMaps := &global.CpuMapLines{CpuMapLines: cpuMap}
-	if err == nil {
-		mapLines := data.(*global.CpuMapLines)
-		if !mapLines.Equal(cpuMaps) {
-			reloadRequested = true
-			mapLines.CpuMapLines = cpuMaps.CpuMapLines
-		}
-	} else {
-		reloadRequested = true
-		p.NewGlobalAttr(cpuMaps)
-	}
+	p.Set(parser.Global, parser.GlobalSectionName, "cpu-map", cpuMap)
 	maxProcsStat.Value = strconv.Itoa(maxProcs)
 	maxThreadsStat.Value = strconv.Itoa(numThreads)
 	return maxProcsStat, maxThreadsStat, reloadRequested, err
@@ -967,7 +985,7 @@ func (c *HAProxyController) handleGlobalAnnotations(transaction *models.Transact
 func (c *HAProxyController) removeHTTPSListeners(transaction *models.Transaction) (err error) {
 	listeners := *c.cfg.HTTPSListeners
 	for index, data := range listeners {
-		data.Status = watch.Deleted
+		data.Status = DELETED
 		listenerName := "https_" + strconv.Itoa(index+1)
 		if err = c.NativeAPI.Configuration.DeleteListener(listenerName, FrontendHTTPS, transaction.ID, 0); err != nil {
 			return err
@@ -986,14 +1004,14 @@ func (c *HAProxyController) handleHTTPRedirect(usingHTTPS bool, transaction *mod
 	if !usingHTTPS {
 		useSSLRedirect = false
 	}
-	var state watch.EventType
+	var state Status
 	if useSSLRedirect {
 		if c.cfg.SSLRedirect == "" {
 			c.cfg.SSLRedirect = "ON"
-			state = watch.Added
+			state = ADDED
 		} else if c.cfg.SSLRedirect == "OFF" {
 			c.cfg.SSLRedirect = "ON"
-			state = watch.Added
+			state = ADDED
 		}
 	} else {
 		if c.cfg.SSLRedirect == "" {
@@ -1001,7 +1019,7 @@ func (c *HAProxyController) handleHTTPRedirect(usingHTTPS bool, transaction *mod
 			state = ""
 		} else if c.cfg.SSLRedirect != "OFF" {
 			c.cfg.SSLRedirect = "OFF"
-			state = watch.Deleted
+			state = DELETED
 		}
 	}
 	redirectCode := int64(302)
@@ -1010,7 +1028,7 @@ func (c *HAProxyController) handleHTTPRedirect(usingHTTPS bool, transaction *mod
 		redirectCode = value
 	}
 	if state == "" && annRedirectCode.Status != "" {
-		state = watch.Modified
+		state = MODIFIED
 	}
 	rule := &models.HTTPRequestRule{
 		ID:        1,
@@ -1022,18 +1040,18 @@ func (c *HAProxyController) handleHTTPRedirect(usingHTTPS bool, transaction *mod
 		CondTest:  "!{ ssl_fc }",
 	}
 	switch state {
-	case watch.Added:
+	case ADDED:
 		if err = c.NativeAPI.Configuration.CreateHTTPRequestRule("frontend", "http", rule, transaction.ID, 0); err != nil {
 			return reloadRequested, err
 		}
 		c.cfg.SSLRedirect = "ON"
 		reloadRequested = true
-	case watch.Modified:
+	case MODIFIED:
 		if err = c.NativeAPI.Configuration.EditHTTPRequestRule(rule.ID, "frontend", "http", rule, transaction.ID, 0); err != nil {
 			return reloadRequested, err
 		}
 		reloadRequested = true
-	case watch.Deleted:
+	case DELETED:
 		if err = c.NativeAPI.Configuration.DeleteHTTPRequestRule(rule.ID, "frontend", "http", transaction.ID, 0); err != nil {
 			return reloadRequested, err
 		}
@@ -1078,6 +1096,7 @@ func (c *HAProxyController) handleHTTPS(namespace *Namespace, maxProcsStatus, nu
 		ecdsaKey, ecdsaKeyOK := secret.Data["ecdsa.key"]
 		ecdsaCrt, ecdsaCrtOK := secret.Data["ecdsa.crt"]
 		haveCert := false
+		log.Println(secretName.Value, rsaCrtOK, rsaKeyOK, ecdsaCrtOK, ecdsaKeyOK)
 		if rsaKeyOK && rsaCrtOK || ecdsaKeyOK && ecdsaCrtOK {
 			if rsaKeyOK && rsaCrtOK {
 				err := c.writeCert(HAProxyCertDir+"cert.pem.rsa", rsaKey, rsaCrt)
@@ -1132,7 +1151,7 @@ func (c *HAProxyController) handleHTTPS(namespace *Namespace, maxProcsStatus, nu
 			data, ok := listeners[index]
 			if !ok {
 				data = &IntW{
-					Status: watch.Added,
+					Status: ADDED,
 				}
 				listeners[index] = data
 			} else {
@@ -1143,7 +1162,7 @@ func (c *HAProxyController) handleHTTPS(namespace *Namespace, maxProcsStatus, nu
 				}
 			}
 			if index >= maxProcs && index >= numThreads {
-				data.Status = watch.Deleted
+				data.Status = DELETED
 			}
 			if numThreads < 2 {
 				listener.Process = strconv.Itoa(index + 1)
@@ -1152,7 +1171,7 @@ func (c *HAProxyController) handleHTTPS(namespace *Namespace, maxProcsStatus, nu
 			}
 			listener.Name = "https_" + strconv.Itoa(index+1)
 			switch data.Status {
-			case watch.Added:
+			case ADDED:
 				if err = nativeAPI.Configuration.CreateListener(FrontendHTTPS, listener, transaction.ID, 0); err != nil {
 					if strings.Contains(err.Error(), "already exists") {
 						if err = nativeAPI.Configuration.EditListener(listener.Name, FrontendHTTPS, listener, transaction.ID, 0); err != nil {
@@ -1162,11 +1181,11 @@ func (c *HAProxyController) handleHTTPS(namespace *Namespace, maxProcsStatus, nu
 						return reloadRequested, usingHTTPS, err
 					}
 				}
-			case watch.Modified:
+			case MODIFIED:
 				if err = nativeAPI.Configuration.EditListener(listener.Name, FrontendHTTPS, listener, transaction.ID, 0); err != nil {
 					return reloadRequested, usingHTTPS, err
 				}
-			case watch.Deleted:
+			case DELETED:
 				if err = nativeAPI.Configuration.DeleteListener(listener.Name, FrontendHTTPS, transaction.ID, 0); err != nil {
 					return reloadRequested, usingHTTPS, err
 				}
@@ -1176,7 +1195,7 @@ func (c *HAProxyController) handleHTTPS(namespace *Namespace, maxProcsStatus, nu
 
 	listeners := *c.cfg.HTTPSListeners
 	for _, listener := range listeners {
-		if listener.Status != watch.Deleted {
+		if listener.Status != DELETED {
 			return reloadRequested, true, nil
 		}
 	}
@@ -1219,7 +1238,7 @@ func (c *HAProxyController) handlePath(namespace *Namespace, ingress *Ingress, r
 			}*/
 			annnotationsActive := false
 			if annMaxconn != nil {
-				if annMaxconn.Status != watch.Deleted {
+				if annMaxconn.Status != DELETED {
 					if maxconn, err := strconv.ParseInt(annMaxconn.Value, 10, 64); err == nil {
 						data.MaxConnections = &maxconn
 					}
@@ -1229,7 +1248,7 @@ func (c *HAProxyController) handlePath(namespace *Namespace, ingress *Ingress, r
 				}
 			}
 			if annCheck != nil {
-				if annCheck.Status != watch.Deleted {
+				if annCheck.Status != DELETED {
 					if annCheck.Value == "enabled" {
 						data.Check = "enabled"
 						//see if we have port and interval defined
@@ -1239,19 +1258,19 @@ func (c *HAProxyController) handlePath(namespace *Namespace, ingress *Ingress, r
 					annnotationsActive = true
 				}
 			}
-			if pod.Status == "" && annnotationsActive {
-				pod.Status = watch.Modified
+			if pod.Status == EMPTY && annnotationsActive {
+				pod.Status = MODIFIED
 			}
 			switch pod.Status {
-			case watch.Added:
+			case ADDED:
 				if err := nativeAPI.Configuration.CreateServer(backendName, data, transaction.ID, 0); err != nil {
 					return err
 				}
-			case watch.Modified:
+			case MODIFIED:
 				if err := nativeAPI.Configuration.EditServer(data.Name, backendName, data, transaction.ID, 0); err != nil {
 					return err
 				}
-			case watch.Deleted:
+			case DELETED:
 				if err := nativeAPI.Configuration.DeleteServer(data.Name, backendName, transaction.ID, 0); err != nil {
 					return err
 				}
@@ -1287,7 +1306,7 @@ func (c *HAProxyController) handleService(namespace *Namespace, ingress *Ingress
 	}
 
 	switch service.Status {
-	case watch.Added:
+	case ADDED:
 		if numberOfTimesBackendUsed := backendsUsed[backendName]; numberOfTimesBackendUsed < 2 {
 			backend := &models.Backend{
 				Balance:  balanceAlg,
@@ -1316,9 +1335,9 @@ func (c *HAProxyController) handleService(namespace *Namespace, ingress *Ingress
 			log.Println("CreateBackendSwitchingRule https", err)
 			return "", nil, nil, err
 		}
-	//case watch.Modified:
+	//case MODIFIED:
 	//nothing to do for now
-	case watch.Deleted:
+	case DELETED:
 		backendsUsed[backendName]--
 		if err := nativeAPI.Configuration.DeleteBackend(backendName, transaction.ID, 0); err != nil {
 			log.Println("DeleteBackend", err)
@@ -1335,22 +1354,22 @@ func (c *HAProxyController) handleService(namespace *Namespace, ingress *Ingress
 	return backendName, selector, service, nil
 }
 
-func (c *HAProxyController) handleGlobalTimeouts() bool {
+func (c *HAProxyController) handleDefaultTimeouts() bool {
 	hasChanges := false
-	hasChanges = c.handleGlobalTimeout("http-request") || hasChanges
-	hasChanges = c.handleGlobalTimeout("connect") || hasChanges
-	hasChanges = c.handleGlobalTimeout("client") || hasChanges
-	hasChanges = c.handleGlobalTimeout("queue") || hasChanges
-	hasChanges = c.handleGlobalTimeout("server") || hasChanges
-	hasChanges = c.handleGlobalTimeout("tunnel") || hasChanges
-	hasChanges = c.handleGlobalTimeout("http-keep-alive") || hasChanges
+	hasChanges = c.handleDefaultTimeout("http-request") || hasChanges
+	hasChanges = c.handleDefaultTimeout("connect") || hasChanges
+	hasChanges = c.handleDefaultTimeout("client") || hasChanges
+	hasChanges = c.handleDefaultTimeout("queue") || hasChanges
+	hasChanges = c.handleDefaultTimeout("server") || hasChanges
+	hasChanges = c.handleDefaultTimeout("tunnel") || hasChanges
+	hasChanges = c.handleDefaultTimeout("http-keep-alive") || hasChanges
 	if hasChanges {
 		c.NativeParser.Save(HAProxyGlobalCFG)
 	}
 	return hasChanges
 }
 
-func (c *HAProxyController) handleGlobalTimeout(timeout string) bool {
+func (c *HAProxyController) handleDefaultTimeout(timeout string) bool {
 	client := c.NativeParser
 	annTimeout, err := GetValueFromAnnotations(fmt.Sprintf("timeout-%s", timeout), c.cfg.ConfigMap.Annotations)
 	if err != nil {
@@ -1359,12 +1378,12 @@ func (c *HAProxyController) handleGlobalTimeout(timeout string) bool {
 	}
 	if annTimeout.Status != "" {
 		//log.Println(fmt.Sprintf("timeout [%s]", timeout), annTimeout.Value, annTimeout.OldValue, annTimeout.Status)
-		data, err := client.GetDefaultsAttr(fmt.Sprintf("timeout %s", timeout))
+		data, err := client.Get(parser.Defaults, parser.DefaultSectionName, fmt.Sprintf("timeout %s", timeout))
 		if err != nil {
 			log.Println(err)
 			return false
 		}
-		timeout := data.(*simple.SimpleTimeout)
+		timeout := data.(*types.SimpleTimeout)
 		timeout.Value = annTimeout.Value
 		return true
 	}

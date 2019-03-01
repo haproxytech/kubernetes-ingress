@@ -2,19 +2,18 @@ package main
 
 import (
 	"fmt"
-
-	"k8s.io/apimachinery/pkg/watch"
 )
 
 //Pod is usefull data from k8s structures about pod
 type Pod struct {
+	Namespace   string
 	IP          string
 	Labels      MapStringW
 	Name        string
 	HAProxyName string
 	Maintenance bool //disabled
 	Backends    map[string]struct{}
-	Status      watch.EventType
+	Status      Status
 }
 
 //Service is usefull data from k8s structures about service
@@ -26,7 +25,7 @@ type Service struct {
 
 	Annotations MapStringW
 	Selector    MapStringW
-	Status      watch.EventType
+	Status      Status
 }
 
 //Namespace is usefull data from k8s structures about namespace
@@ -39,7 +38,7 @@ type Namespace struct {
 	PodNames  map[string]bool
 	Services  map[string]*Service
 	Secret    map[string]*Secret
-	Status    watch.EventType
+	Status    Status
 }
 
 //GetServicesForPod returns all services that are using this pod
@@ -72,14 +71,14 @@ type IngressPath struct {
 	ServiceName string
 	ServicePort int
 	Path        string
-	Status      watch.EventType
+	Status      Status
 }
 
 //IngressRule is usefull data from k8s structures about ingress rule
 type IngressRule struct {
 	Host   string
 	Paths  map[string]*IngressPath
-	Status watch.EventType
+	Status Status
 }
 
 //Ingress is usefull data from k8s structures about ingress
@@ -87,19 +86,19 @@ type Ingress struct {
 	Name        string
 	Annotations MapStringW
 	Rules       map[string]*IngressRule
-	Status      watch.EventType
+	Status      Status
 }
 
 //ConfigMap is usefull data from k8s structures about configmap
 type ConfigMap struct {
 	Name        string
 	Annotations MapStringW
-	Status      watch.EventType
+	Status      Status
 }
 
 //Secret is usefull data from k8s structures about secret
 type Secret struct {
 	Name   string
 	Data   map[string][]byte
-	Status watch.EventType
+	Status Status
 }
