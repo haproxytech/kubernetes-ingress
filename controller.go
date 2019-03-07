@@ -12,8 +12,6 @@ import (
 
 	"github.com/haproxytech/config-parser/types"
 
-	corev1 "k8s.io/api/core/v1"
-	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
 	"k8s.io/apimachinery/pkg/watch"
 
 	clientnative "github.com/haproxytech/client-native"
@@ -49,9 +47,7 @@ func (c *HAProxyController) Start(osArgs OSArgs) {
 	k8sVersion, _ := x.ServerVersion()
 	log.Printf("Running on Kubernetes version: %s %s", k8sVersion.String(), k8sVersion.Platform)
 
-	nsWatch, svcWatch, podWatch, ingressWatch, configMapWatch, secretsWatch := k8s.GetAll()
-
-	go c.watchChanges(nsWatch, svcWatch, podWatch, ingressWatch, configMapWatch, secretsWatch)
+	go c.monitorChanges()
 }
 
 //HAProxyInitialize runs HAProxy for the first time so native client can have access to it
@@ -142,45 +138,36 @@ func (c *HAProxyController) monitorChanges() {
 	configMapReceivedAndProcessed := make(chan bool)
 	syncEveryNSeconds := 5
 	eventChan := make(chan SyncDataEvent, watch.DefaultChanSize*6)
-	go c.SyncData(eventChan, configMapReceivedAndProccesed)
-	configMapOk := false
+	go c.SyncData(eventChan, configMapReceivedAndProcessed)
 
-	podChan := make(chan Pod, 100)
+	stop := make(chan struct{})
+
+	podChan := make(chan *Pod, 100)
+	c.k8s.EventsPods(podChan, stop)
+
+	svcChan := make(chan *Service, 100)
+	c.k8s.EventsServices(svcChan, stop)
+
+	nsChan := make(chan *Namespace, 10)
+	c.k8s.EventsNamespaces(nsChan, stop)
+
+	ingChan := make(chan *Ingress, 10)
+	c.k8s.EventsIngresses(ingChan, stop)
+
+	cfgChan := make(chan *ConfigMap, 10)
+	c.k8s.EventsConfigfMaps(cfgChan, stop)
+
+	secretChan := make(chan *Secret, 10)
+	c.k8s.EventsSecrets(secretChan, stop)
+
+	eventsIngress := []SyncDataEvent{}
+	eventsServices := []SyncDataEvent{}
+	eventsPods := []SyncDataEvent{}
+	configMapOk := false
 
 	for {
 		select {
 		case _ = <-configMapReceivedAndProcessed:
-
-		case pod := <-podChan:
-			status := msg.Type
-			event := SyncDataEvent{SyncType: POD, Namespace: obj.GetNamespace(), Data: pod}
-			if configMapOk {
-				eventChan <- event
-			} else {
-				eventsPods = append(eventsPods, event)
-			}
-		}
-	}
-
-}
-
-func (c *HAProxyController) watchChanges(namespaces watch.Interface, services watch.Interface, pods watch.Interface,
-	ingresses watch.Interface, configMapWatch watch.Interface, secretsWatch watch.Interface) {
-	syncEveryNSeconds := 5
-	eventChan := make(chan SyncDataEvent, watch.DefaultChanSize*6)
-
-	configMapReceivedAndProccesed := make(chan bool)
-	//initOver := true
-	eventsIngress := []SyncDataEvent{}
-	eventsServices := []SyncDataEvent{}
-	eventsPods := []SyncDataEvent{}
-
-	go c.SyncData(eventChan, configMapReceivedAndProccesed)
-	configMapOk := false
-
-	for {
-		select {
-		case _ = <-configMapReceivedAndProccesed:
 			for _, event := range eventsIngress {
 				eventChan <- event
 			}
@@ -190,125 +177,40 @@ func (c *HAProxyController) watchChanges(namespaces watch.Interface, services wa
 			for _, event := range eventsPods {
 				eventChan <- event
 			}
-			time.Sleep(1 * time.Second)
 			eventsIngress = []SyncDataEvent{}
 			eventsServices = []SyncDataEvent{}
 			eventsPods = []SyncDataEvent{}
 			configMapOk = true
-		case msg, ok := <-namespaces.ResultChan():
-			if !ok || msg.Object == nil {
-				namespaces, services, pods, ingresses, configMapWatch, secretsWatch = c.k8s.GetAll()
-				goruntime.GC()
-				continue
-			}
-			obj := msg.Object.(*corev1.Namespace)
-			namespace := &Namespace{
-				Name:     obj.GetName(),
-				Relevant: obj.GetName() == "default",
-				//Annotations
-				Pods:      make(map[string]*Pod),
-				PodNames:  make(map[string]bool),
-				Services:  make(map[string]*Service),
-				Ingresses: make(map[string]*Ingress),
-				Secret:    make(map[string]*Secret),
-				Status:    msg.Type,
-			}
-			eventChan <- SyncDataEvent{SyncType: NAMESPACE, Namespace: obj.GetName(), Data: namespace}
-		case msg, ok := <-services.ResultChan():
-			if !ok || msg.Object == nil {
-				namespaces, services, pods, ingresses, configMapWatch, secretsWatch = c.k8s.GetAll()
-				goruntime.GC()
-				continue
-			}
-			obj := msg.Object.(*corev1.Service)
-			svc := &Service{
-				Name: obj.GetName(),
-				//ClusterIP:  "string",
-				//ExternalIP: "string",
-				//Ports: obj.Spec.Ports,
-
-				Annotations: ConvertToMapStringW(obj.ObjectMeta.Annotations),
-				Selector:    ConvertToMapStringW(obj.Spec.Selector),
-				Status:      msg.Type,
-			}
-			event := SyncDataEvent{SyncType: SERVICE, Namespace: obj.GetNamespace(), Data: svc}
-			if configMapOk {
-				eventChan <- event
-			} else {
-				eventsServices = append(eventsServices, event)
-			}
-		case msg, ok := <-pods.ResultChan():
-			if !ok || msg.Object == nil {
-				namespaces, services, pods, ingresses, configMapWatch, secretsWatch = c.k8s.GetAll()
-				goruntime.GC()
-				continue
-			}
-			obj := msg.Object.(*corev1.Pod)
-			status := msg.Type
-			if obj.ObjectMeta.GetDeletionTimestamp() != nil {
-				//detetct pods that are in terminating state
-				status = DELETED
-			}
-			pod := &Pod{
-				Name:   obj.GetName(),
-				Labels: ConvertToMapStringW(obj.Labels),
-				IP:     obj.Status.PodIP,
-				Status: status,
-			}
-			event := SyncDataEvent{SyncType: POD, Namespace: obj.GetNamespace(), Data: pod}
+			time.Sleep(1 * time.Millisecond)
+		case item := <-cfgChan:
+			eventChan <- SyncDataEvent{SyncType: CONFIGMAP, Namespace: item.Namespace, Data: item}
+		case item := <-nsChan:
+			event := SyncDataEvent{SyncType: NAMESPACE, Namespace: item.Name, Data: item}
+			eventChan <- event
+		case item := <-podChan:
+			event := SyncDataEvent{SyncType: POD, Namespace: item.Namespace, Data: item}
 			if configMapOk {
 				eventChan <- event
 			} else {
 				eventsPods = append(eventsPods, event)
 			}
-		case msg, ok := <-ingresses.ResultChan():
-			if !ok || msg.Object == nil {
-				namespaces, services, pods, ingresses, configMapWatch, secretsWatch = c.k8s.GetAll()
-				goruntime.GC()
-				continue
+		case item := <-svcChan:
+			event := SyncDataEvent{SyncType: SERVICE, Namespace: item.Namespace, Data: item}
+			if configMapOk {
+				eventChan <- event
+			} else {
+				eventsServices = append(eventsServices, event)
 			}
-			obj := msg.Object.(*extensionsv1beta1.Ingress)
-			ingress := &Ingress{
-				Name:        obj.GetName(),
-				Annotations: ConvertToMapStringW(obj.ObjectMeta.Annotations),
-				Rules:       ConvertIngressRules(obj.Spec.Rules),
-				Status:      msg.Type,
-			}
-			event := SyncDataEvent{SyncType: INGRESS, Namespace: obj.GetNamespace(), Data: ingress}
+		case item := <-ingChan:
+			event := SyncDataEvent{SyncType: INGRESS, Namespace: item.Namespace, Data: item}
 			if configMapOk {
 				eventChan <- event
 			} else {
 				eventsIngress = append(eventsIngress, event)
 			}
-		case msg, ok := <-configMapWatch.ResultChan():
-			if !ok || msg.Object == nil {
-				namespaces, services, pods, ingresses, configMapWatch, secretsWatch = c.k8s.GetAll()
-				goruntime.GC()
-				continue
-			}
-			obj := msg.Object.(*corev1.ConfigMap)
-			//only config with name=haproxy-configmap is interesting
-			if obj.ObjectMeta.GetName() == "haproxy-configmap" {
-				configMap := &ConfigMap{
-					Name:        obj.GetName(),
-					Annotations: ConvertToMapStringW(obj.Data),
-					Status:      msg.Type,
-				}
-				eventChan <- SyncDataEvent{SyncType: CONFIGMAP, Namespace: obj.GetNamespace(), Data: configMap}
-			}
-		case msg, ok := <-secretsWatch.ResultChan():
-			if !ok || msg.Object == nil {
-				namespaces, services, pods, ingresses, configMapWatch, secretsWatch = c.k8s.GetAll()
-				goruntime.GC()
-				continue
-			}
-			obj := msg.Object.(*corev1.Secret)
-			secret := &Secret{
-				Name:   obj.ObjectMeta.GetName(),
-				Data:   obj.Data,
-				Status: msg.Type,
-			}
-			eventChan <- SyncDataEvent{SyncType: SECRET, Namespace: obj.GetNamespace(), Data: secret}
+		case item := <-secretChan:
+			event := SyncDataEvent{SyncType: SECRET, Namespace: item.Namespace, Data: item}
+			eventChan <- event
 		case <-time.After(time.Duration(syncEveryNSeconds) * time.Second):
 			//TODO syncEveryNSeconds sec is hardcoded, change that (annotation?)
 			//do sync of data every syncEveryNSeconds sec
@@ -322,7 +224,7 @@ func (c *HAProxyController) watchChanges(namespaces watch.Interface, services wa
 //SyncData gets all kubernetes changes, aggregates them and apply to HAProxy.
 //All the changes must come through this function
 //TODO this is not necessary, remove it later
-func (c *HAProxyController) SyncData(jobChan <-chan SyncDataEvent, chConfigMapReceivedAndProccesed chan bool) {
+func (c *HAProxyController) SyncData(jobChan <-chan SyncDataEvent, chConfigMapReceivedAndProcessed chan bool) {
 	hadChanges := false
 	needsReload := false
 	c.cfg.Init(c.NativeAPI)
@@ -330,10 +232,6 @@ func (c *HAProxyController) SyncData(jobChan <-chan SyncDataEvent, chConfigMapRe
 		ns := c.cfg.GetNamespace(job.Namespace)
 		change := false
 		reload := false
-		if job.SyncType != SECRET && job.SyncType != COMMAND {
-			log.Println(job)
-		}
-		//log.Println(job)
 		switch job.SyncType {
 		case COMMAND:
 			if hadChanges {
@@ -353,7 +251,7 @@ func (c *HAProxyController) SyncData(jobChan <-chan SyncDataEvent, chConfigMapRe
 		case POD:
 			change, reload = c.eventPod(ns, job.Data.(*Pod))
 		case CONFIGMAP:
-			change, reload = c.eventConfigMap(ns, job.Data.(*ConfigMap), chConfigMapReceivedAndProccesed)
+			change, reload = c.eventConfigMap(ns, job.Data.(*ConfigMap), chConfigMapReceivedAndProcessed)
 		case SECRET:
 			change, reload = c.eventSecret(ns, job.Data.(*Secret))
 		}
@@ -603,6 +501,12 @@ func (c *HAProxyController) eventPod(ns *Namespace, data *Pod) (updateRequired, 
 					break
 				}
 			}
+		} else {
+			//hm, no service?
+			if strings.HasPrefix(data.Name, "web-") {
+				log.Println("NO SERVICE", data.Name, data.HAProxyName, data.Status)
+			}
+			createNew = false
 		}
 		if createNew {
 			data.HAProxyName = fmt.Sprintf("SRV_%s", RandomString(5))
@@ -611,7 +515,6 @@ func (c *HAProxyController) eventPod(ns *Namespace, data *Pod) (updateRequired, 
 			}
 			ns.PodNames[data.HAProxyName] = true
 			ns.Pods[data.Name] = data
-			//log.Println("Pod added", data.Name)
 
 			updateRequired = true
 			needsReload = true
@@ -692,7 +595,7 @@ func (c *HAProxyController) eventPod(ns *Namespace, data *Pod) (updateRequired, 
 	return updateRequired, needsReload
 }
 
-func (c *HAProxyController) eventConfigMap(ns *Namespace, data *ConfigMap, chConfigMapReceivedAndProccesed chan bool) (updateRequired, needsReload bool) {
+func (c *HAProxyController) eventConfigMap(ns *Namespace, data *ConfigMap, chConfigMapReceivedAndProcessed chan bool) (updateRequired, needsReload bool) {
 	updateRequired = false
 	if ns.Name != c.osArgs.ConfigMap.Namespace ||
 		data.Name != c.osArgs.ConfigMap.Name {
@@ -709,14 +612,14 @@ func (c *HAProxyController) eventConfigMap(ns *Namespace, data *ConfigMap, chCon
 		}
 	case ADDED:
 		if c.cfg.ConfigMap == nil {
-			chConfigMapReceivedAndProccesed <- true
+			chConfigMapReceivedAndProcessed <- true
 			c.cfg.ConfigMap = data
 			updateRequired = true
 			return updateRequired, updateRequired
 		}
 		if !c.cfg.ConfigMap.Equal(data) {
 			data.Status = MODIFIED
-			return c.eventConfigMap(ns, data, chConfigMapReceivedAndProccesed)
+			return c.eventConfigMap(ns, data, chConfigMapReceivedAndProcessed)
 		}
 	case DELETED:
 		c.cfg.ConfigMap.Annotations.SetStatusState(DELETED)
@@ -1069,7 +972,7 @@ func (c *HAProxyController) handleHTTPS(namespace *Namespace, maxProcsStatus, nu
 		err := c.removeHTTPSListeners(transaction)
 		return reloadRequested, usingHTTPS, err
 	}
-	secretName, err := GetValueFromAnnotations("ssl-certificate", c.cfg.ConfigMap.Annotations)
+	secretName, errSecret := GetValueFromAnnotations("ssl-certificate", c.cfg.ConfigMap.Annotations)
 	minProc := 1
 	maxProcs, _ := strconv.Atoi(maxProcsStatus.Value) // always number
 	numThreads, _ := strconv.Atoi(numThreadsStat.Value)
@@ -1079,7 +982,7 @@ func (c *HAProxyController) handleHTTPS(namespace *Namespace, maxProcsStatus, nu
 		}
 	}
 
-	if secretName.Status != "" || maxProcsStatus.Status != "" {
+	if errSecret == nil && (secretName.Status != "" || maxProcsStatus.Status != "") {
 		if err != nil {
 			log.Println("no ssl-certificate defined, using default secret:", c.osArgs.DefaultCertificate.Name)
 			secretName = &StringW{Value: c.osArgs.DefaultCertificate.Name}
@@ -1096,7 +999,7 @@ func (c *HAProxyController) handleHTTPS(namespace *Namespace, maxProcsStatus, nu
 		ecdsaKey, ecdsaKeyOK := secret.Data["ecdsa.key"]
 		ecdsaCrt, ecdsaCrtOK := secret.Data["ecdsa.crt"]
 		haveCert := false
-		log.Println(secretName.Value, rsaCrtOK, rsaKeyOK, ecdsaCrtOK, ecdsaKeyOK)
+		//log.Println(secretName.Value, rsaCrtOK, rsaKeyOK, ecdsaCrtOK, ecdsaKeyOK)
 		if rsaKeyOK && rsaCrtOK || ecdsaKeyOK && ecdsaCrtOK {
 			if rsaKeyOK && rsaCrtOK {
 				err := c.writeCert(HAProxyCertDir+"cert.pem.rsa", rsaKey, rsaCrt)
@@ -1317,8 +1220,11 @@ func (c *HAProxyController) handleService(namespace *Namespace, ingress *Ingress
 				backend.HTTPXffHeaderInsert = "enabled"
 			}
 			if err := nativeAPI.Configuration.CreateBackend(backend, transaction.ID, 0); err != nil {
-				log.Println("CreateBackend", err)
-				return "", nil, nil, err
+				msg := err.Error()
+				if !strings.Contains(msg, "Farm already exists") {
+					log.Println("CreateBackend", err)
+					return "", nil, nil, err
+				}
 			}
 		}
 		backendSwitchingRule := &models.BackendSwitchingRule{

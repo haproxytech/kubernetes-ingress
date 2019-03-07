@@ -18,6 +18,7 @@ type Pod struct {
 
 //Service is usefull data from k8s structures about service
 type Service struct {
+	Namespace  string
 	Name       string
 	ClusterIP  string
 	ExternalIP string
@@ -83,6 +84,7 @@ type IngressRule struct {
 
 //Ingress is usefull data from k8s structures about ingress
 type Ingress struct {
+	Namespace   string
 	Name        string
 	Annotations MapStringW
 	Rules       map[string]*IngressRule
@@ -91,6 +93,7 @@ type Ingress struct {
 
 //ConfigMap is usefull data from k8s structures about configmap
 type ConfigMap struct {
+	Namespace   string
 	Name        string
 	Annotations MapStringW
 	Status      Status
@@ -98,7 +101,8 @@ type ConfigMap struct {
 
 //Secret is usefull data from k8s structures about secret
 type Secret struct {
-	Name   string
-	Data   map[string][]byte
-	Status Status
+	Namespace string
+	Name      string
+	Data      map[string][]byte
+	Status    Status
 }
