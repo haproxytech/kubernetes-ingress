@@ -83,10 +83,10 @@ func (c *HAProxyController) HAProxyInitialize() {
 
 	confClient := configuration.Client{}
 	confClient.Init(configuration.ClientParams{
-		ConfigurationFile:       HAProxyCFG,
-		GlobalConfigurationFile: HAProxyGlobalCFG,
-		Haproxy:                 "haproxy",
-		LBCTLPath:               "/usr/sbin/lbctl",
+		ConfigurationFile: HAProxyCFG,
+		//GlobalConfigurationFile: HAProxyGlobalCFG,
+		Haproxy: "haproxy",
+		//LBCTLPath:               "/usr/sbin/lbctl",
 	})
 
 	c.NativeAPI = &clientnative.HAProxyClient{
@@ -671,7 +671,7 @@ func (c *HAProxyController) updateHAProxy(reloadRequested bool) error {
 	nativeAPI := c.NativeAPI
 
 	c.handleDefaultTimeouts()
-	version, err := nativeAPI.Configuration.GetVersion()
+	version, err := nativeAPI.Configuration.GetVersion("")
 	if err != nil || version < 1 {
 		//silently fallback to 1
 		version = 1
@@ -691,7 +691,7 @@ func (c *HAProxyController) updateHAProxy(reloadRequested bool) error {
 			}
 			if maxconnAnn.Status != "" {
 				if frontend, err := nativeAPI.Configuration.GetFrontend("http", transaction.ID); err == nil {
-					frontend.Data.MaxConnections = &maxconn
+					frontend.Data.Maxconn = &maxconn
 					nativeAPI.Configuration.EditFrontend("http", frontend.Data, transaction.ID, 0)
 				} else {
 					return err
@@ -715,7 +715,7 @@ func (c *HAProxyController) updateHAProxy(reloadRequested bool) error {
 		numProcs, _ := strconv.Atoi(maxProcs.Value)
 		numThreads, _ := strconv.Atoi(maxThreads.Value)
 		port := int64(80)
-		listener := &models.Listener{
+		listener := &models.Bind{
 			Name:    "http_1",
 			Address: "0.0.0.0",
 			Port:    &port,
@@ -730,7 +730,7 @@ func (c *HAProxyController) updateHAProxy(reloadRequested bool) error {
 			}
 		}
 		if listener.Process != c.cfg.HTTPBindProcess {
-			if err = nativeAPI.Configuration.EditListener(listener.Name, FrontendHTTP, listener, transaction.ID, 0); err != nil {
+			if err = nativeAPI.Configuration.EditBind(listener.Name, FrontendHTTP, listener, transaction.ID, 0); err != nil {
 				return err
 			}
 			c.cfg.HTTPBindProcess = listener.Process
@@ -890,7 +890,7 @@ func (c *HAProxyController) removeHTTPSListeners(transaction *models.Transaction
 	for index, data := range listeners {
 		data.Status = DELETED
 		listenerName := "https_" + strconv.Itoa(index+1)
-		if err = c.NativeAPI.Configuration.DeleteListener(listenerName, FrontendHTTPS, transaction.ID, 0); err != nil {
+		if err = c.NativeAPI.Configuration.DeleteBind(listenerName, FrontendHTTPS, transaction.ID, 0); err != nil {
 			return err
 		}
 	}
@@ -933,14 +933,15 @@ func (c *HAProxyController) handleHTTPRedirect(usingHTTPS bool, transaction *mod
 	if state == "" && annRedirectCode.Status != "" {
 		state = MODIFIED
 	}
+	id := int64(0)
 	rule := &models.HTTPRequestRule{
-		ID:        1,
-		Type:      "redirect",
-		RedirCode: redirectCode,
-		RedirTo:   "https",
-		RedirType: "scheme",
-		Cond:      "if",
-		CondTest:  "!{ ssl_fc }",
+		ID:         &id,
+		Type:       "redirect",
+		RedirCode:  redirectCode,
+		RedirValue: "https",
+		RedirType:  "scheme",
+		Cond:       "if",
+		CondTest:   "!{ ssl_fc }",
 	}
 	switch state {
 	case ADDED:
@@ -950,12 +951,12 @@ func (c *HAProxyController) handleHTTPRedirect(usingHTTPS bool, transaction *mod
 		c.cfg.SSLRedirect = "ON"
 		reloadRequested = true
 	case MODIFIED:
-		if err = c.NativeAPI.Configuration.EditHTTPRequestRule(rule.ID, "frontend", "http", rule, transaction.ID, 0); err != nil {
+		if err = c.NativeAPI.Configuration.EditHTTPRequestRule(*rule.ID, "frontend", "http", rule, transaction.ID, 0); err != nil {
 			return reloadRequested, err
 		}
 		reloadRequested = true
 	case DELETED:
-		if err = c.NativeAPI.Configuration.DeleteHTTPRequestRule(rule.ID, "frontend", "http", transaction.ID, 0); err != nil {
+		if err = c.NativeAPI.Configuration.DeleteHTTPRequestRule(*rule.ID, "frontend", "http", transaction.ID, 0); err != nil {
 			return reloadRequested, err
 		}
 		c.cfg.SSLRedirect = "OFF"
@@ -1035,10 +1036,10 @@ func (c *HAProxyController) handleHTTPS(namespace *Namespace, maxProcsStatus, nu
 		}
 
 		port := int64(443)
-		listener := &models.Listener{
+		listener := &models.Bind{
 			Address:        "0.0.0.0",
 			Port:           &port,
-			Ssl:            "enabled",
+			Ssl:            true,
 			SslCertificate: HAProxyCertDir,
 		}
 		maxIndex := maxProcs
@@ -1075,9 +1076,9 @@ func (c *HAProxyController) handleHTTPS(namespace *Namespace, maxProcsStatus, nu
 			listener.Name = "https_" + strconv.Itoa(index+1)
 			switch data.Status {
 			case ADDED:
-				if err = nativeAPI.Configuration.CreateListener(FrontendHTTPS, listener, transaction.ID, 0); err != nil {
+				if err = nativeAPI.Configuration.CreateBind(FrontendHTTPS, listener, transaction.ID, 0); err != nil {
 					if strings.Contains(err.Error(), "already exists") {
-						if err = nativeAPI.Configuration.EditListener(listener.Name, FrontendHTTPS, listener, transaction.ID, 0); err != nil {
+						if err = nativeAPI.Configuration.EditBind(listener.Name, FrontendHTTPS, listener, transaction.ID, 0); err != nil {
 							return reloadRequested, usingHTTPS, err
 						}
 					} else {
@@ -1085,11 +1086,11 @@ func (c *HAProxyController) handleHTTPS(namespace *Namespace, maxProcsStatus, nu
 					}
 				}
 			case MODIFIED:
-				if err = nativeAPI.Configuration.EditListener(listener.Name, FrontendHTTPS, listener, transaction.ID, 0); err != nil {
+				if err = nativeAPI.Configuration.EditBind(listener.Name, FrontendHTTPS, listener, transaction.ID, 0); err != nil {
 					return reloadRequested, usingHTTPS, err
 				}
 			case DELETED:
-				if err = nativeAPI.Configuration.DeleteListener(listener.Name, FrontendHTTPS, transaction.ID, 0); err != nil {
+				if err = nativeAPI.Configuration.DeleteBind(listener.Name, FrontendHTTPS, transaction.ID, 0); err != nil {
 					return reloadRequested, usingHTTPS, err
 				}
 			}
@@ -1143,7 +1144,7 @@ func (c *HAProxyController) handlePath(namespace *Namespace, ingress *Ingress, r
 			if annMaxconn != nil {
 				if annMaxconn.Status != DELETED {
 					if maxconn, err := strconv.ParseInt(annMaxconn.Value, 10, 64); err == nil {
-						data.MaxConnections = &maxconn
+						data.Maxconn = &maxconn
 					}
 				}
 				if annMaxconn.Status != "" {
@@ -1203,7 +1204,10 @@ func (c *HAProxyController) handleService(namespace *Namespace, ingress *Ingress
 	//both load-balance and forwarded-for have default values, so no need for error checking
 	annBalanceAlg, _ := GetValueFromAnnotations("load-balance", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
 	annForwardedFor, _ := GetValueFromAnnotations("forwarded-for", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
-	balanceAlg, err := ConvertLoadBalanceAlgorithm(annBalanceAlg.Value)
+	//TODO BackendBalance proper usage
+	balanceAlg := &models.BackendBalance{
+		Algorithm: annBalanceAlg.Value,
+	}
 	if err != nil {
 		log.Printf("%s, using %s \n", err, balanceAlg)
 	}
@@ -1212,26 +1216,26 @@ func (c *HAProxyController) handleService(namespace *Namespace, ingress *Ingress
 	case ADDED:
 		if numberOfTimesBackendUsed := backendsUsed[backendName]; numberOfTimesBackendUsed < 2 {
 			backend := &models.Backend{
-				Balance:  balanceAlg,
-				Name:     backendName,
-				Protocol: "http",
+				Balance: balanceAlg,
+				Name:    backendName,
+				Mode:    "http",
 			}
 			if annForwardedFor.Value == "enabled" { //disabled with anything else is ok
-				backend.HTTPXffHeaderInsert = "enabled"
+				backend.Forwardfor = "enabled"
 			}
 			if err := nativeAPI.Configuration.CreateBackend(backend, transaction.ID, 0); err != nil {
 				msg := err.Error()
 				if !strings.Contains(msg, "Farm already exists") {
-					log.Println("CreateBackend", err)
 					return "", nil, nil, err
 				}
 			}
 		}
+		id := int64(0)
 		backendSwitchingRule := &models.BackendSwitchingRule{
-			Cond:       "if",
-			CondTest:   condTest,
-			TargetFarm: backendName,
-			ID:         1,
+			Cond:     "if",
+			CondTest: condTest,
+			Name:     backendName,
+			ID:       &id,
 		}
 		if err := nativeAPI.Configuration.CreateBackendSwitchingRule(FrontendHTTP, backendSwitchingRule, transaction.ID, 0); err != nil {
 			log.Println("CreateBackendSwitchingRule http", err)
@@ -1296,15 +1300,15 @@ func (c *HAProxyController) handleDefaultTimeout(timeout string) bool {
 	return false
 }
 
-func (c *HAProxyController) handleBackendAnnotations(balanceAlg string, forwardedFor *StringW,
+func (c *HAProxyController) handleBackendAnnotations(balanceAlg *models.BackendBalance, forwardedFor *StringW,
 	backendName string, transaction *models.Transaction) error {
 	backend := &models.Backend{
-		Balance:  balanceAlg,
-		Name:     backendName,
-		Protocol: "http",
+		Balance: balanceAlg,
+		Name:    backendName,
+		Mode:    "http",
 	}
 	if forwardedFor.Value == "enabled" { //disabled with anything else is ok
-		backend.HTTPXffHeaderInsert = "enabled"
+		backend.Forwardfor = "enabled"
 	}
 
 	if err := c.NativeAPI.Configuration.EditBackend(backend.Name, backend, transaction.ID, 0); err != nil {

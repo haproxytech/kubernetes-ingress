@@ -1,3 +1,0 @@
-[submodule "lbctl"]
-	path = lbctl
-	url = git@gitlab.int.haproxy.com:HAPEE/lbctl.git
