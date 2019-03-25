@@ -16,6 +16,7 @@ import (
 
 	clientnative "github.com/haproxytech/client-native"
 	"github.com/haproxytech/client-native/configuration"
+	"github.com/haproxytech/client-native/misc"
 	"github.com/haproxytech/client-native/runtime"
 	"github.com/haproxytech/config-parser"
 	"github.com/haproxytech/models"
@@ -78,16 +79,19 @@ func (c *HAProxyController) HAProxyInitialize() {
 	runtimeClient := runtime.Client{}
 	err = runtimeClient.Init([]string{"/var/run/haproxy-runtime-api.sock"})
 	if err != nil {
-		log.Println(err)
+		log.Panicln(err)
 	}
 
 	confClient := configuration.Client{}
-	confClient.Init(configuration.ClientParams{
+	err = confClient.Init(configuration.ClientParams{
 		ConfigurationFile: HAProxyCFG,
 		//GlobalConfigurationFile: HAProxyGlobalCFG,
 		Haproxy: "haproxy",
 		//LBCTLPath:               "/usr/sbin/lbctl",
 	})
+	if err != nil {
+		log.Panicln(err)
+	}
 
 	c.NativeAPI = &clientnative.HAProxyClient{
 		Configuration: &confClient,
@@ -712,6 +716,10 @@ func (c *HAProxyController) updateHAProxy(reloadRequested bool) error {
 		if err != nil {
 			return err
 		}
+		err = c.handleRateLimiting(transaction, usingHTTPS)
+		if err != nil {
+			return err
+		}
 		numProcs, _ := strconv.Atoi(maxProcs.Value)
 		numThreads, _ := strconv.Atoi(maxThreads.Value)
 		port := int64(80)
@@ -801,6 +809,129 @@ func (c *HAProxyController) writeCert(filename string, key, crt []byte) error {
 	if err = f.Close(); err != nil {
 		log.Println(err)
 		return err
+	}
+	return nil
+}
+
+func (c *HAProxyController) handleRateLimiting(transaction *models.Transaction, usingHTTPS bool) (err error) {
+	nativeAPI := c.NativeAPI
+	annRateLimit, _ := GetValueFromAnnotations("rate-limit", c.cfg.ConfigMap.Annotations)
+
+	annRateLimitExpire, _ := GetValueFromAnnotations("rate-limit-expire", c.cfg.ConfigMap.Annotations)
+	annRateLimitInterval, _ := GetValueFromAnnotations("rate-limit-interval", c.cfg.ConfigMap.Annotations)
+	annRateLimitSize, _ := GetValueFromAnnotations("rate-limit-size", c.cfg.ConfigMap.Annotations)
+	rateLimitExpire := misc.ParseTimeout(annRateLimitExpire.Value)
+	rateLimitSize := misc.ParseSize(annRateLimitSize.Value)
+	frontendHTTP, err := nativeAPI.Configuration.GetFrontend("http", transaction.ID)
+	if err != nil {
+		return err
+	}
+	frontendHTTPS, err := nativeAPI.Configuration.GetFrontend("https", transaction.ID)
+	if err != nil {
+		return err
+	}
+	frontendsChanged := false
+
+	//acl ratelimit_is_abuse src_http_req_rate(RateLimit) ge 10
+	//acl ratelimit_inc_cnt_abuse src_inc_gpc0(RateLimit) gt 0
+	//acl ratelimit_cnt_abuse src_get_gpc0(RateLimit) gt 0
+	ID := int64(0)
+	acl1 := &models.ACL{
+		ID:        &ID,
+		ACLName:   "ratelimit_is_abuse",
+		Criterion: "src_http_req_rate(RateLimit)",
+		Value:     "ge 10",
+	}
+	acl2 := &models.ACL{
+		ID:        &ID,
+		ACLName:   "ratelimit_inc_cnt_abuse",
+		Criterion: "src_inc_gpc0(RateLimit)",
+		Value:     "gt 0",
+	}
+	acl3 := &models.ACL{
+		ID:        &ID,
+		ACLName:   "ratelimit_cnt_abuse",
+		Criterion: "src_get_gpc0(RateLimit)",
+		Value:     "gt 0",
+	}
+	tcpRequest1 := &models.TCPRequestRule{
+		ID:     &ID,
+		Type:   "connection",
+		Action: "track-sc0 src table RateLimit",
+	}
+	tcpRequest2 := &models.TCPRequestRule{
+		ID:       &ID,
+		Type:     "connection",
+		Action:   "reject",
+		Cond:     "if",
+		CondTest: "ratelimit_cnt_abuse",
+	}
+	httpRequest1 := &models.HTTPRequestRule{
+		ID:       &ID,
+		Type:     "deny",
+		Cond:     "if",
+		CondTest: "ratelimit_cnt_abuse",
+	}
+	httpRequest2 := &models.HTTPRequestRule{
+		ID:       &ID,
+		Type:     "deny",
+		Cond:     "if",
+		CondTest: "ratelimit_is_abuse ratelimit_inc_cnt_abuse",
+	}
+
+	if annRateLimit.Value != "OFF" {
+		switch annRateLimit.Status {
+		case ADDED, EMPTY:
+			backend := &models.Backend{
+				Name: "RateLimit",
+				StickTable: &models.BackendStickTable{
+					Type:   "ip",
+					Expire: rateLimitExpire,
+					Size:   rateLimitSize,
+					Store:  fmt.Sprintf("gpc0,http_req_rate(%s)", annRateLimitInterval.Value),
+				},
+			}
+			nativeAPI.Configuration.CreateBackend(backend, transaction.ID, 0)
+			frontendsChanged = true
+			//frontendHTTP.data
+
+			//case MODIFIED:
+			//case DELETED
+			nativeAPI.Configuration.CreateACL("frontend", "http", acl1, transaction.ID, 0)
+			nativeAPI.Configuration.CreateACL("frontend", "http", acl2, transaction.ID, 0)
+			nativeAPI.Configuration.CreateACL("frontend", "http", acl3, transaction.ID, 0)
+			nativeAPI.Configuration.CreateACL("frontend", "https", acl1, transaction.ID, 0)
+			nativeAPI.Configuration.CreateACL("frontend", "https", acl2, transaction.ID, 0)
+			nativeAPI.Configuration.CreateACL("frontend", "https", acl3, transaction.ID, 0)
+
+			nativeAPI.Configuration.CreateTCPRequestRule("frontend", "http", tcpRequest1, transaction.ID, 0)
+			nativeAPI.Configuration.CreateTCPRequestRule("frontend", "http", tcpRequest2, transaction.ID, 0)
+			nativeAPI.Configuration.CreateHTTPRequestRule("frontend", "http", httpRequest1, transaction.ID, 0)
+			nativeAPI.Configuration.CreateHTTPRequestRule("frontend", "http", httpRequest2, transaction.ID, 0)
+
+			nativeAPI.Configuration.CreateTCPRequestRule("frontend", "https", tcpRequest1, transaction.ID, 0)
+			nativeAPI.Configuration.CreateTCPRequestRule("frontend", "https", tcpRequest2, transaction.ID, 0)
+			nativeAPI.Configuration.CreateHTTPRequestRule("frontend", "https", httpRequest1, transaction.ID, 0)
+			nativeAPI.Configuration.CreateHTTPRequestRule("frontend", "https", httpRequest2, transaction.ID, 0)
+			/*
+					tcp-request connection track-sc0 src table RateLimit
+				    tcp-request connection reject if { src_get_gpc0(RateLimit) gt 0 }
+				    http-request deny if { src_get_gpc0(RateLimit) gt 0 }
+				    http-request deny if { src_http_req_rate(RateLimit) ge 10 } { src_inc_gpc0(RateLimit) gt 0 }
+			*/
+		}
+	}
+	if frontendsChanged {
+		err := nativeAPI.Configuration.EditFrontend("http", frontendHTTP.Data, transaction.ID, 0)
+		if err != nil {
+			return err
+		}
+		if usingHTTPS {
+			err = nativeAPI.Configuration.EditFrontend("https", frontendHTTPS.Data, transaction.ID, 0)
+			if err != nil {
+				return err
+			}
+		}
 	}
 	return nil
 }
@@ -1221,7 +1352,10 @@ func (c *HAProxyController) handleService(namespace *Namespace, ingress *Ingress
 				Mode:    "http",
 			}
 			if annForwardedFor.Value == "enabled" { //disabled with anything else is ok
-				backend.Forwardfor = "enabled"
+				forwardfor := "enabled"
+				backend.Forwardfor = &models.BackendForwardfor{
+					Enabled: &forwardfor,
+				}
 			}
 			if err := nativeAPI.Configuration.CreateBackend(backend, transaction.ID, 0); err != nil {
 				msg := err.Error()
@@ -1308,7 +1442,10 @@ func (c *HAProxyController) handleBackendAnnotations(balanceAlg *models.BackendB
 		Mode:    "http",
 	}
 	if forwardedFor.Value == "enabled" { //disabled with anything else is ok
-		backend.Forwardfor = "enabled"
+		forwardfor := "enabled"
+		backend.Forwardfor = &models.BackendForwardfor{
+			Enabled: &forwardfor,
+		}
 	}
 
 	if err := c.NativeAPI.Configuration.EditBackend(backend.Name, backend, transaction.ID, 0); err != nil {

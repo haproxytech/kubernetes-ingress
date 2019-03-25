@@ -126,4 +126,8 @@ var defaultAnnotationValues = MapStringW{
 	"timeout-server":                 &StringW{Value: "50s"},
 	"timeout-tunnel":                 &StringW{Value: "1h"},
 	"timeout-http-keep-alive":        &StringW{Value: "1m"},
+	"rate-limit":                     &StringW{Value: "ON"},
+	"rate-limit-size":                &StringW{Value: "100k"},
+	"rate-limit-expire":              &StringW{Value: "30m"},
+	"rate-limit-interval":            &StringW{Value: "10s"},
 }
