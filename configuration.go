@@ -6,12 +6,13 @@ import (
 
 //Configuration represents k8s state
 type Configuration struct {
-	Namespace       map[string]*Namespace
-	ConfigMap       *ConfigMap
-	NativeAPI       *clientnative.HAProxyClient
-	HTTPSListeners  *MapIntW
-	HTTPBindProcess string
-	SSLRedirect     string
+	Namespace           map[string]*Namespace
+	ConfigMap           *ConfigMap
+	NativeAPI           *clientnative.HAProxyClient
+	HTTPSListeners      *MapIntW
+	HTTPBindProcess     string
+	SSLRedirect         string
+	RateLimitingEnabled bool
 }
 
 //Init itialize configuration
