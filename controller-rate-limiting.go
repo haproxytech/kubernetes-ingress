@@ -95,24 +95,39 @@ func (c *HAProxyController) handleRateLimiting(transaction *models.Transaction, 
 				Store:  fmt.Sprintf("gpc0,http_req_rate(%s)", annRateLimitInterval.Value),
 			},
 		}
-		nativeAPI.Configuration.CreateBackend(backend, transaction.ID, 0)
+		err := nativeAPI.Configuration.CreateBackend(backend, transaction.ID, 0)
+		LogErr(err)
 
-		nativeAPI.Configuration.CreateACL("frontend", "http", acl1, transaction.ID, 0)
-		nativeAPI.Configuration.CreateACL("frontend", "http", acl2, transaction.ID, 0)
-		nativeAPI.Configuration.CreateACL("frontend", "http", acl3, transaction.ID, 0)
-		nativeAPI.Configuration.CreateACL("frontend", "https", acl1, transaction.ID, 0)
-		nativeAPI.Configuration.CreateACL("frontend", "https", acl2, transaction.ID, 0)
-		nativeAPI.Configuration.CreateACL("frontend", "https", acl3, transaction.ID, 0)
+		err = nativeAPI.Configuration.CreateACL("frontend", "http", acl1, transaction.ID, 0)
+		LogErr(err)
+		err = nativeAPI.Configuration.CreateACL("frontend", "http", acl2, transaction.ID, 0)
+		LogErr(err)
+		err = nativeAPI.Configuration.CreateACL("frontend", "http", acl3, transaction.ID, 0)
+		LogErr(err)
+		err = nativeAPI.Configuration.CreateACL("frontend", "https", acl1, transaction.ID, 0)
+		LogErr(err)
+		err = nativeAPI.Configuration.CreateACL("frontend", "https", acl2, transaction.ID, 0)
+		LogErr(err)
+		err = nativeAPI.Configuration.CreateACL("frontend", "https", acl3, transaction.ID, 0)
+		LogErr(err)
 
-		nativeAPI.Configuration.CreateTCPRequestRule("frontend", "http", tcpRequest1, transaction.ID, 0)
-		nativeAPI.Configuration.CreateTCPRequestRule("frontend", "http", tcpRequest2, transaction.ID, 0)
-		nativeAPI.Configuration.CreateHTTPRequestRule("frontend", "http", httpRequest1, transaction.ID, 0)
-		nativeAPI.Configuration.CreateHTTPRequestRule("frontend", "http", httpRequest2, transaction.ID, 0)
+		err = nativeAPI.Configuration.CreateTCPRequestRule("frontend", "http", tcpRequest1, transaction.ID, 0)
+		LogErr(err)
+		err = nativeAPI.Configuration.CreateTCPRequestRule("frontend", "http", tcpRequest2, transaction.ID, 0)
+		LogErr(err)
+		err = nativeAPI.Configuration.CreateHTTPRequestRule("frontend", "http", httpRequest1, transaction.ID, 0)
+		LogErr(err)
+		err = nativeAPI.Configuration.CreateHTTPRequestRule("frontend", "http", httpRequest2, transaction.ID, 0)
+		LogErr(err)
 
-		nativeAPI.Configuration.CreateTCPRequestRule("frontend", "https", tcpRequest1, transaction.ID, 0)
-		nativeAPI.Configuration.CreateTCPRequestRule("frontend", "https", tcpRequest2, transaction.ID, 0)
-		nativeAPI.Configuration.CreateHTTPRequestRule("frontend", "https", httpRequest1, transaction.ID, 0)
-		nativeAPI.Configuration.CreateHTTPRequestRule("frontend", "https", httpRequest2, transaction.ID, 0)
+		err = nativeAPI.Configuration.CreateTCPRequestRule("frontend", "https", tcpRequest1, transaction.ID, 0)
+		LogErr(err)
+		err = nativeAPI.Configuration.CreateTCPRequestRule("frontend", "https", tcpRequest2, transaction.ID, 0)
+		LogErr(err)
+		err = nativeAPI.Configuration.CreateHTTPRequestRule("frontend", "https", httpRequest1, transaction.ID, 0)
+		LogErr(err)
+		err = nativeAPI.Configuration.CreateHTTPRequestRule("frontend", "https", httpRequest2, transaction.ID, 0)
+		LogErr(err)
 
 	}
 
@@ -136,9 +151,12 @@ func (c *HAProxyController) handleRateLimiting(transaction *models.Transaction, 
 			}
 			if startIDToRemove >= 0 {
 				//this is not a mistake, just delete all three that are created (they are together)
-				nativeAPI.Configuration.DeleteACL(startIDToRemove, "frontend", frontendName, transaction.ID, 0)
-				nativeAPI.Configuration.DeleteACL(startIDToRemove, "frontend", frontendName, transaction.ID, 0)
-				nativeAPI.Configuration.DeleteACL(startIDToRemove, "frontend", frontendName, transaction.ID, 0)
+				err = nativeAPI.Configuration.DeleteACL(startIDToRemove, "frontend", frontendName, transaction.ID, 0)
+				LogErr(err)
+				err = nativeAPI.Configuration.DeleteACL(startIDToRemove, "frontend", frontendName, transaction.ID, 0)
+				LogErr(err)
+				err = nativeAPI.Configuration.DeleteACL(startIDToRemove, "frontend", frontendName, transaction.ID, 0)
+				LogErr(err)
 			}
 		}
 	}
@@ -163,8 +181,10 @@ func (c *HAProxyController) handleRateLimiting(transaction *models.Transaction, 
 			}
 			if startIDToRemove >= 0 {
 				//this is not a mistake, just delete all three that are created (they are together)
-				nativeAPI.Configuration.DeleteTCPRequestRule(startIDToRemove, "frontend", frontendName, transaction.ID, 0)
-				nativeAPI.Configuration.DeleteTCPRequestRule(startIDToRemove, "frontend", frontendName, transaction.ID, 0)
+				err = nativeAPI.Configuration.DeleteTCPRequestRule(startIDToRemove, "frontend", frontendName, transaction.ID, 0)
+				LogErr(err)
+				err = nativeAPI.Configuration.DeleteTCPRequestRule(startIDToRemove, "frontend", frontendName, transaction.ID, 0)
+				LogErr(err)
 			}
 		}
 	}
@@ -189,14 +209,17 @@ func (c *HAProxyController) handleRateLimiting(transaction *models.Transaction, 
 			}
 			if startIDToRemove >= 0 {
 				//this is not a mistake, just delete all three that are created (they are together)
-				nativeAPI.Configuration.DeleteTCPRequestRule(startIDToRemove, "frontend", frontendName, transaction.ID, 0)
-				nativeAPI.Configuration.DeleteTCPRequestRule(startIDToRemove, "frontend", frontendName, transaction.ID, 0)
+				err = nativeAPI.Configuration.DeleteTCPRequestRule(startIDToRemove, "frontend", frontendName, transaction.ID, 0)
+				LogErr(err)
+				err = nativeAPI.Configuration.DeleteTCPRequestRule(startIDToRemove, "frontend", frontendName, transaction.ID, 0)
+				LogErr(err)
 			}
 		}
 	}
 
 	removeRateLimiting := func() {
-		nativeAPI.Configuration.DeleteBackend("RateLimit", transaction.ID, 0)
+		err := nativeAPI.Configuration.DeleteBackend("RateLimit", transaction.ID, 0)
+		LogErr(err)
 		removeACLs("http")
 		removeACLs("https")
 		removeTCPRules("http")

@@ -77,7 +77,8 @@ func (c *HAProxyController) handleHTTPS(namespace *Namespace, maxProcsStatus, nu
 			if rsaKeyOK && rsaCrtOK {
 				err := c.writeCert(HAProxyCertDir+"cert.pem.rsa", rsaKey, rsaCrt)
 				if err != nil {
-					c.removeHTTPSListeners(transaction)
+					err1 := c.removeHTTPSListeners(transaction)
+					LogErr(err1)
 					return reloadRequested, usingHTTPS, err
 				}
 				haveCert = true
@@ -85,7 +86,8 @@ func (c *HAProxyController) handleHTTPS(namespace *Namespace, maxProcsStatus, nu
 			if ecdsaKeyOK && ecdsaCrtOK {
 				err := c.writeCert(HAProxyCertDir+"cert.pem.ecdsa", ecdsaKey, ecdsaCrt)
 				if err != nil {
-					c.removeHTTPSListeners(transaction)
+					err1 := c.removeHTTPSListeners(transaction)
+					LogErr(err1)
 					return reloadRequested, usingHTTPS, err
 				}
 				haveCert = true
@@ -96,14 +98,16 @@ func (c *HAProxyController) handleHTTPS(namespace *Namespace, maxProcsStatus, nu
 			if tlsKeyOK && tlsCrtOK {
 				err := c.writeCert(HAProxyCertDir+"cert.pem", tlsKey, tlsCrt)
 				if err != nil {
-					c.removeHTTPSListeners(transaction)
+					err1 := c.removeHTTPSListeners(transaction)
+					LogErr(err1)
 					return reloadRequested, usingHTTPS, err
 				}
 				haveCert = true
 			}
 		}
 		if !haveCert {
-			c.removeHTTPSListeners(transaction)
+			err := c.removeHTTPSListeners(transaction)
+			LogErr(err)
 			return reloadRequested, usingHTTPS, fmt.Errorf("no certificate")
 		}
 

@@ -45,7 +45,8 @@ func (c *HAProxyController) handleGlobalAnnotations(transaction *models.Transact
 		nbproc = &types.Int64C{
 			Value: int64(maxProcs),
 		}
-		p.Set(parser.Global, parser.GlobalSectionName, "nbproc", nbproc)
+		err := p.Set(parser.Global, parser.GlobalSectionName, "nbproc", nbproc)
+		LogErr(err)
 		maxProcsStat.Status = ADDED
 		reloadRequested = true
 	}
@@ -66,12 +67,12 @@ func (c *HAProxyController) handleGlobalAnnotations(transaction *models.Transact
 		nbthread = &types.Int64C{
 			Value: int64(numThreads),
 		}
-		p.Set(parser.Global, parser.GlobalSectionName, "nbthread", nbthread)
+		err := p.Set(parser.Global, parser.GlobalSectionName, "nbthread", nbthread)
+		LogErr(err)
 		maxThreadsStat.Status = ADDED
 		reloadRequested = true
 	}
 
-	data, err = p.Get(parser.Global, parser.GlobalSectionName, "cpu-map")
 	numCPUMap := numThreads
 	namePrefix := "1/"
 	if nbthread.Value < 2 {
@@ -85,7 +86,8 @@ func (c *HAProxyController) handleGlobalAnnotations(transaction *models.Transact
 			Value: strconv.Itoa(index),
 		}
 	}
-	p.Set(parser.Global, parser.GlobalSectionName, "cpu-map", cpuMap)
+	err = p.Set(parser.Global, parser.GlobalSectionName, "cpu-map", cpuMap)
+	LogErr(err)
 	maxProcsStat.Value = strconv.Itoa(maxProcs)
 	maxThreadsStat.Value = strconv.Itoa(numThreads)
 	return maxProcsStat, maxThreadsStat, reloadRequested, err

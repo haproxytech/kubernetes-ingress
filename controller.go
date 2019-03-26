@@ -122,11 +122,12 @@ func (c *HAProxyController) saveServerState() error {
 }
 
 func (c *HAProxyController) HAProxyReload() error {
-	c.NativeParser.Save(HAProxyGlobalCFG)
-	err := c.saveServerState()
+	err := c.NativeParser.Save(HAProxyGlobalCFG)
 	if err != nil {
-		log.Println(err)
+		return err
 	}
+	err = c.saveServerState()
+	LogErr(err)
 	//cmd := exec.Command("haproxy", "-f", HAProxyCFG)
 	cmd := exec.Command("service", "haproxy", "reload")
 	err = cmd.Run()

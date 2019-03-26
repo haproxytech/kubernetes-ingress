@@ -1,23 +1,15 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"math/rand"
 
 	"k8s.io/api/extensions/v1beta1"
 )
 
-//LogWatchEvent log what kind of event occured
-func LogWatchEvent(status Status, watchType SyncType, ObjData ...interface{}) {
-	if status == ADDED {
-		log.Println(watchType, "added", ObjData)
-	}
-	if status == DELETED {
-		log.Println(watchType, "deleted", ObjData)
-	}
-	if status == MODIFIED {
-		log.Println(watchType, "modified", ObjData)
+func LogErr(err error) {
+	if err != nil {
+		log.Println(err)
 	}
 }
 
@@ -69,21 +61,4 @@ func ConvertIngressRules(ingressRules []v1beta1.IngressRule) map[string]*Ingress
 		}
 	}
 	return rules
-}
-
-//ConvertLoadBalanceAlgorithm needed as lbctl has its own naming sistem
-func ConvertLoadBalanceAlgorithm(algorithm string) (string, error) {
-	//roundrobin least-connections hash-uri hash-source
-	switch algorithm {
-	case "roundrobin":
-		return "roundrobin", nil
-	case "leastconn":
-		return "least-connections", nil
-	case "uri":
-		return "hash-uri", nil
-	case "source":
-		return "hash-source", nil
-	default:
-		return "roundrobin", fmt.Errorf("Balance algorithm %s not supported", algorithm)
-	}
 }

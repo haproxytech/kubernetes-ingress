@@ -19,7 +19,8 @@ func (c *HAProxyController) handleDefaultTimeouts() bool {
 	hasChanges = c.handleDefaultTimeout("tunnel") || hasChanges
 	hasChanges = c.handleDefaultTimeout("http-keep-alive") || hasChanges
 	if hasChanges {
-		c.NativeParser.Save(HAProxyGlobalCFG)
+		err := c.NativeParser.Save(HAProxyGlobalCFG)
+		LogErr(err)
 	}
 	return hasChanges
 }

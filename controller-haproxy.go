@@ -32,7 +32,8 @@ func (c *HAProxyController) updateHAProxy(reloadRequested bool) error {
 			if maxconnAnn.Status != "" {
 				if frontend, err := nativeAPI.Configuration.GetFrontend("http", transaction.ID); err == nil {
 					frontend.Data.Maxconn = &maxconn
-					nativeAPI.Configuration.EditFrontend("http", frontend.Data, transaction.ID, 0)
+					err := nativeAPI.Configuration.EditFrontend("http", frontend.Data, transaction.ID, 0)
+					LogErr(err)
 				} else {
 					return err
 				}
@@ -41,6 +42,7 @@ func (c *HAProxyController) updateHAProxy(reloadRequested bool) error {
 	}
 
 	maxProcs, maxThreads, reload, err := c.handleGlobalAnnotations(transaction)
+	LogErr(err)
 	reloadRequested = reloadRequested || reload
 
 	for _, namespace := range c.cfg.Namespace {
@@ -92,7 +94,8 @@ func (c *HAProxyController) updateHAProxy(reloadRequested bool) error {
 			for _, rule := range ingress.Rules {
 				//nothing to switch/case for now
 				for _, path := range rule.Paths {
-					c.handlePath(namespace, ingress, rule, path, transaction, backendsUsed)
+					err := c.handlePath(namespace, ingress, rule, path, transaction, backendsUsed)
+					LogErr(err)
 				}
 			}
 			for backendName, numberOfTimesBackendUsed := range backendsUsed {
