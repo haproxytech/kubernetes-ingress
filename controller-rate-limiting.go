@@ -209,17 +209,20 @@ func (c *HAProxyController) handleRateLimiting(transaction *models.Transaction, 
 			}
 			if startIDToRemove >= 0 {
 				//this is not a mistake, just delete all three that are created (they are together)
-				err = nativeAPI.Configuration.DeleteTCPRequestRule(startIDToRemove, "frontend", frontendName, transaction.ID, 0)
+				err = nativeAPI.Configuration.DeleteHTTPRequestRule(startIDToRemove, "frontend", frontendName, transaction.ID, 0)
 				LogErr(err)
-				err = nativeAPI.Configuration.DeleteTCPRequestRule(startIDToRemove, "frontend", frontendName, transaction.ID, 0)
+				err = nativeAPI.Configuration.DeleteHTTPRequestRule(startIDToRemove, "frontend", frontendName, transaction.ID, 0)
 				LogErr(err)
 			}
 		}
 	}
 
 	removeRateLimiting := func() {
-		err := nativeAPI.Configuration.DeleteBackend("RateLimit", transaction.ID, 0)
-		LogErr(err)
+		_, err := nativeAPI.Configuration.GetBackend("RateLimit", transaction.ID)
+		if err == nil {
+			err = nativeAPI.Configuration.DeleteBackend("RateLimit", transaction.ID, 0)
+			LogErr(err)
+		}
 		removeACLs("http")
 		removeACLs("https")
 		removeTCPRules("http")
