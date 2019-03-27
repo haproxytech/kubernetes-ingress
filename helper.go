@@ -3,13 +3,22 @@ package main
 import (
 	"log"
 	"math/rand"
+	"runtime"
+	"strings"
 
 	"k8s.io/api/extensions/v1beta1"
 )
 
 func LogErr(err error) {
-	if err != nil {
-		log.Println(err)
+	if err == nil {
+		return
+	}
+	_, file, no, ok := runtime.Caller(1)
+	if ok {
+		file := strings.Replace(file, "/src/", "", 1)
+		log.SetFlags(log.LstdFlags)
+		log.Printf("%s:%d %s\n", file, no, err.Error())
+		log.SetFlags(log.LstdFlags | log.Lshortfile)
 	}
 }
 
