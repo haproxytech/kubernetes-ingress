@@ -142,7 +142,7 @@ func (c *HAProxyController) handleHTTPRedirect(usingHTTPS bool, transaction *mod
 		state = MODIFIED
 	}
 	id := int64(0)
-	rule := &models.HTTPRequestRule{
+	rule := models.HTTPRequestRule{
 		ID:         &id,
 		Type:       "redirect",
 		RedirCode:  redirectCode,
@@ -153,20 +153,17 @@ func (c *HAProxyController) handleHTTPRedirect(usingHTTPS bool, transaction *mod
 	}
 	switch state {
 	case ADDED:
-		if err = c.NativeAPI.Configuration.CreateHTTPRequestRule("frontend", "http", rule, transaction.ID, 0); err != nil {
-			return reloadRequested, err
-		}
+		c.cfg.HTTPRequests[HTTP_REDIRECT] = []models.HTTPRequestRule{rule}
+		c.cfg.HTTPRequestsStatus = MODIFIED
 		c.cfg.SSLRedirect = "ON"
 		reloadRequested = true
 	case MODIFIED:
-		if err = c.NativeAPI.Configuration.EditHTTPRequestRule(*rule.ID, "frontend", "http", rule, transaction.ID, 0); err != nil {
-			return reloadRequested, err
-		}
+		c.cfg.HTTPRequests[HTTP_REDIRECT] = []models.HTTPRequestRule{rule}
+		c.cfg.HTTPRequestsStatus = MODIFIED
 		reloadRequested = true
 	case DELETED:
-		if err = c.NativeAPI.Configuration.DeleteHTTPRequestRule(*rule.ID, "frontend", "http", transaction.ID, 0); err != nil {
-			return reloadRequested, err
-		}
+		c.cfg.HTTPRequests[HTTP_REDIRECT] = []models.HTTPRequestRule{}
+		c.cfg.HTTPRequestsStatus = MODIFIED
 		c.cfg.SSLRedirect = "OFF"
 		reloadRequested = true
 	}

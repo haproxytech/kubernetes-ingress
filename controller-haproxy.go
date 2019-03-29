@@ -100,14 +100,17 @@ func (c *HAProxyController) updateHAProxy(reloadRequested bool) error {
 			}
 			for backendName, numberOfTimesBackendUsed := range backendsUsed {
 				if numberOfTimesBackendUsed < 1 {
-					if err := nativeAPI.Configuration.DeleteBackend(backendName, transaction.ID, 0); err != nil {
-						log.Println("Cannot delete backend", err)
-					}
+					err := nativeAPI.Configuration.DeleteBackend(backendName, transaction.ID, 0)
+					LogErr(err)
 				}
 			}
 		}
 	}
-	err = nativeAPI.Configuration.CommitTransaction(transaction.ID)
+	err = c.requestsTCPRefresh(transaction)
+	LogErr(err)
+	err = c.RequestsHTTPRefresh(transaction)
+	LogErr(err)
+	_, err = nativeAPI.Configuration.CommitTransaction(transaction.ID)
 	if err != nil {
 		log.Println(err)
 		return err

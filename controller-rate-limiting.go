@@ -111,23 +111,14 @@ func (c *HAProxyController) handleRateLimiting(transaction *models.Transaction, 
 		err = nativeAPI.Configuration.CreateACL("frontend", "https", acl3, transaction.ID, 0)
 		LogErr(err)
 
-		err = nativeAPI.Configuration.CreateTCPRequestRule("frontend", "http", tcpRequest1, transaction.ID, 0)
-		LogErr(err)
-		err = nativeAPI.Configuration.CreateTCPRequestRule("frontend", "http", tcpRequest2, transaction.ID, 0)
-		LogErr(err)
-		err = nativeAPI.Configuration.CreateHTTPRequestRule("frontend", "http", httpRequest1, transaction.ID, 0)
-		LogErr(err)
-		err = nativeAPI.Configuration.CreateHTTPRequestRule("frontend", "http", httpRequest2, transaction.ID, 0)
-		LogErr(err)
-
-		err = nativeAPI.Configuration.CreateTCPRequestRule("frontend", "https", tcpRequest1, transaction.ID, 0)
-		LogErr(err)
-		err = nativeAPI.Configuration.CreateTCPRequestRule("frontend", "https", tcpRequest2, transaction.ID, 0)
-		LogErr(err)
-		err = nativeAPI.Configuration.CreateHTTPRequestRule("frontend", "https", httpRequest1, transaction.ID, 0)
-		LogErr(err)
-		err = nativeAPI.Configuration.CreateHTTPRequestRule("frontend", "https", httpRequest2, transaction.ID, 0)
-		LogErr(err)
+		c.cfg.TCPRequests[RATE_LIMIT] = []models.TCPRequestRule{
+			*tcpRequest1,
+			*tcpRequest2,
+		}
+		c.cfg.HTTPRequests[RATE_LIMIT] = []models.HTTPRequestRule{
+			*httpRequest1,
+			*httpRequest2,
+		}
 
 	}
 
@@ -161,62 +152,6 @@ func (c *HAProxyController) handleRateLimiting(transaction *models.Transaction, 
 		}
 	}
 
-	removeTCPRules := func(frontendName string) {
-		startIDToRemove := int64(-1)
-		tcpRModel, err := nativeAPI.Configuration.GetTCPRequestRules("frontend", frontendName, transaction.ID)
-		if err == nil {
-			data := tcpRModel.Data
-			for _, rule := range data {
-				switch rule.CondTest {
-				case tcpRequest1.CondTest, tcpRequest2.CondTest:
-					if startIDToRemove < 0 {
-						startIDToRemove = *rule.ID
-					} else {
-						if startIDToRemove > *rule.ID {
-							startIDToRemove = *rule.ID
-						}
-					}
-
-				}
-			}
-			if startIDToRemove >= 0 {
-				//this is not a mistake, just delete all three that are created (they are together)
-				err = nativeAPI.Configuration.DeleteTCPRequestRule(startIDToRemove, "frontend", frontendName, transaction.ID, 0)
-				LogErr(err)
-				err = nativeAPI.Configuration.DeleteTCPRequestRule(startIDToRemove, "frontend", frontendName, transaction.ID, 0)
-				LogErr(err)
-			}
-		}
-	}
-
-	removeHTTPRules := func(frontendName string) {
-		startIDToRemove := int64(-1)
-		httpRModel, err := nativeAPI.Configuration.GetHTTPRequestRules("frontend", frontendName, transaction.ID)
-		if err == nil {
-			data := httpRModel.Data
-			for _, rule := range data {
-				switch rule.CondTest {
-				case httpRequest1.CondTest, httpRequest2.CondTest:
-					if startIDToRemove < 0 {
-						startIDToRemove = *rule.ID
-					} else {
-						if startIDToRemove > *rule.ID {
-							startIDToRemove = *rule.ID
-						}
-					}
-
-				}
-			}
-			if startIDToRemove >= 0 {
-				//this is not a mistake, just delete all three that are created (they are together)
-				err = nativeAPI.Configuration.DeleteHTTPRequestRule(startIDToRemove, "frontend", frontendName, transaction.ID, 0)
-				LogErr(err)
-				err = nativeAPI.Configuration.DeleteHTTPRequestRule(startIDToRemove, "frontend", frontendName, transaction.ID, 0)
-				LogErr(err)
-			}
-		}
-	}
-
 	removeRateLimiting := func() {
 		_, err := nativeAPI.Configuration.GetBackend("RateLimit", transaction.ID)
 		if err == nil {
@@ -225,10 +160,14 @@ func (c *HAProxyController) handleRateLimiting(transaction *models.Transaction, 
 		}
 		removeACLs("http")
 		removeACLs("https")
-		removeTCPRules("http")
-		removeTCPRules("https")
-		removeHTTPRules("http")
-		removeHTTPRules("https")
+
+		c.cfg.HTTPRequests[RATE_LIMIT] = []models.HTTPRequestRule{}
+		c.cfg.HTTPRequestsStatus = MODIFIED
+		c.cfg.TCPRequests[RATE_LIMIT] = []models.TCPRequestRule{}
+		c.cfg.TCPRequestsStatus = MODIFIED
+
+		c.cfg.TCPRequests[RATE_LIMIT] = []models.TCPRequestRule{}
+		c.cfg.HTTPRequests[RATE_LIMIT] = []models.HTTPRequestRule{}
 	}
 
 	switch status {

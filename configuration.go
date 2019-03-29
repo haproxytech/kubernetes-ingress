@@ -2,6 +2,12 @@ package main
 
 import (
 	clientnative "github.com/haproxytech/client-native"
+	"github.com/haproxytech/models"
+)
+
+const (
+	RATE_LIMIT    = "rate-limit"
+	HTTP_REDIRECT = "http-redirect"
 )
 
 //Configuration represents k8s state
@@ -13,6 +19,10 @@ type Configuration struct {
 	HTTPBindProcess     string
 	SSLRedirect         string
 	RateLimitingEnabled bool
+	HTTPRequests        map[string][]models.HTTPRequestRule
+	HTTPRequestsStatus  Status
+	TCPRequests         map[string][]models.TCPRequestRule
+	TCPRequestsStatus   Status
 }
 
 //Init itialize configuration
@@ -22,6 +32,16 @@ func (c *Configuration) Init(api *clientnative.HAProxyClient) {
 	c.HTTPBindProcess = "1/1"
 	c.SSLRedirect = ""
 	c.NativeAPI = api
+
+	c.HTTPRequests = map[string][]models.HTTPRequestRule{}
+	c.HTTPRequests[RATE_LIMIT] = []models.HTTPRequestRule{}
+	c.HTTPRequestsStatus = EMPTY
+
+	c.TCPRequests = map[string][]models.TCPRequestRule{}
+	c.TCPRequests[RATE_LIMIT] = []models.TCPRequestRule{}
+	c.TCPRequestsStatus = EMPTY
+
+	c.HTTPRequests[HTTP_REDIRECT] = []models.HTTPRequestRule{}
 }
 
 //GetNamespace returns Namespace. Creates one if not existing
@@ -62,13 +82,13 @@ func (c *Configuration) Clean() {
 					delete(data.Rules, rule.Host)
 					continue
 				default:
-					rule.Status = ""
+					rule.Status = EMPTY
 					for _, path := range rule.Paths {
 						switch path.Status {
 						case DELETED:
 							delete(rule.Paths, path.Path)
 						default:
-							path.Status = ""
+							path.Status = EMPTY
 						}
 					}
 				}
@@ -78,7 +98,7 @@ func (c *Configuration) Clean() {
 			case DELETED:
 				delete(namespace.Ingresses, data.Name)
 			default:
-				data.Status = ""
+				data.Status = EMPTY
 			}
 		}
 		for _, data := range namespace.Services {
@@ -87,7 +107,7 @@ func (c *Configuration) Clean() {
 			case DELETED:
 				delete(namespace.Services, data.Name)
 			default:
-				data.Status = ""
+				data.Status = EMPTY
 			}
 		}
 		for _, data := range namespace.Pods {
@@ -96,7 +116,7 @@ func (c *Configuration) Clean() {
 				delete(namespace.PodNames, data.HAProxyName)
 				delete(namespace.Pods, data.Name)
 			default:
-				data.Status = ""
+				data.Status = EMPTY
 			}
 		}
 		for _, data := range namespace.Secret {
@@ -104,7 +124,7 @@ func (c *Configuration) Clean() {
 			case DELETED:
 				delete(namespace.Secret, data.Name)
 			default:
-				data.Status = ""
+				data.Status = EMPTY
 			}
 		}
 	}
@@ -113,7 +133,9 @@ func (c *Configuration) Clean() {
 	case DELETED:
 		c.ConfigMap = nil
 	default:
-		c.ConfigMap.Status = ""
+		c.ConfigMap.Status = EMPTY
 	}
+	c.HTTPRequestsStatus = EMPTY
+	c.TCPRequestsStatus = EMPTY
 	c.HTTPSListeners.Clean()
 }

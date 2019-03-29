@@ -16,9 +16,9 @@ func LogErr(err error) {
 	_, file, no, ok := runtime.Caller(1)
 	if ok {
 		file := strings.Replace(file, "/src/", "", 1)
-		log.SetFlags(log.LstdFlags)
+		log.SetFlags(LogTypeShort)
 		log.Printf("%s:%d %s\n", file, no, err.Error())
-		log.SetFlags(log.LstdFlags | log.Lshortfile)
+		log.SetFlags(LogType)
 	}
 }
 
