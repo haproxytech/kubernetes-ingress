@@ -68,7 +68,7 @@ func GetValueFromAnnotations(annotationName string, annotations ...MapStringW) (
 						data.OldValue = item.Value
 						data.Status = MODIFIED
 					} else {
-						data.Status = ""
+						data.Status = EMPTY
 					}
 					return data, nil
 				}

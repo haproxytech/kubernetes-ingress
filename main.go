@@ -12,19 +12,19 @@ import (
 const (
 	HAProxyCFG       = "/etc/haproxy/haproxy.cfg"
 	HAProxyGlobalCFG = "/etc/haproxy/global.cfg"
-	HAProxyStatCFG   = "/etc/haproxy/stats.cfg"
 	HAProxyCertDir   = "/etc/haproxy/certs/"
 	HAProxyStateDir  = "/var/state/haproxy/"
-	HAProxySocket    = "/var/run/haproxy-runtime-api.sock"
 	FrontendHTTP     = "http"
 	FrontendHTTPS    = "https"
+	LogTypeShort     = log.LstdFlags
+	LogType          = log.LstdFlags | log.Lshortfile
 )
 
 func main() {
 
 	var osArgs OSArgs
 	var parser = flags.NewParser(&osArgs, flags.Default)
-	parser.Parse()
+	_, err := parser.Parse()
 	if len(osArgs.Version) > 0 {
 		fmt.Printf("HAProxy Ingress Controller %s %s%s\n\n", GitTag, GitCommit, GitDirty)
 		fmt.Printf("Build from: %s\n", GitRepo)
@@ -37,7 +37,8 @@ func main() {
 	log.Printf("Build from: %s\n", GitRepo)
 	log.Printf("Build date: %s\n\n", BuildTime)
 	//TODO currently using default log, switch to something more convenient
-	log.SetFlags(log.LstdFlags | log.Lshortfile)
+	log.SetFlags(LogType)
+	LogErr(err)
 
 	hAProxyController := HAProxyController{}
 	hAProxyController.Start(osArgs)
