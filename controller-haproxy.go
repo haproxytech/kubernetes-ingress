@@ -18,6 +18,10 @@ func (c *HAProxyController) updateHAProxy(reloadRequested bool) error {
 	}
 	//log.Println("Config version:", version)
 	transaction, err := nativeAPI.Configuration.StartTransaction(version)
+	c.ActiveTransaction = transaction.ID
+	defer func() {
+		c.ActiveTransaction = ""
+	}()
 	if err != nil {
 		log.Println(err)
 		return err

@@ -20,11 +20,12 @@ import (
 
 // HAProxyController is ingress controller
 type HAProxyController struct {
-	k8s          *K8s
-	cfg          Configuration
-	osArgs       OSArgs
-	NativeAPI    *clientnative.HAProxyClient
-	NativeParser parser.Parser
+	k8s               *K8s
+	cfg               Configuration
+	osArgs            OSArgs
+	NativeAPI         *clientnative.HAProxyClient
+	NativeParser      parser.Parser
+	ActiveTransaction string
 }
 
 // Start initialize and run HAProxyController
