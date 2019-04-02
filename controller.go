@@ -360,6 +360,27 @@ func (c *HAProxyController) handleService(namespace *Namespace, ingress *Ingress
 	//both load-balance and forwarded-for have default values, so no need for error checking
 	annBalanceAlg, _ := GetValueFromAnnotations("load-balance", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
 	annForwardedFor, _ := GetValueFromAnnotations("forwarded-for", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
+	annWhitelist, _ := GetValueFromAnnotations("whitelist", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
+	switch annWhitelist.Status {
+	case ADDED, MODIFIED:
+		if annWhitelist.Value != "" {
+			ID := int64(0)
+			httpRequest := &models.HTTPRequestRule{
+				ID:       &ID,
+				Type:     "allow",
+				Cond:     "if",
+				CondTest: fmt.Sprintf("{ path_beg %s } { src %s }", path.Path, strings.Replace(annWhitelist.Value, ",", " ", -1)),
+			}
+			c.cfg.HTTPRequests["WHT-"+backendName] = []models.HTTPRequestRule{
+				*httpRequest,
+			}
+		} else {
+			c.cfg.HTTPRequests["WHT-"+backendName] = []models.HTTPRequestRule{}
+		}
+		c.cfg.HTTPRequestsStatus = MODIFIED
+	default:
+		c.cfg.HTTPRequests["WHT-"+backendName] = []models.HTTPRequestRule{}
+	}
 	//TODO BackendBalance proper usage
 	balanceAlg := &models.BackendBalance{
 		Algorithm: annBalanceAlg.Value,

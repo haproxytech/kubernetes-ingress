@@ -1,6 +1,8 @@
 package main
 
 import (
+	"sort"
+
 	"github.com/haproxytech/models"
 )
 
@@ -38,6 +40,27 @@ func (c *HAProxyController) RequestsHTTPRefresh(transaction *models.Transaction)
 		LogErr(err)
 		err = nativeAPI.Configuration.CreateHTTPRequestRule("frontend", "https", request1, transaction.ID, 0)
 		LogErr(err)
+	}
+
+	sortedList := []string{}
+	exclude := map[string]struct{}{
+		HTTP_REDIRECT: struct{}{},
+		RATE_LIMIT:    struct{}{},
+	}
+	for name, _ := range c.cfg.HTTPRequests {
+		_, excluding := exclude[name]
+		if !excluding {
+			sortedList = append(sortedList, name)
+		}
+	}
+	sort.Strings(sortedList)
+	for _, name := range sortedList {
+		for _, request := range c.cfg.HTTPRequests[name] {
+			err = nativeAPI.Configuration.CreateHTTPRequestRule("frontend", "http", &request, transaction.ID, 0)
+			LogErr(err)
+			err = nativeAPI.Configuration.CreateHTTPRequestRule("frontend", "https", &request, transaction.ID, 0)
+			LogErr(err)
+		}
 	}
 
 	return nil
