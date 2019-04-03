@@ -100,9 +100,9 @@ func (c *HAProxyController) handleRateLimiting(transaction *models.Transaction, 
 		err := nativeAPI.Configuration.CreateBackend(backend, transaction.ID, 0)
 		LogErr(err)
 
-		c.addACL(ratelimit_acl1, "http", "https")
-		c.addACL(ratelimit_acl2, "http", "https")
-		c.addACL(ratelimit_acl3, "http", "https")
+		c.addACL(ratelimit_acl1)
+		c.addACL(ratelimit_acl2)
+		c.addACL(ratelimit_acl3)
 
 		c.cfg.TCPRequests[RATE_LIMIT] = []models.TCPRequestRule{
 			*tcpRequest1,
