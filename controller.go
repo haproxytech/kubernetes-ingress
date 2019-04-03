@@ -357,7 +357,7 @@ func (c *HAProxyController) handleService(namespace *Namespace, ingress *Ingress
 	backendName = fmt.Sprintf("%s-%s-%d", namespace.Name, service.Name, path.ServicePort)
 	backendsUsed[backendName]++
 	condTest := "{ req.hdr(host) -i " + rule.Host + " } { path_beg " + path.Path + " } "
-	//both load-balance and forwarded-for have default values, so no need for error checking
+	//load-balance, forwarded-for and annWhitelist have default values, so no need for error checking
 	annBalanceAlg, _ := GetValueFromAnnotations("load-balance", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
 	annForwardedFor, _ := GetValueFromAnnotations("forwarded-for", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
 	annWhitelist, _ := GetValueFromAnnotations("whitelist", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
@@ -378,7 +378,7 @@ func (c *HAProxyController) handleService(namespace *Namespace, ingress *Ingress
 			c.cfg.HTTPRequests["WHT-"+backendName] = []models.HTTPRequestRule{}
 		}
 		c.cfg.HTTPRequestsStatus = MODIFIED
-	default:
+	case DELETED:
 		c.cfg.HTTPRequests["WHT-"+backendName] = []models.HTTPRequestRule{}
 	}
 	//TODO BackendBalance proper usage

@@ -20,6 +20,10 @@ Options for starting controller can be found in [controller.md](controller.md)
 | [maxconn](#maximum-concurent-connections) | number | "2000" |  |:large_blue_circle:|:white_circle:|:white_circle:|
 | [nbthread](#number-of-threads) | number | |  |:large_blue_circle:|:white_circle:|:white_circle:|
 | [pod-maxconn](#maximum-concurent-backend-connections) | number | "2000" |  |:white_circle:|:white_circle:|:large_blue_circle:|
+| [rate-limit](#rate-limit) | "ON"/"OFF" | "OFF" |  |:large_blue_circle:|:white_circle:|:white_circle:|
+| [rate-limit-expire](#rate-limit) | string | "30m" | [rate-limit](#rate-limit) |:large_blue_circle:|:white_circle:|:white_circle:|
+| [rate-limit-interval](#rate-limit) | string | "10s" | [rate-limit](#rate-limit) |:large_blue_circle:|:white_circle:|:white_circle:|
+| [rate-limit-size](#rate-limit) | string | "100k" | [rate-limit](#rate-limit) |:large_blue_circle:|:white_circle:|:white_circle:|
 | [servers-increment](#servers-slots-increment) | number | "42" |  |:large_blue_circle:|:white_circle:|:white_circle:|
 | [servers-increment-max-disabled](#servers-slots-increment) | number | "66" |  |:large_blue_circle:|:white_circle:|:white_circle:|
 | [ssl-certificate](#tls-secret) | string |  |  |:large_blue_circle:|:white_circle:|:white_circle:|
@@ -33,6 +37,7 @@ Options for starting controller can be found in [controller.md](controller.md)
 | [timeout-server](#timeouts) | [time](#time) | "50s" |  |:large_blue_circle:|:white_circle:|:white_circle:|
 | [timeout-tunnel](#timeouts) | [time](#time) | "1h" |  |:large_blue_circle:|:white_circle:|:white_circle:|
 | [timeout-http-keep-alive](#timeouts) | [time](#time) | "1m" |  |:large_blue_circle:|:white_circle:|:white_circle:|
+| [whitelist](#whitelist) | [IPs or CIDRs](#whitelist) | "" |  |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:|
 
 > :information_source: Annotations have hierarchy: `default` <- `Configmap` <- `Ingress` <- `Service`
 >
@@ -84,7 +89,17 @@ Options for starting controller can be found in [controller.md](controller.md)
 - Annotation: `nbthread`
 - default value is number of CPUs available
 
-### Servers slots increment
+#### Rate limit
+- Annotation: `rate-limit`
+  - `ON` / `OFF` - enable or disable rate limiting
+- Annotation: `rate-limit-expire`
+  - Table entries expire after `rate-limit-expire` of inactivity.
+- Annotation: `rate-limit-interval`
+    - request rate for the last `rate-limit-interval`
+- Annotation: `rate-limit-size`
+    - number of ip entries in table
+
+#### Servers slots increment
 
 - Annotation `servers-increment`- determines how much backend servers should we 
         put in `maintenance` mode so controller can 
@@ -92,7 +107,7 @@ Options for starting controller can be found in [controller.md](controller.md)
 - Annotation `servers-increment-max-disabled` - maximum allowed number of 
         disabled servers in backend. Greater number triggers HAProxy reload
 
-### Timeouts
+#### Timeouts
 
 - Annotation `http-request`
 - Annotation `connect`
@@ -106,6 +121,13 @@ Options for starting controller can be found in [controller.md](controller.md)
 
 - Annotation: `forwarded-for`
 - by default enabled, can be disabled per service or globally
+
+#### Whitelist
+
+- Annotation: `whitelist`
+- by default disabled
+- `IPs or CIDR` - coma or space separated list of IP adresses or CIDRs
+- :information_source: service annotation will override ingress one that overrides config map annotation
 
 ### Secrets
 
