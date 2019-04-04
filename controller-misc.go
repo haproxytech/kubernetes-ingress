@@ -82,8 +82,8 @@ func (c *HAProxyController) handleGlobalAnnotations(transaction *models.Transact
 	cpuMap := make([]types.CpuMap, numCPUMap)
 	for index := 0; index < numCPUMap; index++ {
 		cpuMap[index] = types.CpuMap{
-			Name:  fmt.Sprintf("%s%d", namePrefix, index+1),
-			Value: strconv.Itoa(index),
+			Process: fmt.Sprintf("%s%d", namePrefix, index+1),
+			CpuSet:  strconv.Itoa(index),
 		}
 	}
 	err = p.Set(parser.Global, parser.GlobalSectionName, "cpu-map", cpuMap)
