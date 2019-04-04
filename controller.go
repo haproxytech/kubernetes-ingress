@@ -361,18 +361,42 @@ func (c *HAProxyController) handleService(namespace *Namespace, ingress *Ingress
 	annBalanceAlg, _ := GetValueFromAnnotations("load-balance", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
 	annForwardedFor, _ := GetValueFromAnnotations("forwarded-for", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
 	annWhitelist, _ := GetValueFromAnnotations("whitelist", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
-	switch annWhitelist.Status {
+	annWhitelistRL, _ := GetValueFromAnnotations("whitelist-with-rate-limit", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
+	allowRateLimiting := annWhitelistRL.Value != "" && annWhitelistRL.Value != "OFF"
+	status := annWhitelist.Status
+	if status == "" {
+		if annWhitelistRL.Status != EMPTY {
+			data, ok := c.cfg.HTTPRequests["WHT-"+backendName]
+			if ok && len(data) > 0 {
+				status = MODIFIED
+			}
+		}
+	}
+	switch status {
 	case ADDED, MODIFIED:
 		if annWhitelist.Value != "" {
 			ID := int64(0)
-			httpRequest := &models.HTTPRequestRule{
+			httpRequest1 := &models.HTTPRequestRule{
 				ID:       &ID,
 				Type:     "allow",
 				Cond:     "if",
 				CondTest: fmt.Sprintf("{ path_beg %s } { src %s }", path.Path, strings.Replace(annWhitelist.Value, ",", " ", -1)),
 			}
-			c.cfg.HTTPRequests["WHT-"+backendName] = []models.HTTPRequestRule{
-				*httpRequest,
+			httpRequest2 := &models.HTTPRequestRule{
+				ID:       &ID,
+				Type:     "deny",
+				Cond:     "if",
+				CondTest: fmt.Sprintf("{ path_beg %s }", path.Path),
+			}
+			if allowRateLimiting {
+				c.cfg.HTTPRequests["WHT-"+backendName] = []models.HTTPRequestRule{
+					*httpRequest1,
+				}
+			} else {
+				c.cfg.HTTPRequests["WHT-"+backendName] = []models.HTTPRequestRule{
+					*httpRequest2, //reverse order
+					*httpRequest1,
+				}
 			}
 		} else {
 			c.cfg.HTTPRequests["WHT-"+backendName] = []models.HTTPRequestRule{}

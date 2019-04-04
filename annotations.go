@@ -131,4 +131,5 @@ var defaultAnnotationValues = MapStringW{
 	"timeout-tunnel":                 &StringW{Value: "1h"},
 	"timeout-http-keep-alive":        &StringW{Value: "1m"},
 	"whitelist":                      &StringW{Value: ""},
+	"whitelist-with-rate-limit":      &StringW{Value: "OFF"},
 }
