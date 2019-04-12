@@ -241,7 +241,7 @@ func (c *HAProxyController) handleService(index int, namespace *Namespace, ingre
 	status := annWhitelist.Status
 	if status == "" {
 		if annWhitelistRL.Status != EMPTY {
-			data, ok := c.cfg.HTTPRequests[fmt.Sprintf("WHT-%d", index)]
+			data, ok := c.cfg.HTTPRequests[fmt.Sprintf("WHT-%0006d", index)]
 			if ok && len(data) > 0 {
 				status = MODIFIED
 			}
@@ -269,21 +269,21 @@ func (c *HAProxyController) handleService(index int, namespace *Namespace, ingre
 				CondTest: fmt.Sprintf("{ path_beg %s }", path.Path),
 			}
 			if allowRateLimiting {
-				c.cfg.HTTPRequests[fmt.Sprintf("WHT-%d", index)] = []models.HTTPRequestRule{
+				c.cfg.HTTPRequests[fmt.Sprintf("WHT-%0006d", index)] = []models.HTTPRequestRule{
 					*httpRequest1,
 				}
 			} else {
-				c.cfg.HTTPRequests[fmt.Sprintf("WHT-%d", index)] = []models.HTTPRequestRule{
+				c.cfg.HTTPRequests[fmt.Sprintf("WHT-%0006d", index)] = []models.HTTPRequestRule{
 					*httpRequest2, //reverse order
 					*httpRequest1,
 				}
 			}
 		} else {
-			c.cfg.HTTPRequests[fmt.Sprintf("WHT-%d", index)] = []models.HTTPRequestRule{}
+			c.cfg.HTTPRequests[fmt.Sprintf("WHT-%0006d", index)] = []models.HTTPRequestRule{}
 		}
 		c.cfg.HTTPRequestsStatus = MODIFIED
 	case DELETED:
-		c.cfg.HTTPRequests[fmt.Sprintf("WHT-%d", index)] = []models.HTTPRequestRule{}
+		c.cfg.HTTPRequests[fmt.Sprintf("WHT-%0006d", index)] = []models.HTTPRequestRule{}
 	}
 	//TODO BackendBalance proper usage
 	balanceAlg := &models.BackendBalance{
