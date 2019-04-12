@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"sort"
 	"strconv"
 
 	"github.com/haproxytech/models"
@@ -48,7 +49,7 @@ func (c *HAProxyController) updateHAProxy(reloadRequested bool) error {
 	maxProcs, maxThreads, reload, err := c.handleGlobalAnnotations(transaction)
 	LogErr(err)
 	reloadRequested = reloadRequested || reload
-
+	pathIndex := 0
 	for _, namespace := range c.cfg.Namespace {
 		if !namespace.Relevant {
 			continue
@@ -95,11 +96,35 @@ func (c *HAProxyController) updateHAProxy(reloadRequested bool) error {
 		for _, ingress := range namespace.Ingresses {
 			//no need for switch/case for now
 			backendsUsed := map[string]int{}
-			for _, rule := range ingress.Rules {
-				//nothing to switch/case for now
+			sortedList := make([]string, len(ingress.Rules))
+			index := 0
+			for name, _ := range ingress.Rules {
+				sortedList[index] = name
+				index++
+			}
+			sort.Strings(sortedList)
+			log.Println(sortedList)
+			for _, ruleName := range sortedList {
+				rule := ingress.Rules[ruleName]
+				indexedPaths := make([]*IngressPath, len(rule.Paths))
 				for _, path := range rule.Paths {
-					err := c.handlePath(namespace, ingress, rule, path, transaction, backendsUsed)
+					if path.Status != DELETED {
+						indexedPaths[path.PathIndex] = path
+					} else {
+						c.removeBackendSwitchingRule(rule.Host, path.Path)
+						log.Println("SKIPPED", path)
+					}
+				}
+				for i, _ := range indexedPaths {
+					path := indexedPaths[i]
+					if path == nil {
+						continue
+					}
+					log.Println(i, path)
+					log.Println(*path)
+					err := c.handlePath(pathIndex, namespace, ingress, rule, path, transaction, backendsUsed)
 					LogErr(err)
+					pathIndex++
 				}
 			}
 			for backendName, numberOfTimesBackendUsed := range backendsUsed {

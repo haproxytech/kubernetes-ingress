@@ -2,6 +2,8 @@ package main
 
 import (
 	"log"
+	"os"
+	"path/filepath"
 
 	corev1 "k8s.io/api/core/v1"
 	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
@@ -11,6 +13,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
+	"k8s.io/client-go/tools/clientcmd"
 )
 
 const DEBUG_API = false
@@ -32,6 +35,36 @@ func GetKubernetesClient() (*K8s, error) {
 		panic(err.Error())
 	}
 	return &K8s{API: clientset}, nil
+}
+
+//GetRemoteKubernetesClient returns new client that communicates with k8s
+func GetRemoteKubernetesClient(osArgs OSArgs) (*K8s, error) {
+
+	kubeconfig := filepath.Join(homeDir(), ".kube", "config")
+	if osArgs.KubeConfig != "" {
+		kubeconfig = osArgs.KubeConfig
+	}
+
+	// use the current context in kubeconfig
+	config, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
+	if err != nil {
+		panic(err.Error())
+	}
+
+	// create the clientset
+	clientset, err := kubernetes.NewForConfig(config)
+
+	if err != nil {
+		panic(err.Error())
+	}
+	return &K8s{API: clientset}, nil
+}
+
+func homeDir() string {
+	if h := os.Getenv("HOME"); h != "" {
+		return h
+	}
+	return os.Getenv("USERPROFILE") // windows
 }
 
 //GetAll fetches all k8s resources

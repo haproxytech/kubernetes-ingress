@@ -7,9 +7,6 @@ import (
 	"os/exec"
 	"strconv"
 	"strings"
-	"time"
-
-	"k8s.io/apimachinery/pkg/watch"
 
 	clientnative "github.com/haproxytech/client-native"
 	"github.com/haproxytech/client-native/configuration"
@@ -35,7 +32,13 @@ func (c *HAProxyController) Start(osArgs OSArgs) {
 
 	c.HAProxyInitialize()
 
-	k8s, err := GetKubernetesClient()
+	var k8s *K8s
+	var err error
+	if osArgs.OutOfCluster {
+		k8s, err = GetRemoteKubernetesClient(osArgs)
+	} else {
+		k8s, err = GetKubernetesClient()
+	}
 	if err != nil {
 		log.Panic(err)
 	}
@@ -135,138 +138,11 @@ func (c *HAProxyController) HAProxyReload() error {
 	return err
 }
 
-func (c *HAProxyController) monitorChanges() {
-
-	configMapReceivedAndProcessed := make(chan bool)
-	syncEveryNSeconds := 5
-	eventChan := make(chan SyncDataEvent, watch.DefaultChanSize*6)
-	go c.SyncData(eventChan, configMapReceivedAndProcessed)
-
-	stop := make(chan struct{})
-
-	podChan := make(chan *Pod, 100)
-	c.k8s.EventsPods(podChan, stop)
-
-	svcChan := make(chan *Service, 100)
-	c.k8s.EventsServices(svcChan, stop)
-
-	nsChan := make(chan *Namespace, 10)
-	c.k8s.EventsNamespaces(nsChan, stop)
-
-	ingChan := make(chan *Ingress, 10)
-	c.k8s.EventsIngresses(ingChan, stop)
-
-	cfgChan := make(chan *ConfigMap, 10)
-	c.k8s.EventsConfigfMaps(cfgChan, stop)
-
-	secretChan := make(chan *Secret, 10)
-	c.k8s.EventsSecrets(secretChan, stop)
-
-	eventsIngress := []SyncDataEvent{}
-	eventsServices := []SyncDataEvent{}
-	eventsPods := []SyncDataEvent{}
-	configMapOk := false
-
-	for {
-		select {
-		case _ = <-configMapReceivedAndProcessed:
-			for _, event := range eventsIngress {
-				eventChan <- event
-			}
-			for _, event := range eventsServices {
-				eventChan <- event
-			}
-			for _, event := range eventsPods {
-				eventChan <- event
-			}
-			eventsIngress = []SyncDataEvent{}
-			eventsServices = []SyncDataEvent{}
-			eventsPods = []SyncDataEvent{}
-			configMapOk = true
-			time.Sleep(1 * time.Millisecond)
-		case item := <-cfgChan:
-			eventChan <- SyncDataEvent{SyncType: CONFIGMAP, Namespace: item.Namespace, Data: item}
-		case item := <-nsChan:
-			event := SyncDataEvent{SyncType: NAMESPACE, Namespace: item.Name, Data: item}
-			eventChan <- event
-		case item := <-podChan:
-			event := SyncDataEvent{SyncType: POD, Namespace: item.Namespace, Data: item}
-			if configMapOk {
-				eventChan <- event
-			} else {
-				eventsPods = append(eventsPods, event)
-			}
-		case item := <-svcChan:
-			event := SyncDataEvent{SyncType: SERVICE, Namespace: item.Namespace, Data: item}
-			if configMapOk {
-				eventChan <- event
-			} else {
-				eventsServices = append(eventsServices, event)
-			}
-		case item := <-ingChan:
-			event := SyncDataEvent{SyncType: INGRESS, Namespace: item.Namespace, Data: item}
-			if configMapOk {
-				eventChan <- event
-			} else {
-				eventsIngress = append(eventsIngress, event)
-			}
-		case item := <-secretChan:
-			event := SyncDataEvent{SyncType: SECRET, Namespace: item.Namespace, Data: item}
-			eventChan <- event
-		case <-time.After(time.Duration(syncEveryNSeconds) * time.Second):
-			//TODO syncEveryNSeconds sec is hardcoded, change that (annotation?)
-			//do sync of data every syncEveryNSeconds sec
-			if configMapOk && len(eventsIngress) == 0 && len(eventsServices) == 0 && len(eventsPods) == 0 {
-				eventChan <- SyncDataEvent{SyncType: COMMAND}
-			}
-		}
-	}
-}
-
-//SyncData gets all kubernetes changes, aggregates them and apply to HAProxy.
-//All the changes must come through this function
-//TODO this is not necessary, remove it later
-func (c *HAProxyController) SyncData(jobChan <-chan SyncDataEvent, chConfigMapReceivedAndProcessed chan bool) {
-	hadChanges := false
-	needsReload := false
-	c.cfg.Init(c.NativeAPI)
-	for job := range jobChan {
-		ns := c.cfg.GetNamespace(job.Namespace)
-		change := false
-		reload := false
-		switch job.SyncType {
-		case COMMAND:
-			if hadChanges {
-				if err := c.updateHAProxy(needsReload); err != nil {
-					log.Println(err)
-				}
-				hadChanges = false
-				needsReload = false
-				continue
-			}
-		case NAMESPACE:
-			change, reload = c.eventNamespace(ns, job.Data.(*Namespace))
-		case INGRESS:
-			change, reload = c.eventIngress(ns, job.Data.(*Ingress))
-		case SERVICE:
-			change, reload = c.eventService(ns, job.Data.(*Service))
-		case POD:
-			change, reload = c.eventPod(ns, job.Data.(*Pod))
-		case CONFIGMAP:
-			change, reload = c.eventConfigMap(ns, job.Data.(*ConfigMap), chConfigMapReceivedAndProcessed)
-		case SECRET:
-			change, reload = c.eventSecret(ns, job.Data.(*Secret))
-		}
-		hadChanges = hadChanges || change
-		needsReload = needsReload || reload
-	}
-}
-
-func (c *HAProxyController) handlePath(namespace *Namespace, ingress *Ingress, rule *IngressRule, path *IngressPath,
+func (c *HAProxyController) handlePath(index int, namespace *Namespace, ingress *Ingress, rule *IngressRule, path *IngressPath,
 	transaction *models.Transaction, backendsUsed map[string]int) error {
 	nativeAPI := c.NativeAPI
 	//log.Println("PATH", path)
-	backendName, selector, service, err := c.handleService(namespace, ingress, rule, path, backendsUsed, transaction)
+	backendName, selector, service, err := c.handleService(index, namespace, ingress, rule, path, backendsUsed, transaction)
 	if err != nil {
 		return err
 	}
@@ -340,7 +216,7 @@ func (c *HAProxyController) handlePath(namespace *Namespace, ingress *Ingress, r
 	return nil
 }
 
-func (c *HAProxyController) handleService(namespace *Namespace, ingress *Ingress, rule *IngressRule, path *IngressPath,
+func (c *HAProxyController) handleService(index int, namespace *Namespace, ingress *Ingress, rule *IngressRule, path *IngressPath,
 	backendsUsed map[string]int, transaction *models.Transaction) (backendName string, selector MapStringW, service *Service, err error) {
 	nativeAPI := c.NativeAPI
 
@@ -356,7 +232,6 @@ func (c *HAProxyController) handleService(namespace *Namespace, ingress *Ingress
 
 	backendName = fmt.Sprintf("%s-%s-%d", namespace.Name, service.Name, path.ServicePort)
 	backendsUsed[backendName]++
-	condTest := "{ req.hdr(host) -i " + rule.Host + " } { path_beg " + path.Path + " } "
 	//load-balance, forwarded-for and annWhitelist have default values, so no need for error checking
 	annBalanceAlg, _ := GetValueFromAnnotations("load-balance", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
 	annForwardedFor, _ := GetValueFromAnnotations("forwarded-for", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
@@ -366,10 +241,15 @@ func (c *HAProxyController) handleService(namespace *Namespace, ingress *Ingress
 	status := annWhitelist.Status
 	if status == "" {
 		if annWhitelistRL.Status != EMPTY {
-			data, ok := c.cfg.HTTPRequests["WHT-"+backendName]
+			data, ok := c.cfg.HTTPRequests[fmt.Sprintf("WHT-%d", index)]
 			if ok && len(data) > 0 {
 				status = MODIFIED
 			}
+		}
+	}
+	if status == "" {
+		if annWhitelistRL.Value != "" && path.Status == ADDED {
+			status = MODIFIED
 		}
 	}
 	switch status {
@@ -389,21 +269,21 @@ func (c *HAProxyController) handleService(namespace *Namespace, ingress *Ingress
 				CondTest: fmt.Sprintf("{ path_beg %s }", path.Path),
 			}
 			if allowRateLimiting {
-				c.cfg.HTTPRequests["WHT-"+backendName] = []models.HTTPRequestRule{
+				c.cfg.HTTPRequests[fmt.Sprintf("WHT-%d", index)] = []models.HTTPRequestRule{
 					*httpRequest1,
 				}
 			} else {
-				c.cfg.HTTPRequests["WHT-"+backendName] = []models.HTTPRequestRule{
+				c.cfg.HTTPRequests[fmt.Sprintf("WHT-%d", index)] = []models.HTTPRequestRule{
 					*httpRequest2, //reverse order
 					*httpRequest1,
 				}
 			}
 		} else {
-			c.cfg.HTTPRequests["WHT-"+backendName] = []models.HTTPRequestRule{}
+			c.cfg.HTTPRequests[fmt.Sprintf("WHT-%d", index)] = []models.HTTPRequestRule{}
 		}
 		c.cfg.HTTPRequestsStatus = MODIFIED
 	case DELETED:
-		c.cfg.HTTPRequests["WHT-"+backendName] = []models.HTTPRequestRule{}
+		c.cfg.HTTPRequests[fmt.Sprintf("WHT-%d", index)] = []models.HTTPRequestRule{}
 	}
 	//TODO BackendBalance proper usage
 	balanceAlg := &models.BackendBalance{
@@ -434,23 +314,8 @@ func (c *HAProxyController) handleService(namespace *Namespace, ingress *Ingress
 				}
 			}
 		}
-		id := int64(0)
-		backendSwitchingRule := &models.BackendSwitchingRule{
-			Cond:     "if",
-			CondTest: condTest,
-			Name:     backendName,
-			ID:       &id,
-		}
-		if err := nativeAPI.Configuration.CreateBackendSwitchingRule(FrontendHTTP, backendSwitchingRule, transaction.ID, 0); err != nil {
-			log.Println("CreateBackendSwitchingRule http", err)
-			return "", nil, nil, err
-		}
-		if err := nativeAPI.Configuration.CreateBackendSwitchingRule(FrontendHTTPS, backendSwitchingRule, transaction.ID, 0); err != nil {
-			log.Println("CreateBackendSwitchingRule https", err)
-			return "", nil, nil, err
-		}
-	//case MODIFIED:
-	//nothing to do for now
+	case MODIFIED:
+		log.Println("so we have modified now")
 	case DELETED:
 		backendsUsed[backendName]--
 		if err := nativeAPI.Configuration.DeleteBackend(backendName, transaction.ID, 0); err != nil {
@@ -458,6 +323,11 @@ func (c *HAProxyController) handleService(namespace *Namespace, ingress *Ingress
 			return "", nil, nil, err
 		}
 		return "", nil, service, nil
+	}
+
+	switch path.Status {
+	case ADDED, MODIFIED:
+		c.addBackendSwitchingRule(rule.Host, path.Path, backendName)
 	}
 
 	if annBalanceAlg.Status != "" || annForwardedFor.Status != "" {

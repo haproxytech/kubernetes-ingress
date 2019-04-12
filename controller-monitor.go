@@ -1,0 +1,135 @@
+package main
+
+import (
+	"log"
+	"time"
+
+	"k8s.io/apimachinery/pkg/watch"
+)
+
+func (c *HAProxyController) monitorChanges() {
+
+	configMapReceivedAndProcessed := make(chan bool)
+	syncEveryNSeconds := 5
+	eventChan := make(chan SyncDataEvent, watch.DefaultChanSize*6)
+	go c.SyncData(eventChan, configMapReceivedAndProcessed)
+
+	stop := make(chan struct{})
+
+	podChan := make(chan *Pod, 100)
+	c.k8s.EventsPods(podChan, stop)
+
+	svcChan := make(chan *Service, 100)
+	c.k8s.EventsServices(svcChan, stop)
+
+	nsChan := make(chan *Namespace, 10)
+	c.k8s.EventsNamespaces(nsChan, stop)
+
+	ingChan := make(chan *Ingress, 10)
+	c.k8s.EventsIngresses(ingChan, stop)
+
+	cfgChan := make(chan *ConfigMap, 10)
+	c.k8s.EventsConfigfMaps(cfgChan, stop)
+
+	secretChan := make(chan *Secret, 10)
+	c.k8s.EventsSecrets(secretChan, stop)
+
+	eventsIngress := []SyncDataEvent{}
+	eventsServices := []SyncDataEvent{}
+	eventsPods := []SyncDataEvent{}
+	configMapOk := false
+
+	for {
+		select {
+		case _ = <-configMapReceivedAndProcessed:
+			for _, event := range eventsIngress {
+				eventChan <- event
+			}
+			for _, event := range eventsServices {
+				eventChan <- event
+			}
+			for _, event := range eventsPods {
+				eventChan <- event
+			}
+			eventsIngress = []SyncDataEvent{}
+			eventsServices = []SyncDataEvent{}
+			eventsPods = []SyncDataEvent{}
+			configMapOk = true
+			time.Sleep(1 * time.Millisecond)
+		case item := <-cfgChan:
+			eventChan <- SyncDataEvent{SyncType: CONFIGMAP, Namespace: item.Namespace, Data: item}
+		case item := <-nsChan:
+			event := SyncDataEvent{SyncType: NAMESPACE, Namespace: item.Name, Data: item}
+			eventChan <- event
+		case item := <-podChan:
+			event := SyncDataEvent{SyncType: POD, Namespace: item.Namespace, Data: item}
+			if configMapOk {
+				eventChan <- event
+			} else {
+				eventsPods = append(eventsPods, event)
+			}
+		case item := <-svcChan:
+			event := SyncDataEvent{SyncType: SERVICE, Namespace: item.Namespace, Data: item}
+			if configMapOk {
+				eventChan <- event
+			} else {
+				eventsServices = append(eventsServices, event)
+			}
+		case item := <-ingChan:
+			event := SyncDataEvent{SyncType: INGRESS, Namespace: item.Namespace, Data: item}
+			if configMapOk {
+				eventChan <- event
+			} else {
+				eventsIngress = append(eventsIngress, event)
+			}
+		case item := <-secretChan:
+			event := SyncDataEvent{SyncType: SECRET, Namespace: item.Namespace, Data: item}
+			eventChan <- event
+		case <-time.After(time.Duration(syncEveryNSeconds) * time.Second):
+			//TODO syncEveryNSeconds sec is hardcoded, change that (annotation?)
+			//do sync of data every syncEveryNSeconds sec
+			if configMapOk && len(eventsIngress) == 0 && len(eventsServices) == 0 && len(eventsPods) == 0 {
+				eventChan <- SyncDataEvent{SyncType: COMMAND}
+			}
+		}
+	}
+}
+
+//SyncData gets all kubernetes changes, aggregates them and apply to HAProxy.
+//All the changes must come through this function
+//TODO this is not necessary, remove it later
+func (c *HAProxyController) SyncData(jobChan <-chan SyncDataEvent, chConfigMapReceivedAndProcessed chan bool) {
+	hadChanges := false
+	needsReload := false
+	c.cfg.Init(c.NativeAPI)
+	for job := range jobChan {
+		ns := c.cfg.GetNamespace(job.Namespace)
+		change := false
+		reload := false
+		switch job.SyncType {
+		case COMMAND:
+			if hadChanges {
+				if err := c.updateHAProxy(needsReload); err != nil {
+					log.Println(err)
+				}
+				hadChanges = false
+				needsReload = false
+				continue
+			}
+		case NAMESPACE:
+			change, reload = c.eventNamespace(ns, job.Data.(*Namespace))
+		case INGRESS:
+			change, reload = c.eventIngress(ns, job.Data.(*Ingress))
+		case SERVICE:
+			change, reload = c.eventService(ns, job.Data.(*Service))
+		case POD:
+			change, reload = c.eventPod(ns, job.Data.(*Pod))
+		case CONFIGMAP:
+			change, reload = c.eventConfigMap(ns, job.Data.(*ConfigMap), chConfigMapReceivedAndProcessed)
+		case SECRET:
+			change, reload = c.eventSecret(ns, job.Data.(*Secret))
+		}
+		hadChanges = hadChanges || change
+		needsReload = needsReload || reload
+	}
+}

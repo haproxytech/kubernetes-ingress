@@ -52,12 +52,12 @@ func (c *HAProxyController) eventIngress(ns *Namespace, data *Ingress) (updateRe
 							newRule.Status = MODIFIED
 						}
 					} else {
-						newPath.Status = MODIFIED
-						newRule.Status = MODIFIED
+						newPath.Status = ADDED
+						newRule.Status = ADDED
 					}
 				}
 				for _, oldPath := range oldRule.Paths {
-					if _, ok := newRule.Paths[oldPath.Path]; ok {
+					if _, ok := newRule.Paths[oldPath.Path]; !ok {
 						oldPath.Status = DELETED
 						newRule.Paths[oldPath.Path] = oldPath
 					}
@@ -75,6 +75,23 @@ func (c *HAProxyController) eventIngress(ns *Namespace, data *Ingress) (updateRe
 				newIngress.Rules[oldRule.Host] = oldRule
 			}
 		}
+		for annName, ann := range newIngress.Annotations {
+			annOLD, ok := oldIngress.Annotations[annName]
+			if ok {
+				if ann.Value != annOLD.Value {
+					ann.OldValue = annOLD.Value
+					ann.Status = MODIFIED
+				}
+			} else {
+				ann.Status = ADDED
+			}
+		}
+		for annName, ann := range oldIngress.Annotations {
+			_, ok := oldIngress.Annotations[annName]
+			if !ok {
+				ann.Status = DELETED
+			}
+		}
 		ns.Ingresses[data.Name] = newIngress
 		//diffStr := cmp.Diff(oldIngress, newIngress)
 		//log.Println("Ingress modified", data.Name, "\n", diffStr)
@@ -89,6 +106,16 @@ func (c *HAProxyController) eventIngress(ns *Namespace, data *Ingress) (updateRe
 			return updateRequired, updateRequired
 		}
 		ns.Ingresses[data.Name] = data
+
+		for _, newRule := range data.Rules {
+			for _, newPath := range newRule.Paths {
+				newPath.Status = ADDED
+			}
+		}
+		for _, ann := range data.Annotations {
+			ann.Status = ADDED
+		}
+
 		//log.Println("Ingress added", data.Name)
 		updateRequired = true
 	case DELETED:

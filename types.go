@@ -72,6 +72,7 @@ type IngressPath struct {
 	ServiceName string
 	ServicePort int
 	Path        string
+	PathIndex   int
 	Status      Status
 }
 

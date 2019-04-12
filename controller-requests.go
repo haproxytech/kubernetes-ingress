@@ -53,7 +53,7 @@ func (c *HAProxyController) RequestsHTTPRefresh(transaction *models.Transaction)
 			sortedList = append(sortedList, name)
 		}
 	}
-	sort.Strings(sortedList)
+	sort.Sort(sort.Reverse(sort.StringSlice(sortedList))) // reverse order
 	for _, name := range sortedList {
 		for _, request := range c.cfg.HTTPRequests[name] {
 			err = nativeAPI.Configuration.CreateHTTPRequestRule("frontend", "http", &request, transaction.ID, 0)
