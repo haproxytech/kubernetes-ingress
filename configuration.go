@@ -12,17 +12,19 @@ const (
 
 //Configuration represents k8s state
 type Configuration struct {
-	Namespace           map[string]*Namespace
-	ConfigMap           *ConfigMap
-	NativeAPI           *clientnative.HAProxyClient
-	HTTPSListeners      *MapIntW
-	HTTPBindProcess     string
-	SSLRedirect         string
-	RateLimitingEnabled bool
-	HTTPRequests        map[string][]models.HTTPRequestRule
-	HTTPRequestsStatus  Status
-	TCPRequests         map[string][]models.TCPRequestRule
-	TCPRequestsStatus   Status
+	Namespace             map[string]*Namespace
+	ConfigMap             *ConfigMap
+	NativeAPI             *clientnative.HAProxyClient
+	HTTPSListeners        *MapIntW
+	HTTPBindProcess       string
+	SSLRedirect           string
+	RateLimitingEnabled   bool
+	HTTPRequests          map[string][]models.HTTPRequestRule
+	HTTPRequestsStatus    Status
+	TCPRequests           map[string][]models.TCPRequestRule
+	TCPRequestsStatus     Status
+	UseBackendRules       map[string]BackendSwitchingRule
+	UseBackendRulesStatus Status
 }
 
 //Init itialize configuration
@@ -42,6 +44,9 @@ func (c *Configuration) Init(api *clientnative.HAProxyClient) {
 	c.TCPRequestsStatus = EMPTY
 
 	c.HTTPRequests[HTTP_REDIRECT] = []models.HTTPRequestRule{}
+
+	c.UseBackendRules = map[string]BackendSwitchingRule{}
+	c.UseBackendRulesStatus = EMPTY
 }
 
 //GetNamespace returns Namespace. Creates one if not existing
@@ -137,5 +142,6 @@ func (c *Configuration) Clean() {
 	}
 	c.HTTPRequestsStatus = EMPTY
 	c.TCPRequestsStatus = EMPTY
+	c.UseBackendRulesStatus = EMPTY
 	c.HTTPSListeners.Clean()
 }

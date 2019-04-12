@@ -2,60 +2,50 @@ package main
 
 import (
 	"fmt"
-	"log"
+	"sort"
 
 	"github.com/haproxytech/models"
 )
 
-func (c *HAProxyController) addBackendSwitchingRule(Host, Path, Backend string, frontends ...string) {
-	if len(frontends) == 0 {
-		frontends = []string{"http", "https"}
+type BackendSwitchingRule struct {
+	Host    string
+	Path    string
+	Backend string
+}
+
+func (c *HAProxyController) useBackendRuleRefresh() (err error) {
+	if c.cfg.UseBackendRulesStatus == EMPTY {
+		return nil
 	}
-	condTest := fmt.Sprintf("{ req.hdr(host) -i %s } { path_beg %s }", Host, Path)
-	id := int64(0)
-	backendSwitchingRule := &models.BackendSwitchingRule{
-		Cond:     "if",
-		CondTest: condTest,
-		Name:     Backend,
-		ID:       &id,
+	frontends := []string{"http", "https"}
+
+	nativeAPI := c.NativeAPI
+
+	sortedList := []string{}
+	for name, _ := range c.cfg.UseBackendRules {
+		sortedList = append(sortedList, name)
 	}
+	sort.Sort(sort.Reverse(sort.StringSlice(sortedList))) // reverse order
+
+	//map[string][]string
 	for _, frontend := range frontends {
-		bckSwchModel, err := c.NativeAPI.Configuration.GetBackendSwitchingRules(frontend, c.ActiveTransaction)
-		found := false
-		if err == nil {
-			data := bckSwchModel.Data
-			for _, d := range data {
-				if d.CondTest == condTest {
-					found = true
-					break
-				}
-			}
+		err = nil
+		for err == nil {
+			err = nativeAPI.Configuration.DeleteBackendSwitchingRule(0, frontend, c.ActiveTransaction, 0)
 		}
-		if !found {
+		for _, name := range sortedList {
+			rule := c.cfg.UseBackendRules[name]
+			id := int64(0)
+			backendSwitchingRule := &models.BackendSwitchingRule{
+				Cond:     "if",
+				CondTest: fmt.Sprintf("{ req.hdr(host) -i %s } { path_beg %s }", rule.Host, rule.Path),
+				Name:     rule.Backend,
+				ID:       &id,
+			}
 			err = c.cfg.NativeAPI.Configuration.CreateBackendSwitchingRule(frontend, backendSwitchingRule, c.ActiveTransaction, 0)
 			LogErr(err)
 		}
 	}
-}
 
-func (c *HAProxyController) removeBackendSwitchingRule(Host, Path string, frontends ...string) {
-	if len(frontends) == 0 {
-		frontends = []string{"http", "https"}
-	}
-	condTest := fmt.Sprintf("{ req.hdr(host) -i %s } { path_beg %s }", Host, Path)
-	log.Println("REMOVING", condTest)
-	for _, frontend := range frontends {
-		bckSwchModel, err := c.NativeAPI.Configuration.GetBackendSwitchingRules(frontend, c.ActiveTransaction)
-		if err == nil {
-			indexShift := int64(0)
-			data := bckSwchModel.Data
-			for _, d := range data {
-				if d.CondTest == condTest {
-					err = c.NativeAPI.Configuration.DeleteBackendSwitchingRule(*d.ID-indexShift, frontend, c.ActiveTransaction, 0)
-					LogErr(err)
-					break
-				}
-			}
-		}
-	}
+	return nil
 }

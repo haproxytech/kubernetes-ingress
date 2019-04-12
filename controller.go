@@ -293,6 +293,26 @@ func (c *HAProxyController) handleService(index int, namespace *Namespace, ingre
 		log.Printf("%s, using %s \n", err, balanceAlg)
 	}
 
+	key := fmt.Sprintf("R%0006d", index)
+	old, ok := c.cfg.UseBackendRules[key]
+	if ok {
+		if old.Backend != backendName || old.Host != rule.Host || old.Path != path.Path {
+			c.cfg.UseBackendRules[key] = BackendSwitchingRule{
+				Host:    rule.Host,
+				Path:    path.Path,
+				Backend: backendName,
+			}
+			c.cfg.UseBackendRulesStatus = MODIFIED
+		}
+	} else {
+		c.cfg.UseBackendRules[key] = BackendSwitchingRule{
+			Host:    rule.Host,
+			Path:    path.Path,
+			Backend: backendName,
+		}
+		c.cfg.UseBackendRulesStatus = MODIFIED
+	}
+
 	switch service.Status {
 	case ADDED:
 		if numberOfTimesBackendUsed := backendsUsed[backendName]; numberOfTimesBackendUsed < 2 {
@@ -322,12 +342,9 @@ func (c *HAProxyController) handleService(index int, namespace *Namespace, ingre
 			log.Println("DeleteBackend", err)
 			return "", nil, nil, err
 		}
+		delete(c.cfg.UseBackendRules, fmt.Sprintf("R%0006d", index))
+		c.cfg.UseBackendRulesStatus = MODIFIED
 		return "", nil, service, nil
-	}
-
-	switch path.Status {
-	case ADDED, MODIFIED:
-		c.addBackendSwitchingRule(rule.Host, path.Path, backendName)
 	}
 
 	if annBalanceAlg.Status != "" || annForwardedFor.Status != "" {

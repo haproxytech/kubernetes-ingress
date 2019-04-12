@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"sort"
 	"strconv"
@@ -111,7 +112,8 @@ func (c *HAProxyController) updateHAProxy(reloadRequested bool) error {
 					if path.Status != DELETED {
 						indexedPaths[path.PathIndex] = path
 					} else {
-						c.removeBackendSwitchingRule(rule.Host, path.Path)
+						delete(c.cfg.UseBackendRules, fmt.Sprintf("R%0006d", pathIndex))
+						c.cfg.UseBackendRulesStatus = MODIFIED
 						log.Println("SKIPPED", path)
 					}
 				}
@@ -138,6 +140,8 @@ func (c *HAProxyController) updateHAProxy(reloadRequested bool) error {
 	err = c.requestsTCPRefresh(transaction)
 	LogErr(err)
 	err = c.RequestsHTTPRefresh(transaction)
+	LogErr(err)
+	err = c.useBackendRuleRefresh()
 	LogErr(err)
 	_, err = nativeAPI.Configuration.CommitTransaction(transaction.ID)
 	if err != nil {
