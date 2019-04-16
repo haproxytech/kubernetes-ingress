@@ -9,19 +9,19 @@ import (
 
 var ratelimit_ID = int64(0)
 var ratelimit_acl1 = models.ACL{
-	ID:        &ratelimit_ID,
+	ID:        ptrInt64(0),
 	ACLName:   "ratelimit_is_abuse",
 	Criterion: "src_http_req_rate(RateLimit)",
 	Value:     "ge 10",
 }
 var ratelimit_acl2 = models.ACL{
-	ID:        &ratelimit_ID,
+	ID:        ptrInt64(0),
 	ACLName:   "ratelimit_inc_cnt_abuse",
 	Criterion: "src_inc_gpc0(RateLimit)",
 	Value:     "gt 0",
 }
 var ratelimit_acl3 = models.ACL{
-	ID:        &ratelimit_ID,
+	ID:        ptrInt64(0),
 	ACLName:   "ratelimit_cnt_abuse",
 	Criterion: "src_get_gpc0(RateLimit)",
 	Value:     "gt 0",

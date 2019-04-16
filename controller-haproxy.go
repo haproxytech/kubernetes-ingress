@@ -104,7 +104,6 @@ func (c *HAProxyController) updateHAProxy(reloadRequested bool) error {
 				index++
 			}
 			sort.Strings(sortedList)
-			log.Println(sortedList)
 			for _, ruleName := range sortedList {
 				rule := ingress.Rules[ruleName]
 				indexedPaths := make([]*IngressPath, len(rule.Paths))
@@ -122,8 +121,6 @@ func (c *HAProxyController) updateHAProxy(reloadRequested bool) error {
 					if path == nil {
 						continue
 					}
-					log.Println(i, path)
-					log.Println(*path)
 					err := c.handlePath(pathIndex, namespace, ingress, rule, path, transaction, backendsUsed)
 					LogErr(err)
 					pathIndex++

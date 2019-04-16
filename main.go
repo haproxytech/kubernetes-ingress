@@ -36,6 +36,7 @@ func main() {
 	log.Printf("HAProxy Ingress Controller %s %s%s\n\n", GitTag, GitCommit, GitDirty)
 	log.Printf("Build from: %s\n", GitRepo)
 	log.Printf("Build date: %s\n\n", BuildTime)
+	log.Printf("ConfigMap: %s/%s", osArgs.ConfigMap.Namespace, osArgs.ConfigMap.Name)
 	//TODO currently using default log, switch to something more convenient
 	log.SetFlags(LogType)
 	LogErr(err)
