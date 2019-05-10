@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -37,7 +38,7 @@ func (c *HAProxyController) writeCert(filename string, key, crt []byte) error {
 	return nil
 }
 
-func (c *HAProxyController) handleHTTPS(namespace *Namespace, maxProcsStatus, numThreadsStat *StringW, transaction *models.Transaction) (reloadRequested bool, usingHTTPS bool, err error) {
+func (c *HAProxyController) handleHTTPS(maxProcsStatus, numThreadsStat *StringW, transaction *models.Transaction) (reloadRequested bool, usingHTTPS bool, err error) {
 	usingHTTPS = false
 	nativeAPI := c.NativeAPI
 	reloadRequested = false
@@ -45,7 +46,12 @@ func (c *HAProxyController) handleHTTPS(namespace *Namespace, maxProcsStatus, nu
 		err := c.removeHTTPSListeners(transaction)
 		return reloadRequested, usingHTTPS, err
 	}
-	secretName, errSecret := GetValueFromAnnotations("ssl-certificate", c.cfg.ConfigMap.Annotations)
+	secretAnn, errSecret := GetValueFromAnnotations("ssl-certificate", c.cfg.ConfigMap.Annotations)
+	secretData := strings.Split(secretAnn.Value, "/")
+	if len(secretData) != 2 {
+		return reloadRequested, usingHTTPS, errors.New("invalid secret data")
+	}
+
 	minProc := 1
 	maxProcs, _ := strconv.Atoi(maxProcsStatus.Value) // always number
 	numThreads, _ := strconv.Atoi(numThreadsStat.Value)
@@ -54,15 +60,15 @@ func (c *HAProxyController) handleHTTPS(namespace *Namespace, maxProcsStatus, nu
 			minProc = 0
 		}
 	}
+	namespace, ok := c.cfg.Namespace[secretData[0]]
+	if !ok {
+		return reloadRequested, usingHTTPS, errors.New("invalid namespace " + secretData[0])
+	}
 
-	if errSecret == nil && (secretName.Status != "" || maxProcsStatus.Status != "") {
-		if err != nil {
-			log.Println("no ssl-certificate defined, using default secret:", c.osArgs.DefaultCertificate.Name)
-			secretName = &StringW{Value: c.osArgs.DefaultCertificate.Name}
-		}
-		secret, ok := namespace.Secret[secretName.Value]
+	if errSecret == nil && (secretAnn.Status != "" || maxProcsStatus.Status != "") {
+		secret, ok := namespace.Secret[secretData[1]]
 		if !ok {
-			log.Println("secret not found", secretName.Value)
+			log.Println("secret not found", secretData[1])
 			err := c.removeHTTPSListeners(transaction)
 			return reloadRequested, usingHTTPS, err
 		}
