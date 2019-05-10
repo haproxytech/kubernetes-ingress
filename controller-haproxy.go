@@ -51,48 +51,50 @@ func (c *HAProxyController) updateHAProxy(reloadRequested bool) error {
 	LogErr(err)
 	reloadRequested = reloadRequested || reload
 	pathIndex := 0
+
+	var usingHTTPS bool
+	reload, usingHTTPS, err = c.handleHTTPS(maxProcs, maxThreads, transaction)
+	if err != nil {
+		return err
+	}
+	err = c.handleRateLimiting(transaction, usingHTTPS)
+	if err != nil {
+		return err
+	}
+	numProcs, _ := strconv.Atoi(maxProcs.Value)
+	numThreads, _ := strconv.Atoi(maxThreads.Value)
+	port := int64(80)
+	listener := &models.Bind{
+		Name:    "http_1",
+		Address: "0.0.0.0",
+		Port:    &port,
+		Process: "1/1",
+	}
+	if !usingHTTPS {
+		if numProcs > 1 {
+			listener.Process = "all"
+		}
+		if numThreads > 1 {
+			listener.Process = "all"
+		}
+	}
+	if listener.Process != c.cfg.HTTPBindProcess {
+		if err = nativeAPI.Configuration.EditBind(listener.Name, FrontendHTTP, listener, transaction.ID, 0); err != nil {
+			return err
+		}
+		c.cfg.HTTPBindProcess = listener.Process
+	}
+	reloadRequested = reloadRequested || reload
+	reload, err = c.handleHTTPRedirect(usingHTTPS, transaction)
+	if err != nil {
+		return err
+	}
+	reloadRequested = reloadRequested || reload
+
 	for _, namespace := range c.cfg.Namespace {
 		if !namespace.Relevant {
 			continue
 		}
-		var usingHTTPS bool
-		reload, usingHTTPS, err = c.handleHTTPS(namespace, maxProcs, maxThreads, transaction)
-		if err != nil {
-			return err
-		}
-		err = c.handleRateLimiting(transaction, usingHTTPS)
-		if err != nil {
-			return err
-		}
-		numProcs, _ := strconv.Atoi(maxProcs.Value)
-		numThreads, _ := strconv.Atoi(maxThreads.Value)
-		port := int64(80)
-		listener := &models.Bind{
-			Name:    "http_1",
-			Address: "0.0.0.0",
-			Port:    &port,
-			Process: "1/1",
-		}
-		if !usingHTTPS {
-			if numProcs > 1 {
-				listener.Process = "all"
-			}
-			if numThreads > 1 {
-				listener.Process = "all"
-			}
-		}
-		if listener.Process != c.cfg.HTTPBindProcess {
-			if err = nativeAPI.Configuration.EditBind(listener.Name, FrontendHTTP, listener, transaction.ID, 0); err != nil {
-				return err
-			}
-			c.cfg.HTTPBindProcess = listener.Process
-		}
-		reloadRequested = reloadRequested || reload
-		reload, err = c.handleHTTPRedirect(usingHTTPS, transaction)
-		if err != nil {
-			return err
-		}
-		reloadRequested = reloadRequested || reload
 		//TODO, do not just go through them, sort them to handle /web,/ maybe?
 		for _, ingress := range namespace.Ingresses {
 			//no need for switch/case for now
@@ -134,6 +136,7 @@ func (c *HAProxyController) updateHAProxy(reloadRequested bool) error {
 			}
 		}
 	}
+	LogErr(err)
 	err = c.requestsTCPRefresh(transaction)
 	LogErr(err)
 	err = c.RequestsHTTPRefresh(transaction)
