@@ -3,11 +3,19 @@ package main
 import (
 	"log"
 	"math/rand"
+	"os"
 	"runtime"
 	"strings"
 
 	"k8s.io/api/extensions/v1beta1"
 )
+
+func homeDir() string {
+	if h := os.Getenv("HOME"); h != "" {
+		return h
+	}
+	return os.Getenv("USERPROFILE") // windows
+}
 
 func LogErr(err error) {
 	if err == nil {

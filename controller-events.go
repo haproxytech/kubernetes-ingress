@@ -10,8 +10,9 @@ import (
 func (c *HAProxyController) eventNamespace(ns *Namespace, data *Namespace) (updateRequired, needsReload bool) {
 	updateRequired = false
 	switch data.Status {
-	case ADDED:
+	case ADDED:		
 		_ = c.cfg.GetNamespace(data.Name)
+
 	case DELETED:
 		_, ok := c.cfg.Namespace[data.Name]
 		if ok {

@@ -11,8 +11,15 @@ const (
 )
 
 //Configuration represents k8s state
+
+type NamespacesWatch struct {
+	Whitelist map[string]struct{}
+	Blacklist map[string]struct{}
+}
+
 type Configuration struct {
 	Namespace             map[string]*Namespace
+	NamespacesAccess      NamespacesWatch
 	ConfigMap             *ConfigMap
 	NativeAPI             *clientnative.HAProxyClient
 	HTTPSListeners        *MapIntW
@@ -27,8 +34,33 @@ type Configuration struct {
 	UseBackendRulesStatus Status
 }
 
+func (c *Configuration) IsRelevantNamespace(namespace string) bool {
+	if namespace == "" {
+		return false
+	}
+	if len(c.NamespacesAccess.Whitelist) > 0 {
+		_, ok := c.NamespacesAccess.Whitelist[namespace]
+		return ok
+	}
+	_, ok := c.NamespacesAccess.Blacklist[namespace]
+	return !ok
+}
+
 //Init itialize configuration
-func (c *Configuration) Init(api *clientnative.HAProxyClient) {
+func (c *Configuration) Init(osArgs OSArgs, api *clientnative.HAProxyClient) {
+
+	c.NamespacesAccess = NamespacesWatch{
+		Whitelist: map[string]struct{}{},
+		Blacklist: map[string]struct{}{
+			"kube-system": {},
+		},
+	}
+	for _, namespace := range osArgs.NamespaceWhitelist {
+		c.NamespacesAccess.Whitelist[namespace] = struct{}{}
+	}
+	for _, namespace := range osArgs.NamespaceBlacklist {
+		c.NamespacesAccess.Blacklist[namespace] = struct{}{}
+	}
 	c.Namespace = make(map[string]*Namespace)
 	c.HTTPSListeners = &MapIntW{}
 	c.HTTPBindProcess = "1/1"
@@ -56,15 +88,14 @@ func (c *Configuration) GetNamespace(name string) *Namespace {
 		return namespace
 	}
 	newNamespace := c.NewNamespace(name)
-	c.Namespace[name] = newNamespace
 	return newNamespace
 }
 
 //NewNamespace returns new initialized Namespace
 func (c *Configuration) NewNamespace(name string) *Namespace {
-	namespace := &Namespace{
+	newNamespace := &Namespace{
 		Name:     name,
-		Relevant: name == "default",
+		Relevant: c.IsRelevantNamespace(name),
 		//Annotations
 		Pods:      make(map[string]*Pod),
 		PodNames:  make(map[string]bool),
@@ -73,7 +104,8 @@ func (c *Configuration) NewNamespace(name string) *Namespace {
 		Secret:    make(map[string]*Secret),
 		Status:    ADDED,
 	}
-	return namespace
+	c.Namespace[name] = newNamespace
+	return newNamespace
 }
 
 //Clean cleans all the statuses of various data that was changed

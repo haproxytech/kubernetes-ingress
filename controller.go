@@ -34,6 +34,7 @@ func (c *HAProxyController) Start(osArgs OSArgs) {
 
 	var k8s *K8s
 	var err error
+
 	if osArgs.OutOfCluster {
 		k8s, err = GetRemoteKubernetesClient(osArgs)
 	} else {
@@ -54,20 +55,22 @@ func (c *HAProxyController) Start(osArgs OSArgs) {
 //HAProxyInitialize runs HAProxy for the first time so native client can have access to it
 func (c *HAProxyController) HAProxyInitialize() {
 	//cmd := exec.Command("haproxy", "-f", HAProxyCFG)
-	err := os.MkdirAll(HAProxyCertDir, 0644)
+	err := os.MkdirAll(HAProxyCertDir, 0755)
 	if err != nil {
 		log.Panic(err.Error())
 	}
-	err = os.MkdirAll(HAProxyStateDir, 0644)
+	err = os.MkdirAll(HAProxyStateDir, 0755)
 	if err != nil {
 		log.Panic(err.Error())
 	}
 
 	log.Println("Starting HAProxy with", HAProxyCFG)
-	cmd := exec.Command("service", "haproxy", "start")
-	err = cmd.Run()
-	if err != nil {
-		log.Println(err)
+	if !c.osArgs.Test {
+		cmd := exec.Command("service", "haproxy", "start")
+		err = cmd.Run()
+		if err != nil {
+			log.Println(err)
+		}
 	}
 
 	c.NativeParser = parser.Parser{}
@@ -133,8 +136,13 @@ func (c *HAProxyController) HAProxyReload() error {
 	err = c.saveServerState()
 	LogErr(err)
 	//cmd := exec.Command("haproxy", "-f", HAProxyCFG)
-	cmd := exec.Command("service", "haproxy", "reload")
-	err = cmd.Run()
+	if !c.osArgs.Test {
+		cmd := exec.Command("service", "haproxy", "reload")
+		err = cmd.Run()
+	} else {
+		err = nil
+		log.Println("HAProxy would be reloaded now")
+	}
 	return err
 }
 
@@ -293,10 +301,19 @@ func (c *HAProxyController) handleService(index int, namespace *Namespace, ingre
 		log.Printf("%s, using %s \n", err, balanceAlg)
 	}
 
-	key := fmt.Sprintf("R%0006d", index)
-	old, ok := c.cfg.UseBackendRules[key]
-	if ok {
-		if old.Backend != backendName || old.Host != rule.Host || old.Path != path.Path {
+	if rule != nil {
+		key := fmt.Sprintf("R%0006d", index)
+		old, ok := c.cfg.UseBackendRules[key]
+		if ok {
+			if old.Backend != backendName || old.Host != rule.Host || old.Path != path.Path {
+				c.cfg.UseBackendRules[key] = BackendSwitchingRule{
+					Host:    rule.Host,
+					Path:    path.Path,
+					Backend: backendName,
+				}
+				c.cfg.UseBackendRulesStatus = MODIFIED
+			}
+		} else {
 			c.cfg.UseBackendRules[key] = BackendSwitchingRule{
 				Host:    rule.Host,
 				Path:    path.Path,
@@ -305,12 +322,20 @@ func (c *HAProxyController) handleService(index int, namespace *Namespace, ingre
 			c.cfg.UseBackendRulesStatus = MODIFIED
 		}
 	} else {
-		c.cfg.UseBackendRules[key] = BackendSwitchingRule{
-			Host:    rule.Host,
-			Path:    path.Path,
-			Backend: backendName,
+		if service.Status != EMPTY {
+			httpData, err := nativeAPI.Configuration.GetFrontend(FrontendHTTP, transaction.ID)
+			LogErr(err)
+			http := httpData.Data
+			http.DefaultBackend = backendName
+			err = nativeAPI.Configuration.EditFrontend(FrontendHTTP, http, transaction.ID, 0)
+			LogErr(err)
+			httpsData, err := nativeAPI.Configuration.GetFrontend(FrontendHTTPS, transaction.ID)
+			LogErr(err)
+			https := httpsData.Data
+			https.DefaultBackend = backendName
+			err = nativeAPI.Configuration.EditFrontend(FrontendHTTPS, https, transaction.ID, 0)
+			LogErr(err)
 		}
-		c.cfg.UseBackendRulesStatus = MODIFIED
 	}
 
 	switch service.Status {

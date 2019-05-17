@@ -10,14 +10,18 @@ import (
 
 // fixed paths to haproxy items
 const (
+	FrontendHTTP   = "http"
+	FrontendHTTPS  = "https"
+	TestFolderPath = "/tmp/haproxy-ingress/"
+	LogTypeShort   = log.LstdFlags
+	LogType        = log.LstdFlags | log.Lshortfile
+)
+
+var (
 	HAProxyCFG       = "/etc/haproxy/haproxy.cfg"
 	HAProxyGlobalCFG = "/etc/haproxy/global.cfg"
 	HAProxyCertDir   = "/etc/haproxy/certs/"
 	HAProxyStateDir  = "/var/state/haproxy/"
-	FrontendHTTP     = "http"
-	FrontendHTTPS    = "https"
-	LogTypeShort     = log.LstdFlags
-	LogType          = log.LstdFlags | log.Lshortfile
 )
 
 func main() {
@@ -40,6 +44,19 @@ func main() {
 	//TODO currently using default log, switch to something more convenient
 	log.SetFlags(LogType)
 	LogErr(err)
+
+	defaultAnnotationValues["default-backend-service"] = &StringW{
+		Value:  fmt.Sprintf("%s/%s", osArgs.DefaultBackendService.Namespace, osArgs.DefaultBackendService.Name),
+		Status: ADDED,
+	}
+	defaultAnnotationValues["ssl-certificate"] = &StringW{
+		Value:  fmt.Sprintf("%s/%s", osArgs.DefaultCertificate.Namespace, osArgs.DefaultCertificate.Name),
+		Status: ADDED,
+	}
+
+	if osArgs.Test {
+		setupTestEnv()
+	}
 
 	hAProxyController := HAProxyController{}
 	hAProxyController.Start(osArgs)

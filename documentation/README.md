@@ -139,7 +139,7 @@ Options for starting controller can be found in [controller.md](controller.md)
 - define through pod arguments
   - `--default-ssl-certificate`=\<namespace\>/\<secret\>
 - Annotation `ssl-certificate` in config map
-  - \<secret\>
+  - \<namespace\>/\<secret\>
 - single certificate secret can contain two items:
   - tls.key
   - tls.crt

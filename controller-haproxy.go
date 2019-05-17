@@ -1,10 +1,12 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"sort"
 	"strconv"
+	"strings"
 
 	"github.com/haproxytech/models"
 )
@@ -91,6 +93,7 @@ func (c *HAProxyController) updateHAProxy(reloadRequested bool) error {
 	}
 	reloadRequested = reloadRequested || reload
 
+	backendsUsed := map[string]int{}
 	for _, namespace := range c.cfg.Namespace {
 		if !namespace.Relevant {
 			continue
@@ -98,7 +101,6 @@ func (c *HAProxyController) updateHAProxy(reloadRequested bool) error {
 		//TODO, do not just go through them, sort them to handle /web,/ maybe?
 		for _, ingress := range namespace.Ingresses {
 			//no need for switch/case for now
-			backendsUsed := map[string]int{}
 			sortedList := make([]string, len(ingress.Rules))
 			index := 0
 			for name, _ := range ingress.Rules {
@@ -128,14 +130,17 @@ func (c *HAProxyController) updateHAProxy(reloadRequested bool) error {
 					pathIndex++
 				}
 			}
-			for backendName, numberOfTimesBackendUsed := range backendsUsed {
-				if numberOfTimesBackendUsed < 1 {
-					err := nativeAPI.Configuration.DeleteBackend(backendName, transaction.ID, 0)
-					LogErr(err)
-				}
-			}
 		}
 	}
+	//handle default service
+	c.handleDefaultService(transaction, backendsUsed)
+	for backendName, numberOfTimesBackendUsed := range backendsUsed {
+		if numberOfTimesBackendUsed < 1 {
+			err := nativeAPI.Configuration.DeleteBackend(backendName, transaction.ID, 0)
+			LogErr(err)
+		}
+	}
+
 	LogErr(err)
 	err = c.requestsTCPRefresh(transaction)
 	LogErr(err)
@@ -159,4 +164,27 @@ func (c *HAProxyController) updateHAProxy(reloadRequested bool) error {
 		log.Println("HAProxy updated without reload")
 	}
 	return nil
+}
+
+func (c *HAProxyController) handleDefaultService(transaction *models.Transaction, backendsUsed map[string]int) error {
+	dsvcData, _ := GetValueFromAnnotations("default-backend-service")
+	dsvc := strings.Split(dsvcData.Value, "/")
+
+	if len(dsvc) != 2 {
+		return errors.New("default service invalid data")
+	}
+	namespace, ok := c.cfg.Namespace[dsvc[0]]
+	if !ok {
+		return errors.New("default service invalid namespace " + dsvc[0])
+	}
+	ingress := &Ingress{
+		Namespace:   namespace.Name,
+		Annotations: MapStringW{},
+		Rules:       map[string]*IngressRule{},
+	}
+	path := &IngressPath{
+		ServiceName: dsvc[1],
+		PathIndex:   -1,
+	}
+	return c.handlePath(0, namespace, ingress, nil, path, transaction, backendsUsed)
 }

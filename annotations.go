@@ -109,6 +109,7 @@ var defaultAnnotationValues = MapStringW{
 	"ingress.class": &StringW{Value: ""},
 
 	"check":                          &StringW{Value: "enabled"},
+	"default-service":                &StringW{Value: ""},
 	"forwarded-for":                  &StringW{Value: "enabled"},
 	"load-balance":                   &StringW{Value: "roundrobin"},
 	"maxconn":                        &StringW{Value: "2000"},

@@ -2,7 +2,6 @@ package main
 
 import (
 	"log"
-	"os"
 	"path/filepath"
 
 	corev1 "k8s.io/api/core/v1"
@@ -58,13 +57,6 @@ func GetRemoteKubernetesClient(osArgs OSArgs) (*K8s, error) {
 		panic(err.Error())
 	}
 	return &K8s{API: clientset}, nil
-}
-
-func homeDir() string {
-	if h := os.Getenv("HOME"); h != "" {
-		return h
-	}
-	return os.Getenv("USERPROFILE") // windows
 }
 
 //GetAll fetches all k8s resources
@@ -134,8 +126,7 @@ func (k *K8s) EventsNamespaces(channel chan *Namespace, stop chan struct{}) {
 					status = DELETED
 				}
 				item := &Namespace{
-					Name:     data.GetName(),
-					Relevant: data.GetName() == "default",
+					Name: data.GetName(),
 					//Annotations
 					Pods:      make(map[string]*Pod),
 					PodNames:  make(map[string]bool),
@@ -153,8 +144,7 @@ func (k *K8s) EventsNamespaces(channel chan *Namespace, stop chan struct{}) {
 				data := obj.(*corev1.Namespace)
 				var status Status = DELETED
 				item := &Namespace{
-					Name:     data.GetName(),
-					Relevant: data.GetName() == "default",
+					Name: data.GetName(),
 					//Annotations
 					Pods:      make(map[string]*Pod),
 					PodNames:  make(map[string]bool),
@@ -173,14 +163,12 @@ func (k *K8s) EventsNamespaces(channel chan *Namespace, stop chan struct{}) {
 				data2 := newObj.(*corev1.Namespace)
 				var status Status = MODIFIED
 				item1 := &Namespace{
-					Name:     data1.GetName(),
-					Relevant: data1.GetName() == "default",
-					Status:   status,
+					Name:   data1.GetName(),
+					Status: status,
 				}
 				item2 := &Namespace{
-					Name:     data2.GetName(),
-					Relevant: data2.GetName() == "default",
-					Status:   status,
+					Name:   data2.GetName(),
+					Status: status,
 				}
 				if item1.Name == item2.Name {
 					return
