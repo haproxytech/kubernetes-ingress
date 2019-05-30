@@ -38,7 +38,7 @@ Options for starting controller can be found in [controller.md](controller.md)
 | [timeout-tunnel](#timeouts) | [time](#time) | "1h" |  |:large_blue_circle:|:white_circle:|:white_circle:|
 | [timeout-http-keep-alive](#timeouts) | [time](#time) | "1m" |  |:large_blue_circle:|:white_circle:|:white_circle:|
 | [whitelist](#whitelist) | [IPs or CIDRs](#whitelist) | "" |  |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:|
-| [whitelist-with-rate-limit] | "ON"/"OFF" | "OFF" |  |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:|
+| [whitelist-with-rate-limit](#whitelist) | "ON"/"OFF" | "OFF" |  |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:|
 
 > :information_source: Annotations have hierarchy: `default` <- `Configmap` <- `Ingress` <- `Service`
 >

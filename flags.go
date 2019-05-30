@@ -35,8 +35,8 @@ type OSArgs struct {
 	DefaultCertificate    NamespaceValue `long:"default-ssl-certificate" description:"secret name of the certificate" default:"default/tls-secret"`
 	ConfigMap             NamespaceValue `long:"configmap" description:"configmap designated for HAProxy" default:"default/haproxy-configmap"`
 	KubeConfig            string         `long:"kubeconfig" description:"combined with -e. location of kube config file" default:""`
-	NamespaceWhitelist    []string       `long:"namespace-whitelist" description:"combined with -e. location of kube config file"`
-	NamespaceBlacklist    []string       `long:"namespace-blacklist" description:"combined with -e. location of kube config file"`
-	OutOfCluster          bool           `short:"e" description:"use as out of cluster controller "`
+	NamespaceWhitelist    []string       `long:"namespace-whitelist" description:"whitelisted namespaces"`
+	NamespaceBlacklist    []string       `long:"namespace-blacklist" description:"blacklisted namespaces"`
+	OutOfCluster          bool           `short:"e" description:"use as out of cluster controller NOTE: experimantal"`
 	Test                  bool           `short:"t" description:"simulate running HAProxy"`
 }
