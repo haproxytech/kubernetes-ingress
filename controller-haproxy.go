@@ -38,9 +38,9 @@ func (c *HAProxyController) updateHAProxy(reloadRequested bool) error {
 				maxconn, _ = strconv.ParseInt(maxconnAnn.Value, 10, 64)
 			}
 			if maxconnAnn.Status != "" {
-				if frontend, err := nativeAPI.Configuration.GetFrontend("http", transaction.ID); err == nil {
-					frontend.Data.Maxconn = &maxconn
-					err := nativeAPI.Configuration.EditFrontend("http", frontend.Data, transaction.ID, 0)
+				if _, frontend, err := nativeAPI.Configuration.GetFrontend("http", transaction.ID); err == nil {
+					frontend.Maxconn = &maxconn
+					err := nativeAPI.Configuration.EditFrontend("http", frontend, transaction.ID, 0)
 					LogErr(err)
 				} else {
 					return err

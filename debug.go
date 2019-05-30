@@ -26,7 +26,7 @@ func setupTestEnv() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println(dir)
+	log.Println(dir)
 	copyFile(path.Join(dir, "fs/etc/haproxy/haproxy.cfg"), HAProxyCFG)
 	copyFile(path.Join(dir, "fs/etc/haproxy/global.cfg"), HAProxyGlobalCFG)
 	log.Println(string(out))

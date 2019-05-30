@@ -80,7 +80,7 @@ func (c *HAProxyController) HAProxyInitialize() {
 	}
 
 	runtimeClient := runtime.Client{}
-	err = runtimeClient.Init([]string{"/var/run/haproxy-runtime-api.sock"})
+	err = runtimeClient.Init([]string{"/var/run/haproxy-runtime-api.sock"}, "", 0)
 	if err != nil {
 		log.Panicln(err)
 	}
@@ -90,7 +90,6 @@ func (c *HAProxyController) HAProxyInitialize() {
 		ConfigurationFile: HAProxyCFG,
 		//GlobalConfigurationFile: HAProxyGlobalCFG,
 		Haproxy: "haproxy",
-		//LBCTLPath:               "/usr/sbin/lbctl",
 	})
 	if err != nil {
 		log.Panicln(err)
@@ -323,15 +322,13 @@ func (c *HAProxyController) handleService(index int, namespace *Namespace, ingre
 		}
 	} else {
 		if service.Status != EMPTY {
-			httpData, err := nativeAPI.Configuration.GetFrontend(FrontendHTTP, transaction.ID)
+			_, http, err := nativeAPI.Configuration.GetFrontend(FrontendHTTP, transaction.ID)
 			LogErr(err)
-			http := httpData.Data
 			http.DefaultBackend = backendName
 			err = nativeAPI.Configuration.EditFrontend(FrontendHTTP, http, transaction.ID, 0)
 			LogErr(err)
-			httpsData, err := nativeAPI.Configuration.GetFrontend(FrontendHTTPS, transaction.ID)
+			_, https, err := nativeAPI.Configuration.GetFrontend(FrontendHTTPS, transaction.ID)
 			LogErr(err)
-			https := httpsData.Data
 			https.DefaultBackend = backendName
 			err = nativeAPI.Configuration.EditFrontend(FrontendHTTPS, https, transaction.ID, 0)
 			LogErr(err)

@@ -9,11 +9,10 @@ func (c *HAProxyController) addACL(acl models.ACL, frontends ...string) {
 		frontends = []string{"http", "https"}
 	}
 	for _, frontend := range frontends {
-		aclsModel, err := c.NativeAPI.Configuration.GetACLs("frontend", frontend, c.ActiveTransaction)
+		_, acls, err := c.NativeAPI.Configuration.GetACLs("frontend", frontend, c.ActiveTransaction)
 		found := false
 		if err == nil {
-			data := aclsModel.Data
-			for _, d := range data {
+			for _, d := range acls {
 				if acl.ACLName == d.ACLName {
 					found = true
 					break
@@ -30,11 +29,10 @@ func (c *HAProxyController) addACL(acl models.ACL, frontends ...string) {
 func (c *HAProxyController) removeACL(acl models.ACL, frontends ...string) {
 	nativeAPI := c.NativeAPI
 	for _, frontend := range frontends {
-		aclsModel, err := nativeAPI.Configuration.GetACLs("frontend", frontend, c.ActiveTransaction)
+		_, acls, err := nativeAPI.Configuration.GetACLs("frontend", frontend, c.ActiveTransaction)
 		if err == nil {
 			indexShift := int64(0)
-			data := aclsModel.Data
-			for _, d := range data {
+			for _, d := range acls {
 				if acl.ACLName == d.ACLName {
 					err = nativeAPI.Configuration.DeleteACL(*d.ID-indexShift, "frontend", frontend, c.ActiveTransaction, 0)
 					LogErr(err)
