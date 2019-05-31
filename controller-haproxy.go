@@ -38,11 +38,8 @@ func (c *HAProxyController) updateHAProxy(reloadRequested bool) error {
 				maxconn, _ = strconv.ParseInt(maxconnAnn.Value, 10, 64)
 			}
 			if maxconnAnn.Status != "" {
-				if _, frontend, err := nativeAPI.Configuration.GetFrontend("http", transaction.ID); err == nil {
-					frontend.Maxconn = &maxconn
-					err := nativeAPI.Configuration.EditFrontend("http", frontend, transaction.ID, 0)
-					LogErr(err)
-				} else {
+				err := c.handleMaxconn(transaction, maxconn, FrontendHTTP, FrontendHTTPS)
+				if err != nil {
 					return err
 				}
 			}
@@ -162,6 +159,19 @@ func (c *HAProxyController) updateHAProxy(reloadRequested bool) error {
 		}
 	} else {
 		log.Println("HAProxy updated without reload")
+	}
+	return nil
+}
+
+func (c *HAProxyController) handleMaxconn(transaction *models.Transaction, maxconn int64, frontends ...string) error {
+	for _, frontendName := range frontends {
+		if _, frontend, err := c.NativeAPI.Configuration.GetFrontend(frontendName, transaction.ID); err == nil {
+			frontend.Maxconn = &maxconn
+			err := c.NativeAPI.Configuration.EditFrontend(frontendName, frontend, transaction.ID, 0)
+			LogErr(err)
+		} else {
+			return err
+		}
 	}
 	return nil
 }
