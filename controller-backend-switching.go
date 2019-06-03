@@ -36,9 +36,14 @@ func (c *HAProxyController) useBackendRuleRefresh() (err error) {
 		for _, name := range sortedList {
 			rule := c.cfg.UseBackendRules[name]
 			id := int64(0)
+			var host string
+			if rule.Host != "" {
+				host = fmt.Sprintf("{ req.hdr(host) -i %s } ", rule.Host)
+			}
+			condTest := fmt.Sprintf("%s{ path_beg %s }", host, rule.Path)
 			backendSwitchingRule := &models.BackendSwitchingRule{
 				Cond:     "if",
-				CondTest: fmt.Sprintf("{ req.hdr(host) -i %s } { path_beg %s }", rule.Host, rule.Path),
+				CondTest: condTest,
 				Name:     rule.Backend,
 				ID:       &id,
 			}
