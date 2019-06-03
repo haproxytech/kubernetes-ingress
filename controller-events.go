@@ -4,13 +4,13 @@ import (
 	"fmt"
 	"log"
 	"strconv"
-	"strings"
+	"time"
 )
 
 func (c *HAProxyController) eventNamespace(ns *Namespace, data *Namespace) (updateRequired, needsReload bool) {
 	updateRequired = false
 	switch data.Status {
-	case ADDED:		
+	case ADDED:
 		_ = c.cfg.GetNamespace(data.Name)
 
 	case DELETED:
@@ -180,6 +180,28 @@ func (c *HAProxyController) eventService(ns *Namespace, data *Service) (updateRe
 	return updateRequired, updateRequired
 }
 
+func (c *HAProxyController) reevaluatePod(data *Pod) {
+	c.serverlessPodsLock.Lock()
+	timer := c.serverlessPods[data.Name]
+	c.serverlessPodsLock.Unlock()
+	if timer == 0 {
+		timer = 1
+	} else if timer < 1000 {
+		timer = 2 * timer
+	} else {
+		c.serverlessPodsLock.Lock()
+		defer c.serverlessPodsLock.Unlock()
+		delete(c.serverlessPods, data.Name)
+		return
+	}
+	time.Sleep(time.Duration(timer) * time.Second)
+	c.serverlessPodsLock.Lock()
+	defer c.serverlessPodsLock.Unlock()
+	c.serverlessPods[data.Name] = timer
+	//log.Println(fmt.Sprintf("POD %s reevaluated after %d seconds", data.Name, timer))
+	c.eventChan <- SyncDataEvent{SyncType: POD, Namespace: data.Namespace, Data: data}
+}
+
 func (c *HAProxyController) eventPod(ns *Namespace, data *Pod) (updateRequired, needsReload bool) {
 	updateRequired = false
 	needsReload = false
@@ -276,11 +298,13 @@ func (c *HAProxyController) eventPod(ns *Namespace, data *Pod) (updateRequired, 
 					break
 				}
 			}
+			// in case we have delayed pod add
+			c.serverlessPodsLock.Lock()
+			defer c.serverlessPodsLock.Unlock()
+			delete(c.serverlessPods, data.Name)
 		} else {
-			//hm, no service?
-			if strings.HasPrefix(data.Name, "web-") {
-				log.Println("NO SERVICE", data.Name, data.HAProxyName, data.Status)
-			}
+			//no service or service data not yet available
+			go c.reevaluatePod(data)
 			createNew = false
 		}
 		if createNew {

@@ -3,16 +3,13 @@ package main
 import (
 	"log"
 	"time"
-
-	"k8s.io/apimachinery/pkg/watch"
 )
 
 func (c *HAProxyController) monitorChanges() {
 
 	configMapReceivedAndProcessed := make(chan bool)
 	syncEveryNSeconds := 5
-	eventChan := make(chan SyncDataEvent, watch.DefaultChanSize*6)
-	go c.SyncData(eventChan, configMapReceivedAndProcessed)
+	go c.SyncData(c.eventChan, configMapReceivedAndProcessed)
 
 	stop := make(chan struct{})
 
@@ -43,13 +40,13 @@ func (c *HAProxyController) monitorChanges() {
 		select {
 		case _ = <-configMapReceivedAndProcessed:
 			for _, event := range eventsIngress {
-				eventChan <- event
+				c.eventChan <- event
 			}
 			for _, event := range eventsServices {
-				eventChan <- event
+				c.eventChan <- event
 			}
 			for _, event := range eventsPods {
-				eventChan <- event
+				c.eventChan <- event
 			}
 			eventsIngress = []SyncDataEvent{}
 			eventsServices = []SyncDataEvent{}
@@ -57,39 +54,39 @@ func (c *HAProxyController) monitorChanges() {
 			configMapOk = true
 			time.Sleep(1 * time.Millisecond)
 		case item := <-cfgChan:
-			eventChan <- SyncDataEvent{SyncType: CONFIGMAP, Namespace: item.Namespace, Data: item}
+			c.eventChan <- SyncDataEvent{SyncType: CONFIGMAP, Namespace: item.Namespace, Data: item}
 		case item := <-nsChan:
 			event := SyncDataEvent{SyncType: NAMESPACE, Namespace: item.Name, Data: item}
-			eventChan <- event
+			c.eventChan <- event
 		case item := <-podChan:
 			event := SyncDataEvent{SyncType: POD, Namespace: item.Namespace, Data: item}
 			if configMapOk {
-				eventChan <- event
+				c.eventChan <- event
 			} else {
 				eventsPods = append(eventsPods, event)
 			}
 		case item := <-svcChan:
 			event := SyncDataEvent{SyncType: SERVICE, Namespace: item.Namespace, Data: item}
 			if configMapOk {
-				eventChan <- event
+				c.eventChan <- event
 			} else {
 				eventsServices = append(eventsServices, event)
 			}
 		case item := <-ingChan:
 			event := SyncDataEvent{SyncType: INGRESS, Namespace: item.Namespace, Data: item}
 			if configMapOk {
-				eventChan <- event
+				c.eventChan <- event
 			} else {
 				eventsIngress = append(eventsIngress, event)
 			}
 		case item := <-secretChan:
 			event := SyncDataEvent{SyncType: SECRET, Namespace: item.Namespace, Data: item}
-			eventChan <- event
+			c.eventChan <- event
 		case <-time.After(time.Duration(syncEveryNSeconds) * time.Second):
 			//TODO syncEveryNSeconds sec is hardcoded, change that (annotation?)
 			//do sync of data every syncEveryNSeconds sec
 			if configMapOk && len(eventsIngress) == 0 && len(eventsServices) == 0 && len(eventsPods) == 0 {
-				eventChan <- SyncDataEvent{SyncType: COMMAND}
+				c.eventChan <- SyncDataEvent{SyncType: COMMAND}
 			}
 		}
 	}

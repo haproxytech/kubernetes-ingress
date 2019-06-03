@@ -7,22 +7,27 @@ import (
 	"os/exec"
 	"strconv"
 	"strings"
+	"sync"
 
 	clientnative "github.com/haproxytech/client-native"
 	"github.com/haproxytech/client-native/configuration"
 	"github.com/haproxytech/client-native/runtime"
 	"github.com/haproxytech/config-parser"
 	"github.com/haproxytech/models"
+	"k8s.io/apimachinery/pkg/watch"
 )
 
 // HAProxyController is ingress controller
 type HAProxyController struct {
-	k8s               *K8s
-	cfg               Configuration
-	osArgs            OSArgs
-	NativeAPI         *clientnative.HAProxyClient
-	NativeParser      parser.Parser
-	ActiveTransaction string
+	k8s                *K8s
+	cfg                Configuration
+	osArgs             OSArgs
+	NativeAPI          *clientnative.HAProxyClient
+	NativeParser       parser.Parser
+	ActiveTransaction  string
+	eventChan          chan SyncDataEvent
+	serverlessPods     map[string]int
+	serverlessPodsLock sync.Mutex
 }
 
 // Start initialize and run HAProxyController
@@ -49,6 +54,9 @@ func (c *HAProxyController) Start(osArgs OSArgs) {
 	k8sVersion, _ := x.ServerVersion()
 	log.Printf("Running on Kubernetes version: %s %s", k8sVersion.String(), k8sVersion.Platform)
 
+	c.serverlessPods = map[string]int{}
+	c.serverlessPodsLock = sync.Mutex{}
+	c.eventChan = make(chan SyncDataEvent, watch.DefaultChanSize*6)
 	go c.monitorChanges()
 }
 
