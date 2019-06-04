@@ -300,8 +300,8 @@ func (c *HAProxyController) handleService(index int, namespace *Namespace, ingre
 	case DELETED:
 		c.cfg.HTTPRequests[fmt.Sprintf("WHT-%0006d", index)] = []models.HTTPRequestRule{}
 	}
-	//TODO BackendBalance proper usage
-	balanceAlg := &models.BackendBalance{
+	//TODO Balance proper usage
+	balanceAlg := &models.Balance{
 		Algorithm: annBalanceAlg.Value,
 	}
 	if err != nil {
@@ -353,7 +353,7 @@ func (c *HAProxyController) handleService(index int, namespace *Namespace, ingre
 			}
 			if annForwardedFor.Value == "enabled" { //disabled with anything else is ok
 				forwardfor := "enabled"
-				backend.Forwardfor = &models.BackendForwardfor{
+				backend.Forwardfor = &models.Forwardfor{
 					Enabled: &forwardfor,
 				}
 			}

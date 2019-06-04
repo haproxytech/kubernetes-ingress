@@ -46,7 +46,7 @@ func (c *HAProxyController) handleDefaultTimeout(timeout string) bool {
 	return false
 }
 
-func (c *HAProxyController) handleBackendAnnotations(balanceAlg *models.BackendBalance, forwardedFor *StringW,
+func (c *HAProxyController) handleBackendAnnotations(balanceAlg *models.Balance, forwardedFor *StringW,
 	backendName string, transaction *models.Transaction) error {
 	backend := &models.Backend{
 		Balance: balanceAlg,
@@ -55,7 +55,7 @@ func (c *HAProxyController) handleBackendAnnotations(balanceAlg *models.BackendB
 	}
 	if forwardedFor.Value == "enabled" { //disabled with anything else is ok
 		forwardfor := "enabled"
-		backend.Forwardfor = &models.BackendForwardfor{
+		backend.Forwardfor = &models.Forwardfor{
 			Enabled: &forwardfor,
 		}
 	}
