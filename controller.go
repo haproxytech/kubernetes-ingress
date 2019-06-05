@@ -12,6 +12,7 @@ import (
 	clientnative "github.com/haproxytech/client-native"
 	"github.com/haproxytech/client-native/configuration"
 	"github.com/haproxytech/client-native/runtime"
+	"github.com/haproxytech/client-native/misc"
 	"github.com/haproxytech/config-parser"
 	"github.com/haproxytech/models"
 	"k8s.io/apimachinery/pkg/watch"
@@ -165,7 +166,8 @@ func (c *HAProxyController) handlePath(index int, namespace *Namespace, ingress 
 		return nil
 	}
 	annMaxconn, _ := GetValueFromAnnotations("pod-maxconn", service.Annotations)
-	annCheck, _ := GetValueFromAnnotations("check", service.Annotations, c.cfg.ConfigMap.Annotations)
+	annCheck, _ := GetValueFromAnnotations("check", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
+	annCheckInterval, errCheckInterval := GetValueFromAnnotations("check-interval", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
 
 	for _, pod := range namespace.Pods {
 		if hasSelectors(selector, pod.Labels) {
@@ -173,6 +175,7 @@ func (c *HAProxyController) handlePath(index int, namespace *Namespace, ingress 
 				pod.Backends = map[string]struct{}{}
 			}
 			pod.Backends[backendName] = struct{}{}
+			status := pod.Status
 			port := int64(path.ServicePort)
 			weight := int64(128)
 			data := &models.Server{
@@ -209,10 +212,18 @@ func (c *HAProxyController) handlePath(index int, namespace *Namespace, ingress 
 					annnotationsActive = true
 				}
 			}
-			if pod.Status == EMPTY && annnotationsActive {
-				pod.Status = MODIFIED
+			if errCheckInterval == nil {
+				data.Inter =  misc.ParseTimeout(annCheckInterval.Value)
+				if annCheckInterval.Status != EMPTY {
+					annnotationsActive = true
+				}
+			} else {
+				data.Inter = nil	
 			}
-			switch pod.Status {
+			if pod.Status == EMPTY && annnotationsActive {
+				status = MODIFIED
+			}
+			switch status {
 			case ADDED:
 				if err := nativeAPI.Configuration.CreateServer(backendName, data, transaction.ID, 0); err != nil {
 					return err

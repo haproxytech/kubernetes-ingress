@@ -12,9 +12,8 @@ Options for starting controller can be found in [controller.md](controller.md)
 
 | Annotation | Type | Default | Dependencies | Config map | Ingress | Service |
 | - |:-:|:-:|:-:|:-:|:-:|:-:|
-| [check](#backend-checks) | ["enabled"] | "enabled" |  |:large_blue_circle:|:white_circle:|:large_blue_circle:|
-| :construction: [check-port](#backend-checks) | [port](#port) |  | [check](#backend-checks) |:white_circle:|:white_circle:|:large_blue_circle:|
-| :construction: [check-interval](#backend-checks) | [time](#time) |  | [check](#backend-checks) |:large_blue_circle:|:white_circle:|:large_blue_circle:|
+| [check](#backend-checks) | ["enabled"] | "enabled" |  |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:|
+| [check-interval](#backend-checks) | [time](#time) |  | [check](#backend-checks) |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:|
 | [forwarded-for](#x-forwarded-for) | ["enabled", "disabled"] | "enabled" |  |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:|
 | [load-balance](#balance-algorithm) | string | "roundrobin" |  |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:|
 | [maxconn](#maximum-concurent-connections) | number | "2000" |  |:large_blue_circle:|:white_circle:|:white_circle:|
@@ -56,7 +55,6 @@ Options for starting controller can be found in [controller.md](controller.md)
 #### Backend Checks
 
 - Annotation: `check` - activate pod check
-- :construction: Annotation: `check-port` - port to use when checking [`check` must be "enabled"]
 - :construction: Annotation: `check-interval` - interval between checks [`check` must be "enabled"]
 - use in format  `haproxy.org/load-balance: <algorithm> [ <arguments> ]`
 
