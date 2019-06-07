@@ -142,7 +142,7 @@ spec:
         args:
           - --default-ssl-certificate=default/tls-secret
           - --configmap=default/haproxy-configmap
-          - --default-backend-service=default/ingress-default-backend
+          - --default-backend-service=haproxy-controller/ingress-default-backend
         resources:
           requests:
             cpu: "500m"
