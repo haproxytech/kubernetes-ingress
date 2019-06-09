@@ -11,9 +11,9 @@ import (
 
 	clientnative "github.com/haproxytech/client-native"
 	"github.com/haproxytech/client-native/configuration"
-	"github.com/haproxytech/client-native/runtime"
 	"github.com/haproxytech/client-native/misc"
-	"github.com/haproxytech/config-parser"
+	"github.com/haproxytech/client-native/runtime"
+	parser "github.com/haproxytech/config-parser"
 	"github.com/haproxytech/models"
 	"k8s.io/apimachinery/pkg/watch"
 )
@@ -165,7 +165,7 @@ func (c *HAProxyController) handlePath(index int, namespace *Namespace, ingress 
 	if numberOfTimesBackendUsed := backendsUsed[backendName]; numberOfTimesBackendUsed > 1 {
 		return nil
 	}
-	annMaxconn, _ := GetValueFromAnnotations("pod-maxconn", service.Annotations)
+	annMaxconn, errMaxConn := GetValueFromAnnotations("pod-maxconn", service.Annotations)
 	annCheck, _ := GetValueFromAnnotations("check", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
 	annCheckInterval, errCheckInterval := GetValueFromAnnotations("check-interval", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
 
@@ -177,6 +177,9 @@ func (c *HAProxyController) handlePath(index int, namespace *Namespace, ingress 
 			pod.Backends[backendName] = struct{}{}
 			status := pod.Status
 			port := int64(path.ServicePort)
+			if port == 0 && len(service.Ports) > 0 {
+				port = service.Ports[0].Port
+			}
 			weight := int64(128)
 			data := &models.Server{
 				Name:    pod.HAProxyName,
@@ -192,13 +195,13 @@ func (c *HAProxyController) handlePath(index int, namespace *Namespace, ingress 
 			}*/
 			annnotationsActive := false
 			if annMaxconn != nil {
-				if annMaxconn.Status != DELETED {
+				if annMaxconn.Status != DELETED && errMaxConn == nil {
 					if maxconn, err := strconv.ParseInt(annMaxconn.Value, 10, 64); err == nil {
 						data.Maxconn = &maxconn
 					}
-				}
-				if annMaxconn.Status != "" {
-					annnotationsActive = true
+					if annMaxconn.Status != "" {
+						annnotationsActive = true
+					}
 				}
 			}
 			if annCheck != nil {
@@ -213,12 +216,12 @@ func (c *HAProxyController) handlePath(index int, namespace *Namespace, ingress 
 				}
 			}
 			if errCheckInterval == nil {
-				data.Inter =  misc.ParseTimeout(annCheckInterval.Value)
+				data.Inter = misc.ParseTimeout(annCheckInterval.Value)
 				if annCheckInterval.Status != EMPTY {
 					annnotationsActive = true
 				}
 			} else {
-				data.Inter = nil	
+				data.Inter = nil
 			}
 			if pod.Status == EMPTY && annnotationsActive {
 				status = MODIFIED

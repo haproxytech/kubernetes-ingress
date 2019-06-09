@@ -83,6 +83,15 @@ func (a *Service) Equal(b *Service) bool {
 	if !a.Selector.Equal(b.Selector) {
 		return false
 	}
+	if len(a.Ports) != len(b.Ports) {
+		return false
+	}
+	for index, p1 := range a.Ports {
+		p2 := b.Ports[index]
+		if p1.Name != p2.Name || p1.Protocol != p2.Protocol || p1.Port != p2.Port {
+			return false
+		}
+	}
 	return true
 }
 

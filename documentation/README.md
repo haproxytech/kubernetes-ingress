@@ -16,9 +16,9 @@ Options for starting controller can be found in [controller.md](controller.md)
 | [check-interval](#backend-checks) | [time](#time) |  | [check](#backend-checks) |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:|
 | [forwarded-for](#x-forwarded-for) | ["enabled", "disabled"] | "enabled" |  |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:|
 | [load-balance](#balance-algorithm) | string | "roundrobin" |  |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:|
-| [maxconn](#maximum-concurent-connections) | number | "2000" |  |:large_blue_circle:|:white_circle:|:white_circle:|
+| [maxconn](#maximum-concurent-connections) | number |  |  |:large_blue_circle:|:white_circle:|:white_circle:|
 | [nbthread](#number-of-threads) | number | |  |:large_blue_circle:|:white_circle:|:white_circle:|
-| [pod-maxconn](#maximum-concurent-backend-connections) | number | "2000" |  |:white_circle:|:white_circle:|:large_blue_circle:|
+| [pod-maxconn](#maximum-concurent-backend-connections) | number |  |  |:white_circle:|:white_circle:|:large_blue_circle:|
 | [rate-limit](#rate-limit) | "ON"/"OFF" | "OFF" |  |:large_blue_circle:|:white_circle:|:white_circle:|
 | [rate-limit-expire](#rate-limit) | string | "30m" | [rate-limit](#rate-limit) |:large_blue_circle:|:white_circle:|:white_circle:|
 | [rate-limit-interval](#rate-limit) | string | "10s" | [rate-limit](#rate-limit) |:large_blue_circle:|:white_circle:|:white_circle:|
@@ -26,7 +26,6 @@ Options for starting controller can be found in [controller.md](controller.md)
 | [servers-increment](#servers-slots-increment) | number | "42" |  |:large_blue_circle:|:white_circle:|:white_circle:|
 | [servers-increment-max-disabled](#servers-slots-increment) | number | "66" |  |:large_blue_circle:|:white_circle:|:white_circle:|
 | [ssl-certificate](#tls-secret) | string |  |  |:large_blue_circle:|:white_circle:|:white_circle:|
-| [ssl-numproc](#https) | int | "" | [tls-secret](#tls-secret) |:large_blue_circle:|:white_circle:|:white_circle:|
 | [ssl-redirect](#https) | "ON"/"OFF" | "ON" | [tls-secret](#tls-secret) |:large_blue_circle:|:white_circle:|:white_circle:|
 | [ssl-redirect-code](#https) | [301, 302, 303] | "302" | [tls-secret](#tls-secret) |:large_blue_circle:|:white_circle:|:white_circle:|
 | [timeout-http-request](#timeouts) | [time](#time) | "5s" |  |:large_blue_circle:|:white_circle:|:white_circle:|
@@ -60,11 +59,6 @@ Options for starting controller can be found in [controller.md](controller.md)
 
 #### Https
 
-- Annotation: `ssl-numproc` 
-  - :information_source: recomended setup is using [nbthread](#number-of-threads) not `ssl-numproc`
-  - default value: number of procesors - computed from system
-  - limit max number of processes used for ssl termination
-  - process 1 is used only if max number of processes is 1
 - Annotation `ssl-redirect`
   - by default this is activated if tls key is provided
   - redirects http trafic to https
@@ -75,35 +69,34 @@ Options for starting controller can be found in [controller.md](controller.md)
 #### Maximum Concurent Connections
 
 - Annotation: `maxconn`
-- by default this is set to 2000
 
 #### Maximum Concurent Backend Connections
 
 - Annotation: `pod-maxconn`
 - related to backend servers (pods)
-- by default this is set to 2000 for every backend server (pod)
 
 #### Number of threads
 
 - Annotation: `nbthread`
-- default value is number of CPUs available
+- default value is number of procesors available
 
 #### Rate limit
+
 - Annotation: `rate-limit`
   - `ON` / `OFF` - enable or disable rate limiting
 - Annotation: `rate-limit-expire`
   - Table entries expire after `rate-limit-expire` of inactivity.
 - Annotation: `rate-limit-interval`
-    - request rate for the last `rate-limit-interval`
+  - request rate for the last `rate-limit-interval`
 - Annotation: `rate-limit-size`
-    - number of ip entries in table
+  - number of ip entries in table
 
 #### Servers slots increment
 
-- Annotation `servers-increment`- determines how much backend servers should we 
-        put in `maintenance` mode so controller can 
+- Annotation `servers-increment`- determines how much backend servers should we
+        put in `maintenance` mode so controller can
         dynamically insert new pods without hitless reload
-- Annotation `servers-increment-max-disabled` - maximum allowed number of 
+- Annotation `servers-increment-max-disabled` - maximum allowed number of
         disabled servers in backend. Greater number triggers HAProxy reload
 
 #### Timeouts

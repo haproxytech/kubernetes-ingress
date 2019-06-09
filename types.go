@@ -16,14 +16,20 @@ type Pod struct {
 	Status      Status
 }
 
+//ServicePort describes port of a service
+type ServicePort struct {
+	Name     string
+	Protocol string
+	Port     int64
+}
+
 //Service is usefull data from k8s structures about service
 type Service struct {
-	Namespace  string
-	Name       string
-	ClusterIP  string
-	ExternalIP string
-	//Ports      []v1.ServicePort
-
+	Namespace   string
+	Name        string
+	ClusterIP   string
+	ExternalIP  string
+	Ports       []ServicePort
 	Annotations MapStringW
 	Selector    MapStringW
 	Status      Status

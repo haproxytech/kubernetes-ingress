@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"strconv"
 	"strings"
 
 	"github.com/haproxytech/models"
@@ -38,10 +37,11 @@ func (c *HAProxyController) writeCert(filename string, key, crt []byte) error {
 	return nil
 }
 
-func (c *HAProxyController) handleHTTPS(maxProcsStatus, numThreadsStat *StringW, transaction *models.Transaction) (reloadRequested bool, usingHTTPS bool, err error) {
+func (c *HAProxyController) handleHTTPS(transaction *models.Transaction) (reloadRequested bool, usingHTTPS bool, err error) {
 	usingHTTPS = false
 	nativeAPI := c.NativeAPI
 	reloadRequested = false
+	status := EMPTY
 	if c.osArgs.DefaultCertificate.Name == "" {
 		err := c.removeHTTPSListeners(transaction)
 		return reloadRequested, usingHTTPS, err
@@ -52,24 +52,18 @@ func (c *HAProxyController) handleHTTPS(maxProcsStatus, numThreadsStat *StringW,
 		return reloadRequested, usingHTTPS, errors.New("invalid secret data")
 	}
 
-	minProc := 1
-	maxProcs, _ := strconv.Atoi(maxProcsStatus.Value) // always number
-	numThreads, _ := strconv.Atoi(numThreadsStat.Value)
-	if maxProcs < 2 {
-		if numThreads < 2 {
-			minProc = 0
-		}
-	}
 	namespace, ok := c.cfg.Namespace[secretData[0]]
 	if !ok {
 		return reloadRequested, usingHTTPS, errors.New("invalid namespace " + secretData[0])
 	}
+	if secretAnn.Status != EMPTY {
+		status = MODIFIED
+	}
 
-	if errSecret == nil && (secretAnn.Status != "" || maxProcsStatus.Status != "") {
+	if errSecret == nil && (status != "") {
 		secret, ok := namespace.Secret[secretData[1]]
 		if !ok {
 			log.Println("secret not found", secretData[1])
-			err := c.removeHTTPSListeners(transaction)
 			return reloadRequested, usingHTTPS, err
 		}
 		//two options are allowed, tls, rsa+ecdsa
@@ -124,65 +118,27 @@ func (c *HAProxyController) handleHTTPS(maxProcsStatus, numThreadsStat *StringW,
 			Ssl:            true,
 			SslCertificate: HAProxyCertDir,
 		}
-		maxIndex := maxProcs
-		if maxProcs < 2 {
-			maxIndex = numThreads
-		}
-		listeners := *c.cfg.HTTPSListeners
-		if len(listeners) > maxIndex {
-			maxIndex = len(listeners)
-		}
 		usingHTTPS = true
-		for index := minProc; index < maxIndex; index++ {
-			data, ok := listeners[index]
-			if !ok {
-				data = &IntW{
-					Status: ADDED,
-				}
-				listeners[index] = data
-			} else {
-				if secret.Status != "" {
-					data.Status = secret.Status
-				} else if maxProcsStatus.Status != "" {
-					data.Status = maxProcsStatus.Status
-				}
-			}
-			if index >= maxProcs && index >= numThreads {
-				data.Status = DELETED
-			}
-			if numThreads < 2 {
-				listener.Process = strconv.Itoa(index + 1)
-			} else {
-				listener.Process = fmt.Sprintf("1/%d", index+1)
-			}
-			listener.Name = "https_" + strconv.Itoa(index+1)
-			switch data.Status {
-			case ADDED:
-				if err = nativeAPI.Configuration.CreateBind(FrontendHTTPS, listener, transaction.ID, 0); err != nil {
-					if strings.Contains(err.Error(), "already exists") {
-						if err = nativeAPI.Configuration.EditBind(listener.Name, FrontendHTTPS, listener, transaction.ID, 0); err != nil {
-							return reloadRequested, usingHTTPS, err
-						}
-					} else {
+		listener.Name = "https_1"
+		switch status {
+		case ADDED:
+			if err = nativeAPI.Configuration.CreateBind(FrontendHTTPS, listener, transaction.ID, 0); err != nil {
+				if strings.Contains(err.Error(), "already exists") {
+					if err = nativeAPI.Configuration.EditBind(listener.Name, FrontendHTTPS, listener, transaction.ID, 0); err != nil {
 						return reloadRequested, usingHTTPS, err
 					}
-				}
-			case MODIFIED:
-				if err = nativeAPI.Configuration.EditBind(listener.Name, FrontendHTTPS, listener, transaction.ID, 0); err != nil {
-					return reloadRequested, usingHTTPS, err
-				}
-			case DELETED:
-				if err = nativeAPI.Configuration.DeleteBind(listener.Name, FrontendHTTPS, transaction.ID, 0); err != nil {
+				} else {
 					return reloadRequested, usingHTTPS, err
 				}
 			}
-		}
-	}
-
-	listeners := *c.cfg.HTTPSListeners
-	for _, listener := range listeners {
-		if listener.Status != DELETED {
-			return reloadRequested, true, nil
+		case MODIFIED:
+			if err = nativeAPI.Configuration.EditBind(listener.Name, FrontendHTTPS, listener, transaction.ID, 0); err != nil {
+				return reloadRequested, usingHTTPS, err
+			}
+		case DELETED:
+			if err = nativeAPI.Configuration.DeleteBind(listener.Name, FrontendHTTPS, transaction.ID, 0); err != nil {
+				return reloadRequested, usingHTTPS, err
+			}
 		}
 	}
 	return reloadRequested, usingHTTPS, nil

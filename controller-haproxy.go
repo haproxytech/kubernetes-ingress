@@ -30,15 +30,17 @@ func (c *HAProxyController) updateHAProxy(reloadRequested bool) error {
 		log.Println(err)
 		return err
 	}
-
-	if maxconnAnn, err := GetValueFromAnnotations("maxconn", c.cfg.ConfigMap.Annotations); err == nil {
-		if maxconn, err := strconv.ParseInt(maxconnAnn.Value, 10, 64); err == nil {
-			if maxconnAnn.Status == DELETED {
-				maxconnAnn, _ = GetValueFromAnnotations("maxconn", c.cfg.ConfigMap.Annotations) // has default
-				maxconn, _ = strconv.ParseInt(maxconnAnn.Value, 10, 64)
+	maxconnAnn, err := GetValueFromAnnotations("maxconn", c.cfg.ConfigMap.Annotations)
+	if err == nil {
+		if maxconnAnn.Status == DELETED {
+			err := c.handleMaxconn(transaction, nil, FrontendHTTP, FrontendHTTPS)
+			if err != nil {
+				return err
 			}
-			if maxconnAnn.Status != "" {
-				err := c.handleMaxconn(transaction, maxconn, FrontendHTTP, FrontendHTTPS)
+		} else if maxconnAnn.Status != "" {
+			value, err := strconv.ParseInt(maxconnAnn.Value, 10, 64)
+			if err == nil {
+				err := c.handleMaxconn(transaction, &value, FrontendHTTP, FrontendHTTPS)
 				if err != nil {
 					return err
 				}
@@ -46,13 +48,13 @@ func (c *HAProxyController) updateHAProxy(reloadRequested bool) error {
 		}
 	}
 
-	maxProcs, maxThreads, reload, err := c.handleGlobalAnnotations(transaction)
+	reload, err := c.handleGlobalAnnotations(transaction)
 	LogErr(err)
 	reloadRequested = reloadRequested || reload
 	pathIndex := 0
 
 	var usingHTTPS bool
-	reload, usingHTTPS, err = c.handleHTTPS(maxProcs, maxThreads, transaction)
+	reload, usingHTTPS, err = c.handleHTTPS(transaction)
 	if err != nil {
 		return err
 	}
@@ -60,29 +62,7 @@ func (c *HAProxyController) updateHAProxy(reloadRequested bool) error {
 	if err != nil {
 		return err
 	}
-	numProcs, _ := strconv.Atoi(maxProcs.Value)
-	numThreads, _ := strconv.Atoi(maxThreads.Value)
-	port := int64(80)
-	listener := &models.Bind{
-		Name:    "http_1",
-		Address: "0.0.0.0",
-		Port:    &port,
-		Process: "1/1",
-	}
-	if !usingHTTPS {
-		if numProcs > 1 {
-			listener.Process = "all"
-		}
-		if numThreads > 1 {
-			listener.Process = "all"
-		}
-	}
-	if listener.Process != c.cfg.HTTPBindProcess {
-		if err = nativeAPI.Configuration.EditBind(listener.Name, FrontendHTTP, listener, transaction.ID, 0); err != nil {
-			return err
-		}
-		c.cfg.HTTPBindProcess = listener.Process
-	}
+
 	reloadRequested = reloadRequested || reload
 	reload, err = c.handleHTTPRedirect(usingHTTPS, transaction)
 	if err != nil {
@@ -163,10 +143,10 @@ func (c *HAProxyController) updateHAProxy(reloadRequested bool) error {
 	return nil
 }
 
-func (c *HAProxyController) handleMaxconn(transaction *models.Transaction, maxconn int64, frontends ...string) error {
+func (c *HAProxyController) handleMaxconn(transaction *models.Transaction, maxconn *int64, frontends ...string) error {
 	for _, frontendName := range frontends {
 		if _, frontend, err := c.NativeAPI.Configuration.GetFrontend(frontendName, transaction.ID); err == nil {
-			frontend.Maxconn = &maxconn
+			frontend.Maxconn = maxconn
 			err := c.NativeAPI.Configuration.EditFrontend(frontendName, frontend, transaction.ID, 0)
 			LogErr(err)
 		} else {

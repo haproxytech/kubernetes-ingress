@@ -22,8 +22,6 @@ type Configuration struct {
 	NamespacesAccess      NamespacesWatch
 	ConfigMap             *ConfigMap
 	NativeAPI             *clientnative.HAProxyClient
-	HTTPSListeners        *MapIntW
-	HTTPBindProcess       string
 	SSLRedirect           string
 	RateLimitingEnabled   bool
 	HTTPRequests          map[string][]models.HTTPRequestRule
@@ -62,8 +60,6 @@ func (c *Configuration) Init(osArgs OSArgs, api *clientnative.HAProxyClient) {
 		c.NamespacesAccess.Blacklist[namespace] = struct{}{}
 	}
 	c.Namespace = make(map[string]*Namespace)
-	c.HTTPSListeners = &MapIntW{}
-	c.HTTPBindProcess = "1/1"
 	c.SSLRedirect = ""
 	c.NativeAPI = api
 
@@ -175,5 +171,4 @@ func (c *Configuration) Clean() {
 	c.HTTPRequestsStatus = EMPTY
 	c.TCPRequestsStatus = EMPTY
 	c.UseBackendRulesStatus = EMPTY
-	c.HTTPSListeners.Clean()
 }

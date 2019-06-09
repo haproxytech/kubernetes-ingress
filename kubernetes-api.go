@@ -388,7 +388,15 @@ func (k *K8s) EventsServices(channel chan *Service, stop chan struct{}) {
 					Name:        data.GetName(),
 					Annotations: ConvertToMapStringW(data.ObjectMeta.Annotations),
 					Selector:    ConvertToMapStringW(data.Spec.Selector),
+					Ports:       []ServicePort{},
 					Status:      status,
+				}
+				for _, sp := range data.Spec.Ports {
+					item.Ports = append(item.Ports, ServicePort{
+						Name:     sp.Name,
+						Protocol: string(sp.Protocol),
+						Port:     int64(sp.Port),
+					})
 				}
 				if DEBUG_API {
 					log.Printf("%s %s: %s \n", SERVICE, item.Status, item.Name)
@@ -419,14 +427,31 @@ func (k *K8s) EventsServices(channel chan *Service, stop chan struct{}) {
 					Name:        data1.GetName(),
 					Annotations: ConvertToMapStringW(data1.ObjectMeta.Annotations),
 					Selector:    ConvertToMapStringW(data1.Spec.Selector),
+					Ports:       []ServicePort{},
 					Status:      status,
 				}
+				for _, sp := range data1.Spec.Ports {
+					item1.Ports = append(item1.Ports, ServicePort{
+						Name:     sp.Name,
+						Protocol: string(sp.Protocol),
+						Port:     int64(sp.Port),
+					})
+				}
+
 				item2 := &Service{
 					Namespace:   data2.GetNamespace(),
 					Name:        data2.GetName(),
 					Annotations: ConvertToMapStringW(data2.ObjectMeta.Annotations),
 					Selector:    ConvertToMapStringW(data2.Spec.Selector),
+					Ports:       []ServicePort{},
 					Status:      status,
+				}
+				for _, sp := range data2.Spec.Ports {
+					item2.Ports = append(item2.Ports, ServicePort{
+						Name:     sp.Name,
+						Protocol: string(sp.Protocol),
+						Port:     int64(sp.Port),
+					})
 				}
 				if item2.Equal(item1) {
 					return
