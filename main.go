@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"os"
 	"time"
 
 	"github.com/jessevdk/go-flags"
@@ -27,12 +28,17 @@ var (
 func main() {
 
 	var osArgs OSArgs
-	var parser = flags.NewParser(&osArgs, flags.Default)
+	var parser = flags.NewParser(&osArgs, flags.IgnoreUnknown)
 	_, err := parser.Parse()
 	if len(osArgs.Version) > 0 {
 		fmt.Printf("HAProxy Ingress Controller %s %s%s\n\n", GitTag, GitCommit, GitDirty)
 		fmt.Printf("Build from: %s\n", GitRepo)
 		fmt.Printf("Build date: %s\n\n", BuildTime)
+		return
+	}
+
+	if len(osArgs.Help) > 0 && osArgs.Help[0] {
+		parser.WriteHelp(os.Stdout)
 		return
 	}
 

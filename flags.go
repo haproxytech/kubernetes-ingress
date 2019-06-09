@@ -39,4 +39,5 @@ type OSArgs struct {
 	NamespaceBlacklist    []string       `long:"namespace-blacklist" description:"blacklisted namespaces"`
 	OutOfCluster          bool           `short:"e" description:"use as out of cluster controller NOTE: experimantal"`
 	Test                  bool           `short:"t" description:"simulate running HAProxy"`
+	Help                  []bool         `short:"h" long:"help" description:"show this help message"`
 }
