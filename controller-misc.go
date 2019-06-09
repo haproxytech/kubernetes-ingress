@@ -1,26 +1,35 @@
 package main
 
 import (
-	"log"
 	"strconv"
 
 	goruntime "runtime"
 
+	parser "github.com/haproxytech/config-parser"
+	"github.com/haproxytech/config-parser/types"
 	"github.com/haproxytech/models"
 )
 
 func (c *HAProxyController) handleGlobalAnnotations(transaction *models.Transaction) (reloadRequested bool, err error) {
 	reloadRequested = false
 	maxProcs := goruntime.GOMAXPROCS(0)
-	numThreads := maxProcs
+	numThreads := int64(maxProcs)
 	annNbthread, errNumThread := GetValueFromAnnotations("nbthread", c.cfg.ConfigMap.Annotations)
 
 	if errNumThread == nil {
 		if numthr, err := strconv.Atoi(annNbthread.Value); err == nil {
 			if numthr < maxProcs {
-				numThreads = numthr
+				numThreads = int64(numthr)
 			}
-			log.Println(numThreads)
+			var err error
+			if annNbthread.Status == DELETED {
+				err = c.NativeParser.Delete(parser.Global, parser.GlobalSectionName, "nbthread")
+			} else if annNbthread.Status != EMPTY {
+				err = c.NativeParser.Insert(parser.Global, parser.GlobalSectionName, "nbthread", types.Int64C{
+					Value: numThreads,
+				})
+			}
+			LogErr(err)
 		}
 	}
 
