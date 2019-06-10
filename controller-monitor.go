@@ -94,7 +94,6 @@ func (c *HAProxyController) monitorChanges() {
 
 //SyncData gets all kubernetes changes, aggregates them and apply to HAProxy.
 //All the changes must come through this function
-//TODO this is not necessary, remove it later
 func (c *HAProxyController) SyncData(jobChan <-chan SyncDataEvent, chConfigMapReceivedAndProcessed chan bool) {
 	hadChanges := false
 	needsReload := false

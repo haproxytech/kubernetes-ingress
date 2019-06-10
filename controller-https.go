@@ -119,7 +119,7 @@ func (c *HAProxyController) handleHTTPS(transaction *models.Transaction) (reload
 			SslCertificate: HAProxyCertDir,
 		}
 		usingHTTPS = true
-		listener.Name = "https_1"
+		listener.Name = "bind_1"
 		switch status {
 		case ADDED:
 			if err = nativeAPI.Configuration.CreateBind(FrontendHTTPS, listener, transaction.ID, 0); err != nil {
