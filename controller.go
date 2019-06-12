@@ -96,9 +96,9 @@ func (c *HAProxyController) HAProxyInitialize() {
 
 	confClient := configuration.Client{}
 	err = confClient.Init(configuration.ClientParams{
-		ConfigurationFile: HAProxyCFG,
-		//GlobalConfigurationFile: HAProxyGlobalCFG,
-		Haproxy: "haproxy",
+		ConfigurationFile:      HAProxyCFG,
+		PersistentTransactions: false,
+		Haproxy:                "haproxy",
 	})
 	if err != nil {
 		log.Panicln(err)

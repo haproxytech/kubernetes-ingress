@@ -10,7 +10,7 @@ require (
 	github.com/google/gofuzz v1.0.0 // indirect
 	github.com/googleapis/gnostic v0.2.0 // indirect
 	github.com/gregjones/httpcache v0.0.0-20190212212710-3befbb6ad0cc // indirect
-	github.com/haproxytech/client-native v0.9.4
+	github.com/haproxytech/client-native v0.9.5
 	github.com/haproxytech/config-parser v0.9.1
 	github.com/haproxytech/models v0.9.3
 	github.com/hashicorp/golang-lru v0.5.1 // indirect
