@@ -245,17 +245,14 @@ func (c *HAProxyController) handlePath(index int, namespace *Namespace, ingress 
 			}
 			switch status {
 			case ADDED:
-				if err := nativeAPI.Configuration.CreateServer(backendName, data, transaction.ID, 0); err != nil {
-					return err
-				}
+				err := nativeAPI.Configuration.CreateServer(backendName, data, transaction.ID, 0)
+				LogErr(err)
 			case MODIFIED:
-				if err := nativeAPI.Configuration.EditServer(data.Name, backendName, data, transaction.ID, 0); err != nil {
-					return err
-				}
+				err := nativeAPI.Configuration.EditServer(data.Name, backendName, data, transaction.ID, 0)
+				LogErr(err)
 			case DELETED:
-				if err := nativeAPI.Configuration.DeleteServer(data.Name, backendName, transaction.ID, 0); err != nil {
-					return err
-				}
+				err := nativeAPI.Configuration.DeleteServer(data.Name, backendName, transaction.ID, 0)
+				LogErr(err)
 			}
 		} //if pod.Status...
 	} //for pod
