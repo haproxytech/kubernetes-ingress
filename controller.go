@@ -169,15 +169,12 @@ func (c *HAProxyController) HAProxyReload() error {
 }
 
 func (c *HAProxyController) handlePath(index int, namespace *Namespace, ingress *Ingress, rule *IngressRule, path *IngressPath,
-	transaction *models.Transaction, backendsUsed map[string]int) error {
+	transaction *models.Transaction) error {
 	nativeAPI := c.NativeAPI
 	//log.Println("PATH", path)
-	backendName, selector, service, err := c.handleService(index, namespace, ingress, rule, path, backendsUsed, transaction)
+	backendName, selector, service, err := c.handleService(index, namespace, ingress, rule, path, transaction)
 	if err != nil {
 		return err
-	}
-	if numberOfTimesBackendUsed := backendsUsed[backendName]; numberOfTimesBackendUsed > 1 {
-		return nil
 	}
 	annMaxconn, errMaxConn := GetValueFromAnnotations("pod-maxconn", service.Annotations)
 	annCheck, _ := GetValueFromAnnotations("check", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
@@ -240,6 +237,12 @@ func (c *HAProxyController) handlePath(index int, namespace *Namespace, ingress 
 			if pod.Status == EMPTY && annnotationsActive {
 				status = MODIFIED
 			}
+			if status == EMPTY && path.Status != ADDED {
+				status = ADDED
+			}
+			if status == EMPTY && service.Status != ADDED {
+				status = ADDED
+			}
 			switch status {
 			case ADDED:
 				if err := nativeAPI.Configuration.CreateServer(backendName, data, transaction.ID, 0); err != nil {
@@ -260,7 +263,7 @@ func (c *HAProxyController) handlePath(index int, namespace *Namespace, ingress 
 }
 
 func (c *HAProxyController) handleService(index int, namespace *Namespace, ingress *Ingress, rule *IngressRule, path *IngressPath,
-	backendsUsed map[string]int, transaction *models.Transaction) (backendName string, selector MapStringW, service *Service, err error) {
+	transaction *models.Transaction) (backendName string, selector MapStringW, service *Service, err error) {
 	nativeAPI := c.NativeAPI
 
 	service, ok := namespace.Services[path.ServiceName]
@@ -274,7 +277,6 @@ func (c *HAProxyController) handleService(index int, namespace *Namespace, ingre
 	}
 
 	backendName = fmt.Sprintf("%s-%s-%d", namespace.Name, service.Name, path.ServicePort)
-	backendsUsed[backendName]++
 	//load-balance, forwarded-for and annWhitelist have default values, so no need for error checking
 	annBalanceAlg, _ := GetValueFromAnnotations("load-balance", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
 	annForwardedFor, _ := GetValueFromAnnotations("forwarded-for", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
@@ -371,9 +373,17 @@ func (c *HAProxyController) handleService(index int, namespace *Namespace, ingre
 		}
 	}
 
-	switch service.Status {
+	status = service.Status
+	newImportantPath := false
+	if status == "" && path.Status == ADDED {
+		status = ADDED
+		newImportantPath = true
+	}
+
+	switch status {
 	case ADDED:
-		if numberOfTimesBackendUsed := backendsUsed[backendName]; numberOfTimesBackendUsed < 2 {
+		_, _, err := c.cfg.NativeAPI.Configuration.GetBackend(backendName, c.ActiveTransaction)
+		if err != nil {
 			backend := &models.Backend{
 				Balance: balanceAlg,
 				Name:    backendName,
@@ -388,18 +398,15 @@ func (c *HAProxyController) handleService(index int, namespace *Namespace, ingre
 			if err := nativeAPI.Configuration.CreateBackend(backend, transaction.ID, 0); err != nil {
 				msg := err.Error()
 				if !strings.Contains(msg, "Farm already exists") {
-					return "", nil, nil, err
+					if !newImportantPath {
+						return "", nil, nil, err
+					}
 				}
 			}
 		}
 	case MODIFIED:
 		log.Println("so we have modified now")
 	case DELETED:
-		backendsUsed[backendName]--
-		if err := nativeAPI.Configuration.DeleteBackend(backendName, transaction.ID, 0); err != nil {
-			log.Println("DeleteBackend", err)
-			return "", nil, nil, err
-		}
 		delete(c.cfg.UseBackendRules, fmt.Sprintf("R%0006d", index))
 		c.cfg.UseBackendRulesStatus = MODIFIED
 		return "", nil, service, nil

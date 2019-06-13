@@ -41,7 +41,10 @@ func (c *HAProxyController) useBackendRuleRefresh() (err error) {
 	}
 	sort.Sort(sort.Reverse(sort.StringSlice(sortedList))) // reverse order
 
-	//map[string][]string
+	_, frontend, _ := c.cfg.NativeAPI.Configuration.GetFrontend(FrontendHTTPS, c.ActiveTransaction)
+	backends := map[string]struct{}{
+		frontend.DefaultBackend: struct{}{},
+	}
 	for _, frontend := range frontends {
 		err = nil
 		for err == nil {
@@ -61,7 +64,16 @@ func (c *HAProxyController) useBackendRuleRefresh() (err error) {
 				Name:     rule.Backend,
 				ID:       &id,
 			}
+			backends[rule.Backend] = struct{}{}
 			err = c.cfg.NativeAPI.Configuration.CreateBackendSwitchingRule(frontend, backendSwitchingRule, c.ActiveTransaction, 0)
+			LogErr(err)
+		}
+	}
+	_, allBackends, _ := c.cfg.NativeAPI.Configuration.GetBackends(c.ActiveTransaction)
+	for _, backend := range allBackends {
+		_, ok := backends[backend.Name]
+		if !ok {
+			err := nativeAPI.Configuration.DeleteBackend(backend.Name, c.ActiveTransaction, 0)
 			LogErr(err)
 		}
 	}

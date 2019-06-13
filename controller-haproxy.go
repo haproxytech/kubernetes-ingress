@@ -84,12 +84,10 @@ func (c *HAProxyController) updateHAProxy(reloadRequested bool) error {
 	}
 	reloadRequested = reloadRequested || reload
 
-	backendsUsed := map[string]int{}
 	for _, namespace := range c.cfg.Namespace {
 		if !namespace.Relevant {
 			continue
 		}
-		//TODO, do not just go through them, sort them to handle /web,/ maybe?
 		for _, ingress := range namespace.Ingresses {
 			//no need for switch/case for now
 			sortedList := make([]string, len(ingress.Rules))
@@ -116,7 +114,7 @@ func (c *HAProxyController) updateHAProxy(reloadRequested bool) error {
 					if path == nil {
 						continue
 					}
-					err := c.handlePath(pathIndex, namespace, ingress, rule, path, transaction, backendsUsed)
+					err := c.handlePath(pathIndex, namespace, ingress, rule, path, transaction)
 					LogErr(err)
 					pathIndex++
 				}
@@ -124,13 +122,7 @@ func (c *HAProxyController) updateHAProxy(reloadRequested bool) error {
 		}
 	}
 	//handle default service
-	c.handleDefaultService(transaction, backendsUsed)
-	for backendName, numberOfTimesBackendUsed := range backendsUsed {
-		if numberOfTimesBackendUsed < 1 {
-			err := nativeAPI.Configuration.DeleteBackend(backendName, transaction.ID, 0)
-			LogErr(err)
-		}
-	}
+	c.handleDefaultService(transaction)
 
 	LogErr(err)
 	err = c.requestsTCPRefresh(transaction)
@@ -170,7 +162,7 @@ func (c *HAProxyController) handleMaxconn(transaction *models.Transaction, maxco
 	return nil
 }
 
-func (c *HAProxyController) handleDefaultService(transaction *models.Transaction, backendsUsed map[string]int) error {
+func (c *HAProxyController) handleDefaultService(transaction *models.Transaction) error {
 	dsvcData, _ := GetValueFromAnnotations("default-backend-service")
 	dsvc := strings.Split(dsvcData.Value, "/")
 
@@ -190,5 +182,5 @@ func (c *HAProxyController) handleDefaultService(transaction *models.Transaction
 		ServiceName: dsvc[1],
 		PathIndex:   -1,
 	}
-	return c.handlePath(0, namespace, ingress, nil, path, transaction, backendsUsed)
+	return c.handlePath(0, namespace, ingress, nil, path, transaction)
 }
