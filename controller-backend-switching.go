@@ -31,7 +31,7 @@ func (c *HAProxyController) useBackendRuleRefresh() (err error) {
 	if c.cfg.UseBackendRulesStatus == EMPTY {
 		return nil
 	}
-	frontends := []string{"http", "https"}
+	frontends := []string{FrontendHTTP, FrontendHTTPS}
 
 	nativeAPI := c.NativeAPI
 

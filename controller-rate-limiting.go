@@ -135,9 +135,9 @@ func (c *HAProxyController) handleRateLimiting(transaction *models.Transaction, 
 			err = nativeAPI.Configuration.DeleteBackend("RateLimit", transaction.ID, 0)
 			LogErr(err)
 		}
-		c.removeACL(ratelimit_acl1, "http", "https")
-		c.removeACL(ratelimit_acl2, "http", "https")
-		c.removeACL(ratelimit_acl3, "http", "https")
+		c.removeACL(ratelimit_acl1, FrontendHTTP, FrontendHTTPS)
+		c.removeACL(ratelimit_acl2, FrontendHTTP, FrontendHTTPS)
+		c.removeACL(ratelimit_acl3, FrontendHTTP, FrontendHTTPS)
 
 		c.cfg.HTTPRequests[RATE_LIMIT] = []models.HTTPRequestRule{}
 		c.cfg.HTTPRequestsStatus = MODIFIED

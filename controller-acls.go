@@ -20,7 +20,7 @@ import (
 
 func (c *HAProxyController) addACL(acl models.ACL, frontends ...string) {
 	if len(frontends) == 0 {
-		frontends = []string{"http", "https"}
+		frontends = []string{FrontendHTTP, FrontendHTTPS}
 	}
 	for _, frontend := range frontends {
 		_, acls, err := c.NativeAPI.Configuration.GetACLs("frontend", frontend, c.ActiveTransaction)
