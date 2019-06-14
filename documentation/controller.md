@@ -10,7 +10,7 @@ you can run image with arguments:
   - optional, must be in format `namespace/name`
   - default `default/tls-secret`
 - `--configmap`
-  - optional, must be in format `namespace/name`
+  - mandatory, must be in format `namespace/name`
   - default `default/haproxy-configmap`
 - `--namespace-whitelist`
   - optional, if listed only selected namespaces will be monitored
