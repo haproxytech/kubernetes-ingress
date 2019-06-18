@@ -77,6 +77,14 @@ subjects:
   namespace: haproxy-controller
 
 ---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: haproxy-configmap
+  namespace: default
+data:
+
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
