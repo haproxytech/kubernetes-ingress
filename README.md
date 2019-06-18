@@ -1,16 +1,16 @@
 # ![HAProxy](https://github.com/haproxytech/kubernetes-ingress/raw/master/assets/images/haproxy-weblogo-210x49.png "HAProxy")
 
-## HAProxy Kubernetes ingress controller
+## HAProxy Kubernetes Ingress Controller
 
 ### Description
 
 An ingress controller is a Kubernetes resource that routes traffic from outside your cluster to services within the cluster. 
 
-Detailed description can be found on [haproxy.com](https://www.haproxy.com/documentation/hapee/1-9r1/traffic-management/kubernetes-ingress-controller/)
+Detailed documentation can be found within the [Official Documentation](https://www.haproxy.com/documentation/hapee/1-9r1/traffic-management/kubernetes-ingress-controller/)
 
 ### Usage
 
-Docker image is available on Docker Hub: `haproxytech/kubernetes-ingress`
+Docker image is available on Docker Hub: [haproxytech/kubernetes-ingress](https://hub.docker.com/r/haproxytech/kubernetes-ingress)
 
 If you prefer to build it from source use
 ```
