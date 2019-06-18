@@ -54,7 +54,7 @@ Options for starting controller can be found in [controller.md](controller.md)
 #### Backend Checks
 
 - Annotation: `check` - activate pod check
-- :construction: Annotation: `check-interval` - interval between checks [`check` must be "enabled"]
+- Annotation: `check-interval` - interval between checks [`check` must be "enabled"]
 - use in format  `haproxy.org/load-balance: <algorithm> [ <arguments> ]`
 
 #### Https
