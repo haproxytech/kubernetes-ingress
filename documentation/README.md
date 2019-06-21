@@ -15,6 +15,7 @@ Options for starting controller can be found in [controller.md](controller.md)
 | [check](#backend-checks) | ["enabled"] | "enabled" |  |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:|
 | [check-interval](#backend-checks) | [time](#time) |  | [check](#backend-checks) |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:|
 | [forwarded-for](#x-forwarded-for) | ["enabled", "disabled"] | "enabled" |  |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:|
+| [ingress.class](#ingress-class) | string | "" |  |:white_circle:|:large_blue_circle:|:white_circle:|
 | [load-balance](#balance-algorithm) | string | "roundrobin" |  |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:|
 | [maxconn](#maximum-concurent-connections) | number |  |  |:large_blue_circle:|:white_circle:|:white_circle:|
 | [nbthread](#number-of-threads) | number | |  |:large_blue_circle:|:white_circle:|:white_circle:|
@@ -56,6 +57,13 @@ Options for starting controller can be found in [controller.md](controller.md)
 - Annotation: `check` - activate pod check
 - Annotation: `check-interval` - interval between checks [`check` must be "enabled"]
 - use in format  `haproxy.org/load-balance: <algorithm> [ <arguments> ]`
+
+#### Ingress Class
+
+- Annotation: `ingress.class`
+  - default: "haproxy"
+  - used to monitor specific ingress objects in multiple controllers environment
+  - any ingress object whitch have class specified and its different from one defined in [image arguments](controller.md) will be ignored
 
 #### Https
 

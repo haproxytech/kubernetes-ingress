@@ -46,9 +46,8 @@ func (c *HAProxyController) eventIngress(ns *Namespace, data *Ingress) (updateRe
 		newIngress := data
 		oldIngress, ok := ns.Ingresses[data.Name]
 		if !ok {
-			//intentionally do not add it. TODO see if idea of only watching is ok
-			log.Println("Ingress not registered with controller, cannot modify !", data.Name)
-			return false, false
+			newIngress.Status = ADDED
+			return c.eventIngress(ns, newIngress)
 		}
 		if oldIngress.Equal(data) {
 			return false, false

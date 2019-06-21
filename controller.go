@@ -338,7 +338,7 @@ func (c *HAProxyController) handleService(index int, namespace *Namespace, ingre
 	}
 
 	if rule != nil {
-		key := fmt.Sprintf("R%0006d", index)
+		key := fmt.Sprintf("R%s%s%0006d", namespace.Name, ingress.Name, index)
 		old, ok := c.cfg.UseBackendRules[key]
 		if ok {
 			if old.Backend != backendName || old.Host != rule.Host || old.Path != path.Path {

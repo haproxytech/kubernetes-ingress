@@ -4,14 +4,17 @@
 
 you can run image with arguments:
 
+- `--configmap`
+  - mandatory, must be in format `namespace/name`
+  - default `default/haproxy-configmap`
 - `--default-backend-service`
   - must be in format `namespace/name`
 - `--default-ssl-certificate`
   - optional, must be in format `namespace/name`
   - default `default/tls-secret`
-- `--configmap`
-  - mandatory, must be in format `namespace/name`
-  - default `default/haproxy-configmap`
+- `--ingress.class`
+  - default:"haproxy"
+  - class of ingress object to monitor in multiple controllers environment
 - `--namespace-whitelist`
   - optional, if listed only selected namespaces will be monitored
   - :information_source: `namespace-whitelist` has priority over blacklisting.

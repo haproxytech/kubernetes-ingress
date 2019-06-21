@@ -65,7 +65,6 @@ func (c *HAProxyController) updateHAProxy(reloadRequested bool) error {
 	reload, err := c.handleGlobalAnnotations(transaction)
 	LogErr(err)
 	reloadRequested = reloadRequested || reload
-	pathIndex := 0
 
 	var usingHTTPS bool
 	reload, usingHTTPS, err = c.handleHTTPS(transaction)
@@ -89,6 +88,11 @@ func (c *HAProxyController) updateHAProxy(reloadRequested bool) error {
 			continue
 		}
 		for _, ingress := range namespace.Ingresses {
+			pathIndex := 0
+			annClass, _ := GetValueFromAnnotations("ingress.class", ingress.Annotations) // default is ""
+			if annClass.Value != "" && annClass.Value != c.osArgs.IngressClass {
+				ingress.Status = DELETED
+			}
 			//no need for switch/case for now
 			sortedList := make([]string, len(ingress.Rules))
 			index := 0
@@ -101,10 +105,10 @@ func (c *HAProxyController) updateHAProxy(reloadRequested bool) error {
 				rule := ingress.Rules[ruleName]
 				indexedPaths := make([]*IngressPath, len(rule.Paths))
 				for _, path := range rule.Paths {
-					if path.Status != DELETED {
+					if path.Status != DELETED && ingress.Status != DELETED {
 						indexedPaths[path.PathIndex] = path
 					} else {
-						delete(c.cfg.UseBackendRules, fmt.Sprintf("R%0006d", pathIndex))
+						delete(c.cfg.UseBackendRules, fmt.Sprintf("R%s%s%0006d", namespace.Name, ingress.Name, pathIndex))
 						c.cfg.UseBackendRulesStatus = MODIFIED
 						log.Println("SKIPPED", path)
 					}
