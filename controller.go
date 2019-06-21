@@ -246,7 +246,9 @@ func (c *HAProxyController) handlePath(index int, namespace *Namespace, ingress 
 			switch status {
 			case ADDED:
 				err := nativeAPI.Configuration.CreateServer(backendName, data, transaction.ID, 0)
-				LogErr(err)
+				if err != nil && !strings.Contains(err.Error(), "already exists") {
+					LogErr(err)
+				}
 			case MODIFIED:
 				err := nativeAPI.Configuration.EditServer(data.Name, backendName, data, transaction.ID, 0)
 				LogErr(err)
