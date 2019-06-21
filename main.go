@@ -48,6 +48,12 @@ func main() {
 		fmt.Printf("HAProxy Ingress Controller %s %s%s\n\n", GitTag, GitCommit, GitDirty)
 		fmt.Printf("Build from: %s\n", GitRepo)
 		fmt.Printf("Build date: %s\n\n", BuildTime)
+		if len(osArgs.Version) > 1 {
+			fmt.Printf("ConfigMap: %s/%s\n", osArgs.ConfigMap.Namespace, osArgs.ConfigMap.Name)
+			fmt.Printf("Ingress class: %s\n", osArgs.IngressClass)
+			fmt.Printf("Default backend service: %s/%s\n", osArgs.DefaultBackendService.Namespace, osArgs.DefaultBackendService.Name)
+			fmt.Printf("Default ssl certificate: %s/%s\n", osArgs.DefaultCertificate.Namespace, osArgs.DefaultCertificate.Name)
+		}
 		return
 	}
 
@@ -60,7 +66,8 @@ func main() {
 	log.Printf("HAProxy Ingress Controller %s %s%s\n\n", GitTag, GitCommit, GitDirty)
 	log.Printf("Build from: %s\n", GitRepo)
 	log.Printf("Build date: %s\n\n", BuildTime)
-	log.Printf("ConfigMap: %s/%s", osArgs.ConfigMap.Namespace, osArgs.ConfigMap.Name)
+	log.Printf("ConfigMap: %s/%s\n", osArgs.ConfigMap.Namespace, osArgs.ConfigMap.Name)
+	log.Printf("Ingress class: %s\n", osArgs.IngressClass)
 	//TODO currently using default log, switch to something more convenient
 	log.SetFlags(LogType)
 	LogErr(err)
@@ -73,6 +80,8 @@ func main() {
 		Value:  fmt.Sprintf("%s/%s", osArgs.DefaultCertificate.Namespace, osArgs.DefaultCertificate.Name),
 		Status: ADDED,
 	}
+	log.Printf("Default backend service: %s/%s\n", osArgs.DefaultBackendService.Namespace, osArgs.DefaultBackendService.Name)
+	log.Printf("Default ssl certificate: %s/%s\n", osArgs.DefaultCertificate.Namespace, osArgs.DefaultCertificate.Name)
 
 	if osArgs.Test {
 		setupTestEnv()
