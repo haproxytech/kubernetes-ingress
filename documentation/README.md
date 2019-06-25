@@ -56,7 +56,6 @@ Options for starting controller can be found in [controller.md](controller.md)
 
 - Annotation: `check` - activate pod check
 - Annotation: `check-interval` - interval between checks [`check` must be "enabled"]
-- use in format  `haproxy.org/load-balance: <algorithm> [ <arguments> ]`
 
 #### Ingress Class
 
