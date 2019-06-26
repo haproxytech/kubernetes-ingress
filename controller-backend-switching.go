@@ -16,6 +16,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"sort"
 
 	"github.com/haproxytech/models"
@@ -53,11 +54,17 @@ func (c *HAProxyController) useBackendRuleRefresh() (err error) {
 		for _, name := range sortedList {
 			rule := c.cfg.UseBackendRules[name]
 			id := int64(0)
-			var host string
+			var condTest string
 			if rule.Host != "" {
-				host = fmt.Sprintf("{ req.hdr(host) -i %s } ", rule.Host)
+				condTest = fmt.Sprintf("{ req.hdr(host) -i %s } ", rule.Host)
 			}
-			condTest := fmt.Sprintf("%s{ path_beg %s }", host, rule.Path)
+			if rule.Path != "" {
+				condTest = fmt.Sprintf("%s{ path_beg %s }", condTest, rule.Path)
+			}
+			if condTest == "" {
+				log.Println(fmt.Sprintf("Both Host and Path are empty for frontend %s with backend %s, SKIP", frontend, rule.Backend))
+				continue
+			}
 			backendSwitchingRule := &models.BackendSwitchingRule{
 				Cond:     "if",
 				CondTest: condTest,
