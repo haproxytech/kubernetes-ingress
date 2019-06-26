@@ -1,4 +1,4 @@
-module gitlab/haproxytect/kubernetes-ingress
+module github.com/haproxytech/kubernetes-ingress
 
 go 1.12
 
