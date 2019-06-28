@@ -44,6 +44,16 @@ func main() {
 	var osArgs OSArgs
 	var parser = flags.NewParser(&osArgs, flags.IgnoreUnknown)
 	_, err := parser.Parse()
+
+	defaultAnnotationValues["default-backend-service"] = &StringW{
+		Value:  fmt.Sprintf("%s/%s", osArgs.DefaultBackendService.Namespace, osArgs.DefaultBackendService.Name),
+		Status: ADDED,
+	}
+	defaultAnnotationValues["ssl-certificate"] = &StringW{
+		Value:  fmt.Sprintf("%s/%s", osArgs.DefaultCertificate.Namespace, osArgs.DefaultCertificate.Name),
+		Status: ADDED,
+	}
+
 	if len(osArgs.Version) > 0 {
 		fmt.Printf("HAProxy Ingress Controller %s %s%s\n\n", GitTag, GitCommit, GitDirty)
 		fmt.Printf("Build from: %s\n", GitRepo)
@@ -51,8 +61,6 @@ func main() {
 		if len(osArgs.Version) > 1 {
 			fmt.Printf("ConfigMap: %s/%s\n", osArgs.ConfigMap.Namespace, osArgs.ConfigMap.Name)
 			fmt.Printf("Ingress class: %s\n", osArgs.IngressClass)
-			fmt.Printf("Default backend service: %s/%s\n", osArgs.DefaultBackendService.Namespace, osArgs.DefaultBackendService.Name)
-			fmt.Printf("Default ssl certificate: %s/%s\n", osArgs.DefaultCertificate.Namespace, osArgs.DefaultCertificate.Name)
 		}
 		return
 	}
@@ -72,16 +80,8 @@ func main() {
 	log.SetFlags(LogType)
 	LogErr(err)
 
-	defaultAnnotationValues["default-backend-service"] = &StringW{
-		Value:  fmt.Sprintf("%s/%s", osArgs.DefaultBackendService.Namespace, osArgs.DefaultBackendService.Name),
-		Status: ADDED,
-	}
-	defaultAnnotationValues["ssl-certificate"] = &StringW{
-		Value:  fmt.Sprintf("%s/%s", osArgs.DefaultCertificate.Namespace, osArgs.DefaultCertificate.Name),
-		Status: ADDED,
-	}
-	log.Printf("Default backend service: %s/%s\n", osArgs.DefaultBackendService.Namespace, osArgs.DefaultBackendService.Name)
-	log.Printf("Default ssl certificate: %s/%s\n", osArgs.DefaultCertificate.Namespace, osArgs.DefaultCertificate.Name)
+	log.Printf("Default backend service: %s\n", defaultAnnotationValues["default-backend-service"].Value)
+	log.Printf("Default ssl certificate: %s\n", defaultAnnotationValues["ssl-certificate"].Value)
 
 	if osArgs.Test {
 		setupTestEnv()
