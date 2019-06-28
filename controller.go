@@ -187,10 +187,7 @@ func (c *HAProxyController) handlePath(index int, namespace *Namespace, ingress 
 			}
 			pod.Backends[backendName] = struct{}{}
 			status := pod.Status
-			port := int64(path.ServicePort)
-			if port == 0 && len(service.Ports) > 0 {
-				port = service.Ports[0].Port
-			}
+			port := int64(path.ServicePortInt)
 			weight := int64(128)
 			data := &models.Server{
 				Name:    pod.HAProxyName,
@@ -275,7 +272,15 @@ func (c *HAProxyController) handleService(index int, namespace *Namespace, ingre
 		return "", nil, nil, fmt.Errorf("service %s has no selector", service.Name)
 	}
 
-	backendName = fmt.Sprintf("%s-%s-%d", namespace.Name, service.Name, path.ServicePort)
+	if path.ServicePortInt == 0 {
+		for _, p := range service.Ports {
+			if p.Name == path.ServicePortString || path.ServicePortString == "" {
+				path.ServicePortInt = int(p.Port)
+				break
+			}
+		}
+	}
+	backendName = fmt.Sprintf("%s-%s-%d", namespace.Name, service.Name, path.ServicePortInt)
 	//load-balance, forwarded-for and annWhitelist have default values, so no need for error checking
 	annBalanceAlg, _ := GetValueFromAnnotations("load-balance", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
 	annForwardedFor, _ := GetValueFromAnnotations("forwarded-for", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
@@ -380,7 +385,7 @@ func (c *HAProxyController) handleService(index int, namespace *Namespace, ingre
 	}
 
 	switch status {
-	case ADDED:
+	case ADDED, MODIFIED:
 		_, _, err := c.cfg.NativeAPI.Configuration.GetBackend(backendName, c.ActiveTransaction)
 		if err != nil {
 			backend := &models.Backend{
@@ -403,8 +408,6 @@ func (c *HAProxyController) handleService(index int, namespace *Namespace, ingre
 				}
 			}
 		}
-	case MODIFIED:
-		log.Println("so we have modified now")
 	case DELETED:
 		delete(c.cfg.UseBackendRules, fmt.Sprintf("R%0006d", index))
 		c.cfg.UseBackendRulesStatus = MODIFIED

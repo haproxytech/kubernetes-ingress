@@ -79,11 +79,12 @@ func ConvertIngressRules(ingressRules []v1beta1.IngressRule) map[string]*Ingress
 		paths := make(map[string]*IngressPath)
 		for pathIndex, k8sPath := range k8sRule.HTTP.Paths {
 			paths[k8sPath.Path] = &IngressPath{
-				PathIndex:   pathIndex,
-				Path:        k8sPath.Path,
-				ServiceName: k8sPath.Backend.ServiceName,
-				ServicePort: k8sPath.Backend.ServicePort.IntValue(),
-				Status:      "",
+				PathIndex:         pathIndex,
+				Path:              k8sPath.Path,
+				ServiceName:       k8sPath.Backend.ServiceName,
+				ServicePortInt:    k8sPath.Backend.ServicePort.IntValue(),
+				ServicePortString: k8sPath.Backend.ServicePort.StrVal,
+				Status:            "",
 			}
 		}
 		rules[k8sRule.Host] = &IngressRule{

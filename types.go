@@ -89,11 +89,12 @@ func (n *Namespace) GetPodsForSelector(selector MapStringW) map[string]*Pod {
 
 //IngressPath is usefull data from k8s structures about ingress path
 type IngressPath struct {
-	ServiceName string
-	ServicePort int
-	Path        string
-	PathIndex   int
-	Status      Status
+	ServiceName       string
+	ServicePortInt    int
+	ServicePortString string
+	Path              string
+	PathIndex         int
+	Status            Status
 }
 
 //IngressRule is usefull data from k8s structures about ingress rule

@@ -61,7 +61,8 @@ func (c *HAProxyController) eventIngress(ns *Namespace, data *Ingress) (updateRe
 					if oldPath, ok := oldRule.Paths[newPath.Path]; ok {
 						//compare path for differences
 						if newPath.ServiceName != oldPath.ServiceName ||
-							newPath.ServicePort != oldPath.ServicePort {
+							newPath.ServicePortInt != oldPath.ServicePortInt ||
+							newPath.ServicePortString != oldPath.ServicePortString {
 							newPath.Status = MODIFIED
 							newRule.Status = MODIFIED
 						}

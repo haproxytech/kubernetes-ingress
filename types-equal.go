@@ -27,7 +27,10 @@ func (a *IngressPath) Equal(b *IngressPath) bool {
 	if a.ServiceName != b.ServiceName {
 		return false
 	}
-	if a.ServicePort != b.ServicePort {
+	if a.ServicePortInt != b.ServicePortInt {
+		return false
+	}
+	if a.ServicePortString != b.ServicePortString {
 		return false
 	}
 	return true

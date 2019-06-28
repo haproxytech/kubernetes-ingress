@@ -406,10 +406,14 @@ func (k *K8s) EventsServices(channel chan *Service, stop chan struct{}) {
 					Status:      status,
 				}
 				for _, sp := range data.Spec.Ports {
+					port := sp.TargetPort.IntVal
+					if port == 0 {
+						port = sp.Port
+					}
 					item.Ports = append(item.Ports, ServicePort{
 						Name:     sp.Name,
 						Protocol: string(sp.Protocol),
-						Port:     int64(sp.Port),
+						Port:     int64(port),
 					})
 				}
 				if DEBUG_API {
@@ -445,10 +449,14 @@ func (k *K8s) EventsServices(channel chan *Service, stop chan struct{}) {
 					Status:      status,
 				}
 				for _, sp := range data1.Spec.Ports {
+					port := sp.TargetPort.IntVal
+					if port == 0 {
+						port = sp.Port
+					}
 					item1.Ports = append(item1.Ports, ServicePort{
 						Name:     sp.Name,
 						Protocol: string(sp.Protocol),
-						Port:     int64(sp.Port),
+						Port:     int64(port),
 					})
 				}
 
@@ -461,10 +469,14 @@ func (k *K8s) EventsServices(channel chan *Service, stop chan struct{}) {
 					Status:      status,
 				}
 				for _, sp := range data2.Spec.Ports {
+					port := sp.TargetPort.IntVal
+					if port == 0 {
+						port = sp.Port
+					}
 					item2.Ports = append(item2.Ports, ServicePort{
 						Name:     sp.Name,
 						Protocol: string(sp.Protocol),
-						Port:     int64(sp.Port),
+						Port:     int64(port),
 					})
 				}
 				if item2.Equal(item1) {
