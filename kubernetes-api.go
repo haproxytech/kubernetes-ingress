@@ -19,10 +19,8 @@ import (
 	"path/filepath"
 
 	corev1 "k8s.io/api/core/v1"
-	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	networking "k8s.io/api/networking/v1beta1"
 	"k8s.io/apimachinery/pkg/fields"
-	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
@@ -71,53 +69,6 @@ func GetRemoteKubernetesClient(osArgs OSArgs) (*K8s, error) {
 		panic(err.Error())
 	}
 	return &K8s{API: clientset}, nil
-}
-
-//GetAll fetches all k8s resources
-func (k *K8s) GetAll() (ns, svc, pod, ingress, config, secrets watch.Interface) {
-	nsWatch, err := k.GetNamespaces()
-	if err != nil {
-		log.Println(err, nsWatch)
-		//log.Panic(err)
-	}
-
-	log.Println("++++++++++++++++ 1")
-	svcWatch, err := k.GetServices()
-	if err != nil {
-		log.Panic(err)
-	}
-	log.Println("++++++++++++++++ 2")
-
-	podWatch, err := k.GetPods()
-	if err != nil {
-		log.Panic(err)
-	}
-
-	ingressWatch, err := k.GetIngresses()
-	if err != nil {
-		log.Panic(err)
-	}
-
-	configMapWatch, err := k.GetConfigMap()
-	if err != nil {
-		log.Panic(err)
-	}
-
-	secretsWatch, err := k.GetSecrets()
-	if err != nil {
-		log.Panic(err)
-	}
-
-	return nsWatch, svcWatch, podWatch, ingressWatch, configMapWatch, secretsWatch
-}
-
-//GetNamespaces returns namespaces
-func (k *K8s) GetNamespaces() (watch.Interface, error) {
-	watchChanges, err := k.API.CoreV1().Namespaces().Watch(metav1.ListOptions{})
-	if err != nil {
-		return nil, err
-	}
-	return watchChanges, nil
 }
 
 func (k *K8s) EventsNamespaces(channel chan *Namespace, stop chan struct{}) {
@@ -197,15 +148,6 @@ func (k *K8s) EventsNamespaces(channel chan *Namespace, stop chan struct{}) {
 	go controller.Run(stop)
 }
 
-//GetPods returns pods
-func (k *K8s) GetPods() (watch.Interface, error) {
-	watchChanges, err := k.API.CoreV1().Pods("default").Watch(metav1.ListOptions{})
-	if err != nil {
-		return nil, err
-	}
-	return watchChanges, nil
-}
-
 func (k *K8s) EventsPods(channel chan *Pod, stop chan struct{}) {
 	watchlist := cache.NewListWatchFromClient(
 		k.API.CoreV1().RESTClient(),
@@ -283,29 +225,20 @@ func (k *K8s) EventsPods(channel chan *Pod, stop chan struct{}) {
 	go controller.Run(stop)
 }
 
-//GetIngresses returns ingresses
-func (k *K8s) GetIngresses() (watch.Interface, error) {
-	watchChanges, err := k.API.Extensions().Ingresses("").Watch(metav1.ListOptions{})
-	if err != nil {
-		return nil, err
-	}
-	return watchChanges, nil
-}
-
 func (k *K8s) EventsIngresses(channel chan *Ingress, stop chan struct{}) {
 	watchlist := cache.NewListWatchFromClient(
-		k.API.Extensions().RESTClient(),
+		k.API.NetworkingV1beta1().RESTClient(),
 		string("ingresses"),
 		corev1.NamespaceAll,
 		fields.Everything(),
 	)
 	_, controller := cache.NewInformer( // also take a look at NewSharedIndexInformer
 		watchlist,
-		&extensionsv1beta1.Ingress{},
+		&networking.Ingress{},
 		0, //Duration is int64
 		cache.ResourceEventHandlerFuncs{
 			AddFunc: func(obj interface{}) {
-				data := obj.(*extensionsv1beta1.Ingress)
+				data := obj.(*networking.Ingress)
 				var status Status = ADDED
 				if data.ObjectMeta.GetDeletionTimestamp() != nil {
 					//detect services that are in terminating state
@@ -324,7 +257,7 @@ func (k *K8s) EventsIngresses(channel chan *Ingress, stop chan struct{}) {
 				channel <- item
 			},
 			DeleteFunc: func(obj interface{}) {
-				data := obj.(*extensionsv1beta1.Ingress)
+				data := obj.(*networking.Ingress)
 				var status Status = DELETED
 				item := &Ingress{
 					Namespace:   data.GetNamespace(),
@@ -339,8 +272,8 @@ func (k *K8s) EventsIngresses(channel chan *Ingress, stop chan struct{}) {
 				channel <- item
 			},
 			UpdateFunc: func(oldObj, newObj interface{}) {
-				data1 := oldObj.(*extensionsv1beta1.Ingress)
-				data2 := newObj.(*extensionsv1beta1.Ingress)
+				data1 := oldObj.(*networking.Ingress)
+				data2 := newObj.(*networking.Ingress)
 				var status Status = MODIFIED
 				item1 := &Ingress{
 					Namespace:   data1.GetNamespace(),
@@ -367,15 +300,6 @@ func (k *K8s) EventsIngresses(channel chan *Ingress, stop chan struct{}) {
 		},
 	)
 	go controller.Run(stop)
-}
-
-//GetServices returns services
-func (k *K8s) GetServices() (watch.Interface, error) {
-	watchChanges, err := k.API.CoreV1().Services("").Watch(metav1.ListOptions{})
-	if err != nil {
-		return nil, err
-	}
-	return watchChanges, nil
 }
 
 func (k *K8s) EventsServices(channel chan *Service, stop chan struct{}) {
@@ -492,16 +416,6 @@ func (k *K8s) EventsServices(channel chan *Service, stop chan struct{}) {
 	go controller.Run(stop)
 }
 
-//GetConfigMap returns config map for controller
-func (k *K8s) GetConfigMap() (watch.Interface, error) {
-
-	watchChanges, err := k.API.CoreV1().ConfigMaps("").Watch(metav1.ListOptions{})
-	if err != nil {
-		return nil, err
-	}
-	return watchChanges, nil
-}
-
 func (k *K8s) EventsConfigfMaps(channel chan *ConfigMap, stop chan struct{}) {
 	watchlist := cache.NewListWatchFromClient(
 		k.API.CoreV1().RESTClient(),
@@ -573,15 +487,6 @@ func (k *K8s) EventsConfigfMaps(channel chan *ConfigMap, stop chan struct{}) {
 		},
 	)
 	go controller.Run(stop)
-}
-
-//GetSecrets returns kubernetes secrets
-func (k *K8s) GetSecrets() (watch.Interface, error) {
-	watchChanges, err := k.API.CoreV1().Secrets("").Watch(metav1.ListOptions{})
-	if err != nil {
-		return nil, err
-	}
-	return watchChanges, nil
 }
 
 func (k *K8s) EventsSecrets(channel chan *Secret, stop chan struct{}) {
