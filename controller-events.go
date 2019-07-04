@@ -226,8 +226,7 @@ func (c *HAProxyController) eventPod(ns *Namespace, data *Pod) (updateRequired, 
 		var oldPod *Pod
 		oldPod, ok := ns.Pods[data.Name]
 		if !ok {
-			//intentionally do not add it. TODO see if our idea of only watching is ok
-			log.Println("Pod not registered with controller, cannot modify !", data.Name)
+			log.Println("Pod not registered with controller: ", data.Name)
 			return updateRequired, needsReload
 		}
 		if oldPod.Equal(data) {
