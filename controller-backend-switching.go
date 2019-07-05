@@ -45,6 +45,7 @@ func (c *HAProxyController) useBackendRuleRefresh() (err error) {
 	_, frontend, _ := c.cfg.NativeAPI.Configuration.GetFrontend(FrontendHTTPS, c.ActiveTransaction)
 	backends := map[string]struct{}{
 		frontend.DefaultBackend: struct{}{},
+		"RateLimit":             struct{}{},
 	}
 	for _, frontend := range frontends {
 		err = nil
