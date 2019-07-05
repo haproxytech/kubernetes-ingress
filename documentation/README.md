@@ -89,6 +89,9 @@ Options for starting controller can be found in [controller.md](controller.md)
 
 #### Rate limit
 
+Keep in mind this setting is global and will applied to all your traffic.
+The number of requests a client can do per `rate-limit-interval` is **10**.
+
 - Annotation: `rate-limit`
   - `ON` / `OFF` - enable or disable rate limiting
 - Annotation: `rate-limit-expire`
