@@ -33,14 +33,14 @@ rules:
   - list
   - watch
 - apiGroups:
-  - "networking.k8s.io/v1beta1"
+  - "extensions"
   resources:
-    - ingresses
-    - ingresses/status
+  - ingresses
+  - ingresses/status
   verbs:
-    - get
-    - list
-    - watch
+  - get
+  - list
+  - watch
 - apiGroups:
   - ""
   resources:

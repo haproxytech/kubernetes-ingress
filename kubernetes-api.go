@@ -19,7 +19,8 @@ import (
 	"path/filepath"
 
 	corev1 "k8s.io/api/core/v1"
-	networking "k8s.io/api/networking/v1beta1"
+	//networking "k8s.io/api/networking/v1beta1"
+	extensions "k8s.io/api/extensions/v1beta1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -227,18 +228,18 @@ func (k *K8s) EventsPods(channel chan *Pod, stop chan struct{}) {
 
 func (k *K8s) EventsIngresses(channel chan *Ingress, stop chan struct{}) {
 	watchlist := cache.NewListWatchFromClient(
-		k.API.NetworkingV1beta1().RESTClient(),
+		k.API.ExtensionsV1beta1().RESTClient(),
 		string("ingresses"),
 		corev1.NamespaceAll,
 		fields.Everything(),
 	)
 	_, controller := cache.NewInformer( // also take a look at NewSharedIndexInformer
 		watchlist,
-		&networking.Ingress{},
+		&extensions.Ingress{},
 		0, //Duration is int64
 		cache.ResourceEventHandlerFuncs{
 			AddFunc: func(obj interface{}) {
-				data := obj.(*networking.Ingress)
+				data := obj.(*extensions.Ingress)
 				var status Status = ADDED
 				if data.ObjectMeta.GetDeletionTimestamp() != nil {
 					//detect services that are in terminating state
@@ -257,7 +258,7 @@ func (k *K8s) EventsIngresses(channel chan *Ingress, stop chan struct{}) {
 				channel <- item
 			},
 			DeleteFunc: func(obj interface{}) {
-				data := obj.(*networking.Ingress)
+				data := obj.(*extensions.Ingress)
 				var status Status = DELETED
 				item := &Ingress{
 					Namespace:   data.GetNamespace(),
@@ -272,8 +273,8 @@ func (k *K8s) EventsIngresses(channel chan *Ingress, stop chan struct{}) {
 				channel <- item
 			},
 			UpdateFunc: func(oldObj, newObj interface{}) {
-				data1 := oldObj.(*networking.Ingress)
-				data2 := newObj.(*networking.Ingress)
+				data1 := oldObj.(*extensions.Ingress)
+				data2 := newObj.(*extensions.Ingress)
 				var status Status = MODIFIED
 				item1 := &Ingress{
 					Namespace:   data1.GetNamespace(),

@@ -21,7 +21,8 @@ import (
 	"runtime"
 	"strings"
 
-	networking "k8s.io/api/networking/v1beta1"
+	//networking "k8s.io/api/networking/v1beta1"
+	extensions "k8s.io/api/extensions/v1beta1"
 )
 
 func homeDir() string {
@@ -73,7 +74,7 @@ func RandomString(n int) string {
 }
 
 //ConvertIngressRules converts data from kubernetes format
-func ConvertIngressRules(ingressRules []networking.IngressRule) map[string]*IngressRule {
+func ConvertIngressRules(ingressRules []extensions.IngressRule) map[string]*IngressRule {
 	rules := make(map[string]*IngressRule)
 	for _, k8sRule := range ingressRules {
 		paths := make(map[string]*IngressPath)
