@@ -97,11 +97,16 @@ func (c *HAProxyController) requestsTCPRefresh(transaction *models.Transaction) 
 
 	if len(c.cfg.TCPRequests[RATE_LIMIT]) > 0 {
 		request1 := &c.cfg.TCPRequests[RATE_LIMIT][0]
+		request2 := &c.cfg.TCPRequests[RATE_LIMIT][1]
 
 		err = nativeAPI.Configuration.CreateTCPRequestRule("frontend", FrontendHTTP, request1, transaction.ID, 0)
 		LogErr(err)
+		err = nativeAPI.Configuration.CreateTCPRequestRule("frontend", FrontendHTTP, request2, transaction.ID, 0)
+		LogErr(err)
 
 		err = nativeAPI.Configuration.CreateTCPRequestRule("frontend", FrontendHTTPS, request1, transaction.ID, 0)
+		LogErr(err)
+		err = nativeAPI.Configuration.CreateTCPRequestRule("frontend", FrontendHTTPS, request2, transaction.ID, 0)
 		LogErr(err)
 	}
 
