@@ -145,8 +145,6 @@ func (c *HAProxyController) handleRateLimiting(transaction *models.Transaction, 
 		c.cfg.TCPRequests[RATE_LIMIT] = []models.TCPRequestRule{}
 		c.cfg.TCPRequestsStatus = MODIFIED
 
-		c.cfg.TCPRequests[RATE_LIMIT] = []models.TCPRequestRule{}
-		c.cfg.HTTPRequests[RATE_LIMIT] = []models.HTTPRequestRule{}
 	}
 
 	switch status {
