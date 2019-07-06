@@ -127,6 +127,9 @@ func (c *HAProxyController) handleRateLimiting(transaction *models.Transaction, 
 			*httpRequest2,
 		}
 
+		c.cfg.TCPRequestsStatus = ADDED
+		c.cfg.HTTPRequestsStatus = ADDED
+
 	}
 
 	removeRateLimiting := func() {
