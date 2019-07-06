@@ -63,6 +63,10 @@ func (c *HAProxyController) handleRateLimiting(transaction *models.Transaction, 
 			c.cfg.RateLimitingEnabled = false
 		}
 	}
+	if status == EMPTY && c.cfg.RateLimitingEnabled {
+		status = DELETED
+		c.cfg.RateLimitingEnabled = false
+	}
 	if c.cfg.RateLimitingEnabled {
 		if annRateLimitExpire.Status == MODIFIED {
 			status = MODIFIED
