@@ -81,22 +81,17 @@ func (c *HAProxyController) handleRateLimiting(transaction *models.Transaction, 
 		Type:   "connection",
 		Action: "track-sc0 src table RateLimit",
 	}
-	tcpRequest2 := &models.TCPRequestRule{
-		ID:       &ID,
-		Type:     "connection",
-		Action:   "reject",
-		Cond:     "if",
-		CondTest: ratelimit_acl3.ACLName,
-	}
 	httpRequest1 := &models.HTTPRequestRule{
 		ID:       &ID,
 		Type:     "deny",
+		DenyStatus: 429,
 		Cond:     "if",
 		CondTest: fmt.Sprintf("%s %s", ratelimit_acl1.ACLName, ratelimit_acl2.ACLName),
 	}
 	httpRequest2 := &models.HTTPRequestRule{
 		ID:       &ID,
 		Type:     "deny",
+		DenyStatus: 429,
 		Cond:     "if",
 		CondTest: ratelimit_acl3.ACLName,
 	}
@@ -120,12 +115,14 @@ func (c *HAProxyController) handleRateLimiting(transaction *models.Transaction, 
 
 		c.cfg.TCPRequests[RATE_LIMIT] = []models.TCPRequestRule{
 			*tcpRequest1,
-			*tcpRequest2,
 		}
 		c.cfg.HTTPRequests[RATE_LIMIT] = []models.HTTPRequestRule{
 			*httpRequest1,
 			*httpRequest2,
 		}
+
+		c.cfg.TCPRequestsStatus = ADDED
+		c.cfg.HTTPRequestsStatus = ADDED
 
 	}
 
