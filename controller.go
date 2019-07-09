@@ -170,106 +170,128 @@ func (c *HAProxyController) HAProxyReload() error {
 
 func (c *HAProxyController) handlePath(index int, namespace *Namespace, ingress *Ingress, rule *IngressRule, path *IngressPath,
 	transaction *models.Transaction) error {
-	nativeAPI := c.NativeAPI
 	//log.Println("PATH", path)
-	backendName, selector, service, err := c.handleService(index, namespace, ingress, rule, path, transaction)
+	backendName, service, err := c.handleService(index, namespace, ingress, rule, path, transaction)
 	if err != nil {
 		return err
 	}
+
+	endpoints, ok := namespace.Endpoints[service.Name]
+	if !ok {
+		log.Printf("Endpoint for service %s does not exists", service.Name)
+		return nil // not an end of world scenario, just log this
+	}
+	endpoints.BackendName = backendName
+
+	for _, ip := range *endpoints.Addresses {
+		c.handleEndpointIP(namespace, ingress, rule, path, service, backendName, endpoints, ip, transaction)
+	}
+	return nil
+}
+
+func (c *HAProxyController) handleEndpointIP(namespace *Namespace, ingress *Ingress, rule *IngressRule, path *IngressPath, service *Service, backendName string, endpoints *Endpoints, ip *EndpointIP, transaction *models.Transaction) {
+	nativeAPI := c.NativeAPI
 	annMaxconn, errMaxConn := GetValueFromAnnotations("pod-maxconn", service.Annotations)
 	annCheck, _ := GetValueFromAnnotations("check", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
 	annCheckInterval, errCheckInterval := GetValueFromAnnotations("check-interval", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
 
-	for _, pod := range namespace.Pods {
-		if hasSelectors(selector, pod.Labels) {
-			if pod.Backends == nil {
-				pod.Backends = map[string]struct{}{}
+	status := ip.Status
+	port := int64(path.ServicePortInt)
+	if port == 0 {
+		portName := path.ServicePortString
+		for _, p := range *endpoints.Ports {
+			if p.Name == portName {
+				port = p.Port
+				break
 			}
-			pod.Backends[backendName] = struct{}{}
-			status := pod.Status
-			port := int64(path.ServicePortInt)
-			weight := int64(128)
-			data := &models.Server{
-				Name:    pod.HAProxyName,
-				Address: pod.IP,
-				Port:    &port,
-				Weight:  &weight,
+		}
+	}
+	if port == 0 {
+		for _, p := range *endpoints.Ports {
+			port = p.Port
+		}
+	}
+	weight := int64(128)
+	data := &models.Server{
+		Name:    ip.HAProxyName,
+		Address: ip.IP,
+		Port:    &port,
+		Weight:  &weight,
+	}
+	if ip.Disabled {
+		data.Maintenance = "enabled"
+	}
+	annnotationsActive := false
+	if annMaxconn != nil {
+		if annMaxconn.Status != DELETED && errMaxConn == nil {
+			if maxconn, err := strconv.ParseInt(annMaxconn.Value, 10, 64); err == nil {
+				data.Maxconn = &maxconn
 			}
-			if pod.Maintenance {
-				data.Maintenance = "enabled"
+			if annMaxconn.Status != "" {
+				annnotationsActive = true
 			}
-			/*if pod.Sorry != "" {
-				data.Sorry = pod.Sorry
-			}*/
-			annnotationsActive := false
-			if annMaxconn != nil {
-				if annMaxconn.Status != DELETED && errMaxConn == nil {
-					if maxconn, err := strconv.ParseInt(annMaxconn.Value, 10, 64); err == nil {
-						data.Maxconn = &maxconn
-					}
-					if annMaxconn.Status != "" {
-						annnotationsActive = true
-					}
-				}
+		}
+	}
+	if annCheck != nil {
+		if annCheck.Status != DELETED {
+			if annCheck.Value == "enabled" {
+				data.Check = "enabled"
+				//see if we have port and interval defined
 			}
-			if annCheck != nil {
-				if annCheck.Status != DELETED {
-					if annCheck.Value == "enabled" {
-						data.Check = "enabled"
-						//see if we have port and interval defined
-					}
-				}
-				if annCheck.Status != "" {
-					annnotationsActive = true
-				}
-			}
-			if errCheckInterval == nil {
-				data.Inter = misc.ParseTimeout(annCheckInterval.Value)
-				if annCheckInterval.Status != EMPTY {
-					annnotationsActive = true
-				}
-			} else {
-				data.Inter = nil
-			}
-			if pod.Status == EMPTY && annnotationsActive {
-				status = MODIFIED
-			}
-			if status == EMPTY && path.Status != ADDED {
-				status = ADDED
-			}
-			if status == EMPTY && service.Status != ADDED {
-				status = ADDED
-			}
-			switch status {
-			case ADDED:
+		}
+		if annCheck.Status != "" {
+			annnotationsActive = true
+		}
+	}
+	if errCheckInterval == nil {
+		data.Inter = misc.ParseTimeout(annCheckInterval.Value)
+		if annCheckInterval.Status != EMPTY {
+			annnotationsActive = true
+		}
+	} else {
+		data.Inter = nil
+	}
+	if ip.Status == EMPTY && annnotationsActive {
+		status = MODIFIED
+	}
+	if status == EMPTY && path.Status != ADDED {
+		status = ADDED
+	}
+	if status == EMPTY && service.Status != ADDED {
+		status = ADDED
+	}
+	switch status {
+	case ADDED:
+		err := nativeAPI.Configuration.CreateServer(backendName, data, transaction.ID, 0)
+		if err != nil && !strings.Contains(err.Error(), "already exists") {
+			LogErr(err)
+		}
+	case MODIFIED:
+		err := nativeAPI.Configuration.EditServer(data.Name, backendName, data, transaction.ID, 0)
+		if err != nil {
+			if strings.Contains(err.Error(), "does not exist") {
 				err := nativeAPI.Configuration.CreateServer(backendName, data, transaction.ID, 0)
-				if err != nil && !strings.Contains(err.Error(), "already exists") {
-					LogErr(err)
-				}
-			case MODIFIED:
-				err := nativeAPI.Configuration.EditServer(data.Name, backendName, data, transaction.ID, 0)
 				LogErr(err)
-			case DELETED:
-				err := nativeAPI.Configuration.DeleteServer(data.Name, backendName, transaction.ID, 0)
+			} else {
 				LogErr(err)
 			}
-		} //if pod.Status...
-	} //for pod
-	return nil
+		}
+	case DELETED:
+		err := nativeAPI.Configuration.DeleteServer(data.Name, backendName, transaction.ID, 0)
+		if err != nil && !strings.Contains(err.Error(), "does not exist") {
+			LogErr(err)
+		}
+	}
 }
 
 func (c *HAProxyController) handleService(index int, namespace *Namespace, ingress *Ingress, rule *IngressRule, path *IngressPath,
-	transaction *models.Transaction) (backendName string, selector MapStringW, service *Service, err error) {
+	transaction *models.Transaction) (backendName string, service *Service, err error) {
 	nativeAPI := c.NativeAPI
 
 	service, ok := namespace.Services[path.ServiceName]
 	if !ok {
 		log.Println("service", path.ServiceName, "does not exists")
-		return "", nil, nil, fmt.Errorf("service %s does not exists", path.ServiceName)
-	}
-	selector = service.Selector
-	if len(selector) == 0 {
-		return "", nil, nil, fmt.Errorf("service %s has no selector", service.Name)
+		return "", nil, fmt.Errorf("service %s does not exists", path.ServiceName)
 	}
 
 	if path.ServicePortInt == 0 {
@@ -403,7 +425,7 @@ func (c *HAProxyController) handleService(index int, namespace *Namespace, ingre
 				msg := err.Error()
 				if !strings.Contains(msg, "Farm already exists") {
 					if !newImportantPath {
-						return "", nil, nil, err
+						return "", nil, err
 					}
 				}
 			}
@@ -411,13 +433,13 @@ func (c *HAProxyController) handleService(index int, namespace *Namespace, ingre
 	case DELETED:
 		delete(c.cfg.UseBackendRules, fmt.Sprintf("R%0006d", index))
 		c.cfg.UseBackendRulesStatus = MODIFIED
-		return "", nil, service, nil
+		return "", service, nil
 	}
 
 	if annBalanceAlg.Status != "" || annForwardedFor.Status != "" {
 		if err = c.handleBackendAnnotations(balanceAlg, annForwardedFor, backendName, transaction); err != nil {
-			return "", nil, nil, err
+			return "", nil, err
 		}
 	}
-	return backendName, selector, service, nil
+	return backendName, service, nil
 }

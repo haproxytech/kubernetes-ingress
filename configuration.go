@@ -104,11 +104,9 @@ func (c *Configuration) GetNamespace(name string) *Namespace {
 //NewNamespace returns new initialized Namespace
 func (c *Configuration) NewNamespace(name string) *Namespace {
 	newNamespace := &Namespace{
-		Name:     name,
-		Relevant: c.IsRelevantNamespace(name),
-		//Annotations
-		Pods:      make(map[string]*Pod),
-		PodNames:  make(map[string]bool),
+		Name:      name,
+		Relevant:  c.IsRelevantNamespace(name),
+		Endpoints: make(map[string]*Endpoints),
 		Services:  make(map[string]*Service),
 		Ingresses: make(map[string]*Ingress),
 		Secret:    make(map[string]*Secret),
@@ -157,13 +155,18 @@ func (c *Configuration) Clean() {
 				data.Status = EMPTY
 			}
 		}
-		for _, data := range namespace.Pods {
+		for _, data := range namespace.Endpoints {
 			switch data.Status {
 			case DELETED:
-				delete(namespace.PodNames, data.HAProxyName)
-				delete(namespace.Pods, data.Name)
+				delete(namespace.Endpoints, data.Service.Value)
 			default:
 				data.Status = EMPTY
+			}
+			for _, port := range *data.Ports {
+				port.Status = EMPTY
+			}
+			for _, adr := range *data.Addresses {
+				adr.Status = EMPTY
 			}
 		}
 		for _, data := range namespace.Secret {

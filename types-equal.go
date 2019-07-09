@@ -16,6 +16,58 @@ package main
 
 import "bytes"
 
+func (a *ServicePort) Equal(b *ServicePort) bool {
+	if a.Name != b.Name || a.Protocol != b.Protocol || a.Port != b.Port {
+		return false
+	}
+	return true
+}
+
+func (a *ServicePorts) Equal(b *ServicePorts) bool {
+	if len(*a) != len(*b) {
+		return false
+	}
+	for _, value := range *a {
+		found := false
+		for _, value2 := range *b {
+			if value.Equal(value2) {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return false
+		}
+	}
+	return true
+}
+
+func (a *EndpointIP) Equal(b *EndpointIP) bool {
+	if a.IP != b.IP {
+		return false
+	}
+	return true
+}
+
+func (a *EndpointIPs) Equal(b *EndpointIPs) bool {
+	if len(*a) != len(*b) {
+		return false
+	}
+	for _, value := range *a {
+		found := false
+		for _, value2 := range *b {
+			if value.Equal(value2) {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return false
+		}
+	}
+	return true
+}
+
 //Equal checks if Ingress Paths are equal
 func (a *IngressPath) Equal(b *IngressPath) bool {
 	if a == nil || b == nil {
@@ -150,23 +202,22 @@ func (a *Secret) Equal(b *Secret) bool {
 }
 
 //Equal checks if pods are equal
-func (a *Pod) Equal(b *Pod) bool {
+func (a *Endpoints) Equal(b *Endpoints) bool {
 	if a == nil || b == nil {
 		return false
 	}
-	if a.Name != b.Name {
+	if a.Namespace != b.Namespace {
 		return false
 	}
-	if a.IP != b.IP {
+	if a.Service != b.Service {
 		return false
 	}
-	if !a.Labels.Equal(b.Labels) {
+	if !a.Ports.Equal(b.Ports) {
 		return false
 	}
-	for key := range a.Backends {
-		if _, ok := b.Backends[key]; !ok {
-			return false
-		}
+	if !a.Addresses.Equal(b.Addresses) {
+		return false
 	}
+
 	return true
 }

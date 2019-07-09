@@ -25,7 +25,6 @@ Options for starting controller can be found in [controller.md](controller.md)
 | [rate-limit-interval](#rate-limit) | string | "10s" | [rate-limit](#rate-limit) |:large_blue_circle:|:white_circle:|:white_circle:|
 | [rate-limit-size](#rate-limit) | string | "100k" | [rate-limit](#rate-limit) |:large_blue_circle:|:white_circle:|:white_circle:|
 | [servers-increment](#servers-slots-increment) | number | "42" |  |:large_blue_circle:|:white_circle:|:white_circle:|
-| [servers-increment-max-disabled](#servers-slots-increment) | number | "66" |  |:large_blue_circle:|:white_circle:|:white_circle:|
 | [ssl-certificate](#tls-secret) | string |  |  |:large_blue_circle:|:white_circle:|:white_circle:|
 | [ssl-redirect](#https) | "ON"/"OFF" | "ON" | [tls-secret](#tls-secret) |:large_blue_circle:|:white_circle:|:white_circle:|
 | [ssl-redirect-code](#https) | [301, 302, 303] | "302" | [tls-secret](#tls-secret) |:large_blue_circle:|:white_circle:|:white_circle:|
@@ -106,8 +105,6 @@ The number of requests a client can do per `rate-limit-interval` is **10**.
 - Annotation `servers-increment`- determines how much backend servers should we
         put in `maintenance` mode so controller can
         dynamically insert new pods without hitless reload
-- Annotation `servers-increment-max-disabled` - maximum allowed number of
-        disabled servers in backend. Greater number triggers HAProxy reload
 
 #### Timeouts
 

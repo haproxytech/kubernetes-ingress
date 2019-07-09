@@ -14,27 +14,34 @@
 
 package main
 
-import (
-	"fmt"
-)
-
-//Pod is usefull data from k8s structures about pod
-type Pod struct {
-	Namespace   string
-	IP          string
-	Labels      MapStringW
-	Name        string
-	HAProxyName string
-	Maintenance bool //disabled
-	Backends    map[string]struct{}
-	Status      Status
-}
-
 //ServicePort describes port of a service
 type ServicePort struct {
 	Name     string
 	Protocol string
 	Port     int64
+	Status   Status
+}
+
+type ServicePorts []*ServicePort
+
+type EndpointIP struct {
+	IP          string
+	Name        string
+	HAProxyName string
+	Disabled    bool
+	Status      Status
+}
+
+type EndpointIPs []*EndpointIP
+
+//Endpoints is usefull data from k8s structures about Endpoints
+type Endpoints struct {
+	Namespace   string
+	Service     StringW
+	BackendName string
+	Ports       *ServicePorts
+	Addresses   *EndpointIPs
+	Status      Status
 }
 
 //Service is usefull data from k8s structures about service
@@ -55,36 +62,10 @@ type Namespace struct {
 	Name      string
 	Relevant  bool
 	Ingresses map[string]*Ingress
-	Pods      map[string]*Pod
-	PodNames  map[string]bool
+	Endpoints map[string]*Endpoints
 	Services  map[string]*Service
 	Secret    map[string]*Secret
 	Status    Status
-}
-
-//GetServicesForPod returns all services that are using this pod
-func (n *Namespace) GetServicesForPod(labels MapStringW) ([]*Service, error) {
-	result := []*Service{}
-	for _, service := range n.Services {
-		if hasSelectors(service.Selector, labels) {
-			result = append(result, service)
-		}
-	}
-	if len(result) == 0 {
-		return nil, fmt.Errorf("services not found for labels %s", labels.String())
-	}
-	return result, nil
-}
-
-//GetPodsForSelector returns all pod for defined selector
-func (n *Namespace) GetPodsForSelector(selector MapStringW) map[string]*Pod {
-	pods := make(map[string]*Pod)
-	for _, pod := range n.Pods {
-		if hasSelectors(selector, pod.Labels) {
-			pods[pod.Name] = pod
-		}
-	}
-	return pods
 }
 
 //IngressPath is usefull data from k8s structures about ingress path

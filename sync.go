@@ -20,11 +20,11 @@ type SyncType string
 //SyncType values
 const (
 	COMMAND   SyncType = "COMMAND"
+	CONFIGMAP SyncType = "CONFIGMAP"
+	ENDPOINTS SyncType = "ENDPOINTS"
 	INGRESS   SyncType = "INGRESS"
 	NAMESPACE SyncType = "NAMESPACE"
 	SERVICE   SyncType = "SERVICE"
-	POD       SyncType = "POD"
-	CONFIGMAP SyncType = "CONFIGMAP"
 	SECRET    SyncType = "SECRET"
 )
 

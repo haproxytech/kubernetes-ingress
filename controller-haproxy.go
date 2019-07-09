@@ -110,7 +110,6 @@ func (c *HAProxyController) updateHAProxy(reloadRequested bool) error {
 					} else {
 						delete(c.cfg.UseBackendRules, fmt.Sprintf("R%s%s%0006d", namespace.Name, ingress.Name, pathIndex))
 						c.cfg.UseBackendRulesStatus = MODIFIED
-						log.Println("SKIPPED", path)
 					}
 				}
 				for i, _ := range indexedPaths {
@@ -126,9 +125,9 @@ func (c *HAProxyController) updateHAProxy(reloadRequested bool) error {
 		}
 	}
 	//handle default service
-	c.handleDefaultService(transaction)
-
+	err = c.handleDefaultService(transaction)
 	LogErr(err)
+
 	err = c.requestsTCPRefresh(transaction)
 	LogErr(err)
 	err = c.RequestsHTTPRefresh(transaction)

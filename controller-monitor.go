@@ -27,8 +27,8 @@ func (c *HAProxyController) monitorChanges() {
 
 	stop := make(chan struct{})
 
-	podChan := make(chan *Pod, 100)
-	c.k8s.EventsPods(podChan, stop)
+	podEndpoints := make(chan *Endpoints, 100)
+	c.k8s.EventsEndpoints(podEndpoints, stop)
 
 	svcChan := make(chan *Service, 100)
 	c.k8s.EventsServices(svcChan, stop)
@@ -46,8 +46,8 @@ func (c *HAProxyController) monitorChanges() {
 	c.k8s.EventsSecrets(secretChan, stop)
 
 	eventsIngress := []SyncDataEvent{}
+	eventsEndpoints := []SyncDataEvent{}
 	eventsServices := []SyncDataEvent{}
-	eventsPods := []SyncDataEvent{}
 	configMapOk := false
 
 	for {
@@ -56,15 +56,15 @@ func (c *HAProxyController) monitorChanges() {
 			for _, event := range eventsIngress {
 				c.eventChan <- event
 			}
+			for _, event := range eventsEndpoints {
+				c.eventChan <- event
+			}
 			for _, event := range eventsServices {
 				c.eventChan <- event
 			}
-			for _, event := range eventsPods {
-				c.eventChan <- event
-			}
 			eventsIngress = []SyncDataEvent{}
+			eventsEndpoints = []SyncDataEvent{}
 			eventsServices = []SyncDataEvent{}
-			eventsPods = []SyncDataEvent{}
 			configMapOk = true
 			time.Sleep(1 * time.Millisecond)
 		case item := <-cfgChan:
@@ -72,12 +72,12 @@ func (c *HAProxyController) monitorChanges() {
 		case item := <-nsChan:
 			event := SyncDataEvent{SyncType: NAMESPACE, Namespace: item.Name, Data: item}
 			c.eventChan <- event
-		case item := <-podChan:
-			event := SyncDataEvent{SyncType: POD, Namespace: item.Namespace, Data: item}
+		case item := <-podEndpoints:
+			event := SyncDataEvent{SyncType: ENDPOINTS, Namespace: item.Namespace, Data: item}
 			if configMapOk {
 				c.eventChan <- event
 			} else {
-				eventsPods = append(eventsPods, event)
+				eventsEndpoints = append(eventsEndpoints, event)
 			}
 		case item := <-svcChan:
 			event := SyncDataEvent{SyncType: SERVICE, Namespace: item.Namespace, Data: item}
@@ -99,7 +99,7 @@ func (c *HAProxyController) monitorChanges() {
 		case <-time.After(time.Duration(syncEveryNSeconds) * time.Second):
 			//TODO syncEveryNSeconds sec is hardcoded, change that (annotation?)
 			//do sync of data every syncEveryNSeconds sec
-			if configMapOk && len(eventsIngress) == 0 && len(eventsServices) == 0 && len(eventsPods) == 0 {
+			if configMapOk && len(eventsIngress) == 0 && len(eventsServices) == 0 && len(eventsEndpoints) == 0 {
 				c.eventChan <- SyncDataEvent{SyncType: COMMAND}
 			}
 		}
@@ -130,10 +130,10 @@ func (c *HAProxyController) SyncData(jobChan <-chan SyncDataEvent, chConfigMapRe
 			change, reload = c.eventNamespace(ns, job.Data.(*Namespace))
 		case INGRESS:
 			change, reload = c.eventIngress(ns, job.Data.(*Ingress))
+		case ENDPOINTS:
+			change, reload = c.eventEndpoints(ns, job.Data.(*Endpoints))
 		case SERVICE:
 			change, reload = c.eventService(ns, job.Data.(*Service))
-		case POD:
-			change, reload = c.eventPod(ns, job.Data.(*Pod))
 		case CONFIGMAP:
 			change, reload = c.eventConfigMap(ns, job.Data.(*ConfigMap), chConfigMapReceivedAndProcessed)
 		case SECRET:

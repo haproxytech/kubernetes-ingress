@@ -15,6 +15,7 @@
 package main
 
 import (
+	"errors"
 	"log"
 	"path/filepath"
 
@@ -29,6 +30,8 @@ import (
 )
 
 const DEBUG_API = false
+
+var ErrIgnored = errors.New("Ignored resource")
 
 //K8s is structure with all data required to synchronize with k8s
 type K8s struct {
@@ -92,10 +95,8 @@ func (k *K8s) EventsNamespaces(channel chan *Namespace, stop chan struct{}) {
 					status = DELETED
 				}
 				item := &Namespace{
-					Name: data.GetName(),
-					//Annotations
-					Pods:      make(map[string]*Pod),
-					PodNames:  make(map[string]bool),
+					Name:      data.GetName(),
+					Endpoints: make(map[string]*Endpoints),
 					Services:  make(map[string]*Service),
 					Ingresses: make(map[string]*Ingress),
 					Secret:    make(map[string]*Secret),
@@ -110,10 +111,8 @@ func (k *K8s) EventsNamespaces(channel chan *Namespace, stop chan struct{}) {
 				data := obj.(*corev1.Namespace)
 				var status Status = DELETED
 				item := &Namespace{
-					Name: data.GetName(),
-					//Annotations
-					Pods:      make(map[string]*Pod),
-					PodNames:  make(map[string]bool),
+					Name:      data.GetName(),
+					Endpoints: make(map[string]*Endpoints),
 					Services:  make(map[string]*Service),
 					Ingresses: make(map[string]*Ingress),
 					Secret:    make(map[string]*Secret),
@@ -149,81 +148,102 @@ func (k *K8s) EventsNamespaces(channel chan *Namespace, stop chan struct{}) {
 	go controller.Run(stop)
 }
 
-func (k *K8s) EventsPods(channel chan *Pod, stop chan struct{}) {
+func (k *K8s) EventsEndpoints(channel chan *Endpoints, stop chan struct{}) {
 	watchlist := cache.NewListWatchFromClient(
 		k.API.CoreV1().RESTClient(),
-		string(corev1.ResourcePods),
+		string("endpoints"),
 		corev1.NamespaceAll,
 		fields.Everything(),
 	)
 	_, controller := cache.NewInformer( // also take a look at NewSharedIndexInformer
 		watchlist,
-		&corev1.Pod{},
+		&corev1.Endpoints{},
 		0, //Duration is int64
 		cache.ResourceEventHandlerFuncs{
 			AddFunc: func(obj interface{}) {
-				data := obj.(*corev1.Pod)
-				var status Status = ADDED
-				if data.ObjectMeta.GetDeletionTimestamp() != nil {
-					//detect pods that are in terminating state
-					status = DELETED
-				}
-				item := &Pod{
-					Namespace: data.GetNamespace(),
-					Name:      data.GetName(),
-					Labels:    ConvertToMapStringW(data.Labels),
-					IP:        data.Status.PodIP,
-					Status:    status,
+				item, err := k.convertToEndpoints(obj, ADDED)
+				if err == ErrIgnored {
+					return
 				}
 				if DEBUG_API {
-					log.Printf("%s %s: %s \n", POD, item.Status, item.Name)
+					log.Printf("%s %s: %s \n", ENDPOINTS, item.Status, item.Service)
 				}
 				channel <- item
 			},
 			DeleteFunc: func(obj interface{}) {
-				data := obj.(*corev1.Pod)
-				var status Status = DELETED
-				item := &Pod{
-					Namespace: data.GetNamespace(),
-					Name:      data.GetName(),
-					Labels:    ConvertToMapStringW(data.Labels),
-					IP:        data.Status.PodIP,
-					Status:    status,
+				item, err := k.convertToEndpoints(obj, DELETED)
+				if err == ErrIgnored {
+					return
 				}
 				if DEBUG_API {
-					log.Printf("%s %s: %s \n", POD, item.Status, item.Name)
+					log.Printf("%s %s: %s \n", ENDPOINTS, item.Status, item.Service)
 				}
 				channel <- item
 			},
 			UpdateFunc: func(oldObj, newObj interface{}) {
-				data1 := oldObj.(*corev1.Pod)
-				data2 := newObj.(*corev1.Pod)
-				var status Status = MODIFIED
-				item1 := &Pod{
-					Namespace: data1.GetNamespace(),
-					Name:      data1.GetName(),
-					Labels:    ConvertToMapStringW(data1.Labels),
-					IP:        data1.Status.PodIP,
-					Status:    status,
+				item1, err := k.convertToEndpoints(oldObj, EMPTY)
+				if err == ErrIgnored {
+					return
 				}
-				item2 := &Pod{
-					Namespace: data2.GetNamespace(),
-					Name:      data2.GetName(),
-					Labels:    ConvertToMapStringW(data2.Labels),
-					IP:        data2.Status.PodIP,
-					Status:    status,
-				}
+				item2, _ := k.convertToEndpoints(newObj, MODIFIED)
 				if item2.Equal(item1) {
 					return
 				}
+				//fix modified state for ones that are deleted,new,same
 				if DEBUG_API {
-					log.Printf("%s %s: %s \n", POD, item2.Status, item2.Name)
+					log.Printf("%s %s: %s \n", ENDPOINTS, item2.Status, item2.Service)
 				}
 				channel <- item2
 			},
 		},
 	)
 	go controller.Run(stop)
+}
+
+func (k *K8s) convertToEndpoints(obj interface{}, status Status) (*Endpoints, error) {
+	data := obj.(*corev1.Endpoints)
+	if data.GetNamespace() == "kube-system" {
+		if data.ObjectMeta.Name == "kube-controller-manager" ||
+			data.ObjectMeta.Name == "kube-scheduler" ||
+			data.ObjectMeta.Name == "kubernetes-dashboard" ||
+			data.ObjectMeta.Name == "kube-dns" {
+			return nil, ErrIgnored
+		}
+	}
+	if data.ObjectMeta.GetDeletionTimestamp() != nil {
+		//detect endpoints that are in terminating state
+		status = DELETED
+	}
+	item := &Endpoints{
+		Namespace: data.GetNamespace(),
+		Service:   StringW{Value: data.GetName()},
+		Ports:     &ServicePorts{},
+		Addresses: &EndpointIPs{},
+		Status:    status,
+	}
+	for _, sp := range data.Subsets {
+		for _, address := range sp.Addresses {
+			eip := &EndpointIP{
+				IP:          address.IP,
+				HAProxyName: "",
+				Disabled:    false,
+				Status:      status,
+			}
+			if address.TargetRef != nil {
+				eip.Name = address.TargetRef.Name
+			}
+			*item.Addresses = append(*item.Addresses, eip)
+		}
+		for _, port := range sp.Ports {
+			*item.Ports = append(*item.Ports, &ServicePort{
+				Name:     port.Name,
+				Protocol: string(port.Protocol),
+				Port:     int64(port.Port),
+				Status:   status,
+			})
+		}
+	}
+	return item, nil
 }
 
 func (k *K8s) EventsIngresses(channel chan *Ingress, stop chan struct{}) {
