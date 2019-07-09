@@ -365,10 +365,19 @@ func (c *HAProxyController) handleService(index int, namespace *Namespace, ingre
 	}
 
 	if rule != nil {
-		key := fmt.Sprintf("R%s%s%0006d", namespace.Name, ingress.Name, index)
+		key := fmt.Sprintf("R-%s-%s-%s-%s", namespace.Name, ingress.Name, rule.Host, path.Path)
 		old, ok := c.cfg.UseBackendRules[key]
-		if ok {
-			if old.Backend != backendName || old.Host != rule.Host || old.Path != path.Path {
+		if rule.Status != DELETED {
+			if ok {
+				if old.Backend != backendName || old.Host != rule.Host || old.Path != path.Path {
+					c.cfg.UseBackendRules[key] = BackendSwitchingRule{
+						Host:    rule.Host,
+						Path:    path.Path,
+						Backend: backendName,
+					}
+					c.cfg.UseBackendRulesStatus = MODIFIED
+				}
+			} else {
 				c.cfg.UseBackendRules[key] = BackendSwitchingRule{
 					Host:    rule.Host,
 					Path:    path.Path,
@@ -376,13 +385,6 @@ func (c *HAProxyController) handleService(index int, namespace *Namespace, ingre
 				}
 				c.cfg.UseBackendRulesStatus = MODIFIED
 			}
-		} else {
-			c.cfg.UseBackendRules[key] = BackendSwitchingRule{
-				Host:    rule.Host,
-				Path:    path.Path,
-				Backend: backendName,
-			}
-			c.cfg.UseBackendRulesStatus = MODIFIED
 		}
 	} else {
 		if service.Status != EMPTY {
@@ -432,6 +434,7 @@ func (c *HAProxyController) handleService(index int, namespace *Namespace, ingre
 		}
 	case DELETED:
 		delete(c.cfg.UseBackendRules, fmt.Sprintf("R%0006d", index))
+		log.Println("!!!!!!")
 		c.cfg.UseBackendRulesStatus = MODIFIED
 		return "", service, nil
 	}

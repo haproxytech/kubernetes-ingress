@@ -108,7 +108,8 @@ func (c *HAProxyController) updateHAProxy(reloadRequested bool) error {
 					if path.Status != DELETED && ingress.Status != DELETED {
 						indexedPaths[path.PathIndex] = path
 					} else {
-						delete(c.cfg.UseBackendRules, fmt.Sprintf("R%s%s%0006d", namespace.Name, ingress.Name, pathIndex))
+						key := fmt.Sprintf("R-%s-%s-%s-%s", namespace.Name, ingress.Name, rule.Host, path.Path)
+						delete(c.cfg.UseBackendRules, key)
 						c.cfg.UseBackendRulesStatus = MODIFIED
 					}
 				}
