@@ -63,10 +63,6 @@ func (c *HAProxyController) handleRateLimiting(transaction *models.Transaction, 
 			c.cfg.RateLimitingEnabled = false
 		}
 	}
-	if status == EMPTY && c.cfg.RateLimitingEnabled {
-		status = DELETED
-		c.cfg.RateLimitingEnabled = false
-	}
 	if c.cfg.RateLimitingEnabled {
 		if annRateLimitExpire.Status == MODIFIED {
 			status = MODIFIED
@@ -86,18 +82,18 @@ func (c *HAProxyController) handleRateLimiting(transaction *models.Transaction, 
 		Action: "track-sc0 src table RateLimit",
 	}
 	httpRequest1 := &models.HTTPRequestRule{
-		ID:       &ID,
-		Type:     "deny",
+		ID:         &ID,
+		Type:       "deny",
 		DenyStatus: 429,
-		Cond:     "if",
-		CondTest: fmt.Sprintf("%s %s", ratelimit_acl1.ACLName, ratelimit_acl2.ACLName),
+		Cond:       "if",
+		CondTest:   fmt.Sprintf("%s %s", ratelimit_acl1.ACLName, ratelimit_acl2.ACLName),
 	}
 	httpRequest2 := &models.HTTPRequestRule{
-		ID:       &ID,
-		Type:     "deny",
+		ID:         &ID,
+		Type:       "deny",
 		DenyStatus: 429,
-		Cond:     "if",
-		CondTest: ratelimit_acl3.ACLName,
+		Cond:       "if",
+		CondTest:   ratelimit_acl3.ACLName,
 	}
 
 	addRateLimiting := func() {
