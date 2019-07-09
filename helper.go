@@ -45,22 +45,6 @@ func LogErr(err error) {
 	}
 }
 
-func hasSelectors(selectors MapStringW, values MapStringW) bool {
-	if len(selectors) == 0 {
-		return false
-	}
-	for key, value1 := range selectors {
-		value2, ok := values[key]
-		if !ok {
-			return false
-		}
-		if value1.Value != value2.Value {
-			return false
-		}
-	}
-	return true
-}
-
 var chars = []rune("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
 
 //RandomString returns random string of size n
