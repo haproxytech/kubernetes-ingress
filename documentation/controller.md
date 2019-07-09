@@ -13,7 +13,7 @@ you can run image with arguments:
   - optional, must be in format `namespace/name`
   - default `default/tls-secret`
 - `--ingress.class`
-  - default:"haproxy"
+  - default:""
   - class of ingress object to monitor in multiple controllers environment
 - `--namespace-whitelist`
   - optional, if listed only selected namespaces will be monitored

@@ -90,7 +90,7 @@ func (c *HAProxyController) updateHAProxy(reloadRequested bool) error {
 		for _, ingress := range namespace.Ingresses {
 			pathIndex := 0
 			annClass, _ := GetValueFromAnnotations("ingress.class", ingress.Annotations) // default is ""
-			if annClass.Value != "" && annClass.Value != c.osArgs.IngressClass {
+			if annClass.Value != c.osArgs.IngressClass {
 				ingress.Status = DELETED
 			}
 			//no need for switch/case for now

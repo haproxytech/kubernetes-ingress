@@ -40,5 +40,5 @@ type OSArgs struct {
 	OutOfCluster          bool           `short:"e" description:"use as out of cluster controller NOTE: experimantal"`
 	Test                  bool           `short:"t" description:"simulate running HAProxy"`
 	Help                  []bool         `short:"h" long:"help" description:"show this help message"`
-	IngressClass          string         `long:"ingress.class" default:"haproxy" description:"ingress.class to monitor in multiple controllers environment"`
+	IngressClass          string         `long:"ingress.class" default:"" description:"ingress.class to monitor in multiple controllers environment"`
 }
