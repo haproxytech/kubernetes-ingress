@@ -18,7 +18,6 @@ type Status string
 
 const (
 	ADDED    Status = "ADDED"
-	CHECKED  Status = "CHECKED"
 	DELETED  Status = "DELETED"
 	ERROR    Status = "ERROR"
 	EMPTY    Status = ""

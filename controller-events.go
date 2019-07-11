@@ -20,7 +20,7 @@ import (
 	"strconv"
 )
 
-func (c *HAProxyController) eventNamespace(ns *Namespace, data *Namespace) (updateRequired, needsReload bool) {
+func (c *HAProxyController) eventNamespace(ns *Namespace, data *Namespace) (updateRequired bool) {
 	updateRequired = false
 	switch data.Status {
 	case ADDED:
@@ -34,10 +34,10 @@ func (c *HAProxyController) eventNamespace(ns *Namespace, data *Namespace) (upda
 			log.Println("Namespace not registered with controller, cannot delete !", data.Name)
 		}
 	}
-	return updateRequired, updateRequired
+	return updateRequired
 }
 
-func (c *HAProxyController) eventIngress(ns *Namespace, data *Ingress) (updateRequired, needsReload bool) {
+func (c *HAProxyController) eventIngress(ns *Namespace, data *Ingress) (updateRequired bool) {
 	updateRequired = false
 	switch data.Status {
 	case MODIFIED:
@@ -48,7 +48,7 @@ func (c *HAProxyController) eventIngress(ns *Namespace, data *Ingress) (updateRe
 			return c.eventIngress(ns, newIngress)
 		}
 		if oldIngress.Equal(data) {
-			return false, false
+			return false
 		}
 		newIngress.Annotations.SetStatus(oldIngress.Annotations)
 		//so see what exactly has changed in there
@@ -116,7 +116,7 @@ func (c *HAProxyController) eventIngress(ns *Namespace, data *Ingress) (updateRe
 				data.Status = MODIFIED
 				return c.eventIngress(ns, data)
 			}
-			return updateRequired, updateRequired
+			return updateRequired
 		}
 		ns.Ingresses[data.Name] = data
 
@@ -148,27 +148,25 @@ func (c *HAProxyController) eventIngress(ns *Namespace, data *Ingress) (updateRe
 			log.Println("Ingress not registered with controller, cannot delete !", data.Name)
 		}
 	}
-	return updateRequired, updateRequired
+	return updateRequired
 }
 
-func (c *HAProxyController) eventEndpoints(ns *Namespace, data *Endpoints) (updateRequired, needsReload bool) {
+func (c *HAProxyController) eventEndpoints(ns *Namespace, data *Endpoints) (updateRequired bool) {
 	updateRequired = false
-	needsReload = false
 	switch data.Status {
 	case MODIFIED:
 		newEndpoints := data
 		oldEndpoints, ok := ns.Endpoints[data.Service.Value]
 		if !ok {
 			log.Println("Endpoints not registered with controller !", data.Service)
-			return updateRequired, updateRequired
+			return updateRequired
 		}
 		if oldEndpoints.Equal(newEndpoints) {
-			return updateRequired, updateRequired
+			return updateRequired
 		}
+		data.BackendName = oldEndpoints.BackendName
 		c.setModifiedStatusEndpoints(oldEndpoints, newEndpoints)
-		u, r := c.processEndpointIPs(newEndpoints)
-		updateRequired = updateRequired || u
-		needsReload = needsReload || r
+		updateRequired = updateRequired || c.processEndpointIPs(newEndpoints)
 		ns.Endpoints[data.Service.Value] = newEndpoints
 	case ADDED:
 		if old, ok := ns.Endpoints[data.Service.Value]; ok {
@@ -176,7 +174,7 @@ func (c *HAProxyController) eventEndpoints(ns *Namespace, data *Endpoints) (upda
 				data.Status = MODIFIED
 				return c.eventEndpoints(ns, data)
 			}
-			return updateRequired, updateRequired
+			return updateRequired
 		}
 		for _, ip := range *data.Addresses {
 			ip.Status = ADDED
@@ -184,10 +182,8 @@ func (c *HAProxyController) eventEndpoints(ns *Namespace, data *Endpoints) (upda
 		for _, port := range *data.Ports {
 			port.Status = ADDED
 		}
-		u, r := c.processEndpointIPs(data)
 		ns.Endpoints[data.Service.Value] = data
-		updateRequired = updateRequired || u
-		needsReload = needsReload || r
+		updateRequired = updateRequired || c.processEndpointIPs(data)
 		//log.Println("Endpoints added", data.Service)
 	case DELETED:
 		data, ok := ns.Endpoints[data.Service.Value]
@@ -195,12 +191,11 @@ func (c *HAProxyController) eventEndpoints(ns *Namespace, data *Endpoints) (upda
 			data.Status = DELETED
 			//log.Println("Endpoints deleted", data.Service)
 			updateRequired = true
-			needsReload = true
 		} else {
 			log.Println("Endpoints not registered with controller, cannot delete !", data.Service)
 		}
 	}
-	return updateRequired, needsReload
+	return updateRequired
 }
 
 func (c *HAProxyController) setModifiedStatusEndpoints(oldObj, newObj *Endpoints) {
@@ -215,47 +210,46 @@ func (c *HAProxyController) setModifiedStatusEndpoints(oldObj, newObj *Endpoints
 	for _, adrNew := range *newObj.Addresses {
 		adrNew.Status = ADDED
 	}
-	for index := 0; index < len(*oldObj.Addresses); index++ {
-		adrOld := (*oldObj.Addresses)[index]
+	for oldKey, adrOld := range *oldObj.Addresses {
 		for _, adrNew := range *newObj.Addresses {
 			if adrOld.IP == adrNew.IP {
 				adrNew.HAProxyName = adrOld.HAProxyName
 				adrNew.Status = adrOld.Status
-				(*oldObj.Addresses)[index] = nil
-			}
-		}
-	}
-	for _, adrOld := range *oldObj.Addresses {
-		if adrOld == nil {
-			continue
-		}
-		if adrOld.Status == MODIFIED {
-			*newObj.Addresses = append(*newObj.Addresses, adrOld)
-			continue
-		}
-		//try to find one that is added so we can switch them
-		replaced := false
-		for _, adrNew := range *newObj.Addresses {
-			if adrNew.Status == ADDED {
-				replaced = true
-				adrNew.HAProxyName = adrOld.HAProxyName
-				adrNew.Status = MODIFIED
+				delete(*oldObj.Addresses, oldKey)
 				break
 			}
 		}
-		if !replaced {
-			if adrOld.IP != "127.0.0.1" {
-				adrOld.IP = "127.0.0.1"
-				adrOld.Disabled = true
-				adrOld.Status = MODIFIED
-			}
-			*newObj.Addresses = append(*newObj.Addresses, adrOld)
-		}
+
 	}
-	annIncrementDisabled, _ := GetValueFromAnnotations("servers-increment", c.cfg.ConfigMap.Annotations)
-	maxDisabled := int64(0)
-	if increment, err := strconv.ParseInt(annIncrementDisabled.Value, 10, 64); err == nil {
-		maxDisabled = increment
+	for oldKey, adrOld := range *oldObj.Addresses {
+		if !adrOld.Disabled {
+			// it not disabled so it must be now, no longer exists
+			adrOld.IP = "127.0.0.1"
+			adrOld.Disabled = true
+			adrOld.Status = MODIFIED
+			(*newObj.Addresses)[oldKey] = adrOld
+		} else {
+			//try to find one that is added so we can switch them
+			replaced := false
+			for _, adrNew := range *newObj.Addresses {
+				if adrNew.Status == ADDED {
+					replaced = true
+					adrNew.HAProxyName = adrOld.HAProxyName
+					adrNew.Status = MODIFIED
+					break
+				}
+			}
+			if !replaced {
+				(*newObj.Addresses)[oldKey] = adrOld
+			}
+		}
+
+	}
+
+	annIncrement, _ := GetValueFromAnnotations("servers-increment", c.cfg.ConfigMap.Annotations)
+	incrementSize := int64(128)
+	if increment, err := strconv.ParseInt(annIncrement.Value, 10, 64); err == nil {
+		incrementSize = increment
 	}
 	numDisabled := int64(0)
 	for _, adr := range *newObj.Addresses {
@@ -264,20 +258,30 @@ func (c *HAProxyController) setModifiedStatusEndpoints(oldObj, newObj *Endpoints
 		}
 	}
 
-	if numDisabled > maxDisabled {
-		numDisabled = maxDisabled
+	if numDisabled > incrementSize {
+		alreadyDeleted := int64(0)
 		for _, adr := range *newObj.Addresses {
-			if adr.Disabled && numDisabled > 0 {
+			if adr.Status == DELETED {
+				alreadyDeleted++
+			}
+		}
+		division := numDisabled / incrementSize
+		toDisable := division*incrementSize - alreadyDeleted
+		if toDisable == 0 {
+			return
+		}
+		for _, adr := range *newObj.Addresses {
+			if adr.Disabled && toDisable > 0 {
+				adr.IP = "127.0.0.1"
 				adr.Status = DELETED
-				numDisabled--
+				toDisable--
 			}
 		}
 	}
 }
 
-func (c *HAProxyController) processEndpointIPs(data *Endpoints) (updateRequired, needsReload bool) {
+func (c *HAProxyController) processEndpointIPs(data *Endpoints) (updateRequired bool) {
 	updateRequired = false
-	needsReload = false
 	annIncrement, _ := GetValueFromAnnotations("servers-increment", c.cfg.ConfigMap.Annotations)
 	incrementSize := int64(128)
 	if increment, err := strconv.ParseInt(annIncrement.Value, 10, 64); err == nil {
@@ -290,10 +294,6 @@ func (c *HAProxyController) processEndpointIPs(data *Endpoints) (updateRequired,
 			usedNames[ip.HAProxyName] = struct{}{}
 		}
 	}
-	serviceName := data.BackendName
-	if serviceName == "" {
-		serviceName = data.Service.Value
-	}
 	for _, ip := range *data.Addresses {
 		switch ip.Status {
 		case ADDED:
@@ -304,64 +304,63 @@ func (c *HAProxyController) processEndpointIPs(data *Endpoints) (updateRequired,
 				ip.HAProxyName = fmt.Sprintf("SRV_%s", RandomString(5))
 			}
 			usedNames[ip.HAProxyName] = struct{}{}
-			//log.Printf("%s: added new backend server: %s \n", serviceName, ip.HAProxyName)
 			updateRequired = true
-			needsReload = true
 		case MODIFIED:
-			runtimeClient := c.cfg.NativeAPI.Runtime
-			err := runtimeClient.SetServerAddr(data.BackendName, ip.HAProxyName, ip.IP, 0)
-			if err != nil {
-				log.Println(err)
-				needsReload = true
-			}
-			status := "ready"
-			if ip.Disabled {
-				status = "maint"
-			}
-			err = runtimeClient.SetServerState(data.BackendName, ip.HAProxyName, status)
-			if err != nil {
-				log.Println(err)
-				needsReload = true
+			if data.BackendName != "" {
+				runtimeClient := c.cfg.NativeAPI.Runtime
+				err := runtimeClient.SetServerAddr(data.BackendName, ip.HAProxyName, ip.IP, 0)
+				if err != nil {
+					log.Println(err)
+					updateRequired = true
+				}
+				status := "ready"
+				if ip.Disabled {
+					status = "maint"
+				}
+				err = runtimeClient.SetServerState(data.BackendName, ip.HAProxyName, status)
+				if err != nil {
+					log.Println(err)
+					updateRequired = true
+				}
 			} else {
-				log.Printf("%s: modified through runtime: %s - %s\n", serviceName, ip.HAProxyName, status)
+				//this is ok since if exists, we edit current data
+				ip.Status = ADDED
+				updateRequired = true
 			}
-			updateRequired = true
 		case DELETED:
 			//removed on haproxy update
-			ip.IP = "127.0.0.1"
-			ip.Disabled = true
 			updateRequired = true
-			needsReload = true
 		}
 	}
 
 	//align new number of backend servers if necessary
 	podsNumber := int64(len(*data.Addresses))
-	index := podsNumber % incrementSize
-	if index == 0 {
-		return updateRequired, needsReload
+	if podsNumber%incrementSize == 0 {
+		return updateRequired
 	}
-	for ; index < incrementSize; index++ {
+	toCreate := int(incrementSize - podsNumber%incrementSize)
+	if toCreate == 0 {
+		return updateRequired
+	}
+	for index := 0; index < toCreate; index++ {
 		hAProxyName := fmt.Sprintf("SRV_%s", RandomString(5))
 		for _, ok := usedNames[hAProxyName]; ok; {
 			hAProxyName = fmt.Sprintf("SRV_%s", RandomString(5))
 			usedNames[hAProxyName] = struct{}{}
 		}
 
-		*data.Addresses = append(*data.Addresses, &EndpointIP{
+		(*data.Addresses)[hAProxyName] = &EndpointIP{
 			IP:          "127.0.0.1",
 			Name:        hAProxyName,
 			HAProxyName: hAProxyName,
 			Disabled:    true,
 			Status:      ADDED,
-		})
-		updateRequired = true
+		}
 	}
-
-	return updateRequired, needsReload
+	return updateRequired
 }
 
-func (c *HAProxyController) eventService(ns *Namespace, data *Service) (updateRequired, needsReload bool) {
+func (c *HAProxyController) eventService(ns *Namespace, data *Service) (updateRequired bool) {
 	updateRequired = false
 	switch data.Status {
 	case MODIFIED:
@@ -372,7 +371,7 @@ func (c *HAProxyController) eventService(ns *Namespace, data *Service) (updateRe
 			log.Println("Service not registered with controller !", data.Name)
 		}
 		if oldService.Equal(newService) {
-			return updateRequired, updateRequired
+			return updateRequired
 		}
 		newService.Annotations.SetStatus(oldService.Annotations)
 		ns.Services[data.Name] = newService
@@ -383,7 +382,7 @@ func (c *HAProxyController) eventService(ns *Namespace, data *Service) (updateRe
 				data.Status = MODIFIED
 				return c.eventService(ns, data)
 			}
-			return updateRequired, updateRequired
+			return updateRequired
 		}
 		ns.Services[data.Name] = data
 		updateRequired = true
@@ -397,14 +396,14 @@ func (c *HAProxyController) eventService(ns *Namespace, data *Service) (updateRe
 			log.Println("Service not registered with controller, cannot delete !", data.Name)
 		}
 	}
-	return updateRequired, updateRequired
+	return updateRequired
 }
 
-func (c *HAProxyController) eventConfigMap(ns *Namespace, data *ConfigMap, chConfigMapReceivedAndProcessed chan bool) (updateRequired, needsReload bool) {
+func (c *HAProxyController) eventConfigMap(ns *Namespace, data *ConfigMap, chConfigMapReceivedAndProcessed chan bool) (updateRequired bool) {
 	updateRequired = false
 	if ns.Name != c.osArgs.ConfigMap.Namespace ||
 		data.Name != c.osArgs.ConfigMap.Name {
-		return updateRequired, needsReload
+		return updateRequired
 	}
 	switch data.Status {
 	case MODIFIED:
@@ -420,7 +419,7 @@ func (c *HAProxyController) eventConfigMap(ns *Namespace, data *ConfigMap, chCon
 			chConfigMapReceivedAndProcessed <- true
 			c.cfg.ConfigMap = data
 			updateRequired = true
-			return updateRequired, updateRequired
+			return updateRequired
 		}
 		if !c.cfg.ConfigMap.Equal(data) {
 			data.Status = MODIFIED
@@ -430,9 +429,9 @@ func (c *HAProxyController) eventConfigMap(ns *Namespace, data *ConfigMap, chCon
 		c.cfg.ConfigMap.Annotations.SetStatusState(DELETED)
 		c.cfg.ConfigMap.Status = DELETED
 	}
-	return updateRequired, updateRequired
+	return updateRequired
 }
-func (c *HAProxyController) eventSecret(ns *Namespace, data *Secret) (updateRequired, needsReload bool) {
+func (c *HAProxyController) eventSecret(ns *Namespace, data *Secret) (updateRequired bool) {
 	updateRequired = false
 	switch data.Status {
 	case MODIFIED:
@@ -441,10 +440,10 @@ func (c *HAProxyController) eventSecret(ns *Namespace, data *Secret) (updateRequ
 		if !ok {
 			//intentionally do not add it. TODO see if our idea of only watching is ok
 			log.Println("Secret not registered with controller !", data.Name)
-			return updateRequired, updateRequired
+			return updateRequired
 		}
 		if oldSecret.Equal(data) {
-			return updateRequired, updateRequired
+			return updateRequired
 		}
 		ns.Secret[data.Name] = newSecret
 		updateRequired = true
@@ -454,7 +453,7 @@ func (c *HAProxyController) eventSecret(ns *Namespace, data *Secret) (updateRequ
 				data.Status = MODIFIED
 				return c.eventSecret(ns, data)
 			}
-			return updateRequired, updateRequired
+			return updateRequired
 		}
 		ns.Secret[data.Name] = data
 		updateRequired = true
@@ -467,5 +466,5 @@ func (c *HAProxyController) eventSecret(ns *Namespace, data *Secret) (updateRequ
 			log.Println("Secret not registered with controller, cannot delete !", data.Name)
 		}
 	}
-	return updateRequired, updateRequired
+	return updateRequired
 }

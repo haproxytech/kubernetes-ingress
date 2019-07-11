@@ -28,9 +28,10 @@ type BackendSwitchingRule struct {
 	Backend string
 }
 
-func (c *HAProxyController) useBackendRuleRefresh() (err error) {
+func (c *HAProxyController) useBackendRuleRefresh() (needsReload bool, err error) {
+	needsReload = false
 	if c.cfg.UseBackendRulesStatus == EMPTY {
-		return nil
+		return needsReload, nil
 	}
 	frontends := []string{FrontendHTTP, FrontendHTTPS}
 
@@ -86,5 +87,9 @@ func (c *HAProxyController) useBackendRuleRefresh() (err error) {
 		}
 	}
 
-	return nil
+	if c.cfg.UseBackendRulesStatus != EMPTY {
+		needsReload = true
+	}
+
+	return needsReload, nil
 }

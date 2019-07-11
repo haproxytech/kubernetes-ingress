@@ -38,15 +38,16 @@ func (c *HAProxyController) handleGlobalAnnotations(transaction *models.Transact
 			var err error
 			if annNbthread.Status == DELETED {
 				err = c.NativeParser.Delete(parser.Global, parser.GlobalSectionName, "nbthread")
+				reloadRequested = true
 			} else if annNbthread.Status != EMPTY {
 				err = c.NativeParser.Insert(parser.Global, parser.GlobalSectionName, "nbthread", types.Int64C{
 					Value: numThreads,
 				})
+				reloadRequested = true
 			}
 			LogErr(err)
 		}
 	}
-
 	return reloadRequested, err
 }
 

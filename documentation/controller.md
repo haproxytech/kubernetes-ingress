@@ -11,9 +11,9 @@ you can run image with arguments:
   - must be in format `namespace/name`
 - `--default-ssl-certificate`
   - optional, must be in format `namespace/name`
-  - default `default/tls-secret`
+  - default: ""
 - `--ingress.class`
-  - default:""
+  - default: ""
   - class of ingress object to monitor in multiple controllers environment
 - `--namespace-whitelist`
   - optional, if listed only selected namespaces will be monitored

@@ -32,7 +32,7 @@ type EndpointIP struct {
 	Status      Status
 }
 
-type EndpointIPs []*EndpointIP
+type EndpointIPs map[string]*EndpointIP
 
 //Endpoints is usefull data from k8s structures about Endpoints
 type Endpoints struct {

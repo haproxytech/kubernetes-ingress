@@ -110,36 +110,31 @@ func (c *HAProxyController) monitorChanges() {
 //All the changes must come through this function
 func (c *HAProxyController) SyncData(jobChan <-chan SyncDataEvent, chConfigMapReceivedAndProcessed chan bool) {
 	hadChanges := false
-	needsReload := false
 	c.cfg.Init(c.osArgs, c.NativeAPI)
 	for job := range jobChan {
 		ns := c.cfg.GetNamespace(job.Namespace)
 		change := false
-		reload := false
 		switch job.SyncType {
 		case COMMAND:
 			if hadChanges {
-				if err := c.updateHAProxy(needsReload); err != nil {
+				if err := c.updateHAProxy(); err != nil {
 					log.Println(err)
 				}
-				hadChanges = false
-				needsReload = false
 				continue
 			}
 		case NAMESPACE:
-			change, reload = c.eventNamespace(ns, job.Data.(*Namespace))
+			change = c.eventNamespace(ns, job.Data.(*Namespace))
 		case INGRESS:
-			change, reload = c.eventIngress(ns, job.Data.(*Ingress))
+			change = c.eventIngress(ns, job.Data.(*Ingress))
 		case ENDPOINTS:
-			change, reload = c.eventEndpoints(ns, job.Data.(*Endpoints))
+			change = c.eventEndpoints(ns, job.Data.(*Endpoints))
 		case SERVICE:
-			change, reload = c.eventService(ns, job.Data.(*Service))
+			change = c.eventService(ns, job.Data.(*Service))
 		case CONFIGMAP:
-			change, reload = c.eventConfigMap(ns, job.Data.(*ConfigMap), chConfigMapReceivedAndProcessed)
+			change = c.eventConfigMap(ns, job.Data.(*ConfigMap), chConfigMapReceivedAndProcessed)
 		case SECRET:
-			change, reload = c.eventSecret(ns, job.Data.(*Secret))
+			change = c.eventSecret(ns, job.Data.(*Secret))
 		}
 		hadChanges = hadChanges || change
-		needsReload = needsReload || reload
 	}
 }

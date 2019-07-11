@@ -20,9 +20,10 @@ import (
 	"github.com/haproxytech/models"
 )
 
-func (c *HAProxyController) RequestsHTTPRefresh(transaction *models.Transaction) (err error) {
+func (c *HAProxyController) RequestsHTTPRefresh(transaction *models.Transaction) (needsReload bool, err error) {
+	needsReload = false
 	if c.cfg.HTTPRequestsStatus == EMPTY {
-		return nil
+		return needsReload, nil
 	}
 	nativeAPI := c.NativeAPI
 
@@ -76,13 +77,17 @@ func (c *HAProxyController) RequestsHTTPRefresh(transaction *models.Transaction)
 			LogErr(err)
 		}
 	}
+	if c.cfg.HTTPRequestsStatus != EMPTY {
+		needsReload = true
+	}
 
-	return nil
+	return needsReload, nil
 }
 
-func (c *HAProxyController) requestsTCPRefresh(transaction *models.Transaction) (err error) {
+func (c *HAProxyController) requestsTCPRefresh(transaction *models.Transaction) (needsReload bool, err error) {
+	needsReload = false
 	if c.cfg.TCPRequestsStatus == EMPTY {
-		return nil
+		return needsReload, nil
 	}
 	nativeAPI := c.NativeAPI
 
@@ -97,13 +102,20 @@ func (c *HAProxyController) requestsTCPRefresh(transaction *models.Transaction) 
 
 	if len(c.cfg.TCPRequests[RATE_LIMIT]) > 0 {
 		request1 := &c.cfg.TCPRequests[RATE_LIMIT][0]
+		request2 := &c.cfg.TCPRequests[RATE_LIMIT][1]
 
 		err = nativeAPI.Configuration.CreateTCPRequestRule("frontend", FrontendHTTP, request1, transaction.ID, 0)
+		LogErr(err)
+		err = nativeAPI.Configuration.CreateTCPRequestRule("frontend", FrontendHTTP, request2, transaction.ID, 0)
 		LogErr(err)
 
 		err = nativeAPI.Configuration.CreateTCPRequestRule("frontend", FrontendHTTPS, request1, transaction.ID, 0)
 		LogErr(err)
+		err = nativeAPI.Configuration.CreateTCPRequestRule("frontend", FrontendHTTPS, request2, transaction.ID, 0)
+		LogErr(err)
 	}
-
-	return nil
+	if c.cfg.TCPRequestsStatus != EMPTY {
+		needsReload = true
+	}
+	return needsReload, nil
 }

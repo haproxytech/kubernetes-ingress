@@ -157,7 +157,6 @@ func (c *HAProxyController) HAProxyReload() error {
 	}
 	err = c.saveServerState()
 	LogErr(err)
-	//cmd := exec.Command("haproxy", "-f", HAProxyCFG)
 	if !c.osArgs.Test {
 		cmd := exec.Command("service", "haproxy", "reload")
 		err = cmd.Run()
@@ -168,28 +167,35 @@ func (c *HAProxyController) HAProxyReload() error {
 	return err
 }
 
-func (c *HAProxyController) handlePath(index int, namespace *Namespace, ingress *Ingress, rule *IngressRule, path *IngressPath,
-	transaction *models.Transaction) error {
-	//log.Println("PATH", path)
-	backendName, service, err := c.handleService(index, namespace, ingress, rule, path, transaction)
+func (c *HAProxyController) handlePath(index int, namespace *Namespace, ingress *Ingress, rule *IngressRule, path *IngressPath, backendsUsed map[string]struct{}, transaction *models.Transaction) (needsReload bool, err error) {
+	needsReload = false
+	backendName, service, reload, err := c.handleService(index, namespace, ingress, rule, path, transaction)
+	needsReload = needsReload || reload
 	if err != nil {
-		return err
+		return needsReload, err
 	}
 
+	_, alreadyConfigured := backendsUsed[backendName]
+	if alreadyConfigured {
+		return needsReload, nil
+	}
+	backendsUsed[backendName] = struct{}{}
 	endpoints, ok := namespace.Endpoints[service.Name]
 	if !ok {
 		log.Printf("Endpoint for service %s does not exists", service.Name)
-		return nil // not an end of world scenario, just log this
+		return needsReload, nil // not an end of world scenario, just log this
 	}
 	endpoints.BackendName = backendName
 
 	for _, ip := range *endpoints.Addresses {
-		c.handleEndpointIP(namespace, ingress, rule, path, service, backendName, endpoints, ip, transaction)
+		reload := c.handleEndpointIP(namespace, ingress, rule, path, service, backendName, endpoints, ip, transaction)
+		needsReload = needsReload || reload
 	}
-	return nil
+	return needsReload, nil
 }
 
-func (c *HAProxyController) handleEndpointIP(namespace *Namespace, ingress *Ingress, rule *IngressRule, path *IngressPath, service *Service, backendName string, endpoints *Endpoints, ip *EndpointIP, transaction *models.Transaction) {
+func (c *HAProxyController) handleEndpointIP(namespace *Namespace, ingress *Ingress, rule *IngressRule, path *IngressPath, service *Service, backendName string, endpoints *Endpoints, ip *EndpointIP, transaction *models.Transaction) (needsReload bool) {
+	needsReload = false
 	nativeAPI := c.NativeAPI
 	annMaxconn, errMaxConn := GetValueFromAnnotations("pod-maxconn", service.Annotations)
 	annCheck, _ := GetValueFromAnnotations("check", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
@@ -263,8 +269,13 @@ func (c *HAProxyController) handleEndpointIP(namespace *Namespace, ingress *Ingr
 	switch status {
 	case ADDED:
 		err := nativeAPI.Configuration.CreateServer(backendName, data, transaction.ID, 0)
-		if err != nil && !strings.Contains(err.Error(), "already exists") {
-			LogErr(err)
+		if err != nil {
+			if !strings.Contains(err.Error(), "already exists") {
+				LogErr(err)
+				needsReload = true
+			}
+		} else {
+			needsReload = true
 		}
 	case MODIFIED:
 		err := nativeAPI.Configuration.EditServer(data.Name, backendName, data, transaction.ID, 0)
@@ -272,26 +283,35 @@ func (c *HAProxyController) handleEndpointIP(namespace *Namespace, ingress *Ingr
 			if strings.Contains(err.Error(), "does not exist") {
 				err := nativeAPI.Configuration.CreateServer(backendName, data, transaction.ID, 0)
 				LogErr(err)
+				needsReload = true
 			} else {
 				LogErr(err)
 			}
 		}
+		status := "ready"
+		if ip.Disabled {
+			status = "maint"
+		}
+		log.Printf("Modified: %s - %s - %v\n", backendName, ip.HAProxyName, status)
 	case DELETED:
 		err := nativeAPI.Configuration.DeleteServer(data.Name, backendName, transaction.ID, 0)
 		if err != nil && !strings.Contains(err.Error(), "does not exist") {
 			LogErr(err)
 		}
+		needsReload = true
 	}
+	return needsReload
 }
 
 func (c *HAProxyController) handleService(index int, namespace *Namespace, ingress *Ingress, rule *IngressRule, path *IngressPath,
-	transaction *models.Transaction) (backendName string, service *Service, err error) {
+	transaction *models.Transaction) (backendName string, service *Service, needReload bool, err error) {
 	nativeAPI := c.NativeAPI
+	needReload = false
 
 	service, ok := namespace.Services[path.ServiceName]
 	if !ok {
 		log.Println("service", path.ServiceName, "does not exists")
-		return "", nil, fmt.Errorf("service %s does not exists", path.ServiceName)
+		return "", nil, needReload, fmt.Errorf("service %s does not exists", path.ServiceName)
 	}
 
 	if path.ServicePortInt == 0 {
@@ -365,19 +385,10 @@ func (c *HAProxyController) handleService(index int, namespace *Namespace, ingre
 	}
 
 	if rule != nil {
-		key := fmt.Sprintf("R-%s-%s-%s-%s", namespace.Name, ingress.Name, rule.Host, path.Path)
+		key := fmt.Sprintf("R%s%s%0006d", namespace.Name, ingress.Name, index)
 		old, ok := c.cfg.UseBackendRules[key]
-		if rule.Status != DELETED {
-			if ok {
-				if old.Backend != backendName || old.Host != rule.Host || old.Path != path.Path {
-					c.cfg.UseBackendRules[key] = BackendSwitchingRule{
-						Host:    rule.Host,
-						Path:    path.Path,
-						Backend: backendName,
-					}
-					c.cfg.UseBackendRulesStatus = MODIFIED
-				}
-			} else {
+		if ok {
+			if old.Backend != backendName || old.Host != rule.Host || old.Path != path.Path {
 				c.cfg.UseBackendRules[key] = BackendSwitchingRule{
 					Host:    rule.Host,
 					Path:    path.Path,
@@ -385,6 +396,13 @@ func (c *HAProxyController) handleService(index int, namespace *Namespace, ingre
 				}
 				c.cfg.UseBackendRulesStatus = MODIFIED
 			}
+		} else {
+			c.cfg.UseBackendRules[key] = BackendSwitchingRule{
+				Host:    rule.Host,
+				Path:    path.Path,
+				Backend: backendName,
+			}
+			c.cfg.UseBackendRulesStatus = MODIFIED
 		}
 	} else {
 		if service.Status != EMPTY {
@@ -398,6 +416,7 @@ func (c *HAProxyController) handleService(index int, namespace *Namespace, ingre
 			https.DefaultBackend = backendName
 			err = nativeAPI.Configuration.EditFrontend(FrontendHTTPS, https, transaction.ID, 0)
 			LogErr(err)
+			needReload = true
 		}
 	}
 
@@ -427,22 +446,24 @@ func (c *HAProxyController) handleService(index int, namespace *Namespace, ingre
 				msg := err.Error()
 				if !strings.Contains(msg, "Farm already exists") {
 					if !newImportantPath {
-						return "", nil, err
+						return "", nil, needReload, err
 					}
 				}
 			}
+			needReload = true
 		}
 	case DELETED:
 		delete(c.cfg.UseBackendRules, fmt.Sprintf("R%0006d", index))
-		log.Println("!!!!!!")
 		c.cfg.UseBackendRulesStatus = MODIFIED
-		return "", service, nil
+		return "", service, needReload, nil
 	}
 
 	if annBalanceAlg.Status != "" || annForwardedFor.Status != "" {
-		if err = c.handleBackendAnnotations(balanceAlg, annForwardedFor, backendName, transaction); err != nil {
-			return "", nil, err
+		reload, err := c.handleBackendAnnotations(balanceAlg, annForwardedFor, backendName, transaction)
+		needReload = needReload || reload
+		if err != nil {
+			return "", nil, needReload, err
 		}
 	}
-	return backendName, service, nil
+	return backendName, service, needReload, nil
 }

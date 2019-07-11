@@ -16,8 +16,10 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"log"
 	"path/filepath"
+	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	//networking "k8s.io/api/networking/v1beta1"
@@ -85,7 +87,7 @@ func (k *K8s) EventsNamespaces(channel chan *Namespace, stop chan struct{}) {
 	_, controller := cache.NewInformer( // also take a look at NewSharedIndexInformer
 		watchlist,
 		&corev1.Namespace{},
-		0, //Duration is int64
+		1*time.Second, //Duration is int64
 		cache.ResourceEventHandlerFuncs{
 			AddFunc: func(obj interface{}) {
 				data := obj.(*corev1.Namespace)
@@ -158,7 +160,7 @@ func (k *K8s) EventsEndpoints(channel chan *Endpoints, stop chan struct{}) {
 	_, controller := cache.NewInformer( // also take a look at NewSharedIndexInformer
 		watchlist,
 		&corev1.Endpoints{},
-		0, //Duration is int64
+		1*time.Second, //Duration is int64
 		cache.ResourceEventHandlerFuncs{
 			AddFunc: func(obj interface{}) {
 				item, err := k.convertToEndpoints(obj, ADDED)
@@ -229,10 +231,14 @@ func (k *K8s) convertToEndpoints(obj interface{}, status Status) (*Endpoints, er
 				Disabled:    false,
 				Status:      status,
 			}
+			var key string
 			if address.TargetRef != nil {
 				eip.Name = address.TargetRef.Name
+				key = string(address.TargetRef.UID)
+			} else {
+				key = fmt.Sprintf("%s%s%v", address.IP, address.Hostname, address.NodeName)
 			}
-			*item.Addresses = append(*item.Addresses, eip)
+			(*item.Addresses)[key] = eip
 		}
 		for _, port := range sp.Ports {
 			*item.Ports = append(*item.Ports, &ServicePort{
@@ -256,7 +262,7 @@ func (k *K8s) EventsIngresses(channel chan *Ingress, stop chan struct{}) {
 	_, controller := cache.NewInformer( // also take a look at NewSharedIndexInformer
 		watchlist,
 		&extensions.Ingress{},
-		0, //Duration is int64
+		1*time.Second, //Duration is int64
 		cache.ResourceEventHandlerFuncs{
 			AddFunc: func(obj interface{}) {
 				data := obj.(*extensions.Ingress)
@@ -333,7 +339,7 @@ func (k *K8s) EventsServices(channel chan *Service, stop chan struct{}) {
 	_, controller := cache.NewInformer( // also take a look at NewSharedIndexInformer
 		watchlist,
 		&corev1.Service{},
-		0, //Duration is int64
+		1*time.Second, //Duration is int64
 		cache.ResourceEventHandlerFuncs{
 			AddFunc: func(obj interface{}) {
 				data := obj.(*corev1.Service)
@@ -447,7 +453,7 @@ func (k *K8s) EventsConfigfMaps(channel chan *ConfigMap, stop chan struct{}) {
 	_, controller := cache.NewInformer( // also take a look at NewSharedIndexInformer
 		watchlist,
 		&corev1.ConfigMap{},
-		0, //Duration is int64
+		1*time.Second, //Duration is int64
 		cache.ResourceEventHandlerFuncs{
 			AddFunc: func(obj interface{}) {
 				data := obj.(*corev1.ConfigMap)
@@ -520,7 +526,7 @@ func (k *K8s) EventsSecrets(channel chan *Secret, stop chan struct{}) {
 	_, controller := cache.NewInformer( // also take a look at NewSharedIndexInformer
 		watchlist,
 		&corev1.Secret{},
-		0, //Duration is int64
+		1*time.Second, //Duration is int64
 		cache.ResourceEventHandlerFuncs{
 			AddFunc: func(obj interface{}) {
 				data := obj.(*corev1.Secret)

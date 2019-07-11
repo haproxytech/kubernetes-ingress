@@ -25,7 +25,8 @@ import (
 	"github.com/haproxytech/models"
 )
 
-func (c *HAProxyController) updateHAProxy(reloadRequested bool) error {
+func (c *HAProxyController) updateHAProxy() error {
+	needsReload := false
 	nativeAPI := c.NativeAPI
 
 	c.handleDefaultTimeouts()
@@ -64,25 +65,27 @@ func (c *HAProxyController) updateHAProxy(reloadRequested bool) error {
 
 	reload, err := c.handleGlobalAnnotations(transaction)
 	LogErr(err)
-	reloadRequested = reloadRequested || reload
+	needsReload = needsReload || reload
 
 	var usingHTTPS bool
 	reload, usingHTTPS, err = c.handleHTTPS(transaction)
 	if err != nil {
 		return err
 	}
-	err = c.handleRateLimiting(transaction, usingHTTPS)
+	needsReload = needsReload || reload
+
+	reload, err = c.handleRateLimiting(transaction, usingHTTPS)
 	if err != nil {
 		return err
 	}
+	needsReload = needsReload || reload
 
-	reloadRequested = reloadRequested || reload
 	reload, err = c.handleHTTPRedirect(usingHTTPS, transaction)
 	if err != nil {
 		return err
 	}
-	reloadRequested = reloadRequested || reload
-
+	needsReload = needsReload || reload
+	backendsUsed := map[string]struct{}{}
 	for _, namespace := range c.cfg.Namespace {
 		if !namespace.Relevant {
 			continue
@@ -90,7 +93,7 @@ func (c *HAProxyController) updateHAProxy(reloadRequested bool) error {
 		for _, ingress := range namespace.Ingresses {
 			pathIndex := 0
 			annClass, _ := GetValueFromAnnotations("ingress.class", ingress.Annotations) // default is ""
-			if annClass.Value != c.osArgs.IngressClass {
+			if annClass.Value != "" && annClass.Value != c.osArgs.IngressClass {
 				ingress.Status = DELETED
 			}
 			//no need for switch/case for now
@@ -108,8 +111,7 @@ func (c *HAProxyController) updateHAProxy(reloadRequested bool) error {
 					if path.Status != DELETED && ingress.Status != DELETED {
 						indexedPaths[path.PathIndex] = path
 					} else {
-						key := fmt.Sprintf("R-%s-%s-%s-%s", namespace.Name, ingress.Name, rule.Host, path.Path)
-						delete(c.cfg.UseBackendRules, key)
+						delete(c.cfg.UseBackendRules, fmt.Sprintf("R%s%s%0006d", namespace.Name, ingress.Name, pathIndex))
 						c.cfg.UseBackendRulesStatus = MODIFIED
 					}
 				}
@@ -118,7 +120,8 @@ func (c *HAProxyController) updateHAProxy(reloadRequested bool) error {
 					if path == nil {
 						continue
 					}
-					err := c.handlePath(pathIndex, namespace, ingress, rule, path, transaction)
+					reload, err := c.handlePath(pathIndex, namespace, ingress, rule, path, backendsUsed, transaction)
+					needsReload = needsReload || reload
 					LogErr(err)
 					pathIndex++
 				}
@@ -126,29 +129,34 @@ func (c *HAProxyController) updateHAProxy(reloadRequested bool) error {
 		}
 	}
 	//handle default service
-	err = c.handleDefaultService(transaction)
+	reload, err = c.handleDefaultService(backendsUsed, transaction)
 	LogErr(err)
+	needsReload = needsReload || reload
 
-	err = c.requestsTCPRefresh(transaction)
+	reload, err = c.requestsTCPRefresh(transaction)
 	LogErr(err)
-	err = c.RequestsHTTPRefresh(transaction)
+	needsReload = needsReload || reload
+
+	reload, err = c.RequestsHTTPRefresh(transaction)
 	LogErr(err)
-	err = c.useBackendRuleRefresh()
+	needsReload = needsReload || reload
+
+	reload, err = c.useBackendRuleRefresh()
 	LogErr(err)
+	needsReload = needsReload || reload
+
 	_, err = nativeAPI.Configuration.CommitTransaction(transaction.ID)
 	if err != nil {
 		log.Println(err)
 		return err
 	}
 	c.cfg.Clean()
-	if reloadRequested {
+	if needsReload {
 		if err := c.HAProxyReload(); err != nil {
 			log.Println(err)
 		} else {
 			log.Println("HAProxy reloaded")
 		}
-	} else {
-		log.Println("HAProxy updated without reload")
 	}
 	return nil
 }
@@ -166,16 +174,17 @@ func (c *HAProxyController) handleMaxconn(transaction *models.Transaction, maxco
 	return nil
 }
 
-func (c *HAProxyController) handleDefaultService(transaction *models.Transaction) error {
+func (c *HAProxyController) handleDefaultService(backendsUsed map[string]struct{}, transaction *models.Transaction) (needsReload bool, err error) {
+	needsReload = false
 	dsvcData, _ := GetValueFromAnnotations("default-backend-service")
 	dsvc := strings.Split(dsvcData.Value, "/")
 
 	if len(dsvc) != 2 {
-		return errors.New("default service invalid data")
+		return needsReload, errors.New("default service invalid data")
 	}
 	namespace, ok := c.cfg.Namespace[dsvc[0]]
 	if !ok {
-		return errors.New("default service invalid namespace " + dsvc[0])
+		return needsReload, errors.New("default service invalid namespace " + dsvc[0])
 	}
 	ingress := &Ingress{
 		Namespace:   namespace.Name,
@@ -186,5 +195,5 @@ func (c *HAProxyController) handleDefaultService(transaction *models.Transaction
 		ServiceName: dsvc[1],
 		PathIndex:   -1,
 	}
-	return c.handlePath(0, namespace, ingress, nil, path, transaction)
+	return c.handlePath(0, namespace, ingress, nil, path, backendsUsed, transaction)
 }

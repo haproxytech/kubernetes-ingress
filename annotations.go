@@ -126,7 +126,7 @@ var defaultAnnotationValues = MapStringW{
 	"default-service":           &StringW{Value: ""},
 	"forwarded-for":             &StringW{Value: "enabled"},
 	"load-balance":              &StringW{Value: "roundrobin"},
-	"rate-limit":                &StringW{Value: "OFF"},
+	"rate-limit":                &StringW{Value: "ON"},
 	"rate-limit-size":           &StringW{Value: "100k"},
 	"rate-limit-expire":         &StringW{Value: "30m"},
 	"rate-limit-interval":       &StringW{Value: "10s"},

@@ -60,8 +60,8 @@ func (c *HAProxyController) handleDefaultTimeout(timeout string) bool {
 	return false
 }
 
-func (c *HAProxyController) handleBackendAnnotations(balanceAlg *models.Balance, forwardedFor *StringW,
-	backendName string, transaction *models.Transaction) error {
+func (c *HAProxyController) handleBackendAnnotations(balanceAlg *models.Balance, forwardedFor *StringW, backendName string, transaction *models.Transaction) (needsReload bool, err error) {
+	needsReload = false
 	backend := &models.Backend{
 		Balance: balanceAlg,
 		Name:    backendName,
@@ -73,9 +73,12 @@ func (c *HAProxyController) handleBackendAnnotations(balanceAlg *models.Balance,
 			Enabled: &forwardfor,
 		}
 	}
+	if forwardedFor.Status != EMPTY {
+		needsReload = true
+	}
 
 	if err := c.NativeAPI.Configuration.EditBackend(backend.Name, backend, transaction.ID, 0); err != nil {
-		return err
+		return needsReload, err
 	}
-	return nil
+	return needsReload, nil
 }

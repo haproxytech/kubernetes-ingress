@@ -21,7 +21,6 @@ import (
 	"github.com/haproxytech/models"
 )
 
-var ratelimit_ID = int64(0)
 var ratelimit_acl1 = models.ACL{
 	ID:        ptrInt64(0),
 	ACLName:   "ratelimit_is_abuse",
@@ -41,8 +40,9 @@ var ratelimit_acl3 = models.ACL{
 	Value:     "gt 0",
 }
 
-func (c *HAProxyController) handleRateLimiting(transaction *models.Transaction, usingHTTPS bool) (err error) {
+func (c *HAProxyController) handleRateLimiting(transaction *models.Transaction, usingHTTPS bool) (needReload bool, err error) {
 	nativeAPI := c.NativeAPI
+	needReload = false
 	annRateLimit, _ := GetValueFromAnnotations("rate-limit", c.cfg.ConfigMap.Annotations)
 
 	annRateLimitExpire, _ := GetValueFromAnnotations("rate-limit-expire", c.cfg.ConfigMap.Annotations)
@@ -81,19 +81,24 @@ func (c *HAProxyController) handleRateLimiting(transaction *models.Transaction, 
 		Type:   "connection",
 		Action: "track-sc0 src table RateLimit",
 	}
+	tcpRequest2 := &models.TCPRequestRule{
+		ID:       &ID,
+		Type:     "connection",
+		Action:   "reject",
+		Cond:     "if",
+		CondTest: ratelimit_acl3.ACLName,
+	}
 	httpRequest1 := &models.HTTPRequestRule{
-		ID:         &ID,
-		Type:       "deny",
-		DenyStatus: 429,
-		Cond:       "if",
-		CondTest:   fmt.Sprintf("%s %s", ratelimit_acl1.ACLName, ratelimit_acl2.ACLName),
+		ID:       &ID,
+		Type:     "deny",
+		Cond:     "if",
+		CondTest: fmt.Sprintf("%s %s", ratelimit_acl1.ACLName, ratelimit_acl2.ACLName),
 	}
 	httpRequest2 := &models.HTTPRequestRule{
-		ID:         &ID,
-		Type:       "deny",
-		DenyStatus: 429,
-		Cond:       "if",
-		CondTest:   ratelimit_acl3.ACLName,
+		ID:       &ID,
+		Type:     "deny",
+		Cond:     "if",
+		CondTest: ratelimit_acl3.ACLName,
 	}
 
 	addRateLimiting := func() {
@@ -115,14 +120,12 @@ func (c *HAProxyController) handleRateLimiting(transaction *models.Transaction, 
 
 		c.cfg.TCPRequests[RATE_LIMIT] = []models.TCPRequestRule{
 			*tcpRequest1,
+			*tcpRequest2,
 		}
 		c.cfg.HTTPRequests[RATE_LIMIT] = []models.HTTPRequestRule{
 			*httpRequest1,
 			*httpRequest2,
 		}
-
-		c.cfg.TCPRequestsStatus = MODIFIED
-		c.cfg.HTTPRequestsStatus = MODIFIED
 
 	}
 
@@ -141,6 +144,8 @@ func (c *HAProxyController) handleRateLimiting(transaction *models.Transaction, 
 		c.cfg.TCPRequests[RATE_LIMIT] = []models.TCPRequestRule{}
 		c.cfg.TCPRequestsStatus = MODIFIED
 
+		c.cfg.TCPRequests[RATE_LIMIT] = []models.TCPRequestRule{}
+		c.cfg.HTTPRequests[RATE_LIMIT] = []models.HTTPRequestRule{}
 	}
 
 	switch status {
@@ -150,11 +155,14 @@ func (c *HAProxyController) handleRateLimiting(transaction *models.Transaction, 
 		} else {
 			removeRateLimiting()
 		}
+		needReload = true
 	case MODIFIED:
 		removeRateLimiting()
 		addRateLimiting()
+		needReload = true
 	case DELETED:
 		removeRateLimiting()
+		needReload = true
 	}
-	return nil
+	return needReload, nil
 }
