@@ -126,32 +126,46 @@ func (c *HAProxyController) handleHTTPS(transaction *models.Transaction) (reload
 		}
 
 		port := int64(443)
-		listener := &models.Bind{
+		listenerV4 := &models.Bind{
 			Address:        "0.0.0.0",
 			Port:           &port,
+			Name:           "bind_1",
+			Ssl:            true,
+			SslCertificate: HAProxyCertDir,
+		}
+		listenerV4v6 := &models.Bind{
+			Address:        "::",
+			Port:           &port,
+			Name:           "bind_2",
+			V4v6:           true,
 			Ssl:            true,
 			SslCertificate: HAProxyCertDir,
 		}
 		usingHTTPS = true
-		listener.Name = "bind_1"
 		switch status {
 		case ADDED:
-			if err = nativeAPI.Configuration.CreateBind(FrontendHTTPS, listener, transaction.ID, 0); err != nil {
-				if strings.Contains(err.Error(), "already exists") {
-					if err = nativeAPI.Configuration.EditBind(listener.Name, FrontendHTTPS, listener, transaction.ID, 0); err != nil {
+			for _, listener := range []*models.Bind{listenerV4, listenerV4v6} {
+				if err = nativeAPI.Configuration.CreateBind(FrontendHTTPS, listener, transaction.ID, 0); err != nil {
+					if strings.Contains(err.Error(), "already exists") {
+						if err = nativeAPI.Configuration.EditBind(listener.Name, FrontendHTTPS, listener, transaction.ID, 0); err != nil {
+							return reloadRequested, usingHTTPS, err
+						}
+					} else {
 						return reloadRequested, usingHTTPS, err
 					}
-				} else {
-					return reloadRequested, usingHTTPS, err
 				}
 			}
 		case MODIFIED:
-			if err = nativeAPI.Configuration.EditBind(listener.Name, FrontendHTTPS, listener, transaction.ID, 0); err != nil {
-				return reloadRequested, usingHTTPS, err
+			for _, listener := range []*models.Bind{listenerV4, listenerV4v6} {
+				if err = nativeAPI.Configuration.EditBind(listener.Name, FrontendHTTPS, listener, transaction.ID, 0); err != nil {
+					return reloadRequested, usingHTTPS, err
+				}
 			}
 		case DELETED:
-			if err = nativeAPI.Configuration.DeleteBind(listener.Name, FrontendHTTPS, transaction.ID, 0); err != nil {
-				return reloadRequested, usingHTTPS, err
+			for _, listener := range []*models.Bind{listenerV4, listenerV4v6} {
+				if err = nativeAPI.Configuration.DeleteBind(listener.Name, FrontendHTTPS, transaction.ID, 0); err != nil {
+					return reloadRequested, usingHTTPS, err
+				}
 			}
 		}
 	}
