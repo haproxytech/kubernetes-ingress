@@ -67,7 +67,7 @@ func ConvertIngressRules(ingressRules []extensions.IngressRule) map[string]*Ingr
 				PathIndex:         pathIndex,
 				Path:              k8sPath.Path,
 				ServiceName:       k8sPath.Backend.ServiceName,
-				ServicePortInt:    k8sPath.Backend.ServicePort.IntValue(),
+				ServicePortInt:    int64(k8sPath.Backend.ServicePort.IntValue()),
 				ServicePortString: k8sPath.Backend.ServicePort.StrVal,
 				Status:            "",
 			}

@@ -16,10 +16,11 @@ package main
 
 //ServicePort describes port of a service
 type ServicePort struct {
-	Name     string
-	Protocol string
-	Port     int64
-	Status   Status
+	Name        string
+	Protocol    string
+	ServicePort int64
+	TargetPort  int64
+	Status      Status
 }
 
 type ServicePorts []*ServicePort
@@ -71,7 +72,7 @@ type Namespace struct {
 //IngressPath is usefull data from k8s structures about ingress path
 type IngressPath struct {
 	ServiceName       string
-	ServicePortInt    int
+	ServicePortInt    int64
 	ServicePortString string
 	Path              string
 	PathIndex         int

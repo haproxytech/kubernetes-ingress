@@ -242,10 +242,10 @@ func (k *K8s) convertToEndpoints(obj interface{}, status Status) (*Endpoints, er
 		}
 		for _, port := range sp.Ports {
 			*item.Ports = append(*item.Ports, &ServicePort{
-				Name:     port.Name,
-				Protocol: string(port.Protocol),
-				Port:     int64(port.Port),
-				Status:   status,
+				Name:       port.Name,
+				Protocol:   string(port.Protocol),
+				TargetPort: int64(port.Port),
+				Status:     status,
 			})
 		}
 	}
@@ -362,9 +362,10 @@ func (k *K8s) EventsServices(channel chan *Service, stop chan struct{}) {
 						port = sp.Port
 					}
 					item.Ports = append(item.Ports, ServicePort{
-						Name:     sp.Name,
-						Protocol: string(sp.Protocol),
-						Port:     int64(port),
+						Name:        sp.Name,
+						Protocol:    string(sp.Protocol),
+						ServicePort: int64(sp.Port),
+						TargetPort:  int64(port),
 					})
 				}
 				if DEBUG_API {
@@ -405,9 +406,10 @@ func (k *K8s) EventsServices(channel chan *Service, stop chan struct{}) {
 						port = sp.Port
 					}
 					item1.Ports = append(item1.Ports, ServicePort{
-						Name:     sp.Name,
-						Protocol: string(sp.Protocol),
-						Port:     int64(port),
+						Name:        sp.Name,
+						Protocol:    string(sp.Protocol),
+						ServicePort: int64(sp.Port),
+						TargetPort:  int64(port),
 					})
 				}
 
@@ -425,9 +427,10 @@ func (k *K8s) EventsServices(channel chan *Service, stop chan struct{}) {
 						port = sp.Port
 					}
 					item2.Ports = append(item2.Ports, ServicePort{
-						Name:     sp.Name,
-						Protocol: string(sp.Protocol),
-						Port:     int64(port),
+						Name:        sp.Name,
+						Protocol:    string(sp.Protocol),
+						ServicePort: int64(sp.Port),
+						TargetPort:  int64(port),
 					})
 				}
 				if item2.Equal(item1) {

@@ -207,14 +207,14 @@ func (c *HAProxyController) handleEndpointIP(namespace *Namespace, ingress *Ingr
 		portName := path.ServicePortString
 		for _, p := range *endpoints.Ports {
 			if p.Name == portName {
-				port = p.Port
+				port = p.TargetPort
 				break
 			}
 		}
 	}
 	if port == 0 {
 		for _, p := range *endpoints.Ports {
-			port = p.Port
+			port = p.TargetPort
 		}
 	}
 	weight := int64(128)
@@ -317,7 +317,15 @@ func (c *HAProxyController) handleService(index int, namespace *Namespace, ingre
 	if path.ServicePortInt == 0 {
 		for _, p := range service.Ports {
 			if p.Name == path.ServicePortString || path.ServicePortString == "" {
-				path.ServicePortInt = int(p.Port)
+				path.ServicePortInt = int64(p.TargetPort)
+				break
+			}
+		}
+	} else {
+		//check if user defined service port and not target port
+		for _, servicePort := range service.Ports {
+			if path.ServicePortInt == servicePort.ServicePort {
+				path.ServicePortInt = servicePort.TargetPort
 				break
 			}
 		}

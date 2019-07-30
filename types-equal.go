@@ -17,7 +17,7 @@ package main
 import "bytes"
 
 func (a *ServicePort) Equal(b *ServicePort) bool {
-	if a.Name != b.Name || a.Protocol != b.Protocol || a.Port != b.Port {
+	if a.Name != b.Name || a.Protocol != b.Protocol || a.ServicePort != b.ServicePort || a.TargetPort != b.TargetPort {
 		return false
 	}
 	return true
@@ -157,7 +157,7 @@ func (a *Service) Equal(b *Service) bool {
 	}
 	for index, p1 := range a.Ports {
 		p2 := b.Ports[index]
-		if p1.Name != p2.Name || p1.Protocol != p2.Protocol || p1.Port != p2.Port {
+		if p1.Name != p2.Name || p1.Protocol != p2.Protocol || p1.ServicePort != p2.ServicePort || p1.TargetPort != p2.TargetPort {
 			return false
 		}
 	}
