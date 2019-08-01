@@ -99,7 +99,7 @@ func (c *HAProxyController) updateHAProxy() error {
 			//no need for switch/case for now
 			sortedList := make([]string, len(ingress.Rules))
 			index := 0
-			for name, _ := range ingress.Rules {
+			for name := range ingress.Rules {
 				sortedList[index] = name
 				index++
 			}
@@ -115,7 +115,7 @@ func (c *HAProxyController) updateHAProxy() error {
 						c.cfg.UseBackendRulesStatus = MODIFIED
 					}
 				}
-				for i, _ := range indexedPaths {
+				for i := range indexedPaths {
 					path := indexedPaths[i]
 					if path == nil {
 						continue

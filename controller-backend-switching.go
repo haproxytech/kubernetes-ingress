@@ -38,7 +38,7 @@ func (c *HAProxyController) useBackendRuleRefresh() (needsReload bool, err error
 	nativeAPI := c.NativeAPI
 
 	sortedList := []string{}
-	for name, _ := range c.cfg.UseBackendRules {
+	for name := range c.cfg.UseBackendRules {
 		sortedList = append(sortedList, name)
 	}
 	sort.Sort(sort.Reverse(sort.StringSlice(sortedList))) // reverse order

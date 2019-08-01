@@ -62,7 +62,7 @@ func (c *HAProxyController) RequestsHTTPRefresh(transaction *models.Transaction)
 		HTTP_REDIRECT: struct{}{},
 		RATE_LIMIT:    struct{}{},
 	}
-	for name, _ := range c.cfg.HTTPRequests {
+	for name := range c.cfg.HTTPRequests {
 		_, excluding := exclude[name]
 		if !excluding {
 			sortedList = append(sortedList, name)

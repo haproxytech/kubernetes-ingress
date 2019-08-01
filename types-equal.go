@@ -43,10 +43,7 @@ func (a *ServicePorts) Equal(b *ServicePorts) bool {
 }
 
 func (a *EndpointIP) Equal(b *EndpointIP) bool {
-	if a.IP != b.IP {
-		return false
-	}
-	return true
+	return a.IP == b.IP
 }
 
 func (a *EndpointIPs) Equal(b *EndpointIPs) bool {
@@ -126,10 +123,7 @@ func (a *Ingress) Equal(b *Ingress) bool {
 			return false
 		}
 	}
-	if !a.Annotations.Equal(b.Annotations) {
-		return false
-	}
-	return true
+	return a.Annotations.Equal(b.Annotations)
 }
 
 //Equal compares two services, ignores statuses and old values

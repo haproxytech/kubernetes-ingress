@@ -28,10 +28,7 @@ type StringW struct {
 
 //Equal compares only Value, rest is not relevant
 func (a *StringW) Equal(b *StringW) bool {
-	if a.Value != b.Value {
-		return false
-	}
-	return true
+	return a.Value == b.Value
 }
 
 //MapStringW stores values and enables

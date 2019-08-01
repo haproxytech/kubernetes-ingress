@@ -52,7 +52,7 @@ func (c *HAProxyController) monitorChanges() {
 
 	for {
 		select {
-		case _ = <-configMapReceivedAndProcessed:
+		case <-configMapReceivedAndProcessed:
 			for _, event := range eventsIngress {
 				c.eventChan <- event
 			}

@@ -545,7 +545,7 @@ func (k *K8s) EventsSecrets(channel chan *Secret, stop chan struct{}) {
 					Status:    status,
 				}
 				if DEBUG_API {
-					//log.Printf("%s %s: %s \n", SECRET, item.Status, item.Name)
+					log.Printf("%s %s: %s \n", SECRET, item.Status, item.Name)
 				}
 				channel <- item
 			},

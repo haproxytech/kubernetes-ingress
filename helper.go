@@ -85,6 +85,6 @@ func ptrInt64(value int64) *int64 {
 	return &value
 }
 
-func ptrString(value string) *string {
+/*func ptrString(value string) *string {
 	return &value
-}
+}*/
