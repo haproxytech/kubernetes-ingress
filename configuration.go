@@ -20,7 +20,9 @@ import (
 )
 
 const (
-	RATE_LIMIT    = "rate-limit"
+	//nolint
+	RATE_LIMIT = "rate-limit"
+	//nolint
 	HTTP_REDIRECT = "http-redirect"
 )
 

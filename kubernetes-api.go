@@ -31,9 +31,9 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 )
 
-const DEBUG_API = false
+const DEBUG_API = false //nolint golint
 
-var ErrIgnored = errors.New("Ignored resource")
+var ErrIgnored = errors.New("Ignored resource") //nolint golint
 
 //K8s is structure with all data required to synchronize with k8s
 type K8s struct {
@@ -91,7 +91,7 @@ func (k *K8s) EventsNamespaces(channel chan *Namespace, stop chan struct{}) {
 		cache.ResourceEventHandlerFuncs{
 			AddFunc: func(obj interface{}) {
 				data := obj.(*corev1.Namespace)
-				var status Status = ADDED
+				var status = ADDED
 				if data.ObjectMeta.GetDeletionTimestamp() != nil {
 					//detect services that are in terminating state
 					status = DELETED
@@ -111,7 +111,7 @@ func (k *K8s) EventsNamespaces(channel chan *Namespace, stop chan struct{}) {
 			},
 			DeleteFunc: func(obj interface{}) {
 				data := obj.(*corev1.Namespace)
-				var status Status = DELETED
+				var status = DELETED
 				item := &Namespace{
 					Name:      data.GetName(),
 					Endpoints: make(map[string]*Endpoints),
@@ -128,7 +128,7 @@ func (k *K8s) EventsNamespaces(channel chan *Namespace, stop chan struct{}) {
 			UpdateFunc: func(oldObj, newObj interface{}) {
 				data1 := oldObj.(*corev1.Namespace)
 				data2 := newObj.(*corev1.Namespace)
-				var status Status = MODIFIED
+				var status = MODIFIED
 				item1 := &Namespace{
 					Name:   data1.GetName(),
 					Status: status,
@@ -266,7 +266,7 @@ func (k *K8s) EventsIngresses(channel chan *Ingress, stop chan struct{}) {
 		cache.ResourceEventHandlerFuncs{
 			AddFunc: func(obj interface{}) {
 				data := obj.(*extensions.Ingress)
-				var status Status = ADDED
+				var status = ADDED
 				if data.ObjectMeta.GetDeletionTimestamp() != nil {
 					//detect services that are in terminating state
 					status = DELETED
@@ -285,7 +285,7 @@ func (k *K8s) EventsIngresses(channel chan *Ingress, stop chan struct{}) {
 			},
 			DeleteFunc: func(obj interface{}) {
 				data := obj.(*extensions.Ingress)
-				var status Status = DELETED
+				var status = DELETED
 				item := &Ingress{
 					Namespace:   data.GetNamespace(),
 					Name:        data.GetName(),
@@ -301,7 +301,7 @@ func (k *K8s) EventsIngresses(channel chan *Ingress, stop chan struct{}) {
 			UpdateFunc: func(oldObj, newObj interface{}) {
 				data1 := oldObj.(*extensions.Ingress)
 				data2 := newObj.(*extensions.Ingress)
-				var status Status = MODIFIED
+				var status = MODIFIED
 				item1 := &Ingress{
 					Namespace:   data1.GetNamespace(),
 					Name:        data1.GetName(),
@@ -343,7 +343,7 @@ func (k *K8s) EventsServices(channel chan *Service, stop chan struct{}) {
 		cache.ResourceEventHandlerFuncs{
 			AddFunc: func(obj interface{}) {
 				data := obj.(*corev1.Service)
-				var status Status = ADDED
+				var status = ADDED
 				if data.ObjectMeta.GetDeletionTimestamp() != nil {
 					//detect services that are in terminating state
 					status = DELETED
@@ -375,7 +375,7 @@ func (k *K8s) EventsServices(channel chan *Service, stop chan struct{}) {
 			},
 			DeleteFunc: func(obj interface{}) {
 				data := obj.(*corev1.Service)
-				var status Status = DELETED
+				var status = DELETED
 				item := &Service{
 					Namespace:   data.GetNamespace(),
 					Name:        data.GetName(),
@@ -391,7 +391,7 @@ func (k *K8s) EventsServices(channel chan *Service, stop chan struct{}) {
 			UpdateFunc: func(oldObj, newObj interface{}) {
 				data1 := oldObj.(*corev1.Service)
 				data2 := newObj.(*corev1.Service)
-				var status Status = MODIFIED
+				var status = MODIFIED
 				item1 := &Service{
 					Namespace:   data1.GetNamespace(),
 					Name:        data1.GetName(),
@@ -460,7 +460,7 @@ func (k *K8s) EventsConfigfMaps(channel chan *ConfigMap, stop chan struct{}) {
 		cache.ResourceEventHandlerFuncs{
 			AddFunc: func(obj interface{}) {
 				data := obj.(*corev1.ConfigMap)
-				var status Status = ADDED
+				var status = ADDED
 				if data.ObjectMeta.GetDeletionTimestamp() != nil {
 					//detect services that are in terminating state
 					status = DELETED
@@ -478,7 +478,7 @@ func (k *K8s) EventsConfigfMaps(channel chan *ConfigMap, stop chan struct{}) {
 			},
 			DeleteFunc: func(obj interface{}) {
 				data := obj.(*corev1.ConfigMap)
-				var status Status = DELETED
+				var status = DELETED
 				item := &ConfigMap{
 					Namespace:   data.GetNamespace(),
 					Name:        data.GetName(),
@@ -493,7 +493,7 @@ func (k *K8s) EventsConfigfMaps(channel chan *ConfigMap, stop chan struct{}) {
 			UpdateFunc: func(oldObj, newObj interface{}) {
 				data1 := oldObj.(*corev1.ConfigMap)
 				data2 := newObj.(*corev1.ConfigMap)
-				var status Status = MODIFIED
+				var status = MODIFIED
 				item1 := &ConfigMap{
 					Namespace:   data1.GetNamespace(),
 					Name:        data1.GetName(),
@@ -533,7 +533,7 @@ func (k *K8s) EventsSecrets(channel chan *Secret, stop chan struct{}) {
 		cache.ResourceEventHandlerFuncs{
 			AddFunc: func(obj interface{}) {
 				data := obj.(*corev1.Secret)
-				var status Status = ADDED
+				var status = ADDED
 				if data.ObjectMeta.GetDeletionTimestamp() != nil {
 					//detect services that are in terminating state
 					status = DELETED
@@ -551,7 +551,7 @@ func (k *K8s) EventsSecrets(channel chan *Secret, stop chan struct{}) {
 			},
 			DeleteFunc: func(obj interface{}) {
 				data := obj.(*corev1.Secret)
-				var status Status = DELETED
+				var status = DELETED
 				item := &Secret{
 					Namespace: data.GetNamespace(),
 					Name:      data.GetName(),
@@ -566,7 +566,7 @@ func (k *K8s) EventsSecrets(channel chan *Secret, stop chan struct{}) {
 			UpdateFunc: func(oldObj, newObj interface{}) {
 				data1 := oldObj.(*corev1.Secret)
 				data2 := newObj.(*corev1.Secret)
-				var status Status = MODIFIED
+				var status = MODIFIED
 				item1 := &Secret{
 					Namespace: data1.GetNamespace(),
 					Name:      data1.GetName(),

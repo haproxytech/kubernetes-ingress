@@ -28,10 +28,10 @@ type BackendSwitchingRule struct {
 	Backend string
 }
 
-func (c *HAProxyController) useBackendRuleRefresh() (needsReload bool, err error) {
+func (c *HAProxyController) useBackendRuleRefresh() (needsReload bool) {
 	needsReload = false
 	if c.cfg.UseBackendRulesStatus == EMPTY {
-		return needsReload, nil
+		return needsReload
 	}
 	frontends := []string{FrontendHTTP, FrontendHTTPS}
 
@@ -49,7 +49,7 @@ func (c *HAProxyController) useBackendRuleRefresh() (needsReload bool, err error
 		"RateLimit":             struct{}{},
 	}
 	for _, frontend := range frontends {
-		err = nil
+		var err error
 		for err == nil {
 			err = nativeAPI.Configuration.DeleteBackendSwitchingRule(0, frontend, c.ActiveTransaction, 0)
 		}
@@ -91,5 +91,5 @@ func (c *HAProxyController) useBackendRuleRefresh() (needsReload bool, err error
 		needsReload = true
 	}
 
-	return needsReload, nil
+	return needsReload
 }

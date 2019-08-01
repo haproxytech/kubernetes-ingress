@@ -57,7 +57,7 @@ func (c *HAProxyController) handleHTTPS(transaction *models.Transaction) (reload
 	reloadRequested = false
 	status := EMPTY
 	if c.osArgs.DefaultCertificate.Name == "" {
-		err := c.removeHTTPSListeners(transaction)
+		err = c.removeHTTPSListeners(transaction)
 		return reloadRequested, usingHTTPS, err
 	}
 	secretAnn, errSecret := GetValueFromAnnotations("ssl-certificate", c.cfg.ConfigMap.Annotations)
@@ -89,8 +89,8 @@ func (c *HAProxyController) handleHTTPS(transaction *models.Transaction) (reload
 		//log.Println(secretName.Value, rsaCrtOK, rsaKeyOK, ecdsaCrtOK, ecdsaKeyOK)
 		if rsaKeyOK && rsaCrtOK || ecdsaKeyOK && ecdsaCrtOK {
 			if rsaKeyOK && rsaCrtOK {
-				err := c.writeCert(HAProxyCertDir+"cert.pem.rsa", rsaKey, rsaCrt)
-				if err != nil {
+				errCrt := c.writeCert(HAProxyCertDir+"cert.pem.rsa", rsaKey, rsaCrt)
+				if errCrt != nil {
 					err1 := c.removeHTTPSListeners(transaction)
 					LogErr(err1)
 					return reloadRequested, usingHTTPS, err
@@ -98,8 +98,8 @@ func (c *HAProxyController) handleHTTPS(transaction *models.Transaction) (reload
 				haveCert = true
 			}
 			if ecdsaKeyOK && ecdsaCrtOK {
-				err := c.writeCert(HAProxyCertDir+"cert.pem.ecdsa", ecdsaKey, ecdsaCrt)
-				if err != nil {
+				errCrt := c.writeCert(HAProxyCertDir+"cert.pem.ecdsa", ecdsaKey, ecdsaCrt)
+				if errCrt != nil {
 					err1 := c.removeHTTPSListeners(transaction)
 					LogErr(err1)
 					return reloadRequested, usingHTTPS, err
@@ -110,8 +110,8 @@ func (c *HAProxyController) handleHTTPS(transaction *models.Transaction) (reload
 			tlsKey, tlsKeyOK := secret.Data["tls.key"]
 			tlsCrt, tlsCrtOK := secret.Data["tls.crt"]
 			if tlsKeyOK && tlsCrtOK {
-				err := c.writeCert(HAProxyCertDir+"cert.pem", tlsKey, tlsCrt)
-				if err != nil {
+				errCrt := c.writeCert(HAProxyCertDir+"cert.pem", tlsKey, tlsCrt)
+				if errCrt != nil {
 					err1 := c.removeHTTPSListeners(transaction)
 					LogErr(err1)
 					return reloadRequested, usingHTTPS, err
@@ -120,8 +120,8 @@ func (c *HAProxyController) handleHTTPS(transaction *models.Transaction) (reload
 			}
 		}
 		if !haveCert {
-			err := c.removeHTTPSListeners(transaction)
-			LogErr(err)
+			errL := c.removeHTTPSListeners(transaction)
+			LogErr(errL)
 			return reloadRequested, usingHTTPS, fmt.Errorf("no certificate")
 		}
 

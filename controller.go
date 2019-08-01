@@ -202,7 +202,7 @@ func (c *HAProxyController) handleEndpointIP(namespace *Namespace, ingress *Ingr
 	annCheckInterval, errCheckInterval := GetValueFromAnnotations("check-interval", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
 
 	status := ip.Status
-	port := int64(path.ServicePortInt)
+	port := path.ServicePortInt
 	if port == 0 {
 		portName := path.ServicePortString
 		for _, p := range *endpoints.Ports {
@@ -281,8 +281,8 @@ func (c *HAProxyController) handleEndpointIP(namespace *Namespace, ingress *Ingr
 		err := nativeAPI.Configuration.EditServer(data.Name, backendName, data, transaction.ID, 0)
 		if err != nil {
 			if strings.Contains(err.Error(), "does not exist") {
-				err := nativeAPI.Configuration.CreateServer(backendName, data, transaction.ID, 0)
-				LogErr(err)
+				err1 := nativeAPI.Configuration.CreateServer(backendName, data, transaction.ID, 0)
+				LogErr(err1)
 				needsReload = true
 			} else {
 				LogErr(err)
@@ -317,7 +317,7 @@ func (c *HAProxyController) handleService(index int, namespace *Namespace, ingre
 	if path.ServicePortInt == 0 {
 		for _, p := range service.Ports {
 			if p.Name == path.ServicePortString || path.ServicePortString == "" {
-				path.ServicePortInt = int64(p.TargetPort)
+				path.ServicePortInt = p.TargetPort
 				break
 			}
 		}
@@ -412,20 +412,18 @@ func (c *HAProxyController) handleService(index int, namespace *Namespace, ingre
 			}
 			c.cfg.UseBackendRulesStatus = MODIFIED
 		}
-	} else {
-		if service.Status != EMPTY {
-			_, http, err := nativeAPI.Configuration.GetFrontend(FrontendHTTP, transaction.ID)
-			LogErr(err)
-			http.DefaultBackend = backendName
-			err = nativeAPI.Configuration.EditFrontend(FrontendHTTP, http, transaction.ID, 0)
-			LogErr(err)
-			_, https, err := nativeAPI.Configuration.GetFrontend(FrontendHTTPS, transaction.ID)
-			LogErr(err)
-			https.DefaultBackend = backendName
-			err = nativeAPI.Configuration.EditFrontend(FrontendHTTPS, https, transaction.ID, 0)
-			LogErr(err)
-			needReload = true
-		}
+	} else if service.Status != EMPTY {
+		_, http, err := nativeAPI.Configuration.GetFrontend(FrontendHTTP, transaction.ID)
+		LogErr(err)
+		http.DefaultBackend = backendName
+		err = nativeAPI.Configuration.EditFrontend(FrontendHTTP, http, transaction.ID, 0)
+		LogErr(err)
+		_, https, err := nativeAPI.Configuration.GetFrontend(FrontendHTTPS, transaction.ID)
+		LogErr(err)
+		https.DefaultBackend = backendName
+		err = nativeAPI.Configuration.EditFrontend(FrontendHTTPS, https, transaction.ID, 0)
+		LogErr(err)
+		needReload = true
 	}
 
 	status = service.Status

@@ -48,14 +48,15 @@ func (c *HAProxyController) updateHAProxy() error {
 	maxconnAnn, err := GetValueFromAnnotations("maxconn", c.cfg.ConfigMap.Annotations)
 	if err == nil {
 		if maxconnAnn.Status == DELETED {
-			err := c.handleMaxconn(transaction, nil, FrontendHTTP, FrontendHTTPS)
+			err = c.handleMaxconn(transaction, nil, FrontendHTTP, FrontendHTTPS)
 			if err != nil {
 				return err
 			}
 		} else if maxconnAnn.Status != "" {
-			value, err := strconv.ParseInt(maxconnAnn.Value, 10, 64)
+			var value int64
+			value, err = strconv.ParseInt(maxconnAnn.Value, 10, 64)
 			if err == nil {
-				err := c.handleMaxconn(transaction, &value, FrontendHTTP, FrontendHTTPS)
+				err = c.handleMaxconn(transaction, &value, FrontendHTTP, FrontendHTTPS)
 				if err != nil {
 					return err
 				}
@@ -120,7 +121,7 @@ func (c *HAProxyController) updateHAProxy() error {
 					if path == nil {
 						continue
 					}
-					reload, err := c.handlePath(pathIndex, namespace, ingress, rule, path, backendsUsed, transaction)
+					reload, err = c.handlePath(pathIndex, namespace, ingress, rule, path, backendsUsed, transaction)
 					needsReload = needsReload || reload
 					LogErr(err)
 					pathIndex++
@@ -141,8 +142,7 @@ func (c *HAProxyController) updateHAProxy() error {
 	LogErr(err)
 	needsReload = needsReload || reload
 
-	reload, err = c.useBackendRuleRefresh()
-	LogErr(err)
+	reload = c.useBackendRuleRefresh()
 	needsReload = needsReload || reload
 
 	_, err = nativeAPI.Configuration.CommitTransaction(transaction.ID)
@@ -165,8 +165,8 @@ func (c *HAProxyController) handleMaxconn(transaction *models.Transaction, maxco
 	for _, frontendName := range frontends {
 		if _, frontend, err := c.NativeAPI.Configuration.GetFrontend(frontendName, transaction.ID); err == nil {
 			frontend.Maxconn = maxconn
-			err := c.NativeAPI.Configuration.EditFrontend(frontendName, frontend, transaction.ID, 0)
-			LogErr(err)
+			err1 := c.NativeAPI.Configuration.EditFrontend(frontendName, frontend, transaction.ID, 0)
+			LogErr(err1)
 		} else {
 			return err
 		}

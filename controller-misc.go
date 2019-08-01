@@ -31,21 +31,21 @@ func (c *HAProxyController) handleGlobalAnnotations(transaction *models.Transact
 	annNbthread, errNumThread := GetValueFromAnnotations("nbthread", c.cfg.ConfigMap.Annotations)
 
 	if errNumThread == nil {
-		if numthr, err := strconv.Atoi(annNbthread.Value); err == nil {
+		if numthr, errConv := strconv.Atoi(annNbthread.Value); errConv == nil {
 			if numthr < maxProcs {
 				numThreads = int64(numthr)
 			}
-			var err error
+			var errParser error
 			if annNbthread.Status == DELETED {
-				err = c.NativeParser.Delete(parser.Global, parser.GlobalSectionName, "nbthread")
+				errParser = c.NativeParser.Delete(parser.Global, parser.GlobalSectionName, "nbthread")
 				reloadRequested = true
 			} else if annNbthread.Status != EMPTY {
-				err = c.NativeParser.Insert(parser.Global, parser.GlobalSectionName, "nbthread", types.Int64C{
+				errParser = c.NativeParser.Insert(parser.Global, parser.GlobalSectionName, "nbthread", types.Int64C{
 					Value: numThreads,
 				})
 				reloadRequested = true
 			}
-			LogErr(err)
+			LogErr(errParser)
 		}
 	}
 	return reloadRequested, err

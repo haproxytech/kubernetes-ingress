@@ -38,9 +38,9 @@ func LogErr(err error) {
 	}
 	_, file, no, ok := runtime.Caller(1)
 	if ok {
-		file := strings.Replace(file, "/src/", "", 1)
+		file1 := strings.Replace(file, "/src/", "", 1)
 		log.SetFlags(LogTypeShort)
-		log.Printf("%s:%d %s\n", file, no, err.Error())
+		log.Printf("%s:%d %s\n", file1, no, err.Error())
 		log.SetFlags(LogType)
 	}
 }
@@ -85,6 +85,7 @@ func ptrInt64(value int64) *int64 {
 	return &value
 }
 
-/*func ptrString(value string) *string {
+//nolint deadcode
+func ptrString(value string) *string {
 	return &value
-}*/
+}

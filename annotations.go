@@ -42,7 +42,7 @@ func GetValueFromAnnotations(annotationName string, annotations ...MapStringW) (
 	deleted := false
 	oldValue := ""
 	for _, a := range annotations {
-		if item, err := a.Get(annotationName); err == nil {
+		if item, errAnn := a.Get(annotationName); errAnn == nil {
 			if item.Status == ERROR {
 				continue
 			}

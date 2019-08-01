@@ -186,13 +186,13 @@ func (c *HAProxyController) eventEndpoints(ns *Namespace, data *Endpoints) (upda
 		updateRequired = updateRequired || c.processEndpointIPs(data)
 		//log.Println("Endpoints added", data.Service)
 	case DELETED:
-		data, ok := ns.Endpoints[data.Service.Value]
+		oldData, ok := ns.Endpoints[data.Service.Value]
 		if ok {
-			data.Status = DELETED
+			oldData.Status = DELETED
 			//log.Println("Endpoints deleted", data.Service)
 			updateRequired = true
 		} else {
-			log.Println("Endpoints not registered with controller, cannot delete !", data.Service)
+			log.Println("Endpoints not registered with controller, cannot delete !", oldData.Service)
 		}
 	}
 	return updateRequired
