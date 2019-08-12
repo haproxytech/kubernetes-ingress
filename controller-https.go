@@ -128,6 +128,7 @@ func (c *HAProxyController) handleHTTPS(transaction *models.Transaction) (reload
 		port := int64(443)
 		listenerV4 := &models.Bind{
 			Address:        "0.0.0.0",
+			Alpn:           "h2,http/1.1",
 			Port:           &port,
 			Name:           "bind_1",
 			Ssl:            true,
@@ -135,6 +136,7 @@ func (c *HAProxyController) handleHTTPS(transaction *models.Transaction) (reload
 		}
 		listenerV4v6 := &models.Bind{
 			Address:        "::",
+			Alpn:           "h2,http/1.1",
 			Port:           &port,
 			Name:           "bind_2",
 			V4v6:           true,
