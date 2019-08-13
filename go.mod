@@ -3,9 +3,9 @@ module github.com/haproxytech/kubernetes-ingress
 go 1.12
 
 require (
-	github.com/haproxytech/client-native v1.0.1
-	github.com/haproxytech/config-parser v1.0.0
-	github.com/haproxytech/models v1.0.1
+	github.com/haproxytech/client-native v1.2.0
+	github.com/haproxytech/config-parser v1.0.3
+	github.com/haproxytech/models v1.2.0
 	github.com/jessevdk/go-flags v1.4.0
 	github.com/jroimartin/gocui v0.4.0
 	github.com/mattn/go-runewidth v0.0.4 // indirect
@@ -14,3 +14,5 @@ require (
 	k8s.io/apimachinery v0.0.0-20190612205821-1799e75a0719
 	k8s.io/client-go v0.0.0-20190620085101-78d2af792bab
 )
+
+// replace github.com/haproxytech/config-parser => /home/zlatko/src/github.com/haproxytech/config-parser
