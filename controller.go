@@ -388,9 +388,6 @@ func (c *HAProxyController) handleService(index int, namespace *Namespace, ingre
 	balanceAlg := &models.Balance{
 		Algorithm: annBalanceAlg.Value,
 	}
-	if err != nil {
-		log.Printf("%s, using %s \n", err, balanceAlg)
-	}
 
 	if rule != nil {
 		key := fmt.Sprintf("R%s%s%0006d", namespace.Name, ingress.Name, index)

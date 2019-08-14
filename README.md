@@ -30,6 +30,8 @@ kubectl apply -f deploy/haproxy-ingress.yaml
 
 For commit messages and general style please follow the haproxy project's [CONTRIBUTING guide](https://github.com/haproxy/haproxy/blob/master/CONTRIBUTING) and use that where applicable.
 
+Please use `golangci-lint run` from [github.com/golangci/golangci-lint](https://github.com/golangci/golangci-lint) for linting code.
+
 ## License
 
 [Apache License 2.0](LICENSE)
