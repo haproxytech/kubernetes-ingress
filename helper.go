@@ -23,6 +23,8 @@ import (
 
 	//networking "k8s.io/api/networking/v1beta1"
 	extensions "k8s.io/api/extensions/v1beta1"
+
+	"github.com/haproxytech/client-native/misc"
 )
 
 func homeDir() string {
@@ -88,4 +90,12 @@ func ptrInt64(value int64) *int64 {
 //nolint deadcode
 func ptrString(value string) *string {
 	return &value
+}
+
+func annotationConvertToMS(data StringW) (int64, error) {
+	annValue := misc.ParseTimeout(data.Value)
+	if annValue == nil {
+		return 0, ErrAnnotationParse
+	}
+	return *annValue, nil
 }

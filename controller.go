@@ -21,7 +21,6 @@ import (
 	"os/exec"
 	"strconv"
 	"strings"
-	"sync"
 
 	clientnative "github.com/haproxytech/client-native"
 	"github.com/haproxytech/client-native/configuration"
@@ -34,15 +33,14 @@ import (
 
 // HAProxyController is ingress controller
 type HAProxyController struct {
-	k8s                *K8s
-	cfg                Configuration
-	osArgs             OSArgs
-	NativeAPI          *clientnative.HAProxyClient
-	NativeParser       parser.Parser
-	ActiveTransaction  string
-	eventChan          chan SyncDataEvent
-	serverlessPods     map[string]int
-	serverlessPodsLock sync.Mutex
+	k8s               *K8s
+	cfg               Configuration
+	osArgs            OSArgs
+	NativeAPI         *clientnative.HAProxyClient
+	NativeParser      parser.Parser
+	ActiveTransaction string
+	eventChan         chan SyncDataEvent
+	serverlessPods    map[string]int
 }
 
 // Start initialize and run HAProxyController
@@ -70,7 +68,6 @@ func (c *HAProxyController) Start(osArgs OSArgs) {
 	log.Printf("Running on Kubernetes version: %s %s", k8sVersion.String(), k8sVersion.Platform)
 
 	c.serverlessPods = map[string]int{}
-	c.serverlessPodsLock = sync.Mutex{}
 	c.eventChan = make(chan SyncDataEvent, watch.DefaultChanSize*6)
 	go c.monitorChanges()
 }
@@ -468,5 +465,23 @@ func (c *HAProxyController) handleService(index int, namespace *Namespace, ingre
 			return "", nil, needReload, err
 		}
 	}
+	annTimeoutCheck, errCheck := GetValueFromAnnotations("timeout-check", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
+	if errCheck == nil && annTimeoutCheck.Status != EMPTY {
+		backend, _ := c.backendGet(backendName)
+		switch annTimeoutCheck.Status {
+		case DELETED:
+			backend.CheckTimeout = nil
+		default:
+			val, err := annotationConvertToMS(*annTimeoutCheck)
+			if err != nil {
+				LogErr(err)
+				backend.CheckTimeout = nil
+			} else {
+				backend.CheckTimeout = &val
+			}
+			LogErr(c.backendEdit(backendName, backend))
+		}
+	}
+
 	return backendName, service, needReload, nil
 }

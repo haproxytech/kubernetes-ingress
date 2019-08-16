@@ -25,13 +25,16 @@ import (
 
 func (c *HAProxyController) handleDefaultTimeouts() bool {
 	hasChanges := false
-	hasChanges = c.handleDefaultTimeout("http-request") || hasChanges
-	hasChanges = c.handleDefaultTimeout("connect") || hasChanges
-	hasChanges = c.handleDefaultTimeout("client") || hasChanges
-	hasChanges = c.handleDefaultTimeout("queue") || hasChanges
-	hasChanges = c.handleDefaultTimeout("server") || hasChanges
-	hasChanges = c.handleDefaultTimeout("tunnel") || hasChanges
-	hasChanges = c.handleDefaultTimeout("http-keep-alive") || hasChanges
+	hasChanges = c.handleDefaultTimeout("http-request", true) || hasChanges
+	hasChanges = c.handleDefaultTimeout("connect", true) || hasChanges
+	hasChanges = c.handleDefaultTimeout("client", true) || hasChanges
+	hasChanges = c.handleDefaultTimeout("queue", true) || hasChanges
+	hasChanges = c.handleDefaultTimeout("server", true) || hasChanges
+	hasChanges = c.handleDefaultTimeout("tunnel", true) || hasChanges
+	hasChanges = c.handleDefaultTimeout("http-keep-alive", true) || hasChanges
+	//no default values
+	//timeout check is put in every backend, no need to put it here
+	//hasChanges = c.handleDefaultTimeout("check", false) || hasChanges
 	if hasChanges {
 		err := c.NativeParser.Save(HAProxyGlobalCFG)
 		LogErr(err)
@@ -39,19 +42,30 @@ func (c *HAProxyController) handleDefaultTimeouts() bool {
 	return hasChanges
 }
 
-func (c *HAProxyController) handleDefaultTimeout(timeout string) bool {
+func (c *HAProxyController) handleDefaultTimeout(timeout string, hasDefault bool) bool {
 	client := c.NativeParser
 	annTimeout, err := GetValueFromAnnotations(fmt.Sprintf("timeout-%s", timeout), c.cfg.ConfigMap.Annotations)
 	if err != nil {
-		log.Println(err)
+		if hasDefault {
+			log.Println(err)
+		}
 		return false
 	}
 	if annTimeout.Status != "" {
 		//log.Println(fmt.Sprintf("timeout [%s]", timeout), annTimeout.Value, annTimeout.OldValue, annTimeout.Status)
 		data, err := client.Get(parser.Defaults, parser.DefaultSectionName, fmt.Sprintf("timeout %s", timeout))
 		if err != nil {
-			log.Println(err)
-			return false
+			if hasDefault {
+				log.Println(err)
+				return false
+			}
+			errSet := client.Set(parser.Defaults, parser.DefaultSectionName, fmt.Sprintf("timeout %s", timeout), types.SimpleTimeout{
+				Value: annTimeout.Value,
+			})
+			if errSet != nil {
+				log.Println(errSet)
+			}
+			return true
 		}
 		timeout := data.(*types.SimpleTimeout)
 		timeout.Value = annTimeout.Value

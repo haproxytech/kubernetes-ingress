@@ -29,6 +29,7 @@ Options for starting controller can be found in [controller.md](controller.md)
 | [ssl-redirect](#https) | "ON"/"OFF" | "ON" | [tls-secret](#tls-secret) |:large_blue_circle:|:white_circle:|:white_circle:|
 | [ssl-redirect-code](#https) | [301, 302, 303] | "302" | [tls-secret](#tls-secret) |:large_blue_circle:|:white_circle:|:white_circle:|
 | [timeout-http-request](#timeouts) | [time](#time) | "5s" |  |:large_blue_circle:|:white_circle:|:white_circle:|
+| [timeout-check](#timeouts) | [time](#time) |  |  |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:|
 | [timeout-connect](#timeouts) | [time](#time) | "5s" |  |:large_blue_circle:|:white_circle:|:white_circle:|
 | [timeout-client](#timeouts) | [time](#time) | "50s" |  |:large_blue_circle:|:white_circle:|:white_circle:|
 | [timeout-queue](#timeouts) | [time](#time) | "5s" |  |:large_blue_circle:|:white_circle:|:white_circle:|
@@ -108,13 +109,14 @@ The number of requests a client can do per `rate-limit-interval` is **10**.
 
 #### Timeouts
 
-- Annotation `http-request`
-- Annotation `connect`
-- Annotation `client`
-- Annotation `queue`
-- Annotation `server`
-- Annotation `tunnel`
-- Annotation `http-keep-alive`
+- Annotation `timeout-http-request`
+- Annotation [`timeout-check`](https://cbonte.github.io/haproxy-dconv/2.0/configuration.html#timeout%20check)
+- Annotation `timeout-connect`
+- Annotation `timeout-client`
+- Annotation `timeout-queue`
+- Annotation `timeout-server`
+- Annotation `timeout-tunnel`
+- Annotation `timeout-http-keep-alive`
 
 #### X-Forwarded-For
 
