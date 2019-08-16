@@ -47,6 +47,15 @@ func (c HAProxyController) backendSwitchingRuleDeleteAll(frontend string) {
 	}
 }
 
+func (c HAProxyController) frontendGet(frontendName string) (models.Frontend, error) {
+	_, frontend, err := c.NativeAPI.Configuration.GetFrontend(frontendName, c.ActiveTransaction)
+	return *frontend, err
+}
+
+func (c HAProxyController) frontendEdit(frontend models.Frontend) error {
+	return c.NativeAPI.Configuration.EditFrontend(frontend.Name, &frontend, c.ActiveTransaction, 0)
+}
+
 func (c HAProxyController) frontendACLAdd(frontend string, acl models.ACL) error {
 	return c.NativeAPI.Configuration.CreateACL("frontend", frontend, &acl, c.ActiveTransaction, 0)
 }

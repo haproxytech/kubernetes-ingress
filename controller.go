@@ -406,15 +406,15 @@ func (c *HAProxyController) handleService(index int, namespace *Namespace, ingre
 			c.cfg.UseBackendRulesStatus = MODIFIED
 		}
 	} else if service.Status != EMPTY {
-		_, http, err := nativeAPI.Configuration.GetFrontend(FrontendHTTP, transaction.ID)
+		http, err := c.frontendGet(FrontendHTTP)
 		LogErr(err)
 		http.DefaultBackend = backendName
-		err = nativeAPI.Configuration.EditFrontend(FrontendHTTP, http, transaction.ID, 0)
+		err = c.frontendEdit(http)
 		LogErr(err)
-		_, https, err := nativeAPI.Configuration.GetFrontend(FrontendHTTPS, transaction.ID)
+		https, err := c.frontendGet(FrontendHTTPS)
 		LogErr(err)
 		https.DefaultBackend = backendName
-		err = nativeAPI.Configuration.EditFrontend(FrontendHTTPS, https, transaction.ID, 0)
+		err = c.frontendEdit(https)
 		LogErr(err)
 		needReload = true
 	}

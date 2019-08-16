@@ -41,7 +41,7 @@ func (c *HAProxyController) useBackendRuleRefresh() (needsReload bool) {
 	}
 	sort.Sort(sort.Reverse(sort.StringSlice(sortedList))) // reverse order
 
-	_, frontend, _ := c.cfg.NativeAPI.Configuration.GetFrontend(FrontendHTTPS, c.ActiveTransaction)
+	frontend, _ := c.frontendGet(FrontendHTTPS)
 	backends := map[string]struct{}{
 		frontend.DefaultBackend: struct{}{},
 		"RateLimit":             struct{}{},

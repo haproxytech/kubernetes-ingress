@@ -163,9 +163,9 @@ func (c *HAProxyController) updateHAProxy() error {
 
 func (c *HAProxyController) handleMaxconn(transaction *models.Transaction, maxconn *int64, frontends ...string) error {
 	for _, frontendName := range frontends {
-		if _, frontend, err := c.NativeAPI.Configuration.GetFrontend(frontendName, transaction.ID); err == nil {
+		if frontend, err := c.frontendGet(frontendName); err == nil {
 			frontend.Maxconn = maxconn
-			err1 := c.NativeAPI.Configuration.EditFrontend(frontendName, frontend, transaction.ID, 0)
+			err1 := c.frontendEdit(frontend)
 			LogErr(err1)
 		} else {
 			return err
