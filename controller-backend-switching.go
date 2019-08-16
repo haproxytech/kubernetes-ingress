@@ -35,8 +35,6 @@ func (c *HAProxyController) useBackendRuleRefresh() (needsReload bool) {
 	}
 	frontends := []string{FrontendHTTP, FrontendHTTPS}
 
-	nativeAPI := c.NativeAPI
-
 	sortedList := []string{}
 	for name := range c.cfg.UseBackendRules {
 		sortedList = append(sortedList, name)
@@ -50,9 +48,7 @@ func (c *HAProxyController) useBackendRuleRefresh() (needsReload bool) {
 	}
 	for _, frontend := range frontends {
 		var err error
-		for err == nil {
-			err = nativeAPI.Configuration.DeleteBackendSwitchingRule(0, frontend, c.ActiveTransaction, 0)
-		}
+		c.backendSwitchingRuleDeleteAll(frontend)
 		for _, name := range sortedList {
 			rule := c.cfg.UseBackendRules[name]
 			id := int64(0)
@@ -67,14 +63,13 @@ func (c *HAProxyController) useBackendRuleRefresh() (needsReload bool) {
 				log.Println(fmt.Sprintf("Both Host and Path are empty for frontend %s with backend %s, SKIP", frontend, rule.Backend))
 				continue
 			}
-			backendSwitchingRule := &models.BackendSwitchingRule{
+			backends[rule.Backend] = struct{}{}
+			err = c.backendSwitchingRuleCreate(frontend, models.BackendSwitchingRule{
 				Cond:     "if",
 				CondTest: condTest,
 				Name:     rule.Backend,
 				ID:       &id,
-			}
-			backends[rule.Backend] = struct{}{}
-			err = c.cfg.NativeAPI.Configuration.CreateBackendSwitchingRule(frontend, backendSwitchingRule, c.ActiveTransaction, 0)
+			})
 			LogErr(err)
 		}
 	}
