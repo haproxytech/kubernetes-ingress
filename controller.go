@@ -193,7 +193,6 @@ func (c *HAProxyController) handlePath(index int, namespace *Namespace, ingress 
 
 func (c *HAProxyController) handleEndpointIP(namespace *Namespace, ingress *Ingress, rule *IngressRule, path *IngressPath, service *Service, backendName string, endpoints *Endpoints, ip *EndpointIP, transaction *models.Transaction) (needsReload bool) {
 	needsReload = false
-	nativeAPI := c.NativeAPI
 	annMaxconn, errMaxConn := GetValueFromAnnotations("pod-maxconn", service.Annotations)
 	annCheck, _ := GetValueFromAnnotations("check", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
 	annCheckInterval, errCheckInterval := GetValueFromAnnotations("check-interval", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
@@ -215,7 +214,7 @@ func (c *HAProxyController) handleEndpointIP(namespace *Namespace, ingress *Ingr
 		}
 	}
 	weight := int64(128)
-	data := &models.Server{
+	data := models.Server{
 		Name:    ip.HAProxyName,
 		Address: ip.IP,
 		Port:    &port,
@@ -265,7 +264,7 @@ func (c *HAProxyController) handleEndpointIP(namespace *Namespace, ingress *Ingr
 	}
 	switch status {
 	case ADDED:
-		err := nativeAPI.Configuration.CreateServer(backendName, data, transaction.ID, 0)
+		err := c.backendServerCreate(backendName, data)
 		if err != nil {
 			if !strings.Contains(err.Error(), "already exists") {
 				LogErr(err)
@@ -275,10 +274,10 @@ func (c *HAProxyController) handleEndpointIP(namespace *Namespace, ingress *Ingr
 			needsReload = true
 		}
 	case MODIFIED:
-		err := nativeAPI.Configuration.EditServer(data.Name, backendName, data, transaction.ID, 0)
+		err := c.backendServerEdit(backendName, data)
 		if err != nil {
 			if strings.Contains(err.Error(), "does not exist") {
-				err1 := nativeAPI.Configuration.CreateServer(backendName, data, transaction.ID, 0)
+				err1 := c.backendServerCreate(backendName, data)
 				LogErr(err1)
 				needsReload = true
 			} else {
@@ -291,7 +290,7 @@ func (c *HAProxyController) handleEndpointIP(namespace *Namespace, ingress *Ingr
 		}
 		log.Printf("Modified: %s - %s - %v\n", backendName, ip.HAProxyName, status)
 	case DELETED:
-		err := nativeAPI.Configuration.DeleteServer(data.Name, backendName, transaction.ID, 0)
+		err := c.backendServerDelete(backendName, data.Name)
 		if err != nil && !strings.Contains(err.Error(), "does not exist") {
 			LogErr(err)
 		}

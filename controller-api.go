@@ -24,6 +24,18 @@ func (c HAProxyController) backendDelete(backendName string) error {
 	return c.NativeAPI.Configuration.DeleteBackend(backendName, c.ActiveTransaction, 0)
 }
 
+func (c HAProxyController) backendServerCreate(backendName string, data models.Server) error {
+	return c.NativeAPI.Configuration.CreateServer(backendName, &data, c.ActiveTransaction, 0)
+}
+
+func (c HAProxyController) backendServerEdit(backendName string, data models.Server) error {
+	return c.NativeAPI.Configuration.EditServer(data.Name, backendName, &data, c.ActiveTransaction, 0)
+}
+
+func (c HAProxyController) backendServerDelete(backendName string, serverName string) error {
+	return c.NativeAPI.Configuration.DeleteServer(serverName, backendName, c.ActiveTransaction, 0)
+}
+
 func (c HAProxyController) backendSwitchingRuleCreate(frontend string, rule models.BackendSwitchingRule) error {
 	return c.cfg.NativeAPI.Configuration.CreateBackendSwitchingRule(frontend, &rule, c.ActiveTransaction, 0)
 }
