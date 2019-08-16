@@ -16,8 +16,6 @@ package main
 
 import (
 	"sort"
-
-	"github.com/haproxytech/models"
 )
 
 func (c *HAProxyController) RequestsHTTPRefresh() (needsReload bool, err error) {
@@ -73,7 +71,7 @@ func (c *HAProxyController) RequestsHTTPRefresh() (needsReload bool, err error) 
 	return needsReload, nil
 }
 
-func (c *HAProxyController) requestsTCPRefresh(transaction *models.Transaction) (needsReload bool, err error) {
+func (c *HAProxyController) requestsTCPRefresh() (needsReload bool, err error) {
 	needsReload = false
 	if c.cfg.TCPRequestsStatus == EMPTY {
 		return needsReload, nil

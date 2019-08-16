@@ -24,7 +24,7 @@ import (
 	"github.com/haproxytech/models"
 )
 
-func (c *HAProxyController) handleGlobalAnnotations(transaction *models.Transaction) (reloadRequested bool, err error) {
+func (c *HAProxyController) handleGlobalAnnotations() (reloadRequested bool, err error) {
 	reloadRequested = false
 	maxProcs := goruntime.GOMAXPROCS(0)
 	numThreads := int64(maxProcs)
@@ -51,11 +51,11 @@ func (c *HAProxyController) handleGlobalAnnotations(transaction *models.Transact
 	return reloadRequested, err
 }
 
-func (c *HAProxyController) removeHTTPSListeners(transaction *models.Transaction) (err error) {
+func (c *HAProxyController) removeHTTPSListeners() (err error) {
 	return nil
 }
 
-func (c *HAProxyController) handleHTTPRedirect(usingHTTPS bool, transaction *models.Transaction) (reloadRequested bool, err error) {
+func (c *HAProxyController) handleHTTPRedirect(usingHTTPS bool) (reloadRequested bool, err error) {
 	//see if we need to add redirect to https redirect scheme https if !{ ssl_fc }
 	// no need for error checking, we have default value,
 	//if not defined as OFF, we always do redirect

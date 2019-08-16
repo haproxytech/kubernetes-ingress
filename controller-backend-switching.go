@@ -73,7 +73,7 @@ func (c *HAProxyController) useBackendRuleRefresh() (needsReload bool) {
 			LogErr(err)
 		}
 	}
-	_, allBackends, _ := c.cfg.NativeAPI.Configuration.GetBackends(c.ActiveTransaction)
+	allBackends, _ := c.backendsGet()
 	for _, backend := range allBackends {
 		_, ok := backends[backend.Name]
 		if !ok {

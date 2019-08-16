@@ -51,13 +51,12 @@ func (c *HAProxyController) writeCert(filename string, key, crt []byte) error {
 	return nil
 }
 
-func (c *HAProxyController) handleHTTPS(transaction *models.Transaction) (reloadRequested bool, usingHTTPS bool, err error) {
+func (c *HAProxyController) handleHTTPS() (reloadRequested bool, usingHTTPS bool, err error) {
 	usingHTTPS = false
-	nativeAPI := c.NativeAPI
 	reloadRequested = false
 	status := EMPTY
 	if c.osArgs.DefaultCertificate.Name == "" {
-		err = c.removeHTTPSListeners(transaction)
+		err = c.removeHTTPSListeners()
 		return reloadRequested, usingHTTPS, err
 	}
 	secretAnn, errSecret := GetValueFromAnnotations("ssl-certificate", c.cfg.ConfigMap.Annotations)
@@ -91,7 +90,7 @@ func (c *HAProxyController) handleHTTPS(transaction *models.Transaction) (reload
 			if rsaKeyOK && rsaCrtOK {
 				errCrt := c.writeCert(HAProxyCertDir+"cert.pem.rsa", rsaKey, rsaCrt)
 				if errCrt != nil {
-					err1 := c.removeHTTPSListeners(transaction)
+					err1 := c.removeHTTPSListeners()
 					LogErr(err1)
 					return reloadRequested, usingHTTPS, err
 				}
@@ -100,7 +99,7 @@ func (c *HAProxyController) handleHTTPS(transaction *models.Transaction) (reload
 			if ecdsaKeyOK && ecdsaCrtOK {
 				errCrt := c.writeCert(HAProxyCertDir+"cert.pem.ecdsa", ecdsaKey, ecdsaCrt)
 				if errCrt != nil {
-					err1 := c.removeHTTPSListeners(transaction)
+					err1 := c.removeHTTPSListeners()
 					LogErr(err1)
 					return reloadRequested, usingHTTPS, err
 				}
@@ -112,7 +111,7 @@ func (c *HAProxyController) handleHTTPS(transaction *models.Transaction) (reload
 			if tlsKeyOK && tlsCrtOK {
 				errCrt := c.writeCert(HAProxyCertDir+"cert.pem", tlsKey, tlsCrt)
 				if errCrt != nil {
-					err1 := c.removeHTTPSListeners(transaction)
+					err1 := c.removeHTTPSListeners()
 					LogErr(err1)
 					return reloadRequested, usingHTTPS, err
 				}
@@ -120,13 +119,13 @@ func (c *HAProxyController) handleHTTPS(transaction *models.Transaction) (reload
 			}
 		}
 		if !haveCert {
-			errL := c.removeHTTPSListeners(transaction)
+			errL := c.removeHTTPSListeners()
 			LogErr(errL)
 			return reloadRequested, usingHTTPS, fmt.Errorf("no certificate")
 		}
 
 		port := int64(443)
-		listenerV4 := &models.Bind{
+		listenerV4 := models.Bind{
 			Address:        "0.0.0.0",
 			Alpn:           "h2,http/1.1",
 			Port:           &port,
@@ -134,7 +133,7 @@ func (c *HAProxyController) handleHTTPS(transaction *models.Transaction) (reload
 			Ssl:            true,
 			SslCertificate: HAProxyCertDir,
 		}
-		listenerV4v6 := &models.Bind{
+		listenerV4v6 := models.Bind{
 			Address:        "::",
 			Alpn:           "h2,http/1.1",
 			Port:           &port,
@@ -146,10 +145,10 @@ func (c *HAProxyController) handleHTTPS(transaction *models.Transaction) (reload
 		usingHTTPS = true
 		switch status {
 		case ADDED:
-			for _, listener := range []*models.Bind{listenerV4, listenerV4v6} {
-				if err = nativeAPI.Configuration.CreateBind(FrontendHTTPS, listener, transaction.ID, 0); err != nil {
+			for _, listener := range []models.Bind{listenerV4, listenerV4v6} {
+				if err = c.frontendBindCreate(FrontendHTTPS, listener); err != nil {
 					if strings.Contains(err.Error(), "already exists") {
-						if err = nativeAPI.Configuration.EditBind(listener.Name, FrontendHTTPS, listener, transaction.ID, 0); err != nil {
+						if err = c.frontendBindEdit( FrontendHTTPS, listener); err != nil {
 							return reloadRequested, usingHTTPS, err
 						}
 					} else {
@@ -158,14 +157,14 @@ func (c *HAProxyController) handleHTTPS(transaction *models.Transaction) (reload
 				}
 			}
 		case MODIFIED:
-			for _, listener := range []*models.Bind{listenerV4, listenerV4v6} {
-				if err = nativeAPI.Configuration.EditBind(listener.Name, FrontendHTTPS, listener, transaction.ID, 0); err != nil {
+			for _, listener := range []models.Bind{listenerV4, listenerV4v6} {
+				if err = c.frontendBindEdit( FrontendHTTPS, listener); err != nil {
 					return reloadRequested, usingHTTPS, err
 				}
 			}
 		case DELETED:
-			for _, listener := range []*models.Bind{listenerV4, listenerV4v6} {
-				if err = nativeAPI.Configuration.DeleteBind(listener.Name, FrontendHTTPS, transaction.ID, 0); err != nil {
+			for _, listener := range []models.Bind{listenerV4, listenerV4v6} {
+				if err = c.frontendBindDelete(FrontendHTTPS, listener.Name); err != nil {
 					return reloadRequested, usingHTTPS, err
 				}
 			}

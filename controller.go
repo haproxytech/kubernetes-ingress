@@ -164,9 +164,9 @@ func (c *HAProxyController) HAProxyReload() error {
 	return err
 }
 
-func (c *HAProxyController) handlePath(index int, namespace *Namespace, ingress *Ingress, rule *IngressRule, path *IngressPath, backendsUsed map[string]struct{}, transaction *models.Transaction) (needsReload bool, err error) {
+func (c *HAProxyController) handlePath(index int, namespace *Namespace, ingress *Ingress, rule *IngressRule, path *IngressPath, backendsUsed map[string]struct{}) (needsReload bool, err error) {
 	needsReload = false
-	backendName, service, reload, err := c.handleService(index, namespace, ingress, rule, path, transaction)
+	backendName, service, reload, err := c.handleService(index, namespace, ingress, rule, path)
 	needsReload = needsReload || reload
 	if err != nil {
 		return needsReload, err
@@ -185,13 +185,13 @@ func (c *HAProxyController) handlePath(index int, namespace *Namespace, ingress 
 	endpoints.BackendName = backendName
 
 	for _, ip := range *endpoints.Addresses {
-		reload := c.handleEndpointIP(namespace, ingress, rule, path, service, backendName, endpoints, ip, transaction)
+		reload := c.handleEndpointIP(namespace, ingress, rule, path, service, backendName, endpoints, ip)
 		needsReload = needsReload || reload
 	}
 	return needsReload, nil
 }
 
-func (c *HAProxyController) handleEndpointIP(namespace *Namespace, ingress *Ingress, rule *IngressRule, path *IngressPath, service *Service, backendName string, endpoints *Endpoints, ip *EndpointIP, transaction *models.Transaction) (needsReload bool) {
+func (c *HAProxyController) handleEndpointIP(namespace *Namespace, ingress *Ingress, rule *IngressRule, path *IngressPath, service *Service, backendName string, endpoints *Endpoints, ip *EndpointIP) (needsReload bool) {
 	needsReload = false
 	annMaxconn, errMaxConn := GetValueFromAnnotations("pod-maxconn", service.Annotations)
 	annCheck, _ := GetValueFromAnnotations("check", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
@@ -299,9 +299,7 @@ func (c *HAProxyController) handleEndpointIP(namespace *Namespace, ingress *Ingr
 	return needsReload
 }
 
-func (c *HAProxyController) handleService(index int, namespace *Namespace, ingress *Ingress, rule *IngressRule, path *IngressPath,
-	transaction *models.Transaction) (backendName string, service *Service, needReload bool, err error) {
-	nativeAPI := c.NativeAPI
+func (c *HAProxyController) handleService(index int, namespace *Namespace, ingress *Ingress, rule *IngressRule, path *IngressPath) (backendName string, service *Service, needReload bool, err error) {
 	needReload = false
 
 	service, ok := namespace.Services[path.ServiceName]
@@ -428,9 +426,9 @@ func (c *HAProxyController) handleService(index int, namespace *Namespace, ingre
 
 	switch status {
 	case ADDED, MODIFIED:
-		_, _, err := c.cfg.NativeAPI.Configuration.GetBackend(backendName, c.ActiveTransaction)
+		_, err := c.backendGet(backendName)
 		if err != nil {
-			backend := &models.Backend{
+			backend := models.Backend{
 				Balance: balanceAlg,
 				Name:    backendName,
 				Mode:    "http",
@@ -441,7 +439,7 @@ func (c *HAProxyController) handleService(index int, namespace *Namespace, ingre
 					Enabled: &forwardfor,
 				}
 			}
-			if err := nativeAPI.Configuration.CreateBackend(backend, transaction.ID, 0); err != nil {
+			if err := c.backendCreate(backend); err != nil {
 				msg := err.Error()
 				if !strings.Contains(msg, "Farm already exists") {
 					if !newImportantPath {
@@ -458,7 +456,7 @@ func (c *HAProxyController) handleService(index int, namespace *Namespace, ingre
 	}
 
 	if annBalanceAlg.Status != "" || annForwardedFor.Status != "" {
-		reload, err := c.handleBackendAnnotations(balanceAlg, annForwardedFor, backendName, transaction)
+		reload, err := c.handleBackendAnnotations(balanceAlg, annForwardedFor, backendName)
 		needReload = needReload || reload
 		if err != nil {
 			return "", nil, needReload, err
@@ -478,7 +476,7 @@ func (c *HAProxyController) handleService(index int, namespace *Namespace, ingre
 			} else {
 				backend.CheckTimeout = &val
 			}
-			LogErr(c.backendEdit(backendName, backend))
+			LogErr(c.backendEdit(backend))
 		}
 	}
 

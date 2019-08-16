@@ -40,7 +40,7 @@ var ratelimitACL3 = models.ACL{
 	Value:     "gt 0",
 }
 
-func (c *HAProxyController) handleRateLimiting(transaction *models.Transaction, usingHTTPS bool) (needReload bool, err error) {
+func (c *HAProxyController) handleRateLimiting(usingHTTPS bool) (needReload bool, err error) {
 	needReload = false
 	annRateLimit, _ := GetValueFromAnnotations("rate-limit", c.cfg.ConfigMap.Annotations)
 

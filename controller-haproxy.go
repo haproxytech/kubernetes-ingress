@@ -21,34 +21,25 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-
-	"github.com/haproxytech/models"
 )
 
 func (c *HAProxyController) updateHAProxy() error {
 	needsReload := false
-	nativeAPI := c.NativeAPI
 
 	c.handleDefaultTimeouts()
-	version, err := nativeAPI.Configuration.GetVersion("")
-	if err != nil || version < 1 {
-		//silently fallback to 1
-		version = 1
-	}
-	//log.Println("Config version:", version)
-	transaction, err := nativeAPI.Configuration.StartTransaction(version)
-	c.ActiveTransaction = transaction.ID
-	defer func() {
-		c.ActiveTransaction = ""
-	}()
+	err := c.apiStartTransaction()
+
 	if err != nil {
 		log.Println(err)
 		return err
 	}
+	defer func() {
+		c.apiDisposeTransaction()
+	}()
 	maxconnAnn, err := GetValueFromAnnotations("maxconn", c.cfg.ConfigMap.Annotations)
 	if err == nil {
 		if maxconnAnn.Status == DELETED {
-			err = c.handleMaxconn(transaction, nil, FrontendHTTP, FrontendHTTPS)
+			err = c.handleMaxconn(nil, FrontendHTTP, FrontendHTTPS)
 			if err != nil {
 				return err
 			}
@@ -56,7 +47,7 @@ func (c *HAProxyController) updateHAProxy() error {
 			var value int64
 			value, err = strconv.ParseInt(maxconnAnn.Value, 10, 64)
 			if err == nil {
-				err = c.handleMaxconn(transaction, &value, FrontendHTTP, FrontendHTTPS)
+				err = c.handleMaxconn(&value, FrontendHTTP, FrontendHTTPS)
 				if err != nil {
 					return err
 				}
@@ -64,24 +55,24 @@ func (c *HAProxyController) updateHAProxy() error {
 		}
 	}
 
-	reload, err := c.handleGlobalAnnotations(transaction)
+	reload, err := c.handleGlobalAnnotations()
 	LogErr(err)
 	needsReload = needsReload || reload
 
 	var usingHTTPS bool
-	reload, usingHTTPS, err = c.handleHTTPS(transaction)
+	reload, usingHTTPS, err = c.handleHTTPS()
 	if err != nil {
 		return err
 	}
 	needsReload = needsReload || reload
 
-	reload, err = c.handleRateLimiting(transaction, usingHTTPS)
+	reload, err = c.handleRateLimiting(usingHTTPS)
 	if err != nil {
 		return err
 	}
 	needsReload = needsReload || reload
 
-	reload, err = c.handleHTTPRedirect(usingHTTPS, transaction)
+	reload, err = c.handleHTTPRedirect(usingHTTPS)
 	if err != nil {
 		return err
 	}
@@ -121,7 +112,7 @@ func (c *HAProxyController) updateHAProxy() error {
 					if path == nil {
 						continue
 					}
-					reload, err = c.handlePath(pathIndex, namespace, ingress, rule, path, backendsUsed, transaction)
+					reload, err = c.handlePath(pathIndex, namespace, ingress, rule, path, backendsUsed)
 					needsReload = needsReload || reload
 					LogErr(err)
 					pathIndex++
@@ -130,11 +121,11 @@ func (c *HAProxyController) updateHAProxy() error {
 		}
 	}
 	//handle default service
-	reload, err = c.handleDefaultService(backendsUsed, transaction)
+	reload, err = c.handleDefaultService(backendsUsed)
 	LogErr(err)
 	needsReload = needsReload || reload
 
-	reload, err = c.requestsTCPRefresh(transaction)
+	reload, err = c.requestsTCPRefresh()
 	LogErr(err)
 	needsReload = needsReload || reload
 
@@ -145,7 +136,7 @@ func (c *HAProxyController) updateHAProxy() error {
 	reload = c.useBackendRuleRefresh()
 	needsReload = needsReload || reload
 
-	_, err = nativeAPI.Configuration.CommitTransaction(transaction.ID)
+	err = c.apiCommitTransaction()
 	if err != nil {
 		log.Println(err)
 		return err
@@ -161,7 +152,7 @@ func (c *HAProxyController) updateHAProxy() error {
 	return nil
 }
 
-func (c *HAProxyController) handleMaxconn(transaction *models.Transaction, maxconn *int64, frontends ...string) error {
+func (c *HAProxyController) handleMaxconn(maxconn *int64, frontends ...string) error {
 	for _, frontendName := range frontends {
 		if frontend, err := c.frontendGet(frontendName); err == nil {
 			frontend.Maxconn = maxconn
@@ -174,7 +165,7 @@ func (c *HAProxyController) handleMaxconn(transaction *models.Transaction, maxco
 	return nil
 }
 
-func (c *HAProxyController) handleDefaultService(backendsUsed map[string]struct{}, transaction *models.Transaction) (needsReload bool, err error) {
+func (c *HAProxyController) handleDefaultService(backendsUsed map[string]struct{}) (needsReload bool, err error) {
 	needsReload = false
 	dsvcData, _ := GetValueFromAnnotations("default-backend-service")
 	dsvc := strings.Split(dsvcData.Value, "/")
@@ -195,5 +186,5 @@ func (c *HAProxyController) handleDefaultService(backendsUsed map[string]struct{
 		ServiceName: dsvc[1],
 		PathIndex:   -1,
 	}
-	return c.handlePath(0, namespace, ingress, nil, path, backendsUsed, transaction)
+	return c.handlePath(0, namespace, ingress, nil, path, backendsUsed)
 }

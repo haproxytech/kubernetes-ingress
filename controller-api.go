@@ -4,6 +4,32 @@ import (
 	"github.com/haproxytech/models"
 )
 
+func (c *HAProxyController) apiStartTransaction() error {
+	version, errVersion := c.NativeAPI.Configuration.GetVersion("")
+	if errVersion != nil || version < 1 {
+		//silently fallback to 1
+		version = 1
+	}
+	//log.Println("Config version:", version)
+	transaction, err := c.NativeAPI.Configuration.StartTransaction(version)
+	c.ActiveTransaction = transaction.ID
+	return err
+}
+
+func (c *HAProxyController) apiCommitTransaction() error {
+	_, err := c.NativeAPI.Configuration.CommitTransaction(c.ActiveTransaction)
+	return err
+}
+
+func (c *HAProxyController) apiDisposeTransaction() {
+	c.ActiveTransaction = ""
+}
+
+func (c HAProxyController) backendsGet() (models.Backends, error) {
+	_, backends, err := c.cfg.NativeAPI.Configuration.GetBackends(c.ActiveTransaction)
+	return backends, err
+}
+
 func (c HAProxyController) backendGet(backendName string) (models.Backend, error) {
 	_, backend, err := c.NativeAPI.Configuration.GetBackend(backendName, c.ActiveTransaction)
 	if err != nil {
@@ -16,8 +42,8 @@ func (c HAProxyController) backendCreate(backend models.Backend) error {
 	return c.NativeAPI.Configuration.CreateBackend(&backend, c.ActiveTransaction, 0)
 }
 
-func (c HAProxyController) backendEdit(backendName string, backend models.Backend) error {
-	return c.NativeAPI.Configuration.EditBackend(backendName, &backend, c.ActiveTransaction, 0)
+func (c HAProxyController) backendEdit(backend models.Backend) error {
+	return c.NativeAPI.Configuration.EditBackend(backend.Name, &backend, c.ActiveTransaction, 0)
 }
 
 func (c HAProxyController) backendDelete(backendName string) error {
@@ -54,6 +80,18 @@ func (c HAProxyController) frontendGet(frontendName string) (models.Frontend, er
 
 func (c HAProxyController) frontendEdit(frontend models.Frontend) error {
 	return c.NativeAPI.Configuration.EditFrontend(frontend.Name, &frontend, c.ActiveTransaction, 0)
+}
+
+func (c HAProxyController) frontendBindCreate(frontend string, bind models.Bind) error {
+	return c.NativeAPI.Configuration.CreateBind(frontend, &bind, c.ActiveTransaction, 0)
+}
+
+func (c HAProxyController) frontendBindEdit(frontend string, bind models.Bind) error {
+	return c.NativeAPI.Configuration.EditBind(bind.Name, frontend, &bind, c.ActiveTransaction, 0)
+}
+
+func (c HAProxyController) frontendBindDelete(frontend string, bindName string) error {
+	return c.NativeAPI.Configuration.DeleteBind(bindName, frontend, c.ActiveTransaction, 0)
 }
 
 func (c HAProxyController) frontendACLAdd(frontend string, acl models.ACL) error {
