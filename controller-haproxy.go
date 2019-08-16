@@ -138,7 +138,7 @@ func (c *HAProxyController) updateHAProxy() error {
 	LogErr(err)
 	needsReload = needsReload || reload
 
-	reload, err = c.RequestsHTTPRefresh(transaction)
+	reload, err = c.RequestsHTTPRefresh()
 	LogErr(err)
 	needsReload = needsReload || reload
 

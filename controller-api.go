@@ -47,3 +47,25 @@ func (c HAProxyController) frontendACLsGet(frontend string) (models.Acls, error)
 	_, acls, err := c.NativeAPI.Configuration.GetACLs("frontend", frontend, c.ActiveTransaction)
 	return acls, err
 }
+
+func (c HAProxyController) frontendHTTPRequestRuleDeleteAll(frontend string) {
+	var err error
+	for err == nil {
+		err = c.NativeAPI.Configuration.DeleteHTTPRequestRule(0, "frontend", frontend, c.ActiveTransaction, 0)
+	}
+}
+
+func (c HAProxyController) frontendHTTPRequestRuleCreate(frontend string, rule models.HTTPRequestRule) error {
+	return c.NativeAPI.Configuration.CreateHTTPRequestRule("frontend", frontend, &rule, c.ActiveTransaction, 0)
+}
+
+func (c HAProxyController) frontendTCPRequestRuleDeleteAll(frontend string) {
+	var err error
+	for err == nil {
+		err = c.NativeAPI.Configuration.DeleteTCPRequestRule(0, "frontend", frontend, c.ActiveTransaction, 0)
+	}
+}
+
+func (c HAProxyController) frontendTCPRequestRuleCreate(frontend string, rule models.TCPRequestRule) error {
+	return c.NativeAPI.Configuration.CreateTCPRequestRule("frontend", frontend, &rule, c.ActiveTransaction, 0)
+}

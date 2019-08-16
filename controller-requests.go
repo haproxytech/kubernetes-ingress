@@ -20,40 +20,29 @@ import (
 	"github.com/haproxytech/models"
 )
 
-func (c *HAProxyController) RequestsHTTPRefresh(transaction *models.Transaction) (needsReload bool, err error) {
+func (c *HAProxyController) RequestsHTTPRefresh() (needsReload bool, err error) {
 	needsReload = false
 	if c.cfg.HTTPRequestsStatus == EMPTY {
 		return needsReload, nil
 	}
-	nativeAPI := c.NativeAPI
 
-	err = nil
-	for err == nil {
-		err = nativeAPI.Configuration.DeleteHTTPRequestRule(0, "frontend", FrontendHTTP, transaction.ID, 0)
-	}
-	err = nil
-	for err == nil {
-		err = nativeAPI.Configuration.DeleteHTTPRequestRule(0, "frontend", FrontendHTTPS, transaction.ID, 0)
-	}
+	c.frontendHTTPRequestRuleDeleteAll(FrontendHTTP)
+	c.frontendHTTPRequestRuleDeleteAll(FrontendHTTPS)
 	//INFO: order is reversed, first you insert last ones
 	if len(c.cfg.HTTPRequests[HTTP_REDIRECT]) > 0 {
-		request1 := &c.cfg.HTTPRequests[HTTP_REDIRECT][0]
-
-		err = nativeAPI.Configuration.CreateHTTPRequestRule("frontend", FrontendHTTP, request1, transaction.ID, 0)
+		err = c.frontendHTTPRequestRuleCreate(FrontendHTTP, c.cfg.HTTPRequests[HTTP_REDIRECT][0])
 		LogErr(err)
 	}
 	if len(c.cfg.HTTPRequests[RATE_LIMIT]) > 0 {
-		request1 := &c.cfg.HTTPRequests[RATE_LIMIT][0]
-		request2 := &c.cfg.HTTPRequests[RATE_LIMIT][1]
 
-		err = nativeAPI.Configuration.CreateHTTPRequestRule("frontend", FrontendHTTP, request2, transaction.ID, 0)
+		err = c.frontendHTTPRequestRuleCreate(FrontendHTTP, c.cfg.HTTPRequests[RATE_LIMIT][1])
 		LogErr(err)
-		err = nativeAPI.Configuration.CreateHTTPRequestRule("frontend", FrontendHTTP, request1, transaction.ID, 0)
+		err = c.frontendHTTPRequestRuleCreate(FrontendHTTP, c.cfg.HTTPRequests[RATE_LIMIT][0])
 		LogErr(err)
 
-		err = nativeAPI.Configuration.CreateHTTPRequestRule("frontend", FrontendHTTPS, request2, transaction.ID, 0)
+		err = c.frontendHTTPRequestRuleCreate(FrontendHTTPS, c.cfg.HTTPRequests[RATE_LIMIT][1])
 		LogErr(err)
-		err = nativeAPI.Configuration.CreateHTTPRequestRule("frontend", FrontendHTTPS, request1, transaction.ID, 0)
+		err = c.frontendHTTPRequestRuleCreate(FrontendHTTPS, c.cfg.HTTPRequests[RATE_LIMIT][0])
 		LogErr(err)
 	}
 
@@ -71,9 +60,9 @@ func (c *HAProxyController) RequestsHTTPRefresh(transaction *models.Transaction)
 	sort.Sort(sort.Reverse(sort.StringSlice(sortedList))) // reverse order
 	for _, name := range sortedList {
 		for _, request := range c.cfg.HTTPRequests[name] {
-			err = nativeAPI.Configuration.CreateHTTPRequestRule("frontend", FrontendHTTP, &request, transaction.ID, 0)
+			err = c.frontendHTTPRequestRuleCreate(FrontendHTTP, request)
 			LogErr(err)
-			err = nativeAPI.Configuration.CreateHTTPRequestRule("frontend", FrontendHTTPS, &request, transaction.ID, 0)
+			err = c.frontendHTTPRequestRuleCreate(FrontendHTTPS, request)
 			LogErr(err)
 		}
 	}
@@ -89,29 +78,19 @@ func (c *HAProxyController) requestsTCPRefresh(transaction *models.Transaction) 
 	if c.cfg.TCPRequestsStatus == EMPTY {
 		return needsReload, nil
 	}
-	nativeAPI := c.NativeAPI
 
-	err = nil
-	for err == nil {
-		err = nativeAPI.Configuration.DeleteTCPRequestRule(0, "frontend", FrontendHTTP, transaction.ID, 0)
-	}
-	err = nil
-	for err == nil {
-		err = nativeAPI.Configuration.DeleteTCPRequestRule(0, "frontend", FrontendHTTPS, transaction.ID, 0)
-	}
+	c.frontendTCPRequestRuleDeleteAll(FrontendHTTP)
+	c.frontendTCPRequestRuleDeleteAll(FrontendHTTPS)
 
 	if len(c.cfg.TCPRequests[RATE_LIMIT]) > 0 {
-		request1 := &c.cfg.TCPRequests[RATE_LIMIT][0]
-		request2 := &c.cfg.TCPRequests[RATE_LIMIT][1]
-
-		err = nativeAPI.Configuration.CreateTCPRequestRule("frontend", FrontendHTTP, request1, transaction.ID, 0)
+		err = c.frontendTCPRequestRuleCreate(FrontendHTTP, c.cfg.TCPRequests[RATE_LIMIT][0])
 		LogErr(err)
-		err = nativeAPI.Configuration.CreateTCPRequestRule("frontend", FrontendHTTP, request2, transaction.ID, 0)
+		err = c.frontendTCPRequestRuleCreate(FrontendHTTP, c.cfg.TCPRequests[RATE_LIMIT][1])
 		LogErr(err)
 
-		err = nativeAPI.Configuration.CreateTCPRequestRule("frontend", FrontendHTTPS, request1, transaction.ID, 0)
+		err = c.frontendTCPRequestRuleCreate(FrontendHTTPS, c.cfg.TCPRequests[RATE_LIMIT][0])
 		LogErr(err)
-		err = nativeAPI.Configuration.CreateTCPRequestRule("frontend", FrontendHTTPS, request2, transaction.ID, 0)
+		err = c.frontendTCPRequestRuleCreate(FrontendHTTPS, c.cfg.TCPRequests[RATE_LIMIT][1])
 		LogErr(err)
 	}
 	if c.cfg.TCPRequestsStatus != EMPTY {
