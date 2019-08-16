@@ -472,7 +472,7 @@ func (c *HAProxyController) handleService(index int, namespace *Namespace, ingre
 		case DELETED:
 			backend.CheckTimeout = nil
 		default:
-			val, err := annotationConvertToMS(*annTimeoutCheck)
+			val, err := annotationConvertTimeToMS(*annTimeoutCheck)
 			if err != nil {
 				LogErr(err)
 				backend.CheckTimeout = nil

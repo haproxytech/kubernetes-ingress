@@ -132,7 +132,7 @@ func (c *HAProxyController) handleRateLimiting(transaction *models.Transaction, 
 	removeRateLimiting := func() {
 		_, _, err := nativeAPI.Configuration.GetBackend("RateLimit", transaction.ID)
 		if err == nil {
-			err = nativeAPI.Configuration.DeleteBackend("RateLimit", transaction.ID, 0)
+			err = c.backendDelete("RateLimit")
 			LogErr(err)
 		}
 		c.removeACL(ratelimitACL1, FrontendHTTP, FrontendHTTPS)

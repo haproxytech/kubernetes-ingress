@@ -19,12 +19,12 @@ import (
 	"math/rand"
 	"os"
 	"runtime"
+	"strconv"
 	"strings"
 
 	//networking "k8s.io/api/networking/v1beta1"
-	extensions "k8s.io/api/extensions/v1beta1"
 
-	"github.com/haproxytech/client-native/misc"
+	extensions "k8s.io/api/extensions/v1beta1"
 )
 
 func homeDir() string {
@@ -92,10 +92,31 @@ func ptrString(value string) *string {
 	return &value
 }
 
-func annotationConvertToMS(data StringW) (int64, error) {
-	annValue := misc.ParseTimeout(data.Value)
-	if annValue == nil {
-		return 0, ErrAnnotationParse
+func ParseTimeout(data string) (int64, error) {
+	var v int64
+	var err error
+	switch {
+	case strings.HasSuffix(data, "ms"):
+		v, err = strconv.ParseInt(strings.TrimSuffix(data, "ms"), 10, 64)
+	case strings.HasSuffix(data, "s"):
+		v, err = strconv.ParseInt(strings.TrimSuffix(data, "s"), 10, 64)
+		v *= 1000
+	case strings.HasSuffix(data, "m"):
+		v, err = strconv.ParseInt(strings.TrimSuffix(data, "m"), 10, 64)
+		v = v * 1000 * 60
+	case strings.HasSuffix(data, "h"):
+		v, err = strconv.ParseInt(strings.TrimSuffix(data, "h"), 10, 64)
+		v = v * 1000 * 60 * 60
+	case strings.HasSuffix(data, "d"):
+		v, err = strconv.ParseInt(strings.TrimSuffix(data, "d"), 10, 64)
+		v = v * 1000 * 60 * 60 * 24
+	default:
+		v, err = strconv.ParseInt(data, 10, 64)
 	}
-	return *annValue, nil
+	return v, err
+}
+
+//annotationConvertToMS converts annotation time value to milisecon value
+func annotationConvertTimeToMS(data StringW) (int64, error) {
+	return ParseTimeout(data.Value)
 }

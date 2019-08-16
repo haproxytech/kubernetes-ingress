@@ -82,7 +82,7 @@ func (c *HAProxyController) useBackendRuleRefresh() (needsReload bool) {
 	for _, backend := range allBackends {
 		_, ok := backends[backend.Name]
 		if !ok {
-			err := nativeAPI.Configuration.DeleteBackend(backend.Name, c.ActiveTransaction, 0)
+			err := c.backendDelete(backend.Name)
 			LogErr(err)
 		}
 	}
