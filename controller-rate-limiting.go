@@ -41,7 +41,6 @@ var ratelimitACL3 = models.ACL{
 }
 
 func (c *HAProxyController) handleRateLimiting(transaction *models.Transaction, usingHTTPS bool) (needReload bool, err error) {
-	nativeAPI := c.NativeAPI
 	needReload = false
 	annRateLimit, _ := GetValueFromAnnotations("rate-limit", c.cfg.ConfigMap.Annotations)
 
@@ -102,7 +101,7 @@ func (c *HAProxyController) handleRateLimiting(transaction *models.Transaction, 
 	}
 
 	addRateLimiting := func() {
-		backend := &models.Backend{
+		err := c.backendCreate(models.Backend{
 			Name: "RateLimit",
 			StickTable: &models.BackendStickTable{
 				Type:   "ip",
@@ -110,8 +109,7 @@ func (c *HAProxyController) handleRateLimiting(transaction *models.Transaction, 
 				Size:   rateLimitSize,
 				Store:  fmt.Sprintf("gpc0,http_req_rate(%s)", annRateLimitInterval.Value),
 			},
-		}
-		err := nativeAPI.Configuration.CreateBackend(backend, transaction.ID, 0)
+		})
 		LogErr(err)
 
 		c.addACL(ratelimitACL1)
@@ -130,7 +128,7 @@ func (c *HAProxyController) handleRateLimiting(transaction *models.Transaction, 
 	}
 
 	removeRateLimiting := func() {
-		_, _, err := nativeAPI.Configuration.GetBackend("RateLimit", transaction.ID)
+		_, err := c.backendGet("RateLimit")
 		if err == nil {
 			err = c.backendDelete("RateLimit")
 			LogErr(err)

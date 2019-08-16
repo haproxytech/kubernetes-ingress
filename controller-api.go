@@ -12,6 +12,10 @@ func (c HAProxyController) backendGet(backendName string) (models.Backend, error
 	return *backend, nil
 }
 
+func (c HAProxyController) backendCreate(backend models.Backend) error {
+	return c.NativeAPI.Configuration.CreateBackend(&backend, c.ActiveTransaction, 0)
+}
+
 func (c HAProxyController) backendEdit(backendName string, backend models.Backend) error {
 	return c.NativeAPI.Configuration.EditBackend(backendName, &backend, c.ActiveTransaction, 0)
 }
