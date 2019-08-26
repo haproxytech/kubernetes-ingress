@@ -90,10 +90,6 @@ func (c HAProxyController) frontendBindEdit(frontend string, bind models.Bind) e
 	return c.NativeAPI.Configuration.EditBind(bind.Name, frontend, &bind, c.ActiveTransaction, 0)
 }
 
-func (c HAProxyController) frontendBindDelete(frontend string, bindName string) error {
-	return c.NativeAPI.Configuration.DeleteBind(bindName, frontend, c.ActiveTransaction, 0)
-}
-
 func (c HAProxyController) frontendACLAdd(frontend string, acl models.ACL) error {
 	return c.NativeAPI.Configuration.CreateACL("frontend", frontend, &acl, c.ActiveTransaction, 0)
 }

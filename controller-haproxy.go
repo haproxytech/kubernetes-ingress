@@ -59,11 +59,8 @@ func (c *HAProxyController) updateHAProxy() error {
 	LogErr(err)
 	needsReload = needsReload || reload
 
-	var usingHTTPS bool
-	reload, usingHTTPS, err = c.handleHTTPS()
-	if err != nil {
-		return err
-	}
+	usingHTTPS := true
+	reload = c.handleDefaultCertificate()
 	needsReload = needsReload || reload
 
 	reload, err = c.handleRateLimiting(usingHTTPS)

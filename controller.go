@@ -119,6 +119,12 @@ func (c *HAProxyController) HAProxyInitialize() {
 		Configuration: &confClient,
 		Runtime:       &runtimeClient,
 	}
+
+	err = c.apiStartTransaction()
+	LogErr(err)
+	defer c.apiDisposeTransaction()
+	c.initHTTPS()
+	c.apiCommitTransaction()
 }
 
 func (c *HAProxyController) saveServerState() error {
