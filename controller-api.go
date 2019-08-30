@@ -82,6 +82,11 @@ func (c HAProxyController) frontendEdit(frontend models.Frontend) error {
 	return c.NativeAPI.Configuration.EditFrontend(frontend.Name, &frontend, c.ActiveTransaction, 0)
 }
 
+func (c HAProxyController) frontendBindsGet(frontend string) (models.Binds, error) {
+	_, binds, err := c.NativeAPI.Configuration.GetBinds(frontend, c.ActiveTransaction)
+	return binds, err
+}
+
 func (c HAProxyController) frontendBindCreate(frontend string, bind models.Bind) error {
 	return c.NativeAPI.Configuration.CreateBind(frontend, &bind, c.ActiveTransaction, 0)
 }

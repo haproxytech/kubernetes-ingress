@@ -106,8 +106,49 @@ func (c *HAProxyController) handleDefaultCertificate() (reloadRequested bool) {
 				_ = c.writeSecret(Ingress{
 					Name: "DEFAULT_CERT",
 				}, *secret)
+				c.UseHTTPS = BoolW{
+					Value:  true,
+					Status: MODIFIED,
+				}
 				return true
 			}
+		}
+	}
+	return false
+}
+
+func (c *HAProxyController) handleTLSSecret(ingress Ingress, tls IngressTLS) (reloadRequested bool) {
+	reloadRequested = false
+	secretData := strings.Split(tls.SecretName.Value, "/")
+	namespaceName := ingress.Namespace
+	var secretName string
+	if len(secretData) > 1 {
+		namespaceName = secretData[0]
+		secretName = secretData[1]
+	} else {
+		secretName = secretData[0] // only secretname is here
+	}
+	namespace, namespaceOK := c.cfg.Namespace[namespaceName]
+	if len(secretData) == 2 && namespaceOK {
+		secret, secretOK := namespace.Secret[secretName]
+		if !secretOK {
+			if tls.Status != EMPTY {
+				log.Printf("secret %s/%s does not exists, ignoring.", namespaceName, secretName)
+			}
+			return false
+		}
+		if secret.Status == EMPTY && tls.Status == EMPTY {
+			return false
+		}
+		if secret.Status == DELETED { // ignore deleted
+			return false
+		}
+		if c.writeSecret(ingress, *secret) {
+			c.UseHTTPS = BoolW{
+				Value:  true,
+				Status: MODIFIED,
+			}
+			return true
 		}
 	}
 	return false
@@ -116,21 +157,21 @@ func (c *HAProxyController) handleDefaultCertificate() (reloadRequested bool) {
 func (c *HAProxyController) initHTTPS() {
 	port := int64(443)
 	listenerV4 := models.Bind{
-		Address:        "0.0.0.0",
-		Alpn:           "h2,http/1.1",
-		Port:           &port,
-		Name:           "bind_1",
-		Ssl:            true,
-		SslCertificate: HAProxyCertDir,
+		Address: "0.0.0.0",
+		Alpn:    "h2,http/1.1",
+		Port:    &port,
+		Name:    "bind_1",
+		//Ssl:     true,
+		//SslCertificate: HAProxyCertDir,
 	}
 	listenerV4v6 := models.Bind{
-		Address:        "::",
-		Alpn:           "h2,http/1.1",
-		Port:           &port,
-		Name:           "bind_2",
-		V4v6:           true,
-		Ssl:            true,
-		SslCertificate: HAProxyCertDir,
+		Address: "::",
+		Alpn:    "h2,http/1.1",
+		Port:    &port,
+		Name:    "bind_2",
+		V4v6:    true,
+		//Ssl:     true,
+		//SslCertificate: HAProxyCertDir,
 	}
 	for _, listener := range []models.Bind{listenerV4, listenerV4v6} {
 		if err := c.frontendBindCreate(FrontendHTTPS, listener); err != nil {
@@ -144,5 +185,15 @@ func (c *HAProxyController) initHTTPS() {
 		} else {
 			LogErr(err)
 		}
+	}
+}
+
+func (c *HAProxyController) enableCerts() {
+	binds, _ := c.frontendBindsGet(FrontendHTTPS)
+	for _, bind := range binds {
+		bind.Ssl = true
+		bind.SslCertificate = HAProxyCertDir
+		err := c.frontendBindEdit(FrontendHTTPS, *bind)
+		LogErr(err)
 	}
 }

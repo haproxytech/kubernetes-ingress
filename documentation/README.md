@@ -72,6 +72,7 @@ Options for starting controller can be found in [controller.md](controller.md)
   - default `ON`, can be set to "OFF" to disable
 - Annotation `ssl-redirect-code`
   - HTTP status code on redirect
+- Certificate can be defined in Ingress object: `spec.tls[].secretName`. Please see [tls-secret](#tls-secret) for format
 
 #### Maximum Concurent Connections
 
@@ -140,6 +141,8 @@ The number of requests a client can do per `rate-limit-interval` is **10**.
   - `--default-ssl-certificate`=\<namespace\>/\<secret\>
 - Annotation `ssl-certificate` in config map
   - \<namespace\>/\<secret\>
+  - this replaces default certificate
+- certificate can be defined in Ingress object: `spec.tls[].secretName`
 - single certificate secret can contain two items:
   - tls.key
   - tls.crt

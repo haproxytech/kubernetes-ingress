@@ -92,7 +92,15 @@ type Ingress struct {
 	Name        string
 	Annotations MapStringW
 	Rules       map[string]*IngressRule
+	TLS         map[string]*IngressTLS
 	Status      Status
+}
+
+// IngressTLS describes the transport layer security associated with an Ingress.
+type IngressTLS struct {
+	Host       string
+	SecretName StringW
+	Status     Status
 }
 
 //ConfigMap is usefull data from k8s structures about configmap

@@ -51,6 +51,27 @@ func (c *HAProxyController) eventIngress(ns *Namespace, data *Ingress) (updateRe
 			return false
 		}
 		newIngress.Annotations.SetStatus(oldIngress.Annotations)
+		for host, tls := range newIngress.TLS {
+			old, ok := oldIngress.TLS[host]
+			if !ok {
+				tls.Status = ADDED
+				continue
+			}
+			tls.SecretName.OldValue = old.SecretName.Value
+		}
+		for host, tls := range oldIngress.TLS {
+			_, ok := newIngress.TLS[host]
+			if !ok {
+				newIngress.TLS[host] = &IngressTLS{
+					Host: host,
+					SecretName: StringW{
+						Value: tls.SecretName.Value,
+					},
+					Status: DELETED,
+				}
+				continue
+			}
+		}
 		//so see what exactly has changed in there
 		for _, newRule := range newIngress.Rules {
 			if oldRule, ok := oldIngress.Rules[newRule.Host]; ok {

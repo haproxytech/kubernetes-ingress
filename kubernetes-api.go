@@ -276,6 +276,7 @@ func (k *K8s) EventsIngresses(channel chan *Ingress, stop chan struct{}) {
 					Name:        data.GetName(),
 					Annotations: ConvertToMapStringW(data.ObjectMeta.Annotations),
 					Rules:       ConvertIngressRules(data.Spec.Rules),
+					TLS:         ConvertIngressTLS(data.Spec.TLS),
 					Status:      status,
 				}
 				if DEBUG_API {
@@ -291,6 +292,7 @@ func (k *K8s) EventsIngresses(channel chan *Ingress, stop chan struct{}) {
 					Name:        data.GetName(),
 					Annotations: ConvertToMapStringW(data.ObjectMeta.Annotations),
 					Rules:       ConvertIngressRules(data.Spec.Rules),
+					TLS:         ConvertIngressTLS(data.Spec.TLS),
 					Status:      status,
 				}
 				if DEBUG_API {
@@ -307,6 +309,7 @@ func (k *K8s) EventsIngresses(channel chan *Ingress, stop chan struct{}) {
 					Name:        data1.GetName(),
 					Annotations: ConvertToMapStringW(data1.ObjectMeta.Annotations),
 					Rules:       ConvertIngressRules(data1.Spec.Rules),
+					TLS:         ConvertIngressTLS(data1.Spec.TLS),
 					Status:      status,
 				}
 				item2 := &Ingress{
@@ -314,6 +317,7 @@ func (k *K8s) EventsIngresses(channel chan *Ingress, stop chan struct{}) {
 					Name:        data2.GetName(),
 					Annotations: ConvertToMapStringW(data2.ObjectMeta.Annotations),
 					Rules:       ConvertIngressRules(data2.Spec.Rules),
+					TLS:         ConvertIngressTLS(data2.Spec.TLS),
 					Status:      status,
 				}
 				if item2.Equal(item1) {

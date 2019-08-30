@@ -115,7 +115,20 @@ func (c *HAProxyController) updateHAProxy() error {
 					pathIndex++
 				}
 			}
+			ingressSecrets := map[string]struct{}{}
+			//handle certs
+			for _, tls := range ingress.TLS {
+				if _, ok := ingressSecrets[tls.SecretName.Value]; !ok {
+					ingressSecrets[tls.SecretName.Value] = struct{}{}
+					reload = c.handleTLSSecret(*ingress, *tls)
+					needsReload = needsReload || reload
+				}
+			}
 		}
+	}
+	if c.UseHTTPS.Status != EMPTY {
+		c.enableCerts()
+		c.UseHTTPS.Status = EMPTY
 	}
 	//handle default service
 	reload, err = c.handleDefaultService(backendsUsed)

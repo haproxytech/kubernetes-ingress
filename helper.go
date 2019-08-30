@@ -23,7 +23,6 @@ import (
 	"strings"
 
 	//networking "k8s.io/api/networking/v1beta1"
-
 	extensions "k8s.io/api/extensions/v1beta1"
 )
 
@@ -81,6 +80,23 @@ func ConvertIngressRules(ingressRules []extensions.IngressRule) map[string]*Ingr
 		}
 	}
 	return rules
+}
+
+//ConvertIngressRules converts data from kubernetes format
+func ConvertIngressTLS(ingressTLS []extensions.IngressTLS) map[string]*IngressTLS {
+	tls := make(map[string]*IngressTLS)
+	for _, k8sTLS := range ingressTLS {
+		for _, host := range k8sTLS.Hosts {
+			tls[host] = &IngressTLS{
+				Host: host,
+				SecretName: StringW{
+					Value: k8sTLS.SecretName,
+				},
+				Status: EMPTY,
+			}
+		}
+	}
+	return tls
 }
 
 func ptrInt64(value int64) *int64 {

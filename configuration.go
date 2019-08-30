@@ -123,6 +123,15 @@ func (c *Configuration) NewNamespace(name string) *Namespace {
 func (c *Configuration) Clean() {
 	for _, namespace := range c.Namespace {
 		for _, data := range namespace.Ingresses {
+			for _, tls := range data.TLS {
+				switch tls.Status {
+				case DELETED:
+					delete(data.TLS, tls.Host)
+					continue
+				default:
+					tls.Status = EMPTY
+				}
+			}
 			for _, rule := range data.Rules {
 				switch rule.Status {
 				case DELETED:

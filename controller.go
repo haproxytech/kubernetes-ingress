@@ -39,6 +39,7 @@ type HAProxyController struct {
 	NativeAPI         *clientnative.HAProxyClient
 	NativeParser      parser.Parser
 	ActiveTransaction string
+	UseHTTPS          BoolW
 	eventChan         chan SyncDataEvent
 	serverlessPods    map[string]int
 }
@@ -124,7 +125,8 @@ func (c *HAProxyController) HAProxyInitialize() {
 	LogErr(err)
 	defer c.apiDisposeTransaction()
 	c.initHTTPS()
-	c.apiCommitTransaction()
+	err = c.apiCommitTransaction()
+	LogErr(err)
 }
 
 func (c *HAProxyController) saveServerState() error {
