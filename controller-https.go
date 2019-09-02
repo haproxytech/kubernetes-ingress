@@ -102,7 +102,7 @@ func (c *HAProxyController) handleDefaultCertificate() (reloadRequested bool) {
 		namespace, namespaceOK := c.cfg.Namespace[secretData[0]]
 		if len(secretData) == 2 && namespaceOK {
 			secret, ok := namespace.Secret[secretData[1]]
-			if ok {
+			if ok && secret.Status != EMPTY {
 				_ = c.writeSecret(Ingress{
 					Name: "DEFAULT_CERT",
 				}, *secret)
