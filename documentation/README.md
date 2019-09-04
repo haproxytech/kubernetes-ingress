@@ -124,6 +124,10 @@ The number of requests a client can do per `rate-limit-interval` is **10**.
 			address:127.0.0.1, port:514, facility:local0
 			address:192.168.1.1, port:514, facility:local1
 
+- Logs can also be sent to stdout and viewed with `kubectl logs`:
+
+		syslog-server: address:stdout, format: raw, facility:daemon
+
 ##### Syslog fields
 
 The following syslog fields can be used:
