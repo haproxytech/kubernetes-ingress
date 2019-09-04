@@ -28,6 +28,7 @@ Options for starting controller can be found in [controller.md](controller.md)
 | [ssl-certificate](#tls-secret) | string |  |  |:large_blue_circle:|:white_circle:|:white_circle:|
 | [ssl-redirect](#https) | "ON"/"OFF" | "ON" | [tls-secret](#tls-secret) |:large_blue_circle:|:white_circle:|:white_circle:|
 | [ssl-redirect-code](#https) | [301, 302, 303] | "302" | [tls-secret](#tls-secret) |:large_blue_circle:|:white_circle:|:white_circle:|
+| [syslog-server](#logging) | [syslog](#syslog-fields) | "log 127.0.0.1:514 local0 notice" |  |:large_blue_circle:|:white_circle:|:white_circle:|
 | [timeout-http-request](#timeouts) | [time](#time) | "5s" |  |:large_blue_circle:|:white_circle:|:white_circle:|
 | [timeout-check](#timeouts) | [time](#time) |  |  |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:|
 | [timeout-connect](#timeouts) | [time](#time) | "5s" |  |:large_blue_circle:|:white_circle:|:white_circle:|
@@ -107,6 +108,34 @@ The number of requests a client can do per `rate-limit-interval` is **10**.
 - Annotation `servers-increment`- determines how much backend servers should we
         put in `maintenance` mode so controller can
         dynamically insert new pods without hitless reload
+
+#### Logging
+
+- Annotation `syslog-server`: Takes one or more syslog entries separated by "newlines".
+- Each syslog entry is a "comma" separated [syslog fields](#syslog-fields)
+- Example:
+  - Single syslog server:
+
+		syslog-server: address:127.0.0.1, port:514, facility:local0
+
+  - Multiple syslog servers:
+
+		syslog-server: |
+			address:127.0.0.1, port:514, facility:local0
+			address:192.168.1.1, port:514, facility:local1
+
+##### Syslog fields
+
+The following syslog fields can be used:
+- *address*:  Mandatory IP address where the syslog server is listening.
+- *port*:     Optional port number where the syslog server is listening (default 514).
+- *length*:   Optional maximum syslog line length.
+- *format*:   Optional syslog format.
+- *facility*: Mandatory, this can be one of the 24 syslog facilities.
+- *level*:    Optional level to filter outgoing messages.
+- *minlevel*: Optional minimum level.
+
+More information can be found in the official HAProxy [documentation](https://cbonte.github.io/haproxy-dconv/2.0/configuration.html#3.1-log)
 
 #### Timeouts
 

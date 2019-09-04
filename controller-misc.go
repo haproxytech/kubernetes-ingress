@@ -15,7 +15,9 @@
 package main
 
 import (
+	"fmt"
 	"strconv"
+	"strings"
 
 	goruntime "runtime"
 
@@ -29,13 +31,14 @@ func (c *HAProxyController) handleGlobalAnnotations() (reloadRequested bool, err
 	maxProcs := goruntime.GOMAXPROCS(0)
 	numThreads := int64(maxProcs)
 	annNbthread, errNumThread := GetValueFromAnnotations("nbthread", c.cfg.ConfigMap.Annotations)
+	annSyslogSrv, errSyslogSrv := GetValueFromAnnotations("syslog-server", c.cfg.ConfigMap.Annotations)
+	var errParser error
 
 	if errNumThread == nil {
 		if numthr, errConv := strconv.Atoi(annNbthread.Value); errConv == nil {
 			if numthr < maxProcs {
 				numThreads = int64(numthr)
 			}
-			var errParser error
 			if annNbthread.Status == DELETED {
 				errParser = c.NativeParser.Delete(parser.Global, parser.GlobalSectionName, "nbthread")
 				reloadRequested = true
@@ -48,6 +51,62 @@ func (c *HAProxyController) handleGlobalAnnotations() (reloadRequested bool, err
 			LogErr(errParser)
 		}
 	}
+
+	if errSyslogSrv == nil {
+		if annSyslogSrv.Status == DELETED {
+			errParser = c.NativeParser.Set(parser.Global, parser.GlobalSectionName, "log", nil)
+			LogErr(errParser)
+			reloadRequested = true
+		} else if annSyslogSrv.Status != EMPTY {
+			errParser = c.NativeParser.Set(parser.Global, parser.GlobalSectionName, "log", nil)
+			for index, syslogSrv := range strings.Split(annSyslogSrv.Value, "\n") {
+				if syslogSrv == "" {
+					continue
+				}
+				syslogSrv = strings.Join(strings.Fields(syslogSrv), "")
+				logMap := make(map[string]string)
+				for _, paramStr := range strings.Split(syslogSrv, ",") {
+					paramLst := strings.Split(paramStr, ":")
+					if len(paramLst) == 2 {
+						logMap[paramLst[0]] = paramLst[1]
+					} else {
+						LogErr(fmt.Errorf("incorrect syslog param: %s", paramLst))
+						continue
+					}
+				}
+				if _, ok := logMap["address"]; ok {
+					logData := new(types.Log)
+					for k, v := range logMap {
+						switch strings.ToLower(k) {
+						case "address":
+							logData.Address = v
+						case "port":
+							logData.Address += ":" + v
+						case "length":
+							if length, errConv := strconv.Atoi(v); errConv == nil {
+								logData.Length = int64(length)
+							}
+						case "format":
+							logData.Format = v
+						case "facility":
+							logData.Facility = v
+						case "level":
+							logData.Level = v
+						case "minlevel":
+							logData.Level = v
+						default:
+							LogErr(fmt.Errorf("unkown syslog param: %s ", k))
+							continue
+						}
+					}
+					errParser = c.NativeParser.Insert(parser.Global, parser.GlobalSectionName, "log", logData, index)
+					reloadRequested = true
+				}
+			}
+		}
+		LogErr(errParser)
+	}
+
 	return reloadRequested, err
 }
 
