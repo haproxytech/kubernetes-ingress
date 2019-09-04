@@ -88,7 +88,9 @@ func (c *HAProxyController) HAProxyInitialize() {
 	log.Println("Starting HAProxy with", HAProxyCFG)
 	if !c.osArgs.Test {
 		cmd := exec.Command("service", "haproxy", "start")
-		err = cmd.Run()
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		err = cmd.Start()
 		if err != nil {
 			log.Println(err)
 		}
@@ -168,7 +170,9 @@ func (c *HAProxyController) HAProxyReload() error {
 	LogErr(err)
 	if !c.osArgs.Test {
 		cmd := exec.Command("service", "haproxy", "reload")
-		err = cmd.Run()
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		err = cmd.Start()
 	} else {
 		err = nil
 		log.Println("HAProxy would be reloaded now")

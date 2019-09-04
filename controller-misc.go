@@ -58,7 +58,9 @@ func (c *HAProxyController) handleGlobalAnnotations() (reloadRequested bool, err
 			LogErr(errParser)
 			reloadRequested = true
 		} else if annSyslogSrv.Status != EMPTY {
+			stdoutLog := false
 			errParser = c.NativeParser.Set(parser.Global, parser.GlobalSectionName, "log", nil)
+			LogErr(errParser)
 			for index, syslogSrv := range strings.Split(annSyslogSrv.Value, "\n") {
 				if syslogSrv == "" {
 					continue
@@ -79,9 +81,14 @@ func (c *HAProxyController) handleGlobalAnnotations() (reloadRequested bool, err
 					for k, v := range logMap {
 						switch strings.ToLower(k) {
 						case "address":
+							if v == "stdout" {
+								stdoutLog = true
+							}
 							logData.Address = v
 						case "port":
-							logData.Address += ":" + v
+							if logMap["address"] != "stdout" {
+								logData.Address += ":" + v
+							}
 						case "length":
 							if length, errConv := strconv.Atoi(v); errConv == nil {
 								logData.Length = int64(length)
@@ -102,9 +109,15 @@ func (c *HAProxyController) handleGlobalAnnotations() (reloadRequested bool, err
 					errParser = c.NativeParser.Insert(parser.Global, parser.GlobalSectionName, "log", logData, index)
 					reloadRequested = true
 				}
+				LogErr(errParser)
 			}
+			if stdoutLog {
+				errParser = c.NativeParser.Delete(parser.Global, parser.GlobalSectionName, "daemon")
+			} else {
+				errParser = c.NativeParser.Insert(parser.Global, parser.GlobalSectionName, "daemon", types.Enabled{})
+			}
+			LogErr(errParser)
 		}
-		LogErr(errParser)
 	}
 
 	return reloadRequested, err
