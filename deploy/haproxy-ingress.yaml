@@ -80,8 +80,8 @@ subjects:
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: haproxy-configmap
-  namespace: default
+  name: haproxy
+  namespace: haproxy-controller
 data:
 
 ---
@@ -148,7 +148,7 @@ spec:
       - name: haproxy-ingress
         image: haproxytech/kubernetes-ingress
         args:
-          - --configmap=default/haproxy-configmap
+          - --configmap=haproxy-controller/haproxy
           - --default-backend-service=haproxy-controller/ingress-default-backend
         resources:
           requests:
