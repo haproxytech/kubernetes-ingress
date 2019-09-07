@@ -148,7 +148,6 @@ spec:
       - name: haproxy-ingress
         image: haproxytech/kubernetes-ingress
         args:
-          - --default-ssl-certificate=default/tls-secret
           - --configmap=default/haproxy-configmap
           - --default-backend-service=haproxy-controller/ingress-default-backend
         resources:
