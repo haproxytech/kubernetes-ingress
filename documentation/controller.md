@@ -6,7 +6,6 @@ you can run image with arguments:
 
 - `--configmap`
   - mandatory, must be in format `namespace/name`
-  - default `default/haproxy-configmap`
 - `--default-backend-service`
   - must be in format `namespace/name`
 - `--default-ssl-certificate`
