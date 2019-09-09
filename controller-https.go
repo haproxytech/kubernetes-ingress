@@ -129,27 +129,31 @@ func (c *HAProxyController) handleTLSSecret(ingress Ingress, tls IngressTLS) (re
 		secretName = secretData[0] // only secretname is here
 	}
 	namespace, namespaceOK := c.cfg.Namespace[namespaceName]
-	if len(secretData) == 2 && namespaceOK {
-		secret, secretOK := namespace.Secret[secretName]
-		if !secretOK {
-			if tls.Status != EMPTY {
-				log.Printf("secret %s/%s does not exists, ignoring.", namespaceName, secretName)
-			}
-			return false
+	if !namespaceOK {
+		if tls.Status != EMPTY {
+			log.Printf("namespace %s does not exists, ignoring.", namespaceName)
 		}
-		if secret.Status == EMPTY && tls.Status == EMPTY {
-			return false
+		return false
+	}
+	secret, secretOK := namespace.Secret[secretName]
+	if !secretOK {
+		if tls.Status != EMPTY {
+			log.Printf("secret %s/%s does not exists, ignoring.", namespaceName, secretName)
 		}
-		if secret.Status == DELETED { // ignore deleted
-			return false
+		return false
+	}
+	if secret.Status == EMPTY && tls.Status == EMPTY {
+		return false
+	}
+	if secret.Status == DELETED { // ignore deleted
+		return false
+	}
+	if c.writeSecret(ingress, *secret) {
+		c.UseHTTPS = BoolW{
+			Value:  true,
+			Status: MODIFIED,
 		}
-		if c.writeSecret(ingress, *secret) {
-			c.UseHTTPS = BoolW{
-				Value:  true,
-				Status: MODIFIED,
-			}
-			return true
-		}
+		return true
 	}
 	return false
 }
