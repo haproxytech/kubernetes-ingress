@@ -279,6 +279,9 @@ func (c *HAProxyController) handleEndpointIP(namespace *Namespace, ingress *Ingr
 	if status == EMPTY && service.Status != ADDED && service.Status != EMPTY {
 		status = ADDED
 	}
+	if status == EMPTY && rule != nil && rule.Status == ADDED {
+		status = ADDED
+	}
 	switch status {
 	case ADDED:
 		err := c.backendServerCreate(backendName, data)
@@ -439,6 +442,12 @@ func (c *HAProxyController) handleService(index int, namespace *Namespace, ingre
 	if status == "" && path.Status == ADDED {
 		status = ADDED
 		newImportantPath = true
+	}
+	if status == "" && rule != nil && rule.Status == ADDED {
+		status = ADDED
+		//in this case nothing is new except rule,
+		//we need also to populate
+		//newly created backend with servers
 	}
 
 	switch status {
