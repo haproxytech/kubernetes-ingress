@@ -33,15 +33,16 @@ import (
 
 // HAProxyController is ingress controller
 type HAProxyController struct {
-	k8s               *K8s
-	cfg               Configuration
-	osArgs            OSArgs
-	NativeAPI         *clientnative.HAProxyClient
-	NativeParser      parser.Parser
-	ActiveTransaction string
-	UseHTTPS          BoolW
-	eventChan         chan SyncDataEvent
-	serverlessPods    map[string]int
+	k8s                         *K8s
+	cfg                         Configuration
+	osArgs                      OSArgs
+	NativeAPI                   *clientnative.HAProxyClient
+	NativeParser                parser.Parser
+	ActiveTransaction           string
+	ActiveTransactionHasChanges bool
+	UseHTTPS                    BoolW
+	eventChan                   chan SyncDataEvent
+	serverlessPods              map[string]int
 }
 
 // Start initialize and run HAProxyController
@@ -272,10 +273,10 @@ func (c *HAProxyController) handleEndpointIP(namespace *Namespace, ingress *Ingr
 	if ip.Status == EMPTY && annnotationsActive {
 		status = MODIFIED
 	}
-	if status == EMPTY && path.Status != ADDED {
+	if status == EMPTY && path.Status != ADDED && path.Status != EMPTY {
 		status = ADDED
 	}
-	if status == EMPTY && service.Status != ADDED {
+	if status == EMPTY && service.Status != ADDED && service.Status != EMPTY {
 		status = ADDED
 	}
 	switch status {
