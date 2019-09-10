@@ -23,9 +23,10 @@ import (
 )
 
 type BackendSwitchingRule struct {
-	Host    string
-	Path    string
-	Backend string
+	Host      string
+	Path      string
+	Backend   string
+	Namespace string
 }
 
 func (c *HAProxyController) useBackendRuleRefresh() (needsReload bool) {

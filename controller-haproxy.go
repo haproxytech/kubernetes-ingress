@@ -16,7 +16,6 @@ package main
 
 import (
 	"errors"
-	"fmt"
 	"log"
 	"sort"
 	"strconv"
@@ -100,7 +99,12 @@ func (c *HAProxyController) updateHAProxy() error {
 					if path.Status != DELETED && ingress.Status != DELETED {
 						indexedPaths[path.PathIndex] = path
 					} else {
-						delete(c.cfg.UseBackendRules, fmt.Sprintf("R%s%s%0006d", namespace.Name, ingress.Name, pathIndex))
+						for key, rule := range c.cfg.UseBackendRules {
+							if rule.Host == ruleName && rule.Namespace == namespace.Name && rule.Path == path.Path {
+								delete(c.cfg.UseBackendRules, key)
+								break
+							}
+						}
 						c.cfg.UseBackendRulesStatus = MODIFIED
 					}
 				}
