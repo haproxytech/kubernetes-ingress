@@ -59,7 +59,8 @@ func (c *HAProxyController) updateHAProxy() error {
 	needsReload = needsReload || reload
 
 	usingHTTPS := true
-	reload = c.handleDefaultCertificate()
+	certsUsed := map[string]struct{}{}
+	reload = c.handleDefaultCertificate(certsUsed)
 	needsReload = needsReload || reload
 
 	reload, err = c.handleRateLimiting(usingHTTPS)
@@ -124,7 +125,7 @@ func (c *HAProxyController) updateHAProxy() error {
 			for _, tls := range ingress.TLS {
 				if _, ok := ingressSecrets[tls.SecretName.Value]; !ok {
 					ingressSecrets[tls.SecretName.Value] = struct{}{}
-					reload = c.handleTLSSecret(*ingress, *tls)
+					reload = c.handleTLSSecret(*ingress, *tls, certsUsed)
 					needsReload = needsReload || reload
 				}
 			}
@@ -134,6 +135,8 @@ func (c *HAProxyController) updateHAProxy() error {
 		c.enableCerts()
 		c.UseHTTPS.Status = EMPTY
 	}
+	err = c.cleanCertDir(certsUsed)
+	LogErr(err)
 	//handle default service
 	reload, err = c.handleDefaultService(backendsUsed)
 	LogErr(err)

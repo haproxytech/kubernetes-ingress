@@ -16,6 +16,7 @@ package main
 
 import (
 	"fmt"
+	"io/ioutil"
 	"log"
 	"os"
 	"path"
@@ -23,6 +24,25 @@ import (
 
 	"github.com/haproxytech/models"
 )
+
+func (c *HAProxyController) cleanCertDir(usedCerts map[string]struct{}) error {
+	files, err := ioutil.ReadDir(HAProxyCertDir)
+	if err != nil {
+		return err
+	}
+
+	for _, f := range files {
+		if f.IsDir() {
+			continue
+		}
+		filename := path.Join(HAProxyCertDir, f.Name())
+		_, isOK := usedCerts[filename]
+		if !isOK {
+			os.Remove(filename)
+		}
+	}
+	return nil
+}
 
 func (c *HAProxyController) writeCert(filename string, key, crt []byte) error {
 	var f *os.File
@@ -51,73 +71,88 @@ func (c *HAProxyController) writeCert(filename string, key, crt []byte) error {
 	return nil
 }
 
-func (c *HAProxyController) writeSecret(ingress Ingress, secret Secret) (haveCert bool) {
+func (c *HAProxyController) handleSecret(ingress Ingress, secret Secret, writeSecret bool, certs map[string]struct{}) (reloadRequested bool) {
 	//two options are allowed, tls, rsa+ecdsa
 	rsaKey, rsaKeyOK := secret.Data["rsa.key"]
 	rsaCrt, rsaCrtOK := secret.Data["rsa.crt"]
 	ecdsaKey, ecdsaKeyOK := secret.Data["ecdsa.key"]
 	ecdsaCrt, ecdsaCrtOK := secret.Data["ecdsa.crt"]
-	haveCert = false
 	//log.Println(secretName.Value, rsaCrtOK, rsaKeyOK, ecdsaCrtOK, ecdsaKeyOK)
 	if rsaKeyOK && rsaCrtOK || ecdsaKeyOK && ecdsaCrtOK {
 		if rsaKeyOK && rsaCrtOK {
-			errCrt := c.writeCert(path.Join(HAProxyCertDir, fmt.Sprintf("%s_%s_%s.pem.rsa", secret.Namespace, ingress.Name, secret.Name)), rsaKey, rsaCrt)
-			if errCrt != nil {
-				err1 := c.removeHTTPSListeners()
-				LogErr(err1)
-				return false
+			filename := path.Join(HAProxyCertDir, fmt.Sprintf("%s_%s_%s.pem.rsa", secret.Namespace, ingress.Name, secret.Name))
+			if writeSecret {
+				errCrt := c.writeCert(filename, rsaKey, rsaCrt)
+				if errCrt != nil {
+					err1 := c.removeHTTPSListeners()
+					LogErr(err1)
+					return true
+				}
 			}
-			haveCert = true
+			certs[filename] = struct{}{}
 		}
 		if ecdsaKeyOK && ecdsaCrtOK {
-			errCrt := c.writeCert(path.Join(HAProxyCertDir, fmt.Sprintf("%s_%s_%s.pem.ecdsa", secret.Namespace, ingress.Name, secret.Name)), ecdsaKey, ecdsaCrt)
-			if errCrt != nil {
-				err1 := c.removeHTTPSListeners()
-				LogErr(err1)
-				return false
+			filename := path.Join(HAProxyCertDir, fmt.Sprintf("%s_%s_%s.pem.ecdsa", secret.Namespace, ingress.Name, secret.Name))
+			if writeSecret {
+				errCrt := c.writeCert(filename, ecdsaKey, ecdsaCrt)
+				if errCrt != nil {
+					err1 := c.removeHTTPSListeners()
+					LogErr(err1)
+					return true
+				}
 			}
-			haveCert = true
+			certs[filename] = struct{}{}
 		}
 	} else {
 		tlsKey, tlsKeyOK := secret.Data["tls.key"]
 		tlsCrt, tlsCrtOK := secret.Data["tls.crt"]
 		if tlsKeyOK && tlsCrtOK {
-			errCrt := c.writeCert(path.Join(HAProxyCertDir, fmt.Sprintf("%s_%s_%s.pem", secret.Namespace, ingress.Name, secret.Name)), tlsKey, tlsCrt)
-			if errCrt != nil {
-				err1 := c.removeHTTPSListeners()
-				LogErr(err1)
-				return false
+			filename := path.Join(HAProxyCertDir, fmt.Sprintf("%s_%s_%s.pem", secret.Namespace, ingress.Name, secret.Name))
+			if writeSecret {
+				errCrt := c.writeCert(filename, tlsKey, tlsCrt)
+				if errCrt != nil {
+					err1 := c.removeHTTPSListeners()
+					LogErr(err1)
+					return true
+				}
 			}
-			haveCert = true
+			certs[filename] = struct{}{}
 		}
 	}
-	return haveCert
+	return false
 }
 
-func (c *HAProxyController) handleDefaultCertificate() (reloadRequested bool) {
+func (c *HAProxyController) handleDefaultCertificate(certs map[string]struct{}) (reloadRequested bool) {
 	reloadRequested = false
 	secretAnn, defSecretErr := GetValueFromAnnotations("ssl-certificate", c.cfg.ConfigMap.Annotations)
-	if defSecretErr == nil && secretAnn.Status != EMPTY {
+	writeSecret := true
+	if defSecretErr == nil {
+		if secretAnn.Status == DELETED || secretAnn.Status == EMPTY {
+			writeSecret = false
+		}
 		secretData := strings.Split(secretAnn.Value, "/")
 		namespace, namespaceOK := c.cfg.Namespace[secretData[0]]
 		if len(secretData) == 2 && namespaceOK {
 			secret, ok := namespace.Secret[secretData[1]]
-			if ok && secret.Status != EMPTY {
-				_ = c.writeSecret(Ingress{
+			if ok {
+				if secret.Status == EMPTY || secret.Status == DELETED {
+					writeSecret = false
+				}
+				reloadRequested = c.handleSecret(Ingress{
 					Name: "DEFAULT_CERT",
-				}, *secret)
+				}, *secret, writeSecret, certs)
 				c.UseHTTPS = BoolW{
 					Value:  true,
 					Status: MODIFIED,
 				}
-				return true
+				return reloadRequested
 			}
 		}
 	}
 	return false
 }
 
-func (c *HAProxyController) handleTLSSecret(ingress Ingress, tls IngressTLS) (reloadRequested bool) {
+func (c *HAProxyController) handleTLSSecret(ingress Ingress, tls IngressTLS, certs map[string]struct{}) (reloadRequested bool) {
 	reloadRequested = false
 	secretData := strings.Split(tls.SecretName.Value, "/")
 	namespaceName := ingress.Namespace
@@ -142,13 +177,15 @@ func (c *HAProxyController) handleTLSSecret(ingress Ingress, tls IngressTLS) (re
 		}
 		return false
 	}
+	writeSecret := true
 	if secret.Status == EMPTY && tls.Status == EMPTY {
-		return false
+		writeSecret = false
 	}
-	if secret.Status == DELETED { // ignore deleted
-		return false
+	if secret.Status == DELETED {
+		writeSecret = false
 	}
-	if c.writeSecret(ingress, *secret) {
+	reloadRequested = c.handleSecret(ingress, *secret, writeSecret, certs)
+	if reloadRequested {
 		c.UseHTTPS = BoolW{
 			Value:  true,
 			Status: MODIFIED,
