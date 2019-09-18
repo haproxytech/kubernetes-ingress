@@ -248,7 +248,7 @@ func (c *HAProxyController) setModifiedStatusEndpoints(oldObj, newObj *Endpoints
 			adrOld.IP = "127.0.0.1"
 			adrOld.Disabled = true
 			adrOld.Status = MODIFIED
-			(*newObj.Addresses)[oldKey] = adrOld
+			(*newObj.Addresses)[fmt.Sprintf("SRV_%s", RandomString(5))] = adrOld
 		} else {
 			//try to find one that is added so we can switch them
 			replaced := false
