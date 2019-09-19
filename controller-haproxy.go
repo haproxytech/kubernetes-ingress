@@ -58,22 +58,7 @@ func (c *HAProxyController) updateHAProxy() error {
 	LogErr(err)
 	needsReload = needsReload || reload
 
-	usingHTTPS := true
 	certsUsed := map[string]struct{}{}
-	reload = c.handleDefaultCertificate(certsUsed)
-	needsReload = needsReload || reload
-
-	reload, err = c.handleRateLimiting(usingHTTPS)
-	if err != nil {
-		return err
-	}
-	needsReload = needsReload || reload
-
-	reload, err = c.handleHTTPRedirect(usingHTTPS)
-	if err != nil {
-		return err
-	}
-	needsReload = needsReload || reload
 	backendsUsed := map[string]struct{}{}
 	for _, namespace := range c.cfg.Namespace {
 		if !namespace.Relevant {
@@ -135,8 +120,29 @@ func (c *HAProxyController) updateHAProxy() error {
 		c.enableCerts()
 		c.UseHTTPS.Status = EMPTY
 	}
+
+	usingHTTPS := false
+	reload = c.handleDefaultCertificate(certsUsed)
+	needsReload = needsReload || reload
+	if len(certsUsed) > 0 {
+		usingHTTPS = true
+	}
+
+	reload, err = c.handleRateLimiting(usingHTTPS)
+	if err != nil {
+		return err
+	}
+	needsReload = needsReload || reload
+
+	reload, err = c.handleHTTPRedirect(usingHTTPS)
+	if err != nil {
+		return err
+	}
+	needsReload = needsReload || reload
+	//remove certs that are not needed
 	err = c.cleanCertDir(certsUsed)
 	LogErr(err)
+
 	//handle default service
 	reload, err = c.handleDefaultService(backendsUsed)
 	LogErr(err)
