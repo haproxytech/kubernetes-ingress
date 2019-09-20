@@ -181,7 +181,7 @@ func (c *HAProxyController) HAProxyReload() error {
 	return err
 }
 
-func (c *HAProxyController) handlePath(index int, namespace *Namespace, ingress *Ingress, rule *IngressRule, path *IngressPath, backendsUsed map[string]struct{}) (needsReload bool, err error) {
+func (c *HAProxyController) handlePath(index int, namespace *Namespace, ingress *Ingress, rule *IngressRule, path *IngressPath) (needsReload bool, err error) {
 	needsReload = false
 	backendName, service, reload, err := c.handleService(index, namespace, ingress, rule, path)
 	needsReload = needsReload || reload
@@ -189,11 +189,6 @@ func (c *HAProxyController) handlePath(index int, namespace *Namespace, ingress 
 		return needsReload, err
 	}
 
-	_, alreadyConfigured := backendsUsed[backendName]
-	if alreadyConfigured {
-		return needsReload, nil
-	}
-	backendsUsed[backendName] = struct{}{}
 	endpoints, ok := namespace.Endpoints[service.Name]
 	if !ok {
 		log.Printf("Endpoint for service %s does not exists", service.Name)

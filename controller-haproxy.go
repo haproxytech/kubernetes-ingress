@@ -59,7 +59,6 @@ func (c *HAProxyController) updateHAProxy() error {
 	needsReload = needsReload || reload
 
 	certsUsed := map[string]struct{}{}
-	backendsUsed := map[string]struct{}{}
 	for _, namespace := range c.cfg.Namespace {
 		if !namespace.Relevant {
 			continue
@@ -99,7 +98,7 @@ func (c *HAProxyController) updateHAProxy() error {
 					if path == nil {
 						continue
 					}
-					reload, err = c.handlePath(pathIndex, namespace, ingress, rule, path, backendsUsed)
+					reload, err = c.handlePath(pathIndex, namespace, ingress, rule, path)
 					needsReload = needsReload || reload
 					LogErr(err)
 					pathIndex++
@@ -144,7 +143,7 @@ func (c *HAProxyController) updateHAProxy() error {
 	LogErr(err)
 
 	//handle default service
-	reload, err = c.handleDefaultService(backendsUsed)
+	reload, err = c.handleDefaultService()
 	LogErr(err)
 	needsReload = needsReload || reload
 
@@ -188,7 +187,7 @@ func (c *HAProxyController) handleMaxconn(maxconn *int64, frontends ...string) e
 	return nil
 }
 
-func (c *HAProxyController) handleDefaultService(backendsUsed map[string]struct{}) (needsReload bool, err error) {
+func (c *HAProxyController) handleDefaultService() (needsReload bool, err error) {
 	needsReload = false
 	dsvcData, _ := GetValueFromAnnotations("default-backend-service")
 	dsvc := strings.Split(dsvcData.Value, "/")
@@ -209,5 +208,5 @@ func (c *HAProxyController) handleDefaultService(backendsUsed map[string]struct{
 		ServiceName: dsvc[1],
 		PathIndex:   -1,
 	}
-	return c.handlePath(0, namespace, ingress, nil, path, backendsUsed)
+	return c.handlePath(0, namespace, ingress, nil, path)
 }
