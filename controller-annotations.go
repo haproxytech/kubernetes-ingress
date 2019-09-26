@@ -74,25 +74,51 @@ func (c *HAProxyController) handleDefaultTimeout(timeout string, hasDefault bool
 	return false
 }
 
-func (c *HAProxyController) handleBackendAnnotations(balanceAlg *models.Balance, forwardedFor *StringW, backendName string) (needsReload bool, err error) {
-	needsReload = false
-	backend := models.Backend{
-		Balance: balanceAlg,
-		Name:    backendName,
-		Mode:    "http",
-	}
-	if forwardedFor.Value == "enabled" { //disabled with anything else is ok
-		forwardfor := "enabled"
-		backend.Forwardfor = &models.Forwardfor{
-			Enabled: &forwardfor,
+// Update backend with annotations values.
+// Deleted annotations should be handled explicitly when there is no defualt value.
+func (c *HAProxyController) handleBackendAnnotations(ingress *Ingress, service *Service, backendName string, newBackend bool) (needReload bool, err error) {
+	needReload = false
+	model, _ := c.backendGet(backendName)
+	backend := backend(model)
+	backendAnnotations := make(map[string]*StringW, 3)
+	backendAnnotations["annBalanceAlg"], _ = GetValueFromAnnotations("load-balance", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
+	backendAnnotations["annForwardedFor"], _ = GetValueFromAnnotations("forwarded-for", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
+	backendAnnotations["annTimeoutCheck"], _ = GetValueFromAnnotations("timeout-check", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
+
+	for k, v := range backendAnnotations {
+		if v == nil {
+			continue
+		}
+		if v.Status != EMPTY || newBackend {
+			switch k {
+			case "annBalanceAlg":
+				if err := backend.updateBalance(v); err != nil {
+					LogErr(err)
+					continue
+				}
+				needReload = true
+			case "annTimeoutCheck":
+				if v.Status == DELETED && !newBackend {
+					backend.CheckTimeout = nil
+				} else if err := backend.updateCheckTimeout(v); err != nil {
+					LogErr(err)
+					continue
+				}
+				needReload = true
+			case "annForwardedFor":
+				if err := backend.updateForwardFor(v); err != nil {
+					LogErr(err)
+					continue
+				}
+				needReload = true
+			}
 		}
 	}
-	if forwardedFor.Status != EMPTY {
-		needsReload = true
-	}
 
-	if err := c.backendEdit(backend); err != nil {
-		return needsReload, err
+	if needReload {
+		if err := c.backendEdit(models.Backend(backend)); err != nil {
+			return needReload, err
+		}
 	}
-	return needsReload, nil
+	return needReload, nil
 }

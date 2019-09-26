@@ -339,23 +339,20 @@ func (c *HAProxyController) handleService(index int, namespace *Namespace, ingre
 			}
 		}
 	}
+
 	backendName = fmt.Sprintf("%s-%s-%d", namespace.Name, service.Name, path.ServicePortInt)
-	//load-balance, forwarded-for and annWhitelist have default values, so no need for error checking
-	annBalanceAlg, _ := GetValueFromAnnotations("load-balance", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
-	annForwardedFor, _ := GetValueFromAnnotations("forwarded-for", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
+	//Annotations with default values don't need error checking.
 	annWhitelist, _ := GetValueFromAnnotations("whitelist", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
 	annWhitelistRL, _ := GetValueFromAnnotations("whitelist-with-rate-limit", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
 	allowRateLimiting := annWhitelistRL.Value != "" && annWhitelistRL.Value != "OFF"
 	status := annWhitelist.Status
-	if status == "" {
+	if status == EMPTY {
 		if annWhitelistRL.Status != EMPTY {
 			data, ok := c.cfg.HTTPRequests[fmt.Sprintf("WHT-%0006d", index)]
 			if ok && len(data) > 0 {
 				status = MODIFIED
 			}
 		}
-	}
-	if status == "" {
 		if annWhitelistRL.Value != "" && path.Status == ADDED {
 			status = MODIFIED
 		}
@@ -393,11 +390,8 @@ func (c *HAProxyController) handleService(index int, namespace *Namespace, ingre
 	case DELETED:
 		c.cfg.HTTPRequests[fmt.Sprintf("WHT-%0006d", index)] = []models.HTTPRequestRule{}
 	}
-	//TODO Balance proper usage
-	balanceAlg := &models.Balance{
-		Algorithm: annBalanceAlg.Value,
-	}
 
+	// Update usebackend rules
 	if rule != nil {
 		key := fmt.Sprintf("R%s%s%s%0006d", namespace.Name, ingress.Name, rule.Host, index)
 		old, ok := c.cfg.UseBackendRules[key]
@@ -436,31 +430,26 @@ func (c *HAProxyController) handleService(index int, namespace *Namespace, ingre
 
 	status = service.Status
 	newImportantPath := false
-	if status == "" && path.Status == ADDED {
+	if status == EMPTY && path.Status == ADDED {
 		status = ADDED
 		newImportantPath = true
 	}
-	if status == "" && rule != nil && rule.Status == ADDED {
+	if status == EMPTY && rule != nil && rule.Status == ADDED {
 		status = ADDED
 		//in this case nothing is new except rule,
 		//we need also to populate
 		//newly created backend with servers
 	}
 
+	// Backend creation/deletion
+	newBackend := false
 	switch status {
 	case ADDED, MODIFIED:
 		_, err := c.backendGet(backendName)
 		if err != nil {
 			backend := models.Backend{
-				Balance: balanceAlg,
-				Name:    backendName,
-				Mode:    "http",
-			}
-			if annForwardedFor.Value == "enabled" { //disabled with anything else is ok
-				forwardfor := "enabled"
-				backend.Forwardfor = &models.Forwardfor{
-					Enabled: &forwardfor,
-				}
+				Name: backendName,
+				Mode: "http",
 			}
 			if err := c.backendCreate(backend); err != nil {
 				msg := err.Error()
@@ -469,6 +458,8 @@ func (c *HAProxyController) handleService(index int, namespace *Namespace, ingre
 						return "", nil, needReload, err
 					}
 				}
+			} else {
+				newBackend = true
 			}
 			needReload = true
 		}
@@ -478,29 +469,10 @@ func (c *HAProxyController) handleService(index int, namespace *Namespace, ingre
 		return "", service, needReload, nil
 	}
 
-	if annBalanceAlg.Status != "" || annForwardedFor.Status != "" {
-		reload, err := c.handleBackendAnnotations(balanceAlg, annForwardedFor, backendName)
-		needReload = needReload || reload
-		if err != nil {
-			return "", nil, needReload, err
-		}
-	}
-	annTimeoutCheck, errCheck := GetValueFromAnnotations("timeout-check", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
-	if errCheck == nil && annTimeoutCheck.Status != EMPTY {
-		backend, _ := c.backendGet(backendName)
-		switch annTimeoutCheck.Status {
-		case DELETED:
-			backend.CheckTimeout = nil
-		default:
-			val, err := annotationConvertTimeToMS(*annTimeoutCheck)
-			if err != nil {
-				LogErr(err)
-				backend.CheckTimeout = nil
-			} else {
-				backend.CheckTimeout = &val
-			}
-			LogErr(c.backendEdit(backend))
-		}
+	reload, err := c.handleBackendAnnotations(ingress, service, backendName, newBackend)
+	needReload = needReload || reload
+	if err != nil {
+		return "", nil, needReload, err
 	}
 
 	return backendName, service, needReload, nil
