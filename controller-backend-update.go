@@ -15,6 +15,7 @@
 package main
 
 import (
+	"fmt"
 	"github.com/haproxytech/models"
 )
 
@@ -22,32 +23,32 @@ type backend models.Backend
 
 func (b *backend) updateBalance(data *StringW) error {
 	//TODO Balance proper usage
-	balanceAlg := &models.Balance{
+	val := &models.Balance{
 		Algorithm: data.Value,
 	}
-	if err := balanceAlg.Validate(nil); err != nil {
-		return err
+	if err := val.Validate(nil); err != nil {
+		return fmt.Errorf("balance algorithm: %s", err)
 	}
-	b.Balance = balanceAlg
+	b.Balance = val
 	return nil
 }
 
 func (b *backend) updateCheckTimeout(data *StringW) error {
 	val, err := annotationConvertTimeToMS(*data)
 	if err != nil {
-		return err
+		return fmt.Errorf("timeout check: %s", err)
 	}
 	b.CheckTimeout = &val
 	return nil
 }
 
-func (b *backend) updateForwardFor(data *StringW) error {
-	forwardFor := &models.Forwardfor{
+func (b *backend) updateForwardfor(data *StringW) error {
+	val := &models.Forwardfor{
 		Enabled: &data.Value,
 	}
-	if err := forwardFor.Validate(nil); err != nil {
-		return err
+	if err := val.Validate(nil); err != nil {
+		return fmt.Errorf("forwarded-for option: %s", err)
 	}
-	b.Forwardfor = forwardFor
+	b.Forwardfor = val
 	return nil
 }

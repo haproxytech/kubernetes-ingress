@@ -97,16 +97,16 @@ func (c *HAProxyController) handleBackendAnnotations(ingress *Ingress, service *
 					continue
 				}
 				needReload = true
-			case "annTimeoutCheck":
-				if v.Status == DELETED && !newBackend {
-					backend.CheckTimeout = nil
-				} else if err := backend.updateCheckTimeout(v); err != nil {
+			case "annForwardedFor":
+				if err := backend.updateForwardfor(v); err != nil {
 					LogErr(err)
 					continue
 				}
 				needReload = true
-			case "annForwardedFor":
-				if err := backend.updateForwardFor(v); err != nil {
+			case "annTimeoutCheck":
+				if v.Status == DELETED && !newBackend {
+					backend.CheckTimeout = nil
+				} else if err := backend.updateCheckTimeout(v); err != nil {
 					LogErr(err)
 					continue
 				}
