@@ -82,6 +82,7 @@ func (c *HAProxyController) handleBackendAnnotations(ingress *Ingress, service *
 	backend := backend(model)
 	backendAnnotations := make(map[string]*StringW, 3)
 	backendAnnotations["annBalanceAlg"], _ = GetValueFromAnnotations("load-balance", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
+	backendAnnotations["annCheckHttp"], _ = GetValueFromAnnotations("check-http", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
 	backendAnnotations["annForwardedFor"], _ = GetValueFromAnnotations("forwarded-for", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
 	backendAnnotations["annTimeoutCheck"], _ = GetValueFromAnnotations("timeout-check", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
 
@@ -93,6 +94,14 @@ func (c *HAProxyController) handleBackendAnnotations(ingress *Ingress, service *
 			switch k {
 			case "annBalanceAlg":
 				if err := backend.updateBalance(v); err != nil {
+					LogErr(err)
+					continue
+				}
+				needReload = true
+			case "annCheckHttp":
+				if v.Status == DELETED && !newBackend {
+					backend.Httpchk = nil
+				} else if err := backend.updateHttpchk(v); err != nil {
 					LogErr(err)
 					continue
 				}

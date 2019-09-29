@@ -17,6 +17,7 @@ package main
 import (
 	"fmt"
 	"github.com/haproxytech/models"
+	"strings"
 )
 
 type backend models.Backend
@@ -50,5 +51,34 @@ func (b *backend) updateForwardfor(data *StringW) error {
 		return fmt.Errorf("forwarded-for option: %s", err)
 	}
 	b.Forwardfor = val
+	return nil
+}
+
+func (b *backend) updateHttpchk(data *StringW) error {
+	var val *models.Httpchk
+	httpCheckParams := strings.Fields(strings.TrimSpace(data.Value))
+	switch len(httpCheckParams) {
+	case 0:
+		return fmt.Errorf("httpchk option: incorrect number of params")
+	case 1:
+		val = &models.Httpchk{
+			URI: httpCheckParams[0],
+		}
+	case 2:
+		val = &models.Httpchk{
+			Method: httpCheckParams[0],
+			URI:    httpCheckParams[1],
+		}
+	default:
+		val = &models.Httpchk{
+			Method:  httpCheckParams[0],
+			URI:     httpCheckParams[1],
+			Version: strings.Join(httpCheckParams[2:], " "),
+		}
+	}
+	if err := val.Validate(nil); err != nil {
+		return fmt.Errorf("httpchk option: %s", err)
+	}
+	b.Httpchk = val
 	return nil
 }
