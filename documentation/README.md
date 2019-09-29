@@ -13,6 +13,7 @@ Options for starting controller can be found in [controller.md](controller.md)
 | Annotation | Type | Default | Dependencies | Config map | Ingress | Service |
 | - |:-:|:-:|:-:|:-:|:-:|:-:|
 | [check](#backend-checks) | ["enabled"] | "enabled" |  |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:|
+| [check-http](#backend-checks) | string |  | [check](#backend-checks) |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:|
 | [check-interval](#backend-checks) | [time](#time) |  | [check](#backend-checks) |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:|
 | [forwarded-for](#x-forwarded-for) | ["enabled", "disabled"] | "enabled" |  |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:|
 | [ingress.class](#ingress-class) | string | "" |  |:white_circle:|:large_blue_circle:|:white_circle:|
@@ -55,7 +56,11 @@ Options for starting controller can be found in [controller.md](controller.md)
 
 #### Backend Checks
 
-- Annotation: `check` - activate pod check
+- Annotation: `check` - activate pod check (tcp checks by default)
+- Annotation: [`check-http`](https://cbonte.github.io/haproxy-dconv/2.0/configuration.html#4-option%20httpchk) - Enable HTTP protocol to check on the pods health [`check` must be "enabled"]
+  - uri: `check-http: "/check"`
+  - method uri: `check-http: "HEAD /"`
+  - method uri version: `check-http: "HEAD / HTTP/1.1\r\nHost:\ www"`
 - Annotation: `check-interval` - interval between checks [`check` must be "enabled"]
 
 #### Ingress Class
