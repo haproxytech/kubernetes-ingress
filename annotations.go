@@ -133,6 +133,7 @@ var defaultAnnotationValues = MapStringW{
 	"ssl-redirect":              &StringW{Value: "ON"},
 	"ssl-redirect-code":         &StringW{Value: "302"},
 	"servers-increment":         &StringW{Value: "42"},
+	"syslog-server":             &StringW{Value: "address:127.0.0.1, facility: local0, level: notice"},
 	"timeout-http-request":      &StringW{Value: "5s"},
 	"timeout-connect":           &StringW{Value: "5s"},
 	"timeout-client":            &StringW{Value: "50s"},
