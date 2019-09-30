@@ -31,7 +31,8 @@ func (c *HAProxyController) handleGlobalAnnotations() (reloadRequested bool, err
 	maxProcs := goruntime.GOMAXPROCS(0)
 	numThreads := int64(maxProcs)
 	annNbthread, errNumThread := GetValueFromAnnotations("nbthread", c.cfg.ConfigMap.Annotations)
-	annSyslogSrv, errSyslogSrv := GetValueFromAnnotations("syslog-server", c.cfg.ConfigMap.Annotations)
+	// syslog-server has default value
+	annSyslogSrv, _ := GetValueFromAnnotations("syslog-server", c.cfg.ConfigMap.Annotations)
 	var errParser error
 
 	if errNumThread == nil {
@@ -52,72 +53,66 @@ func (c *HAProxyController) handleGlobalAnnotations() (reloadRequested bool, err
 		}
 	}
 
-	if errSyslogSrv == nil {
-		if annSyslogSrv.Status == DELETED {
-			errParser = c.NativeParser.Set(parser.Global, parser.GlobalSectionName, "log", nil)
-			LogErr(errParser)
-			reloadRequested = true
-		} else if annSyslogSrv.Status != EMPTY {
-			stdoutLog := false
-			errParser = c.NativeParser.Set(parser.Global, parser.GlobalSectionName, "log", nil)
-			LogErr(errParser)
-			for index, syslogSrv := range strings.Split(annSyslogSrv.Value, "\n") {
-				if syslogSrv == "" {
+	if annSyslogSrv.Status != EMPTY {
+		stdoutLog := false
+		errParser = c.NativeParser.Set(parser.Global, parser.GlobalSectionName, "log", nil)
+		LogErr(errParser)
+		for index, syslogSrv := range strings.Split(annSyslogSrv.Value, "\n") {
+			if syslogSrv == "" {
+				continue
+			}
+			syslogSrv = strings.Join(strings.Fields(syslogSrv), "")
+			logMap := make(map[string]string)
+			for _, paramStr := range strings.Split(syslogSrv, ",") {
+				paramLst := strings.Split(paramStr, ":")
+				if len(paramLst) == 2 {
+					logMap[paramLst[0]] = paramLst[1]
+				} else {
+					LogErr(fmt.Errorf("incorrect syslog param: %s", paramLst))
 					continue
 				}
-				syslogSrv = strings.Join(strings.Fields(syslogSrv), "")
-				logMap := make(map[string]string)
-				for _, paramStr := range strings.Split(syslogSrv, ",") {
-					paramLst := strings.Split(paramStr, ":")
-					if len(paramLst) == 2 {
-						logMap[paramLst[0]] = paramLst[1]
-					} else {
-						LogErr(fmt.Errorf("incorrect syslog param: %s", paramLst))
+			}
+			if address, ok := logMap["address"]; ok {
+				logData := new(types.Log)
+				logData.Address = address
+				for k, v := range logMap {
+					switch strings.ToLower(k) {
+					case "address":
+						if v == "stdout" {
+							stdoutLog = true
+						}
+					case "port":
+						if logMap["address"] != "stdout" {
+							logData.Address += ":" + v
+						}
+					case "length":
+						if length, errConv := strconv.Atoi(v); errConv == nil {
+							logData.Length = int64(length)
+						}
+					case "format":
+						logData.Format = v
+					case "facility":
+						logData.Facility = v
+					case "level":
+						logData.Level = v
+					case "minlevel":
+						logData.Level = v
+					default:
+						LogErr(fmt.Errorf("unkown syslog param: %s ", k))
 						continue
 					}
 				}
-				if _, ok := logMap["address"]; ok {
-					logData := new(types.Log)
-					for k, v := range logMap {
-						switch strings.ToLower(k) {
-						case "address":
-							if v == "stdout" {
-								stdoutLog = true
-							}
-							logData.Address = v
-						case "port":
-							if logMap["address"] != "stdout" {
-								logData.Address += ":" + v
-							}
-						case "length":
-							if length, errConv := strconv.Atoi(v); errConv == nil {
-								logData.Length = int64(length)
-							}
-						case "format":
-							logData.Format = v
-						case "facility":
-							logData.Facility = v
-						case "level":
-							logData.Level = v
-						case "minlevel":
-							logData.Level = v
-						default:
-							LogErr(fmt.Errorf("unkown syslog param: %s ", k))
-							continue
-						}
-					}
-					errParser = c.NativeParser.Insert(parser.Global, parser.GlobalSectionName, "log", logData, index)
-					reloadRequested = true
-				}
-				LogErr(errParser)
-			}
-			if stdoutLog {
-				errParser = c.NativeParser.Delete(parser.Global, parser.GlobalSectionName, "daemon")
-			} else {
-				errParser = c.NativeParser.Insert(parser.Global, parser.GlobalSectionName, "daemon", types.Enabled{})
+				errParser = c.NativeParser.Insert(parser.Global, parser.GlobalSectionName, "log", logData, index)
+				reloadRequested = true
 			}
 			LogErr(errParser)
 		}
+		if stdoutLog {
+			errParser = c.NativeParser.Delete(parser.Global, parser.GlobalSectionName, "daemon")
+		} else {
+			errParser = c.NativeParser.Insert(parser.Global, parser.GlobalSectionName, "daemon", types.Enabled{})
+		}
+		LogErr(errParser)
 	}
 
 	return reloadRequested, err
