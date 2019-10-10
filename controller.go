@@ -66,8 +66,11 @@ func (c *HAProxyController) Start(osArgs OSArgs) {
 	c.k8s = k8s
 
 	x := k8s.API.Discovery()
-	k8sVersion, _ := x.ServerVersion()
-	log.Printf("Running on Kubernetes version: %s %s", k8sVersion.String(), k8sVersion.Platform)
+	if k8sVersion, err := x.ServerVersion(); err != nil {
+		log.Fatalf("Unable to get Kubernetes version: %v\n", err)
+	} else {
+		log.Printf("Running on Kubernetes version: %s %s", k8sVersion.String(), k8sVersion.Platform)
+	}
 
 	c.serverlessPods = map[string]int{}
 	c.eventChan = make(chan SyncDataEvent, watch.DefaultChanSize*6)
