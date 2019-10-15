@@ -26,7 +26,7 @@ import (
 	"github.com/haproxytech/client-native/configuration"
 	"github.com/haproxytech/client-native/misc"
 	"github.com/haproxytech/client-native/runtime"
-	parser "github.com/haproxytech/config-parser"
+	parser "github.com/haproxytech/config-parser/v2"
 	"github.com/haproxytech/models"
 	"k8s.io/apimachinery/pkg/watch"
 )

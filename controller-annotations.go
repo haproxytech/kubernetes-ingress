@@ -18,8 +18,8 @@ import (
 	"fmt"
 	"log"
 
-	parser "github.com/haproxytech/config-parser"
-	"github.com/haproxytech/config-parser/types"
+	parser "github.com/haproxytech/config-parser/v2"
+	"github.com/haproxytech/config-parser/v2/types"
 	"github.com/haproxytech/models"
 )
 
