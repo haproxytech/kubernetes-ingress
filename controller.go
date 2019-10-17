@@ -91,7 +91,11 @@ func (c *HAProxyController) HAProxyInitialize() {
 
 	cmd := exec.Command("sh", "-c", "haproxy -v")
 	haproxyInfo, err := cmd.Output()
-	log.Println("Running with ", string(haproxyInfo))
+	if err == nil {
+		log.Println("Running with ", strings.ReplaceAll(string(haproxyInfo), "\n", ""))
+	} else {
+		log.Println(err)
+	}
 
 	log.Println("Starting HAProxy with", HAProxyCFG)
 	if !c.osArgs.Test {
@@ -422,12 +426,14 @@ func (c *HAProxyController) handleService(index int, namespace *Namespace, ingre
 			c.cfg.UseBackendRulesStatus = MODIFIED
 		}
 	} else if service.Status != EMPTY {
-		http, err := c.frontendGet(FrontendHTTP)
+		var http models.Frontend
+		var https models.Frontend
+		http, err = c.frontendGet(FrontendHTTP)
 		LogErr(err)
 		http.DefaultBackend = backendName
 		err = c.frontendEdit(http)
 		LogErr(err)
-		https, err := c.frontendGet(FrontendHTTPS)
+		https, err = c.frontendGet(FrontendHTTPS)
 		LogErr(err)
 		https.DefaultBackend = backendName
 		err = c.frontendEdit(https)
@@ -452,13 +458,13 @@ func (c *HAProxyController) handleService(index int, namespace *Namespace, ingre
 	newBackend := false
 	switch status {
 	case ADDED, MODIFIED:
-		_, err := c.backendGet(backendName)
+		_, err = c.backendGet(backendName)
 		if err != nil {
 			backend := models.Backend{
 				Name: backendName,
 				Mode: "http",
 			}
-			if err := c.backendCreate(backend); err != nil {
+			if err = c.backendCreate(backend); err != nil {
 				msg := err.Error()
 				if !strings.Contains(msg, "Farm already exists") {
 					if !newImportantPath {
