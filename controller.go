@@ -89,6 +89,10 @@ func (c *HAProxyController) HAProxyInitialize() {
 		log.Panic(err.Error())
 	}
 
+	cmd := exec.Command("sh", "-c", "haproxy -v")
+	haproxyInfo, err := cmd.Output()
+	log.Println("Running with ", string(haproxyInfo))
+
 	log.Println("Starting HAProxy with", HAProxyCFG)
 	if !c.osArgs.Test {
 		cmd := exec.Command("service", "haproxy", "start")
