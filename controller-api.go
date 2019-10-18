@@ -19,6 +19,9 @@ func (c *HAProxyController) apiStartTransaction() error {
 
 func (c *HAProxyController) apiCommitTransaction() error {
 	if !c.ActiveTransactionHasChanges {
+		if err := c.NativeAPI.Configuration.DeleteTransaction(c.ActiveTransaction); err != nil {
+			return err
+		}
 		return nil
 	}
 	_, err := c.NativeAPI.Configuration.CommitTransaction(c.ActiveTransaction)
