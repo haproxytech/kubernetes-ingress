@@ -19,12 +19,10 @@ import (
 	"log"
 	"os"
 	"os/exec"
-	"strconv"
 	"strings"
 
 	clientnative "github.com/haproxytech/client-native"
 	"github.com/haproxytech/client-native/configuration"
-	"github.com/haproxytech/client-native/misc"
 	"github.com/haproxytech/client-native/runtime"
 	parser "github.com/haproxytech/config-parser/v2"
 	"github.com/haproxytech/models"
@@ -192,120 +190,74 @@ func (c *HAProxyController) HAProxyReload() error {
 	return err
 }
 
-func (c *HAProxyController) handlePath(index int, namespace *Namespace, ingress *Ingress, rule *IngressRule, path *IngressPath) (needsReload bool, err error) {
-	needsReload = false
-	backendName, service, reload, err := c.handleService(index, namespace, ingress, rule, path)
-	needsReload = needsReload || reload
+func (c *HAProxyController) handlePath(index int, namespace *Namespace, ingress *Ingress, rule *IngressRule, path *IngressPath) (needReload bool, err error) {
+	needReload = false
+	service, ok := namespace.Services[path.ServiceName]
+	if !ok {
+		log.Println("service", path.ServiceName, "does not exists")
+		return needReload, fmt.Errorf("service %s does not exists", path.ServiceName)
+	}
+
+	backendName, newBackend, reload, err := c.handleService(index, namespace, ingress, rule, path, service)
+	needReload = needReload || reload
 	if err != nil {
-		return needsReload, err
+		return needReload, err
 	}
 
 	endpoints, ok := namespace.Endpoints[service.Name]
 	if !ok {
 		log.Printf("Endpoint for service %s does not exists", service.Name)
-		return needsReload, nil // not an end of world scenario, just log this
+		return needReload, nil // not an end of world scenario, just log this
 	}
 	endpoints.BackendName = backendName
 
 	for _, ip := range *endpoints.Addresses {
-		reload := c.handleEndpointIP(namespace, ingress, rule, path, service, backendName, endpoints, ip)
-		needsReload = needsReload || reload
+		reload := c.handleEndpointIP(namespace, ingress, rule, path, service, backendName, newBackend, endpoints, ip)
+		needReload = needReload || reload
 	}
-	return needsReload, nil
+	return needReload, nil
 }
 
-func (c *HAProxyController) handleEndpointIP(namespace *Namespace, ingress *Ingress, rule *IngressRule, path *IngressPath, service *Service, backendName string, endpoints *Endpoints, ip *EndpointIP) (needsReload bool) {
-	needsReload = false
-	annMaxconn, errMaxConn := GetValueFromAnnotations("pod-maxconn", service.Annotations)
-	annCheck, _ := GetValueFromAnnotations("check", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
-	annCheckInterval, errCheckInterval := GetValueFromAnnotations("check-interval", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
-
-	status := ip.Status
-	port := path.ServicePortInt
-	if port == 0 {
-		portName := path.ServicePortString
-		for _, p := range *endpoints.Ports {
-			if p.Name == portName {
-				port = p.TargetPort
-				break
-			}
-		}
-	}
-	if port == 0 {
-		for _, p := range *endpoints.Ports {
-			port = p.TargetPort
-		}
-	}
+// handleEndpointIP processes the IngressPath related endpoints and makes corresponding HAProxy configuation
+func (c *HAProxyController) handleEndpointIP(namespace *Namespace, ingress *Ingress, rule *IngressRule, path *IngressPath, service *Service, backendName string, newBackend bool, endpoints *Endpoints, ip *EndpointIP) (needReload bool) {
+	needReload = false
 	weight := int64(128)
-	data := models.Server{
+	server := models.Server{
 		Name:    ip.HAProxyName,
 		Address: ip.IP,
-		Port:    &port,
+		Port:    &path.ServicePortInt,
 		Weight:  &weight,
 	}
 	if ip.Disabled {
-		data.Maintenance = "enabled"
+		server.Maintenance = "enabled"
 	}
-	annnotationsActive := false
-	if annMaxconn != nil {
-		if annMaxconn.Status != DELETED && errMaxConn == nil {
-			if maxconn, err := strconv.ParseInt(annMaxconn.Value, 10, 64); err == nil {
-				data.Maxconn = &maxconn
-			}
-			if annMaxconn.Status != "" {
-				annnotationsActive = true
-			}
+	annotationsActive := c.handleServerAnnotations(ingress, service, &server)
+	status := ip.Status
+	if status == EMPTY {
+		if newBackend {
+			status = ADDED
+		} else if annotationsActive {
+			status = MODIFIED
 		}
-	}
-	if annCheck != nil {
-		if annCheck.Status != DELETED {
-			if annCheck.Value == "enabled" {
-				data.Check = "enabled"
-				//see if we have port and interval defined
-			}
-		}
-		if annCheck.Status != "" {
-			annnotationsActive = true
-		}
-	}
-	if errCheckInterval == nil {
-		data.Inter = misc.ParseTimeout(annCheckInterval.Value)
-		if annCheckInterval.Status != EMPTY {
-			annnotationsActive = true
-		}
-	} else {
-		data.Inter = nil
-	}
-	if ip.Status == EMPTY && annnotationsActive {
-		status = MODIFIED
-	}
-	if status == EMPTY && path.Status != ADDED && path.Status != EMPTY {
-		status = ADDED
-	}
-	if status == EMPTY && service.Status != ADDED && service.Status != EMPTY {
-		status = ADDED
-	}
-	if status == EMPTY && rule != nil && rule.Status == ADDED {
-		status = ADDED
 	}
 	switch status {
 	case ADDED:
-		err := c.backendServerCreate(backendName, data)
+		err := c.backendServerCreate(backendName, server)
 		if err != nil {
 			if !strings.Contains(err.Error(), "already exists") {
 				LogErr(err)
-				needsReload = true
+				needReload = true
 			}
 		} else {
-			needsReload = true
+			needReload = true
 		}
 	case MODIFIED:
-		err := c.backendServerEdit(backendName, data)
+		err := c.backendServerEdit(backendName, server)
 		if err != nil {
 			if strings.Contains(err.Error(), "does not exist") {
-				err1 := c.backendServerCreate(backendName, data)
+				err1 := c.backendServerCreate(backendName, server)
 				LogErr(err1)
-				needsReload = true
+				needReload = true
 			} else {
 				LogErr(err)
 			}
@@ -316,24 +268,22 @@ func (c *HAProxyController) handleEndpointIP(namespace *Namespace, ingress *Ingr
 		}
 		log.Printf("Modified: %s - %s - %v\n", backendName, ip.HAProxyName, status)
 	case DELETED:
-		err := c.backendServerDelete(backendName, data.Name)
+		err := c.backendServerDelete(backendName, server.Name)
 		if err != nil && !strings.Contains(err.Error(), "does not exist") {
 			LogErr(err)
 		}
-		needsReload = true
+		return true
 	}
-	return needsReload
+	return needReload
 }
 
-func (c *HAProxyController) handleService(index int, namespace *Namespace, ingress *Ingress, rule *IngressRule, path *IngressPath) (backendName string, service *Service, needReload bool, err error) {
+// handleService processes the IngressPath related service and makes corresponding HAProxy configuation
+func (c *HAProxyController) handleService(index int, namespace *Namespace, ingress *Ingress, rule *IngressRule, path *IngressPath, service *Service) (backendName string, newBackend bool, needReload bool, err error) {
 	needReload = false
 
-	service, ok := namespace.Services[path.ServiceName]
-	if !ok {
-		log.Println("service", path.ServiceName, "does not exists")
-		return "", nil, needReload, fmt.Errorf("service %s does not exists", path.ServiceName)
-	}
+	c.handleRateLimitingAnnotations(ingress, service, path, index)
 
+	// Set TargetPort
 	if path.ServicePortInt == 0 {
 		for _, p := range service.Ports {
 			if p.Name == path.ServicePortString || path.ServicePortString == "" {
@@ -352,56 +302,6 @@ func (c *HAProxyController) handleService(index int, namespace *Namespace, ingre
 	}
 
 	backendName = fmt.Sprintf("%s-%s-%d", namespace.Name, service.Name, path.ServicePortInt)
-	//Annotations with default values don't need error checking.
-	annWhitelist, _ := GetValueFromAnnotations("whitelist", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
-	annWhitelistRL, _ := GetValueFromAnnotations("whitelist-with-rate-limit", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
-	allowRateLimiting := annWhitelistRL.Value != "" && annWhitelistRL.Value != "OFF"
-	status := annWhitelist.Status
-	if status == EMPTY {
-		if annWhitelistRL.Status != EMPTY {
-			data, ok := c.cfg.HTTPRequests[fmt.Sprintf("WHT-%0006d", index)]
-			if ok && len(data) > 0 {
-				status = MODIFIED
-			}
-		}
-		if annWhitelistRL.Value != "" && path.Status == ADDED {
-			status = MODIFIED
-		}
-	}
-	switch status {
-	case ADDED, MODIFIED:
-		if annWhitelist.Value != "" {
-			ID := int64(0)
-			httpRequest1 := &models.HTTPRequestRule{
-				ID:       &ID,
-				Type:     "allow",
-				Cond:     "if",
-				CondTest: fmt.Sprintf("{ path_beg %s } { src %s }", path.Path, strings.Replace(annWhitelist.Value, ",", " ", -1)),
-			}
-			httpRequest2 := &models.HTTPRequestRule{
-				ID:       &ID,
-				Type:     "deny",
-				Cond:     "if",
-				CondTest: fmt.Sprintf("{ path_beg %s }", path.Path),
-			}
-			if allowRateLimiting {
-				c.cfg.HTTPRequests[fmt.Sprintf("WHT-%0006d", index)] = []models.HTTPRequestRule{
-					*httpRequest1,
-				}
-			} else {
-				c.cfg.HTTPRequests[fmt.Sprintf("WHT-%0006d", index)] = []models.HTTPRequestRule{
-					*httpRequest2, //reverse order
-					*httpRequest1,
-				}
-			}
-		} else {
-			c.cfg.HTTPRequests[fmt.Sprintf("WHT-%0006d", index)] = []models.HTTPRequestRule{}
-		}
-		c.cfg.HTTPRequestsStatus = MODIFIED
-	case DELETED:
-		c.cfg.HTTPRequests[fmt.Sprintf("WHT-%0006d", index)] = []models.HTTPRequestRule{}
-	}
-
 	// Update usebackend rules
 	if rule != nil {
 		key := fmt.Sprintf("R%s%s%s%0006d", namespace.Name, ingress.Name, rule.Host, index)
@@ -441,25 +341,23 @@ func (c *HAProxyController) handleService(index int, namespace *Namespace, ingre
 		needReload = true
 	}
 
-	status = service.Status
-	newImportantPath := false
-	if status == EMPTY && path.Status == ADDED {
-		status = ADDED
-		newImportantPath = true
-	}
-	if status == EMPTY && rule != nil && rule.Status == ADDED {
-		status = ADDED
-		//in this case nothing is new except rule,
-		//we need also to populate
-		//newly created backend with servers
+	// get Backend status
+	status := service.Status
+	if status == EMPTY {
+		if rule != nil && rule.Status == ADDED {
+			//TODO: check why an ADEED rule.Status
+			// is not reflected for the path.Status
+			status = ADDED
+		} else {
+			status = path.Status
+		}
 	}
 
-	// Backend creation/deletion
-	newBackend := false
+	// Backend creation
+	newBackend = false
 	switch status {
 	case ADDED, MODIFIED:
-		_, err = c.backendGet(backendName)
-		if err != nil {
+		if _, err = c.backendGet(backendName); err != nil {
 			backend := models.Backend{
 				Name: backendName,
 				Mode: "http",
@@ -467,26 +365,24 @@ func (c *HAProxyController) handleService(index int, namespace *Namespace, ingre
 			if err = c.backendCreate(backend); err != nil {
 				msg := err.Error()
 				if !strings.Contains(msg, "Farm already exists") {
-					if !newImportantPath {
-						return "", nil, needReload, err
-					}
+					return "", true, needReload, err
 				}
 			} else {
 				newBackend = true
+				needReload = true
 			}
-			needReload = true
 		}
 	case DELETED:
-		delete(c.cfg.UseBackendRules, fmt.Sprintf("R%0006d", index))
-		c.cfg.UseBackendRulesStatus = MODIFIED
-		return "", service, needReload, nil
+		// Backend will be cleaned up with useBackendRuleRefresh
+		// when no more UseBackendRules points to it.
+		return "", newBackend, needReload, nil
 	}
 
 	reload, err := c.handleBackendAnnotations(ingress, service, backendName, newBackend)
 	needReload = needReload || reload
 	if err != nil {
-		return "", nil, needReload, err
+		return "", newBackend, needReload, err
 	}
 
-	return backendName, service, needReload, nil
+	return backendName, newBackend, needReload, nil
 }
