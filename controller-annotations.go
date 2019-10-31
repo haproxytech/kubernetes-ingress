@@ -17,7 +17,10 @@ package main
 import (
 	"fmt"
 	"log"
+	"strconv"
+	"strings"
 
+	"github.com/haproxytech/client-native/misc"
 	parser "github.com/haproxytech/config-parser/v2"
 	"github.com/haproxytech/config-parser/v2/types"
 	"github.com/haproxytech/models"
@@ -130,4 +133,94 @@ func (c *HAProxyController) handleBackendAnnotations(ingress *Ingress, service *
 		}
 	}
 	return needReload, nil
+}
+
+// Update server with annotations values.
+func (c *HAProxyController) handleServerAnnotations(ingress *Ingress, service *Service, server *models.Server) (annnotationsActive bool) {
+	annMaxconn, errMaxConn := GetValueFromAnnotations("pod-maxconn", service.Annotations)
+	annCheck, _ := GetValueFromAnnotations("check", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
+	annCheckInterval, errCheckInterval := GetValueFromAnnotations("check-interval", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
+	annnotationsActive = false
+	if annMaxconn != nil {
+		if annMaxconn.Status != DELETED && errMaxConn == nil {
+			if maxconn, err := strconv.ParseInt(annMaxconn.Value, 10, 64); err == nil {
+				server.Maxconn = &maxconn
+			}
+			if annMaxconn.Status != "" {
+				annnotationsActive = true
+			}
+		}
+	}
+	if annCheck != nil {
+		if annCheck.Status != DELETED {
+			if annCheck.Value == "enabled" {
+				server.Check = "enabled"
+				//see if we have port and interval defined
+			}
+		}
+		if annCheck.Status != "" {
+			annnotationsActive = true
+		}
+	}
+	if errCheckInterval == nil {
+		server.Inter = misc.ParseTimeout(annCheckInterval.Value)
+		if annCheckInterval.Status != EMPTY {
+			annnotationsActive = true
+		}
+	} else {
+		server.Inter = nil
+	}
+	return annnotationsActive
+}
+
+func (c *HAProxyController) handleRateLimitingAnnotations(ingress *Ingress, service *Service, path *IngressPath, index int) {
+	//Annotations with default values don't need error checking.
+	annWhitelist, _ := GetValueFromAnnotations("whitelist", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
+	annWhitelistRL, _ := GetValueFromAnnotations("whitelist-with-rate-limit", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
+	allowRateLimiting := annWhitelistRL.Value != "" && annWhitelistRL.Value != "OFF"
+	status := annWhitelist.Status
+	if status == EMPTY {
+		if annWhitelistRL.Status != EMPTY {
+			data, ok := c.cfg.HTTPRequests[fmt.Sprintf("WHT-%0006d", index)]
+			if ok && len(data) > 0 {
+				status = MODIFIED
+			}
+		}
+		if annWhitelistRL.Value != "" && path.Status == ADDED {
+			status = MODIFIED
+		}
+	}
+	switch status {
+	case ADDED, MODIFIED:
+		if annWhitelist.Value != "" {
+			ID := int64(0)
+			httpRequest1 := &models.HTTPRequestRule{
+				ID:       &ID,
+				Type:     "allow",
+				Cond:     "if",
+				CondTest: fmt.Sprintf("{ path_beg %s } { src %s }", path.Path, strings.Replace(annWhitelist.Value, ",", " ", -1)),
+			}
+			httpRequest2 := &models.HTTPRequestRule{
+				ID:       &ID,
+				Type:     "deny",
+				Cond:     "if",
+				CondTest: fmt.Sprintf("{ path_beg %s }", path.Path),
+			}
+			if allowRateLimiting {
+				c.cfg.HTTPRequests[fmt.Sprintf("WHT-%0006d", index)] = []models.HTTPRequestRule{
+					*httpRequest1,
+				}
+			} else {
+				c.cfg.HTTPRequests[fmt.Sprintf("WHT-%0006d", index)] = []models.HTTPRequestRule{
+					*httpRequest2, //reverse order
+					*httpRequest1,
+				}
+			}
+		} else {
+			c.cfg.HTTPRequests[fmt.Sprintf("WHT-%0006d", index)] = []models.HTTPRequestRule{}
+		}
+		c.cfg.HTTPRequestsStatus = MODIFIED
+	case DELETED:
+		c.cfg.HTTPRequests[fmt.Sprintf("WHT-%0006d", index)] = []models.HTTPRequestRule{}
+	}
 }
