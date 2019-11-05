@@ -298,30 +298,8 @@ func (c *HAProxyController) handleService(index int, namespace *Namespace, ingre
 	}
 
 	backendName = fmt.Sprintf("%s-%s-%d", namespace.Name, service.Name, path.ServicePortInt)
-	// Update usebackend rules
-	if rule != nil {
-		key := fmt.Sprintf("R%s%s%s%0006d", namespace.Name, ingress.Name, rule.Host, index)
-		old, ok := c.cfg.UseBackendRules[key]
-		if ok {
-			if old.Backend != backendName || old.Host != rule.Host || old.Path != path.Path {
-				c.cfg.UseBackendRules[key] = BackendSwitchingRule{
-					Host:      rule.Host,
-					Path:      path.Path,
-					Backend:   backendName,
-					Namespace: namespace.Name,
-				}
-				c.cfg.UseBackendRulesStatus = MODIFIED
-			}
-		} else {
-			c.cfg.UseBackendRules[key] = BackendSwitchingRule{
-				Host:      rule.Host,
-				Path:      path.Path,
-				Backend:   backendName,
-				Namespace: namespace.Name,
-			}
-			c.cfg.UseBackendRulesStatus = MODIFIED
-		}
-	} else if service.Status != EMPTY {
+	// Default backend
+	if rule == nil && service.Status != EMPTY {
 		var http models.Frontend
 		var https models.Frontend
 		http, err = c.frontendGet(FrontendHTTP)
@@ -366,6 +344,30 @@ func (c *HAProxyController) handleService(index int, namespace *Namespace, ingre
 			} else {
 				newBackend = true
 				needReload = true
+			}
+		}
+		// Update usebackend rule
+		if rule != nil {
+			key := fmt.Sprintf("R%s%s%s%0006d", namespace.Name, ingress.Name, rule.Host, index)
+			old, ok := c.cfg.UseBackendRules[key]
+			if ok {
+				if old.Backend != backendName || old.Host != rule.Host || old.Path != path.Path {
+					c.cfg.UseBackendRules[key] = BackendSwitchingRule{
+						Host:      rule.Host,
+						Path:      path.Path,
+						Backend:   backendName,
+						Namespace: namespace.Name,
+					}
+					c.cfg.UseBackendRulesStatus = MODIFIED
+				}
+			} else {
+				c.cfg.UseBackendRules[key] = BackendSwitchingRule{
+					Host:      rule.Host,
+					Path:      path.Path,
+					Backend:   backendName,
+					Namespace: namespace.Name,
+				}
+				c.cfg.UseBackendRulesStatus = MODIFIED
 			}
 		}
 	case DELETED:
