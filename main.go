@@ -34,7 +34,6 @@ const (
 
 var (
 	HAProxyCFG       = "/etc/haproxy/haproxy.cfg"
-	HAProxyGlobalCFG = "/etc/haproxy/global.cfg"
 	HAProxyCertDir   = "/etc/haproxy/certs/"
 	HAProxyStateDir  = "/var/state/haproxy/"
 )
