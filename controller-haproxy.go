@@ -25,9 +25,7 @@ import (
 func (c *HAProxyController) updateHAProxy() error {
 	needsReload := false
 
-	c.handleDefaultTimeouts()
 	err := c.apiStartTransaction()
-
 	if err != nil {
 		log.Println(err)
 		return err
@@ -35,6 +33,8 @@ func (c *HAProxyController) updateHAProxy() error {
 	defer func() {
 		c.apiDisposeTransaction()
 	}()
+	c.handleDefaultTimeouts()
+
 	maxconnAnn, err := GetValueFromAnnotations("maxconn", c.cfg.ConfigMap.Annotations)
 	if err == nil {
 		if maxconnAnn.Status == DELETED {
