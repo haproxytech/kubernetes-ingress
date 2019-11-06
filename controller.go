@@ -35,7 +35,6 @@ type HAProxyController struct {
 	cfg                         Configuration
 	osArgs                      OSArgs
 	NativeAPI                   *clientnative.HAProxyClient
-	NativeParser                parser.Parser
 	ActiveTransaction           string
 	ActiveTransactionHasChanges bool
 	UseHTTPS                    BoolW
@@ -106,12 +105,6 @@ func (c *HAProxyController) HAProxyInitialize() {
 		}
 	}
 
-	c.NativeParser = parser.Parser{}
-	err = c.NativeParser.LoadData(HAProxyGlobalCFG)
-	if err != nil {
-		log.Panic(err)
-	}
-
 	hostname, err := os.Hostname()
 	LogErr(err)
 	log.Println("Running on", hostname)
@@ -145,6 +138,13 @@ func (c *HAProxyController) HAProxyInitialize() {
 	LogErr(err)
 }
 
+func (c *HAProxyController) ActiveConfiguration() (*parser.Parser, error) {
+	if c.ActiveTransaction == "" {
+		return nil, fmt.Errorf("no active transaction")
+	}
+	return c.NativeAPI.Configuration.GetParser(c.ActiveTransaction)
+}
+
 func (c *HAProxyController) saveServerState() error {
 	result, err := c.NativeAPI.Runtime.ExecuteRaw("show servers state")
 	if err != nil {
@@ -172,11 +172,7 @@ func (c *HAProxyController) saveServerState() error {
 }
 
 func (c *HAProxyController) HAProxyReload() error {
-	err := c.NativeParser.Save(HAProxyGlobalCFG)
-	if err != nil {
-		return err
-	}
-	err = c.saveServerState()
+	err := c.saveServerState()
 	LogErr(err)
 	if !c.osArgs.Test {
 		cmd := exec.Command("service", "haproxy", "reload")

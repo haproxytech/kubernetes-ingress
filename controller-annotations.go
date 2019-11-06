@@ -38,15 +38,11 @@ func (c *HAProxyController) handleDefaultTimeouts() bool {
 	//no default values
 	//timeout check is put in every backend, no need to put it here
 	//hasChanges = c.handleDefaultTimeout("check", false) || hasChanges
-	if hasChanges {
-		err := c.NativeParser.Save(HAProxyGlobalCFG)
-		LogErr(err)
-	}
 	return hasChanges
 }
 
 func (c *HAProxyController) handleDefaultTimeout(timeout string, hasDefault bool) bool {
-	client := c.NativeParser
+	config, _ := c.ActiveConfiguration()
 	annTimeout, err := GetValueFromAnnotations(fmt.Sprintf("timeout-%s", timeout), c.cfg.ConfigMap.Annotations)
 	if err != nil {
 		if hasDefault {
@@ -56,13 +52,13 @@ func (c *HAProxyController) handleDefaultTimeout(timeout string, hasDefault bool
 	}
 	if annTimeout.Status != "" {
 		//log.Println(fmt.Sprintf("timeout [%s]", timeout), annTimeout.Value, annTimeout.OldValue, annTimeout.Status)
-		data, err := client.Get(parser.Defaults, parser.DefaultSectionName, fmt.Sprintf("timeout %s", timeout))
+		data, err := config.Get(parser.Defaults, parser.DefaultSectionName, fmt.Sprintf("timeout %s", timeout))
 		if err != nil {
 			if hasDefault {
 				log.Println(err)
 				return false
 			}
-			errSet := client.Set(parser.Defaults, parser.DefaultSectionName, fmt.Sprintf("timeout %s", timeout), types.SimpleTimeout{
+			errSet := config.Set(parser.Defaults, parser.DefaultSectionName, fmt.Sprintf("timeout %s", timeout), types.SimpleTimeout{
 				Value: annTimeout.Value,
 			})
 			if errSet != nil {

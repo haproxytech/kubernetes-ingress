@@ -34,17 +34,17 @@ func (c *HAProxyController) handleGlobalAnnotations() (reloadRequested bool, err
 	// syslog-server has default value
 	annSyslogSrv, _ := GetValueFromAnnotations("syslog-server", c.cfg.ConfigMap.Annotations)
 	var errParser error
-
+	config, _ := c.ActiveConfiguration()
 	if errNumThread == nil {
 		if numthr, errConv := strconv.Atoi(annNbthread.Value); errConv == nil {
 			if numthr < maxProcs {
 				numThreads = int64(numthr)
 			}
 			if annNbthread.Status == DELETED {
-				errParser = c.NativeParser.Delete(parser.Global, parser.GlobalSectionName, "nbthread")
+				errParser = config.Delete(parser.Global, parser.GlobalSectionName, "nbthread")
 				reloadRequested = true
 			} else if annNbthread.Status != EMPTY {
-				errParser = c.NativeParser.Insert(parser.Global, parser.GlobalSectionName, "nbthread", types.Int64C{
+				errParser = config.Insert(parser.Global, parser.GlobalSectionName, "nbthread", types.Int64C{
 					Value: numThreads,
 				})
 				reloadRequested = true
@@ -55,7 +55,7 @@ func (c *HAProxyController) handleGlobalAnnotations() (reloadRequested bool, err
 
 	if annSyslogSrv.Status != EMPTY {
 		stdoutLog := false
-		errParser = c.NativeParser.Set(parser.Global, parser.GlobalSectionName, "log", nil)
+		errParser = config.Set(parser.Global, parser.GlobalSectionName, "log", nil)
 		LogErr(errParser)
 		for index, syslogSrv := range strings.Split(annSyslogSrv.Value, "\n") {
 			if syslogSrv == "" {
@@ -102,15 +102,15 @@ func (c *HAProxyController) handleGlobalAnnotations() (reloadRequested bool, err
 						continue
 					}
 				}
-				errParser = c.NativeParser.Insert(parser.Global, parser.GlobalSectionName, "log", logData, index)
+				errParser = config.Insert(parser.Global, parser.GlobalSectionName, "log", logData, index)
 				reloadRequested = true
 			}
 			LogErr(errParser)
 		}
 		if stdoutLog {
-			errParser = c.NativeParser.Delete(parser.Global, parser.GlobalSectionName, "daemon")
+			errParser = config.Delete(parser.Global, parser.GlobalSectionName, "daemon")
 		} else {
-			errParser = c.NativeParser.Insert(parser.Global, parser.GlobalSectionName, "daemon", types.Enabled{})
+			errParser = config.Insert(parser.Global, parser.GlobalSectionName, "daemon", types.Enabled{})
 		}
 		LogErr(errParser)
 	}
