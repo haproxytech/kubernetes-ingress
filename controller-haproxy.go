@@ -16,8 +16,8 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"log"
-	"sort"
 	"strconv"
 	"strings"
 )
@@ -64,48 +64,24 @@ func (c *HAProxyController) updateHAProxy() error {
 			continue
 		}
 		for _, ingress := range namespace.Ingresses {
-			pathIndex := 0
 			annClass, _ := GetValueFromAnnotations("ingress.class", ingress.Annotations) // default is ""
 			if annClass.Value != "" && annClass.Value != c.osArgs.IngressClass {
 				ingress.Status = DELETED
 			}
-			//no need for switch/case for now
-			sortedList := make([]string, len(ingress.Rules))
-			index := 0
-			for name := range ingress.Rules {
-				sortedList[index] = name
-				index++
-			}
-			sort.Strings(sortedList)
-			for _, ruleName := range sortedList {
-				rule := ingress.Rules[ruleName]
-				indexedPaths := make([]*IngressPath, len(rule.Paths))
+			for _, rule := range ingress.Rules {
 				for _, path := range rule.Paths {
-					if path.Status != DELETED && ingress.Status != DELETED {
-						indexedPaths[path.PathIndex] = path
-					} else {
-						for key, rule := range c.cfg.UseBackendRules {
-							if rule.Host == ruleName && rule.Namespace == namespace.Name && rule.Path == path.Path {
-								delete(c.cfg.UseBackendRules, key)
-								break
-							}
-						}
+					if path.Status == DELETED {
+						delete(c.cfg.UseBackendRules, fmt.Sprintf("R%s%s%s%0006d", namespace.Name, ingress.Name, rule.Host, path.Path))
 						c.cfg.UseBackendRulesStatus = MODIFIED
+					} else {
+						reload, err = c.handlePath(namespace, ingress, rule, path)
+						needsReload = needsReload || reload
+						LogErr(err)
 					}
-				}
-				for i := range indexedPaths {
-					path := indexedPaths[i]
-					if path == nil {
-						continue
-					}
-					reload, err = c.handlePath(pathIndex, namespace, ingress, rule, path)
-					needsReload = needsReload || reload
-					LogErr(err)
-					pathIndex++
 				}
 			}
-			ingressSecrets := map[string]struct{}{}
 			//handle certs
+			ingressSecrets := map[string]struct{}{}
 			for _, tls := range ingress.TLS {
 				if _, ok := ingressSecrets[tls.SecretName.Value]; !ok {
 					ingressSecrets[tls.SecretName.Value] = struct{}{}
@@ -208,5 +184,5 @@ func (c *HAProxyController) handleDefaultService() (needsReload bool, err error)
 		ServiceName: dsvc[1],
 		PathIndex:   -1,
 	}
-	return c.handlePath(0, namespace, ingress, nil, path)
+	return c.handlePath(namespace, ingress, nil, path)
 }

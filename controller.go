@@ -186,7 +186,7 @@ func (c *HAProxyController) HAProxyReload() error {
 	return err
 }
 
-func (c *HAProxyController) handlePath(index int, namespace *Namespace, ingress *Ingress, rule *IngressRule, path *IngressPath) (needReload bool, err error) {
+func (c *HAProxyController) handlePath(namespace *Namespace, ingress *Ingress, rule *IngressRule, path *IngressPath) (needReload bool, err error) {
 	needReload = false
 	service, ok := namespace.Services[path.ServiceName]
 	if !ok {
@@ -194,7 +194,7 @@ func (c *HAProxyController) handlePath(index int, namespace *Namespace, ingress 
 		return needReload, fmt.Errorf("service %s does not exists", path.ServiceName)
 	}
 
-	backendName, newBackend, reload, err := c.handleService(index, namespace, ingress, rule, path, service)
+	backendName, newBackend, reload, err := c.handleService(namespace, ingress, rule, path, service)
 	needReload = needReload || reload
 	if err != nil {
 		return needReload, err
@@ -214,7 +214,7 @@ func (c *HAProxyController) handlePath(index int, namespace *Namespace, ingress 
 	return needReload, nil
 }
 
-// handleEndpointIP processes the IngressPath related endpoints and makes corresponding HAProxy configuation
+// handleEndpointIP processes the IngressPath related endpoints and makes corresponding backend servers configuration in HAProxy
 func (c *HAProxyController) handleEndpointIP(namespace *Namespace, ingress *Ingress, rule *IngressRule, path *IngressPath, service *Service, backendName string, newBackend bool, endpoints *Endpoints, ip *EndpointIP) (needReload bool) {
 	needReload = false
 	weight := int64(128)
@@ -273,11 +273,11 @@ func (c *HAProxyController) handleEndpointIP(namespace *Namespace, ingress *Ingr
 	return needReload
 }
 
-// handleService processes the IngressPath related service and makes corresponding HAProxy configuation
-func (c *HAProxyController) handleService(index int, namespace *Namespace, ingress *Ingress, rule *IngressRule, path *IngressPath, service *Service) (backendName string, newBackend bool, needReload bool, err error) {
+// handleService processes the IngressPath related service and makes corresponding backend configuration in HAProxy
+func (c *HAProxyController) handleService(namespace *Namespace, ingress *Ingress, rule *IngressRule, path *IngressPath, service *Service) (backendName string, newBackend bool, needReload bool, err error) {
 	needReload = false
 
-	c.handleRateLimitingAnnotations(ingress, service, path, index)
+	c.handleRateLimitingAnnotations(ingress, service, path)
 
 	// Set TargetPort
 	if path.ServicePortInt == 0 {
@@ -348,10 +348,11 @@ func (c *HAProxyController) handleService(index int, namespace *Namespace, ingre
 		}
 		// Update usebackend rule
 		if rule != nil {
-			key := fmt.Sprintf("R%s%s%s%0006d", namespace.Name, ingress.Name, rule.Host, index)
+			key := fmt.Sprintf("R%s%s%s%0006d", namespace.Name, ingress.Name, rule.Host, path.Path)
 			old, ok := c.cfg.UseBackendRules[key]
 			if ok {
-				if old.Backend != backendName || old.Host != rule.Host || old.Path != path.Path {
+				// Check if the existing use_backend rule refers to the right backend
+				if old.Backend != backendName {
 					c.cfg.UseBackendRules[key] = BackendSwitchingRule{
 						Host:      rule.Host,
 						Path:      path.Path,
