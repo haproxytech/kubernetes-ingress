@@ -169,7 +169,7 @@ func (c *HAProxyController) handleServerAnnotations(ingress *Ingress, service *S
 	return annnotationsActive
 }
 
-func (c *HAProxyController) handleRateLimitingAnnotations(ingress *Ingress, service *Service, path *IngressPath, index int) {
+func (c *HAProxyController) handleRateLimitingAnnotations(ingress *Ingress, service *Service, path *IngressPath) {
 	//Annotations with default values don't need error checking.
 	annWhitelist, _ := GetValueFromAnnotations("whitelist", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
 	annWhitelistRL, _ := GetValueFromAnnotations("whitelist-with-rate-limit", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
@@ -177,7 +177,7 @@ func (c *HAProxyController) handleRateLimitingAnnotations(ingress *Ingress, serv
 	status := annWhitelist.Status
 	if status == EMPTY {
 		if annWhitelistRL.Status != EMPTY {
-			data, ok := c.cfg.HTTPRequests[fmt.Sprintf("WHT-%0006d", index)]
+			data, ok := c.cfg.HTTPRequests[fmt.Sprintf("WHT-%0006d", path.Path)]
 			if ok && len(data) > 0 {
 				status = MODIFIED
 			}
@@ -203,20 +203,20 @@ func (c *HAProxyController) handleRateLimitingAnnotations(ingress *Ingress, serv
 				CondTest: fmt.Sprintf("{ path_beg %s }", path.Path),
 			}
 			if allowRateLimiting {
-				c.cfg.HTTPRequests[fmt.Sprintf("WHT-%0006d", index)] = []models.HTTPRequestRule{
+				c.cfg.HTTPRequests[fmt.Sprintf("WHT-%0006d", path.Path)] = []models.HTTPRequestRule{
 					*httpRequest1,
 				}
 			} else {
-				c.cfg.HTTPRequests[fmt.Sprintf("WHT-%0006d", index)] = []models.HTTPRequestRule{
+				c.cfg.HTTPRequests[fmt.Sprintf("WHT-%0006d", path.Path)] = []models.HTTPRequestRule{
 					*httpRequest2, //reverse order
 					*httpRequest1,
 				}
 			}
 		} else {
-			c.cfg.HTTPRequests[fmt.Sprintf("WHT-%0006d", index)] = []models.HTTPRequestRule{}
+			c.cfg.HTTPRequests[fmt.Sprintf("WHT-%0006d", path.Path)] = []models.HTTPRequestRule{}
 		}
 		c.cfg.HTTPRequestsStatus = MODIFIED
 	case DELETED:
-		c.cfg.HTTPRequests[fmt.Sprintf("WHT-%0006d", index)] = []models.HTTPRequestRule{}
+		c.cfg.HTTPRequests[fmt.Sprintf("WHT-%0006d", path.Path)] = []models.HTTPRequestRule{}
 	}
 }
