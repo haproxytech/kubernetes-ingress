@@ -194,6 +194,10 @@ func (c *HAProxyController) handlePath(namespace *Namespace, ingress *Ingress, r
 		return needReload, fmt.Errorf("service %s does not exists", path.ServiceName)
 	}
 
+	if err := setTargetPort(namespace, path, service); err != nil {
+		return needReload, err
+	}
+
 	backendName, newBackend, reload, err := c.handleService(namespace, ingress, rule, path, service)
 	needReload = needReload || reload
 	if err != nil {
@@ -221,7 +225,7 @@ func (c *HAProxyController) handleEndpointIP(namespace *Namespace, ingress *Ingr
 	server := models.Server{
 		Name:    ip.HAProxyName,
 		Address: ip.IP,
-		Port:    &path.ServicePortInt,
+		Port:    &path.TargetPort,
 		Weight:  &weight,
 	}
 	if ip.Disabled {
@@ -279,25 +283,12 @@ func (c *HAProxyController) handleService(namespace *Namespace, ingress *Ingress
 
 	c.handleRateLimitingAnnotations(ingress, service, path)
 
-	// Set TargetPort
 	if path.ServicePortInt == 0 {
-		for _, p := range service.Ports {
-			if p.Name == path.ServicePortString || path.ServicePortString == "" {
-				path.ServicePortInt = p.TargetPort
-				break
-			}
-		}
-	} else {
-		//check if user defined service port and not target port
-		for _, servicePort := range service.Ports {
-			if path.ServicePortInt == servicePort.ServicePort {
-				path.ServicePortInt = servicePort.TargetPort
-				break
-			}
-		}
-	}
 
-	backendName = fmt.Sprintf("%s-%s-%d", namespace.Name, service.Name, path.ServicePortInt)
+		backendName = fmt.Sprintf("%s-%s-%s", namespace.Name, service.Name, path.ServicePortString)
+	} else {
+		backendName = fmt.Sprintf("%s-%s-%d", namespace.Name, service.Name, path.ServicePortInt)
+	}
 	// Default backend
 	if rule == nil && service.Status != EMPTY {
 		var http models.Frontend
@@ -384,4 +375,28 @@ func (c *HAProxyController) handleService(namespace *Namespace, ingress *Ingress
 	}
 
 	return backendName, newBackend, needReload, nil
+}
+
+// Looks for the targetPort (Endpoint port) corresponding to the servicePort of the IngressPath
+func setTargetPort(namespace *Namespace, path *IngressPath, service *Service) error {
+	for _, sp := range service.Ports {
+		// Find corresponding servicePort
+		if sp.Name == path.ServicePortString || sp.ServicePort == path.ServicePortInt {
+			// Find the corresponding targetPort in Endpoints ports
+			if endpoints, ok := namespace.Endpoints[service.Name]; ok {
+				for _, epPort := range *endpoints.Ports {
+					if epPort.Name == sp.Name {
+						path.TargetPort = epPort.Port
+						return nil
+					}
+				}
+				log.Printf("Targetport %s not found for service %s", sp.TargetPortStr, service.Name)
+			} else {
+				log.Printf("No endpoints found for service %", service.Name)
+			}
+			// Return nil even if corresponding target port was not found.
+			return nil
+		}
+	}
+	return fmt.Errorf("servicePort(Str: %s, Int: %d) for serviceName %s not found", path.ServicePortString, path.ServicePortInt, service.Name)
 }

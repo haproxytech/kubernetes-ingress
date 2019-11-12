@@ -175,14 +175,19 @@ func (c *HAProxyController) handleDefaultService() (needsReload bool, err error)
 	if !ok {
 		return needsReload, errors.New("default service invalid namespace " + dsvc[0])
 	}
+	service, ok := namespace.Services[dsvc[1]]
+	if !ok {
+		return needsReload, errors.New("service " + dsvc[1] + "does not exists ")
+	}
 	ingress := &Ingress{
 		Namespace:   namespace.Name,
 		Annotations: MapStringW{},
 		Rules:       map[string]*IngressRule{},
 	}
 	path := &IngressPath{
-		ServiceName: dsvc[1],
-		PathIndex:   -1,
+		ServiceName:    service.Name,
+		ServicePortInt: service.Ports[0].ServicePort,
+		PathIndex:      -1,
 	}
 	return c.handlePath(namespace, ingress, nil, path)
 }

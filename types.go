@@ -16,14 +16,13 @@ package main
 
 //ServicePort describes port of a service
 type ServicePort struct {
-	Name        string
-	Protocol    string
-	ServicePort int64
-	TargetPort  int64
-	Status      Status
+	Name          string
+	Protocol      string
+	ServicePort   int64
+	TargetPortInt int64
+	TargetPortStr string
+	Status        Status
 }
-
-type ServicePorts []*ServicePort
 
 type EndpointIP struct {
 	IP          string
@@ -33,14 +32,22 @@ type EndpointIP struct {
 	Status      Status
 }
 
+type EndpointPort struct {
+	Name     string
+	Protocol string
+	Port     int64
+	Status   Status
+}
+
 type EndpointIPs map[string]*EndpointIP
+type EndpointPorts []*EndpointPort
 
 //Endpoints is usefull data from k8s structures about Endpoints
 type Endpoints struct {
 	Namespace   string
 	Service     StringW
 	BackendName string
-	Ports       *ServicePorts
+	Ports       *EndpointPorts
 	Addresses   *EndpointIPs
 	Status      Status
 }
@@ -74,6 +81,7 @@ type IngressPath struct {
 	ServiceName       string
 	ServicePortInt    int64
 	ServicePortString string
+	TargetPort        int64
 	Path              string
 	PathIndex         int
 	Status            Status
