@@ -202,10 +202,13 @@ func (c *HAProxyController) handlePath(namespace *Namespace, ingress *Ingress, r
 
 	endpoints, ok := namespace.Endpoints[service.Name]
 	if !ok {
-		log.Printf("Endpoint for service %s does not exists", service.Name)
+		log.Printf("No Endpoints found for service %s ", service.Name)
 		return needReload, nil // not an end of world scenario, just log this
 	}
 	endpoints.BackendName = backendName
+	if err := c.setTargetPort(path, service, endpoints); err != nil {
+		return needReload, err
+	}
 
 	for _, ip := range *endpoints.Addresses {
 		reload := c.handleEndpointIP(namespace, ingress, rule, path, service, backendName, newBackend, endpoints, ip)
@@ -221,7 +224,7 @@ func (c *HAProxyController) handleEndpointIP(namespace *Namespace, ingress *Ingr
 	server := models.Server{
 		Name:    ip.HAProxyName,
 		Address: ip.IP,
-		Port:    &path.ServicePortInt,
+		Port:    &path.TargetPort,
 		Weight:  &weight,
 	}
 	if ip.Disabled {
@@ -279,25 +282,12 @@ func (c *HAProxyController) handleService(namespace *Namespace, ingress *Ingress
 
 	c.handleRateLimitingAnnotations(ingress, service, path)
 
-	// Set TargetPort
 	if path.ServicePortInt == 0 {
-		for _, p := range service.Ports {
-			if p.Name == path.ServicePortString || path.ServicePortString == "" {
-				path.ServicePortInt = p.TargetPort
-				break
-			}
-		}
-	} else {
-		//check if user defined service port and not target port
-		for _, servicePort := range service.Ports {
-			if path.ServicePortInt == servicePort.ServicePort {
-				path.ServicePortInt = servicePort.TargetPort
-				break
-			}
-		}
-	}
 
-	backendName = fmt.Sprintf("%s-%s-%d", namespace.Name, service.Name, path.ServicePortInt)
+		backendName = fmt.Sprintf("%s-%s-%s", namespace.Name, service.Name, path.ServicePortString)
+	} else {
+		backendName = fmt.Sprintf("%s-%s-%d", namespace.Name, service.Name, path.ServicePortInt)
+	}
 	// Default backend
 	if rule == nil && service.Status != EMPTY {
 		var http models.Frontend
@@ -384,4 +374,35 @@ func (c *HAProxyController) handleService(namespace *Namespace, ingress *Ingress
 	}
 
 	return backendName, newBackend, needReload, nil
+}
+
+// Looks for the targetPort (Endpoint port) corresponding to the servicePort of the IngressPath
+func (c *HAProxyController) setTargetPort(path *IngressPath, service *Service, endpoints *Endpoints) error {
+	for _, sp := range service.Ports {
+		// Find corresponding servicePort
+		if sp.Name == path.ServicePortString || sp.ServicePort == path.ServicePortInt {
+			// Find the corresponding targetPort in Endpoints ports
+			if endpoints != nil {
+				for _, epPort := range *endpoints.Ports {
+					if epPort.Name == sp.Name {
+						if path.TargetPort != epPort.Port {
+							for _, EndpointIP := range *endpoints.Addresses {
+								if err := c.cfg.NativeAPI.Runtime.SetServerAddr(endpoints.BackendName, EndpointIP.HAProxyName, EndpointIP.IP, int(epPort.Port)); err != nil {
+									log.Println(err)
+								}
+							}
+							if path.TargetPort != 0 {
+								log.Printf("TargetPort for backend %s changed to %d", endpoints.BackendName, epPort.Port)
+							}
+							path.TargetPort = epPort.Port
+						}
+						return nil
+					}
+				}
+				log.Printf("Targetport %s not found for service %s", sp.TargetPortStr, service.Name)
+			} // Return nil even if corresponding target port was not found.
+			return nil
+		}
+	}
+	return fmt.Errorf("servicePort(Str: %s, Int: %d) for serviceName %s not found", path.ServicePortString, path.ServicePortInt, service.Name)
 }

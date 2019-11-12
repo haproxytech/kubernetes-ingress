@@ -219,12 +219,12 @@ func (k *K8s) convertToEndpoints(obj interface{}, status Status) (*Endpoints, er
 	item := &Endpoints{
 		Namespace: data.GetNamespace(),
 		Service:   StringW{Value: data.GetName()},
-		Ports:     &ServicePorts{},
+		Ports:     &EndpointPorts{},
 		Addresses: &EndpointIPs{},
 		Status:    status,
 	}
-	for _, sp := range data.Subsets {
-		for _, address := range sp.Addresses {
+	for _, subset := range data.Subsets {
+		for _, address := range subset.Addresses {
 			eip := &EndpointIP{
 				IP:          address.IP,
 				HAProxyName: "",
@@ -240,12 +240,12 @@ func (k *K8s) convertToEndpoints(obj interface{}, status Status) (*Endpoints, er
 			}
 			(*item.Addresses)[key] = eip
 		}
-		for _, port := range sp.Ports {
-			*item.Ports = append(*item.Ports, &ServicePort{
-				Name:       port.Name,
-				Protocol:   string(port.Protocol),
-				TargetPort: int64(port.Port),
-				Status:     status,
+		for _, port := range subset.Ports {
+			*item.Ports = append(*item.Ports, &EndpointPort{
+				Name:     port.Name,
+				Protocol: string(port.Protocol),
+				Port:     int64(port.Port),
+				Status:   status,
 			})
 		}
 	}
@@ -361,15 +361,12 @@ func (k *K8s) EventsServices(channel chan *Service, stop chan struct{}) {
 					Status:      status,
 				}
 				for _, sp := range data.Spec.Ports {
-					port := sp.TargetPort.IntVal
-					if port == 0 {
-						port = sp.Port
-					}
 					item.Ports = append(item.Ports, ServicePort{
-						Name:        sp.Name,
-						Protocol:    string(sp.Protocol),
-						ServicePort: int64(sp.Port),
-						TargetPort:  int64(port),
+						Name:          sp.Name,
+						Protocol:      string(sp.Protocol),
+						ServicePort:   int64(sp.Port),
+						TargetPortInt: int64(sp.TargetPort.IntVal),
+						TargetPortStr: sp.TargetPort.StrVal,
 					})
 				}
 				if DEBUG_API {
@@ -405,15 +402,12 @@ func (k *K8s) EventsServices(channel chan *Service, stop chan struct{}) {
 					Status:      status,
 				}
 				for _, sp := range data1.Spec.Ports {
-					port := sp.TargetPort.IntVal
-					if port == 0 {
-						port = sp.Port
-					}
 					item1.Ports = append(item1.Ports, ServicePort{
-						Name:        sp.Name,
-						Protocol:    string(sp.Protocol),
-						ServicePort: int64(sp.Port),
-						TargetPort:  int64(port),
+						Name:          sp.Name,
+						Protocol:      string(sp.Protocol),
+						ServicePort:   int64(sp.Port),
+						TargetPortInt: int64(sp.TargetPort.IntVal),
+						TargetPortStr: sp.TargetPort.StrVal,
 					})
 				}
 
@@ -426,15 +420,12 @@ func (k *K8s) EventsServices(channel chan *Service, stop chan struct{}) {
 					Status:      status,
 				}
 				for _, sp := range data2.Spec.Ports {
-					port := sp.TargetPort.IntVal
-					if port == 0 {
-						port = sp.Port
-					}
 					item2.Ports = append(item2.Ports, ServicePort{
-						Name:        sp.Name,
-						Protocol:    string(sp.Protocol),
-						ServicePort: int64(sp.Port),
-						TargetPort:  int64(port),
+						Name:          sp.Name,
+						Protocol:      string(sp.Protocol),
+						ServicePort:   int64(sp.Port),
+						TargetPortInt: int64(sp.TargetPort.IntVal),
+						TargetPortStr: sp.TargetPort.StrVal,
 					})
 				}
 				if item2.Equal(item1) {
