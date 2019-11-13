@@ -84,6 +84,7 @@ func (c *HAProxyController) handleBackendAnnotations(ingress *Ingress, service *
 	backendAnnotations["annCheckHttp"], _ = GetValueFromAnnotations("check-http", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
 	backendAnnotations["annForwardedFor"], _ = GetValueFromAnnotations("forwarded-for", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
 	backendAnnotations["annTimeoutCheck"], _ = GetValueFromAnnotations("timeout-check", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
+	backendAnnotations["annAbortOnClose"], _ = GetValueFromAnnotations("abortonclose", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
 
 	for k, v := range backendAnnotations {
 		if v == nil {
@@ -119,6 +120,11 @@ func (c *HAProxyController) handleBackendAnnotations(ingress *Ingress, service *
 					continue
 				}
 				needReload = true
+			case "annAbortOnClose":
+				if err := backend.updateAbortOnClose(v); err != nil {
+					LogErr(err)
+					continue
+				}
 			}
 		}
 	}

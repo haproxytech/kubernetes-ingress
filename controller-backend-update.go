@@ -25,7 +25,7 @@ type backend models.Backend
 func (b *backend) updateBalance(data *StringW) error {
 	//TODO Balance proper usage
 	val := &models.Balance{
-		Algorithm: data.Value,
+		Algorithm: &data.Value,
 	}
 	if err := val.Validate(nil); err != nil {
 		return fmt.Errorf("balance algorithm: %s", err)
@@ -80,5 +80,11 @@ func (b *backend) updateHttpchk(data *StringW) error {
 		return fmt.Errorf("httpchk option: %s", err)
 	}
 	b.Httpchk = val
+	return nil
+}
+
+func (b *backend) updateAbortOnClose(data *StringW) error {
+	val := b.Abortonclose
+	b.Abortonclose = data.Value == "enabled"
 	return nil
 }
