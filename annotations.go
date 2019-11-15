@@ -19,9 +19,9 @@ import (
 )
 
 //ConvertToMapStringW removes prefixes in annotation
-func ConvertToMapStringW(anotations map[string]string) MapStringW {
-	newAnnotations := make(MapStringW, len(anotations))
-	for name, value := range anotations {
+func ConvertToMapStringW(annotations map[string]string) MapStringW {
+	newAnnotations := make(MapStringW, len(annotations))
+	for name, value := range annotations {
 		newAnnotations[convertAnnotationName(name)] = &StringW{
 			Value:  value,
 			Status: ADDED,
