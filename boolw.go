@@ -25,3 +25,8 @@ type BoolW struct {
 func (a *BoolW) Equal(b *BoolW) bool {
 	return a.Value == b.Value
 }
+
+//Changed indicates whether the new value is different than the old one
+func (a *BoolW) Changed() bool {
+	return a.Value != a.OldValue
+}
