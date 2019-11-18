@@ -91,25 +91,22 @@ func (c *HAProxyController) updateHAProxy() error {
 			}
 		}
 	}
+
+	reload = c.handleDefaultCertificate(certsUsed)
+	needsReload = needsReload || reload
+
 	if c.UseHTTPS.Status != EMPTY {
 		c.enableCerts()
 		c.UseHTTPS.Status = EMPTY
 	}
 
-	usingHTTPS := false
-	reload = c.handleDefaultCertificate(certsUsed)
-	needsReload = needsReload || reload
-	if len(certsUsed) > 0 {
-		usingHTTPS = true
-	}
-
-	reload, err = c.handleRateLimiting(usingHTTPS)
+	reload, err = c.handleRateLimiting(c.UseHTTPS.Value)
 	if err != nil {
 		return err
 	}
 	needsReload = needsReload || reload
 
-	reload, err = c.handleHTTPRedirect(usingHTTPS)
+	reload, err = c.handleHTTPRedirect(c.UseHTTPS.Value)
 	if err != nil {
 		return err
 	}

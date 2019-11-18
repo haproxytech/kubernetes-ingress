@@ -72,6 +72,7 @@ func (c *HAProxyController) writeCert(filename string, key, crt []byte) error {
 }
 
 func (c *HAProxyController) handleSecret(ingress Ingress, secret Secret, writeSecret bool, certs map[string]struct{}) (reloadRequested bool) {
+	reloadRequested = false
 	//two options are allowed, tls, rsa+ecdsa
 	rsaKey, rsaKeyOK := secret.Data["rsa.key"]
 	rsaCrt, rsaCrtOK := secret.Data["rsa.crt"]
@@ -86,8 +87,9 @@ func (c *HAProxyController) handleSecret(ingress Ingress, secret Secret, writeSe
 				if errCrt != nil {
 					err1 := c.removeHTTPSListeners()
 					LogErr(err1)
-					return true
+					return false
 				}
+				reloadRequested = true
 			}
 			certs[filename] = struct{}{}
 		}
@@ -98,8 +100,9 @@ func (c *HAProxyController) handleSecret(ingress Ingress, secret Secret, writeSe
 				if errCrt != nil {
 					err1 := c.removeHTTPSListeners()
 					LogErr(err1)
-					return true
+					return false
 				}
+				reloadRequested = true
 			}
 			certs[filename] = struct{}{}
 		}
@@ -113,13 +116,14 @@ func (c *HAProxyController) handleSecret(ingress Ingress, secret Secret, writeSe
 				if errCrt != nil {
 					err1 := c.removeHTTPSListeners()
 					LogErr(err1)
-					return true
+					return false
 				}
+				reloadRequested = true
 			}
 			certs[filename] = struct{}{}
 		}
 	}
-	return false
+	return reloadRequested
 }
 
 func (c *HAProxyController) handleDefaultCertificate(certs map[string]struct{}) (reloadRequested bool) {
