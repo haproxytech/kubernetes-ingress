@@ -80,6 +80,7 @@ github.com/haproxytech/config-parser/v2 v2.0.0-dev5 h1:aLa/jjVM2UO71AFS90SMC1l6o
 github.com/haproxytech/config-parser/v2 v2.0.0-dev5/go.mod h1:VjHOetXAJtwrtLAJPoDaD/kEYwCoixVp5SCsBitMcj8=
 github.com/haproxytech/config-parser/v2/v2 v2.0.0-dev1 h1:YbQt+o8KkzxqXWKzAJXWv4xav4+PuxT9jtfouCAOUzo=
 github.com/haproxytech/config-parser/v2/v2 v2.0.0-dev1/go.mod h1:VjHOetXAJtwrtLAJPoDaD/kEYwCoixVp5SCsBitMcj8=
+github.com/haproxytech/config-parser/v2 v2.0.0-dev4 h1:Pk0bs0xuSUBPdyLBDGgfJ4IXbrAlkTctjmKQ6MjTc+g=
 github.com/haproxytech/models v1.2.3-0.20190823114805-b3bd06b1c569 h1:uSIImvE2nSiEqMvesozR0cF90I0Gys8Rl6uEItGMZbw=
 github.com/haproxytech/models v1.2.3-0.20190823114805-b3bd06b1c569/go.mod h1:UXZVErm/XN6z10sM/enmxrdeEnwo7vz1JI+a8ycEvOQ=
 github.com/haproxytech/models v1.2.5-0.20191014152757-1080a77cbac7 h1:jrwnv559loPKl4EgFT1J5wNmkI+KsBo01Khqgfgjp8Q=

@@ -33,9 +33,9 @@ const (
 )
 
 var (
-	HAProxyCFG       = "/etc/haproxy/haproxy.cfg"
-	HAProxyCertDir   = "/etc/haproxy/certs/"
-	HAProxyStateDir  = "/var/state/haproxy/"
+	HAProxyCFG      = "/etc/haproxy/haproxy.cfg"
+	HAProxyCertDir  = "/etc/haproxy/certs/"
+	HAProxyStateDir = "/var/state/haproxy/"
 )
 
 func main() {
@@ -43,6 +43,15 @@ func main() {
 	var osArgs OSArgs
 	var parser = flags.NewParser(&osArgs, flags.IgnoreUnknown)
 	_, err := parser.Parse()
+	exitCode := 0
+	defer func() {
+		os.Exit(exitCode)
+	}()
+	if err != nil {
+		log.Println(err)
+		exitCode = 1
+		return
+	}
 
 	defaultAnnotationValues["default-backend-service"] = &StringW{
 		Value:  fmt.Sprintf("%s/%s", osArgs.DefaultBackendService.Namespace, osArgs.DefaultBackendService.Name),
@@ -75,6 +84,10 @@ func main() {
 	log.Printf("Build date: %s\n\n", BuildTime)
 	log.Printf("ConfigMap: %s/%s\n", osArgs.ConfigMap.Namespace, osArgs.ConfigMap.Name)
 	log.Printf("Ingress class: %s\n", osArgs.IngressClass)
+	if osArgs.ConfigMapTCPServices.Name != "" {
+		log.Printf("TCP Services defined in %s/%s\n", osArgs.ConfigMapTCPServices.Namespace, osArgs.ConfigMapTCPServices.Name)
+	}
+
 	//TODO currently using default log, switch to something more convenient
 	log.SetFlags(LogType)
 	LogErr(err)

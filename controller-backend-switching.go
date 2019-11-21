@@ -74,6 +74,10 @@ func (c *HAProxyController) useBackendRuleRefresh() (needsReload bool) {
 			LogErr(err)
 		}
 	}
+	for tcpBackend := range c.cfg.TCPBackends {
+		backends[tcpBackend] = struct{}{}
+	}
+
 	allBackends, _ := c.backendsGet()
 	for _, backend := range allBackends {
 		_, ok := backends[backend.Name]

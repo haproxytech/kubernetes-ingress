@@ -46,6 +46,18 @@ func LogErr(err error) {
 	}
 }
 
+func PanicErr(err error) {
+	if err == nil {
+		return
+	}
+	_, file, no, ok := runtime.Caller(1)
+	if ok {
+		file1 := strings.Replace(file, "/src/", "", 1)
+		log.SetFlags(LogTypeShort)
+		log.Panicf("%s:%d %s\n", file1, no, err.Error())
+	}
+}
+
 var chars = []rune("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
 
 //RandomString returns random string of size n

@@ -130,12 +130,15 @@ func (c *HAProxyController) HAProxyInitialize() {
 		Runtime:       &runtimeClient,
 	}
 
+	c.cfg.Init(c.osArgs, c.NativeAPI)
+
 	err = c.apiStartTransaction()
-	LogErr(err)
+	PanicErr(err)
 	defer c.apiDisposeTransaction()
 	c.initHTTPS()
+
 	err = c.apiCommitTransaction()
-	LogErr(err)
+	PanicErr(err)
 }
 
 func (c *HAProxyController) ActiveConfiguration() (*parser.Parser, error) {
@@ -283,13 +286,12 @@ func (c *HAProxyController) handleService(namespace *Namespace, ingress *Ingress
 	c.handleRateLimitingAnnotations(ingress, service, path)
 
 	if path.ServicePortInt == 0 {
-
 		backendName = fmt.Sprintf("%s-%s-%s", namespace.Name, service.Name, path.ServicePortString)
 	} else {
 		backendName = fmt.Sprintf("%s-%s-%d", namespace.Name, service.Name, path.ServicePortInt)
 	}
 	// Default backend
-	if rule == nil && service.Status != EMPTY {
+	if path.IsDefaultPath && service.Status != EMPTY {
 		var http models.Frontend
 		var https models.Frontend
 		http, err = c.frontendGet(FrontendHTTP)
@@ -303,6 +305,9 @@ func (c *HAProxyController) handleService(namespace *Namespace, ingress *Ingress
 		err = c.frontendEdit(https)
 		LogErr(err)
 		needReload = true
+	}
+	if path.IsTCPPath {
+		c.cfg.TCPBackends[backendName] = path.ServicePortInt
 	}
 
 	// get Backend status
@@ -322,9 +327,13 @@ func (c *HAProxyController) handleService(namespace *Namespace, ingress *Ingress
 	switch status {
 	case ADDED, MODIFIED:
 		if _, err = c.backendGet(backendName); err != nil {
+			mode := "http"
 			backend := models.Backend{
 				Name: backendName,
-				Mode: "http",
+				Mode: mode,
+			}
+			if path.IsTCPPath {
+				backend.Mode = string(ModeTCP)
 			}
 			if err = c.backendCreate(backend); err != nil {
 				msg := err.Error()
@@ -337,7 +346,7 @@ func (c *HAProxyController) handleService(namespace *Namespace, ingress *Ingress
 			}
 		}
 		// Update usebackend rule
-		if rule != nil {
+		if rule != nil && !path.IsTCPPath && !path.IsDefaultPath {
 			key := fmt.Sprintf("R%s%s%s%0006d", namespace.Name, ingress.Name, rule.Host, path.Path)
 			old, ok := c.cfg.UseBackendRules[key]
 			if ok {

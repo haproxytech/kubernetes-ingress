@@ -110,7 +110,6 @@ func (c *HAProxyController) monitorChanges() {
 //All the changes must come through this function
 func (c *HAProxyController) SyncData(jobChan <-chan SyncDataEvent, chConfigMapReceivedAndProcessed chan bool) {
 	hadChanges := false
-	c.cfg.Init(c.osArgs, c.NativeAPI)
 	for job := range jobChan {
 		ns := c.cfg.GetNamespace(job.Namespace)
 		change := false

@@ -16,8 +16,9 @@ package main
 
 import (
 	"fmt"
-	"github.com/haproxytech/models"
 	"strings"
+
+	"github.com/haproxytech/models"
 )
 
 type backend models.Backend

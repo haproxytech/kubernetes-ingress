@@ -37,6 +37,7 @@ type Configuration struct {
 	Namespace             map[string]*Namespace
 	NamespacesAccess      NamespacesWatch
 	ConfigMap             *ConfigMap
+	ConfigMapTCPServices  *ConfigMap
 	NativeAPI             *clientnative.HAProxyClient
 	SSLRedirect           string
 	RateLimitingEnabled   bool
@@ -46,6 +47,7 @@ type Configuration struct {
 	TCPRequestsStatus     Status
 	UseBackendRules       map[string]BackendSwitchingRule
 	UseBackendRulesStatus Status
+	TCPBackends           map[string]int64
 }
 
 func (c *Configuration) IsRelevantNamespace(namespace string) bool {
@@ -91,6 +93,8 @@ func (c *Configuration) Init(osArgs OSArgs, api *clientnative.HAProxyClient) {
 
 	c.UseBackendRules = map[string]BackendSwitchingRule{}
 	c.UseBackendRulesStatus = EMPTY
+
+	c.TCPBackends = map[string]int64{}
 }
 
 //GetNamespace returns Namespace. Creates one if not existing
@@ -204,7 +208,17 @@ func (c *Configuration) Clean() {
 	default:
 		c.ConfigMap.Status = EMPTY
 	}
+	if c.ConfigMapTCPServices != nil {
+		switch c.ConfigMapTCPServices.Status {
+		case DELETED:
+			c.ConfigMapTCPServices = nil
+		default:
+			c.ConfigMapTCPServices.Status = EMPTY
+			c.ConfigMapTCPServices.Annotations.Clean()
+		}
+	}
 	c.HTTPRequestsStatus = EMPTY
 	c.TCPRequestsStatus = EMPTY
 	c.UseBackendRulesStatus = EMPTY
+	defaultAnnotationValues.Clean()
 }

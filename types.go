@@ -84,6 +84,8 @@ type IngressPath struct {
 	TargetPort        int64
 	Path              string
 	PathIndex         int
+	IsTCPPath         bool
+	IsDefaultPath     bool
 	Status            Status
 }
 

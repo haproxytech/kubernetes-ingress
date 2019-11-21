@@ -128,6 +128,10 @@ func (c *HAProxyController) updateHAProxy() error {
 	LogErr(err)
 	needsReload = needsReload || reload
 
+	reload, err = c.handleTCPServices()
+	LogErr(err)
+	needsReload = needsReload || reload
+
 	reload = c.useBackendRuleRefresh()
 	needsReload = needsReload || reload
 
@@ -185,6 +189,7 @@ func (c *HAProxyController) handleDefaultService() (needsReload bool, err error)
 		ServiceName:    service.Name,
 		ServicePortInt: service.Ports[0].ServicePort,
 		PathIndex:      -1,
+		IsDefaultPath:  true,
 	}
 	return c.handlePath(namespace, ingress, nil, path)
 }
