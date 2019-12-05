@@ -347,7 +347,7 @@ func (c *HAProxyController) handleService(namespace *Namespace, ingress *Ingress
 		}
 		// Update usebackend rule
 		if rule != nil && !path.IsTCPPath && !path.IsDefaultPath {
-			key := fmt.Sprintf("R%s%s%s%0006d", namespace.Name, ingress.Name, rule.Host, path.Path)
+			key := fmt.Sprintf("R%s%s%s%0006s", namespace.Name, ingress.Name, rule.Host, path.Path)
 			old, ok := c.cfg.UseBackendRules[key]
 			if ok {
 				// Check if the existing use_backend rule refers to the right backend

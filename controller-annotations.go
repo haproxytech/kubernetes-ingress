@@ -183,7 +183,7 @@ func (c *HAProxyController) handleRateLimitingAnnotations(ingress *Ingress, serv
 	status := annWhitelist.Status
 	if status == EMPTY {
 		if annWhitelistRL.Status != EMPTY {
-			data, ok := c.cfg.HTTPRequests[fmt.Sprintf("WHT-%0006d", path.Path)]
+			data, ok := c.cfg.HTTPRequests[fmt.Sprintf("WHT-%0006s", path.Path)]
 			if ok && len(data) > 0 {
 				status = MODIFIED
 			}
@@ -209,20 +209,20 @@ func (c *HAProxyController) handleRateLimitingAnnotations(ingress *Ingress, serv
 				CondTest: fmt.Sprintf("{ path_beg %s }", path.Path),
 			}
 			if allowRateLimiting {
-				c.cfg.HTTPRequests[fmt.Sprintf("WHT-%0006d", path.Path)] = []models.HTTPRequestRule{
+				c.cfg.HTTPRequests[fmt.Sprintf("WHT-%0006s", path.Path)] = []models.HTTPRequestRule{
 					*httpRequest1,
 				}
 			} else {
-				c.cfg.HTTPRequests[fmt.Sprintf("WHT-%0006d", path.Path)] = []models.HTTPRequestRule{
+				c.cfg.HTTPRequests[fmt.Sprintf("WHT-%0006s", path.Path)] = []models.HTTPRequestRule{
 					*httpRequest2, //reverse order
 					*httpRequest1,
 				}
 			}
 		} else {
-			c.cfg.HTTPRequests[fmt.Sprintf("WHT-%0006d", path.Path)] = []models.HTTPRequestRule{}
+			c.cfg.HTTPRequests[fmt.Sprintf("WHT-%0006s", path.Path)] = []models.HTTPRequestRule{}
 		}
 		c.cfg.HTTPRequestsStatus = MODIFIED
 	case DELETED:
-		c.cfg.HTTPRequests[fmt.Sprintf("WHT-%0006d", path.Path)] = []models.HTTPRequestRule{}
+		c.cfg.HTTPRequests[fmt.Sprintf("WHT-%0006s", path.Path)] = []models.HTTPRequestRule{}
 	}
 }

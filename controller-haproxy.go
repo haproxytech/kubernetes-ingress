@@ -71,7 +71,7 @@ func (c *HAProxyController) updateHAProxy() error {
 			for _, rule := range ingress.Rules {
 				for _, path := range rule.Paths {
 					if path.Status == DELETED {
-						delete(c.cfg.UseBackendRules, fmt.Sprintf("R%s%s%s%0006d", namespace.Name, ingress.Name, rule.Host, path.Path))
+						delete(c.cfg.UseBackendRules, fmt.Sprintf("R%s%s%s%0006s", namespace.Name, ingress.Name, rule.Host, path.Path))
 						c.cfg.UseBackendRulesStatus = MODIFIED
 					} else {
 						reload, err = c.handlePath(namespace, ingress, rule, path)

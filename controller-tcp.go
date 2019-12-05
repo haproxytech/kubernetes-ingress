@@ -23,10 +23,9 @@ func (c *HAProxyController) handleTCPServices() (needsReload bool, err error) {
 		frontendName := fmt.Sprintf("tcp-frontend-%s-%s", backendName, port)
 		//log.Println(port, svc, frontendName)
 		var frontend models.Frontend
-		var err error
 		frontend, err = c.frontendGet(frontendName)
 		portInt64 := int64(-1)
-		if prt, err := strconv.ParseInt(portDest, 10, 64); err == nil {
+		if prt, errParse := strconv.ParseInt(portDest, 10, 64); errParse == nil {
 			portInt64 = prt
 		}
 		switch svc.Status {
@@ -66,7 +65,7 @@ func (c *HAProxyController) handleTCPServices() (needsReload bool, err error) {
 				IsTCPPath:      true,
 			}
 			nsmmp := c.cfg.GetNamespace(namespace)
-			_, err := c.handlePath(nsmmp, ingress, nil, path)
+			_, err = c.handlePath(nsmmp, ingress, nil, path)
 			LogErr(err)
 			needsReload = true
 		case MODIFIED:
