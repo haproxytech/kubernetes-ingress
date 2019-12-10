@@ -84,7 +84,10 @@ func (b *backend) updateHttpchk(data *StringW) error {
 }
 
 func (b *backend) updateAbortOnClose(data *StringW) error {
-	val := b.Abortonclose
-	b.Abortonclose = data.Value == "enabled"
+	if data.Value == "enabled" {
+		b.Abortonclose = "enabled"
+	} else {
+		b.Abortonclose = ""
+	}
 	return nil
 }
