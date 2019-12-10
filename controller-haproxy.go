@@ -66,7 +66,7 @@ func (c *HAProxyController) updateHAProxy() error {
 		for _, ingress := range namespace.Ingresses {
 			annClass, _ := GetValueFromAnnotations("ingress.class", ingress.Annotations) // default is ""
 			if annClass.Value != "" && annClass.Value != c.osArgs.IngressClass {
-				ingress.Status = DELETED
+				continue
 			}
 			for _, rule := range ingress.Rules {
 				for _, path := range rule.Paths {
