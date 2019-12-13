@@ -406,17 +406,16 @@ func (c *HAProxyController) setTargetPort(path *IngressPath, service *Service, e
 			if endpoints != nil {
 				for _, epPort := range *endpoints.Ports {
 					if epPort.Name == sp.Name {
-						if path.TargetPort != epPort.Port {
+						// Dinamically update backend port
+						if path.TargetPort != epPort.Port && path.TargetPort != 0 {
 							for _, EndpointIP := range *endpoints.Addresses {
 								if err := c.cfg.NativeAPI.Runtime.SetServerAddr(endpoints.BackendName, EndpointIP.HAProxyName, EndpointIP.IP, int(epPort.Port)); err != nil {
 									log.Println(err)
 								}
-							}
-							if path.TargetPort != 0 {
 								log.Printf("TargetPort for backend %s changed to %d", endpoints.BackendName, epPort.Port)
 							}
-							path.TargetPort = epPort.Port
 						}
+						path.TargetPort = epPort.Port
 						return nil
 					}
 				}
