@@ -58,7 +58,7 @@ func (c *HAProxyController) updateHAProxy() error {
 	LogErr(err)
 	needsReload = needsReload || reload
 
-	certsUsed := map[string]struct{}{}
+	usedCerts := map[string]struct{}{}
 	for _, namespace := range c.cfg.Namespace {
 		if !namespace.Relevant {
 			continue
@@ -71,8 +71,13 @@ func (c *HAProxyController) updateHAProxy() error {
 			for _, rule := range ingress.Rules {
 				for _, path := range rule.Paths {
 					if path.Status == DELETED {
-						delete(c.cfg.UseBackendRules, fmt.Sprintf("R%s%s%s%0006s", namespace.Name, ingress.Name, rule.Host, path.Path))
-						c.cfg.UseBackendRulesStatus = MODIFIED
+						if path.IsSSLPassthrough {
+							delete(c.cfg.UseBackendRules[ModeTCP].Rules, fmt.Sprintf("R%s%s%s%0006s", namespace.Name, ingress.Name, rule.Host, path.Path))
+							c.cfg.UseBackendRules[ModeTCP].Modified = true
+						} else {
+							delete(c.cfg.UseBackendRules[ModeHTTP].Rules, fmt.Sprintf("R%s%s%s%0006s", namespace.Name, ingress.Name, rule.Host, path.Path))
+							c.cfg.UseBackendRules[ModeHTTP].Modified = true
+						}
 					} else {
 						reload, err = c.handlePath(namespace, ingress, rule, path)
 						needsReload = needsReload || reload
@@ -85,35 +90,30 @@ func (c *HAProxyController) updateHAProxy() error {
 			for _, tls := range ingress.TLS {
 				if _, ok := ingressSecrets[tls.SecretName.Value]; !ok {
 					ingressSecrets[tls.SecretName.Value] = struct{}{}
-					reload = c.handleTLSSecret(*ingress, *tls, certsUsed)
+					reload = c.handleTLSSecret(*ingress, *tls, usedCerts)
 					needsReload = needsReload || reload
 				}
 			}
 		}
 	}
 
-	reload = c.handleDefaultCertificate(certsUsed)
+	reload = c.handleDefaultCertificate(usedCerts)
 	needsReload = needsReload || reload
 
-	if c.UseHTTPS.Status != EMPTY {
-		c.enableCerts()
-		c.UseHTTPS.Status = EMPTY
-	}
+	reload = c.handleHTTPS(usedCerts)
+	needsReload = needsReload || reload
 
-	reload, err = c.handleRateLimiting(c.UseHTTPS.Value)
+	reload, err = c.handleRateLimiting(c.cfg.HTTPS)
 	if err != nil {
 		return err
 	}
 	needsReload = needsReload || reload
 
-	reload, err = c.handleHTTPRedirect(c.UseHTTPS.Value)
+	reload, err = c.handleHTTPRedirect(c.cfg.HTTPS)
 	if err != nil {
 		return err
 	}
 	needsReload = needsReload || reload
-	//remove certs that are not needed
-	err = c.cleanCertDir(certsUsed)
-	LogErr(err)
 
 	//handle default service
 	reload, err = c.handleDefaultService()
@@ -132,7 +132,7 @@ func (c *HAProxyController) updateHAProxy() error {
 	LogErr(err)
 	needsReload = needsReload || reload
 
-	reload = c.useBackendRuleRefresh()
+	reload = c.refreshBackendSwitching()
 	needsReload = needsReload || reload
 
 	err = c.apiCommitTransaction()
@@ -191,5 +191,5 @@ func (c *HAProxyController) handleDefaultService() (needsReload bool, err error)
 		PathIndex:      -1,
 		IsDefaultPath:  true,
 	}
-	return c.handlePath(namespace, ingress, nil, path)
+	return c.handlePath(namespace, ingress, &IngressRule{}, path)
 }

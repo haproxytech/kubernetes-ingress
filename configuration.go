@@ -34,20 +34,21 @@ type NamespacesWatch struct {
 }
 
 type Configuration struct {
-	Namespace             map[string]*Namespace
-	NamespacesAccess      NamespacesWatch
-	ConfigMap             *ConfigMap
-	ConfigMapTCPServices  *ConfigMap
-	NativeAPI             *clientnative.HAProxyClient
-	SSLRedirect           string
-	RateLimitingEnabled   bool
-	HTTPRequests          map[string][]models.HTTPRequestRule
-	HTTPRequestsStatus    Status
-	TCPRequests           map[string][]models.TCPRequestRule
-	TCPRequestsStatus     Status
-	UseBackendRules       map[string]BackendSwitchingRule
-	UseBackendRulesStatus Status
-	TCPBackends           map[string]int64
+	Namespace            map[string]*Namespace
+	NamespacesAccess     NamespacesWatch
+	ConfigMap            *ConfigMap
+	ConfigMapTCPServices *ConfigMap
+	NativeAPI            *clientnative.HAProxyClient
+	SSLRedirect          string
+	RateLimitingEnabled  bool
+	HTTPRequests         map[string][]models.HTTPRequestRule
+	HTTPRequestsStatus   Status
+	TCPRequests          map[string][]models.TCPRequestRule
+	TCPRequestsStatus    Status
+	UseBackendRules      map[Mode]*BackendSwitching
+	TCPBackends          map[string]int64
+	HTTPS                bool
+	SSLPassthrough       bool
 }
 
 func (c *Configuration) IsRelevantNamespace(namespace string) bool {
@@ -91,8 +92,12 @@ func (c *Configuration) Init(osArgs OSArgs, api *clientnative.HAProxyClient) {
 
 	c.HTTPRequests[HTTP_REDIRECT] = []models.HTTPRequestRule{}
 
-	c.UseBackendRules = map[string]BackendSwitchingRule{}
-	c.UseBackendRulesStatus = EMPTY
+	c.UseBackendRules = make(map[Mode]*BackendSwitching)
+	for _, mode := range []Mode{ModeHTTP, ModeTCP} {
+		c.UseBackendRules[mode] = &BackendSwitching{}
+		c.UseBackendRules[mode].Modified = false
+		c.UseBackendRules[mode].Rules = map[string]BackendSwitchingRule{}
+	}
 
 	c.TCPBackends = map[string]int64{}
 }
@@ -219,6 +224,7 @@ func (c *Configuration) Clean() {
 	}
 	c.HTTPRequestsStatus = EMPTY
 	c.TCPRequestsStatus = EMPTY
-	c.UseBackendRulesStatus = EMPTY
+	c.UseBackendRules[ModeTCP].Modified = false
+	c.UseBackendRules[ModeHTTP].Modified = false
 	defaultAnnotationValues.Clean()
 }

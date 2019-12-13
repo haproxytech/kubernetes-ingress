@@ -175,6 +175,27 @@ func (c *HAProxyController) handleServerAnnotations(ingress *Ingress, service *S
 	return annnotationsActive
 }
 
+func (c *HAProxyController) handleSSLPassthrough(ingress *Ingress, service *Service, path *IngressPath, backendName string) {
+	annSSLPassthrough, _ := GetValueFromAnnotations("ssl-passthrough", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
+	if annSSLPassthrough.Status != EMPTY || path.Status != EMPTY {
+		backend, err := c.backendGet(backendName)
+		if annSSLPassthrough.Value == "enabled" {
+			path.IsSSLPassthrough = true
+		} else {
+			path.IsSSLPassthrough = false
+		}
+		if err == nil {
+			if path.IsSSLPassthrough {
+				backend.Mode = "tcp"
+			} else {
+				backend.Mode = "http"
+			}
+			LogErr(c.backendEdit(backend))
+		}
+		path.Status = MODIFIED
+	}
+}
+
 func (c *HAProxyController) handleRateLimitingAnnotations(ingress *Ingress, service *Service, path *IngressPath) {
 	//Annotations with default values don't need error checking.
 	annWhitelist, _ := GetValueFromAnnotations("whitelist", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)

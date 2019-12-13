@@ -27,6 +27,7 @@ Options for starting controller can be found in [controller.md](controller.md)
 | [rate-limit-size](#rate-limit) | string | "100k" | [rate-limit](#rate-limit) |:large_blue_circle:|:white_circle:|:white_circle:|
 | [servers-increment](#servers-slots-increment) | number | "42" |  |:large_blue_circle:|:white_circle:|:white_circle:|
 | [ssl-certificate](#tls-secret) | string |  |  |:large_blue_circle:|:white_circle:|:white_circle:|
+| [ssl-passthrough](#https) | ["enabled", "disabled"] | "disabled" |  |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:|
 | [ssl-redirect](#https) | "ON"/"OFF" | "ON" | [tls-secret](#tls-secret) |:large_blue_circle:|:white_circle:|:white_circle:|
 | [ssl-redirect-code](#https) | [301, 302, 303] | "302" | [tls-secret](#tls-secret) |:large_blue_circle:|:white_circle:|:white_circle:|
 | [syslog-server](#logging) | [syslog](#syslog-fields) | "address:127.0.0.1, facility: local0, level: notice" |  |:large_blue_circle:|:white_circle:|:white_circle:|
@@ -72,13 +73,18 @@ Options for starting controller can be found in [controller.md](controller.md)
 
 #### Https
 
+- HAProxy will decrypt/offload HTTPS traffic if certificates are defined.
+- Certificate can be defined in Ingress object: `spec.tls[].secretName`. Please see [tls-secret](#tls-secret) for format
+- Annotation `ssl-passthrough`
+  - by default ssl-passthrough is disabled.
+	- Make HAProxy send TLS traffic directly to the backend instead of offloading it.
+	- Traffic is proxied in TCP mode which makes unavailable a number of the controller annotations (requiring HTTP mode).
 - Annotation `ssl-redirect`
   - by default this is activated if tls key is provided
   - redirects http trafic to https
   - default `ON`, can be set to "OFF" to disable
 - Annotation `ssl-redirect-code`
   - HTTP status code on redirect
-- Certificate can be defined in Ingress object: `spec.tls[].secretName`. Please see [tls-secret](#tls-secret) for format
 
 #### Maximum Concurent Connections
 

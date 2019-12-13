@@ -127,6 +127,18 @@ func (c *HAProxyController) frontendBindEdit(frontend string, bind models.Bind) 
 	return c.NativeAPI.Configuration.EditBind(bind.Name, frontend, &bind, c.ActiveTransaction, 0)
 }
 
+func (c *HAProxyController) frontendBindDeleteAll(frontend string) error {
+	c.ActiveTransactionHasChanges = true
+	binds, _ := c.frontendBindsGet(frontend)
+	for _, bind := range binds {
+		err := c.NativeAPI.Configuration.DeleteBind(bind.Name, frontend, c.ActiveTransaction, 0)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (c *HAProxyController) frontendACLAdd(frontend string, acl models.ACL) error {
 	c.ActiveTransactionHasChanges = true
 	return c.NativeAPI.Configuration.CreateACL("frontend", frontend, &acl, c.ActiveTransaction, 0)

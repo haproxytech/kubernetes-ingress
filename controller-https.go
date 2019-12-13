@@ -145,10 +145,6 @@ func (c *HAProxyController) handleDefaultCertificate(certs map[string]struct{}) 
 				reloadRequested = c.handleSecret(Ingress{
 					Name: "DEFAULT_CERT",
 				}, *secret, writeSecret, certs)
-				c.UseHTTPS = BoolW{
-					Value:  true,
-					Status: MODIFIED,
-				}
 				return reloadRequested
 			}
 		}
@@ -188,57 +184,183 @@ func (c *HAProxyController) handleTLSSecret(ingress Ingress, tls IngressTLS, cer
 	if secret.Status == DELETED {
 		writeSecret = false
 	}
-	reloadRequested = c.handleSecret(ingress, *secret, writeSecret, certs)
-	if reloadRequested {
-		c.UseHTTPS = BoolW{
-			Value:  true,
-			Status: MODIFIED,
-		}
-		return true
-	}
-	return false
+	return c.handleSecret(ingress, *secret, writeSecret, certs)
 }
 
-func (c *HAProxyController) initHTTPS() {
-	port := int64(443)
-	listenerV4 := models.Bind{
-		Address: "0.0.0.0",
-		Alpn:    "h2,http/1.1",
-		Port:    &port,
-		Name:    "bind_1",
-		//Ssl:     true,
-		//SslCertificate: HAProxyCertDir,
-	}
-	listenerV4v6 := models.Bind{
-		Address: "::",
-		Alpn:    "h2,http/1.1",
-		Port:    &port,
-		Name:    "bind_2",
-		V4v6:    true,
-		//Ssl:     true,
-		//SslCertificate: HAProxyCertDir,
-	}
-	for _, listener := range []models.Bind{listenerV4, listenerV4v6} {
-		if err := c.frontendBindCreate(FrontendHTTPS, listener); err != nil {
-			if strings.Contains(err.Error(), "already exists") {
-				if err = c.frontendBindEdit(FrontendHTTPS, listener); err != nil {
-					return
-				}
-			} else {
-				return
-			}
-		} else {
-			LogErr(err)
+func (c *HAProxyController) handleHTTPS(usedCerts map[string]struct{}) (reloadRequested bool) {
+	// ssl-passthrough
+	if len(c.cfg.UseBackendRules[ModeTCP].Rules) > 0 {
+		if !c.cfg.SSLPassthrough {
+			PanicErr(c.enableSSLPassthrough())
+			c.cfg.SSLPassthrough = true
+			reloadRequested = true
 		}
+	} else if c.cfg.SSLPassthrough {
+		PanicErr(c.disableSSLPassthrough())
+		c.cfg.SSLPassthrough = false
+		reloadRequested = true
 	}
+	// ssl-offload
+	if len(usedCerts) > 0 {
+		if !c.cfg.HTTPS {
+			PanicErr(c.enableSSLOffload())
+			c.cfg.HTTPS = true
+			reloadRequested = true
+		}
+	} else if c.cfg.HTTPS {
+		PanicErr(c.disableSSLOffload())
+		c.cfg.HTTPS = false
+		reloadRequested = true
+	}
+	//remove certs that are not needed
+	LogErr(c.cleanCertDir(usedCerts))
+
+	return reloadRequested
 }
 
-func (c *HAProxyController) enableCerts() {
+func (c *HAProxyController) enableSSLOffload() (err error) {
 	binds, _ := c.frontendBindsGet(FrontendHTTPS)
 	for _, bind := range binds {
 		bind.Ssl = true
 		bind.SslCertificate = HAProxyCertDir
-		err := c.frontendBindEdit(FrontendHTTPS, *bind)
-		LogErr(err)
+		bind.Alpn = "h2,http/1.1"
+		err = c.frontendBindEdit(FrontendHTTPS, *bind)
 	}
+	if err != nil {
+		return err
+	}
+	return err
+}
+
+func (c *HAProxyController) disableSSLOffload() (err error) {
+	binds, _ := c.frontendBindsGet(FrontendHTTPS)
+	for _, bind := range binds {
+		bind.Ssl = false
+		bind.SslCertificate = ""
+		bind.Alpn = ""
+		err = c.frontendBindEdit(FrontendHTTPS, *bind)
+	}
+	if err != nil {
+		return err
+	}
+	return err
+}
+
+func (c *HAProxyController) enableSSLPassthrough() (err error) {
+	// Create TCP frontend for ssl-passthrough
+	backendHTTPS := "https"
+	frontend := models.Frontend{
+		Name:           FrontendSSL,
+		Mode:           "tcp",
+		Tcplog:         true,
+		DefaultBackend: backendHTTPS,
+	}
+	err = c.frontendCreate(frontend)
+	if err != nil {
+		return err
+	}
+	err = c.frontendBindCreate(FrontendSSL, models.Bind{
+		Address: "0.0.0.0:443",
+		Name:    "bind_1",
+	})
+	if err != nil {
+		return err
+	}
+	err = c.frontendBindCreate(FrontendSSL, models.Bind{
+		Address: ":::443",
+		Name:    "bind_2",
+		V4v6:    true,
+	})
+	if err != nil {
+		return err
+	}
+	err = c.frontendTCPRequestRuleCreate(FrontendSSL, models.TCPRequestRule{
+		ID:      ptrInt64(0),
+		Type:    "inspect-delay",
+		Timeout: ptrInt64(5000),
+	})
+	if err != nil {
+		return err
+	}
+	err = c.frontendTCPRequestRuleCreate(FrontendSSL, models.TCPRequestRule{
+		ID:       ptrInt64(0),
+		Action:   "accept",
+		Type:     "content",
+		Cond:     "if",
+		CondTest: "{ req_ssl_hello_type 1 }",
+	})
+	if err != nil {
+		return err
+	}
+	// Create backend for proxy chaining (chaining
+	// ssl-passthrough frontend to ssl-offload backend)
+	err = c.backendCreate(models.Backend{
+		Name: backendHTTPS,
+		Mode: "tcp",
+	})
+	if err != nil {
+		return err
+	}
+	c.cfg.TCPBackends[backendHTTPS] = 0
+	err = c.backendServerCreate(backendHTTPS, models.Server{
+		Name:    FrontendHTTPS,
+		Address: "127.0.0.1:8443",
+	})
+	if err != nil {
+		return err
+	}
+
+	// Update HTTPS backend to listen for connections from FrontendSSL
+	err = c.frontendBindDeleteAll(FrontendHTTPS)
+	if err != nil {
+		return err
+	}
+	err = c.frontendBindCreate(FrontendHTTPS, models.Bind{
+		Address: "127.0.0.1:8443",
+		Name:    "bind_1",
+	})
+	return err
+}
+
+func (c *HAProxyController) disableSSLPassthrough() (err error) {
+	var ssl bool
+	var sslCertificate string
+	var alpn string
+	backendHTTPS := "https"
+	err = c.frontendDelete(FrontendSSL)
+	if err != nil {
+		return err
+	}
+	err = c.backendDelete(backendHTTPS)
+	if err != nil {
+		return err
+	}
+	if c.cfg.HTTPS {
+		ssl = true
+		sslCertificate = HAProxyCertDir
+		alpn = "h2,http/1.1"
+	} else {
+		ssl = false
+		sslCertificate = ""
+		alpn = ""
+	}
+	err = c.frontendBindEdit(FrontendHTTPS, models.Bind{
+		Address:        "0.0.0.0:443",
+		Name:           "bind_1",
+		Ssl:            ssl,
+		SslCertificate: sslCertificate,
+		Alpn:           alpn,
+	})
+	if err != nil {
+		return err
+	}
+	err = c.frontendBindCreate(FrontendHTTPS, models.Bind{
+		Address:        ":::443",
+		Name:           "bind_2",
+		V4v6:           true,
+		Ssl:            ssl,
+		SslCertificate: sslCertificate,
+		Alpn:           alpn,
+	})
+	return err
 }

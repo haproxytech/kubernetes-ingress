@@ -85,6 +85,7 @@ type IngressPath struct {
 	Path              string
 	PathIndex         int
 	IsTCPPath         bool
+	IsSSLPassthrough  bool
 	IsDefaultPath     bool
 	Status            Status
 }

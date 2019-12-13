@@ -37,7 +37,6 @@ type HAProxyController struct {
 	NativeAPI                   *clientnative.HAProxyClient
 	ActiveTransaction           string
 	ActiveTransactionHasChanges bool
-	UseHTTPS                    BoolW
 	eventChan                   chan SyncDataEvent
 	serverlessPods              map[string]int
 }
@@ -132,13 +131,6 @@ func (c *HAProxyController) HAProxyInitialize() {
 
 	c.cfg.Init(c.osArgs, c.NativeAPI)
 
-	err = c.apiStartTransaction()
-	PanicErr(err)
-	defer c.apiDisposeTransaction()
-	c.initHTTPS()
-
-	err = c.apiCommitTransaction()
-	PanicErr(err)
 }
 
 func (c *HAProxyController) ActiveConfiguration() (*parser.Parser, error) {
@@ -290,30 +282,33 @@ func (c *HAProxyController) handleService(namespace *Namespace, ingress *Ingress
 	} else {
 		backendName = fmt.Sprintf("%s-%s-%d", namespace.Name, service.Name, path.ServicePortInt)
 	}
-	// Default backend
-	if path.IsDefaultPath && service.Status != EMPTY {
-		var http models.Frontend
-		var https models.Frontend
-		http, err = c.frontendGet(FrontendHTTP)
-		LogErr(err)
-		http.DefaultBackend = backendName
-		err = c.frontendEdit(http)
-		LogErr(err)
-		https, err = c.frontendGet(FrontendHTTPS)
-		LogErr(err)
-		https.DefaultBackend = backendName
-		err = c.frontendEdit(https)
-		LogErr(err)
-		needReload = true
-	}
-	if path.IsTCPPath {
+
+	if path.IsDefaultPath { // Default Backend
+		if service.Status != EMPTY {
+			var http models.Frontend
+			var https models.Frontend
+			http, err = c.frontendGet(FrontendHTTP)
+			LogErr(err)
+			http.DefaultBackend = backendName
+			err = c.frontendEdit(http)
+			LogErr(err)
+			https, err = c.frontendGet(FrontendHTTPS)
+			LogErr(err)
+			https.DefaultBackend = backendName
+			err = c.frontendEdit(https)
+			LogErr(err)
+			needReload = true
+		}
+	} else if path.IsTCPPath { // TCP Service
 		c.cfg.TCPBackends[backendName] = path.ServicePortInt
+	} else {
+		c.handleSSLPassthrough(ingress, service, path, backendName)
 	}
 
-	// get Backend status
+	// Get Backend status
 	status := service.Status
 	if status == EMPTY {
-		if rule != nil && rule.Status == ADDED {
+		if rule.Status == ADDED {
 			//TODO: check why an ADEED rule.Status
 			// is not reflected for the path.Status
 			status = ADDED
@@ -332,7 +327,7 @@ func (c *HAProxyController) handleService(namespace *Namespace, ingress *Ingress
 				Name: backendName,
 				Mode: mode,
 			}
-			if path.IsTCPPath {
+			if path.IsTCPPath || path.IsSSLPassthrough {
 				backend.Mode = string(ModeTCP)
 			}
 			if err = c.backendCreate(backend); err != nil {
@@ -345,30 +340,47 @@ func (c *HAProxyController) handleService(namespace *Namespace, ingress *Ingress
 				needReload = true
 			}
 		}
-		// Update usebackend rule
-		if rule != nil && !path.IsTCPPath && !path.IsDefaultPath {
+		// Update usebackend rules
+		if !path.IsTCPPath && !path.IsDefaultPath {
+			var mode Mode
+			var modeBar Mode
+			if path.IsSSLPassthrough {
+				mode = ModeTCP
+				modeBar = ModeHTTP
+			} else {
+				mode = ModeHTTP
+				modeBar = ModeTCP
+			}
+			backendSwitching := c.cfg.UseBackendRules[mode]
 			key := fmt.Sprintf("R%s%s%s%0006s", namespace.Name, ingress.Name, rule.Host, path.Path)
-			old, ok := c.cfg.UseBackendRules[key]
+			old, ok := backendSwitching.Rules[key]
 			if ok {
 				// Check if the existing use_backend rule refers to the right backend
 				if old.Backend != backendName {
-					c.cfg.UseBackendRules[key] = BackendSwitchingRule{
+					backendSwitching.Rules[key] = BackendSwitchingRule{
 						Host:      rule.Host,
 						Path:      path.Path,
 						Backend:   backendName,
 						Namespace: namespace.Name,
 					}
-					c.cfg.UseBackendRulesStatus = MODIFIED
+					backendSwitching.Modified = true
 				}
 			} else {
-				c.cfg.UseBackendRules[key] = BackendSwitchingRule{
+				backendSwitching.Rules[key] = BackendSwitchingRule{
 					Host:      rule.Host,
 					Path:      path.Path,
 					Backend:   backendName,
 					Namespace: namespace.Name,
 				}
-				c.cfg.UseBackendRulesStatus = MODIFIED
+				backendSwitching.Modified = true
 			}
+			backendSwitchingBar := c.cfg.UseBackendRules[modeBar]
+			_, ok = backendSwitchingBar.Rules[key]
+			if ok {
+				delete(backendSwitchingBar.Rules, fmt.Sprintf("R%s%s%s%0006s", namespace.Name, ingress.Name, rule.Host, path.Path))
+				backendSwitchingBar.Modified = true
+			}
+
 		}
 	case DELETED:
 		// Backend will be cleaned up with useBackendRuleRefresh

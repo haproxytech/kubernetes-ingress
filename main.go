@@ -27,6 +27,7 @@ import (
 const (
 	FrontendHTTP   = "http"
 	FrontendHTTPS  = "https"
+	FrontendSSL    = "ssl"
 	TestFolderPath = "/tmp/haproxy-ingress/"
 	LogTypeShort   = log.LstdFlags
 	LogType        = log.LstdFlags | log.Lshortfile
