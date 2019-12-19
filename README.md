@@ -26,6 +26,10 @@ Basic setup to to run controller is described in [yaml](https://github.com/hapro
 kubectl apply -f deploy/haproxy-ingress.yaml
 ```
 
+### HAProxy Helm Charts
+
+Official HAProxy Technologies Helm Charts for deploying on [Kubernetes](https://kubernetes.io/) are available in [haproxytech/helm-charts](https://github.com/haproxytech/helm-charts) repository
+
 ### Contributing
 
 For commit messages and general style please follow the haproxy project's [CONTRIBUTING guide](https://github.com/haproxy/haproxy/blob/master/CONTRIBUTING) and use that where applicable.
