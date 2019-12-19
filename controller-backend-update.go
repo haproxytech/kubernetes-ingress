@@ -16,6 +16,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"strings"
 
 	"github.com/haproxytech/models"
@@ -45,6 +46,13 @@ func (b *backend) updateCheckTimeout(data *StringW) error {
 }
 
 func (b *backend) updateForwardfor(data *StringW) error {
+	if b.Mode == string(ModeTCP) {
+		if data.Status != EMPTY {
+			log.Printf("'option forwardfor' ignored for backend '%s' as it requires HTTP mode", b.Name)
+		}
+		b.Forwardfor = nil
+		return nil
+	}
 	val := &models.Forwardfor{
 		Enabled: &data.Value,
 	}
