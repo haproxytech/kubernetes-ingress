@@ -109,7 +109,9 @@ func (c *HAProxyController) HAProxyInitialize() {
 	log.Println("Running on", hostname)
 
 	runtimeClient := runtime.Client{}
-	err = runtimeClient.Init([]string{"/var/run/haproxy-runtime-api.sock"}, "", 0)
+	err = runtimeClient.InitWithSockets(map[int]string{
+		0: "/var/run/haproxy-runtime-api.sock",
+	})
 	if err != nil {
 		log.Panicln(err)
 	}
@@ -283,7 +285,8 @@ func (c *HAProxyController) handleService(namespace *Namespace, ingress *Ingress
 		backendName = fmt.Sprintf("%s-%s-%d", namespace.Name, service.Name, path.ServicePortInt)
 	}
 
-	if path.IsDefaultPath { // Default Backend
+	switch {
+	case path.IsDefaultPath: // Default Backend
 		if service.Status != EMPTY {
 			var http models.Frontend
 			var https models.Frontend
@@ -299,9 +302,9 @@ func (c *HAProxyController) handleService(namespace *Namespace, ingress *Ingress
 			LogErr(err)
 			needReload = true
 		}
-	} else if path.IsTCPPath { // TCP Service
+	case path.IsTCPPath: // TCP Service
 		c.cfg.TCPBackends[backendName] = path.ServicePortInt
-	} else {
+	default:
 		c.handleSSLPassthrough(ingress, service, path, backendName)
 	}
 
@@ -352,7 +355,7 @@ func (c *HAProxyController) handleService(namespace *Namespace, ingress *Ingress
 				modeBar = ModeTCP
 			}
 			backendSwitching := c.cfg.UseBackendRules[mode]
-			key := fmt.Sprintf("R%s%s%s%0006s", namespace.Name, ingress.Name, rule.Host, path.Path)
+			key := fmt.Sprintf("R%s%s%s%s", namespace.Name, ingress.Name, rule.Host, path.Path)
 			old, ok := backendSwitching.Rules[key]
 			if ok {
 				// Check if the existing use_backend rule refers to the right backend
@@ -377,7 +380,7 @@ func (c *HAProxyController) handleService(namespace *Namespace, ingress *Ingress
 			backendSwitchingBar := c.cfg.UseBackendRules[modeBar]
 			_, ok = backendSwitchingBar.Rules[key]
 			if ok {
-				delete(backendSwitchingBar.Rules, fmt.Sprintf("R%s%s%s%0006s", namespace.Name, ingress.Name, rule.Host, path.Path))
+				delete(backendSwitchingBar.Rules, fmt.Sprintf("R%s%s%s%s", namespace.Name, ingress.Name, rule.Host, path.Path))
 				backendSwitchingBar.Modified = true
 			}
 

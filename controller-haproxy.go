@@ -72,10 +72,10 @@ func (c *HAProxyController) updateHAProxy() error {
 				for _, path := range rule.Paths {
 					if path.Status == DELETED {
 						if path.IsSSLPassthrough {
-							delete(c.cfg.UseBackendRules[ModeTCP].Rules, fmt.Sprintf("R%s%s%s%0006s", namespace.Name, ingress.Name, rule.Host, path.Path))
+							delete(c.cfg.UseBackendRules[ModeTCP].Rules, fmt.Sprintf("R%s%s%s%s", namespace.Name, ingress.Name, rule.Host, path.Path))
 							c.cfg.UseBackendRules[ModeTCP].Modified = true
 						} else {
-							delete(c.cfg.UseBackendRules[ModeHTTP].Rules, fmt.Sprintf("R%s%s%s%0006s", namespace.Name, ingress.Name, rule.Host, path.Path))
+							delete(c.cfg.UseBackendRules[ModeHTTP].Rules, fmt.Sprintf("R%s%s%s%s", namespace.Name, ingress.Name, rule.Host, path.Path))
 							c.cfg.UseBackendRules[ModeHTTP].Modified = true
 						}
 					} else {
