@@ -127,7 +127,7 @@ spec:
 
 ---
 apiVersion: apps/v1
-kind: Deployment
+kind: DaemonSet
 metadata:
   labels:
     run: haproxy-ingress
@@ -161,10 +161,13 @@ spec:
         ports:
         - name: http
           containerPort: 80
+          hostPort: 80
         - name: https
           containerPort: 443
+          hostPort: 443
         - name: stat
           containerPort: 1024
+          hostPort: 1024
         env:
         - name: POD_NAME
           valueFrom:
