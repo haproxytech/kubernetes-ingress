@@ -20,7 +20,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/haproxytech/client-native/misc"
 	parser "github.com/haproxytech/config-parser/v2"
 	"github.com/haproxytech/config-parser/v2/types"
 	"github.com/haproxytech/models"
@@ -74,103 +73,114 @@ func (c *HAProxyController) handleDefaultTimeout(timeout string, hasDefault bool
 }
 
 // Update backend with annotations values.
-// Deleted annotations should be handled explicitly when there is no defualt value.
 func (c *HAProxyController) handleBackendAnnotations(ingress *Ingress, service *Service, backendName string, newBackend bool) (needReload bool, err error) {
 	needReload = false
 	model, _ := c.backendGet(backendName)
-	backend := backend(model)
-	backendAnnotations := make(map[string]*StringW, 3)
-	backendAnnotations["annBalanceAlg"], _ = GetValueFromAnnotations("load-balance", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
-	backendAnnotations["annCheckHttp"], _ = GetValueFromAnnotations("check-http", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
-	backendAnnotations["annForwardedFor"], _ = GetValueFromAnnotations("forwarded-for", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
-	backendAnnotations["annTimeoutCheck"], _ = GetValueFromAnnotations("timeout-check", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
-	backendAnnotations["annAbortOnClose"], _ = GetValueFromAnnotations("abortonclose", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
+	backend := Backend(model)
+	backendAnnotations := make(map[string]*StringW, 4)
 
+	backendAnnotations["abortonclose"], _ = GetValueFromAnnotations("abortonclose", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
+	backendAnnotations["check-http"], _ = GetValueFromAnnotations("check-http", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
+	backendAnnotations["forwarded-for"], _ = GetValueFromAnnotations("forwarded-for", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
+	backendAnnotations["load-balance"], _ = GetValueFromAnnotations("load-balance", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
+	backendAnnotations["timeout-check"], _ = GetValueFromAnnotations("timeout-check", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
+
+	// The DELETED status of an annotation is handled explicitly
+	// only when there is no default annotation value.
 	for k, v := range backendAnnotations {
 		if v == nil {
 			continue
 		}
 		if v.Status != EMPTY || newBackend {
 			switch k {
-			case "annBalanceAlg":
-				if err := backend.updateBalance(v); err != nil {
-					LogErr(err)
-					continue
-				}
-				needReload = true
-			case "annCheckHttp":
-				if v.Status == DELETED && !newBackend {
-					backend.Httpchk = nil
-				} else if err := backend.updateHttpchk(v); err != nil {
-					LogErr(err)
-					continue
-				}
-				needReload = true
-			case "annForwardedFor":
-				if err := backend.updateForwardfor(v); err != nil {
-					LogErr(err)
-					continue
-				}
-				needReload = true
-			case "annTimeoutCheck":
-				if v.Status == DELETED && !newBackend {
-					backend.CheckTimeout = nil
-				} else if err := backend.updateCheckTimeout(v); err != nil {
-					LogErr(err)
-					continue
-				}
-				needReload = true
-			case "annAbortOnClose":
+			case "abortonclose":
 				if err := backend.updateAbortOnClose(v); err != nil {
 					LogErr(err)
 					continue
 				}
+				needReload = true
+			case "check-http":
+				if v.Status == DELETED && !newBackend {
+					backend.Httpchk = nil
+				} else if err := backend.updateHttpchk(v); err != nil {
+					LogErr(fmt.Errorf("%s annotation: %s", k, err))
+					continue
+				}
+				needReload = true
+			case "forwarded-for":
+				if err := backend.updateForwardfor(v); err != nil {
+					LogErr(fmt.Errorf("%s annotation: %s", k, err))
+					continue
+				}
+				needReload = true
+			case "load-balance":
+				if err := backend.updateBalance(v); err != nil {
+					LogErr(fmt.Errorf("%s annotation: %s", k, err))
+					continue
+				}
+				needReload = true
+			case "timeout-check":
+				if v.Status == DELETED && !newBackend {
+					backend.CheckTimeout = nil
+				} else if err := backend.updateCheckTimeout(v); err != nil {
+					LogErr(fmt.Errorf("%s annotation: %s", k, err))
+					continue
+				}
+				needReload = true
 			}
 		}
 	}
-
 	if needReload {
 		if err := c.backendEdit(models.Backend(backend)); err != nil {
 			return needReload, err
 		}
 	}
 	return needReload, nil
+
 }
 
 // Update server with annotations values.
-func (c *HAProxyController) handleServerAnnotations(ingress *Ingress, service *Service, server *models.Server) (annnotationsActive bool) {
-	annMaxconn, errMaxConn := GetValueFromAnnotations("pod-maxconn", service.Annotations)
-	annCheck, _ := GetValueFromAnnotations("check", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
-	annCheckInterval, errCheckInterval := GetValueFromAnnotations("check-interval", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
+func (c *HAProxyController) handleServerAnnotations(ingress *Ingress, service *Service, model *models.Server) (annnotationsActive bool) {
 	annnotationsActive = false
-	if annMaxconn != nil {
-		if annMaxconn.Status != DELETED && errMaxConn == nil {
-			if maxconn, err := strconv.ParseInt(annMaxconn.Value, 10, 64); err == nil {
-				server.Maxconn = &maxconn
-			}
-			if annMaxconn.Status != "" {
+	server := Server(*model)
+
+	serverAnnotations := make(map[string]*StringW, 3)
+	serverAnnotations["check"], _ = GetValueFromAnnotations("check", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
+	serverAnnotations["check-interval"], _ = GetValueFromAnnotations("check-interval", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
+	serverAnnotations["pod-maxconn"], _ = GetValueFromAnnotations("pod-maxconn", service.Annotations)
+
+	// The DELETED status of an annotation is handled explicitly
+	// only when there is no default annotation value.
+	for k, v := range serverAnnotations {
+		if v == nil {
+			continue
+		}
+		if v.Status != EMPTY {
+			switch k {
+			case "check":
+				if err := server.updateCheck(v); err != nil {
+					LogErr(fmt.Errorf("%s annotation: %s", k, err))
+					continue
+				}
+				annnotationsActive = true
+			case "check-interval":
+				if v.Status == DELETED {
+					server.Inter = nil
+				} else if err := server.updateInter(v); err != nil {
+					LogErr(fmt.Errorf("%s annotation: %s", k, err))
+					continue
+				}
+				annnotationsActive = true
+			case "pod-maxconn":
+				if v.Status == DELETED {
+					server.Maxconn = nil
+				} else if err := server.updateMaxconn(v); err != nil {
+					LogErr(fmt.Errorf("%s annotation: %s", k, err))
+					continue
+				}
 				annnotationsActive = true
 			}
 		}
-	}
-	if annCheck != nil {
-		if annCheck.Status != DELETED {
-			if annCheck.Value == "enabled" {
-				server.Check = "enabled"
-				//see if we have port and interval defined
-			}
-		}
-		if annCheck.Status != "" {
-			annnotationsActive = true
-		}
-	}
-	if errCheckInterval == nil {
-		server.Inter = misc.ParseTimeout(annCheckInterval.Value)
-		if annCheckInterval.Status != EMPTY {
-			annnotationsActive = true
-		}
-	} else {
-		server.Inter = nil
 	}
 	return annnotationsActive
 }
@@ -178,8 +188,14 @@ func (c *HAProxyController) handleServerAnnotations(ingress *Ingress, service *S
 func (c *HAProxyController) handleSSLPassthrough(ingress *Ingress, service *Service, path *IngressPath, backendName string) {
 	annSSLPassthrough, _ := GetValueFromAnnotations("ssl-passthrough", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
 	if annSSLPassthrough.Status != EMPTY || path.Status != EMPTY {
+		enabled, err := GetBoolValue(annSSLPassthrough.Value, "ssl-passthrough")
+		if err != nil {
+			LogErr(err)
+			return
+		}
 		backend, err := c.backendGet(backendName)
-		if annSSLPassthrough.Value == "enabled" {
+
+		if enabled {
 			path.IsSSLPassthrough = true
 		} else {
 			path.IsSSLPassthrough = false
@@ -246,4 +262,21 @@ func (c *HAProxyController) handleRateLimitingAnnotations(ingress *Ingress, serv
 	case DELETED:
 		c.cfg.HTTPRequests[fmt.Sprintf("WHT-%s", path.Path)] = []models.HTTPRequestRule{}
 	}
+}
+
+func GetBoolValue(dataValue, dataName string) (result bool, err error) {
+	result, err = strconv.ParseBool(dataValue)
+	if err != nil {
+		switch strings.ToLower(dataValue) {
+		case "enabled", "on":
+			log.Println(fmt.Sprintf(`WARNING: %s - [%s] is DEPRECATED, use "true" or "false"`, dataName, dataValue))
+			result = true
+		case "disabled", "off":
+			log.Println(fmt.Sprintf(`WARNING: %s - [%s] is DEPRECATED, use "true" or "false"`, dataName, dataValue))
+			result = false
+		default:
+			return false, err
+		}
+	}
+	return result, nil
 }

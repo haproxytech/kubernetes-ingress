@@ -12,23 +12,23 @@ Options for starting controller can be found in [controller.md](controller.md)
 
 | Annotation | Type | Default | Dependencies | Config map | Ingress | Service |
 | - |:-:|:-:|:-:|:-:|:-:|:-:|
-| [check](#backend-checks) | ["enabled"] | "enabled" |  |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:|
+| [check](#backend-checks) | ["true", "false"] | "true" |  |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:|
 | [check-http](#backend-checks) | string |  | [check](#backend-checks) |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:|
 | [check-interval](#backend-checks) | [time](#time) |  | [check](#backend-checks) |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:|
-| [forwarded-for](#x-forwarded-for) | ["enabled", "disabled"] | "enabled" |  |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:|
+| [forwarded-for](#x-forwarded-for) | ["true", "false"] | "true" |  |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:|
 | [ingress.class](#ingress-class) | string | "" |  |:white_circle:|:large_blue_circle:|:white_circle:|
 | [load-balance](#balance-algorithm) | string | "roundrobin" |  |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:|
 | [maxconn](#maximum-concurent-connections) | number |  |  |:large_blue_circle:|:white_circle:|:white_circle:|
 | [nbthread](#number-of-threads) | number | |  |:large_blue_circle:|:white_circle:|:white_circle:|
 | [pod-maxconn](#maximum-concurent-backend-connections) | number |  |  |:white_circle:|:white_circle:|:large_blue_circle:|
-| [rate-limit](#rate-limit) | "ON"/"OFF" | "OFF" |  |:large_blue_circle:|:white_circle:|:white_circle:|
+| [rate-limit](#rate-limit) | "true"/"false" | "false" |  |:large_blue_circle:|:white_circle:|:white_circle:|
 | [rate-limit-expire](#rate-limit) | string | "30m" | [rate-limit](#rate-limit) |:large_blue_circle:|:white_circle:|:white_circle:|
 | [rate-limit-interval](#rate-limit) | string | "10s" | [rate-limit](#rate-limit) |:large_blue_circle:|:white_circle:|:white_circle:|
 | [rate-limit-size](#rate-limit) | string | "100k" | [rate-limit](#rate-limit) |:large_blue_circle:|:white_circle:|:white_circle:|
 | [servers-increment](#servers-slots-increment) | number | "42" |  |:large_blue_circle:|:white_circle:|:white_circle:|
 | [ssl-certificate](#tls-secret) | string |  |  |:large_blue_circle:|:white_circle:|:white_circle:|
-| [ssl-passthrough](#https) | ["enabled", "disabled"] | "disabled" |  |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:|
-| [ssl-redirect](#https) | "ON"/"OFF" | "ON" | [tls-secret](#tls-secret) |:large_blue_circle:|:white_circle:|:white_circle:|
+| [ssl-passthrough](#https) | ["true", "false"] | "false" |  |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:|
+| [ssl-redirect](#https) | "true"/"false" | "true" | [tls-secret](#tls-secret) |:large_blue_circle:|:white_circle:|:white_circle:|
 | [ssl-redirect-code](#https) | [301, 302, 303] | "302" | [tls-secret](#tls-secret) |:large_blue_circle:|:white_circle:|:white_circle:|
 | [syslog-server](#logging) | [syslog](#syslog-fields) | "address:127.0.0.1, facility: local0, level: notice" |  |:large_blue_circle:|:white_circle:|:white_circle:|
 | [timeout-http-request](#timeouts) | [time](#time) | "5s" |  |:large_blue_circle:|:white_circle:|:white_circle:|
@@ -40,7 +40,7 @@ Options for starting controller can be found in [controller.md](controller.md)
 | [timeout-tunnel](#timeouts) | [time](#time) | "1h" |  |:large_blue_circle:|:white_circle:|:white_circle:|
 | [timeout-http-keep-alive](#timeouts) | [time](#time) | "1m" |  |:large_blue_circle:|:white_circle:|:white_circle:|
 | [whitelist](#whitelist) | [IPs or CIDRs](#whitelist) | "" |  |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:|
-| [whitelist-with-rate-limit](#whitelist) | "ON"/"OFF" | "OFF" |  |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:|
+| [whitelist-with-rate-limit](#whitelist) | "true"/"false" | "false" |  |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:|
 
 > :information_source: Annotations have hierarchy: `default` <- `Configmap` <- `Ingress` <- `Service`
 >
@@ -58,11 +58,11 @@ Options for starting controller can be found in [controller.md](controller.md)
 #### Backend Checks
 
 - Annotation: `check` - activate pod check (tcp checks by default)
-- Annotation: [`check-http`](https://cbonte.github.io/haproxy-dconv/2.0/configuration.html#4-option%20httpchk) - Enable HTTP protocol to check on the pods health [`check` must be "enabled"]
+- Annotation: [`check-http`](https://cbonte.github.io/haproxy-dconv/2.0/configuration.html#4-option%20httpchk) - Enable HTTP protocol to check on the pods health [`check` must be "true"]
   - uri: `check-http: "/check"`
   - method uri: `check-http: "HEAD /"`
   - method uri version: `check-http: "HEAD / HTTP/1.1\r\nHost:\ www"`
-- Annotation: `check-interval` - interval between checks [`check` must be "enabled"]
+- Annotation: `check-interval` - interval between checks [`check` must be "true"]
 
 #### Ingress Class
 
@@ -82,7 +82,7 @@ Options for starting controller can be found in [controller.md](controller.md)
 - Annotation `ssl-redirect`
   - by default this is activated if tls key is provided
   - redirects http trafic to https
-  - default `ON`, can be set to "OFF" to disable
+  - default `true`, can be set to "false" to be disabled
 - Annotation `ssl-redirect-code`
   - HTTP status code on redirect
 
@@ -106,7 +106,7 @@ Keep in mind this setting is global and will applied to all your traffic.
 The number of requests a client can do per `rate-limit-interval` is **10**.
 
 - Annotation: `rate-limit`
-  - `ON` / `OFF` - enable or disable rate limiting
+  - `true` / `false` - enable or disable rate limiting
 - Annotation: `rate-limit-expire`
   - Table entries expire after `rate-limit-expire` of inactivity.
 - Annotation: `rate-limit-interval`

@@ -22,9 +22,18 @@ import (
 	"github.com/haproxytech/models"
 )
 
-type backend models.Backend
+type Backend models.Backend
 
-func (b *backend) updateBalance(data *StringW) error {
+func (b *Backend) updateAbortOnClose(data *StringW) error {
+	if data.Value == "enabled" {
+		b.Abortonclose = "enabled"
+	} else {
+		b.Abortonclose = ""
+	}
+	return nil
+}
+
+func (b *Backend) updateBalance(data *StringW) error {
 	//TODO Balance proper usage
 	val := &models.Balance{
 		Algorithm: &data.Value,
@@ -36,7 +45,7 @@ func (b *backend) updateBalance(data *StringW) error {
 	return nil
 }
 
-func (b *backend) updateCheckTimeout(data *StringW) error {
+func (b *Backend) updateCheckTimeout(data *StringW) error {
 	val, err := annotationConvertTimeToMS(*data)
 	if err != nil {
 		return fmt.Errorf("timeout check: %s", err)
@@ -45,7 +54,7 @@ func (b *backend) updateCheckTimeout(data *StringW) error {
 	return nil
 }
 
-func (b *backend) updateForwardfor(data *StringW) error {
+func (b *Backend) updateForwardfor(data *StringW) error {
 	if b.Mode == string(ModeTCP) {
 		if data.Status != EMPTY {
 			log.Printf("'option forwardfor' ignored for backend '%s' as it requires HTTP mode", b.Name)
@@ -53,17 +62,21 @@ func (b *backend) updateForwardfor(data *StringW) error {
 		b.Forwardfor = nil
 		return nil
 	}
-	val := &models.Forwardfor{
-		Enabled: &data.Value,
+	enabled, err := GetBoolValue(data.Value, "forwarded-for")
+	if err != nil {
+		return err
 	}
-	if err := val.Validate(nil); err != nil {
-		return fmt.Errorf("forwarded-for option: %s", err)
+	if enabled {
+		b.Forwardfor = &models.Forwardfor{
+			Enabled: ptrString("enabled"),
+		}
+	} else {
+		b.Forwardfor = nil
 	}
-	b.Forwardfor = val
 	return nil
 }
 
-func (b *backend) updateHttpchk(data *StringW) error {
+func (b *Backend) updateHttpchk(data *StringW) error {
 	var val *models.Httpchk
 	httpCheckParams := strings.Fields(strings.TrimSpace(data.Value))
 	switch len(httpCheckParams) {
@@ -89,14 +102,5 @@ func (b *backend) updateHttpchk(data *StringW) error {
 		return fmt.Errorf("httpchk option: %s", err)
 	}
 	b.Httpchk = val
-	return nil
-}
-
-func (b *backend) updateAbortOnClose(data *StringW) error {
-	if data.Value == "enabled" {
-		b.Abortonclose = "enabled"
-	} else {
-		b.Abortonclose = ""
-	}
 	return nil
 }

@@ -125,37 +125,32 @@ func (c *HAProxyController) removeHTTPSListeners() (err error) {
 func (c *HAProxyController) handleHTTPRedirect(usingHTTPS bool) (reloadRequested bool, err error) {
 	//see if we need to add redirect to https redirect scheme https if !{ ssl_fc }
 	// no need for error checking, we have default value,
-	//if not defined as OFF, we always do redirect
+	//if not defined as false, we always do redirect
 	reloadRequested = false
 	sslRedirect, _ := GetValueFromAnnotations("ssl-redirect", c.cfg.ConfigMap.Annotations)
-	useSSLRedirect := sslRedirect.Value != "OFF"
+	enabled, err := GetBoolValue(sslRedirect.Value, "ssl-redirect")
+	if err != nil {
+		return false, err
+	}
 	if !usingHTTPS {
-		useSSLRedirect = false
+		enabled = false
 	}
 	var state Status
-	if useSSLRedirect {
-		if c.cfg.SSLRedirect == "" {
-			c.cfg.SSLRedirect = "ON"
-			state = ADDED
-		} else if c.cfg.SSLRedirect == "OFF" {
-			c.cfg.SSLRedirect = "ON"
-			state = ADDED
+	if enabled {
+		if !c.cfg.SSLRedirect {
+			c.cfg.SSLRedirect = true
+			state = MODIFIED
 		}
-	} else {
-		if c.cfg.SSLRedirect == "" {
-			c.cfg.SSLRedirect = "OFF"
-			state = ""
-		} else if c.cfg.SSLRedirect != "OFF" {
-			c.cfg.SSLRedirect = "OFF"
-			state = DELETED
-		}
+	} else if c.cfg.SSLRedirect {
+		c.cfg.SSLRedirect = false
+		state = DELETED
 	}
 	redirectCode := int64(302)
 	annRedirectCode, _ := GetValueFromAnnotations("ssl-redirect-code", c.cfg.ConfigMap.Annotations)
 	if value, err := strconv.ParseInt(annRedirectCode.Value, 10, 64); err == nil {
 		redirectCode = value
 	}
-	if state == "" && annRedirectCode.Status != "" {
+	if annRedirectCode.Status != "" {
 		state = MODIFIED
 	}
 	id := int64(0)
@@ -169,11 +164,6 @@ func (c *HAProxyController) handleHTTPRedirect(usingHTTPS bool) (reloadRequested
 		CondTest:   "!{ ssl_fc }",
 	}
 	switch state {
-	case ADDED:
-		c.cfg.HTTPRequests[HTTP_REDIRECT] = []models.HTTPRequestRule{rule}
-		c.cfg.HTTPRequestsStatus = MODIFIED
-		c.cfg.SSLRedirect = "ON"
-		reloadRequested = true
 	case MODIFIED:
 		c.cfg.HTTPRequests[HTTP_REDIRECT] = []models.HTTPRequestRule{rule}
 		c.cfg.HTTPRequestsStatus = MODIFIED
@@ -181,7 +171,6 @@ func (c *HAProxyController) handleHTTPRedirect(usingHTTPS bool) (reloadRequested
 	case DELETED:
 		c.cfg.HTTPRequests[HTTP_REDIRECT] = []models.HTTPRequestRule{}
 		c.cfg.HTTPRequestsStatus = MODIFIED
-		c.cfg.SSLRedirect = "OFF"
 		reloadRequested = true
 	}
 	return reloadRequested, nil

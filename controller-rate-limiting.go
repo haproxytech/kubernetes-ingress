@@ -50,12 +50,16 @@ func (c *HAProxyController) handleRateLimiting(usingHTTPS bool) (needReload bool
 	rateLimitExpire := misc.ParseTimeout(annRateLimitExpire.Value)
 	rateLimitSize := misc.ParseSize(annRateLimitSize.Value)
 
+	enabled, err := GetBoolValue(annRateLimit.Value, "rate-limit")
+	if err != nil {
+		return false, err
+	}
 	status := annRateLimit.Status
 	if status == DELETED {
 		c.cfg.RateLimitingEnabled = false
 	}
 	if status == ADDED || status == MODIFIED {
-		if annRateLimit.Value != "OFF" {
+		if enabled {
 			c.cfg.RateLimitingEnabled = true
 		} else {
 			status = DELETED
@@ -148,7 +152,7 @@ func (c *HAProxyController) handleRateLimiting(usingHTTPS bool) (needReload bool
 
 	switch status {
 	case ADDED:
-		if annRateLimit.Value != "OFF" {
+		if enabled {
 			addRateLimiting()
 		} else {
 			removeRateLimiting()

@@ -39,7 +39,7 @@ type Configuration struct {
 	ConfigMap            *ConfigMap
 	ConfigMapTCPServices *ConfigMap
 	NativeAPI            *clientnative.HAProxyClient
-	SSLRedirect          string
+	SSLRedirect          bool
 	RateLimitingEnabled  bool
 	HTTPRequests         map[string][]models.HTTPRequestRule
 	HTTPRequestsStatus   Status
@@ -79,7 +79,7 @@ func (c *Configuration) Init(osArgs OSArgs, api *clientnative.HAProxyClient) {
 		c.NamespacesAccess.Blacklist[namespace] = struct{}{}
 	}
 	c.Namespace = make(map[string]*Namespace)
-	c.SSLRedirect = ""
+	c.SSLRedirect = false
 	c.NativeAPI = api
 
 	c.HTTPRequests = map[string][]models.HTTPRequestRule{}
