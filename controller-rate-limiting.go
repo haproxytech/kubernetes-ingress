@@ -78,27 +78,26 @@ func (c *HAProxyController) handleRateLimiting(usingHTTPS bool) (needReload bool
 		}
 	}
 
-	ID := int64(0)
 	tcpRequest1 := &models.TCPRequestRule{
-		ID:     &ID,
+		ID:     ptrInt64(0),
 		Type:   "connection",
 		Action: "track-sc0 src table RateLimit",
 	}
 	tcpRequest2 := &models.TCPRequestRule{
-		ID:       &ID,
+		ID:       ptrInt64(0),
 		Type:     "connection",
 		Action:   "reject",
 		Cond:     "if",
 		CondTest: ratelimitACL3.ACLName,
 	}
 	httpRequest1 := &models.HTTPRequestRule{
-		ID:       &ID,
+		ID:       ptrInt64(0),
 		Type:     "deny",
 		Cond:     "if",
 		CondTest: fmt.Sprintf("%s %s", ratelimitACL1.ACLName, ratelimitACL2.ACLName),
 	}
 	httpRequest2 := &models.HTTPRequestRule{
-		ID:       &ID,
+		ID:       ptrInt64(0),
 		Type:     "deny",
 		Cond:     "if",
 		CondTest: ratelimitACL3.ACLName,

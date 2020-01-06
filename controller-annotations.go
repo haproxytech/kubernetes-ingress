@@ -232,15 +232,14 @@ func (c *HAProxyController) handleRateLimitingAnnotations(ingress *Ingress, serv
 	switch status {
 	case ADDED, MODIFIED:
 		if annWhitelist.Value != "" {
-			ID := int64(0)
 			httpRequest1 := &models.HTTPRequestRule{
-				ID:       &ID,
+				ID:       ptrInt64(0),
 				Type:     "allow",
 				Cond:     "if",
 				CondTest: fmt.Sprintf("{ path_beg %s } { src %s }", path.Path, strings.Replace(annWhitelist.Value, ",", " ", -1)),
 			}
 			httpRequest2 := &models.HTTPRequestRule{
-				ID:       &ID,
+				ID:       ptrInt64(0),
 				Type:     "deny",
 				Cond:     "if",
 				CondTest: fmt.Sprintf("{ path_beg %s }", path.Path),

@@ -219,12 +219,11 @@ func (c *HAProxyController) handlePath(namespace *Namespace, ingress *Ingress, r
 // handleEndpointIP processes the IngressPath related endpoints and makes corresponding backend servers configuration in HAProxy
 func (c *HAProxyController) handleEndpointIP(namespace *Namespace, ingress *Ingress, rule *IngressRule, path *IngressPath, service *Service, backendName string, newBackend bool, endpoints *Endpoints, ip *EndpointIP) (needReload bool) {
 	needReload = false
-	weight := int64(128)
 	server := models.Server{
 		Name:    ip.HAProxyName,
 		Address: ip.IP,
 		Port:    &path.TargetPort,
-		Weight:  &weight,
+		Weight:  ptrInt64(128),
 	}
 	if ip.Disabled {
 		server.Maintenance = "enabled"

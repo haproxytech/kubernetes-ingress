@@ -153,9 +153,8 @@ func (c *HAProxyController) handleHTTPRedirect(usingHTTPS bool) (reloadRequested
 	if annRedirectCode.Status != "" {
 		state = MODIFIED
 	}
-	id := int64(0)
 	rule := models.HTTPRequestRule{
-		ID:         &id,
+		ID:         ptrInt64(0),
 		Type:       "redirect",
 		RedirCode:  redirectCode,
 		RedirValue: "https",
