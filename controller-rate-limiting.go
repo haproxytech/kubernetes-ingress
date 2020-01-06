@@ -47,7 +47,7 @@ func (c *HAProxyController) handleRateLimiting(usingHTTPS bool) (needReload bool
 	annRateLimitExpire, _ := GetValueFromAnnotations("rate-limit-expire", c.cfg.ConfigMap.Annotations)
 	annRateLimitInterval, _ := GetValueFromAnnotations("rate-limit-interval", c.cfg.ConfigMap.Annotations)
 	annRateLimitSize, _ := GetValueFromAnnotations("rate-limit-size", c.cfg.ConfigMap.Annotations)
-	rateLimitExpire := misc.ParseTimeout(annRateLimitExpire.Value)
+	rateLimitExpire, _ := ParseTime(annRateLimitExpire.Value)
 	rateLimitSize := misc.ParseSize(annRateLimitSize.Value)
 
 	enabled, err := GetBoolValue(annRateLimit.Value, "rate-limit")

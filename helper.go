@@ -120,7 +120,7 @@ func ptrString(value string) *string {
 	return &value
 }
 
-func ParseTimeout(data string) (int64, error) {
+func ParseTime(data string) (*int64, error) {
 	var v int64
 	var err error
 	switch {
@@ -141,10 +141,5 @@ func ParseTimeout(data string) (int64, error) {
 	default:
 		v, err = strconv.ParseInt(data, 10, 64)
 	}
-	return v, err
-}
-
-//annotationConvertToMS converts annotation time value to milisecon value
-func annotationConvertTimeToMS(data StringW) (int64, error) {
-	return ParseTimeout(data.Value)
+	return &v, err
 }
