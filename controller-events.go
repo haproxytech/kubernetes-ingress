@@ -328,7 +328,7 @@ func (c *HAProxyController) processEndpointIPs(data *Endpoints) (updateRequired 
 			updateRequired = true
 		case MODIFIED:
 			if data.BackendName != "" {
-				runtimeClient := c.cfg.NativeAPI.Runtime
+				runtimeClient := c.NativeAPI.Runtime
 				err := runtimeClient.SetServerAddr(data.BackendName, ip.HAProxyName, ip.IP, 0)
 				if err != nil {
 					log.Println(err)

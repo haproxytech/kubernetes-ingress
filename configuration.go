@@ -38,7 +38,6 @@ type Configuration struct {
 	NamespacesAccess     NamespacesWatch
 	ConfigMap            *ConfigMap
 	ConfigMapTCPServices *ConfigMap
-	NativeAPI            *clientnative.HAProxyClient
 	SSLRedirect          bool
 	RateLimitingEnabled  bool
 	HTTPRequests         map[string][]models.HTTPRequestRule
@@ -80,7 +79,6 @@ func (c *Configuration) Init(osArgs OSArgs, api *clientnative.HAProxyClient) {
 	}
 	c.Namespace = make(map[string]*Namespace)
 	c.SSLRedirect = false
-	c.NativeAPI = api
 
 	c.HTTPRequests = map[string][]models.HTTPRequestRule{}
 	c.HTTPRequests[RATE_LIMIT] = []models.HTTPRequestRule{}

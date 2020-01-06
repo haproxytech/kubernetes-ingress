@@ -34,7 +34,7 @@ func (c *HAProxyController) apiDisposeTransaction() {
 }
 
 func (c *HAProxyController) backendsGet() (models.Backends, error) {
-	_, backends, err := c.cfg.NativeAPI.Configuration.GetBackends(c.ActiveTransaction)
+	_, backends, err := c.NativeAPI.Configuration.GetBackends(c.ActiveTransaction)
 	return backends, err
 }
 
@@ -78,7 +78,7 @@ func (c *HAProxyController) backendServerDelete(backendName string, serverName s
 
 func (c *HAProxyController) backendSwitchingRuleCreate(frontend string, rule models.BackendSwitchingRule) error {
 	c.ActiveTransactionHasChanges = true
-	return c.cfg.NativeAPI.Configuration.CreateBackendSwitchingRule(frontend, &rule, c.ActiveTransaction, 0)
+	return c.NativeAPI.Configuration.CreateBackendSwitchingRule(frontend, &rule, c.ActiveTransaction, 0)
 }
 
 func (c *HAProxyController) backendSwitchingRuleDeleteAll(frontend string) {
