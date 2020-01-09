@@ -44,7 +44,7 @@ func (c *HAProxyController) cleanCertDir(usedCerts map[string]struct{}) error {
 	return nil
 }
 
-func (c *HAProxyController) writeCert(filename string, key []byte, crt []byte) error {
+func (c *HAProxyController) writeCert(filename string, key, crt []byte) error {
 	var f *os.File
 	var err error
 	if f, err = os.Create(filename); err != nil {
@@ -57,9 +57,12 @@ func (c *HAProxyController) writeCert(filename string, key []byte, crt []byte) e
 		return err
 	}
 	//Force writing a newline so that parsing does not barf
-	if _, err = f.WriteString("\n"); err != nil {
-		log.Println(err)
-		return err
+	if key[len(key)-1] != byte('\n') {
+		log.Println("Warning: secret key in", filename, "does not end with \\n, appending it to avoid mangling key and certificate")
+		if _, err = f.WriteString("\n"); err != nil {
+			log.Println(err)
+			return err
+		}
 	}
 	if _, err = f.Write(crt); err != nil {
 		log.Println(err)
