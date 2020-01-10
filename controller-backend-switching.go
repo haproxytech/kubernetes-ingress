@@ -67,12 +67,15 @@ func (c *HAProxyController) refreshBackendSwitching() (needsReload bool) {
 }
 
 func (c *HAProxyController) refreshHTTPBackendSwitching(activeBackends map[string]struct{}) (needsReload bool) {
-	if !c.cfg.UseBackendRules[ModeHTTP].Modified {
-		return false
-	}
 	frontends := []string{FrontendHTTP, FrontendHTTPS}
 
 	useBackendRules := c.cfg.UseBackendRules[ModeHTTP].Rules
+	if !c.cfg.UseBackendRules[ModeHTTP].Modified {
+		for _, rule := range useBackendRules {
+			activeBackends[rule.Backend] = struct{}{}
+		}
+		return false
+	}
 	sortedList := []string{}
 	for name := range useBackendRules {
 		sortedList = append(sortedList, name)
@@ -111,10 +114,6 @@ func (c *HAProxyController) refreshHTTPBackendSwitching(activeBackends map[strin
 
 //  Refresh use_backend rules of the SSL Frontend
 func (c *HAProxyController) refreshTCPBackendSwitching(activeBackends map[string]struct{}) (needsReload bool) {
-	if !c.cfg.UseBackendRules[ModeTCP].Modified {
-		return false
-	}
-
 	_, err := c.frontendGet(FrontendSSL)
 	if err != nil {
 		LogErr(err)
@@ -122,6 +121,12 @@ func (c *HAProxyController) refreshTCPBackendSwitching(activeBackends map[string
 	}
 
 	useBackendRules := c.cfg.UseBackendRules[ModeTCP].Rules
+	if !c.cfg.UseBackendRules[ModeTCP].Modified {
+		for _, rule := range useBackendRules {
+			activeBackends[rule.Backend] = struct{}{}
+		}
+		return false
+	}
 	sortedList := []string{}
 	for name := range useBackendRules {
 		sortedList = append(sortedList, name)
