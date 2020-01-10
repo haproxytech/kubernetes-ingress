@@ -15,10 +15,11 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"os"
-	"time"
+	"os/signal"
 
 	"github.com/jessevdk/go-flags"
 )
@@ -96,17 +97,18 @@ func main() {
 	log.Printf("Default backend service: %s\n", defaultAnnotationValues["default-backend-service"].Value)
 	log.Printf("Default ssl certificate: %s\n", defaultAnnotationValues["ssl-certificate"].Value)
 
+	ctx, cancel := context.WithCancel(context.Background())
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt)
+	go func() {
+		<-c
+		cancel()
+	}()
+
 	if osArgs.Test {
 		setupTestEnv()
 	}
 
 	hAProxyController := HAProxyController{}
-	hAProxyController.Start(osArgs)
-
-	//TODO wait channel
-	for {
-		//TODO don't do that
-		time.Sleep(60 * time.Hour)
-		//log.Println("sleeping")
-	}
+	hAProxyController.Start(ctx, osArgs)
 }

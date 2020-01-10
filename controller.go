@@ -15,6 +15,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"os"
@@ -42,7 +43,7 @@ type HAProxyController struct {
 }
 
 // Start initialize and run HAProxyController
-func (c *HAProxyController) Start(osArgs OSArgs) {
+func (c *HAProxyController) Start(ctx context.Context, osArgs OSArgs) {
 
 	c.osArgs = osArgs
 
@@ -71,6 +72,7 @@ func (c *HAProxyController) Start(osArgs OSArgs) {
 	c.serverlessPods = map[string]int{}
 	c.eventChan = make(chan SyncDataEvent, watch.DefaultChanSize*6)
 	go c.monitorChanges()
+	<-ctx.Done()
 }
 
 //HAProxyInitialize runs HAProxy for the first time so native client can have access to it
