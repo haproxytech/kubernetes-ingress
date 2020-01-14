@@ -197,7 +197,7 @@ func (c *HAProxyController) handleTLSSecret(ingress Ingress, tls IngressTLS, cer
 
 func (c *HAProxyController) handleHTTPS(usedCerts map[string]struct{}) (reloadRequested bool) {
 	// ssl-passthrough
-	if len(c.cfg.UseBackendRules[ModeTCP].Rules) > 0 {
+	if len(c.cfg.BackendSwitchingRules[FrontendSSL]) > 0 {
 		if !c.cfg.SSLPassthrough {
 			PanicErr(c.enableSSLPassthrough())
 			c.cfg.SSLPassthrough = true
@@ -309,7 +309,6 @@ func (c *HAProxyController) enableSSLPassthrough() (err error) {
 	if err != nil {
 		return err
 	}
-	c.cfg.TCPBackends[backendHTTPS] = 0
 	err = c.backendServerCreate(backendHTTPS, models.Server{
 		Name:    FrontendHTTPS,
 		Address: "127.0.0.1:8443",

@@ -99,6 +99,11 @@ func (c *HAProxyController) frontendDelete(frontendName string) error {
 	return c.NativeAPI.Configuration.DeleteFrontend(frontendName, c.ActiveTransaction, 0)
 }
 
+func (c *HAProxyController) frontendsGet() (models.Frontends, error) {
+	_, frontends, err := c.NativeAPI.Configuration.GetFrontends(c.ActiveTransaction)
+	return frontends, err
+}
+
 func (c *HAProxyController) frontendGet(frontendName string) (models.Frontend, error) {
 	_, frontend, err := c.NativeAPI.Configuration.GetFrontend(frontendName, c.ActiveTransaction)
 	if err != nil {

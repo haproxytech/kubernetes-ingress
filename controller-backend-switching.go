@@ -22,132 +22,111 @@ import (
 	"github.com/haproxytech/models"
 )
 
-type BackendSwitching struct {
-	Modified bool
-	Rules    map[string]BackendSwitchingRule
-}
-type BackendSwitchingRule struct {
+type UseBackendRules map[string]UseBackendRule
+
+type UseBackendRule struct {
 	Host      string
 	Path      string
 	Backend   string
 	Namespace string
 }
 
-func (c *HAProxyController) refreshBackendSwitching() (needsReload bool) {
-
-	// Refresh use_backend rules
-	activeBackends := make(map[string]struct{})
-	needsReload = c.refreshHTTPBackendSwitching(activeBackends)
-	needsReload = c.refreshTCPBackendSwitching(activeBackends) || needsReload
-	if !needsReload {
-		return false
+func (c *HAProxyController) addUseBackendRule(key string, rule UseBackendRule, frontends ...string) {
+	for _, frontendName := range frontends {
+		c.cfg.BackendSwitchingRules[frontendName][key] = rule
+		c.cfg.BackendSwitchingStatus[frontendName] = struct{}{}
 	}
-
-	// Add default and RateLimit backend
-	frontend, _ := c.frontendGet(FrontendHTTP)
-	activeBackends[frontend.DefaultBackend] = struct{}{}
-	activeBackends["RateLimit"] = struct{}{}
-
-	// Add Backends used by TCP services
-	for tcpBackend := range c.cfg.TCPBackends {
-		activeBackends[tcpBackend] = struct{}{}
-	}
-
-	// Delete unused backends
-	allBackends, _ := c.backendsGet()
-	for _, backend := range allBackends {
-		_, ok := activeBackends[backend.Name]
-		if !ok {
-			err := c.backendDelete(backend.Name)
-			LogErr(err)
-		}
-	}
-
-	return true
 }
 
-func (c *HAProxyController) refreshHTTPBackendSwitching(activeBackends map[string]struct{}) (needsReload bool) {
-	frontends := []string{FrontendHTTP, FrontendHTTPS}
+func (c *HAProxyController) deleteUseBackendRule(key string, frontends ...string) {
+	for _, frontendName := range frontends {
+		delete(c.cfg.BackendSwitchingRules[frontendName], key)
+		c.cfg.BackendSwitchingStatus[frontendName] = struct{}{}
+	}
+}
 
-	useBackendRules := c.cfg.UseBackendRules[ModeHTTP].Rules
-	if !c.cfg.UseBackendRules[ModeHTTP].Modified {
-		for _, rule := range useBackendRules {
-			activeBackends[rule.Backend] = struct{}{}
-		}
+//  Recreate use_backend rules
+func (c *HAProxyController) refreshBackendSwitching() (needsReload bool) {
+	if len(c.cfg.BackendSwitchingStatus) == 0 {
 		return false
 	}
-	sortedList := []string{}
-	for name := range useBackendRules {
-		sortedList = append(sortedList, name)
+	frontends, err := c.frontendsGet()
+	if err != nil {
+		PanicErr(err)
+		return false
 	}
-	sort.Sort(sort.Reverse(sort.StringSlice(sortedList))) // reverse order
-
+	// Active backend will hold backends in use
+	activeBackends := map[string]struct{}{"RateLimit": struct{}{}}
 	for _, frontend := range frontends {
-		var err error
-		c.backendSwitchingRuleDeleteAll(frontend)
-		for _, name := range sortedList {
-			rule := useBackendRules[name]
-			var condTest string
-			if rule.Host != "" {
-				condTest = fmt.Sprintf("{ req.hdr(host) -i %s } ", rule.Host)
-			}
-			if rule.Path != "" {
-				condTest = fmt.Sprintf("%s{ path_beg %s }", condTest, rule.Path)
-			}
-			if condTest == "" {
-				log.Println(fmt.Sprintf("Both Host and Path are empty for frontend %s with backend %s, SKIP", frontend, rule.Backend))
-				continue
-			}
+		activeBackends[frontend.DefaultBackend] = struct{}{}
+		useBackendRules, ok := c.cfg.BackendSwitchingRules[frontend.Name]
+		if !ok {
+			continue
+		}
+		sortedKeys := []string{}
+		for key, rule := range useBackendRules {
 			activeBackends[rule.Backend] = struct{}{}
-			err = c.backendSwitchingRuleCreate(frontend, models.BackendSwitchingRule{
+			sortedKeys = append(sortedKeys, key)
+		}
+		if _, ok := c.cfg.BackendSwitchingStatus[frontend.Name]; !ok {
+			// No need to refresh rules if the use_backend rules
+			// of the frontend were not updated
+			continue
+		}
+		// host/path are part of use_backend keys, so sorting keys will
+		// result in sorted use_backend rules for better readability
+		sort.Sort(sort.Reverse(sort.StringSlice(sortedKeys)))
+		c.backendSwitchingRuleDeleteAll(frontend.Name)
+		for _, key := range sortedKeys {
+			rule := useBackendRules[key]
+			var condTest string
+			switch frontend.Mode {
+			case "http":
+				if rule.Host != "" {
+					condTest = fmt.Sprintf("{ req.hdr(host) -i %s } ", rule.Host)
+				}
+				if rule.Path != "" {
+					condTest = fmt.Sprintf("%s{ path_beg %s }", condTest, rule.Path)
+				}
+				if condTest == "" {
+					log.Println("Both Host and Path are empty for frontend %s with backend %s, SKIP", frontend, rule.Backend)
+					continue
+				}
+			case "tcp":
+				if rule.Host == "" {
+					log.Println(fmt.Sprintf("Empty SNI for backend %s, SKIP", rule.Backend))
+					continue
+				}
+				condTest = fmt.Sprintf("{ req_ssl_sni -i %s } ", rule.Host)
+			}
+			err := c.backendSwitchingRuleCreate(frontend.Name, models.BackendSwitchingRule{
 				Cond:     "if",
 				CondTest: condTest,
 				Name:     rule.Backend,
 				ID:       ptrInt64(0),
 			})
-			LogErr(err)
+			PanicErr(err)
 		}
+		needsReload = true
+		delete(c.cfg.BackendSwitchingStatus, frontend.Name)
 	}
-	c.cfg.UseBackendRules[ModeHTTP].Modified = false
-	return true
+	needsReload = c.clearBackends(activeBackends) || needsReload
+	return needsReload
 }
 
-//  Refresh use_backend rules of the SSL Frontend
-func (c *HAProxyController) refreshTCPBackendSwitching(activeBackends map[string]struct{}) (needsReload bool) {
-	_, err := c.frontendGet(FrontendSSL)
+// Remove unused backends
+func (c *HAProxyController) clearBackends(activeBackends map[string]struct{}) (needsReload bool) {
+	allBackends, err := c.backendsGet()
 	if err != nil {
 		return false
 	}
-
-	useBackendRules := c.cfg.UseBackendRules[ModeTCP].Rules
-	if !c.cfg.UseBackendRules[ModeTCP].Modified {
-		for _, rule := range useBackendRules {
-			activeBackends[rule.Backend] = struct{}{}
+	for _, backend := range allBackends {
+		if _, ok := activeBackends[backend.Name]; !ok {
+			if err := c.backendDelete(backend.Name); err != nil {
+				PanicErr(err)
+			}
+			needsReload = true
 		}
-		return false
 	}
-	sortedList := []string{}
-	for name := range useBackendRules {
-		sortedList = append(sortedList, name)
-	}
-	sort.Sort(sort.Reverse(sort.StringSlice(sortedList))) // reverse order
-
-	c.backendSwitchingRuleDeleteAll(FrontendSSL)
-	for _, name := range sortedList {
-		rule := useBackendRules[name]
-		if rule.Host == "" {
-			log.Println(fmt.Sprintf("Empty SNI for backend %s, SKIP", rule.Backend))
-			continue
-		}
-		activeBackends[rule.Backend] = struct{}{}
-		err = c.backendSwitchingRuleCreate(FrontendSSL, models.BackendSwitchingRule{
-			Cond:     "if",
-			CondTest: fmt.Sprintf("{ req_ssl_sni -i %s } ", rule.Host),
-			Name:     rule.Backend,
-			ID:       ptrInt64(0),
-		})
-		LogErr(err)
-	}
-	c.cfg.UseBackendRules[ModeTCP].Modified = false
-	return true
+	return needsReload
 }

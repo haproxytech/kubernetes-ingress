@@ -16,7 +16,6 @@ package main
 
 import (
 	"errors"
-	"fmt"
 	"log"
 	"strconv"
 	"strings"
@@ -68,21 +67,12 @@ func (c *HAProxyController) updateHAProxy() error {
 			if annClass.Value != "" && annClass.Value != c.osArgs.IngressClass {
 				continue
 			}
+			// handle Ingress rules
 			for _, rule := range ingress.Rules {
 				for _, path := range rule.Paths {
-					if path.Status == DELETED {
-						if path.IsSSLPassthrough {
-							delete(c.cfg.UseBackendRules[ModeTCP].Rules, fmt.Sprintf("R%s%s%s%s", namespace.Name, ingress.Name, rule.Host, path.Path))
-							c.cfg.UseBackendRules[ModeTCP].Modified = true
-						} else {
-							delete(c.cfg.UseBackendRules[ModeHTTP].Rules, fmt.Sprintf("R%s%s%s%s", namespace.Name, ingress.Name, rule.Host, path.Path))
-							c.cfg.UseBackendRules[ModeHTTP].Modified = true
-						}
-					} else {
-						reload, err = c.handlePath(namespace, ingress, rule, path)
-						needsReload = needsReload || reload
-						LogErr(err)
-					}
+					reload, err = c.handlePath(namespace, ingress, rule, path)
+					needsReload = needsReload || reload
+					LogErr(err)
 				}
 			}
 			//handle certs
@@ -115,7 +105,6 @@ func (c *HAProxyController) updateHAProxy() error {
 	}
 	needsReload = needsReload || reload
 
-	//handle default service
 	reload, err = c.handleDefaultService()
 	LogErr(err)
 	needsReload = needsReload || reload
@@ -186,10 +175,10 @@ func (c *HAProxyController) handleDefaultService() (needsReload bool, err error)
 		Rules:       map[string]*IngressRule{},
 	}
 	path := &IngressPath{
-		ServiceName:    service.Name,
-		ServicePortInt: service.Ports[0].ServicePort,
-		PathIndex:      -1,
-		IsDefaultPath:  true,
+		ServiceName:      service.Name,
+		ServicePortInt:   service.Ports[0].ServicePort,
+		PathIndex:        -1,
+		IsDefaultBackend: true,
 	}
 	return c.handlePath(namespace, ingress, &IngressRule{}, path)
 }

@@ -274,40 +274,8 @@ func (c *HAProxyController) handleEndpointIP(namespace *Namespace, ingress *Ingr
 	return needReload
 }
 
-// handleService processes the IngressPath related service and makes corresponding backend configuration in HAProxy
+// handleService processes the service related to the IngressPath and makes corresponding backend configuration in HAProxy
 func (c *HAProxyController) handleService(namespace *Namespace, ingress *Ingress, rule *IngressRule, path *IngressPath, service *Service) (backendName string, newBackend bool, needReload bool, err error) {
-	needReload = false
-
-	c.handleRateLimitingAnnotations(ingress, service, path)
-
-	if path.ServicePortInt == 0 {
-		backendName = fmt.Sprintf("%s-%s-%s", namespace.Name, service.Name, path.ServicePortString)
-	} else {
-		backendName = fmt.Sprintf("%s-%s-%d", namespace.Name, service.Name, path.ServicePortInt)
-	}
-
-	switch {
-	case path.IsDefaultPath: // Default Backend
-		if service.Status != EMPTY {
-			var http models.Frontend
-			var https models.Frontend
-			http, err = c.frontendGet(FrontendHTTP)
-			LogErr(err)
-			http.DefaultBackend = backendName
-			err = c.frontendEdit(http)
-			LogErr(err)
-			https, err = c.frontendGet(FrontendHTTPS)
-			LogErr(err)
-			https.DefaultBackend = backendName
-			err = c.frontendEdit(https)
-			LogErr(err)
-			needReload = true
-		}
-	case path.IsTCPPath: // TCP Service
-		c.cfg.TCPBackends[backendName] = path.ServicePortInt
-	default:
-		c.handleSSLPassthrough(ingress, service, path, backendName)
-	}
 
 	// Get Backend status
 	status := service.Status
@@ -321,79 +289,96 @@ func (c *HAProxyController) handleService(namespace *Namespace, ingress *Ingress
 		}
 	}
 
-	// Backend creation
-	newBackend = false
-	switch status {
-	case ADDED, MODIFIED:
-		if _, err = c.backendGet(backendName); err != nil {
-			mode := "http"
-			backend := models.Backend{
-				Name: backendName,
-				Mode: mode,
-			}
-			if path.IsTCPPath || path.IsSSLPassthrough {
-				backend.Mode = string(ModeTCP)
-			}
-			if err = c.backendCreate(backend); err != nil {
-				msg := err.Error()
-				if !strings.Contains(msg, "Farm already exists") {
-					return "", true, needReload, err
-				}
-			} else {
-				newBackend = true
-				needReload = true
-			}
+	// If status DELETED
+	// remove use_backend rule and leave.
+	// Backend will be deleted when no more use_backend
+	// rules are left for the backend in question.
+	// This is done via c.refreshBackendSwitching
+	if status == DELETED {
+		key := fmt.Sprintf("R%s%s%s%s", namespace.Name, ingress.Name, rule.Host, path.Path)
+		if path.IsSSLPassthrough {
+			c.deleteUseBackendRule(key, FrontendSSL)
+		} else {
+			c.deleteUseBackendRule(key, FrontendHTTP, FrontendHTTPS)
 		}
-		// Update usebackend rules
-		if !path.IsTCPPath && !path.IsDefaultPath {
-			var mode Mode
-			var modeBar Mode
-			if path.IsSSLPassthrough {
-				mode = ModeTCP
-				modeBar = ModeHTTP
-			} else {
-				mode = ModeHTTP
-				modeBar = ModeTCP
-			}
-			backendSwitching := c.cfg.UseBackendRules[mode]
-			key := fmt.Sprintf("R%s%s%s%s", namespace.Name, ingress.Name, rule.Host, path.Path)
-			old, ok := backendSwitching.Rules[key]
-			if ok {
-				// Check if the existing use_backend rule refers to the right backend
-				if old.Backend != backendName {
-					backendSwitching.Rules[key] = BackendSwitchingRule{
-						Host:      rule.Host,
-						Path:      path.Path,
-						Backend:   backendName,
-						Namespace: namespace.Name,
-					}
-					backendSwitching.Modified = true
-				}
-			} else {
-				backendSwitching.Rules[key] = BackendSwitchingRule{
-					Host:      rule.Host,
-					Path:      path.Path,
-					Backend:   backendName,
-					Namespace: namespace.Name,
-				}
-				backendSwitching.Modified = true
-			}
-			backendSwitchingBar := c.cfg.UseBackendRules[modeBar]
-			_, ok = backendSwitchingBar.Rules[key]
-			if ok {
-				delete(backendSwitchingBar.Rules, fmt.Sprintf("R%s%s%s%s", namespace.Name, ingress.Name, rule.Host, path.Path))
-				backendSwitchingBar.Modified = true
-			}
-
-		}
-	case DELETED:
-		// Backend will be cleaned up with useBackendRuleRefresh
-		// when no more UseBackendRules points to it.
-		return "", newBackend, needReload, nil
+		return "", false, needReload, nil
 	}
 
-	reload, err := c.handleBackendAnnotations(ingress, service, backendName, newBackend)
-	needReload = needReload || reload
+	// Set backendName
+	if path.ServicePortInt == 0 {
+		backendName = fmt.Sprintf("%s-%s-%s", namespace.Name, service.Name, path.ServicePortString)
+	} else {
+		backendName = fmt.Sprintf("%s-%s-%d", namespace.Name, service.Name, path.ServicePortInt)
+	}
+
+	// Get/Create Backend
+	newBackend = false
+	needReload = false
+	var backend models.Backend
+	if backend, err = c.backendGet(backendName); err != nil {
+		mode := "http"
+		backend = models.Backend{
+			Name: backendName,
+			Mode: mode,
+		}
+		if path.IsTCPService || path.IsSSLPassthrough {
+			backend.Mode = string(ModeTCP)
+		}
+		if err = c.backendCreate(backend); err != nil {
+			return "", true, needReload, err
+		}
+		newBackend = true
+		needReload = true
+	}
+
+	// handle Annotations
+	c.handleRateLimitingAnnotations(ingress, service, path)
+	activeSSLPassthrough := c.handleSSLPassthrough(ingress, service, path, &backend, newBackend)
+	activeBackendAnn := c.handleBackendAnnotations(ingress, service, &backend, newBackend)
+	if activeBackendAnn || activeSSLPassthrough {
+		if err = c.backendEdit(backend); err != nil {
+			return backendName, newBackend, needReload, err
+		}
+		needReload = true
+	}
+
+	// No need to update BackendSwitching
+	if status == EMPTY && !activeSSLPassthrough {
+		return backendName, newBackend, needReload, nil
+	}
+
+	// Update backendSwitching
+	key := fmt.Sprintf("R%s%s%s%s", namespace.Name, ingress.Name, rule.Host, path.Path)
+	useBackendRule := UseBackendRule{
+		Host:      rule.Host,
+		Path:      path.Path,
+		Backend:   backendName,
+		Namespace: namespace.Name,
+	}
+	switch {
+	case path.IsDefaultBackend:
+		for _, frontendName := range []string{FrontendHTTP, FrontendHTTPS} {
+			frontend, _ := c.frontendGet(frontendName)
+			LogErr(err)
+			frontend.DefaultBackend = backendName
+			err = c.frontendEdit(frontend)
+			LogErr(err)
+		}
+		needReload = true
+	case path.IsTCPService:
+		// nothing to do
+	case path.IsSSLPassthrough:
+		c.addUseBackendRule(key, useBackendRule, FrontendSSL)
+		if activeSSLPassthrough {
+			c.deleteUseBackendRule(key, FrontendHTTP, FrontendHTTPS)
+		}
+	default:
+		c.addUseBackendRule(key, useBackendRule, FrontendHTTP, FrontendHTTPS)
+		if activeSSLPassthrough {
+			c.deleteUseBackendRule(key, FrontendSSL)
+		}
+	}
+
 	if err != nil {
 		return "", newBackend, needReload, err
 	}

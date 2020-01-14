@@ -72,11 +72,39 @@ func (c *HAProxyController) handleDefaultTimeout(timeout string, hasDefault bool
 	return false
 }
 
+func (c *HAProxyController) handleSSLPassthrough(ingress *Ingress, service *Service, path *IngressPath, backend *models.Backend, newBackend bool) (updateBackendSwitching bool) {
+
+	if path.IsTCPService || path.IsDefaultBackend {
+		return false
+	}
+	updateBackendSwitching = false
+	annSSLPassthrough, _ := GetValueFromAnnotations("ssl-passthrough", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
+	if annSSLPassthrough.Status != EMPTY || newBackend {
+		enabled, err := GetBoolValue(annSSLPassthrough.Value, "ssl-passthrough")
+		if err != nil {
+			LogErr(fmt.Errorf("ssl-passthrough annotation: %s", err))
+			return updateBackendSwitching
+		}
+		if enabled {
+			if !path.IsSSLPassthrough {
+				path.IsSSLPassthrough = true
+				backend.Mode = "tcp"
+				updateBackendSwitching = true
+
+			}
+		} else if path.IsSSLPassthrough {
+			path.IsSSLPassthrough = false
+			backend.Mode = "http"
+			updateBackendSwitching = true
+		}
+	}
+	return updateBackendSwitching
+}
+
 // Update backend with annotations values.
-func (c *HAProxyController) handleBackendAnnotations(ingress *Ingress, service *Service, backendName string, newBackend bool) (needReload bool, err error) {
-	needReload = false
-	model, _ := c.backendGet(backendName)
-	backend := Backend(model)
+func (c *HAProxyController) handleBackendAnnotations(ingress *Ingress, service *Service, backendModel *models.Backend, newBackend bool) (activeAnnotations bool) {
+	activeAnnotations = false
+	backend := Backend(*backendModel)
 	backendAnnotations := make(map[string]*StringW, 4)
 
 	backendAnnotations["abortonclose"], _ = GetValueFromAnnotations("abortonclose", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
@@ -98,7 +126,7 @@ func (c *HAProxyController) handleBackendAnnotations(ingress *Ingress, service *
 					LogErr(err)
 					continue
 				}
-				needReload = true
+				activeAnnotations = true
 			case "check-http":
 				if v.Status == DELETED && !newBackend {
 					backend.Httpchk = nil
@@ -106,19 +134,19 @@ func (c *HAProxyController) handleBackendAnnotations(ingress *Ingress, service *
 					LogErr(fmt.Errorf("%s annotation: %s", k, err))
 					continue
 				}
-				needReload = true
+				activeAnnotations = true
 			case "forwarded-for":
 				if err := backend.updateForwardfor(v); err != nil {
 					LogErr(fmt.Errorf("%s annotation: %s", k, err))
 					continue
 				}
-				needReload = true
+				activeAnnotations = true
 			case "load-balance":
 				if err := backend.updateBalance(v); err != nil {
 					LogErr(fmt.Errorf("%s annotation: %s", k, err))
 					continue
 				}
-				needReload = true
+				activeAnnotations = true
 			case "timeout-check":
 				if v.Status == DELETED && !newBackend {
 					backend.CheckTimeout = nil
@@ -126,23 +154,19 @@ func (c *HAProxyController) handleBackendAnnotations(ingress *Ingress, service *
 					LogErr(fmt.Errorf("%s annotation: %s", k, err))
 					continue
 				}
-				needReload = true
+				activeAnnotations = true
 			}
 		}
 	}
-	if needReload {
-		if err := c.backendEdit(models.Backend(backend)); err != nil {
-			return needReload, err
-		}
-	}
-	return needReload, nil
+	*backendModel = models.Backend(backend)
+	return activeAnnotations
 
 }
 
 // Update server with annotations values.
-func (c *HAProxyController) handleServerAnnotations(ingress *Ingress, service *Service, model *models.Server) (annnotationsActive bool) {
-	annnotationsActive = false
-	server := Server(*model)
+func (c *HAProxyController) handleServerAnnotations(ingress *Ingress, service *Service, serverModel *models.Server) (activeAnnotations bool) {
+	activeAnnotations = false
+	server := Server(*serverModel)
 
 	serverAnnotations := make(map[string]*StringW, 3)
 	serverAnnotations["check"], _ = GetValueFromAnnotations("check", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
@@ -162,7 +186,7 @@ func (c *HAProxyController) handleServerAnnotations(ingress *Ingress, service *S
 					LogErr(fmt.Errorf("%s annotation: %s", k, err))
 					continue
 				}
-				annnotationsActive = true
+				activeAnnotations = true
 			case "check-interval":
 				if v.Status == DELETED {
 					server.Inter = nil
@@ -170,7 +194,7 @@ func (c *HAProxyController) handleServerAnnotations(ingress *Ingress, service *S
 					LogErr(fmt.Errorf("%s annotation: %s", k, err))
 					continue
 				}
-				annnotationsActive = true
+				activeAnnotations = true
 			case "pod-maxconn":
 				if v.Status == DELETED {
 					server.Maxconn = nil
@@ -178,38 +202,12 @@ func (c *HAProxyController) handleServerAnnotations(ingress *Ingress, service *S
 					LogErr(fmt.Errorf("%s annotation: %s", k, err))
 					continue
 				}
-				annnotationsActive = true
+				activeAnnotations = true
 			}
 		}
 	}
-	return annnotationsActive
-}
-
-func (c *HAProxyController) handleSSLPassthrough(ingress *Ingress, service *Service, path *IngressPath, backendName string) {
-	annSSLPassthrough, _ := GetValueFromAnnotations("ssl-passthrough", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
-	if annSSLPassthrough.Status != EMPTY || path.Status != EMPTY {
-		enabled, err := GetBoolValue(annSSLPassthrough.Value, "ssl-passthrough")
-		if err != nil {
-			LogErr(err)
-			return
-		}
-		backend, err := c.backendGet(backendName)
-
-		if enabled {
-			path.IsSSLPassthrough = true
-		} else {
-			path.IsSSLPassthrough = false
-		}
-		if err == nil {
-			if path.IsSSLPassthrough {
-				backend.Mode = "tcp"
-			} else {
-				backend.Mode = "http"
-			}
-			LogErr(c.backendEdit(backend))
-		}
-		path.Status = MODIFIED
-	}
+	*serverModel = models.Server(server)
+	return activeAnnotations
 }
 
 func (c *HAProxyController) handleRateLimitingAnnotations(ingress *Ingress, service *Service, path *IngressPath) {

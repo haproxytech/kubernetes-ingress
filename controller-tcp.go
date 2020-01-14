@@ -62,7 +62,7 @@ func (c *HAProxyController) handleTCPServices() (needsReload bool, err error) {
 				ServiceName:    service,
 				ServicePortInt: portInt64,
 				PathIndex:      -1,
-				IsTCPPath:      true,
+				IsTCPService:   true,
 			}
 			nsmmp := c.cfg.GetNamespace(namespace)
 			_, err = c.handlePath(nsmmp, ingress, nil, path)
@@ -76,8 +76,6 @@ func (c *HAProxyController) handleTCPServices() (needsReload bool, err error) {
 			err = c.frontendDelete(frontendName)
 			LogErr(err)
 			needsReload = true
-			backendName = fmt.Sprintf("%s-%s-%d", namespace, service, portInt64)
-			delete(c.cfg.TCPBackends, backendName)
 		}
 	}
 	return needsReload, err
