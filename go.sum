@@ -12,6 +12,7 @@ github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSs
 github.com/dgrijalva/jwt-go v0.0.0-20160705203006-01aeca54ebda/go.mod h1:E3ru+11k8xSBh+hMPgOLZmtrrCbhqsmaPHjLKYnJCaQ=
 github.com/docker/spdystream v0.0.0-20160310174837-449fdfce4d96/go.mod h1:Qh8CwZgvJUkLughtfhJv5dyTYa91l1fOUCrgjqmcifM=
 github.com/elazarl/goproxy v0.0.0-20170405201442-c4fc26588b6e/go.mod h1:/Zj4wYkgs4iZTTu3o/KG3Itv/qCCa8VVMlb3i9OVuzc=
+github.com/evanphx/json-patch v0.0.0-20190203023257-5858425f7550 h1:mV9jbLoSW/8m4VK16ZkHTozJa8sesK5u5kTMFysTYac=
 github.com/evanphx/json-patch v0.0.0-20190203023257-5858425f7550/go.mod h1:50XU6AFN0ol/bzJsmQLiYLvXMP4fmwYFNcr97nuDLSk=
 github.com/fsnotify/fsnotify v1.4.7/go.mod h1:jwhsz4b93w/PPRr/qN1Yymfu8t87LnFCMoQvtojpjFo=
 github.com/globalsign/mgo v0.0.0-20180905125535-1ca0a4f7cbcb h1:D4uzjWwKYQ5XnAvUbuvHW93esHg7F8N/OYeBBcJoTr0=
@@ -66,6 +67,8 @@ github.com/haproxytech/client-native v1.2.7-0.20191015141253-fd2f43e23fee h1:MLf
 github.com/haproxytech/client-native v1.2.7-0.20191015141253-fd2f43e23fee/go.mod h1:JI/mJCwPKG9UQpna3LQ8HfDkiiZBW+464sArdHm/cQI=
 github.com/haproxytech/client-native v1.2.7-0.20191202205441-d4ec7f26aa21 h1:FGRsmJNppyQMli0B/eO8vjg/ZAyzsYEMDwtZZPLBBbg=
 github.com/haproxytech/client-native v1.2.7-0.20191202205441-d4ec7f26aa21/go.mod h1:RWcaeHrwxvdWlQAb+dzJ78rUR/36EEeaNjWKUmf7Ahs=
+github.com/haproxytech/client-native v1.2.7-0.20200123135444-6616fd84ebc1 h1:AloVEBEvkB/C06jbO5tzXPrhwcNTAsS0LPFhEDDmTfI=
+github.com/haproxytech/client-native v1.2.7-0.20200123135444-6616fd84ebc1/go.mod h1:PqOj2XpsU227JFWSUQmc03OMHjJnAjBi180HglRDAkA=
 github.com/haproxytech/config-parser/v2 v1.1.4 h1:J9ziufMtKSemiHILPu3GgAopuhA8bMxxR1f0kGtgnHk=
 github.com/haproxytech/config-parser/v2 v1.1.4/go.mod h1:se7v728KDunj+qz1kXFFFl+nDuoBdUaN5eYSi+gYjNM=
 github.com/haproxytech/config-parser/v2 v1.1.5 h1:3sA/k2klE9MpZtv05eGBD4J3JWMUzam9CM/cJoteSFo=
@@ -76,11 +79,13 @@ github.com/haproxytech/config-parser/v2 v2.0.0-dev1 h1:YbQt+o8KkzxqXWKzAJXWv4xav
 github.com/haproxytech/config-parser/v2 v2.0.0-dev1/go.mod h1:VjHOetXAJtwrtLAJPoDaD/kEYwCoixVp5SCsBitMcj8=
 github.com/haproxytech/config-parser/v2 v2.0.0-dev3 h1:O5QPDR2VQrBHzhanmAZo7QwdCIQTEQfQNXpSS4g3sn8=
 github.com/haproxytech/config-parser/v2 v2.0.0-dev3/go.mod h1:VjHOetXAJtwrtLAJPoDaD/kEYwCoixVp5SCsBitMcj8=
+github.com/haproxytech/config-parser/v2 v2.0.0-dev4 h1:Pk0bs0xuSUBPdyLBDGgfJ4IXbrAlkTctjmKQ6MjTc+g=
 github.com/haproxytech/config-parser/v2 v2.0.0-dev5 h1:aLa/jjVM2UO71AFS90SMC1l6ogwQGdSxBgWJrNttA7Y=
 github.com/haproxytech/config-parser/v2 v2.0.0-dev5/go.mod h1:VjHOetXAJtwrtLAJPoDaD/kEYwCoixVp5SCsBitMcj8=
+github.com/haproxytech/config-parser/v2 v2.0.0-dev6 h1:AX5CWFE85UDt7PEn8mvJsNYx19uGbdcXzV9T1xEM+K0=
+github.com/haproxytech/config-parser/v2 v2.0.0-dev6/go.mod h1:VjHOetXAJtwrtLAJPoDaD/kEYwCoixVp5SCsBitMcj8=
 github.com/haproxytech/config-parser/v2/v2 v2.0.0-dev1 h1:YbQt+o8KkzxqXWKzAJXWv4xav4+PuxT9jtfouCAOUzo=
 github.com/haproxytech/config-parser/v2/v2 v2.0.0-dev1/go.mod h1:VjHOetXAJtwrtLAJPoDaD/kEYwCoixVp5SCsBitMcj8=
-github.com/haproxytech/config-parser/v2 v2.0.0-dev4 h1:Pk0bs0xuSUBPdyLBDGgfJ4IXbrAlkTctjmKQ6MjTc+g=
 github.com/haproxytech/models v1.2.3-0.20190823114805-b3bd06b1c569 h1:uSIImvE2nSiEqMvesozR0cF90I0Gys8Rl6uEItGMZbw=
 github.com/haproxytech/models v1.2.3-0.20190823114805-b3bd06b1c569/go.mod h1:UXZVErm/XN6z10sM/enmxrdeEnwo7vz1JI+a8ycEvOQ=
 github.com/haproxytech/models v1.2.5-0.20191014152757-1080a77cbac7 h1:jrwnv559loPKl4EgFT1J5wNmkI+KsBo01Khqgfgjp8Q=
@@ -89,6 +94,8 @@ github.com/haproxytech/models v1.2.5-0.20191104104934-518cfec95f5b h1:uWKus7GKxq
 github.com/haproxytech/models v1.2.5-0.20191104104934-518cfec95f5b/go.mod h1:UXZVErm/XN6z10sM/enmxrdeEnwo7vz1JI+a8ycEvOQ=
 github.com/haproxytech/models v1.2.5-0.20191119093343-0605e7733eed h1:xyI1hMK4BsEbULJgLH1vSAmgmH3gAU2HkXWBanbp+Mk=
 github.com/haproxytech/models v1.2.5-0.20191119093343-0605e7733eed/go.mod h1:UXZVErm/XN6z10sM/enmxrdeEnwo7vz1JI+a8ycEvOQ=
+github.com/haproxytech/models v1.2.5-0.20191219083202-da92d6657b87 h1:Ac2WNf6IH8QbyKtEiJCf6quUpif7iMCcBziqlptfsSc=
+github.com/haproxytech/models v1.2.5-0.20191219083202-da92d6657b87/go.mod h1:UXZVErm/XN6z10sM/enmxrdeEnwo7vz1JI+a8ycEvOQ=
 github.com/hashicorp/golang-lru v0.5.0 h1:CL2msUPvZTLb5O648aiLNJw3hnBxN2+1Jq8rCOH9wdo=
 github.com/hashicorp/golang-lru v0.5.0/go.mod h1:/m3WP610KZHVQ1SGc6re/UDhFvYD7pJ4Ao+sR/qLZy8=
 github.com/hpcloud/tail v1.0.0/go.mod h1:ab1qPbhIpdTxEkNHXyeSf5vhxWSCs/tWer42PpOxQnU=
@@ -175,6 +182,7 @@ k8s.io/client-go v0.0.0-20190620085101-78d2af792bab h1:E8Fecph0qbNsAbijJJQryKu4O
 k8s.io/client-go v0.0.0-20190620085101-78d2af792bab/go.mod h1:E95RaSlHr79aHaX0aGSwcPNfygDiPKOVXdmivCIZT0k=
 k8s.io/klog v0.3.1 h1:RVgyDHY/kFKtLqh67NvEWIgkMneNoIrdkN0CxDSQc68=
 k8s.io/klog v0.3.1/go.mod h1:Gq+BEi5rUBO/HRz0bTSXDUcqjScdoY3a9IHpCEIOOfk=
+k8s.io/kube-openapi v0.0.0-20190228160746-b3a7cee44a30 h1:TRb4wNWoBVrH9plmkp2q86FIDppkbrEXdXlxU3a3BMI=
 k8s.io/kube-openapi v0.0.0-20190228160746-b3a7cee44a30/go.mod h1:BXM9ceUBTj2QnfH2MK1odQs778ajze1RxcmP6S8RVVc=
 k8s.io/utils v0.0.0-20190221042446-c2654d5206da h1:ElyM7RPonbKnQqOcw7dG2IK5uvQQn3b/WPHqD5mBvP4=
 k8s.io/utils v0.0.0-20190221042446-c2654d5206da/go.mod h1:8k8uAuAQ0rXslZKaEWd0c3oVhZz7sSzSiPnVZayjIX0=

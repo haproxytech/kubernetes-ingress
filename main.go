@@ -35,9 +35,10 @@ const (
 )
 
 var (
-	HAProxyCFG      = "/etc/haproxy/haproxy.cfg"
-	HAProxyCertDir  = "/etc/haproxy/certs/"
-	HAProxyStateDir = "/var/state/haproxy/"
+	HAProxyCFG        = "/etc/haproxy/haproxy.cfg"
+	HAProxyCertDir    = "/etc/haproxy/certs/"
+	HAProxyCaptureDir = "/etc/haproxy/capture/"
+	HAProxyStateDir   = "/var/state/haproxy/"
 )
 
 func main() {

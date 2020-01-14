@@ -120,8 +120,7 @@ func GetValueFromAnnotations(annotationName string, annotations ...MapStringW) (
 }
 
 var defaultAnnotationValues = MapStringW{
-	"ingress.class": &StringW{Value: ""},
-
+	"ingress.class":             &StringW{Value: ""},
 	"check":                     &StringW{Value: "true"},
 	"cookie-indirect":           &StringW{Value: "true"},
 	"cookie-nocache":            &StringW{Value: "true"},

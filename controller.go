@@ -86,6 +86,10 @@ func (c *HAProxyController) HAProxyInitialize() {
 	if err != nil {
 		log.Panic(err.Error())
 	}
+	err = os.MkdirAll(HAProxyCaptureDir, 0755)
+	if err != nil {
+		log.Panic(err.Error())
+	}
 
 	cmd := exec.Command("sh", "-c", "haproxy -v")
 	haproxyInfo, err := cmd.Output()

@@ -26,6 +26,8 @@ const (
 	RATE_LIMIT = "rate-limit"
 	//nolint
 	HTTP_REDIRECT = "http-redirect"
+	//nolint
+	HTTP_REQUEST_CAPTURE = "request-capture"
 )
 
 //Configuration represents k8s state
@@ -106,6 +108,7 @@ func (c *Configuration) Init(osArgs OSArgs, api *clientnative.HAProxyClient) {
 	c.TCPRequestsStatus = EMPTY
 
 	c.HTTPRequests[HTTP_REDIRECT] = []models.HTTPRequestRule{}
+	c.HTTPRequests[HTTP_REQUEST_CAPTURE] = []models.HTTPRequestRule{}
 
 	c.BackendSwitchingRules = make(map[string]UseBackendRules)
 	c.BackendSwitchingStatus = make(map[string]struct{})
