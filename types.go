@@ -56,8 +56,6 @@ type Endpoints struct {
 type Service struct {
 	Namespace   string
 	Name        string
-	ClusterIP   string
-	ExternalIP  string
 	Ports       []ServicePort
 	Annotations MapStringW
 	Selector    MapStringW
@@ -83,7 +81,6 @@ type IngressPath struct {
 	ServicePortString string
 	TargetPort        int64
 	Path              string
-	PathIndex         int
 	IsTCPService      bool
 	IsSSLPassthrough  bool
 	IsDefaultBackend  bool

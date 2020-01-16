@@ -61,7 +61,6 @@ func (c *HAProxyController) handleTCPServices() (needsReload bool, err error) {
 			path := &IngressPath{
 				ServiceName:    service,
 				ServicePortInt: portInt64,
-				PathIndex:      -1,
 				IsTCPService:   true,
 			}
 			nsmmp := c.cfg.GetNamespace(namespace)

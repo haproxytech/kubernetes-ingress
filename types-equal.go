@@ -141,12 +141,6 @@ func (a *Service) Equal(b *Service) bool {
 	if a.Name != b.Name {
 		return false
 	}
-	if a.ClusterIP != b.ClusterIP {
-		return false
-	}
-	if a.ExternalIP != b.ExternalIP {
-		return false
-	}
 	if !a.Annotations.Equal(b.Annotations) {
 		return false
 	}

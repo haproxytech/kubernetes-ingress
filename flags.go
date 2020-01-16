@@ -36,7 +36,6 @@ type OSArgs struct {
 	ConfigMap             NamespaceValue `long:"configmap" description:"configmap designated for HAProxy" default:"default/haproxy-configmap"`
 	ConfigMapTCPServices  NamespaceValue `long:"configmap-tcp-services" description:"configmap used to define tcp services" default:""`
 	KubeConfig            string         `long:"kubeconfig" default:"" description:"combined with -e. location of kube config file"`
-	Mode                  Mode           `long:"mode" default:"http" description:"you can select mode tcp or http"`
 	NamespaceWhitelist    []string       `long:"namespace-whitelist" description:"whitelisted namespaces"`
 	NamespaceBlacklist    []string       `long:"namespace-blacklist" description:"blacklisted namespaces"`
 	OutOfCluster          bool           `short:"e" description:"use as out of cluster controller NOTE: experimantal"`
