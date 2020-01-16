@@ -116,7 +116,6 @@ func (c *HAProxyController) refreshHTTPBackendSwitching(activeBackends map[strin
 func (c *HAProxyController) refreshTCPBackendSwitching(activeBackends map[string]struct{}) (needsReload bool) {
 	_, err := c.frontendGet(FrontendSSL)
 	if err != nil {
-		LogErr(err)
 		return false
 	}
 
