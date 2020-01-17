@@ -42,4 +42,5 @@ type OSArgs struct {
 	Test                  bool           `short:"t" description:"simulate running HAProxy"`
 	Help                  []bool         `short:"h" long:"help" description:"show this help message"`
 	IngressClass          string         `long:"ingress.class" default:"haproxy" description:"ingress.class to monitor in multiple controllers environment"`
+	PublishService        string         `long:"publish-service" default:"" description:"Takes the form namespace/name. The controller mirrors the address of this service's endpoints to the load-balancer status of all Ingress objects it satisfies"`
 }

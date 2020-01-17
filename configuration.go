@@ -17,6 +17,8 @@ package main
 import (
 	clientnative "github.com/haproxytech/client-native"
 	"github.com/haproxytech/models"
+	"log"
+	"strings"
 )
 
 const (
@@ -38,6 +40,7 @@ type Configuration struct {
 	NamespacesAccess       NamespacesWatch
 	ConfigMap              *ConfigMap
 	ConfigMapTCPServices   *ConfigMap
+	PublishService         *Service
 	HTTPRequests           map[string][]models.HTTPRequestRule
 	HTTPRequestsStatus     Status
 	TCPRequests            map[string][]models.TCPRequestRule
@@ -77,6 +80,20 @@ func (c *Configuration) Init(osArgs OSArgs, api *clientnative.HAProxyClient) {
 	for _, namespace := range osArgs.NamespaceBlacklist {
 		c.NamespacesAccess.Blacklist[namespace] = struct{}{}
 	}
+	parts := strings.Split(osArgs.PublishService, "/")
+	if len(parts) != 0 {
+		if len(parts) == 2 {
+			c.PublishService = &Service{
+				Namespace: parts[0],
+				Name:      parts[1],
+				Status:    EMPTY,
+				Addresses: []string{},
+			}
+		} else {
+			log.Println("publish-service: incorrect param")
+		}
+	}
+
 	c.Namespace = make(map[string]*Namespace)
 	c.SSLRedirect = false
 
@@ -220,4 +237,7 @@ func (c *Configuration) Clean() {
 	c.HTTPRequestsStatus = EMPTY
 	c.TCPRequestsStatus = EMPTY
 	defaultAnnotationValues.Clean()
+	if c.PublishService != nil {
+		c.PublishService.Status = EMPTY
+	}
 }

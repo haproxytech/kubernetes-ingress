@@ -57,6 +57,7 @@ type Service struct {
 	Namespace   string
 	Name        string
 	Ports       []ServicePort
+	Addresses   []string //Used only for publish-service
 	Annotations MapStringW
 	Selector    MapStringW
 	Status      Status

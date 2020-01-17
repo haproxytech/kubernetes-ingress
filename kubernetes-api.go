@@ -18,10 +18,12 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"net"
 	"path/filepath"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	//networking "k8s.io/api/networking/v1beta1"
 	extensions "k8s.io/api/extensions/v1beta1"
 	"k8s.io/apimachinery/pkg/fields"
@@ -333,7 +335,7 @@ func (k *K8s) EventsIngresses(channel chan *Ingress, stop chan struct{}) {
 	go controller.Run(stop)
 }
 
-func (k *K8s) EventsServices(channel chan *Service, stop chan struct{}) {
+func (k *K8s) EventsServices(channel chan *Service, stop chan struct{}, publishSvc *Service) {
 	watchlist := cache.NewListWatchFromClient(
 		k.API.CoreV1().RESTClient(),
 		string(corev1.ResourceServices),
@@ -369,6 +371,11 @@ func (k *K8s) EventsServices(channel chan *Service, stop chan struct{}) {
 						TargetPortStr: sp.TargetPort.StrVal,
 					})
 				}
+				if publishSvc != nil {
+					if publishSvc.Namespace == item.Namespace && publishSvc.Name == item.Name {
+						k.GetPublishServiceAddresses(data, publishSvc)
+					}
+				}
 				if DEBUG_API {
 					log.Printf("%s %s: %s \n", SERVICE, item.Status, item.Name)
 				}
@@ -383,6 +390,11 @@ func (k *K8s) EventsServices(channel chan *Service, stop chan struct{}) {
 					Annotations: ConvertToMapStringW(data.ObjectMeta.Annotations),
 					Selector:    ConvertToMapStringW(data.Spec.Selector),
 					Status:      status,
+				}
+				if publishSvc != nil {
+					if publishSvc.Namespace == item.Namespace && publishSvc.Name == item.Name {
+						publishSvc.Status = DELETED
+					}
 				}
 				if DEBUG_API {
 					log.Printf("%s %s: %s \n", SERVICE, item.Status, item.Name)
@@ -430,6 +442,11 @@ func (k *K8s) EventsServices(channel chan *Service, stop chan struct{}) {
 				}
 				if item2.Equal(item1) {
 					return
+				}
+				if publishSvc != nil {
+					if publishSvc.Namespace == item2.Namespace && publishSvc.Name == item2.Name {
+						k.GetPublishServiceAddresses(data2, publishSvc)
+					}
 				}
 				if DEBUG_API {
 					log.Printf("%s %s: %s \n", SERVICE, item2.Status, item2.Name)
@@ -585,4 +602,86 @@ func (k *K8s) EventsSecrets(channel chan *Secret, stop chan struct{}) {
 		},
 	)
 	go controller.Run(stop)
+}
+
+func (k *K8s) UpdateIngressStatus(ingress *Ingress, publishSvc *Service) (err error) {
+	var ingSource *extensions.Ingress
+	var ingCopy extensions.Ingress
+	status := publishSvc.Status
+	lbi := []corev1.LoadBalancerIngress{}
+	if status == EMPTY {
+		if ingress.Status == EMPTY {
+			return nil
+		}
+		status = ingress.Status
+	}
+
+	// Get Ingress
+	if ingSource, err = k.API.ExtensionsV1beta1().Ingresses(ingress.Namespace).Get(ingress.Name, metav1.GetOptions{}); err != nil {
+		return fmt.Errorf("update ingress status: failed to get ingress %s/%s: %v", ingress.Namespace, ingress.Name, err)
+	}
+	ingCopy = *ingSource
+	ingCopy.Status = extensions.IngressStatus{LoadBalancer: corev1.LoadBalancerStatus{Ingress: lbi}}
+	// Update addresses
+	if status == ADDED || status == MODIFIED {
+		for _, addr := range publishSvc.Addresses {
+			if net.ParseIP(addr) == nil {
+				lbi = append(lbi, corev1.LoadBalancerIngress{Hostname: addr})
+			} else {
+				lbi = append(lbi, corev1.LoadBalancerIngress{IP: addr})
+			}
+		}
+		ingCopy.Status = extensions.IngressStatus{LoadBalancer: corev1.LoadBalancerStatus{Ingress: lbi}}
+	}
+	// Remove addresses
+	if _, err = k.API.ExtensionsV1beta1().Ingresses(ingress.Namespace).UpdateStatus(&ingCopy); err != nil {
+		return fmt.Errorf("failed to update LoadBalancer status of ingress%s/%s: %v", ingress.Namespace, ingress.Name, err)
+	}
+	log.Printf("successful update of LoadBalancer status of ingress %s/%s", ingress.Namespace, ingress.Name)
+	return nil
+
+}
+
+func (k *K8s) GetPublishServiceAddresses(service *corev1.Service, publishSvc *Service) {
+	addresses := []string{}
+	switch service.Spec.Type {
+	case corev1.ServiceTypeExternalName:
+		addresses = []string{service.Spec.ExternalName}
+	case corev1.ServiceTypeClusterIP:
+		addresses = []string{service.Spec.ClusterIP}
+	case corev1.ServiceTypeNodePort:
+		if service.Spec.ExternalIPs != nil {
+			addresses = append(addresses, service.Spec.ExternalIPs...)
+		} else {
+			addresses = append(addresses, service.Spec.ClusterIP)
+		}
+	case corev1.ServiceTypeLoadBalancer:
+		for _, ip := range service.Status.LoadBalancer.Ingress {
+			if ip.IP == "" {
+				addresses = append(addresses, ip.Hostname)
+			} else {
+				addresses = append(addresses, ip.IP)
+			}
+		}
+		addresses = append(addresses, service.Spec.ExternalIPs...)
+	default:
+		log.Printf("Unable to extract IP address/es from service %v", service)
+		return
+	}
+
+	equal := false
+	if len(publishSvc.Addresses) == len(addresses) {
+		equal = true
+		for i, address := range publishSvc.Addresses {
+			if address != publishSvc.Addresses[i] {
+				equal = false
+				break
+			}
+		}
+	}
+	if equal {
+		return
+	}
+	publishSvc.Addresses = addresses
+	publishSvc.Status = MODIFIED
 }

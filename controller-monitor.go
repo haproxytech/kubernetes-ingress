@@ -31,7 +31,7 @@ func (c *HAProxyController) monitorChanges() {
 	c.k8s.EventsEndpoints(podEndpoints, stop)
 
 	svcChan := make(chan *Service, 100)
-	c.k8s.EventsServices(svcChan, stop)
+	c.k8s.EventsServices(svcChan, stop, c.cfg.PublishService)
 
 	nsChan := make(chan *Namespace, 10)
 	c.k8s.EventsNamespaces(nsChan, stop)
