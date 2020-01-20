@@ -85,6 +85,10 @@ func (c *HAProxyController) eventIngress(ns *Namespace, data *Ingress) (updateRe
 							newPath.Status = MODIFIED
 							newRule.Status = MODIFIED
 						}
+						// Sync internal data
+						newPath.IsTCPService = oldPath.IsTCPService
+						newPath.IsSSLPassthrough = oldPath.IsSSLPassthrough
+						newPath.IsDefaultBackend = oldPath.IsDefaultBackend
 					} else {
 						newPath.Status = ADDED
 						newRule.Status = ADDED
