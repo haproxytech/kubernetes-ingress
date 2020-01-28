@@ -133,6 +133,7 @@ var defaultAnnotationValues = MapStringW{
 	"ssl-redirect":              &StringW{Value: "true"},
 	"ssl-redirect-code":         &StringW{Value: "302"},
 	"ssl-passthrough":           &StringW{Value: "false"},
+	"server-ssl":                &StringW{Value: "false"},
 	"servers-increment":         &StringW{Value: "42"},
 	"syslog-server":             &StringW{Value: "address:127.0.0.1, facility: local0, level: notice"},
 	"timeout-http-request":      &StringW{Value: "5s"},
@@ -144,5 +145,4 @@ var defaultAnnotationValues = MapStringW{
 	"timeout-http-keep-alive":   &StringW{Value: "1m"},
 	"whitelist":                 &StringW{Value: ""},
 	"whitelist-with-rate-limit": &StringW{Value: "false"},
-	"server-ssl":                &StringW{Value: "false"},
 }
