@@ -25,6 +25,7 @@ Options for starting controller can be found in [controller.md](controller.md)
 | [rate-limit-expire](#rate-limit) | string | "30m" | [rate-limit](#rate-limit) |:large_blue_circle:|:white_circle:|:white_circle:|
 | [rate-limit-interval](#rate-limit) | string | "10s" | [rate-limit](#rate-limit) |:large_blue_circle:|:white_circle:|:white_circle:|
 | [rate-limit-size](#rate-limit) | string | "100k" | [rate-limit](#rate-limit) |:large_blue_circle:|:white_circle:|:white_circle:|
+| [server-ssl](#server-ssl) | ["true", "false"] | "false" |  |:large_blue_circle:|:white_circle:|:large_blue_circle:|
 | [servers-increment](#servers-slots-increment) | number | "42" |  |:large_blue_circle:|:white_circle:|:white_circle:|
 | [ssl-certificate](#tls-secret) | string |  |  |:large_blue_circle:|:white_circle:|:white_circle:|
 | [ssl-passthrough](#https) | ["true", "false"] | "false" |  |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:|
@@ -113,6 +114,14 @@ The number of requests a client can do per `rate-limit-interval` is **10**.
   - request rate for the last `rate-limit-interval`
 - Annotation: `rate-limit-size`
   - number of ip entries in table
+
+#### Server ssl
+
+- Annotation `server-ssl`
+  - Use ssl for backend servers.
+  - Current implementation does not verify server certificates.
+- Example:
+    `server server1 127.0.0.1:443 ssl verify none`
 
 #### Servers slots increment
 

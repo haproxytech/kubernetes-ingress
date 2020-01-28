@@ -51,3 +51,18 @@ func (s *Server) updateMaxconn(data *StringW) error {
 	s.Maxconn = &maxconn
 	return nil
 }
+
+func (s *Server) updateServerSsl(data *StringW) error {
+	enabled, err := GetBoolValue(data.Value, "ssl")
+	if err != nil {
+		return err
+	}
+	if enabled {
+		s.Ssl = "enabled"
+		s.Verify = "none"
+	} else {
+		s.Ssl = ""
+		s.Verify = ""
+	}
+	return nil
+}
