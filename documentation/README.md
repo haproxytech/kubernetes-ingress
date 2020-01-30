@@ -15,6 +15,7 @@ Options for starting controller can be found in [controller.md](controller.md)
 | [check](#backend-checks) | ["true", "false"] | "true" |  |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:|
 | [check-http](#backend-checks) | string |  | [check](#backend-checks) |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:|
 | [check-interval](#backend-checks) | [time](#time) |  | [check](#backend-checks) |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:|
+| [cookie-persistance](#cookie-persistance) | string | "" |  |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:|
 | [forwarded-for](#x-forwarded-for) | ["true", "false"] | "true" |  |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:|
 | [ingress.class](#ingress-class) | string | "" |  |:white_circle:|:large_blue_circle:|:white_circle:|
 | [load-balance](#balance-algorithm) | string | "roundrobin" |  |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:|
@@ -64,6 +65,14 @@ Options for starting controller can be found in [controller.md](controller.md)
   - method uri: `check-http: "HEAD /"`
   - method uri version: `check-http: "HEAD / HTTP/1.1\r\nHost:\ www"`
 - Annotation: `check-interval` - interval between checks [`check` must be "true"]
+
+#### Cookie persistence
+
+- Configure sticky session via  cookie-based persistence.
+- Annotation: `cookie-persistence <string>` sets the name of the cookie to be used for sticky session.
+- More annotations to fine-tune cookie can be found in controller-annotations.go
+
+More information can be found in the official HAProxy [documentation](https://cbonte.github.io/haproxy-dconv/2.0/configuration.html#4-cookie)
 
 #### Ingress Class
 

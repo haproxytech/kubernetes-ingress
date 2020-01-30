@@ -105,9 +105,10 @@ func (c *HAProxyController) handleSSLPassthrough(ingress *Ingress, service *Serv
 func (c *HAProxyController) handleBackendAnnotations(ingress *Ingress, service *Service, backendModel *models.Backend, newBackend bool) (activeAnnotations bool) {
 	activeAnnotations = false
 	backend := Backend(*backendModel)
-	backendAnnotations := make(map[string]*StringW, 4)
+	backendAnnotations := make(map[string]*StringW, 5)
 
 	backendAnnotations["abortonclose"], _ = GetValueFromAnnotations("abortonclose", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
+	backendAnnotations["cookie-persistence"], _ = GetValueFromAnnotations("cookie-persistence", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
 	backendAnnotations["load-balance"], _ = GetValueFromAnnotations("load-balance", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
 	backendAnnotations["timeout-check"], _ = GetValueFromAnnotations("timeout-check", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
 	if backend.Mode == "http" {
@@ -135,6 +136,17 @@ func (c *HAProxyController) handleBackendAnnotations(ingress *Ingress, service *
 				} else if err := backend.updateHttpchk(v); err != nil {
 					LogErr(fmt.Errorf("%s annotation: %s", k, err))
 					continue
+				}
+				activeAnnotations = true
+			case "cookie-persistence":
+				if v.Status == DELETED && !newBackend {
+					backend.Cookie = nil
+				} else {
+					annotations := c.getCookieAnnotations(ingress, service)
+					if err := backend.updateCookie(v, annotations); err != nil {
+						LogErr(fmt.Errorf("%s annotation: %s", k, err))
+						continue
+					}
 				}
 				activeAnnotations = true
 			case "forwarded-for":
@@ -170,7 +182,8 @@ func (c *HAProxyController) handleServerAnnotations(ingress *Ingress, service *S
 	activeAnnotations = false
 	server := Server(*serverModel)
 
-	serverAnnotations := make(map[string]*StringW, 4)
+	serverAnnotations := make(map[string]*StringW, 5)
+	serverAnnotations["cookie-persistence"], _ = GetValueFromAnnotations("cookie-persistence", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
 	serverAnnotations["check"], _ = GetValueFromAnnotations("check", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
 	serverAnnotations["check-interval"], _ = GetValueFromAnnotations("check-interval", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
 	serverAnnotations["pod-maxconn"], _ = GetValueFromAnnotations("pod-maxconn", service.Annotations)
@@ -184,6 +197,13 @@ func (c *HAProxyController) handleServerAnnotations(ingress *Ingress, service *S
 		}
 		if v.Status != EMPTY {
 			switch k {
+			case "cookie-persistence":
+				if v.Status == DELETED {
+					server.Cookie = ""
+				} else {
+					server.Cookie = server.Name
+				}
+				activeAnnotations = true
 			case "check":
 				if err := server.updateCheck(v); err != nil {
 					LogErr(fmt.Errorf("%s annotation: %s", k, err))
@@ -285,4 +305,21 @@ func GetBoolValue(dataValue, dataName string) (result bool, err error) {
 		}
 	}
 	return result, nil
+}
+
+func (c *HAProxyController) getCookieAnnotations(ingress *Ingress, service *Service) map[string]*StringW {
+
+	cookieAnnotations := make(map[string]*StringW, 11)
+	cookieAnnotations["cookie-domain"], _ = GetValueFromAnnotations("cookie-domain", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
+	cookieAnnotations["cookie-dynamic"], _ = GetValueFromAnnotations("cookie-dynamic", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
+	cookieAnnotations["cookie-httponly"], _ = GetValueFromAnnotations("cookie-httponly", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
+	cookieAnnotations["cookie-indirect"], _ = GetValueFromAnnotations("cookie-indirect", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
+	cookieAnnotations["cookie-maxidle"], _ = GetValueFromAnnotations("cookie-maxidle", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
+	cookieAnnotations["cookie-maxlife"], _ = GetValueFromAnnotations("cookie-maxlife", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
+	cookieAnnotations["cookie-nocache"], _ = GetValueFromAnnotations("cookie-nocache", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
+	cookieAnnotations["cookie-postonly"], _ = GetValueFromAnnotations("cookie-postonly", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
+	cookieAnnotations["cookie-preserve"], _ = GetValueFromAnnotations("cookie-preserve", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
+	cookieAnnotations["cookie-secure"], _ = GetValueFromAnnotations("cookie-secure", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
+	cookieAnnotations["cookie-type"], _ = GetValueFromAnnotations("cookie-type", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
+	return cookieAnnotations
 }
