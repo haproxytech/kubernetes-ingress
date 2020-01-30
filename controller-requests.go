@@ -53,7 +53,8 @@ func (c *HAProxyController) RequestsHTTPRefresh() (needsReload bool, err error) 
 		Cond:       "if",
 		CondTest:   "{ ssl_fc }",
 	}
-	c.frontendHTTPRequestRuleCreate(FrontendHTTPS, xforwardedprotoRule)
+	err = c.frontendHTTPRequestRuleCreate(FrontendHTTPS, xforwardedprotoRule)
+        LogErr(err)
 
 	sortedList := []string{}
 	exclude := map[string]struct{}{
