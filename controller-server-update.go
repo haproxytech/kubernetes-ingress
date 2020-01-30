@@ -21,6 +21,15 @@ import (
 
 type Server models.Server
 
+func (s *Server) updateCookie(data *StringW) error {
+	if len(data.Value) > 0 {
+		s.Cookie = s.Name
+	} else {
+		s.Cookie = ""
+	}
+	return nil
+}
+
 func (s *Server) updateCheck(data *StringW) error {
 	enabled, err := GetBoolValue(data.Value, "check")
 	if err != nil {

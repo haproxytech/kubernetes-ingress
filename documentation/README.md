@@ -12,6 +12,17 @@ Options for starting controller can be found in [controller.md](controller.md)
 
 | Annotation | Type | Default | Dependencies | Config map | Ingress | Service |
 | - |:-:|:-:|:-:|:-:|:-:|:-:|
+| [cookie](#cookie) | string | "" |  |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:|
+| [cookie-domain](#cookie) | string | "" | [cookie](#cookie) |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:|
+| [cookie-dynamic](#cookie) | ["true", "false"] | "false" | [cookie](#cookie) |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:|
+| [cookie-indirect](#cookie) | ["true", "false"] | "true" | [cookie](#cookie) |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:|
+| [cookie-maxidle](#cookie) | number | "" | [cookie](#cookie) |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:|
+| [cookie-maxlife](#cookie) | [number | "" | [cookie](#cookie) |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:|
+| [cookie-nocache](#cookie) | ["true", "false"] | "true" | [cookie](#cookie) |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:|
+| [cookie-postonly](#cookie) | ["true", "false"] | "false" | [cookie](#cookie) |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:|
+| [cookie-preserve](#cookie) | ["true", "false"] | "false" | [cookie](#cookie) |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:|
+| [cookie-secure](#cookie) | ["true", "false"] | "false" | [cookie](#cookie) |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:|
+| [cookie-type](#cookie) | ["rewrite", "insert", "prefix"] | "insert" | [cookie](#cookie) |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:|
 | [check](#backend-checks) | ["true", "false"] | "true" |  |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:|
 | [check-http](#backend-checks) | string |  | [check](#backend-checks) |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:|
 | [check-interval](#backend-checks) | [time](#time) |  | [check](#backend-checks) |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:|
@@ -55,6 +66,24 @@ Options for starting controller can be found in [controller.md](controller.md)
 
 - Annotation: `load-balance`
 - use in format  `haproxy.org/load-balance: <algorithm> [ <arguments> ]`
+
+#### Cookie
+
+- Cookie, Sticky session
+- Annotation: `cookie <string>` Name of cookie, default '' , disable
+  - `cookie-domain <string>` default '' , disable
+  - `cookie-dynamic` default false
+  - `cookie-httponly` default false
+  - `cookie-indirect` default true
+  - `cookie-maxidle` default '', disable
+  - `cookie-maxlife` default '', disable
+  - `cookie-nocache` default true
+  - `cookie-postonly` default false
+  - `cookie-preserve` default false
+  - `cookie-secure` default false
+  - `cookie-type [rewrite |insert | prefix]` default 'insert' 
+ - example: `cookie SERVERID insert indirect nocache`
+ - server cookie name equals to the generated server name, cant be set, eg: `cookie SRV_8bqQK`
 
 #### Backend Checks
 

@@ -16,6 +16,7 @@ package main
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/haproxytech/models"
@@ -50,6 +51,72 @@ func (b *Backend) updateCheckTimeout(data *StringW) error {
 		return fmt.Errorf("timeout check: %s", err)
 	}
 	b.CheckTimeout = val
+	return nil
+}
+
+func (b *Backend) updateCookie(data *StringW, cookieData map[string]*StringW) error {
+	val := &models.Cookie{
+		Name: &data.Value,
+	}
+	if len(cookieData["cookie-domain"].Value) != 0 {
+		val.Domain = strings.Fields(cookieData["cookie-domain"].Value)
+	} else {
+		val.Domain = nil
+	}
+	dynamic, dynamicErr := GetBoolValue(cookieData["cookie-dynamic"].Value, "cookie-dynamic")
+	if dynamicErr != nil {
+		return dynamicErr
+	}
+	val.Dynamic = dynamic
+	httponly, httponlyErr := GetBoolValue(cookieData["cookie-httponly"].Value, "cookie-httponly")
+	if httponlyErr != nil {
+		return httponlyErr
+	}
+	val.Httponly = httponly
+	indirect, indirectErr := GetBoolValue(cookieData["cookie-indirect"].Value, "cookie-indirect")
+	if indirectErr != nil {
+		return indirectErr
+	}
+	val.Indirect = indirect
+	if len(cookieData["cookie-maxidle"].Value) > 0 {
+		maxidle, maxidleErr := strconv.ParseInt(cookieData["cookie-maxidle"].Value, 10, 64)
+		if maxidleErr != nil {
+			return maxidleErr
+		}
+		val.Maxidle = maxidle
+	}
+	if len(cookieData["cookie-maxlife"].Value) > 0 {
+		maxlife, maxlifeErr := strconv.ParseInt(cookieData["cookie-maxlife"].Value, 10, 64)
+		if maxlifeErr != nil {
+			return maxlifeErr
+		}
+		val.Maxlife = maxlife
+	}
+	nocache, nocacheErr := GetBoolValue(cookieData["cookie-nocache"].Value, "cookie-nocache")
+	if nocacheErr != nil {
+		return nocacheErr
+	}
+	val.Nocache = nocache
+	postonly, postonlyErr := GetBoolValue(cookieData["cookie-postonly"].Value, "cookie-postonly")
+	if postonlyErr != nil {
+		return postonlyErr
+	}
+	val.Postonly = postonly
+	preserve, preserveErr := GetBoolValue(cookieData["cookie-preserve"].Value, "cookie-preserve")
+	if preserveErr != nil {
+		return preserveErr
+	}
+	val.Preserve = preserve
+	secure, secureErr := GetBoolValue(cookieData["cookie-secure"].Value, "cookie-secure")
+	if secureErr != nil {
+		return secureErr
+	}
+	val.Secure = secure
+	val.Type = cookieData["cookie-type"].Value
+	b.Cookie = val
+	if err := val.Validate(nil); err != nil {
+		return fmt.Errorf("cooklie: %s", err)
+	}
 	return nil
 }
 
