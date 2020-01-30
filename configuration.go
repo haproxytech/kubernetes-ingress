@@ -26,8 +26,6 @@ const (
 	RATE_LIMIT = "rate-limit"
 	//nolint
 	HTTP_REDIRECT = "http-redirect"
-	//nolint
-	X_FORWARDED_PROTO = "x-forwarded-proto"
 )
 
 //Configuration represents k8s state
@@ -101,9 +99,6 @@ func (c *Configuration) Init(osArgs OSArgs, api *clientnative.HAProxyClient) {
 
 	c.HTTPRequests = map[string][]models.HTTPRequestRule{}
 	c.HTTPRequests[RATE_LIMIT] = []models.HTTPRequestRule{}
-
-	c.HTTPRequests = map[string][]models.HTTPRequestRule{}
-	c.HTTPRequests[X_FORWARDED_PROTO] = []models.HTTPRequestRule{}
 	c.HTTPRequestsStatus = EMPTY
 
 	c.TCPRequests = map[string][]models.TCPRequestRule{}

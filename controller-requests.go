@@ -58,9 +58,8 @@ func (c *HAProxyController) RequestsHTTPRefresh() (needsReload bool, err error) 
 
 	sortedList := []string{}
 	exclude := map[string]struct{}{
-		HTTP_REDIRECT:     struct{}{},
-		RATE_LIMIT:        struct{}{},
-		X_FORWARDED_PROTO: struct{}{},
+		HTTP_REDIRECT: struct{}{},
+		RATE_LIMIT:    struct{}{},
 	}
 	for name := range c.cfg.HTTPRequests {
 		_, excluding := exclude[name]
