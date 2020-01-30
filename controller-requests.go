@@ -16,6 +16,7 @@ package main
 
 import (
 	"sort"
+	"github.com/haproxytech/models"
 )
 
 func (c *HAProxyController) RequestsHTTPRefresh() (needsReload bool, err error) {
@@ -43,11 +44,22 @@ func (c *HAProxyController) RequestsHTTPRefresh() (needsReload bool, err error) 
 		err = c.frontendHTTPRequestRuleCreate(FrontendHTTPS, c.cfg.HTTPRequests[RATE_LIMIT][0])
 		LogErr(err)
 	}
+	id := int64(0)
+	xforwardedprotoRule := models.HTTPRequestRule{
+		ID:         &id,
+		Type:       "set-header",
+		HdrName:    "X-Forwarded-Proto",
+		HdrFormat:  "https",
+		Cond:       "if",
+		CondTest:   "{ ssl_fc }",
+	}
+	c.frontendHTTPRequestRuleCreate(FrontendHTTPS, xforwardedprotoRule)
 
 	sortedList := []string{}
 	exclude := map[string]struct{}{
-		HTTP_REDIRECT: struct{}{},
-		RATE_LIMIT:    struct{}{},
+		HTTP_REDIRECT:     struct{}{},
+		RATE_LIMIT:        struct{}{},
+		X_FORWARDED_PROTO: struct{}{},
 	}
 	for name := range c.cfg.HTTPRequests {
 		_, excluding := exclude[name]
