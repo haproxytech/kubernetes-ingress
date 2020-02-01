@@ -343,7 +343,7 @@ func (c *HAProxyController) handleService(namespace *Namespace, ingress *Ingress
 	}
 
 	// No need to update BackendSwitching
-	if status == EMPTY && !activeSSLPassthrough {
+	if (status == EMPTY && !activeSSLPassthrough) || path.IsTCPService {
 		return backendName, newBackend, needReload, nil
 	}
 
@@ -365,8 +365,6 @@ func (c *HAProxyController) handleService(namespace *Namespace, ingress *Ingress
 			LogErr(err)
 		}
 		needReload = true
-	case path.IsTCPService:
-		// nothing to do
 	case path.IsSSLPassthrough:
 		c.addUseBackendRule(key, useBackendRule, FrontendSSL)
 		if activeSSLPassthrough {
