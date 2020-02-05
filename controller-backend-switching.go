@@ -74,8 +74,12 @@ func (c *HAProxyController) refreshBackendSwitching() (needsReload bool) {
 			continue
 		}
 		// host/path are part of use_backend keys, so sorting keys will
-		// result in sorted use_backend rules for better readability
-		sort.Sort(sort.Reverse(sort.StringSlice(sortedKeys)))
+		// result in sorted use_backend rules where the longest path will match first.
+		// Example:
+		// use_backend service-abc if { req.hdr(host) -i example } { path_beg /a/b/c }
+		// use_backend service-ab  if { req.hdr(host) -i example } { path_beg /a/b }
+		// use_backend service-a   if { req.hdr(host) -i example } { path_beg /a }
+		sort.Strings(sortedKeys)
 		c.backendSwitchingRuleDeleteAll(frontend.Name)
 		for _, key := range sortedKeys {
 			rule := useBackendRules[key]
