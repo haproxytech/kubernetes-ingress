@@ -94,7 +94,7 @@ func (c *HAProxyController) refreshBackendSwitching() (needsReload bool) {
 					condTest = fmt.Sprintf("%s{ path_beg %s }", condTest, rule.Path)
 				}
 				if condTest == "" {
-					log.Println("Both Host and Path are empty for frontend %s with backend %s, SKIP", frontend, rule.Backend)
+					log.Printf("both Host and Path are empty for frontend %v with backend %v, SKIP\n", frontend, rule.Backend)
 					continue
 				}
 			case "tcp":
