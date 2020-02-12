@@ -16,7 +16,6 @@ package main
 
 import (
 	"errors"
-	"github.com/haproxytech/models"
 	"log"
 	"strconv"
 	"strings"
@@ -64,7 +63,6 @@ func (c *HAProxyController) updateHAProxy() error {
 
 	captureHosts := map[uint64][]string{}
 	usedCerts := map[string]struct{}{}
-	c.cfg.HTTPRequests[HTTP_REQUEST_CAPTURE] = []models.HTTPRequestRule{}
 
 	for _, namespace := range c.cfg.Namespace {
 		if !namespace.Relevant {
@@ -102,7 +100,7 @@ func (c *HAProxyController) updateHAProxy() error {
 				}
 			}
 
-			reload, err = c.handleHTTPRequestCapture(ingress, captureHosts)
+			reload, err = c.handleCaptureRequest(ingress, captureHosts)
 			LogErr(err)
 			needsReload = needsReload || reload
 		}

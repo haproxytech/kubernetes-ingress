@@ -73,7 +73,7 @@ func isMember(ss []string, e string) bool {
 	return false
 }
 
-func (c *HAProxyController) handleHTTPRequestCapture(
+func (c *HAProxyController) handleCaptureRequest(
 	ingress *Ingress,
 	captureHosts map[uint64][]string) (needReload bool, err error) {
 
@@ -101,7 +101,8 @@ func (c *HAProxyController) handleHTTPRequestCapture(
 
 	status := ingress.Status
 
-	rules := []models.HTTPRequestRule{}
+	httpRules := []models.HTTPRequestRule{}
+	tcpRules := []models.TCPRequestRule{}
 	for _, sample := range strings.Split(capturesAnn.Value, "\n") {
 		if capturesAnn.Status == DELETED {
 			break
@@ -111,7 +112,7 @@ func (c *HAProxyController) handleHTTPRequestCapture(
 		}
 		key := captureHash(fmt.Sprintf("%s%d", sample, len))
 		filename := path.Join(HAProxyCaptureDir, strconv.FormatUint(key, 10)) + ".lst"
-		rule := &models.HTTPRequestRule{
+		httpRule := &models.HTTPRequestRule{
 			ID:            ptrInt64(0),
 			Type:          "capture",
 			CaptureSample: sample,
@@ -119,13 +120,20 @@ func (c *HAProxyController) handleHTTPRequestCapture(
 			CaptureLen:    len,
 			CondTest:      fmt.Sprintf("{ req.hdr(Host) -f %s }", filename),
 		}
-
+		tcpRule := &models.TCPRequestRule{
+			ID:       ptrInt64(0),
+			Type:     "content",
+			Action:   "capture " + sample + " len " + strconv.FormatInt(len, 10),
+			Cond:     "if",
+			CondTest: fmt.Sprintf("{ req_ssl_sni -f %s }", filename),
+		}
 		for hostname := range ingress.Rules {
 			if hostname == "" {
 				continue
 			}
 			if _, ok := captureHosts[key]; !ok {
-				rules = append(rules, *rule)
+				httpRules = append(httpRules, *httpRule)
+				tcpRules = append(tcpRules, *tcpRule)
 			}
 			if !isMember(captureHosts[key], hostname) {
 				captureHosts[key] = append(captureHosts[key], hostname)
@@ -139,7 +147,8 @@ func (c *HAProxyController) handleHTTPRequestCapture(
 			log.Println(err)
 			return err
 		}
-		c.cfg.HTTPRequests[HTTP_REQUEST_CAPTURE] = append(c.cfg.HTTPRequests[HTTP_REQUEST_CAPTURE], rules...)
+		c.cfg.HTTPRequests[REQUEST_CAPTURE] = append(c.cfg.HTTPRequests[REQUEST_CAPTURE], httpRules...)
+		c.cfg.TCPRequests[REQUEST_CAPTURE] = append(c.cfg.TCPRequests[REQUEST_CAPTURE], tcpRules...)
 		return nil
 	}
 
@@ -153,6 +162,7 @@ func (c *HAProxyController) handleHTTPRequestCapture(
 	switch status {
 	case MODIFIED, ADDED, DELETED:
 		c.cfg.HTTPRequestsStatus = MODIFIED
+		c.cfg.TCPRequestsStatus = MODIFIED
 		reload = true
 	}
 

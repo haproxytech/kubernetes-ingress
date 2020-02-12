@@ -17,8 +17,8 @@ Options for starting controller can be found in [controller.md](controller.md)
 | [check-interval](#backend-checks) | [time](#time) |  | [check](#backend-checks) |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:|
 | [cookie-persistance](#cookie-persistance) | string | "" |  |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:|
 | [forwarded-for](#x-forwarded-for) | ["true", "false"] | "true" |  |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:|
-| [request-capture](#http-request) | string | "" |  |:white_circle:|:large_blue_circle:|:white_circle:|
-| [request-capture-len](#http-request) | string | "128" |  |:white_circle:|:large_blue_circle:|:white_circle:|
+| [request-capture](#request-capture) | string | "" |  |:white_circle:|:large_blue_circle:|:white_circle:|
+| [request-capture-len](#request-capture) | string | "128" |  |:white_circle:|:large_blue_circle:|:white_circle:|
 | [ingress.class](#ingress-class) | string | "" |  |:white_circle:|:large_blue_circle:|:white_circle:|
 | [load-balance](#balance-algorithm) | string | "roundrobin" |  |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:|
 | [maxconn](#maximum-concurent-connections) | number |  |  |:large_blue_circle:|:white_circle:|:white_circle:|
@@ -76,7 +76,7 @@ Options for starting controller can be found in [controller.md](controller.md)
 
 More information can be found in the official HAProxy [documentation](https://cbonte.github.io/haproxy-dconv/2.0/configuration.html#4-cookie)
 
-#### HTTP Request
+#### Request Capture
 
 - Annotation: `request-capture`
   - Usage:

@@ -27,7 +27,7 @@ const (
 	//nolint
 	HTTP_REDIRECT = "http-redirect"
 	//nolint
-	HTTP_REQUEST_CAPTURE = "request-capture"
+	REQUEST_CAPTURE = "request-capture"
 )
 
 //Configuration represents k8s state
@@ -101,14 +101,14 @@ func (c *Configuration) Init(osArgs OSArgs, api *clientnative.HAProxyClient) {
 
 	c.HTTPRequests = map[string][]models.HTTPRequestRule{}
 	c.HTTPRequests[RATE_LIMIT] = []models.HTTPRequestRule{}
+	c.HTTPRequests[HTTP_REDIRECT] = []models.HTTPRequestRule{}
+	c.HTTPRequests[REQUEST_CAPTURE] = []models.HTTPRequestRule{}
 	c.HTTPRequestsStatus = EMPTY
 
 	c.TCPRequests = map[string][]models.TCPRequestRule{}
 	c.TCPRequests[RATE_LIMIT] = []models.TCPRequestRule{}
+	c.TCPRequests[REQUEST_CAPTURE] = []models.TCPRequestRule{}
 	c.TCPRequestsStatus = EMPTY
-
-	c.HTTPRequests[HTTP_REDIRECT] = []models.HTTPRequestRule{}
-	c.HTTPRequests[HTTP_REQUEST_CAPTURE] = []models.HTTPRequestRule{}
 
 	c.BackendSwitchingRules = make(map[string]UseBackendRules)
 	c.BackendSwitchingStatus = make(map[string]struct{})
@@ -240,6 +240,8 @@ func (c *Configuration) Clean() {
 			c.ConfigMapTCPServices.Annotations.Clean()
 		}
 	}
+	c.HTTPRequests[REQUEST_CAPTURE] = []models.HTTPRequestRule{}
+	c.TCPRequests[REQUEST_CAPTURE] = []models.TCPRequestRule{}
 	c.HTTPRequestsStatus = EMPTY
 	c.TCPRequestsStatus = EMPTY
 	defaultAnnotationValues.Clean()

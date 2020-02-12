@@ -88,6 +88,7 @@ func (c *HAProxyController) requestsTCPRefresh() (needsReload bool, err error) {
 		return needsReload, nil
 	}
 
+	// Frontends HTTP and HTTPS
 	c.frontendTCPRequestRuleDeleteAll(FrontendHTTP)
 	c.frontendTCPRequestRuleDeleteAll(FrontendHTTPS)
 
@@ -102,8 +103,48 @@ func (c *HAProxyController) requestsTCPRefresh() (needsReload bool, err error) {
 		err = c.frontendTCPRequestRuleCreate(FrontendHTTPS, c.cfg.TCPRequests[RATE_LIMIT][1])
 		LogErr(err)
 	}
-	if c.cfg.TCPRequestsStatus != EMPTY {
-		needsReload = true
+
+	if !c.cfg.SSLPassthrough {
+		return true, nil
 	}
-	return needsReload, nil
+
+	// SSL Frontend
+	c.frontendTCPRequestRuleDeleteAll(FrontendSSL)
+
+	// Fixed SSLpassthrough rules
+	err = c.frontendTCPRequestRuleCreate(FrontendSSL, models.TCPRequestRule{
+		ID:       ptrInt64(0),
+		Action:   "accept",
+		Type:     "content",
+		Cond:     "if",
+		CondTest: "{ req_ssl_hello_type 1 }",
+	})
+	LogErr(err)
+
+	err = c.frontendTCPRequestRuleCreate(FrontendSSL, models.TCPRequestRule{
+		ID:      ptrInt64(0),
+		Type:    "inspect-delay",
+		Timeout: ptrInt64(5000),
+	})
+	LogErr(err)
+
+	sortedList := []string{}
+	exclude := map[string]struct{}{
+		RATE_LIMIT: struct{}{},
+	}
+	for name := range c.cfg.TCPRequests {
+		_, excluding := exclude[name]
+		if !excluding {
+			sortedList = append(sortedList, name)
+		}
+	}
+	sort.Sort(sort.Reverse(sort.StringSlice(sortedList))) // reverse order
+	for _, name := range sortedList {
+		for _, request := range c.cfg.TCPRequests[name] {
+			err = c.frontendTCPRequestRuleCreate(FrontendSSL, request)
+			LogErr(err)
+		}
+	}
+
+	return true, nil
 }
