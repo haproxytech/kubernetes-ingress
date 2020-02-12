@@ -17,7 +17,6 @@ package main
 import (
 	clientnative "github.com/haproxytech/client-native"
 	"github.com/haproxytech/models"
-	"log"
 	"strings"
 )
 
@@ -83,16 +82,12 @@ func (c *Configuration) Init(osArgs OSArgs, api *clientnative.HAProxyClient) {
 		c.NamespacesAccess.Blacklist[namespace] = struct{}{}
 	}
 	parts := strings.Split(osArgs.PublishService, "/")
-	if len(parts) != 0 {
-		if len(parts) == 2 {
-			c.PublishService = &Service{
-				Namespace: parts[0],
-				Name:      parts[1],
-				Status:    EMPTY,
-				Addresses: []string{},
-			}
-		} else {
-			log.Println("publish-service: incorrect param")
+	if len(parts) == 2 {
+		c.PublishService = &Service{
+			Namespace: parts[0],
+			Name:      parts[1],
+			Status:    EMPTY,
+			Addresses: []string{},
 		}
 	}
 

@@ -87,6 +87,7 @@ func main() {
 	log.Printf("Build date: %s\n\n", BuildTime)
 	log.Printf("ConfigMap: %s/%s\n", osArgs.ConfigMap.Namespace, osArgs.ConfigMap.Name)
 	log.Printf("Ingress class: %s\n", osArgs.IngressClass)
+	log.Printf("Publish service: %s\n", osArgs.PublishService)
 	if osArgs.ConfigMapTCPServices.Name != "" {
 		log.Printf("TCP Services defined in %s/%s\n", osArgs.ConfigMapTCPServices.Namespace, osArgs.ConfigMapTCPServices.Name)
 	}
