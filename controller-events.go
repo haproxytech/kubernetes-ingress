@@ -72,7 +72,15 @@ func (c *HAProxyController) eventIngress(ns *Namespace, data *Ingress) (updateRe
 				continue
 			}
 		}
+
 		//so see what exactly has changed in there
+		//DefaultBackend
+		newDtBd := newIngress.DefaultBackend
+		oldDtBd := oldIngress.DefaultBackend
+		if newDtBd != nil && !oldDtBd.Equal(newDtBd) {
+			newDtBd.Status = MODIFIED
+		}
+		//Rules
 		for _, newRule := range newIngress.Rules {
 			if oldRule, ok := oldIngress.Rules[newRule.Host]; ok {
 				//so we need to compare if anything is different
@@ -113,6 +121,7 @@ func (c *HAProxyController) eventIngress(ns *Namespace, data *Ingress) (updateRe
 				newIngress.Rules[oldRule.Host] = oldRule
 			}
 		}
+		// Annotations
 		for annName, ann := range newIngress.Annotations {
 			annOLD, ok := oldIngress.Annotations[annName]
 			if ok {
@@ -145,6 +154,9 @@ func (c *HAProxyController) eventIngress(ns *Namespace, data *Ingress) (updateRe
 		}
 		ns.Ingresses[data.Name] = data
 
+		if data.DefaultBackend != nil {
+			data.DefaultBackend.Status = ADDED
+		}
 		for _, newRule := range data.Rules {
 			for _, newPath := range newRule.Paths {
 				newPath.Status = ADDED
@@ -160,6 +172,9 @@ func (c *HAProxyController) eventIngress(ns *Namespace, data *Ingress) (updateRe
 		ingress, ok := ns.Ingresses[data.Name]
 		if ok {
 			ingress.Status = DELETED
+			if ingress.DefaultBackend != nil {
+				ingress.DefaultBackend.Status = DELETED
+			}
 			for _, rule := range ingress.Rules {
 				rule.Status = DELETED
 				for _, path := range rule.Paths {

@@ -97,12 +97,13 @@ type IngressRule struct {
 
 //Ingress is usefull data from k8s structures about ingress
 type Ingress struct {
-	Namespace   string
-	Name        string
-	Annotations MapStringW
-	Rules       map[string]*IngressRule
-	TLS         map[string]*IngressTLS
-	Status      Status
+	Namespace      string
+	Name           string
+	Annotations    MapStringW
+	Rules          map[string]*IngressRule
+	DefaultBackend *IngressPath
+	TLS            map[string]*IngressTLS
+	Status         Status
 }
 
 // IngressTLS describes the transport layer security associated with an Ingress.

@@ -58,6 +58,10 @@ func (c *HAProxyController) updateHAProxy() error {
 	LogErr(err)
 	needsReload = needsReload || reload
 
+	reload, err = c.handleDefaultService()
+	LogErr(err)
+	needsReload = needsReload || reload
+
 	captureHosts := map[uint64][]string{}
 	usedCerts := map[string]struct{}{}
 	c.cfg.HTTPRequests[HTTP_REQUEST_CAPTURE] = []models.HTTPRequestRule{}
@@ -73,6 +77,12 @@ func (c *HAProxyController) updateHAProxy() error {
 			}
 			if c.cfg.PublishService != nil && ingress.Status != DELETED {
 				LogErr(c.k8s.UpdateIngressStatus(ingress, c.cfg.PublishService))
+			}
+			// handle Default Backend
+			if ingress.DefaultBackend != nil {
+				reload, err = c.handlePath(namespace, ingress, &IngressRule{}, ingress.DefaultBackend)
+				LogErr(err)
+				needsReload = needsReload || reload
 			}
 			// handle Ingress rules
 			for _, rule := range ingress.Rules {
@@ -114,10 +124,6 @@ func (c *HAProxyController) updateHAProxy() error {
 	if err != nil {
 		return err
 	}
-	needsReload = needsReload || reload
-
-	reload, err = c.handleDefaultService()
-	LogErr(err)
 	needsReload = needsReload || reload
 
 	reload, err = c.requestsTCPRefresh()
@@ -164,6 +170,7 @@ func (c *HAProxyController) handleMaxconn(maxconn *int64, frontends ...string) e
 	return nil
 }
 
+// handles defaultBackned configured via cli param "default-backend-service"
 func (c *HAProxyController) handleDefaultService() (needsReload bool, err error) {
 	needsReload = false
 	dsvcData, _ := GetValueFromAnnotations("default-backend-service")
@@ -171,6 +178,9 @@ func (c *HAProxyController) handleDefaultService() (needsReload bool, err error)
 
 	if len(dsvc) != 2 {
 		return needsReload, errors.New("default service invalid data")
+	}
+	if dsvc[0] == "" || dsvc[1] == "" {
+		return needsReload, nil
 	}
 	namespace, ok := c.cfg.Namespace[dsvc[0]]
 	if !ok {
@@ -182,6 +192,7 @@ func (c *HAProxyController) handleDefaultService() (needsReload bool, err error)
 	}
 	ingress := &Ingress{
 		Namespace:   namespace.Name,
+		Name:        "DefaultService",
 		Annotations: MapStringW{},
 		Rules:       map[string]*IngressRule{},
 	}

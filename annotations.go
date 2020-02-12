@@ -125,7 +125,6 @@ var defaultAnnotationValues = MapStringW{
 	"cookie-indirect":           &StringW{Value: "true"},
 	"cookie-nocache":            &StringW{Value: "true"},
 	"cookie-type":               &StringW{Value: "insert"},
-	"default-service":           &StringW{Value: ""},
 	"forwarded-for":             &StringW{Value: "true"},
 	"load-balance":              &StringW{Value: "roundrobin"},
 	"rate-limit":                &StringW{Value: "true"},

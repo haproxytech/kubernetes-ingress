@@ -300,9 +300,14 @@ func (c *HAProxyController) handleService(namespace *Namespace, ingress *Ingress
 	// This is done via c.refreshBackendSwitching
 	if status == DELETED {
 		key := fmt.Sprintf("R%s%s%s%s", namespace.Name, ingress.Name, rule.Host, path.Path)
-		if path.IsSSLPassthrough {
+		switch {
+		case path.IsSSLPassthrough:
 			c.deleteUseBackendRule(key, FrontendSSL)
-		} else {
+		case path.IsDefaultBackend:
+			log.Printf("Removing  default_backend %s from ingress \n", service.Name)
+			LogErr(c.setDefaultBackend(""))
+			needReload = true
+		default:
 			c.deleteUseBackendRule(key, FrontendHTTP, FrontendHTTPS)
 		}
 		return "", false, needReload, nil
@@ -361,13 +366,8 @@ func (c *HAProxyController) handleService(namespace *Namespace, ingress *Ingress
 	}
 	switch {
 	case path.IsDefaultBackend:
-		for _, frontendName := range []string{FrontendHTTP, FrontendHTTPS} {
-			frontend, _ := c.frontendGet(frontendName)
-			LogErr(err)
-			frontend.DefaultBackend = backendName
-			err = c.frontendEdit(frontend)
-			LogErr(err)
-		}
+		log.Printf("Confiugring default_backend %s from ingress %s\n", service.Name, ingress.Name)
+		LogErr(c.setDefaultBackend(backendName))
 		needReload = true
 	case path.IsSSLPassthrough:
 		c.addUseBackendRule(key, useBackendRule, FrontendSSL)

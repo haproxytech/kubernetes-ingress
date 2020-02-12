@@ -130,6 +130,10 @@ func (a *Ingress) Equal(b *Ingress) bool {
 			return false
 		}
 	}
+
+	if a.DefaultBackend != b.DefaultBackend && !a.DefaultBackend.Equal(b.DefaultBackend) {
+		return false
+	}
 	return a.Annotations.Equal(b.Annotations)
 }
 

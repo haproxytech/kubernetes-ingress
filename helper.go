@@ -110,6 +110,19 @@ func ConvertIngressTLS(ingressTLS []extensions.IngressTLS) map[string]*IngressTL
 	return tls
 }
 
+func ConvertIngressBackend(ingressBackend *extensions.IngressBackend) *IngressPath {
+	if ingressBackend == nil {
+		return nil
+	}
+	return &IngressPath{
+		ServiceName:       ingressBackend.ServiceName,
+		ServicePortInt:    int64(ingressBackend.ServicePort.IntValue()),
+		ServicePortString: ingressBackend.ServicePort.StrVal,
+		IsDefaultBackend:  true,
+		Status:            "",
+	}
+}
+
 func ptrInt64(value int64) *int64 {
 	return &value
 }

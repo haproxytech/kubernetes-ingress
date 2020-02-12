@@ -156,6 +156,9 @@ func (c *Configuration) Clean() {
 					tls.Status = EMPTY
 				}
 			}
+			if data.DefaultBackend != nil {
+				data.DefaultBackend.Status = EMPTY
+			}
 			for _, rule := range data.Rules {
 				switch rule.Status {
 				case DELETED:

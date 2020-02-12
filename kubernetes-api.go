@@ -274,12 +274,13 @@ func (k *K8s) EventsIngresses(channel chan *Ingress, stop chan struct{}) {
 					status = DELETED
 				}
 				item := &Ingress{
-					Namespace:   data.GetNamespace(),
-					Name:        data.GetName(),
-					Annotations: ConvertToMapStringW(data.ObjectMeta.Annotations),
-					Rules:       ConvertIngressRules(data.Spec.Rules),
-					TLS:         ConvertIngressTLS(data.Spec.TLS),
-					Status:      status,
+					Namespace:      data.GetNamespace(),
+					Name:           data.GetName(),
+					Annotations:    ConvertToMapStringW(data.ObjectMeta.Annotations),
+					Rules:          ConvertIngressRules(data.Spec.Rules),
+					DefaultBackend: ConvertIngressBackend(data.Spec.Backend),
+					TLS:            ConvertIngressTLS(data.Spec.TLS),
+					Status:         status,
 				}
 				if DEBUG_API {
 					log.Printf("%s %s: %s \n", INGRESS, item.Status, item.Name)
@@ -290,12 +291,13 @@ func (k *K8s) EventsIngresses(channel chan *Ingress, stop chan struct{}) {
 				data := obj.(*extensions.Ingress)
 				var status = DELETED
 				item := &Ingress{
-					Namespace:   data.GetNamespace(),
-					Name:        data.GetName(),
-					Annotations: ConvertToMapStringW(data.ObjectMeta.Annotations),
-					Rules:       ConvertIngressRules(data.Spec.Rules),
-					TLS:         ConvertIngressTLS(data.Spec.TLS),
-					Status:      status,
+					Namespace:      data.GetNamespace(),
+					Name:           data.GetName(),
+					Annotations:    ConvertToMapStringW(data.ObjectMeta.Annotations),
+					Rules:          ConvertIngressRules(data.Spec.Rules),
+					DefaultBackend: ConvertIngressBackend(data.Spec.Backend),
+					TLS:            ConvertIngressTLS(data.Spec.TLS),
+					Status:         status,
 				}
 				if DEBUG_API {
 					log.Printf("%s %s: %s \n", INGRESS, item.Status, item.Name)
@@ -307,20 +309,22 @@ func (k *K8s) EventsIngresses(channel chan *Ingress, stop chan struct{}) {
 				data2 := newObj.(*extensions.Ingress)
 				var status = MODIFIED
 				item1 := &Ingress{
-					Namespace:   data1.GetNamespace(),
-					Name:        data1.GetName(),
-					Annotations: ConvertToMapStringW(data1.ObjectMeta.Annotations),
-					Rules:       ConvertIngressRules(data1.Spec.Rules),
-					TLS:         ConvertIngressTLS(data1.Spec.TLS),
-					Status:      status,
+					Namespace:      data1.GetNamespace(),
+					Name:           data1.GetName(),
+					Annotations:    ConvertToMapStringW(data1.ObjectMeta.Annotations),
+					Rules:          ConvertIngressRules(data1.Spec.Rules),
+					DefaultBackend: ConvertIngressBackend(data1.Spec.Backend),
+					TLS:            ConvertIngressTLS(data1.Spec.TLS),
+					Status:         status,
 				}
 				item2 := &Ingress{
-					Namespace:   data2.GetNamespace(),
-					Name:        data2.GetName(),
-					Annotations: ConvertToMapStringW(data2.ObjectMeta.Annotations),
-					Rules:       ConvertIngressRules(data2.Spec.Rules),
-					TLS:         ConvertIngressTLS(data2.Spec.TLS),
-					Status:      status,
+					Namespace:      data2.GetNamespace(),
+					Name:           data2.GetName(),
+					Annotations:    ConvertToMapStringW(data2.ObjectMeta.Annotations),
+					Rules:          ConvertIngressRules(data2.Spec.Rules),
+					DefaultBackend: ConvertIngressBackend(data2.Spec.Backend),
+					TLS:            ConvertIngressTLS(data2.Spec.TLS),
+					Status:         status,
 				}
 				if item2.Equal(item1) {
 					return

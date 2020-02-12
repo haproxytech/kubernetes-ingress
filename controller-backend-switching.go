@@ -130,3 +130,17 @@ func (c *HAProxyController) clearBackends(activeBackends map[string]struct{}) (n
 	}
 	return needsReload
 }
+
+func (c *HAProxyController) setDefaultBackend(backendName string) (err error) {
+	for _, frontendName := range []string{FrontendHTTP, FrontendHTTPS} {
+		frontend, e := c.frontendGet(frontendName)
+		if e == nil {
+			frontend.DefaultBackend = backendName
+			e = c.frontendEdit(frontend)
+		}
+		if e != nil {
+			err = e
+		}
+	}
+	return err
+}
