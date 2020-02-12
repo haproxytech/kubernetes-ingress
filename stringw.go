@@ -38,7 +38,7 @@ type MapStringW map[string]*StringW
 func (a *MapStringW) Get(name string) (data *StringW, err error) {
 	var ok bool
 	if data, ok = (*a)[name]; !ok {
-		return nil, fmt.Errorf("StringW %s does not exist", name) //nolint golint
+		return nil, fmt.Errorf("StringW '%s' does not exist", name) //nolint golint
 	}
 	return data, nil
 }

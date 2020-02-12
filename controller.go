@@ -193,8 +193,8 @@ func (c *HAProxyController) handlePath(namespace *Namespace, ingress *Ingress, r
 	needReload = false
 	service, ok := namespace.Services[path.ServiceName]
 	if !ok {
-		log.Println("service", path.ServiceName, "does not exists")
-		return needReload, fmt.Errorf("service %s does not exists", path.ServiceName)
+		log.Printf("service '%s' does not exist", path.ServiceName)
+		return needReload, fmt.Errorf("service '%s' does not exist", path.ServiceName)
 	}
 
 	backendName, newBackend, reload, err := c.handleService(namespace, ingress, rule, path, service)
@@ -205,7 +205,7 @@ func (c *HAProxyController) handlePath(namespace *Namespace, ingress *Ingress, r
 
 	endpoints, ok := namespace.Endpoints[service.Name]
 	if !ok {
-		log.Printf("No Endpoints found for service %s ", service.Name)
+		log.Printf("No Endpoints found for service '%s'", service.Name)
 		return needReload, nil // not an end of world scenario, just log this
 	}
 	endpoints.BackendName = backendName
@@ -304,7 +304,7 @@ func (c *HAProxyController) handleService(namespace *Namespace, ingress *Ingress
 		case path.IsSSLPassthrough:
 			c.deleteUseBackendRule(key, FrontendSSL)
 		case path.IsDefaultBackend:
-			log.Printf("Removing  default_backend %s from ingress \n", service.Name)
+			log.Printf("Removing default_backend %s from ingress \n", service.Name)
 			LogErr(c.setDefaultBackend(""))
 			needReload = true
 		default:
@@ -410,10 +410,10 @@ func (c *HAProxyController) setTargetPort(path *IngressPath, service *Service, e
 						return nil
 					}
 				}
-				log.Printf("Targetport %s not found for service %s", sp.TargetPortStr, service.Name)
+				log.Printf("Targetport '%s' not found for service %s", sp.TargetPortStr, service.Name)
 			} // Return nil even if corresponding target port was not found.
 			return nil
 		}
 	}
-	return fmt.Errorf("servicePort(Str: %s, Int: %d) for serviceName %s not found", path.ServicePortString, path.ServicePortInt, service.Name)
+	return fmt.Errorf("servicePort(Str: %s, Int: %d) for serviceName '%s' not found", path.ServicePortString, path.ServicePortInt, service.Name)
 }

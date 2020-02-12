@@ -174,14 +174,14 @@ func (c *HAProxyController) handleTLSSecret(ingress Ingress, tls IngressTLS, cer
 	namespace, namespaceOK := c.cfg.Namespace[namespaceName]
 	if !namespaceOK {
 		if tls.Status != EMPTY {
-			log.Printf("namespace %s does not exists, ignoring.", namespaceName)
+			log.Printf("namespace '%s' does not exist, ignoring.", namespaceName)
 		}
 		return false
 	}
 	secret, secretOK := namespace.Secret[secretName]
 	if !secretOK {
 		if tls.Status != EMPTY {
-			log.Printf("secret %s/%s does not exists, ignoring.", namespaceName, secretName)
+			log.Printf("secret '%s/%s' does not exist, ignoring.", namespaceName, secretName)
 		}
 		return false
 	}

@@ -186,7 +186,7 @@ func (c *HAProxyController) handleDefaultService() (needsReload bool, err error)
 	}
 	service, ok := namespace.Services[dsvc[1]]
 	if !ok {
-		return needsReload, errors.New("service " + dsvc[1] + "does not exists ")
+		return needsReload, errors.New("service '" + dsvc[1] + "' does not exist")
 	}
 	ingress := &Ingress{
 		Namespace:   namespace.Name,
