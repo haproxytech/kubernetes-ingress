@@ -110,6 +110,9 @@ func (c *HAProxyController) eventIngress(ns *Namespace, data *Ingress) (updateRe
 				}
 			} else {
 				newRule.Status = ADDED
+				for _, path := range newRule.Paths {
+					path.Status = ADDED
+				}
 			}
 		}
 		for _, oldRule := range oldIngress.Rules {

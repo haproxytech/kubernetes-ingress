@@ -284,13 +284,7 @@ func (c *HAProxyController) handleService(namespace *Namespace, ingress *Ingress
 	// Get Backend status
 	status := service.Status
 	if status == EMPTY {
-		if rule.Status == ADDED {
-			//TODO: check why an ADEED rule.Status
-			// is not reflected for the path.Status
-			status = ADDED
-		} else {
-			status = path.Status
-		}
+		status = path.Status
 	}
 
 	// If status DELETED
