@@ -79,7 +79,11 @@ func (c *HAProxyController) handleSSLPassthrough(ingress *Ingress, service *Serv
 	}
 	updateBackendSwitching = false
 	annSSLPassthrough, _ := GetValueFromAnnotations("ssl-passthrough", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
-	if annSSLPassthrough.Status != EMPTY || newBackend {
+	status := annSSLPassthrough.Status
+	if status == EMPTY {
+		status = path.Status
+	}
+	if status != EMPTY || newBackend {
 		enabled, err := GetBoolValue(annSSLPassthrough.Value, "ssl-passthrough")
 		if err != nil {
 			LogErr(fmt.Errorf("ssl-passthrough annotation: %s", err))
