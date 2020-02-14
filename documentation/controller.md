@@ -7,6 +7,24 @@ you can run image with arguments:
 - `--configmap`
   - mandatory, must be in format `namespace/name`
   - default `default/haproxy-configmap`
+- `--configmap-tcp-services`
+  - optional, must be in format `namespace/name`
+  - Example:
+   ```
+   apiVersion: v1
+   kind: ConfigMap
+   metadata:
+     name: tcp
+     namespace: default
+   data:
+     3306:             # Port where the frontend is going to listen to.
+       tcp/mysql:3306  # Kuberntes service to use for the backend.
+     389:
+       tcp/ldap:389
+     6379:
+       tcp/redis:6379
+   ```
+  - Ports of TCP services should be exposed on the controller's kubernetes service
 - `--default-backend-service`
   - must be in format `namespace/name`
 - `--default-ssl-certificate`
