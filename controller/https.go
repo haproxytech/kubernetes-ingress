@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package controller
 
 import (
 	"fmt"
@@ -22,6 +22,7 @@ import (
 	"path"
 	"strings"
 
+	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 	"github.com/haproxytech/models"
 )
 
@@ -94,7 +95,7 @@ func (c *HAProxyController) handleSecret(ingress Ingress, secret Secret, writeSe
 				errCrt := c.writeCert(filename, rsaKey, rsaCrt)
 				if errCrt != nil {
 					err1 := c.removeHTTPSListeners()
-					LogErr(err1)
+					utils.LogErr(err1)
 					return false
 				}
 				reloadRequested = true
@@ -107,7 +108,7 @@ func (c *HAProxyController) handleSecret(ingress Ingress, secret Secret, writeSe
 				errCrt := c.writeCert(filename, ecdsaKey, ecdsaCrt)
 				if errCrt != nil {
 					err1 := c.removeHTTPSListeners()
-					LogErr(err1)
+					utils.LogErr(err1)
 					return false
 				}
 				reloadRequested = true
@@ -123,7 +124,7 @@ func (c *HAProxyController) handleSecret(ingress Ingress, secret Secret, writeSe
 				errCrt := c.writeCert(filename, tlsKey, tlsCrt)
 				if errCrt != nil {
 					err1 := c.removeHTTPSListeners()
-					LogErr(err1)
+					utils.LogErr(err1)
 					return false
 				}
 				reloadRequested = true
@@ -199,29 +200,29 @@ func (c *HAProxyController) handleHTTPS(usedCerts map[string]struct{}) (reloadRe
 	// ssl-passthrough
 	if len(c.cfg.BackendSwitchingRules[FrontendSSL]) > 0 {
 		if !c.cfg.SSLPassthrough {
-			PanicErr(c.enableSSLPassthrough())
+			utils.PanicErr(c.enableSSLPassthrough())
 			c.cfg.SSLPassthrough = true
 			reloadRequested = true
 		}
 	} else if c.cfg.SSLPassthrough {
-		PanicErr(c.disableSSLPassthrough())
+		utils.PanicErr(c.disableSSLPassthrough())
 		c.cfg.SSLPassthrough = false
 		reloadRequested = true
 	}
 	// ssl-offload
 	if len(usedCerts) > 0 {
 		if !c.cfg.HTTPS {
-			PanicErr(c.enableSSLOffload())
+			utils.PanicErr(c.enableSSLOffload())
 			c.cfg.HTTPS = true
 			reloadRequested = true
 		}
 	} else if c.cfg.HTTPS {
-		PanicErr(c.disableSSLOffload())
+		utils.PanicErr(c.disableSSLOffload())
 		c.cfg.HTTPS = false
 		reloadRequested = true
 	}
 	//remove certs that are not needed
-	LogErr(c.cleanCertDir(usedCerts))
+	utils.LogErr(c.cleanCertDir(usedCerts))
 
 	return reloadRequested
 }
@@ -283,15 +284,15 @@ func (c *HAProxyController) enableSSLPassthrough() (err error) {
 		return err
 	}
 	err = c.frontendTCPRequestRuleCreate(FrontendSSL, models.TCPRequestRule{
-		ID:      ptrInt64(0),
+		ID:      utils.PtrInt64(0),
 		Type:    "inspect-delay",
-		Timeout: ptrInt64(5000),
+		Timeout: utils.PtrInt64(5000),
 	})
 	if err != nil {
 		return err
 	}
 	err = c.frontendTCPRequestRuleCreate(FrontendSSL, models.TCPRequestRule{
-		ID:       ptrInt64(0),
+		ID:       utils.PtrInt64(0),
 		Action:   "accept",
 		Type:     "content",
 		Cond:     "if",
@@ -370,4 +371,8 @@ func (c *HAProxyController) disableSSLPassthrough() (err error) {
 		Alpn:           alpn,
 	})
 	return err
+}
+
+func (c *HAProxyController) removeHTTPSListeners() (err error) {
+	return nil
 }

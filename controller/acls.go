@@ -12,9 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package controller
 
 import (
+	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 	"github.com/haproxytech/models"
 )
 
@@ -35,7 +36,7 @@ func (c *HAProxyController) addACL(acl models.ACL, frontends ...string) {
 		}
 		if !found {
 			err = c.frontendACLAdd(frontend, acl)
-			LogErr(err)
+			utils.LogErr(err)
 		}
 	}
 }
@@ -48,7 +49,7 @@ func (c *HAProxyController) removeACL(acl models.ACL, frontends ...string) {
 			for _, d := range acls {
 				if acl.ACLName == d.ACLName {
 					err = c.frontendACLDelete(frontend, *d.ID-indexShift)
-					LogErr(err)
+					utils.LogErr(err)
 					if err == nil {
 						indexShift++
 					}

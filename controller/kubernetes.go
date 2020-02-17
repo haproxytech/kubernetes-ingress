@@ -12,14 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package controller
 
 import (
 	"errors"
 	"fmt"
 	"log"
 	"net"
-	"path/filepath"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
@@ -57,12 +56,7 @@ func GetKubernetesClient() (*K8s, error) {
 }
 
 //GetRemoteKubernetesClient returns new client that communicates with k8s
-func GetRemoteKubernetesClient(osArgs OSArgs) (*K8s, error) {
-
-	kubeconfig := filepath.Join(homeDir(), ".kube", "config")
-	if osArgs.KubeConfig != "" {
-		kubeconfig = osArgs.KubeConfig
-	}
+func GetRemoteKubernetesClient(kubeconfig string) (*K8s, error) {
 
 	// use the current context in kubeconfig
 	config, err := clientcmd.BuildConfigFromFlags("", kubeconfig)

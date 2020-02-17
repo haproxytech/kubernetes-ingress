@@ -12,10 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package controller
 
 import (
 	"fmt"
+	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 	"log"
 	"strconv"
 )
@@ -270,7 +271,7 @@ func (c *HAProxyController) setModifiedStatusEndpoints(oldObj, newObj *Endpoints
 			adrOld.IP = "127.0.0.1"
 			adrOld.Disabled = true
 			adrOld.Status = MODIFIED
-			(*newObj.Addresses)[fmt.Sprintf("SRV_%s", RandomString(5))] = adrOld
+			(*newObj.Addresses)[fmt.Sprintf("SRV_%s", utils.RandomString(5))] = adrOld
 		} else {
 			//try to find one that is added so we can switch them
 			replaced := false
@@ -342,9 +343,9 @@ func (c *HAProxyController) processEndpointIPs(data *Endpoints) (updateRequired 
 		case ADDED:
 			//added on haproxy update
 			ip.Status = ADDED
-			ip.HAProxyName = fmt.Sprintf("SRV_%s", RandomString(5))
+			ip.HAProxyName = fmt.Sprintf("SRV_%s", utils.RandomString(5))
 			for _, ok := usedNames[ip.HAProxyName]; ok; {
-				ip.HAProxyName = fmt.Sprintf("SRV_%s", RandomString(5))
+				ip.HAProxyName = fmt.Sprintf("SRV_%s", utils.RandomString(5))
 			}
 			usedNames[ip.HAProxyName] = struct{}{}
 			updateRequired = true
@@ -386,9 +387,9 @@ func (c *HAProxyController) processEndpointIPs(data *Endpoints) (updateRequired 
 		return updateRequired
 	}
 	for index := 0; index < toCreate; index++ {
-		hAProxyName := fmt.Sprintf("SRV_%s", RandomString(5))
+		hAProxyName := fmt.Sprintf("SRV_%s", utils.RandomString(5))
 		for _, ok := usedNames[hAProxyName]; ok; {
-			hAProxyName = fmt.Sprintf("SRV_%s", RandomString(5))
+			hAProxyName = fmt.Sprintf("SRV_%s", utils.RandomString(5))
 			usedNames[hAProxyName] = struct{}{}
 		}
 

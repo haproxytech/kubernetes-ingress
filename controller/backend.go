@@ -12,13 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package controller
 
 import (
 	"fmt"
 	"strconv"
 	"strings"
 
+	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 	"github.com/haproxytech/models"
 )
 
@@ -46,7 +47,7 @@ func (b *Backend) updateBalance(data *StringW) error {
 }
 
 func (b *Backend) updateCheckTimeout(data *StringW) error {
-	val, err := ParseTime(data.Value)
+	val, err := utils.ParseTime(data.Value)
 	if err != nil {
 		return fmt.Errorf("timeout check: %s", err)
 	}
@@ -137,7 +138,7 @@ func (b *Backend) updateForwardfor(data *StringW) error {
 	}
 	if enabled {
 		b.Forwardfor = &models.Forwardfor{
-			Enabled: ptrString("enabled"),
+			Enabled: utils.PtrString("enabled"),
 		}
 	} else {
 		b.Forwardfor = nil

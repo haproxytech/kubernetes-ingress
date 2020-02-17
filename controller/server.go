@@ -12,9 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package controller
 
 import (
+	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 	"github.com/haproxytech/models"
 	"strconv"
 )
@@ -35,7 +36,7 @@ func (s *Server) updateCheck(data *StringW) error {
 }
 
 func (s *Server) updateInter(data *StringW) error {
-	time, err := ParseTime(data.Value)
+	time, err := utils.ParseTime(data.Value)
 	if err != nil {
 		return err
 	}

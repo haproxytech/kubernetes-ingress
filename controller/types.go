@@ -12,7 +12,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package controller
+
+import (
+	extensions "k8s.io/api/extensions/v1beta1"
+)
+
+const (
+	FrontendHTTP  = "http"
+	FrontendHTTPS = "https"
+	FrontendSSL   = "ssl"
+)
+
+var (
+	HAProxyCFG        string
+	HAProxyCertDir    string
+	HAProxyStateDir   string
+	HAProxyCaptureDir string
+)
 
 //ServicePort describes port of a service
 type ServicePort struct {
@@ -127,4 +144,57 @@ type Secret struct {
 	Name      string
 	Data      map[string][]byte
 	Status    Status
+}
+
+//ConvertIngressRules converts data from kubernetes format
+func ConvertIngressRules(ingressRules []extensions.IngressRule) map[string]*IngressRule {
+	rules := make(map[string]*IngressRule)
+	for _, k8sRule := range ingressRules {
+		paths := make(map[string]*IngressPath)
+		for _, k8sPath := range k8sRule.HTTP.Paths {
+			paths[k8sPath.Path] = &IngressPath{
+				Path:              k8sPath.Path,
+				ServiceName:       k8sPath.Backend.ServiceName,
+				ServicePortInt:    int64(k8sPath.Backend.ServicePort.IntValue()),
+				ServicePortString: k8sPath.Backend.ServicePort.StrVal,
+				Status:            "",
+			}
+		}
+		rules[k8sRule.Host] = &IngressRule{
+			Host:   k8sRule.Host,
+			Paths:  paths,
+			Status: "",
+		}
+	}
+	return rules
+}
+
+//ConvertIngressRules converts data from kubernetes format
+func ConvertIngressTLS(ingressTLS []extensions.IngressTLS) map[string]*IngressTLS {
+	tls := make(map[string]*IngressTLS)
+	for _, k8sTLS := range ingressTLS {
+		for _, host := range k8sTLS.Hosts {
+			tls[host] = &IngressTLS{
+				Host: host,
+				SecretName: StringW{
+					Value: k8sTLS.SecretName,
+				},
+				Status: EMPTY,
+			}
+		}
+	}
+	return tls
+}
+
+func ConvertIngressBackend(ingressBackend *extensions.IngressBackend) *IngressPath {
+	if ingressBackend == nil {
+		return nil
+	}
+	return &IngressPath{
+		ServiceName:       ingressBackend.ServiceName,
+		ServicePortInt:    int64(ingressBackend.ServicePort.IntValue()),
+		ServicePortString: ingressBackend.ServicePort.StrVal,
+		IsDefaultBackend:  true,
+		Status:            "",
+	}
 }

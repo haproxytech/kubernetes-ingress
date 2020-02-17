@@ -12,14 +12,26 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package controller
 
-type Status string
+//SyncType represents type of k8s received message
+type SyncType string
 
+//SyncType values
 const (
-	ADDED    Status = "ADDED"
-	DELETED  Status = "DELETED"
-	ERROR    Status = "ERROR"
-	EMPTY    Status = ""
-	MODIFIED Status = "MODIFIED"
+	COMMAND   SyncType = "COMMAND"
+	CONFIGMAP SyncType = "CONFIGMAP"
+	ENDPOINTS SyncType = "ENDPOINTS"
+	INGRESS   SyncType = "INGRESS"
+	NAMESPACE SyncType = "NAMESPACE"
+	SERVICE   SyncType = "SERVICE"
+	SECRET    SyncType = "SECRET"
 )
+
+//SyncDataEvent represents converted k8s received message
+type SyncDataEvent struct {
+	_ [0]int
+	SyncType
+	Namespace string
+	Data      interface{}
+}

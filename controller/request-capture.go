@@ -12,10 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package controller
 
 import (
 	"fmt"
+	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 	"github.com/haproxytech/models"
 	"hash/fnv"
 	"log"
@@ -32,7 +33,7 @@ const (
 func captureHash(s string) uint64 {
 	h := fnv.New64a()
 	_, err := h.Write([]byte(s))
-	LogErr(err)
+	utils.LogErr(err)
 	return h.Sum64()
 }
 
@@ -59,9 +60,9 @@ func generateCaptureFile(captureHosts map[uint64][]string) (err error) {
 
 func cleanCapturefiles() {
 	err := os.RemoveAll(HAProxyCaptureDir)
-	LogErr(err)
+	utils.LogErr(err)
 	err = os.MkdirAll(HAProxyCaptureDir, 0755)
-	LogErr(err)
+	utils.LogErr(err)
 }
 
 func isMember(ss []string, e string) bool {
@@ -113,7 +114,7 @@ func (c *HAProxyController) handleCaptureRequest(
 		key := captureHash(fmt.Sprintf("%s%d", sample, len))
 		filename := path.Join(HAProxyCaptureDir, strconv.FormatUint(key, 10)) + ".lst"
 		httpRule := &models.HTTPRequestRule{
-			ID:            ptrInt64(0),
+			ID:            utils.PtrInt64(0),
 			Type:          "capture",
 			CaptureSample: sample,
 			Cond:          "if",
@@ -121,7 +122,7 @@ func (c *HAProxyController) handleCaptureRequest(
 			CondTest:      fmt.Sprintf("{ req.hdr(Host) -f %s }", filename),
 		}
 		tcpRule := &models.TCPRequestRule{
-			ID:       ptrInt64(0),
+			ID:       utils.PtrInt64(0),
 			Type:     "content",
 			Action:   "capture " + sample + " len " + strconv.FormatInt(len, 10),
 			Cond:     "if",

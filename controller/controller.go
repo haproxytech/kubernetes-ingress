@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package controller
 
 import (
 	"context"
@@ -20,12 +20,14 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 
 	clientnative "github.com/haproxytech/client-native"
 	"github.com/haproxytech/client-native/configuration"
 	"github.com/haproxytech/client-native/runtime"
 	parser "github.com/haproxytech/config-parser/v2"
+	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 	"github.com/haproxytech/models"
 	"k8s.io/apimachinery/pkg/watch"
 )
@@ -34,7 +36,7 @@ import (
 type HAProxyController struct {
 	k8s                         *K8s
 	cfg                         Configuration
-	osArgs                      OSArgs
+	osArgs                      utils.OSArgs
 	NativeAPI                   *clientnative.HAProxyClient
 	ActiveTransaction           string
 	ActiveTransactionHasChanges bool
@@ -43,7 +45,7 @@ type HAProxyController struct {
 }
 
 // Start initialize and run HAProxyController
-func (c *HAProxyController) Start(ctx context.Context, osArgs OSArgs) {
+func (c *HAProxyController) Start(ctx context.Context, osArgs utils.OSArgs) {
 
 	c.osArgs = osArgs
 
@@ -53,12 +55,16 @@ func (c *HAProxyController) Start(ctx context.Context, osArgs OSArgs) {
 	var err error
 
 	if osArgs.OutOfCluster {
-		k8s, err = GetRemoteKubernetesClient(osArgs)
+		kubeconfig := filepath.Join(utils.HomeDir(), ".kube", "config")
+		if osArgs.KubeConfig != "" {
+			kubeconfig = osArgs.KubeConfig
+		}
+		k8s, err = GetRemoteKubernetesClient(kubeconfig)
 	} else {
 		k8s, err = GetKubernetesClient()
 	}
 	if err != nil {
-		log.Panic(err)
+		utils.PanicErr(err)
 	}
 	c.k8s = k8s
 
@@ -80,15 +86,15 @@ func (c *HAProxyController) HAProxyInitialize() {
 	//cmd := exec.Command("haproxy", "-f", HAProxyCFG)
 	err := os.MkdirAll(HAProxyCertDir, 0755)
 	if err != nil {
-		log.Panic(err.Error())
+		utils.PanicErr(err)
 	}
 	err = os.MkdirAll(HAProxyStateDir, 0755)
 	if err != nil {
-		log.Panic(err.Error())
+		utils.PanicErr(err)
 	}
 	err = os.MkdirAll(HAProxyCaptureDir, 0755)
 	if err != nil {
-		log.Panic(err.Error())
+		utils.PanicErr(err)
 	}
 
 	cmd := exec.Command("sh", "-c", "haproxy -v")
@@ -111,7 +117,7 @@ func (c *HAProxyController) HAProxyInitialize() {
 	}
 
 	hostname, err := os.Hostname()
-	LogErr(err)
+	utils.LogErr(err)
 	log.Println("Running on", hostname)
 
 	runtimeClient := runtime.Client{}
@@ -119,7 +125,7 @@ func (c *HAProxyController) HAProxyInitialize() {
 		0: "/var/run/haproxy-runtime-api.sock",
 	})
 	if err != nil {
-		log.Panicln(err)
+		utils.PanicErr(err)
 	}
 
 	confClient := configuration.Client{}
@@ -129,7 +135,7 @@ func (c *HAProxyController) HAProxyInitialize() {
 		Haproxy:                "haproxy",
 	})
 	if err != nil {
-		log.Panicln(err)
+		utils.PanicErr(err)
 	}
 
 	c.NativeAPI = &clientnative.HAProxyClient{
@@ -176,7 +182,7 @@ func (c *HAProxyController) saveServerState() error {
 
 func (c *HAProxyController) HAProxyReload() error {
 	err := c.saveServerState()
-	LogErr(err)
+	utils.LogErr(err)
 	if !c.osArgs.Test {
 		cmd := exec.Command("service", "haproxy", "reload")
 		cmd.Stdout = os.Stdout
@@ -227,7 +233,7 @@ func (c *HAProxyController) handleEndpointIP(namespace *Namespace, ingress *Ingr
 		Name:    ip.HAProxyName,
 		Address: ip.IP,
 		Port:    &path.TargetPort,
-		Weight:  ptrInt64(128),
+		Weight:  utils.PtrInt64(128),
 	}
 	if ip.Disabled {
 		server.Maintenance = "enabled"
@@ -246,7 +252,7 @@ func (c *HAProxyController) handleEndpointIP(namespace *Namespace, ingress *Ingr
 		err := c.backendServerCreate(backendName, server)
 		if err != nil {
 			if !strings.Contains(err.Error(), "already exists") {
-				LogErr(err)
+				utils.LogErr(err)
 				needReload = true
 			}
 		} else {
@@ -257,10 +263,10 @@ func (c *HAProxyController) handleEndpointIP(namespace *Namespace, ingress *Ingr
 		if err != nil {
 			if strings.Contains(err.Error(), "does not exist") {
 				err1 := c.backendServerCreate(backendName, server)
-				LogErr(err1)
+				utils.LogErr(err1)
 				needReload = true
 			} else {
-				LogErr(err)
+				utils.LogErr(err)
 			}
 		}
 		status := "ready"
@@ -271,7 +277,7 @@ func (c *HAProxyController) handleEndpointIP(namespace *Namespace, ingress *Ingr
 	case DELETED:
 		err := c.backendServerDelete(backendName, server.Name)
 		if err != nil && !strings.Contains(err.Error(), "does not exist") {
-			LogErr(err)
+			utils.LogErr(err)
 		}
 		return true
 	}
@@ -299,7 +305,7 @@ func (c *HAProxyController) handleService(namespace *Namespace, ingress *Ingress
 			c.deleteUseBackendRule(key, FrontendSSL)
 		case path.IsDefaultBackend:
 			log.Printf("Removing default_backend %s from ingress \n", service.Name)
-			LogErr(c.setDefaultBackend(""))
+			utils.LogErr(c.setDefaultBackend(""))
 			needReload = true
 		default:
 			c.deleteUseBackendRule(key, FrontendHTTP, FrontendHTTPS)
@@ -361,7 +367,7 @@ func (c *HAProxyController) handleService(namespace *Namespace, ingress *Ingress
 	switch {
 	case path.IsDefaultBackend:
 		log.Printf("Confiugring default_backend %s from ingress %s\n", service.Name, ingress.Name)
-		LogErr(c.setDefaultBackend(backendName))
+		utils.LogErr(c.setDefaultBackend(backendName))
 		needReload = true
 	case path.IsSSLPassthrough:
 		c.addUseBackendRule(key, useBackendRule, FrontendSSL)

@@ -12,10 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package controller
 
 import (
 	clientnative "github.com/haproxytech/client-native"
+	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 	"github.com/haproxytech/models"
 	"strings"
 )
@@ -67,7 +68,7 @@ func (c *Configuration) IsRelevantNamespace(namespace string) bool {
 }
 
 //Init itialize configuration
-func (c *Configuration) Init(osArgs OSArgs, api *clientnative.HAProxyClient) {
+func (c *Configuration) Init(osArgs utils.OSArgs, api *clientnative.HAProxyClient) {
 
 	c.NamespacesAccess = NamespacesWatch{
 		Whitelist: map[string]struct{}{},

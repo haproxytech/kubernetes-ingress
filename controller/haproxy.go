@@ -12,13 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package controller
 
 import (
-	"errors"
+	"fmt"
 	"log"
+	goruntime "runtime"
 	"strconv"
 	"strings"
+
+	parser "github.com/haproxytech/config-parser/v2"
+	"github.com/haproxytech/config-parser/v2/types"
+	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 )
 
 func (c *HAProxyController) updateHAProxy() error {
@@ -26,7 +31,7 @@ func (c *HAProxyController) updateHAProxy() error {
 
 	err := c.apiStartTransaction()
 	if err != nil {
-		log.Println(err)
+		utils.LogErr(err)
 		return err
 	}
 	defer func() {
@@ -54,11 +59,11 @@ func (c *HAProxyController) updateHAProxy() error {
 	}
 
 	reload, err := c.handleGlobalAnnotations()
-	LogErr(err)
+	utils.LogErr(err)
 	needsReload = needsReload || reload
 
 	reload, err = c.handleDefaultService()
-	LogErr(err)
+	utils.LogErr(err)
 	needsReload = needsReload || reload
 
 	captureHosts := map[uint64][]string{}
@@ -74,12 +79,12 @@ func (c *HAProxyController) updateHAProxy() error {
 				continue
 			}
 			if c.cfg.PublishService != nil && ingress.Status != DELETED {
-				LogErr(c.k8s.UpdateIngressStatus(ingress, c.cfg.PublishService))
+				utils.LogErr(c.k8s.UpdateIngressStatus(ingress, c.cfg.PublishService))
 			}
 			// handle Default Backend
 			if ingress.DefaultBackend != nil {
 				reload, err = c.handlePath(namespace, ingress, &IngressRule{}, ingress.DefaultBackend)
-				LogErr(err)
+				utils.LogErr(err)
 				needsReload = needsReload || reload
 			}
 			// handle Ingress rules
@@ -87,7 +92,7 @@ func (c *HAProxyController) updateHAProxy() error {
 				for _, path := range rule.Paths {
 					reload, err = c.handlePath(namespace, ingress, rule, path)
 					needsReload = needsReload || reload
-					LogErr(err)
+					utils.LogErr(err)
 				}
 			}
 			//handle certs
@@ -101,7 +106,7 @@ func (c *HAProxyController) updateHAProxy() error {
 			}
 
 			reload, err = c.handleCaptureRequest(ingress, captureHosts)
-			LogErr(err)
+			utils.LogErr(err)
 			needsReload = needsReload || reload
 		}
 	}
@@ -125,15 +130,15 @@ func (c *HAProxyController) updateHAProxy() error {
 	needsReload = needsReload || reload
 
 	reload, err = c.requestsTCPRefresh()
-	LogErr(err)
+	utils.LogErr(err)
 	needsReload = needsReload || reload
 
 	reload, err = c.RequestsHTTPRefresh()
-	LogErr(err)
+	utils.LogErr(err)
 	needsReload = needsReload || reload
 
 	reload, err = c.handleTCPServices()
-	LogErr(err)
+	utils.LogErr(err)
 	needsReload = needsReload || reload
 
 	reload = c.refreshBackendSwitching()
@@ -141,13 +146,13 @@ func (c *HAProxyController) updateHAProxy() error {
 
 	err = c.apiCommitTransaction()
 	if err != nil {
-		log.Println(err)
+		utils.LogErr(err)
 		return err
 	}
 	c.cfg.Clean()
 	if needsReload {
 		if err := c.HAProxyReload(); err != nil {
-			log.Println(err)
+			utils.LogErr(err)
 		} else {
 			log.Println("HAProxy reloaded")
 		}
@@ -160,12 +165,104 @@ func (c *HAProxyController) handleMaxconn(maxconn *int64, frontends ...string) e
 		if frontend, err := c.frontendGet(frontendName); err == nil {
 			frontend.Maxconn = maxconn
 			err1 := c.frontendEdit(frontend)
-			LogErr(err1)
+			utils.LogErr(err1)
 		} else {
 			return err
 		}
 	}
 	return nil
+}
+
+func (c *HAProxyController) handleGlobalAnnotations() (reloadRequested bool, err error) {
+	reloadRequested = false
+	maxProcs := goruntime.GOMAXPROCS(0)
+	numThreads := int64(maxProcs)
+	annNbthread, errNumThread := GetValueFromAnnotations("nbthread", c.cfg.ConfigMap.Annotations)
+	// syslog-server has default value
+	annSyslogSrv, _ := GetValueFromAnnotations("syslog-server", c.cfg.ConfigMap.Annotations)
+	var errParser error
+	config, _ := c.ActiveConfiguration()
+	if errNumThread == nil {
+		if numthr, errConv := strconv.Atoi(annNbthread.Value); errConv == nil {
+			if numthr < maxProcs {
+				numThreads = int64(numthr)
+			}
+			if annNbthread.Status == DELETED {
+				errParser = config.Delete(parser.Global, parser.GlobalSectionName, "nbthread")
+				reloadRequested = true
+			} else if annNbthread.Status != EMPTY {
+				errParser = config.Insert(parser.Global, parser.GlobalSectionName, "nbthread", types.Int64C{
+					Value: numThreads,
+				})
+				reloadRequested = true
+			}
+			utils.LogErr(errParser)
+		}
+	}
+
+	if annSyslogSrv.Status != EMPTY {
+		stdoutLog := false
+		errParser = config.Set(parser.Global, parser.GlobalSectionName, "log", nil)
+		utils.LogErr(errParser)
+		for index, syslogSrv := range strings.Split(annSyslogSrv.Value, "\n") {
+			if syslogSrv == "" {
+				continue
+			}
+			syslogSrv = strings.Join(strings.Fields(syslogSrv), "")
+			logMap := make(map[string]string)
+			for _, paramStr := range strings.Split(syslogSrv, ",") {
+				paramLst := strings.Split(paramStr, ":")
+				if len(paramLst) == 2 {
+					logMap[paramLst[0]] = paramLst[1]
+				} else {
+					utils.LogErr(fmt.Errorf("incorrect syslog param: %s", paramLst))
+					continue
+				}
+			}
+			if address, ok := logMap["address"]; ok {
+				logData := new(types.Log)
+				logData.Address = address
+				for k, v := range logMap {
+					switch strings.ToLower(k) {
+					case "address":
+						if v == "stdout" {
+							stdoutLog = true
+						}
+					case "port":
+						if logMap["address"] != "stdout" {
+							logData.Address += ":" + v
+						}
+					case "length":
+						if length, errConv := strconv.Atoi(v); errConv == nil {
+							logData.Length = int64(length)
+						}
+					case "format":
+						logData.Format = v
+					case "facility":
+						logData.Facility = v
+					case "level":
+						logData.Level = v
+					case "minlevel":
+						logData.Level = v
+					default:
+						utils.LogErr(fmt.Errorf("unkown syslog param: %s ", k))
+						continue
+					}
+				}
+				errParser = config.Insert(parser.Global, parser.GlobalSectionName, "log", logData, index)
+				reloadRequested = true
+			}
+			utils.LogErr(errParser)
+		}
+		if stdoutLog {
+			errParser = config.Delete(parser.Global, parser.GlobalSectionName, "daemon")
+		} else {
+			errParser = config.Insert(parser.Global, parser.GlobalSectionName, "daemon", types.Enabled{})
+		}
+		utils.LogErr(errParser)
+	}
+
+	return reloadRequested, err
 }
 
 // handles defaultBackned configured via cli param "default-backend-service"
@@ -175,18 +272,18 @@ func (c *HAProxyController) handleDefaultService() (needsReload bool, err error)
 	dsvc := strings.Split(dsvcData.Value, "/")
 
 	if len(dsvc) != 2 {
-		return needsReload, errors.New("default service invalid data")
+		return needsReload, fmt.Errorf("default service invalid data")
 	}
 	if dsvc[0] == "" || dsvc[1] == "" {
 		return needsReload, nil
 	}
 	namespace, ok := c.cfg.Namespace[dsvc[0]]
 	if !ok {
-		return needsReload, errors.New("default service invalid namespace " + dsvc[0])
+		return needsReload, fmt.Errorf("default service invalid namespace " + dsvc[0])
 	}
 	service, ok := namespace.Services[dsvc[1]]
 	if !ok {
-		return needsReload, errors.New("service '" + dsvc[1] + "' does not exist")
+		return needsReload, fmt.Errorf("service '" + dsvc[1] + "' does not exist")
 	}
 	ingress := &Ingress{
 		Namespace:   namespace.Name,

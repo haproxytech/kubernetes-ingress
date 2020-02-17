@@ -12,13 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package controller
 
 import (
 	"fmt"
 	"log"
 	"sort"
 
+	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 	"github.com/haproxytech/models"
 )
 
@@ -52,7 +53,7 @@ func (c *HAProxyController) refreshBackendSwitching() (needsReload bool) {
 	}
 	frontends, err := c.frontendsGet()
 	if err != nil {
-		PanicErr(err)
+		utils.PanicErr(err)
 		return false
 	}
 	// Active backend will hold backends in use
@@ -107,9 +108,9 @@ func (c *HAProxyController) refreshBackendSwitching() (needsReload bool) {
 				Cond:     "if",
 				CondTest: condTest,
 				Name:     rule.Backend,
-				ID:       ptrInt64(0),
+				ID:       utils.PtrInt64(0),
 			})
-			PanicErr(err)
+			utils.PanicErr(err)
 		}
 		needsReload = true
 		delete(c.cfg.BackendSwitchingStatus, frontend.Name)
@@ -127,7 +128,7 @@ func (c *HAProxyController) clearBackends(activeBackends map[string]struct{}) (n
 	for _, backend := range allBackends {
 		if _, ok := activeBackends[backend.Name]; !ok {
 			if err := c.backendDelete(backend.Name); err != nil {
-				PanicErr(err)
+				utils.PanicErr(err)
 			}
 			needsReload = true
 		}

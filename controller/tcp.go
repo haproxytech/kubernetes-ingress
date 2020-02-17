@@ -1,10 +1,11 @@
-package main
+package controller
 
 import (
 	"fmt"
 	"strconv"
 	"strings"
 
+	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 	"github.com/haproxytech/models"
 )
 
@@ -37,18 +38,18 @@ func (c *HAProxyController) handleTCPServices() (needsReload bool, err error) {
 		switch svc.Status {
 		case DELETED:
 			err = c.frontendDelete(frontendName)
-			PanicErr(err)
+			utils.PanicErr(err)
 			needsReload = true
 			c.cfg.BackendSwitchingStatus["tcp-services"] = struct{}{}
 			continue
 		case MODIFIED:
 			if frontend, err = c.frontendGet(frontendName); err != nil {
-				PanicErr(err)
+				utils.PanicErr(err)
 				continue
 			}
 			frontend.DefaultBackend = backendName
 			if err = c.frontendEdit(frontend); err != nil {
-				PanicErr(err)
+				utils.PanicErr(err)
 				continue
 			}
 		case ADDED:
@@ -59,18 +60,18 @@ func (c *HAProxyController) handleTCPServices() (needsReload bool, err error) {
 				DefaultBackend: backendName,
 			}
 			err = c.frontendCreate(frontend)
-			PanicErr(err)
+			utils.PanicErr(err)
 			err = c.frontendBindCreate(frontendName, models.Bind{
 				Address: "0.0.0.0:" + port,
 				Name:    "bind_1",
 			})
-			PanicErr(err)
+			utils.PanicErr(err)
 			err = c.frontendBindCreate(frontendName, models.Bind{
 				Address: ":::" + port,
 				Name:    "bind_2",
 				V4v6:    true,
 			})
-			PanicErr(err)
+			utils.PanicErr(err)
 			needsReload = true
 		}
 
@@ -88,7 +89,7 @@ func (c *HAProxyController) handleTCPServices() (needsReload bool, err error) {
 		}
 		nsmmp := c.cfg.GetNamespace(namespace)
 		_, err = c.handlePath(nsmmp, ingress, nil, path)
-		PanicErr(err)
+		utils.PanicErr(err)
 		needsReload = true
 	}
 	return needsReload, err
