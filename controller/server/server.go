@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package controller
+package server
 
 import (
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
@@ -22,8 +22,8 @@ import (
 
 type Server models.Server
 
-func (s *Server) updateCheck(data *StringW) error {
-	enabled, err := GetBoolValue(data.Value, "check")
+func (s *Server) UpdateCheck(value string) error {
+	enabled, err := utils.GetBoolValue(value, "check")
 	if err != nil {
 		return err
 	}
@@ -35,8 +35,8 @@ func (s *Server) updateCheck(data *StringW) error {
 	return nil
 }
 
-func (s *Server) updateInter(data *StringW) error {
-	time, err := utils.ParseTime(data.Value)
+func (s *Server) UpdateInter(value string) error {
+	time, err := utils.ParseTime(value)
 	if err != nil {
 		return err
 	}
@@ -44,8 +44,8 @@ func (s *Server) updateInter(data *StringW) error {
 	return nil
 }
 
-func (s *Server) updateMaxconn(data *StringW) error {
-	maxconn, err := strconv.ParseInt(data.Value, 10, 64)
+func (s *Server) UpdateMaxconn(value string) error {
+	maxconn, err := strconv.ParseInt(value, 10, 64)
 	if err != nil {
 		return err
 	}
@@ -53,8 +53,8 @@ func (s *Server) updateMaxconn(data *StringW) error {
 	return nil
 }
 
-func (s *Server) updateServerSsl(data *StringW) error {
-	enabled, err := GetBoolValue(data.Value, "ssl")
+func (s *Server) UpdateServerSsl(value string) error {
+	enabled, err := utils.GetBoolValue(value, "ssl")
 	if err != nil {
 		return err
 	}

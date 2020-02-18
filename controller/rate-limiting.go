@@ -52,7 +52,7 @@ func (c *HAProxyController) handleRateLimiting(usingHTTPS bool) (needReload bool
 	rateLimitExpire, _ := utils.ParseTime(annRateLimitExpire.Value)
 	rateLimitSize := misc.ParseSize(annRateLimitSize.Value)
 
-	enabled, err := GetBoolValue(annRateLimit.Value, "rate-limit")
+	enabled, err := utils.GetBoolValue(annRateLimit.Value, "rate-limit")
 	if err != nil {
 		return false, err
 	}
