@@ -21,19 +21,11 @@ func (c *HAProxyController) handleTCPServices() (needsReload bool, err error) {
 		namespace := parts[0]
 		service := parts[1]
 
-		if svc.Status == EMPTY {
-			continue
-		}
-
-		// Set frontend and backend names
-		backendName := strings.ReplaceAll(strings.ReplaceAll(svc.Value, "/", "-"), ":", "-")
-		frontendName := fmt.Sprintf("tcp-%s", port)
-
 		// Handle Frontend
-		var frontend models.Frontend
-		portInt64 := int64(-1)
-		if prt, errParse := strconv.ParseInt(portDest, 10, 64); errParse == nil {
-			portInt64 = prt
+		var frontendName, backendName string
+		if svc.Status != EMPTY {
+			backendName = strings.ReplaceAll(strings.ReplaceAll(svc.Value, "/", "-"), ":", "-")
+			frontendName = fmt.Sprintf("tcp-%s", port)
 		}
 		switch svc.Status {
 		case DELETED:
@@ -43,8 +35,9 @@ func (c *HAProxyController) handleTCPServices() (needsReload bool, err error) {
 			c.cfg.BackendSwitchingStatus["tcp-services"] = struct{}{}
 			continue
 		case MODIFIED:
-			if frontend, err = c.frontendGet(frontendName); err != nil {
-				utils.PanicErr(err)
+			frontend, errFt := c.frontendGet(frontendName)
+			if err != nil {
+				utils.PanicErr(errFt)
 				continue
 			}
 			frontend.DefaultBackend = backendName
@@ -53,7 +46,7 @@ func (c *HAProxyController) handleTCPServices() (needsReload bool, err error) {
 				continue
 			}
 		case ADDED:
-			frontend = models.Frontend{
+			frontend := models.Frontend{
 				Name:           frontendName,
 				Mode:           "tcp",
 				Tcplog:         true,
@@ -76,6 +69,11 @@ func (c *HAProxyController) handleTCPServices() (needsReload bool, err error) {
 		}
 
 		// Handle Backend
+		var servicePort int64
+		if servicePort, err = strconv.ParseInt(portDest, 10, 64); err != nil {
+			utils.LogErr(err)
+			continue
+		}
 		ingress := &Ingress{
 			Namespace:   namespace,
 			Annotations: MapStringW{},
@@ -83,14 +81,14 @@ func (c *HAProxyController) handleTCPServices() (needsReload bool, err error) {
 		}
 		path := &IngressPath{
 			ServiceName:    service,
-			ServicePortInt: portInt64,
+			ServicePortInt: servicePort,
 			IsTCPService:   true,
 			Status:         svc.Status,
 		}
 		nsmmp := c.cfg.GetNamespace(namespace)
-		_, err = c.handlePath(nsmmp, ingress, nil, path)
-		utils.PanicErr(err)
-		needsReload = true
+		reload, errBck := c.handlePath(nsmmp, ingress, nil, path)
+		utils.PanicErr(errBck)
+		needsReload = needsReload || reload
 	}
 	return needsReload, err
 }
