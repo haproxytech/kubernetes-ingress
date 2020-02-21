@@ -33,12 +33,10 @@ var (
 
 //ServicePort describes port of a service
 type ServicePort struct {
-	Name          string
-	Protocol      string
-	ServicePort   int64
-	TargetPortInt int64
-	TargetPortStr string
-	Status        Status
+	Name     string
+	Protocol string
+	Port     int64
+	Status   Status
 }
 
 type EndpointIP struct {

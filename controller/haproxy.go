@@ -293,7 +293,7 @@ func (c *HAProxyController) handleDefaultService() (needsReload bool, err error)
 	}
 	path := &IngressPath{
 		ServiceName:      service.Name,
-		ServicePortInt:   service.Ports[0].ServicePort,
+		ServicePortInt:   service.Ports[0].Port,
 		IsDefaultBackend: true,
 	}
 	return c.handlePath(namespace, ingress, &IngressRule{}, path)

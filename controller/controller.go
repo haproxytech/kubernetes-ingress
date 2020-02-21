@@ -392,7 +392,7 @@ func (c *HAProxyController) handleService(namespace *Namespace, ingress *Ingress
 func (c *HAProxyController) setTargetPort(path *IngressPath, service *Service, endpoints *Endpoints) error {
 	for _, sp := range service.Ports {
 		// Find corresponding servicePort
-		if sp.Name == path.ServicePortString || sp.ServicePort == path.ServicePortInt {
+		if sp.Name == path.ServicePortString || sp.Port == path.ServicePortInt {
 			// Find the corresponding targetPort in Endpoints ports
 			if endpoints != nil {
 				for _, epPort := range *endpoints.Ports {
@@ -410,7 +410,7 @@ func (c *HAProxyController) setTargetPort(path *IngressPath, service *Service, e
 						return nil
 					}
 				}
-				log.Printf("Targetport '%s' not found for service %s", sp.TargetPortStr, service.Name)
+				log.Printf("Could not find Targetport of '%s' for service %s", sp.Name, service.Name)
 			} // Return nil even if corresponding target port was not found.
 			return nil
 		}
