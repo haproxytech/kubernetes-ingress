@@ -68,6 +68,7 @@ func (c *HAProxyController) updateHAProxy() error {
 
 	captureHosts := map[uint64][]string{}
 	usedCerts := map[string]struct{}{}
+	whitelistMap := map[string]struct{}{}
 
 	for _, namespace := range c.cfg.Namespace {
 		if !namespace.Relevant {
@@ -93,6 +94,10 @@ func (c *HAProxyController) updateHAProxy() error {
 					reload, err = c.handlePath(namespace, ingress, rule, path)
 					needsReload = needsReload || reload
 					utils.LogErr(err)
+
+					reload, err = c.handleRateLimitingAnnotations(ingress, path, whitelistMap)
+					utils.LogErr(err)
+					needsReload = needsReload || reload
 				}
 			}
 			//handle certs
@@ -108,7 +113,11 @@ func (c *HAProxyController) updateHAProxy() error {
 			reload, err = c.handleCaptureRequest(ingress, captureHosts)
 			utils.LogErr(err)
 			needsReload = needsReload || reload
+
 		}
+
+		reload, err = c.updateWhitelist(whitelistMap)
+		needsReload = needsReload || reload
 	}
 
 	reload = c.handleDefaultCertificate(usedCerts)

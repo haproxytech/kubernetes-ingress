@@ -341,7 +341,6 @@ func (c *HAProxyController) handleService(namespace *Namespace, ingress *Ingress
 	}
 
 	// handle Annotations
-	c.handleRateLimitingAnnotations(ingress, service, path)
 	activeSSLPassthrough := c.handleSSLPassthrough(ingress, service, path, &backend, newBackend)
 	activeBackendAnn := c.handleBackendAnnotations(ingress, service, &backend, newBackend)
 	if activeBackendAnn || activeSSLPassthrough {
