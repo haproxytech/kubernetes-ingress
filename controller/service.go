@@ -186,33 +186,44 @@ func (c *HAProxyController) handleService(namespace *Namespace, ingress *Ingress
 		return backendName, newBackend, reload, nil
 	}
 
-	// Update backendSwitching
-	key := fmt.Sprintf("%s-%s-%s-%s", rule.Host, path.Path, namespace.Name, ingress.Name)
-	useBackendRule := UseBackendRule{
-		Host:      rule.Host,
-		Path:      path.Path,
-		Backend:   backendName,
-		Namespace: namespace.Name,
-	}
-	switch {
-	case path.IsDefaultBackend:
-		log.Printf("Confiugring default_backend %s from ingress %s\n", service.Name, ingress.Name)
-		err = c.setDefaultBackend(backendName)
-		reload = true
-	case path.IsSSLPassthrough:
-		c.addUseBackendRule(key, useBackendRule, FrontendSSL)
-		if activeSSLPassthrough {
-			c.deleteUseBackendRule(key, FrontendHTTP, FrontendHTTPS)
-		}
-	default:
-		c.addUseBackendRule(key, useBackendRule, FrontendHTTP, FrontendHTTPS)
-		if activeSSLPassthrough {
-			c.deleteUseBackendRule(key, FrontendSSL)
-		}
+	// IP backend switching support
+	// ingress annotation looks like:  "haproxy.org/ip-routing: 1.2.3.4,5.6.7.8"
+	hosts := []string{rule.Host}
+	ipRouting, _ := GetValueFromAnnotations("ip-routing", ingress.Annotations)
+	if ipRouting != nil && ipRouting.Status != EMPTY {
+		ips := strings.Split(ipRouting.Value, ",")
+		hosts = append(hosts, ips...)
 	}
 
-	if err != nil {
-		return "", newBackend, reload, err
+	for _, host := range hosts {
+		// Update backendSwitching
+		key := fmt.Sprintf("%s-%s-%s-%s", host, path.Path, namespace.Name, ingress.Name)
+		useBackendRule := UseBackendRule{
+			Host:      host,
+			Path:      path.Path,
+			Backend:   backendName,
+			Namespace: namespace.Name,
+		}
+		switch {
+		case path.IsDefaultBackend:
+			log.Printf("Confiugring default_backend %s from ingress %s\n", service.Name, ingress.Name)
+			err = c.setDefaultBackend(backendName)
+			reload = true
+		case path.IsSSLPassthrough:
+			c.addUseBackendRule(key, useBackendRule, FrontendSSL)
+			if activeSSLPassthrough {
+				c.deleteUseBackendRule(key, FrontendHTTP, FrontendHTTPS)
+			}
+		default:
+			c.addUseBackendRule(key, useBackendRule, FrontendHTTP, FrontendHTTPS)
+			if activeSSLPassthrough {
+				c.deleteUseBackendRule(key, FrontendSSL)
+			}
+		}
+
+		if err != nil {
+			return "", newBackend, reload, err
+		}
 	}
 
 	return backendName, newBackend, reload, nil
