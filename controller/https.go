@@ -58,7 +58,7 @@ func (c *HAProxyController) writeCert(filename string, key, crt []byte) error {
 		return err
 	}
 	//Force writing a newline so that parsing does not barf
-	if key[len(key)-1] != byte('\n') {
+	if len(key) > 0 && key[len(key)-1] != byte('\n') {
 		log.Println("Warning: secret key in", filename, "does not end with \\n, appending it to avoid mangling key and certificate")
 		if _, err = f.WriteString("\n"); err != nil {
 			log.Println(err)
