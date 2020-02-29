@@ -143,7 +143,7 @@ func (c *HAProxyController) HAProxyInitialize() {
 		Runtime:       &runtimeClient,
 	}
 
-	c.cfg.Init(c.osArgs, c.NativeAPI)
+	c.cfg.Init(c.osArgs)
 
 }
 

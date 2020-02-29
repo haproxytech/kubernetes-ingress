@@ -15,7 +15,6 @@
 package controller
 
 import (
-	clientnative "github.com/haproxytech/client-native"
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 	"github.com/haproxytech/models"
 	"strings"
@@ -68,7 +67,7 @@ func (c *Configuration) IsRelevantNamespace(namespace string) bool {
 }
 
 //Init itialize configuration
-func (c *Configuration) Init(osArgs utils.OSArgs, api *clientnative.HAProxyClient) {
+func (c *Configuration) Init(osArgs utils.OSArgs) {
 
 	c.NamespacesAccess = NamespacesWatch{
 		Whitelist: map[string]struct{}{},
