@@ -15,6 +15,7 @@
 package controller
 
 import (
+	"github.com/haproxytech/kubernetes-ingress/controller/haproxy"
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 	"github.com/haproxytech/models"
 	"strings"
@@ -42,6 +43,7 @@ type Configuration struct {
 	ConfigMap              *ConfigMap
 	ConfigMapTCPServices   *ConfigMap
 	PublishService         *Service
+	MapFiles               haproxy.Maps
 	HTTPRequests           map[string][]models.HTTPRequestRule
 	HTTPRequestsStatus     Status
 	TCPRequests            map[string][]models.TCPRequestRule
@@ -67,7 +69,7 @@ func (c *Configuration) IsRelevantNamespace(namespace string) bool {
 }
 
 //Init itialize configuration
-func (c *Configuration) Init(osArgs utils.OSArgs) {
+func (c *Configuration) Init(osArgs utils.OSArgs, mapDir string) {
 
 	c.NamespacesAccess = NamespacesWatch{
 		Whitelist: map[string]struct{}{},
@@ -97,13 +99,13 @@ func (c *Configuration) Init(osArgs utils.OSArgs) {
 	c.HTTPRequests = map[string][]models.HTTPRequestRule{}
 	c.HTTPRequests[RATE_LIMIT] = []models.HTTPRequestRule{}
 	c.HTTPRequests[HTTP_REDIRECT] = []models.HTTPRequestRule{}
-	c.HTTPRequests[REQUEST_CAPTURE] = []models.HTTPRequestRule{}
 	c.HTTPRequestsStatus = EMPTY
 
 	c.TCPRequests = map[string][]models.TCPRequestRule{}
 	c.TCPRequests[RATE_LIMIT] = []models.TCPRequestRule{}
-	c.TCPRequests[REQUEST_CAPTURE] = []models.TCPRequestRule{}
 	c.TCPRequestsStatus = EMPTY
+
+	c.MapFiles = haproxy.NewMapFiles(mapDir)
 
 	c.BackendSwitchingRules = make(map[string]UseBackendRules)
 	c.BackendSwitchingStatus = make(map[string]struct{})
@@ -235,8 +237,12 @@ func (c *Configuration) Clean() {
 			c.ConfigMapTCPServices.Annotations.Clean()
 		}
 	}
-	c.HTTPRequests[REQUEST_CAPTURE] = []models.HTTPRequestRule{}
-	c.TCPRequests[REQUEST_CAPTURE] = []models.TCPRequestRule{}
+	c.MapFiles.Clean()
+	c.HTTPRequests = map[string][]models.HTTPRequestRule{}
+	c.TCPRequests = map[string][]models.TCPRequestRule{}
+	c.HTTPRequests[RATE_LIMIT] = []models.HTTPRequestRule{}
+	c.HTTPRequests[HTTP_REDIRECT] = []models.HTTPRequestRule{}
+	c.TCPRequests[RATE_LIMIT] = []models.TCPRequestRule{}
 	c.HTTPRequestsStatus = EMPTY
 	c.TCPRequestsStatus = EMPTY
 	defaultAnnotationValues.Clean()

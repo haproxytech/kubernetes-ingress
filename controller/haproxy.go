@@ -65,7 +65,6 @@ func (c *HAProxyController) updateHAProxy() error {
 	utils.LogErr(err)
 	needsReload = needsReload || reload
 
-	captureHosts := map[uint64][]string{}
 	usedCerts := map[string]struct{}{}
 	whitelistMap := map[string]struct{}{}
 
@@ -109,10 +108,7 @@ func (c *HAProxyController) updateHAProxy() error {
 				}
 			}
 
-			reload, err = c.handleCaptureRequest(ingress, captureHosts)
-			utils.LogErr(err)
-			needsReload = needsReload || reload
-
+			utils.LogErr(c.handleRequestCapture(ingress))
 		}
 
 		reload, err = c.updateWhitelist(whitelistMap)
@@ -142,6 +138,10 @@ func (c *HAProxyController) updateHAProxy() error {
 	needsReload = needsReload || reload
 
 	reload, err = c.RequestsHTTPRefresh()
+	utils.LogErr(err)
+	needsReload = needsReload || reload
+
+	reload, err = c.cfg.MapFiles.Refresh()
 	utils.LogErr(err)
 	needsReload = needsReload || reload
 

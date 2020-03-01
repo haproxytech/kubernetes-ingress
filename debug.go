@@ -38,7 +38,7 @@ func setupTestEnv() {
 	c.HAProxyCFG = path.Join(TestFolderPath, c.HAProxyCFG)
 	c.HAProxyCertDir = path.Join(TestFolderPath, c.HAProxyCertDir)
 	c.HAProxyStateDir = path.Join(TestFolderPath, c.HAProxyStateDir)
-	c.HAProxyCaptureDir = path.Join(TestFolderPath, c.HAProxyCaptureDir)
+	c.HAProxyMapDir = path.Join(TestFolderPath, c.HAProxyMapDir)
 	cmd := exec.Command("pwd")
 	out, err := cmd.CombinedOutput()
 	if err != nil {

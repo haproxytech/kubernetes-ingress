@@ -92,7 +92,7 @@ func (c *HAProxyController) HAProxyInitialize() {
 	if err != nil {
 		utils.PanicErr(err)
 	}
-	err = os.MkdirAll(HAProxyCaptureDir, 0755)
+	err = os.MkdirAll(HAProxyMapDir, 0755)
 	if err != nil {
 		utils.PanicErr(err)
 	}
@@ -143,7 +143,7 @@ func (c *HAProxyController) HAProxyInitialize() {
 		Runtime:       &runtimeClient,
 	}
 
-	c.cfg.Init(c.osArgs)
+	c.cfg.Init(c.osArgs, HAProxyMapDir)
 
 }
 

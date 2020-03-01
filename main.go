@@ -31,7 +31,7 @@ func main() {
 	c.HAProxyCFG = "/etc/haproxy/haproxy.cfg"
 	c.HAProxyCertDir = "/etc/haproxy/certs/"
 	c.HAProxyStateDir = "/var/state/haproxy/"
-	c.HAProxyCaptureDir = "/etc/haproxy/capture/"
+	c.HAProxyMapDir = "/etc/haproxy/maps/"
 
 	var osArgs utils.OSArgs
 	var parser = flags.NewParser(&osArgs, flags.IgnoreUnknown)
