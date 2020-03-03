@@ -16,64 +16,14 @@ package controller
 
 import (
 	"fmt"
-	"log"
 	"strconv"
 	"strings"
 
-	parser "github.com/haproxytech/config-parser/v2"
-	"github.com/haproxytech/config-parser/v2/types"
 	"github.com/haproxytech/kubernetes-ingress/controller/backend"
 	"github.com/haproxytech/kubernetes-ingress/controller/server"
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 	"github.com/haproxytech/models"
 )
-
-func (c *HAProxyController) handleDefaultTimeouts() bool {
-	hasChanges := false
-	hasChanges = c.handleDefaultTimeout("http-request", true) || hasChanges
-	hasChanges = c.handleDefaultTimeout("connect", true) || hasChanges
-	hasChanges = c.handleDefaultTimeout("client", true) || hasChanges
-	hasChanges = c.handleDefaultTimeout("queue", true) || hasChanges
-	hasChanges = c.handleDefaultTimeout("server", true) || hasChanges
-	hasChanges = c.handleDefaultTimeout("tunnel", true) || hasChanges
-	hasChanges = c.handleDefaultTimeout("http-keep-alive", true) || hasChanges
-	//no default values
-	//timeout check is put in every backend, no need to put it here
-	//hasChanges = c.handleDefaultTimeout("check", false) || hasChanges
-	return hasChanges
-}
-
-func (c *HAProxyController) handleDefaultTimeout(timeout string, hasDefault bool) bool {
-	config, _ := c.ActiveConfiguration()
-	annTimeout, err := GetValueFromAnnotations(fmt.Sprintf("timeout-%s", timeout), c.cfg.ConfigMap.Annotations)
-	if err != nil {
-		if hasDefault {
-			log.Println(err)
-		}
-		return false
-	}
-	if annTimeout.Status != "" {
-		//log.Println(fmt.Sprintf("timeout [%s]", timeout), annTimeout.Value, annTimeout.OldValue, annTimeout.Status)
-		data, err := config.Get(parser.Defaults, parser.DefaultSectionName, fmt.Sprintf("timeout %s", timeout))
-		if err != nil {
-			if hasDefault {
-				log.Println(err)
-				return false
-			}
-			errSet := config.Set(parser.Defaults, parser.DefaultSectionName, fmt.Sprintf("timeout %s", timeout), types.SimpleTimeout{
-				Value: annTimeout.Value,
-			})
-			if errSet != nil {
-				log.Println(errSet)
-			}
-			return true
-		}
-		timeout := data.(*types.SimpleTimeout)
-		timeout.Value = annTimeout.Value
-		return true
-	}
-	return false
-}
 
 func (c *HAProxyController) handleSSLPassthrough(ingress *Ingress, service *Service, path *IngressPath, backend *models.Backend, newBackend bool) (updateBackendSwitching bool) {
 
