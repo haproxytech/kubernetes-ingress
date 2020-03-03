@@ -17,15 +17,13 @@ package controller
 import (
 	"fmt"
 	"log"
-	goruntime "runtime"
 	"strconv"
 	"strings"
 
-	parser "github.com/haproxytech/config-parser/v2"
-	"github.com/haproxytech/config-parser/v2/types"
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 )
 
+// Sync HAProxy configuration
 func (c *HAProxyController) updateHAProxy() error {
 	needsReload := false
 
@@ -167,111 +165,6 @@ func (c *HAProxyController) updateHAProxy() error {
 		}
 	}
 	return nil
-}
-
-func (c *HAProxyController) handleMaxconn(maxconn *int64, frontends ...string) error {
-	for _, frontendName := range frontends {
-		if frontend, err := c.frontendGet(frontendName); err == nil {
-			frontend.Maxconn = maxconn
-			err1 := c.frontendEdit(frontend)
-			utils.LogErr(err1)
-		} else {
-			return err
-		}
-	}
-	return nil
-}
-
-func (c *HAProxyController) handleGlobalAnnotations() (reloadRequested bool, err error) {
-	reloadRequested = false
-	maxProcs := goruntime.GOMAXPROCS(0)
-	numThreads := int64(maxProcs)
-	annNbthread, errNumThread := GetValueFromAnnotations("nbthread", c.cfg.ConfigMap.Annotations)
-	// syslog-server has default value
-	annSyslogSrv, _ := GetValueFromAnnotations("syslog-server", c.cfg.ConfigMap.Annotations)
-	var errParser error
-	config, _ := c.ActiveConfiguration()
-	if errNumThread == nil {
-		if numthr, errConv := strconv.Atoi(annNbthread.Value); errConv == nil {
-			if numthr < maxProcs {
-				numThreads = int64(numthr)
-			}
-			if annNbthread.Status == DELETED {
-				errParser = config.Delete(parser.Global, parser.GlobalSectionName, "nbthread")
-				reloadRequested = true
-			} else if annNbthread.Status != EMPTY {
-				errParser = config.Insert(parser.Global, parser.GlobalSectionName, "nbthread", types.Int64C{
-					Value: numThreads,
-				})
-				reloadRequested = true
-			}
-			utils.LogErr(errParser)
-		}
-	}
-
-	if annSyslogSrv.Status != EMPTY {
-		stdoutLog := false
-		errParser = config.Set(parser.Global, parser.GlobalSectionName, "log", nil)
-		utils.LogErr(errParser)
-		for index, syslogSrv := range strings.Split(annSyslogSrv.Value, "\n") {
-			if syslogSrv == "" {
-				continue
-			}
-			syslogSrv = strings.Join(strings.Fields(syslogSrv), "")
-			logMap := make(map[string]string)
-			for _, paramStr := range strings.Split(syslogSrv, ",") {
-				paramLst := strings.Split(paramStr, ":")
-				if len(paramLst) == 2 {
-					logMap[paramLst[0]] = paramLst[1]
-				} else {
-					utils.LogErr(fmt.Errorf("incorrect syslog param: %s", paramLst))
-					continue
-				}
-			}
-			if address, ok := logMap["address"]; ok {
-				logData := new(types.Log)
-				logData.Address = address
-				for k, v := range logMap {
-					switch strings.ToLower(k) {
-					case "address":
-						if v == "stdout" {
-							stdoutLog = true
-						}
-					case "port":
-						if logMap["address"] != "stdout" {
-							logData.Address += ":" + v
-						}
-					case "length":
-						if length, errConv := strconv.Atoi(v); errConv == nil {
-							logData.Length = int64(length)
-						}
-					case "format":
-						logData.Format = v
-					case "facility":
-						logData.Facility = v
-					case "level":
-						logData.Level = v
-					case "minlevel":
-						logData.Level = v
-					default:
-						utils.LogErr(fmt.Errorf("unkown syslog param: %s ", k))
-						continue
-					}
-				}
-				errParser = config.Insert(parser.Global, parser.GlobalSectionName, "log", logData, index)
-				reloadRequested = true
-			}
-			utils.LogErr(errParser)
-		}
-		if stdoutLog {
-			errParser = config.Delete(parser.Global, parser.GlobalSectionName, "daemon")
-		} else {
-			errParser = config.Insert(parser.Global, parser.GlobalSectionName, "daemon", types.Enabled{})
-		}
-		utils.LogErr(errParser)
-	}
-
-	return reloadRequested, err
 }
 
 // handles defaultBackned configured via cli param "default-backend-service"
