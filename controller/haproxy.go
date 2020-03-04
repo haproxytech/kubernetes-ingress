@@ -35,7 +35,8 @@ func (c *HAProxyController) updateHAProxy() error {
 	defer func() {
 		c.apiDisposeTransaction()
 	}()
-	c.handleDefaultTimeouts()
+	reload := c.handleDefaultTimeouts()
+	needsReload = needsReload || reload
 
 	maxconnAnn, err := GetValueFromAnnotations("maxconn", c.cfg.ConfigMap.Annotations)
 	if err == nil {
@@ -56,7 +57,7 @@ func (c *HAProxyController) updateHAProxy() error {
 		}
 	}
 
-	reload, err := c.handleGlobalAnnotations()
+	reload, err = c.handleGlobalAnnotations()
 	utils.LogErr(err)
 	needsReload = needsReload || reload
 
