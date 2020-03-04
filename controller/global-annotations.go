@@ -108,46 +108,36 @@ func (c *HAProxyController) handleGlobalAnnotations() (reloadRequested bool, err
 
 func (c *HAProxyController) handleDefaultTimeouts() bool {
 	hasChanges := false
-	hasChanges = c.handleDefaultTimeout("http-request", true) || hasChanges
-	hasChanges = c.handleDefaultTimeout("connect", true) || hasChanges
-	hasChanges = c.handleDefaultTimeout("client", true) || hasChanges
-	hasChanges = c.handleDefaultTimeout("queue", true) || hasChanges
-	hasChanges = c.handleDefaultTimeout("server", true) || hasChanges
-	hasChanges = c.handleDefaultTimeout("tunnel", true) || hasChanges
-	hasChanges = c.handleDefaultTimeout("http-keep-alive", true) || hasChanges
+	hasChanges = c.handleDefaultTimeout("http-request") || hasChanges
+	hasChanges = c.handleDefaultTimeout("connect") || hasChanges
+	hasChanges = c.handleDefaultTimeout("client") || hasChanges
+	hasChanges = c.handleDefaultTimeout("queue") || hasChanges
+	hasChanges = c.handleDefaultTimeout("server") || hasChanges
+	hasChanges = c.handleDefaultTimeout("tunnel") || hasChanges
+	hasChanges = c.handleDefaultTimeout("http-keep-alive") || hasChanges
 	//no default values
 	//timeout check is put in every backend, no need to put it here
 	//hasChanges = c.handleDefaultTimeout("check", false) || hasChanges
 	return hasChanges
 }
 
-func (c *HAProxyController) handleDefaultTimeout(timeout string, hasDefault bool) bool {
-	config, _ := c.ActiveConfiguration()
+func (c *HAProxyController) handleDefaultTimeout(timeout string) bool {
 	annTimeout, err := GetValueFromAnnotations(fmt.Sprintf("timeout-%s", timeout), c.cfg.ConfigMap.Annotations)
 	if err != nil {
-		if hasDefault {
-			log.Println(err)
-		}
+		log.Println(err)
 		return false
 	}
 	if annTimeout.Status != "" {
-		//log.Println(fmt.Sprintf("timeout [%s]", timeout), annTimeout.Value, annTimeout.OldValue, annTimeout.Status)
-		data, err := config.Get(parser.Defaults, parser.DefaultSectionName, fmt.Sprintf("timeout %s", timeout))
+		config, _ := c.ActiveConfiguration()
+		//TODO use client Native instead
+		err = config.Set(parser.Defaults, parser.DefaultSectionName, fmt.Sprintf("timeout %s", timeout), types.SimpleTimeout{
+			Value: annTimeout.Value,
+		})
 		if err != nil {
-			if hasDefault {
-				log.Println(err)
-				return false
-			}
-			errSet := config.Set(parser.Defaults, parser.DefaultSectionName, fmt.Sprintf("timeout %s", timeout), types.SimpleTimeout{
-				Value: annTimeout.Value,
-			})
-			if errSet != nil {
-				log.Println(errSet)
-			}
-			return true
+			log.Println(err)
+			return false
 		}
-		timeout := data.(*types.SimpleTimeout)
-		timeout.Value = annTimeout.Value
+		log.Println(fmt.Sprintf("default timeout-%s updated from %s to %s", timeout, annTimeout.OldValue, annTimeout.Value))
 		return true
 	}
 	return false
