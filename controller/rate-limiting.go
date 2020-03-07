@@ -16,8 +16,6 @@ package controller
 
 import (
 	"fmt"
-	"os"
-	"strings"
 
 	"github.com/haproxytech/client-native/misc"
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
@@ -169,74 +167,4 @@ func (c *HAProxyController) handleRateLimiting(usingHTTPS bool) (needReload bool
 		needReload = true
 	}
 	return needReload, nil
-}
-
-const whitelistFile = "/etc/haproxy/whitelist.acl"
-
-func (c *HAProxyController) updateWhitelist(whitelistMap map[string]struct{}) (needReload bool, err error) {
-	if len(whitelistMap) == 0 {
-		return false, nil
-	}
-	f, err := os.Create(whitelistFile)
-	if err != nil {
-		utils.LogErr(err)
-		return false, err
-	}
-	defer f.Close()
-
-	for addr := range whitelistMap {
-		_, err = f.WriteString(addr + "\n")
-		if err != nil {
-			utils.LogErr(err)
-		}
-	}
-	return true, err
-}
-
-func (c *HAProxyController) handleRateLimitingAnnotations(
-	ingress *Ingress, path *IngressPath, whitelistMap map[string]struct{}) (needReload bool, err error) {
-	//Annotations with default values don't need error checking.
-	annWhitelist, _ := GetValueFromAnnotations("whitelist", ingress.Annotations, c.cfg.ConfigMap.Annotations)
-	status := annWhitelist.Status
-
-	requestKey := fmt.Sprintf("WHT-%s-%s", ingress.Name, path.Path)
-
-	switch status {
-	case ADDED, MODIFIED, EMPTY:
-		c.cfg.HTTPRequestsStatus = MODIFIED
-		needReload = true
-
-		if annWhitelist.Value == "" {
-			c.cfg.HTTPRequests[requestKey] = []models.HTTPRequestRule{}
-			return false, nil
-		}
-
-		// Annotation values are comma or space separated.
-		addresses := strings.Fields(strings.Replace(annWhitelist.Value, ",", " ", -1))
-		for _, a := range addresses {
-			whitelistMap[a] = struct{}{}
-		}
-
-		// Avoid empty path.
-		prefix := path.Path
-		if prefix == "" {
-			prefix = "/"
-		}
-
-		denyRequest := &models.HTTPRequestRule{
-			ID:         utils.PtrInt64(0),
-			Type:       "deny",
-			Cond:       "if",
-			DenyStatus: 503,
-			CondTest:   fmt.Sprintf("{ path_beg %s } !{ src -f %s }", prefix, whitelistFile),
-		}
-		c.cfg.HTTPRequests[requestKey] = []models.HTTPRequestRule{
-			*denyRequest,
-		}
-	case DELETED:
-		c.cfg.HTTPRequests[requestKey] = []models.HTTPRequestRule{}
-		needReload = true
-	}
-
-	return needReload, err
 }

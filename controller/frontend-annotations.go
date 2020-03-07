@@ -17,6 +17,7 @@ package controller
 import (
 	"fmt"
 	"hash/fnv"
+	"net"
 	"path"
 	"strconv"
 	"strings"
@@ -110,6 +111,65 @@ func (c *HAProxyController) handleRequestCapture(ingress *Ingress) error {
 	}
 
 	return err
+}
+
+func (c *HAProxyController) handleWhitelisting(ingress *Ingress) error {
+	//  Get and validate annotations
+	annWhitelist, _ := GetValueFromAnnotations("whitelist", ingress.Annotations, c.cfg.ConfigMap.Annotations)
+	if annWhitelist == nil {
+		return nil
+	}
+	value := strings.Replace(annWhitelist.Value, ",", " ", -1)
+	for _, address := range strings.Fields(value) {
+		if ip := net.ParseIP(address); ip == nil {
+			if _, _, err := net.ParseCIDR(address); err != nil {
+				return fmt.Errorf("incorrect value for whitelist annotation in ingress '%s'", ingress.Name)
+			}
+		}
+	}
+
+	// Get Rules status
+	status := ingress.Status
+	if status == MODIFIED {
+		if annWhitelist.Status != EMPTY {
+			status = annWhitelist.Status
+		}
+	}
+
+	// Update rules
+	mapFiles := c.cfg.MapFiles
+	key := hashStrToUint(fmt.Sprintf("WHT-%s", annWhitelist.Value))
+	if status != EMPTY {
+		mapFiles.Modified(key)
+		c.cfg.HTTPRequestsStatus = MODIFIED
+		c.cfg.TCPRequestsStatus = MODIFIED
+		if status == DELETED {
+			return nil
+		}
+	}
+	for hostname := range ingress.Rules {
+		mapFiles.AppendHost(key, hostname)
+	}
+
+	mapFile := path.Join(HAProxyMapDir, strconv.FormatUint(key, 10)) + ".lst"
+	httpRule := models.HTTPRequestRule{
+		ID:         utils.PtrInt64(0),
+		Type:       "deny",
+		DenyStatus: 403,
+		Cond:       "if",
+		CondTest:   fmt.Sprintf("{ req.hdr(Host) -f %s } !{ src %s }", mapFile, value),
+	}
+	tcpRule := models.TCPRequestRule{
+		ID:       utils.PtrInt64(0),
+		Type:     "content",
+		Action:   "reject",
+		Cond:     "if",
+		CondTest: fmt.Sprintf("{ req_ssl_sni -f %s } !{ src %s }", mapFile, value),
+	}
+	c.cfg.HTTPRequests[fmt.Sprint(key)] = []models.HTTPRequestRule{httpRule}
+	c.cfg.TCPRequests[fmt.Sprint(key)] = []models.TCPRequestRule{tcpRule}
+
+	return nil
 }
 
 func hashStrToUint(s string) uint64 {
