@@ -30,6 +30,8 @@ const (
 	//nolint
 	HTTP_REDIRECT Rule = "http-redirect"
 	//nolint
+	PROXY_PROTOCOL Rule = "proxy-protocol"
+	//nolint
 	REQUEST_CAPTURE Rule = "request-capture"
 	//nolint
 	WHITELIST Rule = "whitelist"
@@ -89,6 +91,10 @@ func (c *HAProxyController) RequestsTCPRefresh() (needsReload bool) {
 			utils.LogErr(c.frontendTCPRequestRuleCreate(frontend, c.cfg.TCPRequests[RATE_LIMIT][0]))
 			utils.LogErr(c.frontendTCPRequestRuleCreate(frontend, c.cfg.TCPRequests[RATE_LIMIT][1]))
 		}
+		// PROXY_PROTCOL
+		if len(c.cfg.TCPRequests[PROXY_PROTOCOL]) > 0 {
+			utils.LogErr(c.frontendTCPRequestRuleCreate(frontend, c.cfg.TCPRequests[PROXY_PROTOCOL][0]))
+		}
 	}
 	if !c.cfg.SSLPassthrough {
 		return true
@@ -127,5 +133,9 @@ func (c *HAProxyController) RequestsTCPRefresh() (needsReload bool) {
 	})
 	utils.LogErr(err)
 
+	// PROXY_PROTCOL
+	if len(c.cfg.TCPRequests[PROXY_PROTOCOL]) > 0 {
+		utils.LogErr(c.frontendTCPRequestRuleCreate(FrontendSSL, c.cfg.TCPRequests[PROXY_PROTOCOL][0]))
+	}
 	return true
 }

@@ -91,7 +91,7 @@ func (c *Configuration) Init(osArgs utils.OSArgs, mapDir string) {
 		c.HTTPRequests[rule] = make(map[uint64]models.HTTPRequestRule)
 	}
 	c.TCPRequests = make(map[Rule]TCPRequestRules)
-	for _, rule := range []Rule{RATE_LIMIT, REQUEST_CAPTURE, WHITELIST} {
+	for _, rule := range []Rule{RATE_LIMIT, REQUEST_CAPTURE, PROXY_PROTOCOL, WHITELIST} {
 		c.TCPRequests[rule] = make(map[uint64]models.TCPRequestRule)
 	}
 	c.HTTPRequestsStatus = EMPTY

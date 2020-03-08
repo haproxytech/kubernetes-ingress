@@ -109,6 +109,8 @@ func (c *HAProxyController) updateHAProxy() error {
 		}
 	}
 
+	utils.LogErr(c.handleProxyProtocol())
+
 	reload = c.handleDefaultCertificate(usedCerts)
 	needsReload = needsReload || reload
 

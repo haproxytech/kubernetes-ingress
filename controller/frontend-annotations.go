@@ -97,6 +97,46 @@ func (c *HAProxyController) handleHTTPRedirect(ingress *Ingress) error {
 	return nil
 }
 
+func (c *HAProxyController) handleProxyProtocol() error {
+	//  Get and validate annotations
+	annProxyProtocol, _ := GetValueFromAnnotations("proxy-protocol", c.cfg.ConfigMap.Annotations)
+	if annProxyProtocol == nil {
+		return nil
+	}
+	value := strings.Replace(annProxyProtocol.Value, ",", " ", -1)
+	for _, address := range strings.Fields(value) {
+		if ip := net.ParseIP(address); ip == nil {
+			if _, _, err := net.ParseCIDR(address); err != nil {
+				return fmt.Errorf("incorrect value for proxy-protocol annotation ")
+			}
+		}
+	}
+
+	// Get Rules status
+	status := annProxyProtocol.Status
+
+	// Update rules
+	// Since this is a Configmap Annotation ONLY, no need to
+	// track ingress hosts in Map file
+	if status != EMPTY {
+		c.cfg.TCPRequestsStatus = MODIFIED
+		if status == DELETED {
+			return nil
+		}
+	}
+
+	tcpRule := models.TCPRequestRule{
+		ID:       utils.PtrInt64(0),
+		Type:     "connection",
+		Action:   "expect-proxy layer4",
+		Cond:     "if",
+		CondTest: fmt.Sprintf("{ src %s }", value),
+	}
+	c.cfg.TCPRequests[PROXY_PROTOCOL][0] = tcpRule
+
+	return nil
+}
+
 func (c *HAProxyController) handleRequestCapture(ingress *Ingress) error {
 	//  Get and validate annotations
 	annReqCapture, _ := GetValueFromAnnotations("request-capture", ingress.Annotations, c.cfg.ConfigMap.Annotations)

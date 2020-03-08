@@ -24,6 +24,7 @@ Options for starting controller can be found in [controller.md](controller.md)
 | [maxconn](#maximum-concurent-connections) | number |  |  |:large_blue_circle:|:white_circle:|:white_circle:|
 | [nbthread](#number-of-threads) | number | |  |:large_blue_circle:|:white_circle:|:white_circle:|
 | [pod-maxconn](#maximum-concurent-backend-connections) | number |  |  |:white_circle:|:white_circle:|:large_blue_circle:|
+| [proxy-protocol](#proxy-protocol) | [IPs or CIDRs](#proxy-protocol) |   |  |:large_blue_circle:|:white_circle:|:white_circle:|
 | [rate-limit](#rate-limit) | "true"/"false" | "false" |  |:large_blue_circle:|:white_circle:|:white_circle:|
 | [rate-limit-expire](#rate-limit) | string | "30m" | [rate-limit](#rate-limit) |:large_blue_circle:|:white_circle:|:white_circle:|
 | [rate-limit-interval](#rate-limit) | string | "10s" | [rate-limit](#rate-limit) |:large_blue_circle:|:white_circle:|:white_circle:|
@@ -130,6 +131,15 @@ More information can be found in the official HAProxy [documentation](https://cb
 
 - Annotation: `nbthread`
 - default value is number of procesors available
+
+#### Proxy Protocol
+- Annotation: `proxy-protocol`
+- Enables Proxy Protocol for a list of IPs and/or CIDRs
+- Connection will fait with `400 Bad Request` if source IP is in annotation list but no Proxy Protocol data is sent.
+- usage:
+  ```
+	proxy-protocol: 192.168.1.0/24, 192.168.2.100
+	```
 
 #### Rate limit
 
