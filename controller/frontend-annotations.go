@@ -27,7 +27,8 @@ import (
 )
 
 const (
-	defaultCaptureLen = 128
+	defaultCaptureLen      = 128
+	defaultSSLRedirectCode = 302
 )
 
 func (c *HAProxyController) handleMaxconn(maxconn *int64, frontends ...string) error {
@@ -40,6 +41,59 @@ func (c *HAProxyController) handleMaxconn(maxconn *int64, frontends ...string) e
 			return err
 		}
 	}
+	return nil
+}
+
+func (c *HAProxyController) handleHTTPRedirect(ingress *Ingress) error {
+	//  Get and validate annotations
+	annSSLRedirect, _ := GetValueFromAnnotations("ssl-redirect", ingress.Annotations, c.cfg.ConfigMap.Annotations)
+	annRedirectCode, _ := GetValueFromAnnotations("ssl-redirect-code", ingress.Annotations, c.cfg.ConfigMap.Annotations)
+	if annSSLRedirect == nil {
+		return nil
+	}
+	enabled, err := utils.GetBoolValue(annSSLRedirect.Value, "ssl-redirect")
+	if err != nil {
+		return err
+	}
+	var sslRedirectCode int64
+	if sslRedirectCode, err = strconv.ParseInt(annRedirectCode.Value, 10, 64); err != nil {
+		sslRedirectCode = defaultSSLRedirectCode
+	}
+	// Get Status
+	status := ingress.Status
+	if status == MODIFIED {
+		if annSSLRedirect.Status != EMPTY {
+			status = annSSLRedirect.Status
+		}
+	}
+	// Update rules
+	mapFiles := c.cfg.MapFiles
+	key := hashStrToUint(fmt.Sprintf("HTTP_REDIRECT-%d", sslRedirectCode))
+	if status != EMPTY {
+		if !enabled && !mapFiles.Exists(key) {
+			return nil
+		}
+		mapFiles.Modified(key)
+		c.cfg.HTTPRequestsStatus = MODIFIED
+		if status == DELETED {
+			return nil
+		}
+	}
+	for hostname := range ingress.Rules {
+		mapFiles.AppendHost(key, hostname)
+	}
+
+	mapFile := path.Join(HAProxyMapDir, strconv.FormatUint(key, 10)) + ".lst"
+	httpRule := models.HTTPRequestRule{
+		ID:         utils.PtrInt64(0),
+		Type:       "redirect",
+		RedirCode:  sslRedirectCode,
+		RedirValue: "https",
+		RedirType:  "scheme",
+		Cond:       "if",
+		CondTest:   fmt.Sprintf("{ req.hdr(Host) -f %s } !{ ssl_fc }", mapFile),
+	}
+	c.cfg.HTTPRequests[HTTP_REDIRECT] = []models.HTTPRequestRule{httpRule}
 	return nil
 }
 

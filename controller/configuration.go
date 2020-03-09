@@ -52,7 +52,6 @@ type Configuration struct {
 	BackendSwitchingStatus map[string]struct{}
 	RateLimitingEnabled    bool
 	HTTPS                  bool
-	SSLRedirect            bool
 	SSLPassthrough         bool
 }
 
@@ -94,7 +93,6 @@ func (c *Configuration) Init(osArgs utils.OSArgs, mapDir string) {
 	}
 
 	c.Namespace = make(map[string]*Namespace)
-	c.SSLRedirect = false
 
 	c.HTTPRequests = map[string][]models.HTTPRequestRule{}
 	c.HTTPRequests[RATE_LIMIT] = []models.HTTPRequestRule{}

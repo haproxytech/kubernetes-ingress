@@ -105,6 +105,7 @@ func (c *HAProxyController) updateHAProxy() error {
 
 			utils.LogErr(c.handleRequestCapture(ingress))
 			utils.LogErr(c.handleWhitelisting(ingress))
+			utils.LogErr(c.handleHTTPRedirect(ingress))
 		}
 	}
 
@@ -115,12 +116,6 @@ func (c *HAProxyController) updateHAProxy() error {
 	needsReload = needsReload || reload
 
 	reload, err = c.handleRateLimiting(c.cfg.HTTPS)
-	if err != nil {
-		return err
-	}
-	needsReload = needsReload || reload
-
-	reload, err = c.handleHTTPRedirect(c.cfg.HTTPS)
 	if err != nil {
 		return err
 	}

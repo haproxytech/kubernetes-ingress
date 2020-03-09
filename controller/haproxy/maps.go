@@ -23,6 +23,7 @@ import (
 type Maps interface {
 	AppendHost(key uint64, host string)
 	Clean()
+	Exists(key uint64) bool
 	Modified(key uint64)
 	Refresh() (needsReload bool, err error)
 }
@@ -65,6 +66,11 @@ func (m mapFiles) Clean() {
 		mapFile.hosts = []string{}
 		mapFile.modified = false
 	}
+}
+
+func (m mapFiles) Exists(key uint64) bool {
+	_, ok := m[key]
+	return ok
 }
 
 func (m mapFiles) Modified(key uint64) {
