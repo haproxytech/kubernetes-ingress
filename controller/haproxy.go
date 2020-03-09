@@ -121,17 +121,13 @@ func (c *HAProxyController) updateHAProxy() error {
 	}
 	needsReload = needsReload || reload
 
-	reload, err = c.requestsTCPRefresh()
-	utils.LogErr(err)
-	needsReload = needsReload || reload
-
-	reload, err = c.RequestsHTTPRefresh()
-	utils.LogErr(err)
-	needsReload = needsReload || reload
-
 	reload, err = c.cfg.MapFiles.Refresh()
 	utils.LogErr(err)
 	needsReload = needsReload || reload
+
+	needsReload = c.RequestsHTTPRefresh() || needsReload
+
+	needsReload = c.RequestsTCPRefresh() || needsReload
 
 	reload, err = c.handleTCPServices()
 	utils.LogErr(err)

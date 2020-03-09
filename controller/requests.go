@@ -15,37 +15,35 @@
 package controller
 
 import (
-	"sort"
-
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 	"github.com/haproxytech/models"
 )
 
-func (c *HAProxyController) RequestsHTTPRefresh() (needsReload bool, err error) {
-	needsReload = false
+type HTTPRequestRules map[uint64]models.HTTPRequestRule
+type TCPRequestRules map[uint64]models.TCPRequestRule
+
+type Rule string
+
+const (
+	//nolint
+	RATE_LIMIT Rule = "rate-limit"
+	//nolint
+	HTTP_REDIRECT Rule = "http-redirect"
+	//nolint
+	REQUEST_CAPTURE Rule = "request-capture"
+	//nolint
+	WHITELIST Rule = "whitelist"
+)
+
+func (c *HAProxyController) RequestsHTTPRefresh() (needsReload bool) {
 	if c.cfg.HTTPRequestsStatus == EMPTY {
-		return needsReload, nil
+		return false
 	}
 
+	// DELETE RULES
 	c.frontendHTTPRequestRuleDeleteAll(FrontendHTTP)
 	c.frontendHTTPRequestRuleDeleteAll(FrontendHTTPS)
-	//INFO: order is reversed, first you insert last ones
-	if len(c.cfg.HTTPRequests[HTTP_REDIRECT]) > 0 {
-		err = c.frontendHTTPRequestRuleCreate(FrontendHTTP, c.cfg.HTTPRequests[HTTP_REDIRECT][0])
-		utils.LogErr(err)
-	}
-	if len(c.cfg.HTTPRequests[RATE_LIMIT]) > 0 {
-
-		err = c.frontendHTTPRequestRuleCreate(FrontendHTTP, c.cfg.HTTPRequests[RATE_LIMIT][1])
-		utils.LogErr(err)
-		err = c.frontendHTTPRequestRuleCreate(FrontendHTTP, c.cfg.HTTPRequests[RATE_LIMIT][0])
-		utils.LogErr(err)
-
-		err = c.frontendHTTPRequestRuleCreate(FrontendHTTPS, c.cfg.HTTPRequests[RATE_LIMIT][1])
-		utils.LogErr(err)
-		err = c.frontendHTTPRequestRuleCreate(FrontendHTTPS, c.cfg.HTTPRequests[RATE_LIMIT][0])
-		utils.LogErr(err)
-	}
+	// FORWARDED_PRTOTO
 	xforwardedprotoRule := models.HTTPRequestRule{
 		ID:        utils.PtrInt64(0),
 		Type:      "set-header",
@@ -54,67 +52,66 @@ func (c *HAProxyController) RequestsHTTPRefresh() (needsReload bool, err error) 
 		Cond:      "if",
 		CondTest:  "{ ssl_fc }",
 	}
-	err = c.frontendHTTPRequestRuleCreate(FrontendHTTPS, xforwardedprotoRule)
-	utils.LogErr(err)
-
-	sortedList := []string{}
-	exclude := map[string]struct{}{
-		HTTP_REDIRECT: struct{}{},
-		RATE_LIMIT:    struct{}{},
+	utils.LogErr(c.frontendHTTPRequestRuleCreate(FrontendHTTPS, xforwardedprotoRule))
+	// HTTP_REDIRECT
+	for _, httpRule := range c.cfg.HTTPRequests[REQUEST_CAPTURE] {
+		utils.LogErr(c.frontendHTTPRequestRuleCreate(FrontendHTTP, httpRule))
 	}
-	for name := range c.cfg.HTTPRequests {
-		_, excluding := exclude[name]
-		if !excluding {
-			sortedList = append(sortedList, name)
+	for _, frontend := range []string{FrontendHTTP, FrontendHTTPS} {
+		// REQUEST_CAPTURE
+		for _, httpRule := range c.cfg.HTTPRequests[REQUEST_CAPTURE] {
+			utils.LogErr(c.frontendHTTPRequestRuleCreate(frontend, httpRule))
+		}
+		// RATE_LIMIT
+		if len(c.cfg.HTTPRequests[RATE_LIMIT]) > 0 {
+			utils.LogErr(c.frontendHTTPRequestRuleCreate(frontend, c.cfg.HTTPRequests[RATE_LIMIT][1]))
+			utils.LogErr(c.frontendHTTPRequestRuleCreate(frontend, c.cfg.HTTPRequests[RATE_LIMIT][0]))
+		}
+		// WHITELIST
+		for _, httpRule := range c.cfg.HTTPRequests[WHITELIST] {
+			utils.LogErr(c.frontendHTTPRequestRuleCreate(frontend, httpRule))
 		}
 	}
-	sort.Sort(sort.Reverse(sort.StringSlice(sortedList))) // reverse order
-	for _, name := range sortedList {
-		for _, request := range c.cfg.HTTPRequests[name] {
-			err = c.frontendHTTPRequestRuleCreate(FrontendHTTP, request)
-			utils.LogErr(err)
-			err = c.frontendHTTPRequestRuleCreate(FrontendHTTPS, request)
-			utils.LogErr(err)
-		}
-	}
-	if c.cfg.HTTPRequestsStatus != EMPTY {
-		needsReload = true
-	}
-
-	return needsReload, nil
+	return true
 }
 
-func (c *HAProxyController) requestsTCPRefresh() (needsReload bool, err error) {
-	needsReload = false
+func (c *HAProxyController) RequestsTCPRefresh() (needsReload bool) {
 	if c.cfg.TCPRequestsStatus == EMPTY {
-		return needsReload, nil
+		return false
 	}
 
-	// Frontends HTTP and HTTPS
-	c.frontendTCPRequestRuleDeleteAll(FrontendHTTP)
-	c.frontendTCPRequestRuleDeleteAll(FrontendHTTPS)
-
-	if len(c.cfg.TCPRequests[RATE_LIMIT]) > 0 {
-		err = c.frontendTCPRequestRuleCreate(FrontendHTTP, c.cfg.TCPRequests[RATE_LIMIT][0])
-		utils.LogErr(err)
-		err = c.frontendTCPRequestRuleCreate(FrontendHTTP, c.cfg.TCPRequests[RATE_LIMIT][1])
-		utils.LogErr(err)
-
-		err = c.frontendTCPRequestRuleCreate(FrontendHTTPS, c.cfg.TCPRequests[RATE_LIMIT][0])
-		utils.LogErr(err)
-		err = c.frontendTCPRequestRuleCreate(FrontendHTTPS, c.cfg.TCPRequests[RATE_LIMIT][1])
-		utils.LogErr(err)
+	// HTTP and HTTPS Frrontends
+	for _, frontend := range []string{FrontendHTTP, FrontendHTTPS} {
+		// DELETE RULES
+		c.frontendTCPRequestRuleDeleteAll(frontend)
+		// RATE_LIMIT
+		if len(c.cfg.HTTPRequests[RATE_LIMIT]) > 0 {
+			utils.LogErr(c.frontendTCPRequestRuleCreate(frontend, c.cfg.TCPRequests[RATE_LIMIT][0]))
+			utils.LogErr(c.frontendTCPRequestRuleCreate(frontend, c.cfg.TCPRequests[RATE_LIMIT][1]))
+		}
 	}
-
 	if !c.cfg.SSLPassthrough {
-		return true, nil
+		return true
 	}
 
-	// SSL Frontend
+	// SSL Frontend for SSL_PASSTHROUGH
 	c.frontendTCPRequestRuleDeleteAll(FrontendSSL)
+	// REQUEST_CAPTURE
+	for _, tcpRule := range c.cfg.TCPRequests[REQUEST_CAPTURE] {
+		utils.LogErr(c.frontendTCPRequestRuleCreate(FrontendSSL, tcpRule))
+	}
+	// RATE_LIMIT
+	if len(c.cfg.TCPRequests[RATE_LIMIT]) > 0 {
+		utils.LogErr(c.frontendTCPRequestRuleCreate(FrontendSSL, c.cfg.TCPRequests[RATE_LIMIT][1]))
+		utils.LogErr(c.frontendTCPRequestRuleCreate(FrontendSSL, c.cfg.TCPRequests[RATE_LIMIT][0]))
+	}
+	// WHITELIST
+	for _, tcpRule := range c.cfg.TCPRequests[WHITELIST] {
+		utils.LogErr(c.frontendTCPRequestRuleCreate(FrontendSSL, tcpRule))
+	}
 
 	// Fixed SSLpassthrough rules
-	err = c.frontendTCPRequestRuleCreate(FrontendSSL, models.TCPRequestRule{
+	err := c.frontendTCPRequestRuleCreate(FrontendSSL, models.TCPRequestRule{
 		ID:       utils.PtrInt64(0),
 		Action:   "accept",
 		Type:     "content",
@@ -130,23 +127,5 @@ func (c *HAProxyController) requestsTCPRefresh() (needsReload bool, err error) {
 	})
 	utils.LogErr(err)
 
-	sortedList := []string{}
-	exclude := map[string]struct{}{
-		RATE_LIMIT: struct{}{},
-	}
-	for name := range c.cfg.TCPRequests {
-		_, excluding := exclude[name]
-		if !excluding {
-			sortedList = append(sortedList, name)
-		}
-	}
-	sort.Sort(sort.Reverse(sort.StringSlice(sortedList))) // reverse order
-	for _, name := range sortedList {
-		for _, request := range c.cfg.TCPRequests[name] {
-			err = c.frontendTCPRequestRuleCreate(FrontendSSL, request)
-			utils.LogErr(err)
-		}
-	}
-
-	return true, nil
+	return true
 }

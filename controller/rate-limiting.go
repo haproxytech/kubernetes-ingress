@@ -120,14 +120,10 @@ func (c *HAProxyController) handleRateLimiting(usingHTTPS bool) (needReload bool
 		c.addACL(ratelimitACL2)
 		c.addACL(ratelimitACL3)
 
-		c.cfg.TCPRequests[RATE_LIMIT] = []models.TCPRequestRule{
-			*tcpRequest1,
-			*tcpRequest2,
-		}
-		c.cfg.HTTPRequests[RATE_LIMIT] = []models.HTTPRequestRule{
-			*httpRequest1,
-			*httpRequest2,
-		}
+		c.cfg.TCPRequests[RATE_LIMIT][0] = *tcpRequest1
+		c.cfg.TCPRequests[RATE_LIMIT][1] = *tcpRequest2
+		c.cfg.HTTPRequests[RATE_LIMIT][0] = *httpRequest1
+		c.cfg.HTTPRequests[RATE_LIMIT][1] = *httpRequest2
 
 	}
 
@@ -141,13 +137,10 @@ func (c *HAProxyController) handleRateLimiting(usingHTTPS bool) (needReload bool
 		c.removeACL(ratelimitACL2, FrontendHTTP, FrontendHTTPS)
 		c.removeACL(ratelimitACL3, FrontendHTTP, FrontendHTTPS)
 
-		c.cfg.HTTPRequests[RATE_LIMIT] = []models.HTTPRequestRule{}
+		c.cfg.HTTPRequests[RATE_LIMIT] = map[uint64]models.HTTPRequestRule{}
 		c.cfg.HTTPRequestsStatus = MODIFIED
-		c.cfg.TCPRequests[RATE_LIMIT] = []models.TCPRequestRule{}
+		c.cfg.TCPRequests[RATE_LIMIT] = map[uint64]models.TCPRequestRule{}
 		c.cfg.TCPRequestsStatus = MODIFIED
-
-		c.cfg.TCPRequests[RATE_LIMIT] = []models.TCPRequestRule{}
-		c.cfg.HTTPRequests[RATE_LIMIT] = []models.HTTPRequestRule{}
 	}
 
 	switch status {

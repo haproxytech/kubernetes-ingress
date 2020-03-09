@@ -15,19 +15,11 @@
 package controller
 
 import (
+	"strings"
+
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy"
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 	"github.com/haproxytech/models"
-	"strings"
-)
-
-const (
-	//nolint
-	RATE_LIMIT = "rate-limit"
-	//nolint
-	HTTP_REDIRECT = "http-redirect"
-	//nolint
-	REQUEST_CAPTURE = "request-capture"
 )
 
 //Configuration represents k8s state
@@ -44,9 +36,9 @@ type Configuration struct {
 	ConfigMapTCPServices   *ConfigMap
 	PublishService         *Service
 	MapFiles               haproxy.Maps
-	HTTPRequests           map[string][]models.HTTPRequestRule
+	HTTPRequests           map[Rule]HTTPRequestRules
 	HTTPRequestsStatus     Status
-	TCPRequests            map[string][]models.TCPRequestRule
+	TCPRequests            map[Rule]TCPRequestRules
 	TCPRequestsStatus      Status
 	BackendSwitchingRules  map[string]UseBackendRules
 	BackendSwitchingStatus map[string]struct{}
@@ -94,13 +86,15 @@ func (c *Configuration) Init(osArgs utils.OSArgs, mapDir string) {
 
 	c.Namespace = make(map[string]*Namespace)
 
-	c.HTTPRequests = map[string][]models.HTTPRequestRule{}
-	c.HTTPRequests[RATE_LIMIT] = []models.HTTPRequestRule{}
-	c.HTTPRequests[HTTP_REDIRECT] = []models.HTTPRequestRule{}
+	c.HTTPRequests = make(map[Rule]HTTPRequestRules)
+	for _, rule := range []Rule{HTTP_REDIRECT, RATE_LIMIT, REQUEST_CAPTURE, WHITELIST} {
+		c.HTTPRequests[rule] = make(map[uint64]models.HTTPRequestRule)
+	}
+	c.TCPRequests = make(map[Rule]TCPRequestRules)
+	for _, rule := range []Rule{RATE_LIMIT, REQUEST_CAPTURE, WHITELIST} {
+		c.TCPRequests[rule] = make(map[uint64]models.TCPRequestRule)
+	}
 	c.HTTPRequestsStatus = EMPTY
-
-	c.TCPRequests = map[string][]models.TCPRequestRule{}
-	c.TCPRequests[RATE_LIMIT] = []models.TCPRequestRule{}
 	c.TCPRequestsStatus = EMPTY
 
 	c.MapFiles = haproxy.NewMapFiles(mapDir)
@@ -236,11 +230,12 @@ func (c *Configuration) Clean() {
 		}
 	}
 	c.MapFiles.Clean()
-	c.HTTPRequests = map[string][]models.HTTPRequestRule{}
-	c.TCPRequests = map[string][]models.TCPRequestRule{}
-	c.HTTPRequests[RATE_LIMIT] = []models.HTTPRequestRule{}
-	c.HTTPRequests[HTTP_REDIRECT] = []models.HTTPRequestRule{}
-	c.TCPRequests[RATE_LIMIT] = []models.TCPRequestRule{}
+	for rule := range c.HTTPRequests {
+		c.HTTPRequests[rule] = make(map[uint64]models.HTTPRequestRule)
+	}
+	for rule := range c.TCPRequests {
+		c.TCPRequests[rule] = make(map[uint64]models.TCPRequestRule)
+	}
 	c.HTTPRequestsStatus = EMPTY
 	c.TCPRequestsStatus = EMPTY
 	defaultAnnotationValues.Clean()

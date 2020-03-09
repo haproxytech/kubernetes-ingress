@@ -68,7 +68,7 @@ func (c *HAProxyController) handleHTTPRedirect(ingress *Ingress) error {
 	}
 	// Update rules
 	mapFiles := c.cfg.MapFiles
-	key := hashStrToUint(fmt.Sprintf("HTTP_REDIRECT-%d", sslRedirectCode))
+	key := hashStrToUint(fmt.Sprintf("%s-%d", HTTP_REDIRECT, sslRedirectCode))
 	if status != EMPTY {
 		if !enabled && !mapFiles.Exists(key) {
 			return nil
@@ -93,7 +93,7 @@ func (c *HAProxyController) handleHTTPRedirect(ingress *Ingress) error {
 		Cond:       "if",
 		CondTest:   fmt.Sprintf("{ req.hdr(Host) -f %s } !{ ssl_fc }", mapFile),
 	}
-	c.cfg.HTTPRequests[HTTP_REDIRECT] = []models.HTTPRequestRule{httpRule}
+	c.cfg.HTTPRequests[HTTP_REDIRECT][key] = httpRule
 	return nil
 }
 
@@ -118,7 +118,7 @@ func (c *HAProxyController) handleRequestCapture(ingress *Ingress) error {
 		captureLen = defaultCaptureLen
 	}
 
-	// Get Rules status
+	// Get status
 	status := ingress.Status
 	if status == MODIFIED {
 		if annReqCapture.Status != EMPTY {
@@ -129,7 +129,7 @@ func (c *HAProxyController) handleRequestCapture(ingress *Ingress) error {
 	// Update rules
 	mapFiles := c.cfg.MapFiles
 	for _, sample := range strings.Split(annReqCapture.Value, "\n") {
-		key := hashStrToUint(fmt.Sprintf("RC-%s-%d", sample, captureLen))
+		key := hashStrToUint(fmt.Sprintf("%s-%s-%d", REQUEST_CAPTURE, sample, captureLen))
 		if status != EMPTY {
 			mapFiles.Modified(key)
 			c.cfg.HTTPRequestsStatus = MODIFIED
@@ -144,6 +144,7 @@ func (c *HAProxyController) handleRequestCapture(ingress *Ingress) error {
 		for hostname := range ingress.Rules {
 			mapFiles.AppendHost(key, hostname)
 		}
+
 		mapFile := path.Join(HAProxyMapDir, strconv.FormatUint(key, 10)) + ".lst"
 		httpRule := models.HTTPRequestRule{
 			ID:            utils.PtrInt64(0),
@@ -160,8 +161,8 @@ func (c *HAProxyController) handleRequestCapture(ingress *Ingress) error {
 			Cond:     "if",
 			CondTest: fmt.Sprintf("{ req_ssl_sni -f %s }", mapFile),
 		}
-		c.cfg.HTTPRequests[fmt.Sprint(key)] = []models.HTTPRequestRule{httpRule}
-		c.cfg.TCPRequests[fmt.Sprint(key)] = []models.TCPRequestRule{tcpRule}
+		c.cfg.HTTPRequests[REQUEST_CAPTURE][key] = httpRule
+		c.cfg.TCPRequests[REQUEST_CAPTURE][key] = tcpRule
 	}
 
 	return err
@@ -192,7 +193,7 @@ func (c *HAProxyController) handleWhitelisting(ingress *Ingress) error {
 
 	// Update rules
 	mapFiles := c.cfg.MapFiles
-	key := hashStrToUint(fmt.Sprintf("WHT-%s", annWhitelist.Value))
+	key := hashStrToUint(fmt.Sprintf("%s-%s", WHITELIST, annWhitelist.Value))
 	if status != EMPTY {
 		mapFiles.Modified(key)
 		c.cfg.HTTPRequestsStatus = MODIFIED
@@ -220,8 +221,8 @@ func (c *HAProxyController) handleWhitelisting(ingress *Ingress) error {
 		Cond:     "if",
 		CondTest: fmt.Sprintf("{ req_ssl_sni -f %s } !{ src %s }", mapFile, value),
 	}
-	c.cfg.HTTPRequests[fmt.Sprint(key)] = []models.HTTPRequestRule{httpRule}
-	c.cfg.TCPRequests[fmt.Sprint(key)] = []models.TCPRequestRule{tcpRule}
+	c.cfg.HTTPRequests[WHITELIST][key] = httpRule
+	c.cfg.TCPRequests[WHITELIST][key] = tcpRule
 
 	return nil
 }
