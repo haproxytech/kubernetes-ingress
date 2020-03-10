@@ -45,7 +45,6 @@ Options for starting controller can be found in [controller.md](controller.md)
 | [timeout-tunnel](#timeouts) | [time](#time) | "1h" |  |:large_blue_circle:|:white_circle:|:white_circle:|
 | [timeout-http-keep-alive](#timeouts) | [time](#time) | "1m" |  |:large_blue_circle:|:white_circle:|:white_circle:|
 | [whitelist](#whitelist) | [IPs or CIDRs](#whitelist) | "" |  |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:|
-| [whitelist-with-rate-limit](#whitelist) | "true"/"false" | "false" |  |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:|
 
 > :information_source: Annotations have hierarchy: `default` <- `Configmap` <- `Ingress` <- `Service`
 >
@@ -224,8 +223,6 @@ More information can be found in the official HAProxy [documentation](https://cb
 - by default disabled
 - `IPs or CIDR` - coma or space separated list of IP addresses or CIDRs
 - :information_source: service annotation will override ingress one that overrides config map annotation
-- Annotation: `whitelist-with-rate-limit`
-  - apply rate-limiting, but exclude addresses from whitelist
 
 ### Secrets
 
