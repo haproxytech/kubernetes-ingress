@@ -17,8 +17,6 @@ Options for starting controller can be found in [controller.md](controller.md)
 | [check-interval](#backend-checks) | [time](#time) |  | [check](#backend-checks) |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:|
 | [cookie-persistance](#cookie-persistance) | string | "" |  |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:|
 | [forwarded-for](#x-forwarded-for) | ["true", "false"] | "true" |  |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:|
-| [request-capture](#request-capture) | string | "" |  |:white_circle:|:large_blue_circle:|:white_circle:|
-| [request-capture-len](#request-capture) | string | "128" |  |:white_circle:|:large_blue_circle:|:white_circle:|
 | [ingress.class](#ingress-class) | string | "" |  |:white_circle:|:large_blue_circle:|:white_circle:|
 | [load-balance](#balance-algorithm) | string | "roundrobin" |  |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:|
 | [maxconn](#maximum-concurent-connections) | number |  |  |:large_blue_circle:|:white_circle:|:white_circle:|
@@ -29,22 +27,24 @@ Options for starting controller can be found in [controller.md](controller.md)
 | [rate-limit-expire](#rate-limit) | string | "30m" | [rate-limit](#rate-limit) |:large_blue_circle:|:white_circle:|:white_circle:|
 | [rate-limit-interval](#rate-limit) | string | "10s" | [rate-limit](#rate-limit) |:large_blue_circle:|:white_circle:|:white_circle:|
 | [rate-limit-size](#rate-limit) | string | "100k" | [rate-limit](#rate-limit) |:large_blue_circle:|:white_circle:|:white_circle:|
-| [server-ssl](#server-ssl) | ["true", "false"] | "false" |  |:large_blue_circle:|:white_circle:|:large_blue_circle:|
+| [request-capture](#request-capture) | string |  |  |:large_blue_circle:|:large_blue_circle:|:white_circle:|
+| [request-capture-len](#request-capture) | string | "128" |  |:large_blue_circle:|:large_blue_circle:|:white_circle:|
+| [server-ssl](#server-ssl) | ["true", "false"] | "false" |  |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:|
 | [servers-increment](#servers-slots-increment) | number | "42" |  |:large_blue_circle:|:white_circle:|:white_circle:|
 | [ssl-certificate](#tls-secret) | string |  |  |:large_blue_circle:|:white_circle:|:white_circle:|
 | [ssl-passthrough](#https) | ["true", "false"] | "false" |  |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:|
-| [ssl-redirect](#https) | "true"/"false" | "true" | [tls-secret](#tls-secret) |:large_blue_circle:|:white_circle:|:white_circle:|
-| [ssl-redirect-code](#https) | [301, 302, 303] | "302" | [tls-secret](#tls-secret) |:large_blue_circle:|:white_circle:|:white_circle:|
+| [ssl-redirect](#https) | "true"/"false" | "true" | [tls-secret](#tls-secret) |:large_blue_circle:|:large_blue_circle:|:white_circle:|
+| [ssl-redirect-code](#https) | [301, 302, 303] | "302" | [tls-secret](#tls-secret) |:large_blue_circle:|:large_blue_circle:|:white_circle:|
 | [syslog-server](#logging) | [syslog](#syslog-fields) | "address:127.0.0.1, facility: local0, level: notice" |  |:large_blue_circle:|:white_circle:|:white_circle:|
-| [timeout-http-request](#timeouts) | [time](#time) | "5s" |  |:large_blue_circle:|:white_circle:|:white_circle:|
 | [timeout-check](#timeouts) | [time](#time) |  |  |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:|
-| [timeout-connect](#timeouts) | [time](#time) | "5s" |  |:large_blue_circle:|:white_circle:|:white_circle:|
 | [timeout-client](#timeouts) | [time](#time) | "50s" |  |:large_blue_circle:|:white_circle:|:white_circle:|
+| [timeout-connect](#timeouts) | [time](#time) | "5s" |  |:large_blue_circle:|:white_circle:|:white_circle:|
+| [timeout-http-request](#timeouts) | [time](#time) | "5s" |  |:large_blue_circle:|:white_circle:|:white_circle:|
+| [timeout-http-keep-alive](#timeouts) | [time](#time) | "1m" |  |:large_blue_circle:|:white_circle:|:white_circle:|
 | [timeout-queue](#timeouts) | [time](#time) | "5s" |  |:large_blue_circle:|:white_circle:|:white_circle:|
 | [timeout-server](#timeouts) | [time](#time) | "50s" |  |:large_blue_circle:|:white_circle:|:white_circle:|
 | [timeout-tunnel](#timeouts) | [time](#time) | "1h" |  |:large_blue_circle:|:white_circle:|:white_circle:|
-| [timeout-http-keep-alive](#timeouts) | [time](#time) | "1m" |  |:large_blue_circle:|:white_circle:|:white_circle:|
-| [whitelist](#whitelist) | [IPs or CIDRs](#whitelist) | "" |  |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:|
+| [whitelist](#whitelist) | [IPs or CIDRs](#whitelist) | "" |  |:large_blue_circle:|:large_blue_circle:|:white_circle:|
 
 > :information_source: Annotations have hierarchy: `default` <- `Configmap` <- `Ingress` <- `Service`
 >
