@@ -137,7 +137,8 @@ func (c *HAProxyController) handleDefaultTimeout(timeout string) bool {
 			log.Println(err)
 			return false
 		}
-		log.Println(fmt.Sprintf("default timeout-%s updated from %s to %s", timeout, annTimeout.OldValue, annTimeout.Value))
+		log.Println(fmt.Sprintf("Setting default timeout-%s to %s", timeout, annTimeout.Value))
+		c.ActiveTransactionHasChanges = true
 		return true
 	}
 	return false
