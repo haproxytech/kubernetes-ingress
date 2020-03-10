@@ -17,10 +17,10 @@ you can run image with arguments:
      name: tcp
      namespace: default
    data:
-     3306:             # Port where the frontend is going to listen to.
-       tcp/mysql:3306  # Kuberntes service to use for the backend.
+     3306:              # Port where the frontend is going to listen to.
+       tcp/mysql:3306   # Kuberntes service to use for the backend.
      389:
-       tcp/ldap:389
+       tcp/ldap:389:ssl # ssl option will enable ssl offloading for target service.
      6379:
        tcp/redis:6379
    ```
