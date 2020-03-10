@@ -117,7 +117,7 @@ More information can be found in the official HAProxy [documentation](https://cb
 - Annotation `ssl-redirect-code`
   - HTTP status code on redirect
 
-#### Maximum Concurent Connections
+#### Maximum Concurent Frontend Connections
 
 - Annotation: `maxconn`
 

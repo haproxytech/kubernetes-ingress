@@ -31,19 +31,6 @@ const (
 	defaultSSLRedirectCode = 302
 )
 
-func (c *HAProxyController) handleMaxconn(maxconn *int64, frontends ...string) error {
-	for _, frontendName := range frontends {
-		if frontend, err := c.frontendGet(frontendName); err == nil {
-			frontend.Maxconn = maxconn
-			err1 := c.frontendEdit(frontend)
-			utils.LogErr(err1)
-		} else {
-			return err
-		}
-	}
-	return nil
-}
-
 func (c *HAProxyController) handleHTTPRedirect(ingress *Ingress) error {
 	//  Get and validate annotations
 	annSSLRedirect, _ := GetValueFromAnnotations("ssl-redirect", ingress.Annotations, c.cfg.ConfigMap.Annotations)

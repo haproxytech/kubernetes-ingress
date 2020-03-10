@@ -17,7 +17,6 @@ package controller
 import (
 	"fmt"
 	"log"
-	"strconv"
 	"strings"
 
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
@@ -38,24 +37,9 @@ func (c *HAProxyController) updateHAProxy() error {
 	reload := c.handleDefaultTimeouts()
 	needsReload = needsReload || reload
 
-	maxconnAnn, err := GetValueFromAnnotations("maxconn", c.cfg.ConfigMap.Annotations)
-	if err == nil {
-		if maxconnAnn.Status == DELETED {
-			err = c.handleMaxconn(nil, FrontendHTTP, FrontendHTTPS)
-			if err != nil {
-				return err
-			}
-		} else if maxconnAnn.Status != "" {
-			var value int64
-			value, err = strconv.ParseInt(maxconnAnn.Value, 10, 64)
-			if err == nil {
-				err = c.handleMaxconn(&value, FrontendHTTP, FrontendHTTPS)
-				if err != nil {
-					return err
-				}
-			}
-		}
-	}
+	reload, err = c.handleMaxconn()
+	utils.LogErr(err)
+	needsReload = needsReload || reload
 
 	reload, err = c.handleGlobalAnnotations()
 	utils.LogErr(err)

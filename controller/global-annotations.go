@@ -142,3 +142,36 @@ func (c *HAProxyController) handleDefaultTimeout(timeout string) bool {
 	}
 	return false
 }
+
+func (c *HAProxyController) handleMaxconn() (needReload bool, err error) {
+	annMaxconn, _ := GetValueFromAnnotations("maxconn", c.cfg.ConfigMap.Annotations)
+	if annMaxconn == nil {
+		return false, nil
+	}
+	value, maxconnErr := strconv.ParseInt(annMaxconn.Value, 10, 64)
+	if maxconnErr != nil {
+		return false, maxconnErr
+	}
+
+	config, _ := c.ActiveConfiguration()
+	switch annMaxconn.Status {
+	case EMPTY:
+		return false, nil
+	case DELETED:
+		err = config.Set(parser.Defaults, parser.DefaultSectionName, "maxconn", nil)
+		if err != nil {
+			return false, err
+		}
+		log.Println(fmt.Sprintf("Removing default maxconn"))
+	default:
+		err = config.Set(parser.Defaults, parser.DefaultSectionName, "maxconn", types.Int64C{
+			Value: value,
+		})
+		if err != nil {
+			return false, err
+		}
+		log.Println(fmt.Sprintf("Setting default maxconn to %d", value))
+	}
+	c.ActiveTransactionHasChanges = true
+	return true, nil
+}
