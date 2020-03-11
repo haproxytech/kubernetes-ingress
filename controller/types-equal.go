@@ -113,6 +113,20 @@ func (a *IngressRule) Equal(b *IngressRule) bool {
 	return true
 }
 
+//Equal checks if Ingress secrets are equal
+func (a *IngressTLS) Equal(b *IngressTLS) bool {
+	if a == nil || b == nil {
+		return false
+	}
+	if a.Host != b.Host {
+		return false
+	}
+	if a.SecretName != b.SecretName {
+		return false
+	}
+	return true
+}
+
 //Equal compares two Ingresses, ignores
 func (a *Ingress) Equal(b *Ingress) bool {
 	if a == nil || b == nil {
@@ -130,7 +144,15 @@ func (a *Ingress) Equal(b *Ingress) bool {
 			return false
 		}
 	}
-
+	if len(a.TLS) != len(b.TLS) {
+		return false
+	}
+	for k, v := range a.TLS {
+		value, ok := b.TLS[k]
+		if !ok || !v.Equal(value) {
+			return false
+		}
+	}
 	if a.DefaultBackend != b.DefaultBackend && !a.DefaultBackend.Equal(b.DefaultBackend) {
 		return false
 	}
