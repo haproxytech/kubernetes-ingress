@@ -151,11 +151,11 @@ func (c *HAProxyController) handleTLSSecret(ingress Ingress, tls IngressTLS, cer
 		}
 		return false
 	}
+	if secret.Status == DELETED || tls.Status == DELETED {
+		return false
+	}
 	writeSecret := true
 	if secret.Status == EMPTY && tls.Status == EMPTY {
-		writeSecret = false
-	}
-	if secret.Status == DELETED {
 		writeSecret = false
 	}
 	return c.handleSecret(ingress, *secret, writeSecret, certs)
