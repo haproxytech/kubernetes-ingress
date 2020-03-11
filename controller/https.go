@@ -82,49 +82,14 @@ func (c *HAProxyController) writeCert(filename string, key, crt []byte) error {
 
 func (c *HAProxyController) handleSecret(ingress Ingress, secret Secret, writeSecret bool, certs map[string]struct{}) (reloadRequested bool) {
 	reloadRequested = false
-	//two options are allowed, tls, rsa+ecdsa
-	rsaKey, rsaKeyOK := secret.Data["rsa.key"]
-	rsaCrt, rsaCrtOK := secret.Data["rsa.crt"]
-	ecdsaKey, ecdsaKeyOK := secret.Data["ecdsa.key"]
-	ecdsaCrt, ecdsaCrtOK := secret.Data["ecdsa.crt"]
-	//log.Println(secretName.Value, rsaCrtOK, rsaKeyOK, ecdsaCrtOK, ecdsaKeyOK)
-	if rsaKeyOK && rsaCrtOK || ecdsaKeyOK && ecdsaCrtOK {
-		if rsaKeyOK && rsaCrtOK {
+	for _, k := range []string{"tls", "rsa", "ecdsa"} {
+		key, keyOk := secret.Data[k+".key"]
+		crt, crtOk := secret.Data[k+".crt"]
+		if keyOk && crtOk {
 			filename := path.Join(HAProxyCertDir, fmt.Sprintf("%s_%s_%s.pem.rsa", secret.Namespace, ingress.Name, secret.Name))
 			if writeSecret {
-				errCrt := c.writeCert(filename, rsaKey, rsaCrt)
-				if errCrt != nil {
-					err1 := c.removeHTTPSListeners()
-					utils.LogErr(err1)
-					return false
-				}
-				reloadRequested = true
-			}
-			certs[filename] = struct{}{}
-		}
-		if ecdsaKeyOK && ecdsaCrtOK {
-			filename := path.Join(HAProxyCertDir, fmt.Sprintf("%s_%s_%s.pem.ecdsa", secret.Namespace, ingress.Name, secret.Name))
-			if writeSecret {
-				errCrt := c.writeCert(filename, ecdsaKey, ecdsaCrt)
-				if errCrt != nil {
-					err1 := c.removeHTTPSListeners()
-					utils.LogErr(err1)
-					return false
-				}
-				reloadRequested = true
-			}
-			certs[filename] = struct{}{}
-		}
-	} else {
-		tlsKey, tlsKeyOK := secret.Data["tls.key"]
-		tlsCrt, tlsCrtOK := secret.Data["tls.crt"]
-		if tlsKeyOK && tlsCrtOK {
-			filename := path.Join(HAProxyCertDir, fmt.Sprintf("%s_%s_%s.pem", secret.Namespace, ingress.Name, secret.Name))
-			if writeSecret {
-				errCrt := c.writeCert(filename, tlsKey, tlsCrt)
-				if errCrt != nil {
-					err1 := c.removeHTTPSListeners()
-					utils.LogErr(err1)
+				if err := c.writeCert(filename, key, crt); err != nil {
+					utils.LogErr(err)
 					return false
 				}
 				reloadRequested = true
@@ -373,8 +338,4 @@ func (c *HAProxyController) disableSSLPassthrough() (err error) {
 		Alpn:           alpn,
 	})
 	return err
-}
-
-func (c *HAProxyController) removeHTTPSListeners() (err error) {
-	return nil
 }
