@@ -30,11 +30,13 @@ func (c *HAProxyController) handleGlobalAnnotations() (reloadRequested bool, err
 			}
 			if annNbthread.Status == DELETED {
 				errParser = config.Delete(parser.Global, parser.GlobalSectionName, "nbthread")
+				c.ActiveTransactionHasChanges = true
 				reloadRequested = true
 			} else if annNbthread.Status != EMPTY {
 				errParser = config.Insert(parser.Global, parser.GlobalSectionName, "nbthread", types.Int64C{
 					Value: numThreads,
 				})
+				c.ActiveTransactionHasChanges = true
 				reloadRequested = true
 			}
 			utils.LogErr(errParser)
@@ -91,6 +93,7 @@ func (c *HAProxyController) handleGlobalAnnotations() (reloadRequested bool, err
 					}
 				}
 				errParser = config.Insert(parser.Global, parser.GlobalSectionName, "log", logData, index)
+				c.ActiveTransactionHasChanges = true
 				reloadRequested = true
 			}
 			utils.LogErr(errParser)
