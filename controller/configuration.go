@@ -32,6 +32,7 @@ type NamespacesWatch struct {
 type Configuration struct {
 	Namespace              map[string]*Namespace
 	NamespacesAccess       NamespacesWatch
+	IngressClass           string
 	ConfigMap              *ConfigMap
 	ConfigMapTCPServices   *ConfigMap
 	PublishService         *Service
@@ -74,6 +75,9 @@ func (c *Configuration) Init(osArgs utils.OSArgs, mapDir string) {
 	for _, namespace := range osArgs.NamespaceBlacklist {
 		c.NamespacesAccess.Blacklist[namespace] = struct{}{}
 	}
+
+	c.IngressClass = osArgs.IngressClass
+
 	parts := strings.Split(osArgs.PublishService, "/")
 	if len(parts) == 2 {
 		c.PublishService = &Service{

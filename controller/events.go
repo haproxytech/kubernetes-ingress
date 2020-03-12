@@ -39,6 +39,7 @@ func (c *HAProxyController) eventNamespace(ns *Namespace, data *Namespace) (upda
 }
 
 func (c *HAProxyController) eventIngress(ns *Namespace, data *Ingress) (updateRequired bool) {
+	ingressClass := ""
 	updateRequired = false
 	switch data.Status {
 	case MODIFIED:
@@ -46,6 +47,13 @@ func (c *HAProxyController) eventIngress(ns *Namespace, data *Ingress) (updateRe
 		oldIngress, ok := ns.Ingresses[data.Name]
 		if !ok {
 			newIngress.Status = ADDED
+			return c.eventIngress(ns, newIngress)
+		}
+		if annIngressClass, ok := data.Annotations["ingress.class"]; ok {
+			ingressClass = annIngressClass.Value
+		}
+		if ingressClass != c.cfg.IngressClass {
+			newIngress.Status = DELETED
 			return c.eventIngress(ns, newIngress)
 		}
 		if oldIngress.Equal(data) {
@@ -148,6 +156,12 @@ func (c *HAProxyController) eventIngress(ns *Namespace, data *Ingress) (updateRe
 		//log.Println("Ingress modified", data.Name, "\n", diffStr)
 		updateRequired = true
 	case ADDED:
+		if annIngressClass, ok := data.Annotations["ingress.class"]; ok {
+			ingressClass = annIngressClass.Value
+		}
+		if ingressClass != c.cfg.IngressClass {
+			return false
+		}
 		if old, ok := ns.Ingresses[data.Name]; ok {
 			data.Status = old.Status
 			if !old.Equal(data) {

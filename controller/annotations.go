@@ -127,7 +127,6 @@ func SetDefaultAnnotation(annotation, value string) {
 }
 
 var defaultAnnotationValues = MapStringW{
-	"ingress.class":           &StringW{Value: ""},
 	"check":                   &StringW{Value: "true"},
 	"cookie-indirect":         &StringW{Value: "true"},
 	"cookie-nocache":          &StringW{Value: "true"},
