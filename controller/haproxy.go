@@ -56,10 +56,6 @@ func (c *HAProxyController) updateHAProxy() error {
 			continue
 		}
 		for _, ingress := range namespace.Ingresses {
-			annClass, _ := GetValueFromAnnotations("ingress.class", ingress.Annotations) // default is ""
-			if annClass.Value != "" && annClass.Value != c.osArgs.IngressClass {
-				continue
-			}
 			if c.cfg.PublishService != nil && ingress.Status != DELETED {
 				utils.LogErr(c.k8s.UpdateIngressStatus(ingress, c.cfg.PublishService))
 			}
