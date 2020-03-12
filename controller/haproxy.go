@@ -84,6 +84,7 @@ func (c *HAProxyController) updateHAProxy() error {
 			}
 
 			utils.LogErr(c.handleRequestCapture(ingress))
+			utils.LogErr(c.handleRequestSetHdr(ingress))
 			utils.LogErr(c.handleWhitelisting(ingress))
 			utils.LogErr(c.handleHTTPRedirect(ingress))
 		}

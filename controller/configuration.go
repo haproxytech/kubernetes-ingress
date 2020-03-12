@@ -91,7 +91,7 @@ func (c *Configuration) Init(osArgs utils.OSArgs, mapDir string) {
 	c.Namespace = make(map[string]*Namespace)
 
 	c.HTTPRequests = make(map[Rule]HTTPRequestRules)
-	for _, rule := range []Rule{HTTP_REDIRECT, RATE_LIMIT, REQUEST_CAPTURE, WHITELIST} {
+	for _, rule := range []Rule{HTTP_REDIRECT, RATE_LIMIT, REQUEST_CAPTURE, REQUEST_SET_HEADER, WHITELIST} {
 		c.HTTPRequests[rule] = make(map[uint64]models.HTTPRequestRule)
 	}
 	c.TCPRequests = make(map[Rule]TCPRequestRules)

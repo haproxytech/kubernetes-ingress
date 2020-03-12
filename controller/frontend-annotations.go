@@ -195,6 +195,55 @@ func (c *HAProxyController) handleRequestCapture(ingress *Ingress) error {
 	return err
 }
 
+func (c *HAProxyController) handleRequestSetHdr(ingress *Ingress) error {
+	//  Get and validate annotations
+	annSetHdr, err := GetValueFromAnnotations("request-set-header", ingress.Annotations, c.cfg.ConfigMap.Annotations)
+	if annSetHdr == nil {
+		return nil
+	}
+	// Get status
+	status := ingress.Status
+	if status == MODIFIED {
+		if annSetHdr.Status != EMPTY {
+			status = annSetHdr.Status
+		}
+	}
+
+	// Update rules
+	mapFiles := c.cfg.MapFiles
+	for _, param := range strings.Split(annSetHdr.Value, "\n") {
+		parts := strings.Fields(param)
+		if len(parts) != 2 {
+			utils.LogErr(fmt.Errorf("incorrect value '%s' in request-set-header annotation", param))
+			continue
+		}
+		key := hashStrToUint(fmt.Sprintf("%s-%s-%s", REQUEST_SET_HEADER, parts[0], parts[1]))
+		if status != EMPTY {
+			mapFiles.Modified(key)
+			c.cfg.HTTPRequestsStatus = MODIFIED
+			if status == DELETED {
+				break
+			}
+		}
+		for hostname := range ingress.Rules {
+			mapFiles.AppendHost(key, hostname)
+		}
+
+		mapFile := path.Join(HAProxyMapDir, strconv.FormatUint(key, 10)) + ".lst"
+		httpRule := models.HTTPRequestRule{
+			ID:        utils.PtrInt64(0),
+			Type:      "set-header",
+			HdrName:   parts[0],
+			HdrFormat: parts[1],
+			Cond:      "if",
+			CondTest:  fmt.Sprintf("{ req.hdr(Host) -f %s }", mapFile),
+		}
+		c.cfg.HTTPRequests[REQUEST_SET_HEADER][key] = httpRule
+	}
+
+	return err
+}
+
 func (c *HAProxyController) handleWhitelisting(ingress *Ingress) error {
 	//  Get and validate annotations
 	annWhitelist, _ := GetValueFromAnnotations("whitelist", ingress.Annotations, c.cfg.ConfigMap.Annotations)

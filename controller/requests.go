@@ -34,6 +34,8 @@ const (
 	//nolint
 	REQUEST_CAPTURE Rule = "request-capture"
 	//nolint
+	REQUEST_SET_HEADER Rule = "request-set-header"
+	//nolint
 	WHITELIST Rule = "whitelist"
 )
 
@@ -60,6 +62,10 @@ func (c *HAProxyController) RequestsHTTPRefresh() (needsReload bool) {
 		utils.LogErr(c.frontendHTTPRequestRuleCreate(FrontendHTTP, httpRule))
 	}
 	for _, frontend := range []string{FrontendHTTP, FrontendHTTPS} {
+		// REQUEST_SET_HEADER
+		for _, httpRule := range c.cfg.HTTPRequests[REQUEST_SET_HEADER] {
+			utils.LogErr(c.frontendHTTPRequestRuleCreate(frontend, httpRule))
+		}
 		// REQUEST_CAPTURE
 		for _, httpRule := range c.cfg.HTTPRequests[REQUEST_CAPTURE] {
 			utils.LogErr(c.frontendHTTPRequestRuleCreate(frontend, httpRule))

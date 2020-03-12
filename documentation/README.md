@@ -29,6 +29,7 @@ Options for starting controller can be found in [controller.md](controller.md)
 | [rate-limit-size](#rate-limit) | string | "100k" | [rate-limit](#rate-limit) |:large_blue_circle:|:white_circle:|:white_circle:|
 | [request-capture](#request-capture) | string |  |  |:large_blue_circle:|:large_blue_circle:|:white_circle:|
 | [request-capture-len](#request-capture) | string | "128" |  |:large_blue_circle:|:large_blue_circle:|:white_circle:|
+| [request-set-header](#request-set-header) | string |  |  |:large_blue_circle:|:large_blue_circle:|:white_circle:|
 | [server-ssl](#server-ssl) | ["true", "false"] | "false" |  |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:|
 | [servers-increment](#servers-slots-increment) | number | "42" |  |:large_blue_circle:|:white_circle:|:white_circle:|
 | [ssl-certificate](#tls-secret) | string |  |  |:large_blue_circle:|:white_circle:|:white_circle:|
@@ -95,6 +96,30 @@ More information can be found in the official HAProxy [documentation](https://cb
   request-capture-len: <positive integer>
   ```
 
+#### Request Set Header
+- Annotation `request-set-header`
+  - Single value:
+    - Usage:
+    ```
+    request-set-header: <Header> <value>
+    ```
+    - Example:
+    ```
+    request-set-header: Host example.com
+    ```
+  - Multiple values:
+    - Usage:
+    ```
+    request-set-header: |
+      <Header> <value>
+      <Header> <value>
+    ```
+    - Example:
+    ```
+    request-set-header: |
+      Strict-Transport-Security "max-age=31536000"
+      Cache-Control "no-store,no-cache,private"
+    ```
 #### Ingress Class
 
 - Annotation: `ingress.class`
