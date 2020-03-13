@@ -46,14 +46,9 @@ func (c *HAProxyController) handleHTTPRedirect(ingress *Ingress) error {
 	if sslRedirectCode, err = strconv.ParseInt(annRedirectCode.Value, 10, 64); err != nil {
 		sslRedirectCode = defaultSSLRedirectCode
 	}
-	// Get Status
-	status := ingress.Status
-	if status == MODIFIED {
-		if annSSLRedirect.Status != EMPTY {
-			status = annSSLRedirect.Status
-		}
-	}
+
 	// Update rules
+	status := setStatus(ingress.Status, annSSLRedirect.Status)
 	mapFiles := c.cfg.MapFiles
 	key := hashStrToUint(fmt.Sprintf("%s-%d", HTTP_REDIRECT, sslRedirectCode))
 	if status != EMPTY {
@@ -145,15 +140,8 @@ func (c *HAProxyController) handleRequestCapture(ingress *Ingress) error {
 		captureLen = defaultCaptureLen
 	}
 
-	// Get status
-	status := ingress.Status
-	if status == MODIFIED {
-		if annReqCapture.Status != EMPTY {
-			status = annReqCapture.Status
-		}
-	}
-
 	// Update rules
+	status := setStatus(ingress.Status, annReqCapture.Status)
 	mapFiles := c.cfg.MapFiles
 	for _, sample := range strings.Split(annReqCapture.Value, "\n") {
 		key := hashStrToUint(fmt.Sprintf("%s-%s-%d", REQUEST_CAPTURE, sample, captureLen))
@@ -201,15 +189,9 @@ func (c *HAProxyController) handleRequestSetHdr(ingress *Ingress) error {
 	if annSetHdr == nil {
 		return nil
 	}
-	// Get status
-	status := ingress.Status
-	if status == MODIFIED {
-		if annSetHdr.Status != EMPTY {
-			status = annSetHdr.Status
-		}
-	}
 
 	// Update rules
+	status := setStatus(ingress.Status, annSetHdr.Status)
 	mapFiles := c.cfg.MapFiles
 	for _, param := range strings.Split(annSetHdr.Value, "\n") {
 		parts := strings.Fields(param)
@@ -259,15 +241,8 @@ func (c *HAProxyController) handleWhitelisting(ingress *Ingress) error {
 		}
 	}
 
-	// Get Rules status
-	status := ingress.Status
-	if status == MODIFIED {
-		if annWhitelist.Status != EMPTY {
-			status = annWhitelist.Status
-		}
-	}
-
 	// Update rules
+	status := setStatus(ingress.Status, annWhitelist.Status)
 	mapFiles := c.cfg.MapFiles
 	key := hashStrToUint(fmt.Sprintf("%s-%s", WHITELIST, annWhitelist.Value))
 	if status != EMPTY {
@@ -308,4 +283,15 @@ func hashStrToUint(s string) uint64 {
 	_, err := h.Write([]byte(strings.ToLower(s)))
 	utils.LogErr(err)
 	return h.Sum64()
+}
+
+// Return status for ingress annotations
+func setStatus(ingressStatus, annStatus Status) Status {
+	if ingressStatus == DELETED || annStatus == DELETED {
+		return DELETED
+	}
+	if ingressStatus == EMPTY && annStatus == EMPTY {
+		return EMPTY
+	}
+	return MODIFIED
 }
