@@ -58,16 +58,19 @@ func (c *HAProxyController) RequestsHTTPRefresh() (needsReload bool) {
 	}
 	utils.LogErr(c.frontendHTTPRequestRuleCreate(FrontendHTTPS, xforwardedprotoRule))
 	// SSL_REDIRECT
-	for _, httpRule := range c.cfg.HTTPRequests[SSL_REDIRECT] {
+	for key, httpRule := range c.cfg.HTTPRequests[SSL_REDIRECT] {
+		c.cfg.MapFiles.Modified(key)
 		utils.LogErr(c.frontendHTTPRequestRuleCreate(FrontendHTTP, httpRule))
 	}
 	for _, frontend := range []string{FrontendHTTP, FrontendHTTPS} {
 		// REQUEST_SET_HEADER
-		for _, httpRule := range c.cfg.HTTPRequests[REQUEST_SET_HEADER] {
+		for key, httpRule := range c.cfg.HTTPRequests[REQUEST_SET_HEADER] {
+			c.cfg.MapFiles.Modified(key)
 			utils.LogErr(c.frontendHTTPRequestRuleCreate(frontend, httpRule))
 		}
 		// REQUEST_CAPTURE
-		for _, httpRule := range c.cfg.HTTPRequests[REQUEST_CAPTURE] {
+		for key, httpRule := range c.cfg.HTTPRequests[REQUEST_CAPTURE] {
+			c.cfg.MapFiles.Modified(key)
 			utils.LogErr(c.frontendHTTPRequestRuleCreate(frontend, httpRule))
 		}
 		// RATE_LIMIT
@@ -109,7 +112,8 @@ func (c *HAProxyController) RequestsTCPRefresh() (needsReload bool) {
 	// SSL Frontend for SSL_PASSTHROUGH
 	c.frontendTCPRequestRuleDeleteAll(FrontendSSL)
 	// REQUEST_CAPTURE
-	for _, tcpRule := range c.cfg.TCPRequests[REQUEST_CAPTURE] {
+	for key, tcpRule := range c.cfg.TCPRequests[REQUEST_CAPTURE] {
+		c.cfg.MapFiles.Modified(key)
 		utils.LogErr(c.frontendTCPRequestRuleCreate(FrontendSSL, tcpRule))
 	}
 	// RATE_LIMIT
@@ -118,7 +122,8 @@ func (c *HAProxyController) RequestsTCPRefresh() (needsReload bool) {
 		utils.LogErr(c.frontendTCPRequestRuleCreate(FrontendSSL, c.cfg.TCPRequests[RATE_LIMIT][0]))
 	}
 	// WHITELIST
-	for _, tcpRule := range c.cfg.TCPRequests[WHITELIST] {
+	for key, tcpRule := range c.cfg.TCPRequests[WHITELIST] {
+		c.cfg.MapFiles.Modified(key)
 		utils.LogErr(c.frontendTCPRequestRuleCreate(FrontendSSL, tcpRule))
 	}
 
