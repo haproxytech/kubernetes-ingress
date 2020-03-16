@@ -228,7 +228,7 @@ func (c *HAProxyController) enableSSLPassthrough() (err error) {
 	frontend := models.Frontend{
 		Name:           FrontendSSL,
 		Mode:           "tcp",
-		LogFormat:      "'%ci:%cp [%t] %ft %b/%s %Tw/%Tc/%Tt %B %ts %ac/%fc/%bc/%sc/%rc %sq/%bq %hr %hs'",
+		LogFormat:      "'%ci:%cp [%t] %ft %b/%s %Tw/%Tc/%Tt %B %ts %ac/%fc/%bc/%sc/%rc %sq/%bq %hr %hs %[req_ssl_sni]'",
 		DefaultBackend: backendHTTPS,
 	}
 	err = c.frontendCreate(frontend)

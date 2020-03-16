@@ -47,7 +47,7 @@ func (c *HAProxyController) RequestsHTTPRefresh() (needsReload bool) {
 	// DELETE RULES
 	c.frontendHTTPRequestRuleDeleteAll(FrontendHTTP)
 	c.frontendHTTPRequestRuleDeleteAll(FrontendHTTPS)
-	// FORWARDED_PRTOTO
+	//STATIC: FORWARDED_PRTOTO
 	xforwardedprotoRule := models.HTTPRequestRule{
 		ID:        utils.PtrInt64(0),
 		Type:      "set-header",
@@ -73,6 +73,15 @@ func (c *HAProxyController) RequestsHTTPRefresh() (needsReload bool) {
 			c.cfg.MapFiles.Modified(key)
 			utils.LogErr(c.frontendHTTPRequestRuleCreate(frontend, httpRule))
 		}
+		// STATIC: SET_VARIABLE txn.Base (for logging purpose)
+		setVarBaseRule := models.HTTPRequestRule{
+			ID:       utils.PtrInt64(0),
+			Type:     "set-var",
+			VarName:  "base",
+			VarScope: "txn",
+			VarExpr:  "base",
+		}
+		utils.LogErr(c.frontendHTTPRequestRuleCreate(frontend, setVarBaseRule))
 		// RATE_LIMIT
 		if len(c.cfg.HTTPRequests[RATE_LIMIT]) > 0 {
 			utils.LogErr(c.frontendHTTPRequestRuleCreate(frontend, c.cfg.HTTPRequests[RATE_LIMIT][1]))
