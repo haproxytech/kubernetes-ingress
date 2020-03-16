@@ -34,7 +34,7 @@ Options for starting controller can be found in [controller.md](controller.md)
 | [servers-increment](#servers-slots-increment) | number | "42" |  |:large_blue_circle:|:white_circle:|:white_circle:|
 | [ssl-certificate](#tls-secret) | string |  |  |:large_blue_circle:|:white_circle:|:white_circle:|
 | [ssl-passthrough](#https) | ["true", "false"] | "false" |  |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:|
-| [ssl-redirect](#https) | "true"/"false" | "true" | [tls-secret](#tls-secret) |:large_blue_circle:|:large_blue_circle:|:white_circle:|
+| [ssl-redirect](#https) | "true"/"false" | "false" | [tls-secret](#tls-secret) |:large_blue_circle:|:large_blue_circle:|:white_circle:|
 | [ssl-redirect-code](#https) | [301, 302, 303] | "302" | [tls-secret](#tls-secret) |:large_blue_circle:|:large_blue_circle:|:white_circle:|
 | [syslog-server](#logging) | [syslog](#syslog-fields) | "address:127.0.0.1, facility: local0, level: notice" |  |:large_blue_circle:|:white_circle:|:white_circle:|
 | [timeout-check](#timeouts) | [time](#time) |  |  |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:|
@@ -136,11 +136,12 @@ More information can be found in the official HAProxy [documentation](https://cb
 	- Make HAProxy send TLS traffic directly to the backend instead of offloading it.
 	- Traffic is proxied in TCP mode which makes unavailable a number of the controller annotations (requiring HTTP mode).
 - Annotation `ssl-redirect`
-  - by default this is activated if tls key is provided
   - redirects http trafic to https
-  - default `true`, can be set to "false" to be disabled
+  - by default, for an ingress with TLS enabled,  the controller redirects (302) to HTTPS.
+	- Automatic redirects, when TLS enabled, can be disabled by setting annotation to "false" in configmap.
 - Annotation `ssl-redirect-code`
   - HTTP status code on redirect
+	- default is `302`
 
 #### Maximum Concurent Frontend Connections
 

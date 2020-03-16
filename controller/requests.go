@@ -28,7 +28,7 @@ const (
 	//nolint
 	RATE_LIMIT Rule = "rate-limit"
 	//nolint
-	HTTP_REDIRECT Rule = "http-redirect"
+	SSL_REDIRECT Rule = "ssl-redirect"
 	//nolint
 	PROXY_PROTOCOL Rule = "proxy-protocol"
 	//nolint
@@ -57,8 +57,8 @@ func (c *HAProxyController) RequestsHTTPRefresh() (needsReload bool) {
 		CondTest:  "{ ssl_fc }",
 	}
 	utils.LogErr(c.frontendHTTPRequestRuleCreate(FrontendHTTPS, xforwardedprotoRule))
-	// HTTP_REDIRECT
-	for _, httpRule := range c.cfg.HTTPRequests[REQUEST_CAPTURE] {
+	// SSL_REDIRECT
+	for _, httpRule := range c.cfg.HTTPRequests[SSL_REDIRECT] {
 		utils.LogErr(c.frontendHTTPRequestRuleCreate(FrontendHTTP, httpRule))
 	}
 	for _, frontend := range []string{FrontendHTTP, FrontendHTTPS} {

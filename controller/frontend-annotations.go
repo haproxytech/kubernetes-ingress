@@ -33,38 +33,49 @@ const (
 
 func (c *HAProxyController) handleHTTPRedirect(ingress *Ingress) error {
 	//  Get and validate annotations
+	var err error
+	enabled := false
 	annSSLRedirect, _ := GetValueFromAnnotations("ssl-redirect", ingress.Annotations, c.cfg.ConfigMap.Annotations)
 	annRedirectCode, _ := GetValueFromAnnotations("ssl-redirect-code", ingress.Annotations, c.cfg.ConfigMap.Annotations)
 	if annSSLRedirect == nil {
-		return nil
-	}
-	enabled, err := utils.GetBoolValue(annSSLRedirect.Value, "ssl-redirect")
-	if err != nil {
-		return err
+		if ingress.Status == EMPTY {
+			return nil
+		}
+		if len(ingress.TLS) > 0 {
+			enabled = true
+		}
+	} else {
+		switch annSSLRedirect.Status {
+		case EMPTY:
+			if ingress.Status == EMPTY {
+				return nil
+			}
+		case DELETED:
+			if len(ingress.TLS) > 0 {
+				enabled = true
+			}
+		default:
+			if enabled, err = utils.GetBoolValue(annSSLRedirect.Value, "ssl-redirect"); err != nil {
+				return err
+			}
+		}
 	}
 	var sslRedirectCode int64
 	if sslRedirectCode, err = strconv.ParseInt(annRedirectCode.Value, 10, 64); err != nil {
 		sslRedirectCode = defaultSSLRedirectCode
 	}
 
-	// Update rules
-	status := setStatus(ingress.Status, annSSLRedirect.Status)
+	// Update Rules
+	key := hashStrToUint(fmt.Sprintf("%s-%d", SSL_REDIRECT, sslRedirectCode))
 	mapFiles := c.cfg.MapFiles
-	key := hashStrToUint(fmt.Sprintf("%s-%d", HTTP_REDIRECT, sslRedirectCode))
-	if status != EMPTY {
-		if !enabled && !mapFiles.Exists(key) {
-			return nil
-		}
-		mapFiles.Modified(key)
-		c.cfg.HTTPRequestsStatus = MODIFIED
-		if status == DELETED {
-			return nil
-		}
+	mapFiles.Modified(key)
+	c.cfg.HTTPRequestsStatus = MODIFIED
+	if !enabled {
+		return nil
 	}
 	for hostname := range ingress.Rules {
 		mapFiles.AppendHost(key, hostname)
 	}
-
 	mapFile := path.Join(HAProxyMapDir, strconv.FormatUint(key, 10)) + ".lst"
 	httpRule := models.HTTPRequestRule{
 		ID:         utils.PtrInt64(0),
@@ -75,7 +86,7 @@ func (c *HAProxyController) handleHTTPRedirect(ingress *Ingress) error {
 		Cond:       "if",
 		CondTest:   fmt.Sprintf("{ req.hdr(Host) -f %s } !{ ssl_fc }", mapFile),
 	}
-	c.cfg.HTTPRequests[HTTP_REDIRECT][key] = httpRule
+	c.cfg.HTTPRequests[SSL_REDIRECT][key] = httpRule
 	return nil
 }
 
