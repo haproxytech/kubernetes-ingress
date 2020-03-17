@@ -16,9 +16,10 @@ package controller
 
 import (
 	"fmt"
-	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 	"log"
 	"strconv"
+
+	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 )
 
 func (c *HAProxyController) eventNamespace(ns *Namespace, data *Namespace) (updateRequired bool) {

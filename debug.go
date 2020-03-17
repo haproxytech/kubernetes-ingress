@@ -16,14 +16,15 @@ package main
 
 import (
 	"fmt"
-	c "github.com/haproxytech/kubernetes-ingress/controller"
-	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 	"log"
 	"os"
 	"os/exec"
 	"path"
 	"path/filepath"
 	"time"
+
+	c "github.com/haproxytech/kubernetes-ingress/controller"
+	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 )
 
 const (

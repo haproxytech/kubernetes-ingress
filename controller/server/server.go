@@ -15,9 +15,10 @@
 package server
 
 import (
+	"strconv"
+
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 	"github.com/haproxytech/models"
-	"strconv"
 )
 
 type Server models.Server
