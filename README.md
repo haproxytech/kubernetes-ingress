@@ -32,9 +32,11 @@ Official HAProxy Technologies Helm Charts for deploying on [Kubernetes](https://
 
 ### Contributing
 
-For commit messages and general style please follow the haproxy project's [CONTRIBUTING guide](https://github.com/haproxy/haproxy/blob/master/CONTRIBUTING) and use that where applicable.
-
-Please use `golangci-lint run` from [github.com/golangci/golangci-lint](https://github.com/golangci/golangci-lint) for linting code.
+Thanks for your interest in the project and your willing to contribute:
+- Pull requests are welcome!
+- For commit messages and general style please follow the haproxy project's [CONTRIBUTING guide](https://github.com/haproxy/haproxy/blob/master/CONTRIBUTING) and use that where applicable.
+- Please use `golangci-lint run` from [github.com/golangci/golangci-lint](https://github.com/golangci/golangci-lint) for linting code.
+- Join our [HAProxy Community Slack](haproxy.slack.com) and you're welcome to ask questions, get some help, etc in the [#ingress-controller](https://haproxy.slack.com/archives/CR9N5UNAZ) channel.
 
 ## License
 
