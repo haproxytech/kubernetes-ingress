@@ -20,6 +20,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"syscall"
 
 	c "github.com/haproxytech/kubernetes-ingress/controller"
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
@@ -81,7 +82,7 @@ func main() {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	signalC := make(chan os.Signal, 1)
-	signal.Notify(signalC, os.Interrupt)
+	signal.Notify(signalC, os.Interrupt, syscall.SIGTERM, syscall.SIGUSR1)
 	go func() {
 		<-signalC
 		cancel()
