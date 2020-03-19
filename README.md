@@ -36,7 +36,12 @@ Thanks for your interest in the project and your willing to contribute:
 - Pull requests are welcome!
 - For commit messages and general style please follow the haproxy project's [CONTRIBUTING guide](https://github.com/haproxy/haproxy/blob/master/CONTRIBUTING) and use that where applicable.
 - Please use `golangci-lint run` from [github.com/golangci/golangci-lint](https://github.com/golangci/golangci-lint) for linting code.
-- Join our [HAProxy Community Slack](haproxy.slack.com) and you're welcome to ask questions, get some help, etc in the [#ingress-controller](https://haproxy.slack.com/archives/CR9N5UNAZ) channel.
+
+### Discussion
+
+A Github issue is the right place to discuss feature requests, bug reports or any other subject that needs tracking.
+
+To ask questions, get some help or even have a little chat, you can join our [#ingress-controller](https://haproxy.slack.com/archives/CR9N5UNAZ) channel in [HAProxy Community Slack](haproxy.slack.com).
 
 ## License
 
