@@ -31,31 +31,30 @@ const (
 	defaultSSLRedirectCode = 302
 )
 
+var sslRedirectEnabled map[string]struct{}
+
 func (c *HAProxyController) handleHTTPRedirect(ingress *Ingress) error {
 	//  Get and validate annotations
 	var err error
-	enabled := false
+	toEnable := false
 	annSSLRedirect, _ := GetValueFromAnnotations("ssl-redirect", ingress.Annotations, c.cfg.ConfigMap.Annotations)
 	annRedirectCode, _ := GetValueFromAnnotations("ssl-redirect-code", ingress.Annotations, c.cfg.ConfigMap.Annotations)
+	_, enabled := sslRedirectEnabled[ingress.Namespace+ingress.Name]
 	if annSSLRedirect == nil {
-		if ingress.Status == EMPTY {
-			return nil
-		}
 		if len(ingress.TLS) > 0 {
-			enabled = true
+			toEnable = true
+		} else if !enabled {
+			// Nothing to do
+			return nil
 		}
 	} else {
 		switch annSSLRedirect.Status {
-		case EMPTY:
-			if ingress.Status == EMPTY {
-				return nil
-			}
 		case DELETED:
 			if len(ingress.TLS) > 0 {
-				enabled = true
+				toEnable = true
 			}
 		default:
-			if enabled, err = utils.GetBoolValue(annSSLRedirect.Value, "ssl-redirect"); err != nil {
+			if toEnable, err = utils.GetBoolValue(annSSLRedirect.Value, "ssl-redirect"); err != nil {
 				return err
 			}
 		}
@@ -68,11 +67,16 @@ func (c *HAProxyController) handleHTTPRedirect(ingress *Ingress) error {
 	// Update Rules
 	key := hashStrToUint(fmt.Sprintf("%s-%d", SSL_REDIRECT, sslRedirectCode))
 	mapFiles := c.cfg.MapFiles
-	mapFiles.Modified(key)
-	c.cfg.HTTPRequestsStatus = MODIFIED
-	if !enabled {
+	// Disable Redirect
+	if !toEnable {
+		if enabled {
+			delete(sslRedirectEnabled, ingress.Namespace+ingress.Name)
+			mapFiles.Modified(key)
+			c.cfg.HTTPRequestsStatus = MODIFIED
+		}
 		return nil
 	}
+	//Enable Redirect
 	for hostname := range ingress.Rules {
 		mapFiles.AppendHost(key, hostname)
 	}
@@ -87,6 +91,12 @@ func (c *HAProxyController) handleHTTPRedirect(ingress *Ingress) error {
 		CondTest:   fmt.Sprintf("{ req.hdr(Host) -f %s } !{ ssl_fc }", mapFile),
 	}
 	c.cfg.HTTPRequests[SSL_REDIRECT][key] = httpRule
+
+	if !enabled {
+		mapFiles.Modified(key)
+		c.cfg.HTTPRequestsStatus = MODIFIED
+		sslRedirectEnabled[ingress.Namespace+ingress.Name] = struct{}{}
+	}
 	return nil
 }
 

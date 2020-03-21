@@ -100,6 +100,7 @@ func (c *Configuration) Init(osArgs utils.OSArgs, mapDir string) {
 	}
 	c.HTTPRequestsStatus = EMPTY
 	c.TCPRequestsStatus = EMPTY
+	sslRedirectEnabled = make(map[string]struct{})
 
 	c.MapFiles = haproxy.NewMapFiles(mapDir)
 
