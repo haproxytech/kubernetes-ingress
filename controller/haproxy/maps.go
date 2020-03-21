@@ -97,6 +97,7 @@ func (m mapFiles) Refresh() (needsReload bool, err error) {
 			if _, err = f.WriteString(hosts); err != nil {
 				return needsReload, err
 			}
+			needsReload = true
 		}
 	}
 	return needsReload, nil
