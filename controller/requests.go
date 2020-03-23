@@ -136,8 +136,15 @@ func (c *HAProxyController) RequestsTCPRefresh() (needsReload bool) {
 		utils.LogErr(c.frontendTCPRequestRuleCreate(FrontendSSL, tcpRule))
 	}
 
-	// Fixed SSLpassthrough rules
+	// STATIC: SSLpassthrough rules
 	err := c.frontendTCPRequestRuleCreate(FrontendSSL, models.TCPRequestRule{
+		ID:     utils.PtrInt64(0),
+		Action: "set-var(sess.sni) req_ssl_sni",
+		Type:   "content",
+	})
+	utils.LogErr(err)
+
+	err = c.frontendTCPRequestRuleCreate(FrontendSSL, models.TCPRequestRule{
 		ID:       utils.PtrInt64(0),
 		Action:   "accept",
 		Type:     "content",
