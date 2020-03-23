@@ -165,6 +165,9 @@ func (c *HAProxyController) handleRequestCapture(ingress *Ingress) error {
 	status := setStatus(ingress.Status, annReqCapture.Status)
 	mapFiles := c.cfg.MapFiles
 	for _, sample := range strings.Split(annReqCapture.Value, "\n") {
+		if sample == "" {
+			continue
+		}
 		key := hashStrToUint(fmt.Sprintf("%s-%s-%d", REQUEST_CAPTURE, sample, captureLen))
 		if status != EMPTY {
 			mapFiles.Modified(key)
@@ -173,9 +176,6 @@ func (c *HAProxyController) handleRequestCapture(ingress *Ingress) error {
 			if status == DELETED {
 				break
 			}
-		}
-		if sample == "" {
-			continue
 		}
 		for hostname := range ingress.Rules {
 			mapFiles.AppendHost(key, hostname)
