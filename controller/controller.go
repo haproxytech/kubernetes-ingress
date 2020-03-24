@@ -255,11 +255,7 @@ func (c *HAProxyController) handleEndpointIP(namespace *Namespace, ingress *Ingr
 				}
 			}
 			switch podStatus {
-			case MODIFIED:
-				fallthrough
-			case DELETED:
-				fallthrough
-			case ADDED:
+			case MODIFIED, DELETED, ADDED:
 				needReload = true
 			}
 		}
@@ -284,11 +280,7 @@ func (c *HAProxyController) handleEndpointIP(namespace *Namespace, ingress *Ingr
 	}
 	if status == EMPTY {
 		switch podStatus {
-		case MODIFIED:
-			fallthrough
-		case DELETED:
-			fallthrough
-		case ADDED:
+		case MODIFIED, DELETED, ADDED:
 			status = MODIFIED
 		}
 	}
