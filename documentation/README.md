@@ -12,6 +12,7 @@ Options for starting controller can be found in [controller.md](controller.md)
 
 | Annotation | Type | Default | Dependencies | Config map | Ingress | Service |
 | - |:-:|:-:|:-:|:-:|:-:|:-:|
+| [blacklist](#access control) | [IPs or CIDRs](#access control) | "" |  |:large_blue_circle:|:large_blue_circle:|:white_circle:|
 | [check](#backend-checks) | ["true", "false"] | "true" |  |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:|
 | [check-http](#backend-checks) | string |  | [check](#backend-checks) |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:|
 | [check-interval](#backend-checks) | [time](#time) |  | [check](#backend-checks) |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:|
@@ -54,6 +55,16 @@ Options for starting controller can be found in [controller.md](controller.md)
 > This is usefull if we want, for instance, to change default behaviour, but want to keep default for some service. etc.
 
 ### Options
+
+#### Access control
+
+- Annotation: `blacklist`
+  - Block given IPs and/or CIDR
+- Annotation: `whitelist`
+  - Allow only given IPs and/or CIDR
+- Access control is disabled by default
+- Access control can be set for all traffic (annotation on configmap) or for a set of hosts (annotation on ingress)
+- `IPs or CIDR` - coma or space separated list of IP addresses or CIDRs
 
 #### Balance Algorithm
 
@@ -242,13 +253,6 @@ More information can be found in the official HAProxy [documentation](https://cb
 
 - Annotation: `forwarded-for`
 - by default enabled, can be disabled per service or globally
-
-#### Whitelist
-
-- Annotation: `whitelist`
-- by default disabled
-- `IPs or CIDR` - coma or space separated list of IP addresses or CIDRs
-- :information_source: service annotation will override ingress one that overrides config map annotation
 
 ### Secrets
 

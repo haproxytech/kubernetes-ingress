@@ -91,11 +91,11 @@ func (c *Configuration) Init(osArgs utils.OSArgs, mapDir string) {
 	c.Namespace = make(map[string]*Namespace)
 
 	c.HTTPRequests = make(map[Rule]HTTPRequestRules)
-	for _, rule := range []Rule{SSL_REDIRECT, RATE_LIMIT, REQUEST_CAPTURE, REQUEST_SET_HEADER, WHITELIST} {
+	for _, rule := range []Rule{BLACKLIST, SSL_REDIRECT, RATE_LIMIT, REQUEST_CAPTURE, REQUEST_SET_HEADER, WHITELIST} {
 		c.HTTPRequests[rule] = make(map[uint64]models.HTTPRequestRule)
 	}
 	c.TCPRequests = make(map[Rule]TCPRequestRules)
-	for _, rule := range []Rule{RATE_LIMIT, REQUEST_CAPTURE, PROXY_PROTOCOL, WHITELIST} {
+	for _, rule := range []Rule{BLACKLIST, RATE_LIMIT, REQUEST_CAPTURE, PROXY_PROTOCOL, WHITELIST} {
 		c.TCPRequests[rule] = make(map[uint64]models.TCPRequestRule)
 	}
 	c.HTTPRequestsStatus = EMPTY

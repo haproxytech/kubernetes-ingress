@@ -33,6 +33,58 @@ const (
 
 var sslRedirectEnabled map[string]struct{}
 
+func (c *HAProxyController) handleBlacklisting(ingress *Ingress) error {
+	//  Get and validate annotations
+	annBlacklist, _ := GetValueFromAnnotations("blacklist", ingress.Annotations, c.cfg.ConfigMap.Annotations)
+	if annBlacklist == nil {
+		return nil
+	}
+	value := strings.Replace(annBlacklist.Value, ",", " ", -1)
+	for _, address := range strings.Fields(value) {
+		if ip := net.ParseIP(address); ip == nil {
+			if _, _, err := net.ParseCIDR(address); err != nil {
+				return fmt.Errorf("incorrect value for blacklist annotation in ingress '%s'", ingress.Name)
+			}
+		}
+	}
+
+	// Update rules
+	status := setStatus(ingress.Status, annBlacklist.Status)
+	mapFiles := c.cfg.MapFiles
+	key := hashStrToUint(fmt.Sprintf("%s-%s", BLACKLIST, annBlacklist.Value))
+	if status != EMPTY {
+		mapFiles.Modified(key)
+		c.cfg.HTTPRequestsStatus = MODIFIED
+		c.cfg.TCPRequestsStatus = MODIFIED
+		if status == DELETED {
+			return nil
+		}
+	}
+	for hostname := range ingress.Rules {
+		mapFiles.AppendHost(key, hostname)
+	}
+
+	mapFile := path.Join(HAProxyMapDir, strconv.FormatUint(key, 10)) + ".lst"
+	httpRule := models.HTTPRequestRule{
+		ID:         utils.PtrInt64(0),
+		Type:       "deny",
+		DenyStatus: 403,
+		Cond:       "if",
+		CondTest:   fmt.Sprintf("{ req.hdr(Host) -f %s } { src %s }", mapFile, value),
+	}
+	tcpRule := models.TCPRequestRule{
+		ID:       utils.PtrInt64(0),
+		Type:     "content",
+		Action:   "reject",
+		Cond:     "if",
+		CondTest: fmt.Sprintf("{ req_ssl_sni -f %s } { src %s }", mapFile, value),
+	}
+	c.cfg.HTTPRequests[BLACKLIST][key] = httpRule
+	c.cfg.TCPRequests[BLACKLIST][key] = tcpRule
+
+	return nil
+}
+
 func (c *HAProxyController) handleHTTPRedirect(ingress *Ingress) error {
 	//  Get and validate annotations
 	var err error

@@ -26,6 +26,8 @@ type Rule string
 
 const (
 	//nolint
+	BLACKLIST Rule = "blacklist"
+	//nolint
 	RATE_LIMIT Rule = "rate-limit"
 	//nolint
 	SSL_REDIRECT Rule = "ssl-redirect"
@@ -87,6 +89,10 @@ func (c *HAProxyController) RequestsHTTPRefresh() (needsReload bool) {
 			utils.LogErr(c.frontendHTTPRequestRuleCreate(frontend, c.cfg.HTTPRequests[RATE_LIMIT][1]))
 			utils.LogErr(c.frontendHTTPRequestRuleCreate(frontend, c.cfg.HTTPRequests[RATE_LIMIT][0]))
 		}
+		// BLACKLIST
+		for _, httpRule := range c.cfg.HTTPRequests[BLACKLIST] {
+			utils.LogErr(c.frontendHTTPRequestRuleCreate(frontend, httpRule))
+		}
 		// WHITELIST
 		for _, httpRule := range c.cfg.HTTPRequests[WHITELIST] {
 			utils.LogErr(c.frontendHTTPRequestRuleCreate(frontend, httpRule))
@@ -130,12 +136,6 @@ func (c *HAProxyController) RequestsTCPRefresh() (needsReload bool) {
 		utils.LogErr(c.frontendTCPRequestRuleCreate(FrontendSSL, c.cfg.TCPRequests[RATE_LIMIT][1]))
 		utils.LogErr(c.frontendTCPRequestRuleCreate(FrontendSSL, c.cfg.TCPRequests[RATE_LIMIT][0]))
 	}
-	// WHITELIST
-	for key, tcpRule := range c.cfg.TCPRequests[WHITELIST] {
-		c.cfg.MapFiles.Modified(key)
-		utils.LogErr(c.frontendTCPRequestRuleCreate(FrontendSSL, tcpRule))
-	}
-
 	// STATIC: SSLpassthrough rules
 	err := c.frontendTCPRequestRuleCreate(FrontendSSL, models.TCPRequestRule{
 		ID:     utils.PtrInt64(0),
@@ -143,7 +143,6 @@ func (c *HAProxyController) RequestsTCPRefresh() (needsReload bool) {
 		Type:   "content",
 	})
 	utils.LogErr(err)
-
 	err = c.frontendTCPRequestRuleCreate(FrontendSSL, models.TCPRequestRule{
 		ID:       utils.PtrInt64(0),
 		Action:   "accept",
@@ -152,14 +151,22 @@ func (c *HAProxyController) RequestsTCPRefresh() (needsReload bool) {
 		CondTest: "{ req_ssl_hello_type 1 }",
 	})
 	utils.LogErr(err)
-
 	err = c.frontendTCPRequestRuleCreate(FrontendSSL, models.TCPRequestRule{
 		ID:      utils.PtrInt64(0),
 		Type:    "inspect-delay",
 		Timeout: utils.PtrInt64(5000),
 	})
 	utils.LogErr(err)
-
+	// BLACKLIST
+	for key, tcpRule := range c.cfg.TCPRequests[BLACKLIST] {
+		c.cfg.MapFiles.Modified(key)
+		utils.LogErr(c.frontendTCPRequestRuleCreate(FrontendSSL, tcpRule))
+	}
+	// WHITELIST
+	for key, tcpRule := range c.cfg.TCPRequests[WHITELIST] {
+		c.cfg.MapFiles.Modified(key)
+		utils.LogErr(c.frontendTCPRequestRuleCreate(FrontendSSL, tcpRule))
+	}
 	// PROXY_PROTCOL
 	if len(c.cfg.TCPRequests[PROXY_PROTOCOL]) > 0 {
 		utils.LogErr(c.frontendTCPRequestRuleCreate(FrontendSSL, c.cfg.TCPRequests[PROXY_PROTOCOL][0]))
