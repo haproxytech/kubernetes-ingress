@@ -21,6 +21,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	clientnative "github.com/haproxytech/client-native"
@@ -229,11 +230,45 @@ func (c *HAProxyController) handlePath(namespace *Namespace, ingress *Ingress, r
 // handleEndpointIP processes the IngressPath related endpoints and makes corresponding backend servers configuration in HAProxy
 func (c *HAProxyController) handleEndpointIP(namespace *Namespace, ingress *Ingress, rule *IngressRule, path *IngressPath, service *Service, backendName string, newBackend bool, endpoints *Endpoints, ip *EndpointIP) (needReload bool) {
 	needReload = false
+	weight := c.osArgs.DefaultWeight
+	podStatus := EMPTY
+	if ip.TargetRef.Kind == "Pod" {
+		pod := c.cfg.Pods[string(ip.TargetRef.UID)]
+		if pod == nil {
+			if DEBUG_API {
+				log.Printf("Pod %s with UID %s in namespace %s not found in cache",
+					ip.TargetRef.Name,
+					string(ip.TargetRef.UID),
+					namespace.Name)
+			}
+		} else {
+			podStatus = pod.Status
+			annotation, err := GetValueFromAnnotations("weight", pod.Annotations)
+			if err != nil {
+				if !strings.Contains(err.Error(), "does not exist") {
+					utils.LogErr(err)
+				}
+			} else {
+				weight, err = strconv.ParseInt(annotation.Value, 10, 64)
+				if err != nil {
+					utils.LogErr(err)
+				}
+			}
+			switch podStatus {
+			case MODIFIED:
+				fallthrough
+			case DELETED:
+				fallthrough
+			case ADDED:
+				needReload = true
+			}
+		}
+	}
 	server := models.Server{
 		Name:    ip.HAProxyName,
 		Address: ip.IP,
 		Port:    &path.TargetPort,
-		Weight:  utils.PtrInt64(128),
+		Weight:  utils.PtrInt64(weight),
 	}
 	if ip.Disabled {
 		server.Maintenance = "enabled"
@@ -244,6 +279,16 @@ func (c *HAProxyController) handleEndpointIP(namespace *Namespace, ingress *Ingr
 		if newBackend {
 			status = ADDED
 		} else if annotationsActive {
+			status = MODIFIED
+		}
+	}
+	if status == EMPTY {
+		switch podStatus {
+		case MODIFIED:
+			fallthrough
+		case DELETED:
+			fallthrough
+		case ADDED:
 			status = MODIFIED
 		}
 	}

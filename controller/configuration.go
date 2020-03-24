@@ -46,6 +46,7 @@ type Configuration struct {
 	RateLimitingEnabled    bool
 	HTTPS                  bool
 	SSLPassthrough         bool
+	Pods                   map[string]*Pod
 }
 
 func (c *Configuration) IsRelevantNamespace(namespace string) bool {
@@ -109,6 +110,7 @@ func (c *Configuration) Init(osArgs utils.OSArgs, mapDir string) {
 	for _, frontend := range []string{FrontendHTTP, FrontendHTTPS, FrontendSSL} {
 		c.BackendSwitchingRules[frontend] = UseBackendRules{}
 	}
+	c.Pods = make(map[string]*Pod)
 }
 
 //GetNamespace returns Namespace. Creates one if not existing
@@ -216,6 +218,15 @@ func (c *Configuration) Clean() {
 			default:
 				data.Status = EMPTY
 			}
+		}
+	}
+	for _, data := range c.Pods {
+		data.Annotations.Clean()
+		switch data.Status {
+		case DELETED:
+			delete(c.Pods, data.UID)
+		default:
+			data.Status = EMPTY
 		}
 	}
 	c.ConfigMap.Annotations.Clean()

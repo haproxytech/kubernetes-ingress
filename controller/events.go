@@ -561,3 +561,42 @@ func (c *HAProxyController) eventSecret(ns *Namespace, data *Secret) (updateRequ
 	}
 	return updateRequired
 }
+
+func (c *HAProxyController) eventPod(ns *Namespace, data *Pod) (updateRequired bool) {
+	updateRequired = false
+	switch data.Status {
+	case MODIFIED:
+		newPod := data
+		oldPod, ok := c.cfg.Pods[data.UID]
+		if !ok {
+			//intentionally do not add it. TODO see if our idea of only watching is ok
+			log.Println("Pod not registered with controller !", data.Name)
+		}
+		if oldPod.Equal(newPod) {
+			return updateRequired
+		}
+		newPod.Annotations.SetStatus(oldPod.Annotations)
+		c.cfg.Pods[data.UID] = newPod
+		updateRequired = true
+	case ADDED:
+		if old, ok := c.cfg.Pods[data.UID]; ok {
+			if !old.Equal(data) {
+				data.Status = MODIFIED
+				return c.eventPod(ns, data)
+			}
+			return updateRequired
+		}
+		c.cfg.Pods[data.UID] = data
+		updateRequired = true
+	case DELETED:
+		pod, ok := c.cfg.Pods[data.UID]
+		if ok {
+			pod.Status = DELETED
+			pod.Annotations.SetStatusState(DELETED)
+			updateRequired = true
+		} else {
+			log.Println("Pod not registered with controller, cannot delete !", data.Name)
+		}
+	}
+	return updateRequired
+}

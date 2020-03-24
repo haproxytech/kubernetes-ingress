@@ -26,6 +26,7 @@ const (
 	NAMESPACE SyncType = "NAMESPACE"
 	SERVICE   SyncType = "SERVICE"
 	SECRET    SyncType = "SECRET"
+	POD       SyncType = "POD"
 )
 
 //SyncDataEvent represents converted k8s received message

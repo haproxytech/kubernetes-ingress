@@ -15,6 +15,7 @@
 package controller
 
 import (
+	v1 "k8s.io/api/core/v1"
 	extensions "k8s.io/api/extensions/v1beta1"
 )
 
@@ -45,6 +46,7 @@ type EndpointIP struct {
 	HAProxyName string
 	Disabled    bool
 	Status      Status
+	TargetRef   v1.ObjectReference
 }
 
 type EndpointPort struct {
@@ -64,6 +66,15 @@ type Endpoints struct {
 	BackendName string
 	Ports       *EndpointPorts
 	Addresses   *EndpointIPs
+	Status      Status
+}
+
+//Pod is for resolving pods to get the weight annotation
+type Pod struct {
+	Namespace   string
+	Name        string
+	UID         string
+	Annotations MapStringW
 	Status      Status
 }
 

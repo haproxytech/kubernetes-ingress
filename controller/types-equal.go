@@ -159,6 +159,23 @@ func (a *Ingress) Equal(b *Ingress) bool {
 	return a.Annotations.Equal(b.Annotations)
 }
 
+//Equal checks if Pods are equal
+func (a *Pod) Equal(b *Pod) bool {
+	if a == nil || b == nil {
+		return false
+	}
+	if a.Name != b.Name {
+		return false
+	}
+	if a.UID != b.UID {
+		return false
+	}
+	if a.Namespace != b.Namespace {
+		return false
+	}
+	return a.Annotations.Equal(b.Annotations)
+}
+
 //Equal compares two services, ignores statuses and old values
 func (a *Service) Equal(b *Service) bool {
 	if a == nil || b == nil {

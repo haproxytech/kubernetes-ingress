@@ -222,11 +222,16 @@ func (k *K8s) convertToEndpoints(obj interface{}, status Status) (*Endpoints, er
 	}
 	for _, subset := range data.Subsets {
 		for _, address := range subset.Addresses {
+			var targetRef corev1.ObjectReference
+			if address.TargetRef != nil {
+				targetRef = *(address.TargetRef)
+			}
 			eip := &EndpointIP{
 				IP:          address.IP,
 				HAProxyName: "",
 				Disabled:    false,
 				Status:      status,
+				TargetRef:   targetRef,
 			}
 			var key string
 			if address.TargetRef != nil {
@@ -247,6 +252,82 @@ func (k *K8s) convertToEndpoints(obj interface{}, status Status) (*Endpoints, er
 		}
 	}
 	return item, nil
+}
+
+func (k *K8s) EventsPods(channel chan *Pod, stop chan struct{}) {
+	watchlist := cache.NewListWatchFromClient(
+		k.API.CoreV1().RESTClient(),
+		string(corev1.ResourcePods),
+		corev1.NamespaceAll,
+		fields.Everything(),
+	)
+	_, controller := cache.NewInformer(
+		watchlist,
+		&corev1.Pod{},
+		1*time.Second,
+		cache.ResourceEventHandlerFuncs{
+			AddFunc: func(obj interface{}) {
+				data := obj.(*corev1.Pod)
+				var status = ADDED
+				if data.ObjectMeta.GetDeletionTimestamp() != nil {
+					//detect services that are in terminating state
+					status = DELETED
+				}
+				item := &Pod{
+					Namespace:   data.GetNamespace(),
+					Name:        data.GetName(),
+					UID:         string(data.GetUID()),
+					Annotations: ConvertToMapStringW(data.ObjectMeta.Annotations),
+					Status:      status,
+				}
+				if DEBUG_API {
+					log.Printf("%s %s: %s \n", POD, item.Status, item.Name)
+				}
+				channel <- item
+			},
+			DeleteFunc: func(obj interface{}) {
+				data := obj.(*corev1.Pod)
+				var status = DELETED
+				item := &Pod{
+					Namespace:   data.GetNamespace(),
+					Name:        data.GetName(),
+					UID:         string(data.GetUID()),
+					Annotations: ConvertToMapStringW(data.ObjectMeta.Annotations),
+					Status:      status,
+				}
+				if DEBUG_API {
+					log.Printf("%s %s: %s \n", POD, item.Status, item.Name)
+				}
+				channel <- item
+			},
+			UpdateFunc: func(oldObj, newObj interface{}) {
+				data1 := oldObj.(*corev1.Pod)
+				data2 := newObj.(*corev1.Pod)
+				var status = MODIFIED
+				item1 := &Pod{
+					Namespace:   data1.GetNamespace(),
+					Name:        data1.GetName(),
+					UID:         string(data1.GetUID()),
+					Annotations: ConvertToMapStringW(data1.ObjectMeta.Annotations),
+					Status:      status,
+				}
+				item2 := &Pod{
+					Namespace:   data2.GetNamespace(),
+					Name:        data2.GetName(),
+					UID:         string(data2.GetUID()),
+					Annotations: ConvertToMapStringW(data2.ObjectMeta.Annotations),
+					Status:      status,
+				}
+				if item2.Equal(item1) {
+					return
+				}
+				if DEBUG_API {
+					log.Printf("%s %s: %s \n", POD, item2.Status, item2.Name)
+				}
+				channel <- item2
+			},
+		})
+	go controller.Run(stop)
 }
 
 func (k *K8s) EventsIngresses(channel chan *Ingress, stop chan struct{}) {

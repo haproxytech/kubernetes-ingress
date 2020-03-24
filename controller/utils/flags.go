@@ -43,4 +43,5 @@ type OSArgs struct {
 	Help                  []bool         `short:"h" long:"help" description:"show this help message"`
 	IngressClass          string         `long:"ingress.class" default:"" description:"ingress.class to monitor in multiple controllers environment"`
 	PublishService        string         `long:"publish-service" default:"" description:"Takes the form namespace/name. The controller mirrors the address of this service's endpoints to the load-balancer status of all Ingress objects it satisfies"`
+	DefaultWeight         int64          `long:"default-weight" default:"128" description:"The default weight of backend servers in case no weight is specified explicitly for the pod"`
 }

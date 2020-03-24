@@ -45,9 +45,13 @@ func (c *HAProxyController) monitorChanges() {
 	secretChan := make(chan *Secret, 10)
 	c.k8s.EventsSecrets(secretChan, stop)
 
+	podChan := make(chan *Pod, 100)
+	c.k8s.EventsPods(podChan, stop)
+
 	eventsIngress := []SyncDataEvent{}
 	eventsEndpoints := []SyncDataEvent{}
 	eventsServices := []SyncDataEvent{}
+	eventsPods := []SyncDataEvent{}
 	configMapOk := false
 
 	for {
@@ -62,9 +66,13 @@ func (c *HAProxyController) monitorChanges() {
 			for _, event := range eventsServices {
 				c.eventChan <- event
 			}
+			for _, event := range eventsPods {
+				c.eventChan <- event
+			}
 			eventsIngress = []SyncDataEvent{}
 			eventsEndpoints = []SyncDataEvent{}
 			eventsServices = []SyncDataEvent{}
+			eventsPods = []SyncDataEvent{}
 			configMapOk = true
 			time.Sleep(1 * time.Millisecond)
 		case item := <-cfgChan:
@@ -96,10 +104,18 @@ func (c *HAProxyController) monitorChanges() {
 		case item := <-secretChan:
 			event := SyncDataEvent{SyncType: SECRET, Namespace: item.Namespace, Data: item}
 			c.eventChan <- event
+		case item := <-podChan:
+			event := SyncDataEvent{SyncType: POD, Namespace: item.Namespace, Data: item}
+			if configMapOk {
+				c.eventChan <- event
+			} else {
+				eventsPods = append(eventsPods, event)
+			}
 		case <-time.After(time.Duration(syncEveryNSeconds) * time.Second):
 			//TODO syncEveryNSeconds sec is hardcoded, change that (annotation?)
 			//do sync of data every syncEveryNSeconds sec
-			if configMapOk && len(eventsIngress) == 0 && len(eventsServices) == 0 && len(eventsEndpoints) == 0 {
+			if configMapOk && len(eventsIngress) == 0 && len(eventsServices) == 0 && len(eventsEndpoints) == 0 &&
+				len(eventsPods) == 0 {
 				c.eventChan <- SyncDataEvent{SyncType: COMMAND}
 			}
 		}
@@ -133,6 +149,8 @@ func (c *HAProxyController) SyncData(jobChan <-chan SyncDataEvent, chConfigMapRe
 			change = c.eventConfigMap(ns, job.Data.(*ConfigMap), chConfigMapReceivedAndProcessed)
 		case SECRET:
 			change = c.eventSecret(ns, job.Data.(*Secret))
+		case POD:
+			change = c.eventPod(ns, job.Data.(*Pod))
 		}
 		hadChanges = hadChanges || change
 	}
