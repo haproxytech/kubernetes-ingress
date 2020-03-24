@@ -30,6 +30,9 @@ you can run image with arguments:
 - `--default-ssl-certificate`
   - optional, must be in format `namespace/name`
   - default: ""
+- `--default-weight`
+  - default: 128
+  - optional, defines the weight for endpoints that don't have an explicit weight defined
 - `--ingress.class`
   - default: ""
   - class of ingress object to monitor in multiple controllers environment

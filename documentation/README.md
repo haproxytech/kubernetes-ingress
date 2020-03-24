@@ -48,6 +48,11 @@ Options for starting controller can be found in [controller.md](controller.md)
 | [timeout-tunnel](#timeouts) | [time](#time) | "1h" |  |:large_blue_circle:|:white_circle:|:white_circle:|
 | [whitelist](#whitelist) | [IPs or CIDRs](#whitelist) | "" |  |:large_blue_circle:|:large_blue_circle:|:white_circle:|
 
+#### Object specific annotations
+| Annotation | Type | Default | Dependencies | Object |
+| - |:-:|:-:|:-:|:-:|
+| [weight](#traffic distribution) | number 0-256 | set via `--default-weight` parameter or 128 || Pod |
+
 > :information_source: Annotations have hierarchy: `default` <- `Configmap` <- `Ingress` <- `Service`
 >
 > Service annotations have highest priority. If they are not defined, controller goes one level up until it finds value.
@@ -253,6 +258,12 @@ More information can be found in the official HAProxy [documentation](https://cb
 
 - Annotation: `forwarded-for`
 - by default enabled, can be disabled per service or globally
+
+#### Traffic distribution
+- Annotation: `weight`
+  - Set on the pod, this annotation can be used to set the weight of the pod in the backend configuration in order to control the amount of traffic these pods receive relative to other pods.
+  - The default weight for all other endpoints or pods that don't have to specific annotation can be set via the controller command line parameter `--default-weight` and defaults to 128 if not set. 
+  - More information can be found in the official HAProxy [documentation](https://cbonte.github.io/haproxy-dconv/2.0/configuration.html#5-weight) 
 
 ### Secrets
 
