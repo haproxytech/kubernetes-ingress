@@ -126,6 +126,15 @@ func (c *HAProxyController) RequestsTCPRefresh() (needsReload bool) {
 
 	// SSL Frontend for SSL_PASSTHROUGH
 	c.frontendTCPRequestRuleDeleteAll(FrontendSSL)
+	// STATIC: Accept content
+	err := c.frontendTCPRequestRuleCreate(FrontendSSL, models.TCPRequestRule{
+		Index:    utils.PtrInt64(0),
+		Action:   "accept",
+		Type:     "content",
+		Cond:     "if",
+		CondTest: "{ req_ssl_hello_type 1 }",
+	})
+	utils.LogErr(err)
 	// REQUEST_CAPTURE
 	for key, tcpRule := range c.cfg.TCPRequests[REQUEST_CAPTURE] {
 		c.cfg.MapFiles.Modified(key)
@@ -136,21 +145,14 @@ func (c *HAProxyController) RequestsTCPRefresh() (needsReload bool) {
 		utils.LogErr(c.frontendTCPRequestRuleCreate(FrontendSSL, c.cfg.TCPRequests[RATE_LIMIT][1]))
 		utils.LogErr(c.frontendTCPRequestRuleCreate(FrontendSSL, c.cfg.TCPRequests[RATE_LIMIT][0]))
 	}
-	// STATIC: SSLpassthrough rules
-	err := c.frontendTCPRequestRuleCreate(FrontendSSL, models.TCPRequestRule{
+	// STATIC: Set-var rule used to log SNI
+	err = c.frontendTCPRequestRuleCreate(FrontendSSL, models.TCPRequestRule{
 		Index:  utils.PtrInt64(0),
 		Action: "set-var(sess.sni) req_ssl_sni",
 		Type:   "content",
 	})
 	utils.LogErr(err)
-	err = c.frontendTCPRequestRuleCreate(FrontendSSL, models.TCPRequestRule{
-		Index:    utils.PtrInt64(0),
-		Action:   "accept",
-		Type:     "content",
-		Cond:     "if",
-		CondTest: "{ req_ssl_hello_type 1 }",
-	})
-	utils.LogErr(err)
+	// STATIC: Inspect delay
 	err = c.frontendTCPRequestRuleCreate(FrontendSSL, models.TCPRequestRule{
 		Index:   utils.PtrInt64(0),
 		Type:    "inspect-delay",

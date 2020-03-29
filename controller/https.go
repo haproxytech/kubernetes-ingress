@@ -251,19 +251,27 @@ func (c *HAProxyController) enableSSLPassthrough() (err error) {
 		return err
 	}
 	err = c.frontendTCPRequestRuleCreate(FrontendSSL, models.TCPRequestRule{
-		Type:    "inspect-delay",
-		Index:   utils.PtrInt64(0),
-		Timeout: utils.PtrInt64(5000),
-	})
-	if err != nil {
-		return err
-	}
-	err = c.frontendTCPRequestRuleCreate(FrontendSSL, models.TCPRequestRule{
 		Index:    utils.PtrInt64(0),
 		Action:   "accept",
 		Type:     "content",
 		Cond:     "if",
 		CondTest: "{ req_ssl_hello_type 1 }",
+	})
+	if err != nil {
+		return err
+	}
+	err = c.frontendTCPRequestRuleCreate(FrontendSSL, models.TCPRequestRule{
+		Index:  utils.PtrInt64(0),
+		Action: "set-var(sess.sni) req_ssl_sni",
+		Type:   "content",
+	})
+	if err != nil {
+		return err
+	}
+	err = c.frontendTCPRequestRuleCreate(FrontendSSL, models.TCPRequestRule{
+		Type:    "inspect-delay",
+		Index:   utils.PtrInt64(0),
+		Timeout: utils.PtrInt64(5000),
 	})
 	if err != nil {
 		return err
