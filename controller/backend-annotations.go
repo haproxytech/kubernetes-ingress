@@ -218,7 +218,11 @@ func (c *HAProxyController) handleCookieAnnotations(ingress *Ingress, service *S
 		}
 		switch k {
 		case "cookie-domain":
-			cookie.Domain = strings.Fields(v.Value)
+			var domains []*models.Domain
+			for _, domain := range strings.Fields(v.Value) {
+				domains = append(domains, &models.Domain{Value: domain})
+			}
+			cookie.Domains = domains
 		case "cookie-dynamic":
 			dynamic, err := utils.GetBoolValue(v.Value, "cookie-dynamic")
 			utils.LogErr(err)
