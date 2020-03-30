@@ -51,7 +51,7 @@ func (c *HAProxyController) RequestsHTTPRefresh() (needsReload bool) {
 	c.frontendHTTPRequestRuleDeleteAll(FrontendHTTPS)
 	//STATIC: FORWARDED_PRTOTO
 	xforwardedprotoRule := models.HTTPRequestRule{
-		ID:        utils.PtrInt64(0),
+		Index:     utils.PtrInt64(0),
 		Type:      "set-header",
 		HdrName:   "X-Forwarded-Proto",
 		HdrFormat: "https",
@@ -77,7 +77,7 @@ func (c *HAProxyController) RequestsHTTPRefresh() (needsReload bool) {
 		}
 		// STATIC: SET_VARIABLE txn.Base (for logging purpose)
 		setVarBaseRule := models.HTTPRequestRule{
-			ID:       utils.PtrInt64(0),
+			Index:    utils.PtrInt64(0),
 			Type:     "set-var",
 			VarName:  "base",
 			VarScope: "txn",
@@ -138,13 +138,13 @@ func (c *HAProxyController) RequestsTCPRefresh() (needsReload bool) {
 	}
 	// STATIC: SSLpassthrough rules
 	err := c.frontendTCPRequestRuleCreate(FrontendSSL, models.TCPRequestRule{
-		ID:     utils.PtrInt64(0),
+		Index:  utils.PtrInt64(0),
 		Action: "set-var(sess.sni) req_ssl_sni",
 		Type:   "content",
 	})
 	utils.LogErr(err)
 	err = c.frontendTCPRequestRuleCreate(FrontendSSL, models.TCPRequestRule{
-		ID:       utils.PtrInt64(0),
+		Index:    utils.PtrInt64(0),
 		Action:   "accept",
 		Type:     "content",
 		Cond:     "if",
@@ -152,7 +152,7 @@ func (c *HAProxyController) RequestsTCPRefresh() (needsReload bool) {
 	})
 	utils.LogErr(err)
 	err = c.frontendTCPRequestRuleCreate(FrontendSSL, models.TCPRequestRule{
-		ID:      utils.PtrInt64(0),
+		Index:   utils.PtrInt64(0),
 		Type:    "inspect-delay",
 		Timeout: utils.PtrInt64(5000),
 	})

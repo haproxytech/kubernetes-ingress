@@ -48,7 +48,7 @@ func (c *HAProxyController) removeACL(acl models.ACL, frontends ...string) {
 			indexShift := int64(0)
 			for _, d := range acls {
 				if acl.ACLName == d.ACLName {
-					err = c.frontendACLDelete(frontend, *d.ID-indexShift)
+					err = c.frontendACLDelete(frontend, *d.Index-indexShift)
 					utils.LogErr(err)
 					if err == nil {
 						indexShift++

@@ -108,7 +108,7 @@ func (c *HAProxyController) refreshBackendSwitching() (needsReload bool) {
 				Cond:     "if",
 				CondTest: condTest,
 				Name:     rule.Backend,
-				ID:       utils.PtrInt64(0),
+				Index:    utils.PtrInt64(0),
 			})
 			utils.PanicErr(err)
 		}

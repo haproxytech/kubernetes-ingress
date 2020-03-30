@@ -23,19 +23,19 @@ import (
 )
 
 var ratelimitACL1 = models.ACL{
-	ID:        utils.PtrInt64(0),
+	Index:     utils.PtrInt64(0),
 	ACLName:   "ratelimit_is_abuse",
 	Criterion: "src_http_req_rate(RateLimit)",
 	Value:     "ge 10",
 }
 var ratelimitACL2 = models.ACL{
-	ID:        utils.PtrInt64(0),
+	Index:     utils.PtrInt64(0),
 	ACLName:   "ratelimit_inc_cnt_abuse",
 	Criterion: "src_inc_gpc0(RateLimit)",
 	Value:     "gt 0",
 }
 var ratelimitACL3 = models.ACL{
-	ID:        utils.PtrInt64(0),
+	Index:     utils.PtrInt64(0),
 	ACLName:   "ratelimit_cnt_abuse",
 	Criterion: "src_get_gpc0(RateLimit)",
 	Value:     "gt 0",
@@ -80,25 +80,25 @@ func (c *HAProxyController) handleRateLimiting(usingHTTPS bool) (needReload bool
 	}
 
 	tcpRequest1 := &models.TCPRequestRule{
-		ID:     utils.PtrInt64(0),
+		Index:  utils.PtrInt64(0),
 		Type:   "connection",
 		Action: "track-sc0 src table RateLimit",
 	}
 	tcpRequest2 := &models.TCPRequestRule{
-		ID:       utils.PtrInt64(0),
+		Index:    utils.PtrInt64(0),
 		Type:     "connection",
 		Action:   "reject",
 		Cond:     "if",
 		CondTest: ratelimitACL3.ACLName,
 	}
 	httpRequest1 := &models.HTTPRequestRule{
-		ID:       utils.PtrInt64(0),
+		Index:    utils.PtrInt64(0),
 		Type:     "deny",
 		Cond:     "if",
 		CondTest: fmt.Sprintf("%s %s", ratelimitACL1.ACLName, ratelimitACL2.ACLName),
 	}
 	httpRequest2 := &models.HTTPRequestRule{
-		ID:       utils.PtrInt64(0),
+		Index:    utils.PtrInt64(0),
 		Type:     "deny",
 		Cond:     "if",
 		CondTest: ratelimitACL3.ACLName,

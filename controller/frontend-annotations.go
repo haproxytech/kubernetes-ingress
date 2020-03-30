@@ -66,14 +66,14 @@ func (c *HAProxyController) handleBlacklisting(ingress *Ingress) error {
 
 	mapFile := path.Join(HAProxyMapDir, strconv.FormatUint(key, 10)) + ".lst"
 	httpRule := models.HTTPRequestRule{
-		ID:         utils.PtrInt64(0),
+		Index:      utils.PtrInt64(0),
 		Type:       "deny",
 		DenyStatus: 403,
 		Cond:       "if",
 		CondTest:   fmt.Sprintf("{ req.hdr(Host) -f %s } { src %s }", mapFile, value),
 	}
 	tcpRule := models.TCPRequestRule{
-		ID:       utils.PtrInt64(0),
+		Index:    utils.PtrInt64(0),
 		Type:     "content",
 		Action:   "reject",
 		Cond:     "if",
@@ -134,7 +134,7 @@ func (c *HAProxyController) handleHTTPRedirect(ingress *Ingress) error {
 	}
 	mapFile := path.Join(HAProxyMapDir, strconv.FormatUint(key, 10)) + ".lst"
 	httpRule := models.HTTPRequestRule{
-		ID:         utils.PtrInt64(0),
+		Index:      utils.PtrInt64(0),
 		Type:       "redirect",
 		RedirCode:  sslRedirectCode,
 		RedirValue: "https",
@@ -181,7 +181,7 @@ func (c *HAProxyController) handleProxyProtocol() error {
 	}
 
 	tcpRule := models.TCPRequestRule{
-		ID:       utils.PtrInt64(0),
+		Index:    utils.PtrInt64(0),
 		Type:     "connection",
 		Action:   "expect-proxy layer4",
 		Cond:     "if",
@@ -235,7 +235,7 @@ func (c *HAProxyController) handleRequestCapture(ingress *Ingress) error {
 
 		mapFile := path.Join(HAProxyMapDir, strconv.FormatUint(key, 10)) + ".lst"
 		httpRule := models.HTTPRequestRule{
-			ID:            utils.PtrInt64(0),
+			Index:         utils.PtrInt64(0),
 			Type:          "capture",
 			CaptureSample: sample,
 			Cond:          "if",
@@ -243,7 +243,7 @@ func (c *HAProxyController) handleRequestCapture(ingress *Ingress) error {
 			CondTest:      fmt.Sprintf("{ req.hdr(Host) -f %s }", mapFile),
 		}
 		tcpRule := models.TCPRequestRule{
-			ID:       utils.PtrInt64(0),
+			Index:    utils.PtrInt64(0),
 			Type:     "content",
 			Action:   "capture " + sample + " len " + strconv.FormatInt(captureLen, 10),
 			Cond:     "if",
@@ -286,7 +286,7 @@ func (c *HAProxyController) handleRequestSetHdr(ingress *Ingress) error {
 
 		mapFile := path.Join(HAProxyMapDir, strconv.FormatUint(key, 10)) + ".lst"
 		httpRule := models.HTTPRequestRule{
-			ID:        utils.PtrInt64(0),
+			Index:     utils.PtrInt64(0),
 			Type:      "set-header",
 			HdrName:   parts[0],
 			HdrFormat: parts[1],
@@ -332,14 +332,14 @@ func (c *HAProxyController) handleWhitelisting(ingress *Ingress) error {
 
 	mapFile := path.Join(HAProxyMapDir, strconv.FormatUint(key, 10)) + ".lst"
 	httpRule := models.HTTPRequestRule{
-		ID:         utils.PtrInt64(0),
+		Index:      utils.PtrInt64(0),
 		Type:       "deny",
 		DenyStatus: 403,
 		Cond:       "if",
 		CondTest:   fmt.Sprintf("{ req.hdr(Host) -f %s } !{ src %s }", mapFile, value),
 	}
 	tcpRule := models.TCPRequestRule{
-		ID:       utils.PtrInt64(0),
+		Index:    utils.PtrInt64(0),
 		Type:     "content",
 		Action:   "reject",
 		Cond:     "if",
