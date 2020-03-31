@@ -15,6 +15,8 @@
 package controller
 
 import (
+	"fmt"
+
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 	"github.com/haproxytech/models"
 )
@@ -23,6 +25,11 @@ type HTTPRequestRules map[uint64]models.HTTPRequestRule
 type TCPRequestRules map[uint64]models.TCPRequestRule
 
 type Rule string
+
+type rateLimitTable struct {
+	size   *int64
+	period *int64
+}
 
 const (
 	//nolint
@@ -85,9 +92,23 @@ func (c *HAProxyController) RequestsHTTPRefresh() (needsReload bool) {
 		}
 		utils.LogErr(c.frontendHTTPRequestRuleCreate(frontend, setVarBaseRule))
 		// RATE_LIMIT
-		if len(c.cfg.HTTPRequests[RATE_LIMIT]) > 0 {
-			utils.LogErr(c.frontendHTTPRequestRuleCreate(frontend, c.cfg.HTTPRequests[RATE_LIMIT][1]))
-			utils.LogErr(c.frontendHTTPRequestRuleCreate(frontend, c.cfg.HTTPRequests[RATE_LIMIT][0]))
+		for tableName, table := range rateLimitTables {
+			_, err := c.backendGet(tableName)
+			if err != nil {
+				err := c.backendCreate(models.Backend{
+					Name: tableName,
+					StickTable: &models.BackendStickTable{
+						Type:  "ip",
+						Size:  table.size,
+						Store: fmt.Sprintf("http_req_rate(%d)", *table.period),
+					},
+				})
+				utils.LogErr(err)
+			}
+		}
+		for key, httpRule := range c.cfg.HTTPRequests[RATE_LIMIT] {
+			c.cfg.MapFiles.Modified(key)
+			utils.LogErr(c.frontendHTTPRequestRuleCreate(frontend, httpRule))
 		}
 		// BLACKLIST
 		for _, httpRule := range c.cfg.HTTPRequests[BLACKLIST] {
@@ -110,11 +131,6 @@ func (c *HAProxyController) RequestsTCPRefresh() (needsReload bool) {
 	for _, frontend := range []string{FrontendHTTP, FrontendHTTPS} {
 		// DELETE RULES
 		c.frontendTCPRequestRuleDeleteAll(frontend)
-		// RATE_LIMIT
-		if len(c.cfg.HTTPRequests[RATE_LIMIT]) > 0 {
-			utils.LogErr(c.frontendTCPRequestRuleCreate(frontend, c.cfg.TCPRequests[RATE_LIMIT][0]))
-			utils.LogErr(c.frontendTCPRequestRuleCreate(frontend, c.cfg.TCPRequests[RATE_LIMIT][1]))
-		}
 		// PROXY_PROTCOL
 		if len(c.cfg.TCPRequests[PROXY_PROTOCOL]) > 0 {
 			utils.LogErr(c.frontendTCPRequestRuleCreate(frontend, c.cfg.TCPRequests[PROXY_PROTOCOL][0]))
@@ -139,11 +155,6 @@ func (c *HAProxyController) RequestsTCPRefresh() (needsReload bool) {
 	for key, tcpRule := range c.cfg.TCPRequests[REQUEST_CAPTURE] {
 		c.cfg.MapFiles.Modified(key)
 		utils.LogErr(c.frontendTCPRequestRuleCreate(FrontendSSL, tcpRule))
-	}
-	// RATE_LIMIT
-	if len(c.cfg.TCPRequests[RATE_LIMIT]) > 0 {
-		utils.LogErr(c.frontendTCPRequestRuleCreate(FrontendSSL, c.cfg.TCPRequests[RATE_LIMIT][1]))
-		utils.LogErr(c.frontendTCPRequestRuleCreate(FrontendSSL, c.cfg.TCPRequests[RATE_LIMIT][0]))
 	}
 	// STATIC: Set-var rule used to log SNI
 	err = c.frontendTCPRequestRuleCreate(FrontendSSL, models.TCPRequestRule{

@@ -24,9 +24,8 @@ Options for starting controller can be found in [controller.md](controller.md)
 | [nbthread](#number-of-threads) | number | |  |:large_blue_circle:|:white_circle:|:white_circle:|
 | [pod-maxconn](#maximum-concurent-backend-connections) | number |  |  |:white_circle:|:white_circle:|:large_blue_circle:|
 | [proxy-protocol](#proxy-protocol) | [IPs or CIDRs](#proxy-protocol) |   |  |:large_blue_circle:|:white_circle:|:white_circle:|
-| [rate-limit](#rate-limit) | "true"/"false" | "false" |  |:large_blue_circle:|:white_circle:|:white_circle:|
-| [rate-limit-expire](#rate-limit) | string | "30m" | [rate-limit](#rate-limit) |:large_blue_circle:|:white_circle:|:white_circle:|
-| [rate-limit-interval](#rate-limit) | string | "10s" | [rate-limit](#rate-limit) |:large_blue_circle:|:white_circle:|:white_circle:|
+| [rate-limit-period](#rate-limit) | [time](#time)| 1s |  |:large_blue_circle:|:large_blue_circle:|:white_circle:|
+| [rate-limit-requests](#rate-limit) | number |  |  |:large_blue_circle:|:large_blue_circle:|:white_circle:|
 | [rate-limit-size](#rate-limit) | string | "100k" | [rate-limit](#rate-limit) |:large_blue_circle:|:white_circle:|:white_circle:|
 | [request-capture](#request-capture) | string |  |  |:large_blue_circle:|:large_blue_circle:|:white_circle:|
 | [request-capture-len](#request-capture) | string | "128" |  |:large_blue_circle:|:large_blue_circle:|:white_circle:|
@@ -179,17 +178,20 @@ More information can be found in the official HAProxy [documentation](https://cb
 
 #### Rate limit
 
-Keep in mind this setting is global and will applied to all your traffic.
-The number of requests a client can do per `rate-limit-interval` is **10**.
-
-- Annotation: `rate-limit`
-  - `true` / `false` - enable or disable rate limiting
-- Annotation: `rate-limit-expire`
-  - Table entries expire after `rate-limit-expire` of inactivity.
-- Annotation: `rate-limit-interval`
-  - request rate for the last `rate-limit-interval`
+- Annotation: `rate-limit-period`
+  - Period of time over which requests are tracked for a given source IP.
+	- Default is 1s
+- Annotation: `rate-limit-requests`
+  - Maximum number of requests accepted from a source IP each period.
+	- If this number is exceeded, HAProxy will deny requests with 403 status code.
 - Annotation: `rate-limit-size`
-  - number of ip entries in table
+  - Number of tracked source IPs. Default is 100k
+	- If this number is exceeded, older entries will be dropped as new ones come.
+- Example, this will limit traffic to 15 requests per minute per source IP.
+  ```
+	rate-limit-period: 1m
+	rate-limit-requests: 15
+	```
 
 #### Server ssl
 

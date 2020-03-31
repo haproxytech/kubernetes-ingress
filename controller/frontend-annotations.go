@@ -22,6 +22,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/haproxytech/client-native/misc"
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 	"github.com/haproxytech/models"
 )
@@ -32,6 +33,7 @@ const (
 )
 
 var sslRedirectEnabled map[string]struct{}
+var rateLimitTables map[string]rateLimitTable
 
 func (c *HAProxyController) handleBlacklisting(ingress *Ingress) error {
 	//  Get and validate annotations
@@ -189,6 +191,75 @@ func (c *HAProxyController) handleProxyProtocol() error {
 	}
 	c.cfg.TCPRequests[PROXY_PROTOCOL][0] = tcpRule
 
+	return nil
+}
+
+func (c *HAProxyController) handleRateLimiting(ingress *Ingress) error {
+	//  Get and validate annotations
+	annRateLimitReq, _ := GetValueFromAnnotations("rate-limit-requests", ingress.Annotations, c.cfg.ConfigMap.Annotations)
+	if annRateLimitReq == nil {
+		return nil
+	}
+	reqsLimit, err := strconv.ParseInt(annRateLimitReq.Value, 10, 64)
+	if err != nil {
+		return err
+	}
+	// Following annotaitons have default values
+	annRateLimitPeriod, _ := GetValueFromAnnotations("rate-limit-period", ingress.Annotations, c.cfg.ConfigMap.Annotations)
+	rateLimitPeriod, err := utils.ParseTime(annRateLimitPeriod.Value)
+	if err != nil {
+		return err
+	}
+	annRateLimitSize, _ := GetValueFromAnnotations("rate-limit-size", ingress.Annotations, c.cfg.ConfigMap.Annotations)
+	rateLimitSize := misc.ParseSize(annRateLimitSize.Value)
+
+	// Update rules
+	var status Status
+	if annRateLimitReq.Status != EMPTY {
+		status = setStatus(ingress.Status, annRateLimitReq.Status)
+	} else {
+		status = setStatus(ingress.Status, annRateLimitPeriod.Status)
+	}
+	mapFiles := c.cfg.MapFiles
+	reqsKey := hashStrToUint(fmt.Sprintf("%s-%d-%d", RATE_LIMIT, *rateLimitPeriod, reqsLimit))
+	trackKey := hashStrToUint(fmt.Sprintf("%s-%d", RATE_LIMIT, *rateLimitPeriod))
+	tableName := fmt.Sprintf("RateLimit-%d", *rateLimitPeriod)
+	if status != EMPTY {
+		mapFiles.Modified(reqsKey)
+		mapFiles.Modified(trackKey)
+		c.cfg.HTTPRequestsStatus = MODIFIED
+		if status == DELETED {
+			delete(rateLimitTables, tableName)
+			return nil
+		}
+	}
+	for hostname := range ingress.Rules {
+		mapFiles.AppendHost(reqsKey, hostname)
+		mapFiles.AppendHost(trackKey, hostname)
+	}
+	rateLimitTables[tableName] = rateLimitTable{
+		size:   rateLimitSize,
+		period: rateLimitPeriod,
+	}
+	trackMapFile := path.Join(HAProxyMapDir, strconv.FormatUint(trackKey, 10)) + ".lst"
+	httpTrackRule := models.HTTPRequestRule{
+		Index:         utils.PtrInt64(0),
+		Type:          "track-sc0",
+		TrackSc0Key:   "src",
+		TrackSc0Table: tableName,
+		Cond:          "if",
+		CondTest:      fmt.Sprintf("{ req.hdr(Host) -f %s }", trackMapFile),
+	}
+	reqsMapFile := path.Join(HAProxyMapDir, strconv.FormatUint(reqsKey, 10)) + ".lst"
+	httpDenyRule := models.HTTPRequestRule{
+		Index:      utils.PtrInt64(1),
+		Type:       "deny",
+		DenyStatus: 403,
+		Cond:       "if",
+		CondTest:   fmt.Sprintf("{ req.hdr(Host) -f %s } { sc0_http_req_rate(%s) gt %d }", reqsMapFile, tableName, reqsLimit),
+	}
+	c.cfg.HTTPRequests[RATE_LIMIT][trackKey] = httpTrackRule
+	c.cfg.HTTPRequests[RATE_LIMIT][reqsKey] = httpDenyRule
 	return nil
 }
 

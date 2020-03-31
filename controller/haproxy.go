@@ -83,6 +83,7 @@ func (c *HAProxyController) updateHAProxy() error {
 				}
 			}
 
+			utils.LogErr(c.handleRateLimiting(ingress))
 			utils.LogErr(c.handleRequestCapture(ingress))
 			utils.LogErr(c.handleRequestSetHdr(ingress))
 			utils.LogErr(c.handleBlacklisting(ingress))
@@ -97,12 +98,6 @@ func (c *HAProxyController) updateHAProxy() error {
 	needsReload = needsReload || reload
 
 	reload = c.handleHTTPS(usedCerts)
-	needsReload = needsReload || reload
-
-	reload, err = c.handleRateLimiting(c.cfg.HTTPS)
-	if err != nil {
-		return err
-	}
 	needsReload = needsReload || reload
 
 	reload, err = c.cfg.MapFiles.Refresh()

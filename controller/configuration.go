@@ -43,7 +43,6 @@ type Configuration struct {
 	TCPRequestsStatus      Status
 	BackendSwitchingRules  map[string]UseBackendRules
 	BackendSwitchingStatus map[string]struct{}
-	RateLimitingEnabled    bool
 	HTTPS                  bool
 	SSLPassthrough         bool
 }
@@ -95,12 +94,13 @@ func (c *Configuration) Init(osArgs utils.OSArgs, mapDir string) {
 		c.HTTPRequests[rule] = make(map[uint64]models.HTTPRequestRule)
 	}
 	c.TCPRequests = make(map[Rule]TCPRequestRules)
-	for _, rule := range []Rule{BLACKLIST, RATE_LIMIT, REQUEST_CAPTURE, PROXY_PROTOCOL, WHITELIST} {
+	for _, rule := range []Rule{BLACKLIST, REQUEST_CAPTURE, PROXY_PROTOCOL, WHITELIST} {
 		c.TCPRequests[rule] = make(map[uint64]models.TCPRequestRule)
 	}
 	c.HTTPRequestsStatus = EMPTY
 	c.TCPRequestsStatus = EMPTY
 	sslRedirectEnabled = make(map[string]struct{})
+	rateLimitTables = make(map[string]rateLimitTable)
 
 	c.MapFiles = haproxy.NewMapFiles(mapDir)
 

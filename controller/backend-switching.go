@@ -57,7 +57,10 @@ func (c *HAProxyController) refreshBackendSwitching() (needsReload bool) {
 		return false
 	}
 	// Active backend will hold backends in use
-	activeBackends := map[string]struct{}{"RateLimit": struct{}{}}
+	activeBackends := make(map[string]struct{})
+	for rateLimitTable := range rateLimitTables {
+		activeBackends[rateLimitTable] = struct{}{}
+	}
 	for _, frontend := range frontends {
 		activeBackends[frontend.DefaultBackend] = struct{}{}
 		useBackendRules, ok := c.cfg.BackendSwitchingRules[frontend.Name]
