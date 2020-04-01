@@ -100,13 +100,13 @@ func (c *HAProxyController) updateHAProxy() error {
 	reload = c.handleHTTPS(usedCerts)
 	needsReload = needsReload || reload
 
-	reload, err = c.cfg.MapFiles.Refresh()
-	utils.LogErr(err)
-	needsReload = needsReload || reload
-
 	needsReload = c.RequestsHTTPRefresh() || needsReload
 
 	needsReload = c.RequestsTCPRefresh() || needsReload
+
+	reload, err = c.cfg.MapFiles.Refresh()
+	utils.LogErr(err)
+	needsReload = needsReload || reload
 
 	reload, err = c.handleTCPServices()
 	utils.LogErr(err)
