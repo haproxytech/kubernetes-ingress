@@ -86,7 +86,7 @@ func (c *HAProxyController) handleSecret(ingress Ingress, secret Secret, writeSe
 		key, keyOk := secret.Data[k+".key"]
 		crt, crtOk := secret.Data[k+".crt"]
 		if keyOk && crtOk {
-			filename := path.Join(HAProxyCertDir, fmt.Sprintf("%s_%s_%s.pem.rsa", secret.Namespace, ingress.Name, secret.Name))
+			filename := path.Join(HAProxyCertDir, fmt.Sprintf("%s_%s_%s.pem.rsa", ingress.Name, secret.Namespace, secret.Name))
 			if writeSecret {
 				if err := c.writeCert(filename, key, crt); err != nil {
 					utils.LogErr(err)
@@ -117,7 +117,7 @@ func (c *HAProxyController) handleDefaultCertificate(certs map[string]struct{}) 
 					writeSecret = false
 				}
 				reloadRequested = c.handleSecret(Ingress{
-					Name: "DEFAULT_CERT",
+					Name: "0",
 				}, *secret, writeSecret, certs)
 				return reloadRequested
 			}
