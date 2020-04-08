@@ -6,7 +6,7 @@ start)
       echo haproxy is running, pid=`cat /var/run/haproxy.pid`
       exit 1
    else
-      haproxy -f /etc/haproxy/haproxy.cfg -p /var/run/haproxy.pid
+      haproxy -W -f /etc/haproxy/haproxy.cfg -p /var/run/haproxy.pid
    fi   
    ;;
 stop)
@@ -14,10 +14,14 @@ stop)
    rm /var/run/haproxy.pid
    ;;
 restart)
-   $0 apply
+   if [ -e /var/run/haproxy.pid ]; then
+      haproxy -W -f /etc/haproxy/haproxy.cfg -p /var/run/haproxy.pid -sf $(cat /var/run/haproxy.pid)
+   else
+      $0 start
+   fi
    ;;
 reload)
-   $0 apply
+   kill -USR2 `cat /var/run/haproxy.pid`
    ;;
 status)
    if [ -e /var/run/haproxy.pid ]; then
@@ -26,16 +30,6 @@ status)
       echo haproxy is NOT running
       exit 1
    fi
-   ;;
-apply)   
-   if [ -e /var/run/haproxy.pid ]; then
-      haproxy -f /etc/haproxy/haproxy.cfg -p /var/run/haproxy.pid -sf $(cat /var/run/haproxy.pid)
-   else
-      $0 start
-   fi
-   ;;
-push_apply)   
-   $0 apply
    ;;
 validate)   
    haproxy -c -f /etc/haproxy/haproxy.cfg
