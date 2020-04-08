@@ -123,7 +123,7 @@ func (c *HAProxyController) updateHAProxy() error {
 	}
 	c.cfg.Clean()
 	if restart {
-		if err := c.HAProxyRestart(); err != nil {
+		if err := c.HAProxyService("restart"); err != nil {
 			utils.LogErr(err)
 		} else {
 			log.Println("HAProxy restarted")
@@ -131,7 +131,7 @@ func (c *HAProxyController) updateHAProxy() error {
 		return nil
 	}
 	if needsReload {
-		if err := c.HAProxyReload(); err != nil {
+		if err := c.HAProxyService("reload"); err != nil {
 			utils.LogErr(err)
 		} else {
 			log.Println("HAProxy reloaded")

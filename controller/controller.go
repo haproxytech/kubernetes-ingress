@@ -106,15 +106,7 @@ func (c *HAProxyController) HAProxyInitialize() {
 	}
 
 	log.Println("Starting HAProxy with", HAProxyCFG)
-	if !c.osArgs.Test {
-		cmd := exec.Command("service", "haproxy", "start")
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-		err = cmd.Start()
-		if err != nil {
-			log.Println(err)
-		}
-	}
+	utils.PanicErr(c.HAProxyService("start"))
 
 	hostname, err := os.Hostname()
 	utils.LogErr(err)
@@ -180,33 +172,22 @@ func (c *HAProxyController) saveServerState() error {
 	return nil
 }
 
-func (c *HAProxyController) HAProxyReload() error {
-	err := c.saveServerState()
-	utils.LogErr(err)
-	if !c.osArgs.Test {
-		cmd := exec.Command("service", "haproxy", "reload")
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-		err = cmd.Start()
-	} else {
-		err = nil
-		log.Println("HAProxy would be reloaded now")
+func (c *HAProxyController) HAProxyService(action string) (err error) {
+	if c.osArgs.Test {
+		log.Println("HAProxy would be reload" + action + "ed now")
+		return nil
 	}
-	return err
-}
-
-func (c *HAProxyController) HAProxyRestart() error {
-	err := c.saveServerState()
-	utils.LogErr(err)
-	if !c.osArgs.Test {
-		cmd := exec.Command("service", "haproxy", "restart")
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-		err = cmd.Start()
-	} else {
-		err = nil
-		log.Println("HAProxy would be restarted now")
+	switch action {
+	case "reload", "restart":
+		utils.LogErr(c.saveServerState())
+	case "start":
+	default:
+		return fmt.Errorf("unkown command '%s'", action)
 	}
+	cmd := exec.Command("service", "haproxy", action)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	err = cmd.Start()
 	return err
 }
 
