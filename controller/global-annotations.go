@@ -14,8 +14,9 @@ import (
 
 // Handle Global and default Annotations
 
-func (c *HAProxyController) handleGlobalAnnotations() (reloadRequested bool, err error) {
+func (c *HAProxyController) handleGlobalAnnotations() (restartRequested bool, reloadRequested bool, err error) {
 	reloadRequested = false
+	restartRequested = false
 	maxProcs := goruntime.GOMAXPROCS(0)
 	numThreads := int64(maxProcs)
 	annNbthread, errNumThread := GetValueFromAnnotations("nbthread", c.cfg.ConfigMap.Annotations)
@@ -45,6 +46,10 @@ func (c *HAProxyController) handleGlobalAnnotations() (reloadRequested bool, err
 
 	if annSyslogSrv.Status != EMPTY {
 		stdoutLog := false
+		daemonMode := false
+		if val, _ := config.Get(parser.Global, parser.GlobalSectionName, "daemon"); val != nil {
+			daemonMode = true
+		}
 		errParser = config.Set(parser.Global, parser.GlobalSectionName, "log", nil)
 		utils.LogErr(errParser)
 		for index, syslogSrv := range strings.Split(annSyslogSrv.Value, "\n") {
@@ -99,14 +104,18 @@ func (c *HAProxyController) handleGlobalAnnotations() (reloadRequested bool, err
 			utils.LogErr(errParser)
 		}
 		if stdoutLog {
-			errParser = config.Delete(parser.Global, parser.GlobalSectionName, "daemon")
-		} else {
+			if daemonMode {
+				errParser = config.Delete(parser.Global, parser.GlobalSectionName, "daemon")
+				restartRequested = true
+			}
+		} else if !daemonMode {
 			errParser = config.Insert(parser.Global, parser.GlobalSectionName, "daemon", types.Enabled{})
+			restartRequested = true
 		}
 		utils.LogErr(errParser)
 	}
 
-	return reloadRequested, err
+	return restartRequested, reloadRequested, err
 }
 
 func (c *HAProxyController) handleDefaultTimeouts() bool {

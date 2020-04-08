@@ -34,14 +34,15 @@ func (c *HAProxyController) updateHAProxy() error {
 	defer func() {
 		c.apiDisposeTransaction()
 	}()
-	reload := c.handleDefaultTimeouts()
-	needsReload = needsReload || reload
 
-	reload, err = c.handleMaxconn()
+	restart, reload, err := c.handleGlobalAnnotations()
 	utils.LogErr(err)
 	needsReload = needsReload || reload
 
-	reload, err = c.handleGlobalAnnotations()
+	reload = c.handleDefaultTimeouts()
+	needsReload = needsReload || reload
+
+	reload, err = c.handleMaxconn()
 	utils.LogErr(err)
 	needsReload = needsReload || reload
 
@@ -121,6 +122,14 @@ func (c *HAProxyController) updateHAProxy() error {
 		return err
 	}
 	c.cfg.Clean()
+	if restart {
+		if err := c.HAProxyRestart(); err != nil {
+			utils.LogErr(err)
+		} else {
+			log.Println("HAProxy restarted")
+		}
+		return nil
+	}
 	if needsReload {
 		if err := c.HAProxyReload(); err != nil {
 			utils.LogErr(err)

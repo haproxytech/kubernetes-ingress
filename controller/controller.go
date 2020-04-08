@@ -195,6 +195,21 @@ func (c *HAProxyController) HAProxyReload() error {
 	return err
 }
 
+func (c *HAProxyController) HAProxyRestart() error {
+	err := c.saveServerState()
+	utils.LogErr(err)
+	if !c.osArgs.Test {
+		cmd := exec.Command("service", "haproxy", "restart")
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		err = cmd.Start()
+	} else {
+		err = nil
+		log.Println("HAProxy would be restarted now")
+	}
+	return err
+}
+
 func (c *HAProxyController) handlePath(namespace *Namespace, ingress *Ingress, rule *IngressRule, path *IngressPath) (needReload bool, err error) {
 	needReload = false
 	service, ok := namespace.Services[path.ServiceName]
