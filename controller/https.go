@@ -103,18 +103,18 @@ func (c *HAProxyController) handleSecret(ingress Ingress, secret Secret, writeSe
 func (c *HAProxyController) handleDefaultCertificate(certs map[string]struct{}) (reloadRequested bool) {
 	reloadRequested = false
 	secretAnn, defSecretErr := GetValueFromAnnotations("ssl-certificate", c.cfg.ConfigMap.Annotations)
-	writeSecret := true
+	writeSecret := false
 	if defSecretErr == nil {
-		if secretAnn.Status == DELETED || secretAnn.Status == EMPTY {
-			writeSecret = false
+		if secretAnn.Status != DELETED && secretAnn.Status != EMPTY {
+			writeSecret = true
 		}
 		secretData := strings.Split(secretAnn.Value, "/")
 		namespace, namespaceOK := c.cfg.Namespace[secretData[0]]
 		if len(secretData) == 2 && namespaceOK {
 			secret, ok := namespace.Secret[secretData[1]]
 			if ok {
-				if secret.Status == EMPTY || secret.Status == DELETED {
-					writeSecret = false
+				if secret.Status != EMPTY && secret.Status != DELETED {
+					writeSecret = true
 				}
 				reloadRequested = c.handleSecret(Ingress{
 					Name: "0",
