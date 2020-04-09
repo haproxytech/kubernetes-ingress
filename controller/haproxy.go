@@ -50,6 +50,10 @@ func (c *HAProxyController) updateHAProxy() error {
 	utils.LogErr(err)
 	needsReload = needsReload || reload
 
+	reload, err = c.handleLogFormat()
+	utils.LogErr(err)
+	needsReload = needsReload || reload
+
 	usedCerts := map[string]struct{}{}
 
 	for _, namespace := range c.cfg.Namespace {

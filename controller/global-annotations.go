@@ -188,3 +188,19 @@ func (c *HAProxyController) handleMaxconn() (needReload bool, err error) {
 	c.ActiveTransactionHasChanges = true
 	return true, nil
 }
+
+func (c *HAProxyController) handleLogFormat() (needReload bool, err error) {
+	annLogFormat, _ := GetValueFromAnnotations("log-format", c.cfg.ConfigMap.Annotations)
+	if annLogFormat.Status == EMPTY {
+		return false, nil
+	}
+	config, _ := c.ActiveConfiguration()
+	err = config.Set(parser.Defaults, parser.DefaultSectionName, "log-format", types.StringC{
+		Value: "'" + annLogFormat.Value + "'",
+	})
+	if err != nil {
+		return false, err
+	}
+	c.ActiveTransactionHasChanges = true
+	return true, nil
+}

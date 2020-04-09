@@ -20,6 +20,7 @@ Options for starting controller can be found in [controller.md](controller.md)
 | [forwarded-for](#x-forwarded-for) | ["true", "false"] | "true" |  |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:|
 | [ingress.class](#ingress-class) | string | "" |  |:white_circle:|:large_blue_circle:|:white_circle:|
 | [load-balance](#balance-algorithm) | string | "roundrobin" |  |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:|
+| [log-format](#log-format) | string |  |  |:large_blue_circle:|:white_circle:|:white_circle:|
 | [maxconn](#maximum-concurent-connections) | number |  |  |:large_blue_circle:|:white_circle:|:white_circle:|
 | [nbthread](#number-of-threads) | number | |  |:large_blue_circle:|:white_circle:|:white_circle:|
 | [pod-maxconn](#maximum-concurent-backend-connections) | number |  |  |:white_circle:|:white_circle:|:large_blue_circle:|
@@ -27,8 +28,8 @@ Options for starting controller can be found in [controller.md](controller.md)
 | [rate-limit-period](#rate-limit) | [time](#time)| 1s |  |:large_blue_circle:|:large_blue_circle:|:white_circle:|
 | [rate-limit-requests](#rate-limit) | number |  |  |:large_blue_circle:|:large_blue_circle:|:white_circle:|
 | [rate-limit-size](#rate-limit) | string | "100k" | [rate-limit](#rate-limit) |:large_blue_circle:|:white_circle:|:white_circle:|
-| [request-capture](#request-capture) | string |  |  |:large_blue_circle:|:large_blue_circle:|:white_circle:|
-| [request-capture-len](#request-capture) | string | "128" |  |:large_blue_circle:|:large_blue_circle:|:white_circle:|
+| [request-capture](#request-capture) | [sample expression](#sample-expression) |  |  |:large_blue_circle:|:large_blue_circle:|:white_circle:|
+| [request-capture-len](#request-capture) | number | 128 |  |:large_blue_circle:|:large_blue_circle:|:white_circle:|
 | [request-set-header](#request-set-header) | string |  |  |:large_blue_circle:|:large_blue_circle:|:white_circle:|
 | [server-ssl](#server-ssl) | ["true", "false"] | "false" |  |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:|
 | [servers-increment](#servers-slots-increment) | number | "42" |  |:large_blue_circle:|:white_circle:|:white_circle:|
@@ -70,6 +71,16 @@ Options for starting controller can be found in [controller.md](controller.md)
 - Annotation: `load-balance`
 - use in format  `haproxy.org/load-balance: <algorithm> [ <arguments> ]`
 
+#### Log format
+
+- Annotation: `log-format`
+- Specifies the log-format string to use for HTTP traffic logs.
+- Log format string is covered in depth in [HAProxy documentation](https://cbonte.github.io/haproxy-dconv/2.0/configuration.html#8.2.3)
+- Default log-format is:  
+   `"%ci:%cp [%tr] %ft %b/%s %TR/%Tw/%Tc/%Tr/%Ta %ST %B %CC %CS %tsc %ac/%fc/%bc/%sc/%rc %sq/%bq %hr %hs \"%HM %[var(txn.base)] %HV\""`
+  - Which will look like this:  
+  `10.244.0.1:5793 [10/Apr/2020:10:32:50.132] https~ test-echo1-8080/SRV_TFW8V 0/0/1/2/3 200 653 - - ---- 1/1/0/0/0 0/0 "GET test.k8s.local/ HTTP/2.0"`
+
 #### Backend Checks
 
 - Annotation: `check` - activate pod check (tcp checks by default)
@@ -89,16 +100,32 @@ More information can be found in the official HAProxy [documentation](https://cb
 
 #### Request Capture
 
+- Captures samples of the request using [sample expression](#sample-expression) and log them in HAProxy traffic logs.
+- **NB**: The [log-format](#log-format) should include `%hr` which makes request captured samples appear in traffic logs.
 - Annotation: `request-capture`
-  - Usage:
-  ```
-  request-capture: |
-    <"request sample string">
-    <"request sample string">
+  - Single value:
+    - Usage:
+    ```
+    request-capture: <sample-expression>
+    ```
+    - Example: capture test cookie
+    ```
+     request-capture: cookie(test)
+    ```
+  - Multiple values:
+    - Usage:
+    ```
+    request-capture: |
+    <sample-expression>
+    <sample expression>
     ...
     ```
-  where `<"request-sample-string">` looks like `"req.hdr(Host),lower,field(1,:)"`
-
+    - Example: capture multiple headers
+    ```
+    request-capture: |
+    hdr(Host)
+    hdr(User-agent)
+    ```
 - Annotation: `request-capture-len`
   - If this annotation is missing, default is `128`.
   - Usage:
@@ -281,6 +308,15 @@ More information can be found in the official HAProxy [documentation](https://cb
 #### Port
 
 - value between <0, 65535]
+
+#### Sample expression
+
+- Sample expressions/fetches are used to retrieve data from request/response buffer.
+- Example:
+  - headers: `hdr(header-name)`
+  - cookies: `cookie(cookie-name)`
+  - Name of the cipher used to offload SSL: `ssl_fc_cipher`
+- Sample expressions are covered in depth in [HAProxy documenation](https://cbonte.github.io/haproxy-dconv/2.0/configuration.html#7.3), however many are out of the ingress controller's scope.
 
 #### Time
 
