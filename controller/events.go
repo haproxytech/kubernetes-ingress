@@ -184,7 +184,9 @@ func (c *HAProxyController) eventIngress(ns *Namespace, data *Ingress) (updateRe
 		for _, ann := range data.Annotations {
 			ann.Status = ADDED
 		}
-
+		for _, tls := range data.TLS {
+			tls.Status = ADDED
+		}
 		//log.Println("Ingress added", data.Name)
 		updateRequired = true
 	case DELETED:
