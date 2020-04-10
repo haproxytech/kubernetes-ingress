@@ -14,108 +14,127 @@ import (
 
 // Handle Global and default Annotations
 
-func (c *HAProxyController) handleGlobalAnnotations() (restartRequested bool, reloadRequested bool, err error) {
-	reloadRequested = false
-	restartRequested = false
+func (c *HAProxyController) handleGlobalAnnotations() (restart bool, reload bool) {
+	reload = false
+	reload = c.handleDefaultLogFormat() ||
+		c.handleDefaultMaxconn() ||
+		c.handleDefaultTimeouts() ||
+		c.handleNbthread()
+
+	restart, r := c.handleSyslog()
+	reload = reload || r
+	return restart, reload
+}
+
+func (c *HAProxyController) handleNbthread() bool {
+	reload := false
 	maxProcs := goruntime.GOMAXPROCS(0)
 	numThreads := int64(maxProcs)
-	annNbthread, errNumThread := GetValueFromAnnotations("nbthread", c.cfg.ConfigMap.Annotations)
-	// syslog-server has default value
-	annSyslogSrv, _ := GetValueFromAnnotations("syslog-server", c.cfg.ConfigMap.Annotations)
+	annNbthread, _ := GetValueFromAnnotations("nbthread", c.cfg.ConfigMap.Annotations)
+	if annNbthread == nil || annNbthread.Status == EMPTY {
+		return false
+	}
 	var errParser error
 	config, _ := c.ActiveConfiguration()
-	if errNumThread == nil {
-		if numthr, errConv := strconv.Atoi(annNbthread.Value); errConv == nil {
-			if numthr < maxProcs {
-				numThreads = int64(numthr)
-			}
-			if annNbthread.Status == DELETED {
-				errParser = config.Delete(parser.Global, parser.GlobalSectionName, "nbthread")
-				c.ActiveTransactionHasChanges = true
-				reloadRequested = true
-			} else if annNbthread.Status != EMPTY {
-				errParser = config.Insert(parser.Global, parser.GlobalSectionName, "nbthread", types.Int64C{
-					Value: numThreads,
-				})
-				c.ActiveTransactionHasChanges = true
-				reloadRequested = true
-			}
-			utils.LogErr(errParser)
+	if numthr, errConv := strconv.Atoi(annNbthread.Value); errConv == nil {
+		if numthr < maxProcs {
+			numThreads = int64(numthr)
 		}
-	}
-
-	if annSyslogSrv.Status != EMPTY {
-		stdoutLog := false
-		daemonMode := false
-		if val, _ := config.Get(parser.Global, parser.GlobalSectionName, "daemon"); val != nil {
-			daemonMode = true
+		if annNbthread.Status == DELETED {
+			errParser = config.Delete(parser.Global, parser.GlobalSectionName, "nbthread")
+			c.ActiveTransactionHasChanges = true
+			reload = true
+		} else if annNbthread.Status != EMPTY {
+			errParser = config.Insert(parser.Global, parser.GlobalSectionName, "nbthread", types.Int64C{
+				Value: numThreads,
+			})
+			c.ActiveTransactionHasChanges = true
+			reload = true
 		}
-		errParser = config.Set(parser.Global, parser.GlobalSectionName, "log", nil)
 		utils.LogErr(errParser)
-		for index, syslogSrv := range strings.Split(annSyslogSrv.Value, "\n") {
-			if syslogSrv == "" {
+	}
+	return reload
+}
+
+func (c *HAProxyController) handleSyslog() (restart, reload bool) {
+	annSyslogSrv, _ := GetValueFromAnnotations("syslog-server", c.cfg.ConfigMap.Annotations)
+	if annSyslogSrv.Status == EMPTY {
+		return false, false
+	}
+	config, _ := c.ActiveConfiguration()
+	restart = false
+	reload = false
+	stdoutLog := false
+	daemonMode := false
+	if val, _ := config.Get(parser.Global, parser.GlobalSectionName, "daemon"); val != nil {
+		daemonMode = true
+	}
+	errParser := config.Set(parser.Global, parser.GlobalSectionName, "log", nil)
+	utils.LogErr(errParser)
+	for index, syslogSrv := range strings.Split(annSyslogSrv.Value, "\n") {
+		if syslogSrv == "" {
+			continue
+		}
+		syslogSrv = strings.Join(strings.Fields(syslogSrv), "")
+		logMap := make(map[string]string)
+		for _, paramStr := range strings.Split(syslogSrv, ",") {
+			paramLst := strings.Split(paramStr, ":")
+			if len(paramLst) == 2 {
+				logMap[paramLst[0]] = paramLst[1]
+			} else {
+				utils.LogErr(fmt.Errorf("incorrect syslog param: %s", paramLst))
 				continue
 			}
-			syslogSrv = strings.Join(strings.Fields(syslogSrv), "")
-			logMap := make(map[string]string)
-			for _, paramStr := range strings.Split(syslogSrv, ",") {
-				paramLst := strings.Split(paramStr, ":")
-				if len(paramLst) == 2 {
-					logMap[paramLst[0]] = paramLst[1]
-				} else {
-					utils.LogErr(fmt.Errorf("incorrect syslog param: %s", paramLst))
+		}
+		if address, ok := logMap["address"]; ok {
+			logData := new(types.Log)
+			logData.Address = address
+			for k, v := range logMap {
+				switch strings.ToLower(k) {
+				case "address":
+					if v == "stdout" {
+						stdoutLog = true
+					}
+				case "port":
+					if logMap["address"] != "stdout" {
+						logData.Address += ":" + v
+					}
+				case "length":
+					if length, errConv := strconv.Atoi(v); errConv == nil {
+						logData.Length = int64(length)
+					}
+				case "format":
+					logData.Format = v
+				case "facility":
+					logData.Facility = v
+				case "level":
+					logData.Level = v
+				case "minlevel":
+					logData.Level = v
+				default:
+					utils.LogErr(fmt.Errorf("unkown syslog param: %s ", k))
 					continue
 				}
 			}
-			if address, ok := logMap["address"]; ok {
-				logData := new(types.Log)
-				logData.Address = address
-				for k, v := range logMap {
-					switch strings.ToLower(k) {
-					case "address":
-						if v == "stdout" {
-							stdoutLog = true
-						}
-					case "port":
-						if logMap["address"] != "stdout" {
-							logData.Address += ":" + v
-						}
-					case "length":
-						if length, errConv := strconv.Atoi(v); errConv == nil {
-							logData.Length = int64(length)
-						}
-					case "format":
-						logData.Format = v
-					case "facility":
-						logData.Facility = v
-					case "level":
-						logData.Level = v
-					case "minlevel":
-						logData.Level = v
-					default:
-						utils.LogErr(fmt.Errorf("unkown syslog param: %s ", k))
-						continue
-					}
-				}
-				errParser = config.Insert(parser.Global, parser.GlobalSectionName, "log", logData, index)
+			errParser = config.Insert(parser.Global, parser.GlobalSectionName, "log", logData, index)
+			if errParser != nil {
 				c.ActiveTransactionHasChanges = true
-				reloadRequested = true
+				reload = true
 			}
 			utils.LogErr(errParser)
 		}
-		if stdoutLog {
-			if daemonMode {
-				errParser = config.Delete(parser.Global, parser.GlobalSectionName, "daemon")
-				restartRequested = true
-			}
-		} else if !daemonMode {
-			errParser = config.Insert(parser.Global, parser.GlobalSectionName, "daemon", types.Enabled{})
-			restartRequested = true
-		}
-		utils.LogErr(errParser)
 	}
-
-	return restartRequested, reloadRequested, err
+	if stdoutLog {
+		if daemonMode {
+			errParser = config.Delete(parser.Global, parser.GlobalSectionName, "daemon")
+			restart = true
+		}
+	} else if !daemonMode {
+		errParser = config.Insert(parser.Global, parser.GlobalSectionName, "daemon", types.Enabled{})
+		restart = true
+	}
+	utils.LogErr(errParser)
+	return restart, reload
 }
 
 func (c *HAProxyController) handleDefaultTimeouts() bool {
@@ -156,24 +175,26 @@ func (c *HAProxyController) handleDefaultTimeout(timeout string) bool {
 	return false
 }
 
-func (c *HAProxyController) handleMaxconn() (needReload bool, err error) {
+func (c *HAProxyController) handleDefaultMaxconn() bool {
 	annMaxconn, _ := GetValueFromAnnotations("maxconn", c.cfg.ConfigMap.Annotations)
 	if annMaxconn == nil {
-		return false, nil
+		return false
 	}
-	value, maxconnErr := strconv.ParseInt(annMaxconn.Value, 10, 64)
-	if maxconnErr != nil {
-		return false, maxconnErr
+	value, err := strconv.ParseInt(annMaxconn.Value, 10, 64)
+	if err != nil {
+		utils.LogErr(err)
+		return false
 	}
 
 	config, _ := c.ActiveConfiguration()
 	switch annMaxconn.Status {
 	case EMPTY:
-		return false, nil
+		return false
 	case DELETED:
 		err = config.Set(parser.Defaults, parser.DefaultSectionName, "maxconn", nil)
 		if err != nil {
-			return false, err
+			utils.LogErr(err)
+			return false
 		}
 		log.Println(fmt.Sprintf("Removing default maxconn"))
 	default:
@@ -181,26 +202,28 @@ func (c *HAProxyController) handleMaxconn() (needReload bool, err error) {
 			Value: value,
 		})
 		if err != nil {
-			return false, err
+			utils.LogErr(err)
+			return false
 		}
 		log.Println(fmt.Sprintf("Setting default maxconn to %d", value))
 	}
 	c.ActiveTransactionHasChanges = true
-	return true, nil
+	return true
 }
 
-func (c *HAProxyController) handleLogFormat() (needReload bool, err error) {
+func (c *HAProxyController) handleDefaultLogFormat() bool {
 	annLogFormat, _ := GetValueFromAnnotations("log-format", c.cfg.ConfigMap.Annotations)
 	if annLogFormat.Status == EMPTY {
-		return false, nil
+		return false
 	}
 	config, _ := c.ActiveConfiguration()
-	err = config.Set(parser.Defaults, parser.DefaultSectionName, "log-format", types.StringC{
+	err := config.Set(parser.Defaults, parser.DefaultSectionName, "log-format", types.StringC{
 		Value: "'" + annLogFormat.Value + "'",
 	})
 	if err != nil {
-		return false, err
+		utils.LogErr(err)
+		return false
 	}
 	c.ActiveTransactionHasChanges = true
-	return true, nil
+	return true
 }

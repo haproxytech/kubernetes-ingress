@@ -35,22 +35,9 @@ func (c *HAProxyController) updateHAProxy() error {
 		c.apiDisposeTransaction()
 	}()
 
-	restart, reload, err := c.handleGlobalAnnotations()
-	utils.LogErr(err)
-	needsReload = needsReload || reload
+	needsReload, restart := c.handleGlobalAnnotations()
 
-	reload = c.handleDefaultTimeouts()
-	needsReload = needsReload || reload
-
-	reload, err = c.handleMaxconn()
-	utils.LogErr(err)
-	needsReload = needsReload || reload
-
-	reload, err = c.handleDefaultService()
-	utils.LogErr(err)
-	needsReload = needsReload || reload
-
-	reload, err = c.handleLogFormat()
+	reload, err := c.handleDefaultService()
 	utils.LogErr(err)
 	needsReload = needsReload || reload
 
