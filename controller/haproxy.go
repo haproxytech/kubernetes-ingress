@@ -24,7 +24,7 @@ import (
 
 // Sync HAProxy configuration
 func (c *HAProxyController) updateHAProxy() error {
-	needsReload := false
+	reload := false
 
 	err := c.apiStartTransaction()
 	if err != nil {
@@ -35,11 +35,11 @@ func (c *HAProxyController) updateHAProxy() error {
 		c.apiDisposeTransaction()
 	}()
 
-	needsReload, restart := c.handleGlobalAnnotations()
+	reload, restart := c.handleGlobalAnnotations()
 
-	reload, err := c.handleDefaultService()
+	r, err := c.handleDefaultService()
 	utils.LogErr(err)
-	needsReload = needsReload || reload
+	reload = reload || r
 
 	usedCerts := map[string]struct{}{}
 
@@ -53,15 +53,15 @@ func (c *HAProxyController) updateHAProxy() error {
 			}
 			// handle Default Backend
 			if ingress.DefaultBackend != nil {
-				reload, err = c.handlePath(namespace, ingress, &IngressRule{}, ingress.DefaultBackend)
+				r, err = c.handlePath(namespace, ingress, &IngressRule{}, ingress.DefaultBackend)
 				utils.LogErr(err)
-				needsReload = needsReload || reload
+				reload = reload || r
 			}
 			// handle Ingress rules
 			for _, rule := range ingress.Rules {
 				for _, path := range rule.Paths {
-					reload, err = c.handlePath(namespace, ingress, rule, path)
-					needsReload = needsReload || reload
+					r, err = c.handlePath(namespace, ingress, rule, path)
+					reload = reload || r
 					utils.LogErr(err)
 				}
 			}
@@ -70,8 +70,8 @@ func (c *HAProxyController) updateHAProxy() error {
 			for _, tls := range ingress.TLS {
 				if _, ok := ingressSecrets[tls.SecretName.Value]; !ok {
 					ingressSecrets[tls.SecretName.Value] = struct{}{}
-					reload = c.handleTLSSecret(*ingress, *tls, usedCerts)
-					needsReload = needsReload || reload
+					r = c.handleTLSSecret(*ingress, *tls, usedCerts)
+					reload = reload || r
 				}
 			}
 
@@ -86,26 +86,26 @@ func (c *HAProxyController) updateHAProxy() error {
 
 	utils.LogErr(c.handleProxyProtocol())
 
-	reload = c.handleDefaultCertificate(usedCerts)
-	needsReload = needsReload || reload
+	r = c.handleDefaultCertificate(usedCerts)
+	reload = reload || r
 
-	reload = c.handleHTTPS(usedCerts)
-	needsReload = needsReload || reload
+	r = c.handleHTTPS(usedCerts)
+	reload = reload || r
 
-	needsReload = c.RequestsHTTPRefresh() || needsReload
+	reload = c.RequestsHTTPRefresh() || reload
 
-	needsReload = c.RequestsTCPRefresh() || needsReload
+	reload = c.RequestsTCPRefresh() || reload
 
-	reload, err = c.cfg.MapFiles.Refresh()
+	r, err = c.cfg.MapFiles.Refresh()
 	utils.LogErr(err)
-	needsReload = needsReload || reload
+	reload = reload || r
 
-	reload, err = c.handleTCPServices()
+	r, err = c.handleTCPServices()
 	utils.LogErr(err)
-	needsReload = needsReload || reload
+	reload = reload || r
 
-	reload = c.refreshBackendSwitching()
-	needsReload = needsReload || reload
+	r = c.refreshBackendSwitching()
+	reload = reload || r
 
 	err = c.apiCommitTransaction()
 	if err != nil {
@@ -121,7 +121,7 @@ func (c *HAProxyController) updateHAProxy() error {
 		}
 		return nil
 	}
-	if needsReload {
+	if reload {
 		if err := c.HAProxyService("reload"); err != nil {
 			utils.LogErr(err)
 		} else {
@@ -132,24 +132,24 @@ func (c *HAProxyController) updateHAProxy() error {
 }
 
 // handles defaultBackned configured via cli param "default-backend-service"
-func (c *HAProxyController) handleDefaultService() (needsReload bool, err error) {
-	needsReload = false
+func (c *HAProxyController) handleDefaultService() (reload bool, err error) {
+	reload = false
 	dsvcData, _ := GetValueFromAnnotations("default-backend-service")
 	dsvc := strings.Split(dsvcData.Value, "/")
 
 	if len(dsvc) != 2 {
-		return needsReload, fmt.Errorf("default service invalid data")
+		return reload, fmt.Errorf("default service invalid data")
 	}
 	if dsvc[0] == "" || dsvc[1] == "" {
-		return needsReload, nil
+		return reload, nil
 	}
 	namespace, ok := c.cfg.Namespace[dsvc[0]]
 	if !ok {
-		return needsReload, fmt.Errorf("default service invalid namespace " + dsvc[0])
+		return reload, fmt.Errorf("default service invalid namespace " + dsvc[0])
 	}
 	service, ok := namespace.Services[dsvc[1]]
 	if !ok {
-		return needsReload, fmt.Errorf("service '" + dsvc[1] + "' does not exist")
+		return reload, fmt.Errorf("service '" + dsvc[1] + "' does not exist")
 	}
 	ingress := &Ingress{
 		Namespace:   namespace.Name,

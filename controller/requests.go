@@ -48,7 +48,7 @@ const (
 	WHITELIST Rule = "whitelist"
 )
 
-func (c *HAProxyController) RequestsHTTPRefresh() (needsReload bool) {
+func (c *HAProxyController) RequestsHTTPRefresh() (reload bool) {
 	if c.cfg.HTTPRequestsStatus == EMPTY {
 		return false
 	}
@@ -122,7 +122,7 @@ func (c *HAProxyController) RequestsHTTPRefresh() (needsReload bool) {
 	return true
 }
 
-func (c *HAProxyController) RequestsTCPRefresh() (needsReload bool) {
+func (c *HAProxyController) RequestsTCPRefresh() (reload bool) {
 	if c.cfg.TCPRequestsStatus == EMPTY {
 		return false
 	}

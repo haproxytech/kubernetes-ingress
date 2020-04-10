@@ -80,8 +80,8 @@ func (c *HAProxyController) writeCert(filename string, key, crt []byte) error {
 	return nil
 }
 
-func (c *HAProxyController) handleSecret(ingress Ingress, secret Secret, writeSecret bool, certs map[string]struct{}) (reloadRequested bool) {
-	reloadRequested = false
+func (c *HAProxyController) handleSecret(ingress Ingress, secret Secret, writeSecret bool, certs map[string]struct{}) (reload bool) {
+	reload = false
 	for _, k := range []string{"tls", "rsa", "ecdsa"} {
 		key, keyOk := secret.Data[k+".key"]
 		crt, crtOk := secret.Data[k+".crt"]
@@ -92,16 +92,15 @@ func (c *HAProxyController) handleSecret(ingress Ingress, secret Secret, writeSe
 					utils.LogErr(err)
 					return false
 				}
-				reloadRequested = true
+				reload = true
 			}
 			certs[filename] = struct{}{}
 		}
 	}
-	return reloadRequested
+	return reload
 }
 
-func (c *HAProxyController) handleDefaultCertificate(certs map[string]struct{}) (reloadRequested bool) {
-	reloadRequested = false
+func (c *HAProxyController) handleDefaultCertificate(certs map[string]struct{}) (reload bool) {
 	secretAnn, defSecretErr := GetValueFromAnnotations("ssl-certificate", c.cfg.ConfigMap.Annotations)
 	writeSecret := false
 	if defSecretErr == nil {
@@ -116,18 +115,16 @@ func (c *HAProxyController) handleDefaultCertificate(certs map[string]struct{}) 
 				if secret.Status != EMPTY && secret.Status != DELETED {
 					writeSecret = true
 				}
-				reloadRequested = c.handleSecret(Ingress{
+				return c.handleSecret(Ingress{
 					Name: "0",
 				}, *secret, writeSecret, certs)
-				return reloadRequested
 			}
 		}
 	}
 	return false
 }
 
-func (c *HAProxyController) handleTLSSecret(ingress Ingress, tls IngressTLS, certs map[string]struct{}) (reloadRequested bool) {
-	reloadRequested = false
+func (c *HAProxyController) handleTLSSecret(ingress Ingress, tls IngressTLS, certs map[string]struct{}) (reload bool) {
 	secretData := strings.Split(tls.SecretName.Value, "/")
 	namespaceName := ingress.Namespace
 	var secretName string
@@ -161,35 +158,35 @@ func (c *HAProxyController) handleTLSSecret(ingress Ingress, tls IngressTLS, cer
 	return c.handleSecret(ingress, *secret, writeSecret, certs)
 }
 
-func (c *HAProxyController) handleHTTPS(usedCerts map[string]struct{}) (reloadRequested bool) {
+func (c *HAProxyController) handleHTTPS(usedCerts map[string]struct{}) (reload bool) {
 	// ssl-passthrough
 	if len(c.cfg.BackendSwitchingRules[FrontendSSL]) > 0 {
 		if !c.cfg.SSLPassthrough {
 			utils.PanicErr(c.enableSSLPassthrough())
 			c.cfg.SSLPassthrough = true
-			reloadRequested = true
+			reload = true
 		}
 	} else if c.cfg.SSLPassthrough {
 		utils.PanicErr(c.disableSSLPassthrough())
 		c.cfg.SSLPassthrough = false
-		reloadRequested = true
+		reload = true
 	}
 	// ssl-offload
 	if len(usedCerts) > 0 {
 		if !c.cfg.HTTPS {
 			utils.PanicErr(c.enableSSLOffload(FrontendHTTPS, true))
 			c.cfg.HTTPS = true
-			reloadRequested = true
+			reload = true
 		}
 	} else if c.cfg.HTTPS {
 		utils.PanicErr(c.disableSSLOffload(FrontendHTTPS))
 		c.cfg.HTTPS = false
-		reloadRequested = true
+		reload = true
 	}
 	//remove certs that are not needed
 	utils.LogErr(c.cleanCertDir(usedCerts))
 
-	return reloadRequested
+	return reload
 }
 
 func (c *HAProxyController) enableSSLOffload(frontendName string, alpn bool) (err error) {

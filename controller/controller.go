@@ -191,40 +191,40 @@ func (c *HAProxyController) HAProxyService(action string) (err error) {
 	return err
 }
 
-func (c *HAProxyController) handlePath(namespace *Namespace, ingress *Ingress, rule *IngressRule, path *IngressPath) (needReload bool, err error) {
-	needReload = false
+func (c *HAProxyController) handlePath(namespace *Namespace, ingress *Ingress, rule *IngressRule, path *IngressPath) (reload bool, err error) {
+	reload = false
 	service, ok := namespace.Services[path.ServiceName]
 	if !ok {
 		log.Printf("service '%s' does not exist", path.ServiceName)
-		return needReload, fmt.Errorf("service '%s' does not exist", path.ServiceName)
+		return reload, fmt.Errorf("service '%s' does not exist", path.ServiceName)
 	}
 
-	backendName, newBackend, reload, err := c.handleService(namespace, ingress, rule, path, service)
-	needReload = needReload || reload
+	backendName, newBackend, r, err := c.handleService(namespace, ingress, rule, path, service)
+	reload = reload || r
 	if err != nil {
-		return needReload, err
+		return reload, err
 	}
 
 	endpoints, ok := namespace.Endpoints[service.Name]
 	if !ok {
 		log.Printf("No Endpoints found for service '%s'", service.Name)
-		return needReload, nil // not an end of world scenario, just log this
+		return reload, nil // not an end of world scenario, just log this
 	}
 	endpoints.BackendName = backendName
 	if err := c.setTargetPort(path, service, endpoints); err != nil {
-		return needReload, err
+		return reload, err
 	}
 
 	for _, ip := range *endpoints.Addresses {
-		reload := c.handleEndpointIP(namespace, ingress, rule, path, service, backendName, newBackend, endpoints, ip)
-		needReload = needReload || reload
+		r := c.handleEndpointIP(namespace, ingress, rule, path, service, backendName, newBackend, endpoints, ip)
+		reload = reload || r
 	}
-	return needReload, nil
+	return reload, nil
 }
 
 // handleEndpointIP processes the IngressPath related endpoints and makes corresponding backend servers configuration in HAProxy
-func (c *HAProxyController) handleEndpointIP(namespace *Namespace, ingress *Ingress, rule *IngressRule, path *IngressPath, service *Service, backendName string, newBackend bool, endpoints *Endpoints, ip *EndpointIP) (needReload bool) {
-	needReload = false
+func (c *HAProxyController) handleEndpointIP(namespace *Namespace, ingress *Ingress, rule *IngressRule, path *IngressPath, service *Service, backendName string, newBackend bool, endpoints *Endpoints, ip *EndpointIP) (reload bool) {
+	reload = false
 	server := models.Server{
 		Name:    ip.HAProxyName,
 		Address: ip.IP,
@@ -249,10 +249,10 @@ func (c *HAProxyController) handleEndpointIP(namespace *Namespace, ingress *Ingr
 		if err != nil {
 			if !strings.Contains(err.Error(), "already exists") {
 				utils.LogErr(err)
-				needReload = true
+				reload = true
 			}
 		} else {
-			needReload = true
+			reload = true
 		}
 	case MODIFIED:
 		err := c.backendServerEdit(backendName, server)
@@ -260,7 +260,7 @@ func (c *HAProxyController) handleEndpointIP(namespace *Namespace, ingress *Ingr
 			if strings.Contains(err.Error(), "does not exist") {
 				err1 := c.backendServerCreate(backendName, server)
 				utils.LogErr(err1)
-				needReload = true
+				reload = true
 			} else {
 				utils.LogErr(err)
 			}
@@ -277,11 +277,11 @@ func (c *HAProxyController) handleEndpointIP(namespace *Namespace, ingress *Ingr
 		}
 		return true
 	}
-	return needReload
+	return reload
 }
 
 // handleService processes the service related to the IngressPath and makes corresponding backend configuration in HAProxy
-func (c *HAProxyController) handleService(namespace *Namespace, ingress *Ingress, rule *IngressRule, path *IngressPath, service *Service) (backendName string, newBackend bool, needReload bool, err error) {
+func (c *HAProxyController) handleService(namespace *Namespace, ingress *Ingress, rule *IngressRule, path *IngressPath, service *Service) (backendName string, newBackend bool, reload bool, err error) {
 
 	// Get Backend status
 	status := service.Status
@@ -302,11 +302,11 @@ func (c *HAProxyController) handleService(namespace *Namespace, ingress *Ingress
 		case path.IsDefaultBackend:
 			log.Printf("Removing default_backend %s from ingress \n", service.Name)
 			utils.LogErr(c.setDefaultBackend(""))
-			needReload = true
+			reload = true
 		default:
 			c.deleteUseBackendRule(key, FrontendHTTP, FrontendHTTPS)
 		}
-		return "", false, needReload, nil
+		return "", false, reload, nil
 	}
 
 	// Set backendName
@@ -318,7 +318,7 @@ func (c *HAProxyController) handleService(namespace *Namespace, ingress *Ingress
 
 	// Get/Create Backend
 	newBackend = false
-	needReload = false
+	reload = false
 	var backend models.Backend
 	if backend, err = c.backendGet(backendName); err != nil {
 		mode := "http"
@@ -330,10 +330,10 @@ func (c *HAProxyController) handleService(namespace *Namespace, ingress *Ingress
 			backend.Mode = string(ModeTCP)
 		}
 		if err = c.backendCreate(backend); err != nil {
-			return "", true, needReload, err
+			return "", true, reload, err
 		}
 		newBackend = true
-		needReload = true
+		reload = true
 	}
 
 	// handle Annotations
@@ -341,14 +341,14 @@ func (c *HAProxyController) handleService(namespace *Namespace, ingress *Ingress
 	activeBackendAnn := c.handleBackendAnnotations(ingress, service, &backend, newBackend)
 	if activeBackendAnn || activeSSLPassthrough {
 		if err = c.backendEdit(backend); err != nil {
-			return backendName, newBackend, needReload, err
+			return backendName, newBackend, reload, err
 		}
-		needReload = true
+		reload = true
 	}
 
 	// No need to update BackendSwitching
 	if (status == EMPTY && !activeSSLPassthrough) || path.IsTCPService {
-		return backendName, newBackend, needReload, nil
+		return backendName, newBackend, reload, nil
 	}
 
 	// Update backendSwitching
@@ -363,7 +363,7 @@ func (c *HAProxyController) handleService(namespace *Namespace, ingress *Ingress
 	case path.IsDefaultBackend:
 		log.Printf("Confiugring default_backend %s from ingress %s\n", service.Name, ingress.Name)
 		utils.LogErr(c.setDefaultBackend(backendName))
-		needReload = true
+		reload = true
 	case path.IsSSLPassthrough:
 		c.addUseBackendRule(key, useBackendRule, FrontendSSL)
 		if activeSSLPassthrough {
@@ -377,10 +377,10 @@ func (c *HAProxyController) handleService(namespace *Namespace, ingress *Ingress
 	}
 
 	if err != nil {
-		return "", newBackend, needReload, err
+		return "", newBackend, reload, err
 	}
 
-	return backendName, newBackend, needReload, nil
+	return backendName, newBackend, reload, nil
 }
 
 // Looks for the targetPort (Endpoint port) corresponding to the servicePort of the IngressPath

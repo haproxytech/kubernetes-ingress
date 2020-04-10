@@ -24,7 +24,7 @@ type Maps interface {
 	AppendHost(key uint64, host string)
 	Clean()
 	Modified(key uint64)
-	Refresh() (needsReload bool, err error)
+	Refresh() (reload bool, err error)
 }
 
 type mapFiles map[uint64]*mapFile
@@ -77,8 +77,8 @@ func (m mapFiles) Modified(key uint64) {
 	m[key].modified = true
 }
 
-func (m mapFiles) Refresh() (needsReload bool, err error) {
-	needsReload = false
+func (m mapFiles) Refresh() (reload bool, err error) {
+	reload = false
 	for key, mapFile := range m {
 		if mapFile.modified {
 			var f *os.File
@@ -89,16 +89,16 @@ func (m mapFiles) Refresh() (needsReload bool, err error) {
 			}
 			if hosts == "" {
 				err = os.Remove(filename)
-				return needsReload, err
+				return reload, err
 			} else if f, err = os.Create(filename); err != nil {
-				return needsReload, err
+				return reload, err
 			}
 			defer f.Close()
 			if _, err = f.WriteString(hosts); err != nil {
-				return needsReload, err
+				return reload, err
 			}
-			needsReload = true
+			reload = true
 		}
 	}
-	return needsReload, nil
+	return reload, nil
 }

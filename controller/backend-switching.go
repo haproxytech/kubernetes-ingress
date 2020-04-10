@@ -47,7 +47,7 @@ func (c *HAProxyController) deleteUseBackendRule(key string, frontends ...string
 }
 
 //  Recreate use_backend rules
-func (c *HAProxyController) refreshBackendSwitching() (needsReload bool) {
+func (c *HAProxyController) refreshBackendSwitching() (reload bool) {
 	if len(c.cfg.BackendSwitchingStatus) == 0 {
 		return false
 	}
@@ -115,15 +115,15 @@ func (c *HAProxyController) refreshBackendSwitching() (needsReload bool) {
 			})
 			utils.PanicErr(err)
 		}
-		needsReload = true
+		reload = true
 		delete(c.cfg.BackendSwitchingStatus, frontend.Name)
 	}
-	needsReload = c.clearBackends(activeBackends) || needsReload
-	return needsReload
+	reload = c.clearBackends(activeBackends) || reload
+	return reload
 }
 
 // Remove unused backends
-func (c *HAProxyController) clearBackends(activeBackends map[string]struct{}) (needsReload bool) {
+func (c *HAProxyController) clearBackends(activeBackends map[string]struct{}) (reload bool) {
 	allBackends, err := c.backendsGet()
 	if err != nil {
 		return false
@@ -133,10 +133,10 @@ func (c *HAProxyController) clearBackends(activeBackends map[string]struct{}) (n
 			if err := c.backendDelete(backend.Name); err != nil {
 				utils.PanicErr(err)
 			}
-			needsReload = true
+			reload = true
 		}
 	}
-	return needsReload
+	return reload
 }
 
 func (c *HAProxyController) setDefaultBackend(backendName string) (err error) {

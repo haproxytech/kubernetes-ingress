@@ -9,7 +9,7 @@ import (
 	"github.com/haproxytech/models"
 )
 
-func (c *HAProxyController) handleTCPServices() (needsReload bool, err error) {
+func (c *HAProxyController) handleTCPServices() (reload bool, err error) {
 	if c.cfg.ConfigMapTCPServices == nil {
 		return false, nil
 	}
@@ -43,7 +43,7 @@ func (c *HAProxyController) handleTCPServices() (needsReload bool, err error) {
 			err = c.frontendDelete(frontendName)
 			utils.PanicErr(err)
 			c.cfg.BackendSwitchingStatus["tcp-services"] = struct{}{}
-			needsReload = true
+			reload = true
 			continue
 		case MODIFIED:
 			frontend, errFt := c.frontendGet(frontendName)
@@ -61,7 +61,7 @@ func (c *HAProxyController) handleTCPServices() (needsReload bool, err error) {
 				utils.PanicErr(err)
 				continue
 			}
-			needsReload = true
+			reload = true
 		case ADDED:
 			frontend := models.Frontend{
 				Name:           frontendName,
@@ -91,7 +91,7 @@ func (c *HAProxyController) handleTCPServices() (needsReload bool, err error) {
 			if sslOption == "ssl" {
 				utils.LogErr(c.enableSSLOffload(frontend.Name, false))
 			}
-			needsReload = true
+			reload = true
 		}
 
 		// Handle Backend
@@ -112,9 +112,9 @@ func (c *HAProxyController) handleTCPServices() (needsReload bool, err error) {
 			Status:         svc.Status,
 		}
 		nsmmp := c.cfg.GetNamespace(namespace)
-		reload, errBck := c.handlePath(nsmmp, ingress, nil, path)
+		r, errBck := c.handlePath(nsmmp, ingress, nil, path)
 		utils.LogErr(errBck)
-		needsReload = needsReload || reload
+		reload = reload || r
 	}
-	return needsReload, err
+	return reload, err
 }
