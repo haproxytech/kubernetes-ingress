@@ -91,7 +91,8 @@ func (c *HAProxyController) refreshBackendSwitching() (reload bool) {
 			switch frontend.Mode {
 			case "http":
 				if rule.Host != "" {
-					condTest = fmt.Sprintf("{ req.hdr(host) -i %s } ", rule.Host)
+					//TODO: provide option to do strict host matching
+					condTest = fmt.Sprintf("{ req.hdr(host),field(1,:) -i %s } ", rule.Host)
 				}
 				if rule.Path != "" {
 					condTest = fmt.Sprintf("%s{ path_beg %s }", condTest, rule.Path)
