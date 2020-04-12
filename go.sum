@@ -111,6 +111,8 @@ github.com/haproxytech/config-parser/v2 v2.0.0 h1:U08NC1KzB/jO5KvrkALi2AXzLC32aj
 github.com/haproxytech/config-parser/v2 v2.0.0/go.mod h1:VjHOetXAJtwrtLAJPoDaD/kEYwCoixVp5SCsBitMcj8=
 github.com/haproxytech/config-parser/v2 v2.0.1-0.20200410141400-6b5f76c25002 h1:1an1Y9M7WPJ9NAf3zZIG4IsbB+JroKd+01khi8nXlDg=
 github.com/haproxytech/config-parser/v2 v2.0.1-0.20200410141400-6b5f76c25002/go.mod h1:VjHOetXAJtwrtLAJPoDaD/kEYwCoixVp5SCsBitMcj8=
+github.com/haproxytech/config-parser/v2 v2.0.1-0.20200410235413-ecffcb50b648 h1:R+Jy/LygGyviQ/DCbayHTpExIIS0C2mishi953/p9tc=
+github.com/haproxytech/config-parser/v2 v2.0.1-0.20200410235413-ecffcb50b648/go.mod h1:VjHOetXAJtwrtLAJPoDaD/kEYwCoixVp5SCsBitMcj8=
 github.com/haproxytech/config-parser/v2/v2 v2.0.0-dev1 h1:YbQt+o8KkzxqXWKzAJXWv4xav4+PuxT9jtfouCAOUzo=
 github.com/haproxytech/config-parser/v2/v2 v2.0.0-dev1/go.mod h1:VjHOetXAJtwrtLAJPoDaD/kEYwCoixVp5SCsBitMcj8=
 github.com/haproxytech/models v1.2.3-0.20190823114805-b3bd06b1c569 h1:uSIImvE2nSiEqMvesozR0cF90I0Gys8Rl6uEItGMZbw=
@@ -134,6 +136,8 @@ github.com/haproxytech/models v1.2.5-0.20200330140719-129501d8182f h1:5tjE9Ek97m
 github.com/haproxytech/models v1.2.5-0.20200330140719-129501d8182f/go.mod h1:UXZVErm/XN6z10sM/enmxrdeEnwo7vz1JI+a8ycEvOQ=
 github.com/haproxytech/models v1.2.5-0.20200331170001-c1f211881473 h1:dSH3RFW5UyzSsAW6JvGD80eUfdnz9GGRuIOQxha78eM=
 github.com/haproxytech/models v1.2.5-0.20200331170001-c1f211881473/go.mod h1:UXZVErm/XN6z10sM/enmxrdeEnwo7vz1JI+a8ycEvOQ=
+github.com/haproxytech/models v1.2.5-0.20200414103449-1ad77053aff9 h1:okNyn0EK24pbO+cRr7qLm0ai48mYUwMoBAtQiuz2qBM=
+github.com/haproxytech/models v1.2.5-0.20200414103449-1ad77053aff9/go.mod h1:UXZVErm/XN6z10sM/enmxrdeEnwo7vz1JI+a8ycEvOQ=
 github.com/hashicorp/golang-lru v0.5.0 h1:CL2msUPvZTLb5O648aiLNJw3hnBxN2+1Jq8rCOH9wdo=
 github.com/hashicorp/golang-lru v0.5.0/go.mod h1:/m3WP610KZHVQ1SGc6re/UDhFvYD7pJ4Ao+sR/qLZy8=
 github.com/hpcloud/tail v1.0.0/go.mod h1:ab1qPbhIpdTxEkNHXyeSf5vhxWSCs/tWer42PpOxQnU=

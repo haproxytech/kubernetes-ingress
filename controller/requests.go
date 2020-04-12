@@ -45,6 +45,8 @@ const (
 	//nolint
 	SSL_REDIRECT Rule = "ssl-redirect"
 	//nolint
+	PATH_REWRITE Rule = "path-rewrite"
+	//nolint
 	PROXY_PROTOCOL Rule = "proxy-protocol"
 	//nolint
 	REQUEST_CAPTURE Rule = "request-capture"

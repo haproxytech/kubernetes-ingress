@@ -23,6 +23,7 @@ Options for starting controller can be found in [controller.md](controller.md)
 | [log-format](#log-format) | string |  |  |:large_blue_circle:|:white_circle:|:white_circle:|
 | [maxconn](#maximum-concurent-connections) | number |  |  |:large_blue_circle:|:white_circle:|:white_circle:|
 | [nbthread](#number-of-threads) | number | |  |:large_blue_circle:|:white_circle:|:white_circle:|
+| [path-rewrite](#path-rewrite) | string |  |  |:white_circle:|:large_blue_circle:|:large_blue_circle:|
 | [pod-maxconn](#maximum-concurent-backend-connections) | number |  |  |:white_circle:|:white_circle:|:large_blue_circle:|
 | [proxy-protocol](#proxy-protocol) | [IPs or CIDRs](#proxy-protocol) |   |  |:large_blue_circle:|:white_circle:|:white_circle:|
 | [rate-limit-period](#rate-limit) | [time](#time)| 1s |  |:large_blue_circle:|:large_blue_circle:|:white_circle:|
@@ -98,6 +99,35 @@ Options for starting controller can be found in [controller.md](controller.md)
 - More annotations to fine-tune cookie can be found in controller-annotations.go
 
 More information can be found in the official HAProxy [documentation](https://cbonte.github.io/haproxy-dconv/2.0/configuration.html#4-cookie)
+
+#### Path Rewrite
+- Annotation: `path-rewrite`
+  - Single param: Overrides entire path 
+    - Usage:
+    ```
+    path-rewrite: <string>
+    ```
+    - Example: turn any path into "/"
+    ```
+    path-rewrite: /
+    ```
+  - Two params: Use regex (Standard back-references supported) to match Path occrences and replace them.
+    - Usage:
+    ```
+    path-rewrite: <string> <string>
+    ```
+    - Example: prefix /foo: turn "/bar?q=1" into "/foo/bar?q=1"
+    ```
+    path-rewrite: (.*) /foo\1
+    ```
+    - Example: suffix /foo : turn "/bar?q=1" into "/bar/foo?q=1"
+    ```
+    path-rewrite: ([^?]*)(\?(.*))? \1/foo\2
+    ```
+    - Example: strip /foo : turn "/foo/bar?q=1" into "/bar?q=1"
+    ```
+    path-rewrite: /foo/(.*) /\1
+    ```
 
 #### Request Capture
 
