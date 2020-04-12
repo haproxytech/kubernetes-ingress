@@ -19,8 +19,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/haproxytech/kubernetes-ingress/controller/backend"
-	"github.com/haproxytech/kubernetes-ingress/controller/server"
+	"github.com/haproxytech/kubernetes-ingress/controller/haproxy"
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 	"github.com/haproxytech/models"
 )
@@ -61,7 +60,7 @@ func (c *HAProxyController) handleSSLPassthrough(ingress *Ingress, service *Serv
 // Update backend with annotations values.
 func (c *HAProxyController) handleBackendAnnotations(ingress *Ingress, service *Service, backendModel *models.Backend, newBackend bool) (activeAnnotations bool) {
 	activeAnnotations = false
-	backend := backend.Backend(*backendModel)
+	backend := haproxy.Backend(*backendModel)
 	backendAnnotations := make(map[string]*StringW, 5)
 
 	backendAnnotations["abortonclose"], _ = GetValueFromAnnotations("abortonclose", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
@@ -137,7 +136,7 @@ func (c *HAProxyController) handleBackendAnnotations(ingress *Ingress, service *
 // Update server with annotations values.
 func (c *HAProxyController) handleServerAnnotations(ingress *Ingress, service *Service, serverModel *models.Server) (activeAnnotations bool) {
 	activeAnnotations = false
-	server := server.Server(*serverModel)
+	server := haproxy.Server(*serverModel)
 
 	serverAnnotations := make(map[string]*StringW, 5)
 	serverAnnotations["cookie-persistence"], _ = GetValueFromAnnotations("cookie-persistence", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
