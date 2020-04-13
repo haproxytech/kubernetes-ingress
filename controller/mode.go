@@ -5,17 +5,17 @@ import "fmt"
 type Mode string
 
 const (
-	ModeHTTP Mode = "http"
-	ModeTCP  Mode = "tcp"
+	HTTP Mode = "http"
+	TCP  Mode = "tcp"
 )
 
 //UnmarshalFlag Unmarshal flag
 func (n *Mode) UnmarshalFlag(value string) error {
 	switch value {
-	case string(ModeHTTP), string(ModeTCP):
+	case string(HTTP), string(TCP):
 		*n = Mode(value)
 	default:
-		return fmt.Errorf("mode can be only '%s' or '%s'", ModeHTTP, ModeTCP)
+		return fmt.Errorf("mode can be only '%s' or '%s'", HTTP, TCP)
 	}
 	return nil
 }

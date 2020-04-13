@@ -158,9 +158,9 @@ func (c *HAProxyController) updateHAProxy() error {
 	r = c.handleHTTPS(usedCerts)
 	reload = reload || r
 
-	reload = c.RequestsHTTPRefresh() || reload
+	reload = c.FrontendHTTPReqsRefresh() || reload
 
-	reload = c.RequestsTCPRefresh() || reload
+	reload = c.FrontendTCPreqsRefresh() || reload
 
 	r, err = c.cfg.MapFiles.Refresh()
 	utils.LogErr(err)

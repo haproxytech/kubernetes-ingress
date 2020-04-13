@@ -21,8 +21,8 @@ import (
 	"github.com/haproxytech/models"
 )
 
-type HTTPRequestRules map[uint64]models.HTTPRequestRule
-type TCPRequestRules map[uint64]models.TCPRequestRule
+type FrontendHTTPReqs map[uint64]models.HTTPRequestRule
+type FrontendTCPReqs map[uint64]models.TCPRequestRule
 
 type Rule string
 
@@ -48,8 +48,8 @@ const (
 	WHITELIST Rule = "whitelist"
 )
 
-func (c *HAProxyController) RequestsHTTPRefresh() (reload bool) {
-	if c.cfg.HTTPRequestsStatus == EMPTY {
+func (c *HAProxyController) FrontendHTTPReqsRefresh() (reload bool) {
+	if c.cfg.FrontendRulesStatus[HTTP] == EMPTY {
 		return false
 	}
 
@@ -67,18 +67,18 @@ func (c *HAProxyController) RequestsHTTPRefresh() (reload bool) {
 	}
 	utils.LogErr(c.frontendHTTPRequestRuleCreate(FrontendHTTPS, xforwardedprotoRule))
 	// SSL_REDIRECT
-	for key, httpRule := range c.cfg.HTTPRequests[SSL_REDIRECT] {
+	for key, httpRule := range c.cfg.FrontendHTTPRules[SSL_REDIRECT] {
 		c.cfg.MapFiles.Modified(key)
 		utils.LogErr(c.frontendHTTPRequestRuleCreate(FrontendHTTP, httpRule))
 	}
 	for _, frontend := range []string{FrontendHTTP, FrontendHTTPS} {
 		// REQUEST_SET_HEADER
-		for key, httpRule := range c.cfg.HTTPRequests[REQUEST_SET_HEADER] {
+		for key, httpRule := range c.cfg.FrontendHTTPRules[REQUEST_SET_HEADER] {
 			c.cfg.MapFiles.Modified(key)
 			utils.LogErr(c.frontendHTTPRequestRuleCreate(frontend, httpRule))
 		}
 		// REQUEST_CAPTURE
-		for key, httpRule := range c.cfg.HTTPRequests[REQUEST_CAPTURE] {
+		for key, httpRule := range c.cfg.FrontendHTTPRules[REQUEST_CAPTURE] {
 			c.cfg.MapFiles.Modified(key)
 			utils.LogErr(c.frontendHTTPRequestRuleCreate(frontend, httpRule))
 		}
@@ -106,24 +106,24 @@ func (c *HAProxyController) RequestsHTTPRefresh() (reload bool) {
 				utils.LogErr(err)
 			}
 		}
-		for key, httpRule := range c.cfg.HTTPRequests[RATE_LIMIT] {
+		for key, httpRule := range c.cfg.FrontendHTTPRules[RATE_LIMIT] {
 			c.cfg.MapFiles.Modified(key)
 			utils.LogErr(c.frontendHTTPRequestRuleCreate(frontend, httpRule))
 		}
 		// BLACKLIST
-		for _, httpRule := range c.cfg.HTTPRequests[BLACKLIST] {
+		for _, httpRule := range c.cfg.FrontendHTTPRules[BLACKLIST] {
 			utils.LogErr(c.frontendHTTPRequestRuleCreate(frontend, httpRule))
 		}
 		// WHITELIST
-		for _, httpRule := range c.cfg.HTTPRequests[WHITELIST] {
+		for _, httpRule := range c.cfg.FrontendHTTPRules[WHITELIST] {
 			utils.LogErr(c.frontendHTTPRequestRuleCreate(frontend, httpRule))
 		}
 	}
 	return true
 }
 
-func (c *HAProxyController) RequestsTCPRefresh() (reload bool) {
-	if c.cfg.TCPRequestsStatus == EMPTY {
+func (c *HAProxyController) FrontendTCPreqsRefresh() (reload bool) {
+	if c.cfg.FrontendRulesStatus[TCP] == EMPTY {
 		return false
 	}
 
@@ -132,8 +132,8 @@ func (c *HAProxyController) RequestsTCPRefresh() (reload bool) {
 		// DELETE RULES
 		c.frontendTCPRequestRuleDeleteAll(frontend)
 		// PROXY_PROTCOL
-		if len(c.cfg.TCPRequests[PROXY_PROTOCOL]) > 0 {
-			utils.LogErr(c.frontendTCPRequestRuleCreate(frontend, c.cfg.TCPRequests[PROXY_PROTOCOL][0]))
+		if len(c.cfg.FrontendTCPRules[PROXY_PROTOCOL]) > 0 {
+			utils.LogErr(c.frontendTCPRequestRuleCreate(frontend, c.cfg.FrontendTCPRules[PROXY_PROTOCOL][0]))
 		}
 	}
 	if !c.cfg.SSLPassthrough {
@@ -152,7 +152,7 @@ func (c *HAProxyController) RequestsTCPRefresh() (reload bool) {
 	})
 	utils.LogErr(err)
 	// REQUEST_CAPTURE
-	for key, tcpRule := range c.cfg.TCPRequests[REQUEST_CAPTURE] {
+	for key, tcpRule := range c.cfg.FrontendTCPRules[REQUEST_CAPTURE] {
 		c.cfg.MapFiles.Modified(key)
 		utils.LogErr(c.frontendTCPRequestRuleCreate(FrontendSSL, tcpRule))
 	}
@@ -171,18 +171,18 @@ func (c *HAProxyController) RequestsTCPRefresh() (reload bool) {
 	})
 	utils.LogErr(err)
 	// BLACKLIST
-	for key, tcpRule := range c.cfg.TCPRequests[BLACKLIST] {
+	for key, tcpRule := range c.cfg.FrontendTCPRules[BLACKLIST] {
 		c.cfg.MapFiles.Modified(key)
 		utils.LogErr(c.frontendTCPRequestRuleCreate(FrontendSSL, tcpRule))
 	}
 	// WHITELIST
-	for key, tcpRule := range c.cfg.TCPRequests[WHITELIST] {
+	for key, tcpRule := range c.cfg.FrontendTCPRules[WHITELIST] {
 		c.cfg.MapFiles.Modified(key)
 		utils.LogErr(c.frontendTCPRequestRuleCreate(FrontendSSL, tcpRule))
 	}
 	// PROXY_PROTCOL
-	if len(c.cfg.TCPRequests[PROXY_PROTOCOL]) > 0 {
-		utils.LogErr(c.frontendTCPRequestRuleCreate(FrontendSSL, c.cfg.TCPRequests[PROXY_PROTOCOL][0]))
+	if len(c.cfg.FrontendTCPRules[PROXY_PROTOCOL]) > 0 {
+		utils.LogErr(c.frontendTCPRequestRuleCreate(FrontendSSL, c.cfg.FrontendTCPRules[PROXY_PROTOCOL][0]))
 	}
 	return true
 }

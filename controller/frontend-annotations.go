@@ -56,8 +56,8 @@ func (c *HAProxyController) handleBlacklisting(ingress *Ingress) error {
 	key := hashStrToUint(fmt.Sprintf("%s-%s", BLACKLIST, annBlacklist.Value))
 	if status != EMPTY {
 		mapFiles.Modified(key)
-		c.cfg.HTTPRequestsStatus = MODIFIED
-		c.cfg.TCPRequestsStatus = MODIFIED
+		c.cfg.FrontendRulesStatus[HTTP] = MODIFIED
+		c.cfg.FrontendRulesStatus[TCP] = MODIFIED
 		if status == DELETED {
 			return nil
 		}
@@ -81,8 +81,8 @@ func (c *HAProxyController) handleBlacklisting(ingress *Ingress) error {
 		Cond:     "if",
 		CondTest: fmt.Sprintf("{ req_ssl_sni -f %s } { src %s }", mapFile, value),
 	}
-	c.cfg.HTTPRequests[BLACKLIST][key] = httpRule
-	c.cfg.TCPRequests[BLACKLIST][key] = tcpRule
+	c.cfg.FrontendHTTPRules[BLACKLIST][key] = httpRule
+	c.cfg.FrontendTCPRules[BLACKLIST][key] = tcpRule
 
 	return nil
 }
@@ -126,7 +126,7 @@ func (c *HAProxyController) handleHTTPRedirect(ingress *Ingress) error {
 		if enabled {
 			delete(sslRedirectEnabled, ingress.Namespace+ingress.Name)
 			mapFiles.Modified(key)
-			c.cfg.HTTPRequestsStatus = MODIFIED
+			c.cfg.FrontendRulesStatus[HTTP] = MODIFIED
 		}
 		return nil
 	}
@@ -144,11 +144,11 @@ func (c *HAProxyController) handleHTTPRedirect(ingress *Ingress) error {
 		Cond:       "if",
 		CondTest:   fmt.Sprintf("{ req.hdr(Host) -f %s } !{ ssl_fc }", mapFile),
 	}
-	c.cfg.HTTPRequests[SSL_REDIRECT][key] = httpRule
+	c.cfg.FrontendHTTPRules[SSL_REDIRECT][key] = httpRule
 
 	if !enabled {
 		mapFiles.Modified(key)
-		c.cfg.HTTPRequestsStatus = MODIFIED
+		c.cfg.FrontendRulesStatus[HTTP] = MODIFIED
 		sslRedirectEnabled[ingress.Namespace+ingress.Name] = struct{}{}
 	}
 	return nil
@@ -176,7 +176,7 @@ func (c *HAProxyController) handleProxyProtocol() error {
 	// Since this is a Configmap Annotation ONLY, no need to
 	// track ingress hosts in Map file
 	if status != EMPTY {
-		c.cfg.TCPRequestsStatus = MODIFIED
+		c.cfg.FrontendRulesStatus[TCP] = MODIFIED
 		if status == DELETED {
 			return nil
 		}
@@ -189,7 +189,7 @@ func (c *HAProxyController) handleProxyProtocol() error {
 		Cond:     "if",
 		CondTest: fmt.Sprintf("{ src %s }", value),
 	}
-	c.cfg.TCPRequests[PROXY_PROTOCOL][0] = tcpRule
+	c.cfg.FrontendTCPRules[PROXY_PROTOCOL][0] = tcpRule
 
 	return nil
 }
@@ -227,7 +227,7 @@ func (c *HAProxyController) handleRateLimiting(ingress *Ingress) error {
 	if status != EMPTY {
 		mapFiles.Modified(reqsKey)
 		mapFiles.Modified(trackKey)
-		c.cfg.HTTPRequestsStatus = MODIFIED
+		c.cfg.FrontendRulesStatus[HTTP] = MODIFIED
 		if status == DELETED {
 			delete(rateLimitTables, tableName)
 			return nil
@@ -258,8 +258,8 @@ func (c *HAProxyController) handleRateLimiting(ingress *Ingress) error {
 		Cond:       "if",
 		CondTest:   fmt.Sprintf("{ req.hdr(Host) -f %s } { sc0_http_req_rate(%s) gt %d }", reqsMapFile, tableName, reqsLimit),
 	}
-	c.cfg.HTTPRequests[RATE_LIMIT][trackKey] = httpTrackRule
-	c.cfg.HTTPRequests[RATE_LIMIT][reqsKey] = httpDenyRule
+	c.cfg.FrontendHTTPRules[RATE_LIMIT][trackKey] = httpTrackRule
+	c.cfg.FrontendHTTPRules[RATE_LIMIT][reqsKey] = httpDenyRule
 	return nil
 }
 
@@ -294,8 +294,8 @@ func (c *HAProxyController) handleRequestCapture(ingress *Ingress) error {
 		key := hashStrToUint(fmt.Sprintf("%s-%s-%d", REQUEST_CAPTURE, sample, captureLen))
 		if status != EMPTY {
 			mapFiles.Modified(key)
-			c.cfg.HTTPRequestsStatus = MODIFIED
-			c.cfg.TCPRequestsStatus = MODIFIED
+			c.cfg.FrontendRulesStatus[HTTP] = MODIFIED
+			c.cfg.FrontendRulesStatus[TCP] = MODIFIED
 			if status == DELETED {
 				break
 			}
@@ -320,8 +320,8 @@ func (c *HAProxyController) handleRequestCapture(ingress *Ingress) error {
 			Cond:     "if",
 			CondTest: fmt.Sprintf("{ req_ssl_sni -f %s }", mapFile),
 		}
-		c.cfg.HTTPRequests[REQUEST_CAPTURE][key] = httpRule
-		c.cfg.TCPRequests[REQUEST_CAPTURE][key] = tcpRule
+		c.cfg.FrontendHTTPRules[REQUEST_CAPTURE][key] = httpRule
+		c.cfg.FrontendTCPRules[REQUEST_CAPTURE][key] = tcpRule
 	}
 
 	return err
@@ -346,7 +346,7 @@ func (c *HAProxyController) handleRequestSetHdr(ingress *Ingress) error {
 		key := hashStrToUint(fmt.Sprintf("%s-%s-%s", REQUEST_SET_HEADER, parts[0], parts[1]))
 		if status != EMPTY {
 			mapFiles.Modified(key)
-			c.cfg.HTTPRequestsStatus = MODIFIED
+			c.cfg.FrontendRulesStatus[HTTP] = MODIFIED
 			if status == DELETED {
 				break
 			}
@@ -364,7 +364,7 @@ func (c *HAProxyController) handleRequestSetHdr(ingress *Ingress) error {
 			Cond:      "if",
 			CondTest:  fmt.Sprintf("{ req.hdr(Host) -f %s }", mapFile),
 		}
-		c.cfg.HTTPRequests[REQUEST_SET_HEADER][key] = httpRule
+		c.cfg.FrontendHTTPRules[REQUEST_SET_HEADER][key] = httpRule
 	}
 
 	return err
@@ -391,8 +391,8 @@ func (c *HAProxyController) handleWhitelisting(ingress *Ingress) error {
 	key := hashStrToUint(fmt.Sprintf("%s-%s", WHITELIST, annWhitelist.Value))
 	if status != EMPTY {
 		mapFiles.Modified(key)
-		c.cfg.HTTPRequestsStatus = MODIFIED
-		c.cfg.TCPRequestsStatus = MODIFIED
+		c.cfg.FrontendRulesStatus[HTTP] = MODIFIED
+		c.cfg.FrontendRulesStatus[TCP] = MODIFIED
 		if status == DELETED {
 			return nil
 		}
@@ -416,8 +416,8 @@ func (c *HAProxyController) handleWhitelisting(ingress *Ingress) error {
 		Cond:     "if",
 		CondTest: fmt.Sprintf("{ req_ssl_sni -f %s } !{ src %s }", mapFile, value),
 	}
-	c.cfg.HTTPRequests[WHITELIST][key] = httpRule
-	c.cfg.TCPRequests[WHITELIST][key] = tcpRule
+	c.cfg.FrontendHTTPRules[WHITELIST][key] = httpRule
+	c.cfg.FrontendTCPRules[WHITELIST][key] = tcpRule
 
 	return nil
 }

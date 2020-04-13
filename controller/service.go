@@ -162,7 +162,7 @@ func (c *HAProxyController) handleService(namespace *Namespace, ingress *Ingress
 			Mode: mode,
 		}
 		if path.IsTCPService || path.IsSSLPassthrough {
-			backend.Mode = string(ModeTCP)
+			backend.Mode = string(TCP)
 		}
 		if err = c.backendCreate(backend); err != nil {
 			return "", true, reload, err

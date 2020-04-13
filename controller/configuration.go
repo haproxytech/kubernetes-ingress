@@ -37,10 +37,9 @@ type Configuration struct {
 	ConfigMapTCPServices   *ConfigMap
 	PublishService         *Service
 	MapFiles               haproxy.Maps
-	HTTPRequests           map[Rule]HTTPRequestRules
-	HTTPRequestsStatus     Status
-	TCPRequests            map[Rule]TCPRequestRules
-	TCPRequestsStatus      Status
+	FrontendHTTPRules      map[Rule]FrontendHTTPReqs
+	FrontendTCPRules       map[Rule]FrontendTCPReqs
+	FrontendRulesStatus    map[Mode]Status
 	BackendSwitchingRules  map[string]UseBackendRules
 	BackendSwitchingStatus map[string]struct{}
 	HTTPS                  bool
@@ -89,20 +88,22 @@ func (c *Configuration) Init(osArgs utils.OSArgs, mapDir string) {
 
 	c.Namespace = make(map[string]*Namespace)
 
-	c.HTTPRequests = make(map[Rule]HTTPRequestRules)
+	c.FrontendHTTPRules = make(map[Rule]FrontendHTTPReqs)
 	for _, rule := range []Rule{BLACKLIST, SSL_REDIRECT, RATE_LIMIT, REQUEST_CAPTURE, REQUEST_SET_HEADER, WHITELIST} {
-		c.HTTPRequests[rule] = make(map[uint64]models.HTTPRequestRule)
+		c.FrontendHTTPRules[rule] = make(map[uint64]models.HTTPRequestRule)
 	}
-	c.TCPRequests = make(map[Rule]TCPRequestRules)
+	c.FrontendTCPRules = make(map[Rule]FrontendTCPReqs)
 	for _, rule := range []Rule{BLACKLIST, REQUEST_CAPTURE, PROXY_PROTOCOL, WHITELIST} {
-		c.TCPRequests[rule] = make(map[uint64]models.TCPRequestRule)
+		c.FrontendTCPRules[rule] = make(map[uint64]models.TCPRequestRule)
 	}
-	c.HTTPRequestsStatus = EMPTY
-	c.TCPRequestsStatus = EMPTY
+	c.FrontendRulesStatus = map[Mode]Status{
+		HTTP: EMPTY,
+		TCP:  EMPTY,
+	}
+	c.MapFiles = haproxy.NewMapFiles(mapDir)
+
 	sslRedirectEnabled = make(map[string]struct{})
 	rateLimitTables = make(map[string]rateLimitTable)
-
-	c.MapFiles = haproxy.NewMapFiles(mapDir)
 
 	c.BackendSwitchingRules = make(map[string]UseBackendRules)
 	c.BackendSwitchingStatus = make(map[string]struct{})
@@ -235,14 +236,14 @@ func (c *Configuration) Clean() {
 		}
 	}
 	c.MapFiles.Clean()
-	for rule := range c.HTTPRequests {
-		c.HTTPRequests[rule] = make(map[uint64]models.HTTPRequestRule)
+	for rule := range c.FrontendHTTPRules {
+		c.FrontendHTTPRules[rule] = make(map[uint64]models.HTTPRequestRule)
 	}
-	for rule := range c.TCPRequests {
-		c.TCPRequests[rule] = make(map[uint64]models.TCPRequestRule)
+	for rule := range c.FrontendTCPRules {
+		c.FrontendTCPRules[rule] = make(map[uint64]models.TCPRequestRule)
 	}
-	c.HTTPRequestsStatus = EMPTY
-	c.TCPRequestsStatus = EMPTY
+	c.FrontendRulesStatus[HTTP] = EMPTY
+	c.FrontendRulesStatus[TCP] = EMPTY
 	defaultAnnotationValues.Clean()
 	if c.PublishService != nil {
 		c.PublishService.Status = EMPTY
