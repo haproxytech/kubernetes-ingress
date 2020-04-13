@@ -32,6 +32,7 @@ Options for starting controller can be found in [controller.md](controller.md)
 | [request-capture-len](#request-capture) | number | 128 |  |:large_blue_circle:|:large_blue_circle:|:white_circle:|
 | [request-set-header](#request-set-header) | string |  |  |:large_blue_circle:|:large_blue_circle:|:white_circle:|
 | [server-ssl](#server-ssl) | ["true", "false"] | "false" |  |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:|
+| [set-host](#set-host) | string |  |  |:white_circle:|:large_blue_circle:|:large_blue_circle:|
 | [servers-increment](#servers-slots-increment) | number | "42" |  |:large_blue_circle:|:white_circle:|:white_circle:|
 | [ssl-certificate](#tls-secret) | string |  |  |:large_blue_circle:|:white_circle:|:white_circle:|
 | [ssl-passthrough](#https) | ["true", "false"] | "false" |  |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:|
@@ -142,7 +143,7 @@ More information can be found in the official HAProxy [documentation](https://cb
     ```
     - Example:
     ```
-    request-set-header: Host example.com
+    request-set-header: Ingress-id Ienai6ohdoh9
     ```
   - Multiple values:
     - Usage:
@@ -157,6 +158,19 @@ More information can be found in the official HAProxy [documentation](https://cb
       Strict-Transport-Security "max-age=31536000"
       Cache-Control "no-store,no-cache,private"
     ```
+- **NB**: This sets header before HAProxy does any service/backend dispatch.
+          So in the case you want to change the Host header this will impact
+          HAProxy decision on which service/backend to use (based on matching Host against ingress rules).
+          In order to set the Host header after service selection, use [set-host](#set-host) annotation.
+
+#### Set Host
+- Annotation `set-host`
+  - Usage:
+  ```
+  set-host: example.com
+  ```
+- This lets you set a specific Host header before sending the request to the service (or backend server in HAProxy terms).
+
 #### Ingress Class
 
 - Annotation: `ingress.class`

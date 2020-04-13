@@ -41,6 +41,8 @@ const (
 	//nolint
 	RATE_LIMIT Rule = "rate-limit"
 	//nolint
+	SET_HOST Rule = "set-host"
+	//nolint
 	SSL_REDIRECT Rule = "ssl-redirect"
 	//nolint
 	PROXY_PROTOCOL Rule = "proxy-protocol"

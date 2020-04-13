@@ -61,7 +61,7 @@ func (c *HAProxyController) handleSSLPassthrough(ingress *Ingress, service *Serv
 func (c *HAProxyController) handleBackendAnnotations(ingress *Ingress, service *Service, backendModel *models.Backend, newBackend bool) (activeAnnotations bool) {
 	activeAnnotations = false
 	backend := haproxy.Backend(*backendModel)
-	backendAnnotations := make(map[string]*StringW, 5)
+	backendAnnotations := make(map[string]*StringW, 7)
 
 	backendAnnotations["abortonclose"], _ = GetValueFromAnnotations("abortonclose", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
 	backendAnnotations["cookie-persistence"], _ = GetValueFromAnnotations("cookie-persistence", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
@@ -70,6 +70,7 @@ func (c *HAProxyController) handleBackendAnnotations(ingress *Ingress, service *
 	if backend.Mode == "http" {
 		backendAnnotations["check-http"], _ = GetValueFromAnnotations("check-http", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
 		backendAnnotations["forwarded-for"], _ = GetValueFromAnnotations("forwarded-for", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
+		backendAnnotations["set-host"], _ = GetValueFromAnnotations("set-host", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
 	}
 
 	// The DELETED status of an annotation is handled explicitly
@@ -117,6 +118,21 @@ func (c *HAProxyController) handleBackendAnnotations(ingress *Ingress, service *
 					continue
 				}
 				activeAnnotations = true
+			case "set-host":
+				httpReqs := c.getBackendHTTPReqs(backend.Name)
+				delete(httpReqs.rules, SET_HOST)
+				if v.Status != DELETED || newBackend {
+					httpRule := models.HTTPRequestRule{
+						Index:     utils.PtrInt64(0),
+						Type:      "set-header",
+						HdrName:   "Host",
+						HdrFormat: v.Value,
+					}
+					httpReqs.rules[SET_HOST] = httpRule
+				}
+				httpReqs.modified = true
+				activeAnnotations = true
+				c.cfg.BackendHTTPRules[backend.Name] = httpReqs
 			case "timeout-check":
 				if v.Status == DELETED && !newBackend {
 					backend.CheckTimeout = nil
@@ -265,4 +281,16 @@ func (c *HAProxyController) handleCookieAnnotations(ingress *Ingress, service *S
 		}
 	}
 	return cookie
+}
+
+func (c *HAProxyController) getBackendHTTPReqs(backend string) BackendHTTPReqs {
+	httpReqs, ok := c.cfg.BackendHTTPRules[backend]
+	if !ok {
+		c.cfg.BackendHTTPRules[backend] = BackendHTTPReqs{
+			modified: false,
+			rules:    make(map[Rule]models.HTTPRequestRule),
+		}
+		return c.cfg.BackendHTTPRules[backend]
+	}
+	return httpReqs
 }
