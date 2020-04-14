@@ -61,6 +61,19 @@ func (c *HAProxyController) backendDelete(backendName string) error {
 	return c.NativeAPI.Configuration.DeleteBackend(backendName, c.ActiveTransaction, 0)
 }
 
+func (c *HAProxyController) backendHTTPRequestRuleCreate(backend string, rule models.HTTPRequestRule) error {
+	c.ActiveTransactionHasChanges = true
+	return c.NativeAPI.Configuration.CreateHTTPRequestRule("backend", backend, &rule, c.ActiveTransaction, 0)
+}
+
+func (c *HAProxyController) backendHTTPRequestRuleDeleteAll(backend string) {
+	c.ActiveTransactionHasChanges = true
+	var err error
+	for err == nil {
+		err = c.NativeAPI.Configuration.DeleteHTTPRequestRule(0, "backend", backend, c.ActiveTransaction, 0)
+	}
+}
+
 func (c *HAProxyController) backendServerCreate(backendName string, data models.Server) error {
 	c.ActiveTransactionHasChanges = true
 	return c.NativeAPI.Configuration.CreateServer(backendName, &data, c.ActiveTransaction, 0)

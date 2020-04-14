@@ -42,6 +42,7 @@ type Configuration struct {
 	FrontendRulesStatus    map[Mode]Status
 	BackendSwitchingRules  map[string]UseBackendRules
 	BackendSwitchingStatus map[string]struct{}
+	BackendHTTPRules       map[string]BackendHTTPReqs
 	HTTPS                  bool
 	SSLPassthrough         bool
 }
@@ -110,6 +111,7 @@ func (c *Configuration) Init(osArgs utils.OSArgs, mapDir string) {
 	for _, frontend := range []string{FrontendHTTP, FrontendHTTPS, FrontendSSL} {
 		c.BackendSwitchingRules[frontend] = UseBackendRules{}
 	}
+	c.BackendHTTPRules = make(map[string]BackendHTTPReqs)
 }
 
 //GetNamespace returns Namespace. Creates one if not existing

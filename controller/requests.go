@@ -23,6 +23,10 @@ import (
 
 type FrontendHTTPReqs map[uint64]models.HTTPRequestRule
 type FrontendTCPReqs map[uint64]models.TCPRequestRule
+type BackendHTTPReqs struct {
+	modified bool
+	rules    map[Rule]models.HTTPRequestRule
+}
 
 type Rule string
 
@@ -185,4 +189,23 @@ func (c *HAProxyController) FrontendTCPreqsRefresh() (reload bool) {
 		utils.LogErr(c.frontendTCPRequestRuleCreate(FrontendSSL, c.cfg.FrontendTCPRules[PROXY_PROTOCOL][0]))
 	}
 	return true
+}
+
+func (c *HAProxyController) BackendHTTPReqsRefresh() (reload bool) {
+	for backendName, httpReqs := range c.cfg.BackendHTTPRules {
+		if httpReqs.modified {
+			reload = true
+			c.backendHTTPRequestRuleDeleteAll(backendName)
+			if len(httpReqs.rules) == 0 {
+				delete(c.cfg.BackendHTTPRules, backendName)
+			} else {
+				for _, httpRule := range httpReqs.rules {
+					utils.LogErr(c.backendHTTPRequestRuleCreate(backendName, httpRule))
+				}
+			}
+			httpReqs.modified = false
+			c.cfg.BackendHTTPRules[backendName] = httpReqs
+		}
+	}
+	return reload
 }
