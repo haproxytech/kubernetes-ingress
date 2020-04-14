@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM golang:1.13.9-alpine AS builder
+FROM golang:1.14.2-alpine AS builder
 
 RUN apk --no-cache add git openssh
 
