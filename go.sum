@@ -80,6 +80,8 @@ github.com/haproxytech/client-native v1.2.7-0.20200330170342-148289fdd0fd h1:hc6
 github.com/haproxytech/client-native v1.2.7-0.20200330170342-148289fdd0fd/go.mod h1:9KMAKnD63RHOS7Pbqb07wUpc4S0vyHoZ/BxWOQybQNU=
 github.com/haproxytech/client-native v1.2.7-0.20200331172134-ea6e2ed6a97c h1:EvCU87xzphOTqX8DmICo37VRN+bdN3C8cOUkmDX96hU=
 github.com/haproxytech/client-native v1.2.7-0.20200331172134-ea6e2ed6a97c/go.mod h1:5EYS/hpavQl9M37DLcllGL1oP0csNwxOvWooBn3x0xs=
+github.com/haproxytech/client-native v1.2.7-0.20200414104124-140ddf161808 h1:SV8njQBt8KFU8qyrgHWljZeWhBcJfuce/3vCx2FUndQ=
+github.com/haproxytech/client-native v1.2.7-0.20200414104124-140ddf161808/go.mod h1:5U2zQ/eCNSAhmT3mj36dVtxXAxXp0Csp3D4atiowdtc=
 github.com/haproxytech/config-parser v1.1.10 h1:dcqTi/3W1VDiPHvH5ASL1uV8YWMNaNI7XEmHZNT0kCg=
 github.com/haproxytech/config-parser v1.1.10/go.mod h1:se7v728KDunj+qz1kXFFFl+nDuoBdUaN5eYSi+gYjNM=
 github.com/haproxytech/config-parser v1.2.0 h1:CxiGZ2Camy8+SdKW6/fIhXzB+Nqlf8AY+/t+M8Ht8L4=
