@@ -314,11 +314,13 @@ func (c *HAProxyController) handleRequestCapture(ingress *Ingress) error {
 			CondTest:      fmt.Sprintf("{ req.hdr(Host) -f %s }", mapFile),
 		}
 		tcpRule := models.TCPRequestRule{
-			Index:    utils.PtrInt64(0),
-			Type:     "content",
-			Action:   "capture " + sample + " len " + strconv.FormatInt(captureLen, 10),
-			Cond:     "if",
-			CondTest: fmt.Sprintf("{ req_ssl_sni -f %s }", mapFile),
+			Index:      utils.PtrInt64(0),
+			Type:       "content",
+			Action:     "capture",
+			CaptureLen: captureLen,
+			Expr:       sample,
+			Cond:       "if",
+			CondTest:   fmt.Sprintf("{ req_ssl_sni -f %s }", mapFile),
 		}
 		c.cfg.FrontendHTTPRules[REQUEST_CAPTURE][key] = httpRule
 		c.cfg.FrontendTCPRules[REQUEST_CAPTURE][key] = tcpRule

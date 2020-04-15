@@ -166,9 +166,12 @@ func (c *HAProxyController) FrontendTCPreqsRefresh() (reload bool) {
 	}
 	// STATIC: Set-var rule used to log SNI
 	err = c.frontendTCPRequestRuleCreate(FrontendSSL, models.TCPRequestRule{
-		Index:  utils.PtrInt64(0),
-		Action: "set-var(sess.sni) req_ssl_sni",
-		Type:   "content",
+		Index:    utils.PtrInt64(0),
+		Action:   "set-var",
+		VarName:  "sni",
+		VarScope: "sess",
+		Expr:     "req_ssl_sni",
+		Type:     "content",
 	})
 	utils.LogErr(err)
 	// STATIC: Inspect delay
