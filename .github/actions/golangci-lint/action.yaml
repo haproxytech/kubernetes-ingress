@@ -1,0 +1,5 @@
+name: golangci-lint
+description: Wraps golangci-lint as a GitHub action
+runs:
+  using: docker
+  image: Dockerfile

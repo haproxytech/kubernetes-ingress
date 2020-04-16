@@ -196,7 +196,7 @@ func (c *HAProxyController) handleDefaultMaxconn() bool {
 			utils.LogErr(err)
 			return false
 		}
-		log.Println(fmt.Sprintf("Removing default maxconn"))
+		log.Println("Removing default maxconn")
 	default:
 		err = config.Set(parser.Defaults, parser.DefaultSectionName, "maxconn", types.Int64C{
 			Value: value,
