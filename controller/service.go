@@ -130,7 +130,7 @@ func (c *HAProxyController) handleService(namespace *Namespace, ingress *Ingress
 	// rules are left for the backend in question.
 	// This is done via c.refreshBackendSwitching
 	if status == DELETED {
-		key := fmt.Sprintf("R%s%s%s%s", namespace.Name, ingress.Name, rule.Host, path.Path)
+		key := fmt.Sprintf("%s-%s-%s-%s", rule.Host, path.Path, namespace.Name, ingress.Name)
 		switch {
 		case path.IsSSLPassthrough:
 			c.deleteUseBackendRule(key, FrontendSSL)
@@ -187,7 +187,7 @@ func (c *HAProxyController) handleService(namespace *Namespace, ingress *Ingress
 	}
 
 	// Update backendSwitching
-	key := fmt.Sprintf("R%s%s%s%s", namespace.Name, ingress.Name, rule.Host, path.Path)
+	key := fmt.Sprintf("%s-%s-%s-%s", rule.Host, path.Path, namespace.Name, ingress.Name)
 	useBackendRule := UseBackendRule{
 		Host:      rule.Host,
 		Path:      path.Path,
