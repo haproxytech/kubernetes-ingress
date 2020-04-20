@@ -117,7 +117,7 @@ func (c *HAProxyController) handleSyslog() (restart, reload bool) {
 				}
 			}
 			errParser = config.Insert(parser.Global, parser.GlobalSectionName, "log", logData, index)
-			if errParser != nil {
+			if errParser == nil {
 				c.ActiveTransactionHasChanges = true
 				reload = true
 			}
