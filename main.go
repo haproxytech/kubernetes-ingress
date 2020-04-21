@@ -27,12 +27,9 @@ import (
 	"github.com/jessevdk/go-flags"
 )
 
-func main() {
+var cfgDir string
 
-	c.HAProxyCFG = "/etc/haproxy/haproxy.cfg"
-	c.HAProxyCertDir = "/etc/haproxy/certs/"
-	c.HAProxyStateDir = "/var/state/haproxy/"
-	c.HAProxyMapDir = "/etc/haproxy/maps/"
+func main() {
 
 	var osArgs utils.OSArgs
 	var parser = flags.NewParser(&osArgs, flags.IgnoreUnknown)
@@ -88,10 +85,13 @@ func main() {
 		cancel()
 	}()
 
+	cfgDir = "/etc/haproxy/"
 	if osArgs.Test {
 		setupTestEnv()
 	}
 
-	controller := c.HAProxyController{}
+	controller := c.HAProxyController{
+		HAProxyCfgDir: cfgDir,
+	}
 	controller.Start(ctx, osArgs)
 }

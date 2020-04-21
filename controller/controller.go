@@ -39,6 +39,7 @@ type HAProxyController struct {
 	NativeAPI                   *clientnative.HAProxyClient
 	ActiveTransaction           string
 	ActiveTransactionHasChanges bool
+	HAProxyCfgDir               string
 	eventChan                   chan SyncDataEvent
 	serverlessPods              map[string]int
 }
@@ -204,18 +205,26 @@ func (c *HAProxyController) updateHAProxy() error {
 
 //HAProxyInitialize runs HAProxy for the first time so native client can have access to it
 func (c *HAProxyController) haproxyInitialize() {
-	//cmd := exec.Command("haproxy", "-f", HAProxyCFG)
-	err := os.MkdirAll(HAProxyCertDir, 0755)
-	if err != nil {
+	if HAProxyCFG == "" {
+		HAProxyCFG = filepath.Join(c.HAProxyCfgDir, "haproxy.cfg")
+	}
+	if _, err := os.Stat(HAProxyCFG); err != nil {
 		utils.PanicErr(err)
 	}
-	err = os.MkdirAll(HAProxyStateDir, 0755)
-	if err != nil {
-		utils.PanicErr(err)
+	if HAProxyCertDir == "" {
+		HAProxyCertDir = filepath.Join(c.HAProxyCfgDir, "certs")
 	}
-	err = os.MkdirAll(HAProxyMapDir, 0755)
-	if err != nil {
-		utils.PanicErr(err)
+	if HAProxyMapDir == "" {
+		HAProxyMapDir = filepath.Join(c.HAProxyCfgDir, "maps")
+	}
+	if HAProxyStateDir == "" {
+		HAProxyStateDir = "/var/state/haproxy/"
+	}
+	for _, d := range []string{HAProxyCertDir, HAProxyMapDir, HAProxyStateDir} {
+		err := os.MkdirAll(d, 0755)
+		if err != nil {
+			utils.PanicErr(err)
+		}
 	}
 
 	cmd := exec.Command("sh", "-c", "haproxy -v")

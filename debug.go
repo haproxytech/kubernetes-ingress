@@ -33,13 +33,10 @@ const (
 
 func setupTestEnv() {
 	log.Printf("Running in test env")
-	err := os.MkdirAll(TestFolderPath, 0755)
+	cfgDir = path.Join(TestFolderPath, cfgDir)
+	err := os.MkdirAll(cfgDir, 0755)
 	utils.LogErr(err)
 	time.Sleep(2 * time.Second)
-	c.HAProxyCFG = path.Join(TestFolderPath, c.HAProxyCFG)
-	c.HAProxyCertDir = path.Join(TestFolderPath, c.HAProxyCertDir)
-	c.HAProxyStateDir = path.Join(TestFolderPath, c.HAProxyStateDir)
-	c.HAProxyMapDir = path.Join(TestFolderPath, c.HAProxyMapDir)
 	cmd := exec.Command("pwd")
 	out, err := cmd.CombinedOutput()
 	if err != nil {
