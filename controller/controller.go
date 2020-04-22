@@ -15,13 +15,16 @@
 package controller
 
 import (
+	"bufio"
 	"context"
 	"fmt"
 	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
+	"syscall"
 
 	clientnative "github.com/haproxytech/client-native"
 	"github.com/haproxytech/client-native/configuration"
@@ -50,6 +53,27 @@ func (c *HAProxyController) ActiveConfiguration() (*parser.Parser, error) {
 		return nil, fmt.Errorf("no active transaction")
 	}
 	return c.NativeAPI.Configuration.GetParser(c.ActiveTransaction)
+}
+
+// Rreturn HAProxy master process if it exists.
+func (c *HAProxyController) HAProxyProcess() (*os.Process, error) {
+	file, err := os.Open(HAProxyPIDFile)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+	scanner := bufio.NewScanner(file)
+	scanner.Scan()
+	pid, err := strconv.Atoi(scanner.Text())
+	if err != nil {
+		return nil, err
+	}
+	process, err := os.FindProcess(pid)
+	if err != nil {
+		return nil, err
+	}
+	err = process.Signal(syscall.Signal(0))
+	return process, err
 }
 
 // Start initialize and run HAProxyController
@@ -208,6 +232,9 @@ func (c *HAProxyController) haproxyInitialize() {
 	if HAProxyCFG == "" {
 		HAProxyCFG = filepath.Join(c.HAProxyCfgDir, "haproxy.cfg")
 	}
+	if HAProxyPIDFile == "" {
+		HAProxyPIDFile = "/var/run/haproxy.pid"
+	}
 	if _, err := os.Stat(HAProxyCFG); err != nil {
 		utils.PanicErr(err)
 	}
@@ -269,24 +296,55 @@ func (c *HAProxyController) haproxyInitialize() {
 
 }
 
-// Handle HAProxy system service
+// Handle HAProxy daemon via Master process
 func (c *HAProxyController) haproxyService(action string) (err error) {
 	if c.osArgs.Test {
 		log.Println("HAProxy would be reload" + action + "ed now")
 		return nil
 	}
+
+	var cmd *exec.Cmd
+	// if processErr is nil, process variable will automatically
+	// hold information about a running Master HAproxy process
+	process, processErr := c.HAProxyProcess()
+
 	switch action {
-	case "reload", "restart":
-		utils.LogErr(c.saveServerState())
 	case "start":
+		if processErr == nil {
+			utils.LogErr(fmt.Errorf("haproxy is already running"))
+			return nil
+		}
+		cmd = exec.Command("haproxy", "-W", "-f", HAProxyCFG, "-p", HAProxyPIDFile)
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		return cmd.Start()
+	case "stop":
+		if processErr != nil {
+			utils.LogErr(fmt.Errorf("haproxy  already stopped"))
+			return processErr
+		}
+		return process.Signal(syscall.SIGUSR1)
+	case "reload":
+		utils.LogErr(c.saveServerState())
+		if processErr != nil {
+			utils.LogErr(fmt.Errorf("haproxy is not running, trying to start it"))
+			return c.haproxyService("start")
+		}
+		return process.Signal(syscall.SIGUSR2)
+	case "restart":
+		utils.LogErr(c.saveServerState())
+		if processErr != nil {
+			utils.LogErr(fmt.Errorf("haproxy is not running, trying to start it"))
+			return c.haproxyService("start")
+		}
+		pid := strconv.Itoa(process.Pid)
+		cmd = exec.Command("haproxy", "-W", "-f", HAProxyCFG, "-p", HAProxyPIDFile, "-sf", pid)
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		return cmd.Start()
 	default:
 		return fmt.Errorf("unkown command '%s'", action)
 	}
-	cmd := exec.Command("service", "haproxy", action)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	err = cmd.Start()
-	return err
 }
 
 // Saves HAProxy servers state so it is retrieved after reload.

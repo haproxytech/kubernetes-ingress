@@ -29,6 +29,7 @@ var (
 	HAProxyCertDir  string
 	HAProxyStateDir string
 	HAProxyMapDir   string
+	HAProxyPIDFile  string
 )
 
 //ServicePort describes port of a service
