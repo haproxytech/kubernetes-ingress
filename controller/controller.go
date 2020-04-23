@@ -126,7 +126,7 @@ func (c *HAProxyController) updateHAProxy() error {
 		c.apiDisposeTransaction()
 	}()
 
-	reload, restart := c.handleGlobalAnnotations()
+	restart, reload := c.handleGlobalAnnotations()
 
 	r, err := c.handleDefaultService()
 	utils.LogErr(err)
