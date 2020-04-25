@@ -165,9 +165,22 @@ func (c *HAProxyController) frontendHTTPRequestRuleDeleteAll(frontend string) {
 	}
 }
 
+func (c *HAProxyController) frontendHTTPResponseRuleDeleteAll(frontend string) {
+	c.ActiveTransactionHasChanges = true
+	var err error
+	for err == nil {
+		err = c.NativeAPI.Configuration.DeleteHTTPResponseRule(0, "frontend", frontend, c.ActiveTransaction, 0)
+	}
+}
+
 func (c *HAProxyController) frontendHTTPRequestRuleCreate(frontend string, rule models.HTTPRequestRule) error {
 	c.ActiveTransactionHasChanges = true
 	return c.NativeAPI.Configuration.CreateHTTPRequestRule("frontend", frontend, &rule, c.ActiveTransaction, 0)
+}
+
+func (c *HAProxyController) frontendHTTPResponseRuleCreate(frontend string, rule models.HTTPResponseRule) error {
+	c.ActiveTransactionHasChanges = true
+	return c.NativeAPI.Configuration.CreateHTTPResponseRule("frontend", frontend, &rule, c.ActiveTransaction, 0)
 }
 
 func (c *HAProxyController) frontendTCPRequestRuleDeleteAll(frontend string) {

@@ -81,7 +81,7 @@ func (c *HAProxyController) handleBlacklisting(ingress *Ingress) error {
 		Cond:     "if",
 		CondTest: fmt.Sprintf("{ req_ssl_sni -f %s } { src %s }", mapFile, value),
 	}
-	c.cfg.FrontendHTTPRules[BLACKLIST][key] = httpRule
+	c.cfg.FrontendHTTPReqRules[BLACKLIST][key] = httpRule
 	c.cfg.FrontendTCPRules[BLACKLIST][key] = tcpRule
 
 	return nil
@@ -144,7 +144,7 @@ func (c *HAProxyController) handleHTTPRedirect(ingress *Ingress) error {
 		Cond:       "if",
 		CondTest:   fmt.Sprintf("{ req.hdr(Host) -f %s } !{ ssl_fc }", mapFile),
 	}
-	c.cfg.FrontendHTTPRules[SSL_REDIRECT][key] = httpRule
+	c.cfg.FrontendHTTPReqRules[SSL_REDIRECT][key] = httpRule
 
 	if !enabled {
 		mapFiles.Modified(key)
@@ -258,8 +258,8 @@ func (c *HAProxyController) handleRateLimiting(ingress *Ingress) error {
 		Cond:       "if",
 		CondTest:   fmt.Sprintf("{ req.hdr(Host) -f %s } { sc0_http_req_rate(%s) gt %d }", reqsMapFile, tableName, reqsLimit),
 	}
-	c.cfg.FrontendHTTPRules[RATE_LIMIT][trackKey] = httpTrackRule
-	c.cfg.FrontendHTTPRules[RATE_LIMIT][reqsKey] = httpDenyRule
+	c.cfg.FrontendHTTPReqRules[RATE_LIMIT][trackKey] = httpTrackRule
+	c.cfg.FrontendHTTPReqRules[RATE_LIMIT][reqsKey] = httpDenyRule
 	return nil
 }
 
@@ -322,7 +322,7 @@ func (c *HAProxyController) handleRequestCapture(ingress *Ingress) error {
 			Cond:       "if",
 			CondTest:   fmt.Sprintf("{ req_ssl_sni -f %s }", mapFile),
 		}
-		c.cfg.FrontendHTTPRules[REQUEST_CAPTURE][key] = httpRule
+		c.cfg.FrontendHTTPReqRules[REQUEST_CAPTURE][key] = httpRule
 		c.cfg.FrontendTCPRules[REQUEST_CAPTURE][key] = tcpRule
 	}
 
@@ -366,7 +366,50 @@ func (c *HAProxyController) handleRequestSetHdr(ingress *Ingress) error {
 			Cond:      "if",
 			CondTest:  fmt.Sprintf("{ req.hdr(Host) -f %s }", mapFile),
 		}
-		c.cfg.FrontendHTTPRules[REQUEST_SET_HEADER][key] = httpRule
+		c.cfg.FrontendHTTPReqRules[REQUEST_SET_HEADER][key] = httpRule
+	}
+
+	return err
+}
+
+func (c *HAProxyController) handleResponseSetHdr(ingress *Ingress) error {
+	//  Get and validate annotations
+	annSetHdr, err := GetValueFromAnnotations("response-set-header", ingress.Annotations, c.cfg.ConfigMap.Annotations)
+	if annSetHdr == nil {
+		return nil
+	}
+
+	// Update rules
+	status := setStatus(ingress.Status, annSetHdr.Status)
+	mapFiles := c.cfg.MapFiles
+	for _, param := range strings.Split(annSetHdr.Value, "\n") {
+		parts := strings.Fields(param)
+		if len(parts) != 2 {
+			utils.LogErr(fmt.Errorf("incorrect value '%s' in response-set-header annotation", param))
+			continue
+		}
+		key := hashStrToUint(fmt.Sprintf("%s-%s-%s", RESPONSE_SET_HEADER, parts[0], parts[1]))
+		if status != EMPTY {
+			mapFiles.Modified(key)
+			c.cfg.FrontendRulesStatus[HTTP] = MODIFIED
+			if status == DELETED {
+				break
+			}
+		}
+		for hostname := range ingress.Rules {
+			mapFiles.AppendHost(key, hostname)
+		}
+
+		mapFile := path.Join(HAProxyMapDir, strconv.FormatUint(key, 10)) + ".lst"
+		httpRule := models.HTTPResponseRule{
+			Index:     utils.PtrInt64(0),
+			Type:      "set-header",
+			HdrName:   parts[0],
+			HdrFormat: parts[1],
+			Cond:      "if",
+			CondTest:  fmt.Sprintf("{ req.hdr(Host) -f %s }", mapFile),
+		}
+		c.cfg.FrontendHTTPRspRules[RESPONSE_SET_HEADER][key] = httpRule
 	}
 
 	return err
@@ -418,7 +461,7 @@ func (c *HAProxyController) handleWhitelisting(ingress *Ingress) error {
 		Cond:     "if",
 		CondTest: fmt.Sprintf("{ req_ssl_sni -f %s } !{ src %s }", mapFile, value),
 	}
-	c.cfg.FrontendHTTPRules[WHITELIST][key] = httpRule
+	c.cfg.FrontendHTTPReqRules[WHITELIST][key] = httpRule
 	c.cfg.FrontendTCPRules[WHITELIST][key] = tcpRule
 
 	return nil
