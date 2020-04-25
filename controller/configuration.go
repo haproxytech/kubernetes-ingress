@@ -37,7 +37,7 @@ type Configuration struct {
 	ConfigMapTCPServices   *ConfigMap
 	PublishService         *Service
 	MapFiles               haproxy.Maps
-	FrontendHTTPRules      map[Rule]FrontendHTTPReqs
+	FrontendHTTPReqRules   map[Rule]FrontendHTTPReqs
 	FrontendTCPRules       map[Rule]FrontendTCPReqs
 	FrontendRulesStatus    map[Mode]Status
 	BackendSwitchingRules  map[string]UseBackendRules
@@ -89,9 +89,9 @@ func (c *Configuration) Init(osArgs utils.OSArgs, mapDir string) {
 
 	c.Namespace = make(map[string]*Namespace)
 
-	c.FrontendHTTPRules = make(map[Rule]FrontendHTTPReqs)
+	c.FrontendHTTPReqRules = make(map[Rule]FrontendHTTPReqs)
 	for _, rule := range []Rule{BLACKLIST, SSL_REDIRECT, RATE_LIMIT, REQUEST_CAPTURE, REQUEST_SET_HEADER, WHITELIST} {
-		c.FrontendHTTPRules[rule] = make(map[uint64]models.HTTPRequestRule)
+		c.FrontendHTTPReqRules[rule] = make(map[uint64]models.HTTPRequestRule)
 	}
 	c.FrontendTCPRules = make(map[Rule]FrontendTCPReqs)
 	for _, rule := range []Rule{BLACKLIST, REQUEST_CAPTURE, PROXY_PROTOCOL, WHITELIST} {
@@ -238,8 +238,8 @@ func (c *Configuration) Clean() {
 		}
 	}
 	c.MapFiles.Clean()
-	for rule := range c.FrontendHTTPRules {
-		c.FrontendHTTPRules[rule] = make(map[uint64]models.HTTPRequestRule)
+	for rule := range c.FrontendHTTPReqRules {
+		c.FrontendHTTPReqRules[rule] = make(map[uint64]models.HTTPRequestRule)
 	}
 	for rule := range c.FrontendTCPRules {
 		c.FrontendTCPRules[rule] = make(map[uint64]models.TCPRequestRule)
