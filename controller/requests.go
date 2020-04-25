@@ -75,18 +75,18 @@ func (c *HAProxyController) FrontendHTTPReqsRefresh() (reload bool) {
 	}
 	utils.LogErr(c.frontendHTTPRequestRuleCreate(FrontendHTTPS, xforwardedprotoRule))
 	// SSL_REDIRECT
-	for key, httpRule := range c.cfg.FrontendHTTPRules[SSL_REDIRECT] {
+	for key, httpRule := range c.cfg.FrontendHTTPReqRules[SSL_REDIRECT] {
 		c.cfg.MapFiles.Modified(key)
 		utils.LogErr(c.frontendHTTPRequestRuleCreate(FrontendHTTP, httpRule))
 	}
 	for _, frontend := range []string{FrontendHTTP, FrontendHTTPS} {
 		// REQUEST_SET_HEADER
-		for key, httpRule := range c.cfg.FrontendHTTPRules[REQUEST_SET_HEADER] {
+		for key, httpRule := range c.cfg.FrontendHTTPReqRules[REQUEST_SET_HEADER] {
 			c.cfg.MapFiles.Modified(key)
 			utils.LogErr(c.frontendHTTPRequestRuleCreate(frontend, httpRule))
 		}
 		// REQUEST_CAPTURE
-		for key, httpRule := range c.cfg.FrontendHTTPRules[REQUEST_CAPTURE] {
+		for key, httpRule := range c.cfg.FrontendHTTPReqRules[REQUEST_CAPTURE] {
 			c.cfg.MapFiles.Modified(key)
 			utils.LogErr(c.frontendHTTPRequestRuleCreate(frontend, httpRule))
 		}
@@ -114,16 +114,16 @@ func (c *HAProxyController) FrontendHTTPReqsRefresh() (reload bool) {
 				utils.LogErr(err)
 			}
 		}
-		for key, httpRule := range c.cfg.FrontendHTTPRules[RATE_LIMIT] {
+		for key, httpRule := range c.cfg.FrontendHTTPReqRules[RATE_LIMIT] {
 			c.cfg.MapFiles.Modified(key)
 			utils.LogErr(c.frontendHTTPRequestRuleCreate(frontend, httpRule))
 		}
 		// BLACKLIST
-		for _, httpRule := range c.cfg.FrontendHTTPRules[BLACKLIST] {
+		for _, httpRule := range c.cfg.FrontendHTTPReqRules[BLACKLIST] {
 			utils.LogErr(c.frontendHTTPRequestRuleCreate(frontend, httpRule))
 		}
 		// WHITELIST
-		for _, httpRule := range c.cfg.FrontendHTTPRules[WHITELIST] {
+		for _, httpRule := range c.cfg.FrontendHTTPReqRules[WHITELIST] {
 			utils.LogErr(c.frontendHTTPRequestRuleCreate(frontend, httpRule))
 		}
 	}
