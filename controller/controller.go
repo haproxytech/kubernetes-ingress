@@ -144,6 +144,7 @@ func (c *HAProxyController) updateHAProxy() error {
 			utils.LogErr(c.handleRateLimiting(ingress))
 			utils.LogErr(c.handleRequestCapture(ingress))
 			utils.LogErr(c.handleRequestSetHdr(ingress))
+			utils.LogErr(c.handleResponseSetHdr(ingress))
 			utils.LogErr(c.handleBlacklisting(ingress))
 			utils.LogErr(c.handleWhitelisting(ingress))
 			utils.LogErr(c.handleHTTPRedirect(ingress))
@@ -159,6 +160,8 @@ func (c *HAProxyController) updateHAProxy() error {
 	reload = reload || r
 
 	reload = c.FrontendHTTPReqsRefresh() || reload
+
+	reload = c.FrontendHTTPRspsRefresh() || reload
 
 	reload = c.FrontendTCPreqsRefresh() || reload
 

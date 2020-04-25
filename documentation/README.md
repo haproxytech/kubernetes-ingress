@@ -32,6 +32,7 @@ Options for starting controller can be found in [controller.md](controller.md)
 | [request-capture](#request-capture) | [sample expression](#sample-expression) |  |  |:large_blue_circle:|:large_blue_circle:|:white_circle:|
 | [request-capture-len](#request-capture) | number | 128 |  |:large_blue_circle:|:large_blue_circle:|:white_circle:|
 | [request-set-header](#request-set-header) | string |  |  |:large_blue_circle:|:large_blue_circle:|:white_circle:|
+| [response-set-header](#response-set-header) | string |  |  |:large_blue_circle:|:large_blue_circle:|:white_circle:|
 | [server-ssl](#server-ssl) | ["true", "false"] | "false" |  |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:|
 | [set-host](#set-host) | string |  |  |:white_circle:|:large_blue_circle:|:large_blue_circle:|
 | [servers-increment](#servers-slots-increment) | number | "42" |  |:large_blue_circle:|:white_circle:|:white_circle:|
@@ -192,6 +193,31 @@ More information can be found in the official HAProxy [documentation](https://cb
           So in the case you want to change the Host header this will impact
           HAProxy decision on which service/backend to use (based on matching Host against ingress rules).
           In order to set the Host header after service selection, use [set-host](#set-host) annotation.
+
+#### Response Set Header
+- Annotation `response-set-header`
+  - Single value:
+    - Usage:
+    ```
+    response-set-header: <Header> <value>
+    ```
+    - Example:
+    ```
+    response-set-header: Ingress-id Ienai6ohdoh9
+    ```
+  - Multiple values:
+    - Usage:
+    ```
+    response-set-header: |
+      <Header> <value>
+      <Header> <value>
+    ```
+    - Example:
+    ```
+    response-set-header: |
+      Strict-Transport-Security "max-age=31536000"
+      Cache-Control "no-store,no-cache,private"
+    ```
 
 #### Set Host
 - Annotation `set-host`
