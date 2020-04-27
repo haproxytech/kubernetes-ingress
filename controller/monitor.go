@@ -17,12 +17,25 @@ package controller
 import (
 	"log"
 	"time"
+
+	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 )
+
+func (c *HAProxyController) syncPeriod() (syncPeriod time.Duration) {
+	d, err := GetValueFromAnnotations("sync-period")
+	if err != nil {
+		utils.PanicErr(err)
+	}
+	syncPeriod, _ = time.ParseDuration(d.Value)
+
+	return
+}
 
 func (c *HAProxyController) monitorChanges() {
 
 	configMapReceivedAndProcessed := make(chan bool)
-	syncEveryNSeconds := 5
+	syncPeriod := c.syncPeriod()
+	log.Println("executing syncPeriod every", syncPeriod.String())
 	go c.SyncData(c.eventChan, configMapReceivedAndProcessed)
 
 	stop := make(chan struct{})
@@ -96,9 +109,7 @@ func (c *HAProxyController) monitorChanges() {
 		case item := <-secretChan:
 			event := SyncDataEvent{SyncType: SECRET, Namespace: item.Namespace, Data: item}
 			c.eventChan <- event
-		case <-time.After(time.Duration(syncEveryNSeconds) * time.Second):
-			//TODO syncEveryNSeconds sec is hardcoded, change that (annotation?)
-			//do sync of data every syncEveryNSeconds sec
+		case <-time.After(syncPeriod):
 			if configMapOk && len(eventsIngress) == 0 && len(eventsServices) == 0 && len(eventsEndpoints) == 0 {
 				c.eventChan <- SyncDataEvent{SyncType: COMMAND}
 			}

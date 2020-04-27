@@ -51,3 +51,8 @@ you can run image with arguments:
 - `--publish-service`
   - optional, must be in fromat `namespace/name`
   - The controller mirrors the address of the service's endpoints to the load-balancer status of all Ingress objects it satisfies.
+
+- `--sync-period`
+  - optional (must adhere to [`time.Duration`](https://golang.org/pkg/time/#ParseDuration) format),
+    sets the synchronization period at which the controller executes the configuration sync
+  - default value to `5s` (_5 seconds_)
