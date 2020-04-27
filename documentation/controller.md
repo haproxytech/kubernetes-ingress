@@ -46,10 +46,10 @@ you can run image with arguments:
 
 - `--namespace-blacklist`
   - optional, if listed selected namespaces will be excluded
-  - usage: same as whitellisting
+  - usage: same as whitelisting
 
 - `--publish-service`
-  - optional, must be in fromat `namespace/name`
+  - optional, must be in format `namespace/name`
   - The controller mirrors the address of the service's endpoints to the load-balancer status of all Ingress objects it satisfies.
 
 - `--sync-period`

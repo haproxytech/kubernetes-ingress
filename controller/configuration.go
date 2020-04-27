@@ -59,7 +59,7 @@ func (c *Configuration) IsRelevantNamespace(namespace string) bool {
 	return !ok
 }
 
-//Init itialize configuration
+//Init initialize configuration
 func (c *Configuration) Init(osArgs utils.OSArgs, mapDir string) {
 
 	c.NamespacesAccess = NamespacesWatch{
