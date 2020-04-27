@@ -47,6 +47,7 @@ func main() {
 	defaultCertificate := fmt.Sprintf("%s/%s", osArgs.DefaultBackendService.Namespace, osArgs.DefaultCertificate.Name)
 	c.SetDefaultAnnotation("default-backend-service", defaultBackendSvc)
 	c.SetDefaultAnnotation("ssl-certificate", defaultCertificate)
+	c.SetDefaultAnnotation("sync-period", osArgs.SyncPeriod.String())
 
 	if len(osArgs.Version) > 0 {
 		fmt.Printf("HAProxy Ingress Controller %s %s%s\n\n", GitTag, GitCommit, GitDirty)
@@ -73,6 +74,7 @@ func main() {
 	log.Printf("Publish service: %s\n", osArgs.PublishService)
 	log.Printf("Default backend service: %s\n", defaultBackendSvc)
 	log.Printf("Default ssl certificate: %s\n", defaultCertificate)
+	log.Printf("Controller sync period: %s\n", osArgs.SyncPeriod.String())
 	if osArgs.ConfigMapTCPServices.Name != "" {
 		log.Printf("TCP Services defined in %s/%s\n", osArgs.ConfigMapTCPServices.Namespace, osArgs.ConfigMapTCPServices.Name)
 	}
