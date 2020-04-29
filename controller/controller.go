@@ -299,7 +299,7 @@ func (c *HAProxyController) haproxyInitialize() {
 // Handle HAProxy daemon via Master process
 func (c *HAProxyController) haproxyService(action string) (err error) {
 	if c.osArgs.Test {
-		log.Println("HAProxy would be reload" + action + "ed now")
+		log.Println("HAProxy would be " + action + "ed now")
 		return nil
 	}
 

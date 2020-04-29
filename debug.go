@@ -34,8 +34,13 @@ const (
 func setupTestEnv() {
 	log.Printf("Running in test env")
 	cfgDir = path.Join(TestFolderPath, cfgDir)
-	err := os.MkdirAll(cfgDir, 0755)
-	utils.LogErr(err)
+	if err := os.MkdirAll(cfgDir, 0755); err != nil {
+		log.Fatal(err)
+	}
+	c.HAProxyStateDir = path.Join(TestFolderPath, "/var/state/haproxy/")
+	if err := os.MkdirAll(c.HAProxyStateDir, 0755); err != nil {
+		log.Fatal(err)
+	}
 	time.Sleep(2 * time.Second)
 	cmd := exec.Command("pwd")
 	out, err := cmd.CombinedOutput()
@@ -47,7 +52,7 @@ func setupTestEnv() {
 		log.Fatal(err)
 	}
 	log.Println(dir)
-	copyFile(path.Join(dir, "fs/etc/haproxy/haproxy.cfg"), c.HAProxyCFG)
+	copyFile(path.Join(dir, "fs/etc/haproxy/haproxy.cfg"), cfgDir)
 	log.Println(string(out))
 }
 
