@@ -1,0 +1,15 @@
+name: checking code and commit subject
+on: [push, pull_request]
+jobs:
+  check:
+    name: checking linting and commit subject
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v1
+      - name: check-commit
+        uses: docker://haproxytech/check-commit:v1.0.0
+      - name: golangci-lint
+        uses: docker://golangci/golangci-lint:v1.24
+        with:
+          args: golangci-lint run -v --timeout 15m
