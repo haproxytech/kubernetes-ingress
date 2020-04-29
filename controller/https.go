@@ -17,7 +17,6 @@ package controller
 import (
 	"fmt"
 	"io/ioutil"
-	"log"
 	"os"
 	"path"
 	"strings"
@@ -49,32 +48,32 @@ func (c *HAProxyController) writeCert(filename string, key, crt []byte) error {
 	var f *os.File
 	var err error
 	if f, err = os.Create(filename); err != nil {
-		log.Println(err)
+		c.Logger.Error(err)
 		return err
 	}
 	defer f.Close()
 	if _, err = f.Write(key); err != nil {
-		log.Println(err)
+		c.Logger.Error(err)
 		return err
 	}
 	//Force writing a newline so that parsing does not barf
 	if len(key) > 0 && key[len(key)-1] != byte('\n') {
-		log.Println("Warning: secret key in", filename, "does not end with \\n, appending it to avoid mangling key and certificate")
+		c.Logger.Warningf("secret key in %s does not end with \\n, appending it to avoid mangling key and certificate", filename)
 		if _, err = f.WriteString("\n"); err != nil {
-			log.Println(err)
+			c.Logger.Error(err)
 			return err
 		}
 	}
 	if _, err = f.Write(crt); err != nil {
-		log.Println(err)
+		c.Logger.Error(err)
 		return err
 	}
 	if err = f.Sync(); err != nil {
-		log.Println(err)
+		c.Logger.Error(err)
 		return err
 	}
 	if err = f.Close(); err != nil {
-		log.Println(err)
+		c.Logger.Error(err)
 		return err
 	}
 	return nil
@@ -137,14 +136,14 @@ func (c *HAProxyController) handleTLSSecret(ingress Ingress, tls IngressTLS, cer
 	namespace, namespaceOK := c.cfg.Namespace[namespaceName]
 	if !namespaceOK {
 		if tls.Status != EMPTY {
-			log.Printf("namespace '%s' does not exist, ignoring.", namespaceName)
+			c.Logger.Warningf("namespace [%s] does not exist, ignoring.", namespaceName)
 		}
 		return false
 	}
 	secret, secretOK := namespace.Secret[secretName]
 	if !secretOK {
 		if tls.Status != EMPTY {
-			log.Printf("secret '%s/%s' does not exist, ignoring.", namespaceName, secretName)
+			c.Logger.Warningf("secret [%s/%s] does not exist, ignoring.", namespaceName, secretName)
 		}
 		return false
 	}

@@ -16,7 +16,6 @@ package controller
 
 import (
 	"fmt"
-	"log"
 	"strings"
 
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
@@ -104,7 +103,7 @@ func (c *HAProxyController) handleEndpointIP(namespace *Namespace, ingress *Ingr
 		if ip.Disabled {
 			status = "maint"
 		}
-		log.Printf("Modified: %s - %s - %v\n", backendName, ip.HAProxyName, status)
+		c.Logger.Debugf("Modified: %s - %s - %v\n", backendName, ip.HAProxyName, status)
 	case DELETED:
 		err := c.backendServerDelete(backendName, server.Name)
 		if err != nil && !strings.Contains(err.Error(), "does not exist") {
@@ -135,7 +134,7 @@ func (c *HAProxyController) handleService(namespace *Namespace, ingress *Ingress
 		case path.IsSSLPassthrough:
 			c.deleteUseBackendRule(key, FrontendSSL)
 		case path.IsDefaultBackend:
-			log.Printf("Removing default_backend %s from ingress \n", service.Name)
+			c.Logger.Debugf("Removing default_backend %s from ingress \n", service.Name)
 			err = c.setDefaultBackend("")
 			reload = true
 		default:
@@ -196,7 +195,7 @@ func (c *HAProxyController) handleService(namespace *Namespace, ingress *Ingress
 	}
 	switch {
 	case path.IsDefaultBackend:
-		log.Printf("Confiugring default_backend %s from ingress %s\n", service.Name, ingress.Name)
+		c.Logger.Debugf("Configuring default_backend %s from ingress %s", service.Name, ingress.Name)
 		err = c.setDefaultBackend(backendName)
 		reload = true
 	case path.IsSSLPassthrough:
@@ -234,7 +233,7 @@ func (c *HAProxyController) handlePath(namespace *Namespace, ingress *Ingress, r
 
 	endpoints, ok := namespace.Endpoints[service.Name]
 	if !ok {
-		log.Printf("No Endpoints found for service '%s'", service.Name)
+		c.Logger.Warningf("No Endpoints found for service '%s'", service.Name)
 		return reload, nil // not an end of world scenario, just log this
 	}
 	endpoints.BackendName = backendName
@@ -262,16 +261,16 @@ func (c *HAProxyController) setTargetPort(path *IngressPath, service *Service, e
 						if path.TargetPort != epPort.Port && path.TargetPort != 0 {
 							for _, EndpointIP := range *endpoints.Addresses {
 								if err := c.NativeAPI.Runtime.SetServerAddr(endpoints.BackendName, EndpointIP.HAProxyName, EndpointIP.IP, int(epPort.Port)); err != nil {
-									log.Println(err)
+									c.Logger.Error(err)
 								}
-								log.Printf("TargetPort for backend %s changed to %d", endpoints.BackendName, epPort.Port)
+								c.Logger.Debug("TargetPort for backend %s changed to %d", endpoints.BackendName, epPort.Port)
 							}
 						}
 						path.TargetPort = epPort.Port
 						return nil
 					}
 				}
-				log.Printf("Could not find Targetport of '%s' for service %s", sp.Name, service.Name)
+				c.Logger.Warningf("Could not find Targetport of '%s' for service %s", sp.Name, service.Name)
 			} // Return nil even if corresponding target port was not found.
 			return nil
 		}

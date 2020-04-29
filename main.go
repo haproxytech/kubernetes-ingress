@@ -17,7 +17,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
 	"os"
 	"os/signal"
 	"syscall"
@@ -39,10 +38,13 @@ func main() {
 		os.Exit(exitCode)
 	}()
 	if err != nil {
-		log.Println(err)
+		fmt.Println(err)
 		exitCode = 1
 		return
 	}
+	logger := utils.GetLogger()
+	logger.SetLevel(osArgs.LogLevel.LogLevel)
+
 	defaultBackendSvc := fmt.Sprintf("%s/%s", osArgs.DefaultBackendService.Namespace, osArgs.DefaultBackendService.Name)
 	defaultCertificate := fmt.Sprintf("%s/%s", osArgs.DefaultBackendService.Namespace, osArgs.DefaultCertificate.Name)
 	c.SetDefaultAnnotation("default-backend-service", defaultBackendSvc)
@@ -65,19 +67,23 @@ func main() {
 		return
 	}
 
-	log.Println(IngressControllerInfo)
-	log.Printf("HAProxy Ingress Controller %s %s%s\n\n", GitTag, GitCommit, GitDirty)
-	log.Printf("Build from: %s\n", GitRepo)
-	log.Printf("Build date: %s\n\n", BuildTime)
-	log.Printf("ConfigMap: %s/%s\n", osArgs.ConfigMap.Namespace, osArgs.ConfigMap.Name)
-	log.Printf("Ingress class: %s\n", osArgs.IngressClass)
-	log.Printf("Publish service: %s\n", osArgs.PublishService)
-	log.Printf("Default backend service: %s\n", defaultBackendSvc)
-	log.Printf("Default ssl certificate: %s\n", defaultCertificate)
-	log.Printf("Controller sync period: %s\n", osArgs.SyncPeriod.String())
+	logger.FileName = false
+	logger.Print(IngressControllerInfo)
+	logger.Printf("HAProxy Ingress Controller %s %s%s\n", GitTag, GitCommit, GitDirty)
+	logger.Printf("Build from: %s", GitRepo)
+	logger.Printf("Build date: %s\n", BuildTime)
+
+	logger.Printf("ConfigMap: %s/%s", osArgs.ConfigMap.Namespace, osArgs.ConfigMap.Name)
+	logger.Printf("Ingress class: %s", osArgs.IngressClass)
+	logger.Printf("Publish service: %s", osArgs.PublishService)
+	logger.Printf("Default backend service: %s", defaultBackendSvc)
+	logger.Printf("Default ssl certificate: %s", defaultCertificate)
+	logger.Printf("Controller sync period: %s", osArgs.SyncPeriod.String())
+
 	if osArgs.ConfigMapTCPServices.Name != "" {
-		log.Printf("TCP Services defined in %s/%s\n", osArgs.ConfigMapTCPServices.Namespace, osArgs.ConfigMapTCPServices.Name)
+		logger.Printf("TCP Services defined in %s/%s", osArgs.ConfigMapTCPServices.Namespace, osArgs.ConfigMapTCPServices.Name)
 	}
+	logger.FileName = true
 
 	ctx, cancel := context.WithCancel(context.Background())
 	signalC := make(chan os.Signal, 1)
@@ -94,6 +100,7 @@ func main() {
 
 	controller := c.HAProxyController{
 		HAProxyCfgDir: cfgDir,
+		Logger:        logger,
 	}
 	controller.Start(ctx, osArgs)
 }

@@ -10,7 +10,6 @@ func (c *HAProxyController) apiStartTransaction() error {
 		//silently fallback to 1
 		version = 1
 	}
-	//log.Println("Config version:", version)
 	transaction, err := c.NativeAPI.Configuration.StartTransaction(version)
 	c.ActiveTransaction = transaction.ID
 	c.ActiveTransactionHasChanges = false

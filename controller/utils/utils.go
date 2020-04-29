@@ -15,8 +15,6 @@
 package utils
 
 import (
-	"fmt"
-	"log"
 	"math/rand"
 	"os"
 	"strconv"
@@ -80,10 +78,12 @@ func GetBoolValue(dataValue, dataName string) (result bool, err error) {
 	if err != nil {
 		switch strings.ToLower(dataValue) {
 		case "enabled", "on":
-			log.Println(fmt.Sprintf(`WARNING: %s - [%s] is DEPRECATED, use "true" or "false"`, dataName, dataValue))
+			logger := GetLogger()
+			logger.Warningf(`%s - [%s] is DEPRECATED, use "true" or "false"`, dataName, dataValue)
 			result = true
 		case "disabled", "off":
-			log.Println(fmt.Sprintf(`WARNING: %s - [%s] is DEPRECATED, use "true" or "false"`, dataName, dataValue))
+			logger := GetLogger()
+			logger.Warningf(`%s - [%s] is DEPRECATED, use "true" or "false"`, dataName, dataValue)
 			result = false
 		default:
 			return false, err

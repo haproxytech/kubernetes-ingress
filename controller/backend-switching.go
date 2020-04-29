@@ -16,7 +16,6 @@ package controller
 
 import (
 	"fmt"
-	"log"
 	"sort"
 
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
@@ -98,12 +97,12 @@ func (c *HAProxyController) refreshBackendSwitching() (reload bool) {
 					condTest = fmt.Sprintf("%s{ path_beg %s }", condTest, rule.Path)
 				}
 				if condTest == "" {
-					log.Printf("both Host and Path are empty for frontend %v with backend %v, SKIP\n", frontend, rule.Backend)
+					c.Logger.Infof("both Host and Path are empty for frontend %v with backend %v, SKIP\n", frontend, rule.Backend)
 					continue
 				}
 			case "tcp":
 				if rule.Host == "" {
-					log.Println(fmt.Sprintf("Empty SNI for backend %s, SKIP", rule.Backend))
+					c.Logger.Infof("Empty SNI for backend %s, SKIP", rule.Backend)
 					continue
 				}
 				condTest = fmt.Sprintf("{ req_ssl_sni -i %s } ", rule.Host)

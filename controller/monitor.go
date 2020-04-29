@@ -15,7 +15,6 @@
 package controller
 
 import (
-	"log"
 	"time"
 
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
@@ -35,7 +34,7 @@ func (c *HAProxyController) monitorChanges() {
 
 	configMapReceivedAndProcessed := make(chan bool)
 	syncPeriod := c.syncPeriod()
-	log.Println("executing syncPeriod every", syncPeriod.String())
+	c.Logger.Infof("executing syncPeriod every %s", syncPeriod.String())
 	go c.SyncData(c.eventChan, configMapReceivedAndProcessed)
 
 	stop := make(chan struct{})
@@ -139,7 +138,7 @@ func (c *HAProxyController) SyncData(jobChan <-chan SyncDataEvent, chConfigMapRe
 		case COMMAND:
 			if hadChanges {
 				if err := c.updateHAProxy(); err != nil {
-					log.Println(err)
+					c.Logger.Error(err)
 				}
 				continue
 			}

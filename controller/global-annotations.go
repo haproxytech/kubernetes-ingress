@@ -2,7 +2,6 @@ package controller
 
 import (
 	"fmt"
-	"log"
 	goruntime "runtime"
 	"strconv"
 	"strings"
@@ -163,16 +162,16 @@ func (c *HAProxyController) handleDefaultTimeout(timeout string) bool {
 		var err error
 		config, _ := c.ActiveConfiguration()
 		if annTimeout.Status == DELETED {
-			log.Println(fmt.Sprintf("Removing default timeout-%s ", timeout))
+			c.Logger.Debugf("Removing default timeout-%s ", timeout)
 			err = config.Delete(parser.Defaults, parser.DefaultSectionName, fmt.Sprintf("timeout %s", timeout))
 		} else {
-			log.Println(fmt.Sprintf("Setting default timeout-%s to %s", timeout, annTimeout.Value))
+			c.Logger.Debugf("Setting default timeout-%s to %s", timeout, annTimeout.Value)
 			err = config.Set(parser.Defaults, parser.DefaultSectionName, fmt.Sprintf("timeout %s", timeout), types.SimpleTimeout{
 				Value: annTimeout.Value,
 			})
 		}
 		if err != nil {
-			log.Println(err)
+			c.Logger.Error(err)
 			return false
 		}
 		c.ActiveTransactionHasChanges = true
@@ -202,7 +201,7 @@ func (c *HAProxyController) handleDefaultMaxconn() bool {
 			utils.LogErr(err)
 			return false
 		}
-		log.Println("Removing default maxconn")
+		c.Logger.Debug("Removing default maxconn")
 	default:
 		err = config.Set(parser.Defaults, parser.DefaultSectionName, "maxconn", types.Int64C{
 			Value: value,
@@ -211,7 +210,7 @@ func (c *HAProxyController) handleDefaultMaxconn() bool {
 			utils.LogErr(err)
 			return false
 		}
-		log.Println(fmt.Sprintf("Setting default maxconn to %d", value))
+		c.Logger.Debugf("Setting default maxconn to %d", value)
 	}
 	c.ActiveTransactionHasChanges = true
 	return true

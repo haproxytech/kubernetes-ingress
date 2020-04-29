@@ -18,7 +18,6 @@ import (
 	"bufio"
 	"context"
 	"fmt"
-	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -45,6 +44,7 @@ type HAProxyController struct {
 	HAProxyCfgDir               string
 	eventChan                   chan SyncDataEvent
 	serverlessPods              map[string]int
+	Logger                      utils.Logger
 }
 
 // Return Parser of current configuration (for config-parser usage)
@@ -55,7 +55,7 @@ func (c *HAProxyController) ActiveConfiguration() (*parser.Parser, error) {
 	return c.NativeAPI.Configuration.GetParser(c.ActiveTransaction)
 }
 
-// Rreturn HAProxy master process if it exists.
+// Return HAProxy master process if it exists.
 func (c *HAProxyController) HAProxyProcess() (*os.Process, error) {
 	file, err := os.Open(HAProxyPIDFile)
 	if err != nil {
@@ -102,9 +102,9 @@ func (c *HAProxyController) Start(ctx context.Context, osArgs utils.OSArgs) {
 
 	x := k8s.API.Discovery()
 	if k8sVersion, err := x.ServerVersion(); err != nil {
-		log.Fatalf("Unable to get Kubernetes version: %v\n", err)
+		c.Logger.Panicf("Unable to get Kubernetes version: %v\n", err)
 	} else {
-		log.Printf("Running on Kubernetes version: %s %s", k8sVersion.String(), k8sVersion.Platform)
+		c.Logger.Infof("Running on Kubernetes version: %s %s", k8sVersion.String(), k8sVersion.Platform)
 	}
 
 	c.serverlessPods = map[string]int{}
@@ -213,7 +213,7 @@ func (c *HAProxyController) updateHAProxy() error {
 		if err := c.haproxyService("restart"); err != nil {
 			utils.LogErr(err)
 		} else {
-			log.Println("HAProxy restarted")
+			c.Logger.Info("HAProxy restarted")
 		}
 		return nil
 	}
@@ -221,7 +221,7 @@ func (c *HAProxyController) updateHAProxy() error {
 		if err := c.haproxyService("reload"); err != nil {
 			utils.LogErr(err)
 		} else {
-			log.Println("HAProxy reloaded")
+			c.Logger.Info("HAProxy reloaded")
 		}
 	}
 	return nil
@@ -257,17 +257,17 @@ func (c *HAProxyController) haproxyInitialize() {
 	cmd := exec.Command("sh", "-c", "haproxy -v")
 	haproxyInfo, err := cmd.Output()
 	if err == nil {
-		log.Println("Running with ", strings.ReplaceAll(string(haproxyInfo), "\n", ""))
+		c.Logger.Infof("Running with %s", strings.ReplaceAll(string(haproxyInfo), "\n", ""))
 	} else {
-		log.Println(err)
+		c.Logger.Error(err)
 	}
 
-	log.Println("Starting HAProxy with", HAProxyCFG)
+	c.Logger.Infof("Starting HAProxy with %s", HAProxyCFG)
 	utils.PanicErr(c.haproxyService("start"))
 
 	hostname, err := os.Hostname()
 	utils.LogErr(err)
-	log.Println("Running on", hostname)
+	c.Logger.Infof("Running on %s", hostname)
 
 	runtimeClient := runtime.Client{}
 	err = runtimeClient.InitWithSockets(map[int]string{
@@ -299,7 +299,7 @@ func (c *HAProxyController) haproxyInitialize() {
 // Handle HAProxy daemon via Master process
 func (c *HAProxyController) haproxyService(action string) (err error) {
 	if c.osArgs.Test {
-		log.Println("HAProxy would be " + action + "ed now")
+		c.Logger.Infof("HAProxy would be %sed now", action)
 		return nil
 	}
 
@@ -343,7 +343,7 @@ func (c *HAProxyController) haproxyService(action string) (err error) {
 		cmd.Stderr = os.Stderr
 		return cmd.Start()
 	default:
-		return fmt.Errorf("unkown command '%s'", action)
+		return fmt.Errorf("unknown command '%s'", action)
 	}
 }
 
@@ -355,20 +355,20 @@ func (c *HAProxyController) saveServerState() error {
 	}
 	var f *os.File
 	if f, err = os.Create(HAProxyStateDir + "global"); err != nil {
-		log.Println(err)
+		c.Logger.Error(err)
 		return err
 	}
 	defer f.Close()
 	if _, err = f.Write([]byte(result[0])); err != nil {
-		log.Println(err)
+		c.Logger.Error(err)
 		return err
 	}
 	if err = f.Sync(); err != nil {
-		log.Println(err)
+		c.Logger.Error(err)
 		return err
 	}
 	if err = f.Close(); err != nil {
-		log.Println(err)
+		c.Logger.Error(err)
 		return err
 	}
 	return nil

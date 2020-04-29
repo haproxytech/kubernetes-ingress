@@ -16,7 +16,6 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"os/exec"
 	"path"
@@ -32,35 +31,36 @@ const (
 )
 
 func setupTestEnv() {
-	log.Printf("Running in test env")
+	logger := utils.GetLogger()
+	logger.Info("Running in test env")
 	cfgDir = path.Join(TestFolderPath, cfgDir)
 	if err := os.MkdirAll(cfgDir, 0755); err != nil {
-		log.Fatal(err)
+		logger.Panic(err)
 	}
 	c.HAProxyStateDir = path.Join(TestFolderPath, "/var/state/haproxy/")
 	if err := os.MkdirAll(c.HAProxyStateDir, 0755); err != nil {
-		log.Fatal(err)
+		logger.Panic(err)
 	}
 	time.Sleep(2 * time.Second)
 	cmd := exec.Command("pwd")
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		log.Fatalf("cmd.Run() failed with %s\n", err)
+		logger.Panicf("cmd.Run() failed with %s\n", err.Error())
 	}
 	dir, err := filepath.Abs(filepath.Dir(os.Args[0]))
 	if err != nil {
-		log.Fatal(err)
+		logger.Panic(err)
 	}
-	log.Println(dir)
+	logger.Debug(dir)
 	copyFile(path.Join(dir, "fs/etc/haproxy/haproxy.cfg"), cfgDir)
-	log.Println(string(out))
+	logger.Debug(string(out))
 }
 
 func copyFile(src, dst string) {
+	logger := utils.GetLogger()
 	cmd := fmt.Sprintf("cp %s %s", src, dst)
-	log.Println(cmd)
+	logger.Debug(cmd)
 	result := exec.Command("bash", "-c", cmd)
 	_, err := result.CombinedOutput()
-	utils.LogErr(err)
-
+	logger.Debug(err)
 }

@@ -56,3 +56,10 @@ you can run image with arguments:
   - optional (must adhere to [`time.Duration`](https://golang.org/pkg/time/#ParseDuration) format),
     sets the synchronization period at which the controller executes the configuration sync
   - default value to `5s` (_5 seconds_)
+
+- `--log`
+  - optional
+  - select log level that application outputs
+  - default: `info`
+  - available options: `error`, `warning`, `info`, `debug`, `trace`
+    
