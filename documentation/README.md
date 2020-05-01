@@ -341,16 +341,16 @@ More information can be found in the official HAProxy [documentation](https://cb
 
 #### Timeouts
 
-- Annotation `timeout-http-request`
+- Annotation [`timeout-http-request`](https://cbonte.github.io/haproxy-dconv/2.0/configuration.html#timeout%20http-request)
 - Annotation [`timeout-check`](https://cbonte.github.io/haproxy-dconv/2.0/configuration.html#timeout%20check)
-- Annotation `timeout-connect`
-- Annotation `timeout-client`
-- Annotation `timeout-client-fin`
-- Annotation `timeout-queue`
-- Annotation `timeout-server`
-- Annotation `timeout-server-fin`
-- Annotation `timeout-tunnel`
-- Annotation `timeout-http-keep-alive`
+- Annotation [`timeout-connect`](https://cbonte.github.io/haproxy-dconv/2.0/configuration.html#timeout%20connect)
+- Annotation [`timeout-client`](https://cbonte.github.io/haproxy-dconv/2.0/configuration.html#timeout%20client)
+- Annotation [`timeout-client-fin`](https://cbonte.github.io/haproxy-dconv/2.0/configuration.html#timeout%20client-fin)
+- Annotation [`timeout-queue`](https://cbonte.github.io/haproxy-dconv/2.0/configuration.html#4-timeout%20queue)
+- Annotation [`timeout-server`](https://cbonte.github.io/haproxy-dconv/2.0/configuration.html#4.2-timeout%20server)
+- Annotation [`timeout-server-fin`](https://cbonte.github.io/haproxy-dconv/2.0/configuration.html#4.2-timeout%20server-fin)
+- Annotation [`timeout-tunnel`](https://cbonte.github.io/haproxy-dconv/2.0/configuration.html#timeout%20tunnel)
+- Annotation [`timeout-http-keep-alive`](https://cbonte.github.io/haproxy-dconv/2.0/configuration.html#timeout%20http-keep-alive)
 
 #### X-Forwarded-For
 
