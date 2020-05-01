@@ -5,7 +5,7 @@
 you can run image with arguments:
 
 - `--configmap`
-  - mandatory, must be in format `namespace/name`
+  - optional, must be in format `namespace/name`
   - default `default/haproxy-configmap`
 - `--configmap-tcp-services`
   - optional, must be in format `namespace/name`

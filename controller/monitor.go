@@ -58,10 +58,17 @@ func (c *HAProxyController) monitorChanges() {
 	secretChan := make(chan *Secret, 10)
 	c.k8s.EventsSecrets(secretChan, stop)
 
-	eventsIngress := []SyncDataEvent{}
-	eventsEndpoints := []SyncDataEvent{}
-	eventsServices := []SyncDataEvent{}
-	configMapOk := false
+	// Buffering events so they are handled after configMap is processed
+	var eventsIngress, eventsEndpoints, eventsServices []SyncDataEvent
+	var configMapOk bool
+	if c.osArgs.ConfigMap.Name == "" {
+		configMapOk = true
+	} else {
+		eventsIngress = []SyncDataEvent{}
+		eventsEndpoints = []SyncDataEvent{}
+		eventsServices = []SyncDataEvent{}
+		configMapOk = false
+	}
 
 	for {
 		select {
