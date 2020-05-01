@@ -43,11 +43,13 @@ Options for starting controller can be found in [controller.md](controller.md)
 | [syslog-server](#logging) | [syslog](#syslog-fields) | "address:127.0.0.1, facility: local0, level: notice" |  |:large_blue_circle:|:white_circle:|:white_circle:|
 | [timeout-check](#timeouts) | [time](#time) |  |  |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:|
 | [timeout-client](#timeouts) | [time](#time) | "50s" |  |:large_blue_circle:|:white_circle:|:white_circle:|
+| [timeout-client-fin](#timeouts) | [time](#time) |  |  |:large_blue_circle:|:white_circle:|:white_circle:|
 | [timeout-connect](#timeouts) | [time](#time) | "5s" |  |:large_blue_circle:|:white_circle:|:white_circle:|
 | [timeout-http-request](#timeouts) | [time](#time) | "5s" |  |:large_blue_circle:|:white_circle:|:white_circle:|
 | [timeout-http-keep-alive](#timeouts) | [time](#time) | "1m" |  |:large_blue_circle:|:white_circle:|:white_circle:|
 | [timeout-queue](#timeouts) | [time](#time) | "5s" |  |:large_blue_circle:|:white_circle:|:white_circle:|
 | [timeout-server](#timeouts) | [time](#time) | "50s" |  |:large_blue_circle:|:white_circle:|:white_circle:|
+| [timeout-server-fin](#timeouts) | [time](#time) |  |  |:large_blue_circle:|:white_circle:|:white_circle:|
 | [timeout-tunnel](#timeouts) | [time](#time) | "1h" |  |:large_blue_circle:|:white_circle:|:white_circle:|
 | [whitelist](#whitelist) | [IPs or CIDRs](#whitelist) | "" |  |:large_blue_circle:|:large_blue_circle:|:white_circle:|
 
@@ -343,8 +345,10 @@ More information can be found in the official HAProxy [documentation](https://cb
 - Annotation [`timeout-check`](https://cbonte.github.io/haproxy-dconv/2.0/configuration.html#timeout%20check)
 - Annotation `timeout-connect`
 - Annotation `timeout-client`
+- Annotation `timeout-client-fin`
 - Annotation `timeout-queue`
 - Annotation `timeout-server`
+- Annotation `timeout-server-fin`
 - Annotation `timeout-tunnel`
 - Annotation `timeout-http-keep-alive`
 

@@ -142,8 +142,10 @@ func (c *HAProxyController) handleDefaultTimeouts() bool {
 	hasChanges = c.handleDefaultTimeout("http-request") || hasChanges
 	hasChanges = c.handleDefaultTimeout("connect") || hasChanges
 	hasChanges = c.handleDefaultTimeout("client") || hasChanges
+	hasChanges = c.handleDefaultTimeout("client-fin") || hasChanges
 	hasChanges = c.handleDefaultTimeout("queue") || hasChanges
 	hasChanges = c.handleDefaultTimeout("server") || hasChanges
+	hasChanges = c.handleDefaultTimeout("server-fin") || hasChanges
 	hasChanges = c.handleDefaultTimeout("tunnel") || hasChanges
 	hasChanges = c.handleDefaultTimeout("http-keep-alive") || hasChanges
 	//no default values
@@ -153,22 +155,26 @@ func (c *HAProxyController) handleDefaultTimeouts() bool {
 }
 
 func (c *HAProxyController) handleDefaultTimeout(timeout string) bool {
-	annTimeout, err := GetValueFromAnnotations(fmt.Sprintf("timeout-%s", timeout), c.cfg.ConfigMap.Annotations)
-	if err != nil {
-		log.Println(err)
+	annTimeout, _ := GetValueFromAnnotations(fmt.Sprintf("timeout-%s", timeout), c.cfg.ConfigMap.Annotations)
+	if annTimeout == nil {
 		return false
 	}
 	if annTimeout.Status != "" {
+		var err error
 		config, _ := c.ActiveConfiguration()
-		//TODO use client Native instead
-		err = config.Set(parser.Defaults, parser.DefaultSectionName, fmt.Sprintf("timeout %s", timeout), types.SimpleTimeout{
-			Value: annTimeout.Value,
-		})
+		if annTimeout.Status == DELETED {
+			log.Println(fmt.Sprintf("Removing default timeout-%s ", timeout))
+			err = config.Delete(parser.Defaults, parser.DefaultSectionName, fmt.Sprintf("timeout %s", timeout))
+		} else {
+			log.Println(fmt.Sprintf("Setting default timeout-%s to %s", timeout, annTimeout.Value))
+			err = config.Set(parser.Defaults, parser.DefaultSectionName, fmt.Sprintf("timeout %s", timeout), types.SimpleTimeout{
+				Value: annTimeout.Value,
+			})
+		}
 		if err != nil {
 			log.Println(err)
 			return false
 		}
-		log.Println(fmt.Sprintf("Setting default timeout-%s to %s", timeout, annTimeout.Value))
 		c.ActiveTransactionHasChanges = true
 		return true
 	}

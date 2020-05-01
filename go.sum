@@ -121,6 +121,8 @@ github.com/haproxytech/config-parser/v2 v2.0.1-0.20200410235413-ecffcb50b648 h1:
 github.com/haproxytech/config-parser/v2 v2.0.1-0.20200410235413-ecffcb50b648/go.mod h1:VjHOetXAJtwrtLAJPoDaD/kEYwCoixVp5SCsBitMcj8=
 github.com/haproxytech/config-parser/v2 v2.0.1-0.20200417115602-4292d48d861c h1:984WXIgAsyBd7DOkcLppqAMIDW2G4EUNTIi4yLQFwhk=
 github.com/haproxytech/config-parser/v2 v2.0.1-0.20200417115602-4292d48d861c/go.mod h1:VjHOetXAJtwrtLAJPoDaD/kEYwCoixVp5SCsBitMcj8=
+github.com/haproxytech/config-parser/v2 v2.0.2-0.20200430155943-0b3899f23650 h1:kTTswz0OZXV5OJn4QjTN9ffwcgPEPCyaPT4sOBldHTI=
+github.com/haproxytech/config-parser/v2 v2.0.2-0.20200430155943-0b3899f23650/go.mod h1:VjHOetXAJtwrtLAJPoDaD/kEYwCoixVp5SCsBitMcj8=
 github.com/haproxytech/config-parser/v2/v2 v2.0.0-dev1 h1:YbQt+o8KkzxqXWKzAJXWv4xav4+PuxT9jtfouCAOUzo=
 github.com/haproxytech/config-parser/v2/v2 v2.0.0-dev1/go.mod h1:VjHOetXAJtwrtLAJPoDaD/kEYwCoixVp5SCsBitMcj8=
 github.com/haproxytech/models v1.2.3-0.20190823114805-b3bd06b1c569 h1:uSIImvE2nSiEqMvesozR0cF90I0Gys8Rl6uEItGMZbw=
