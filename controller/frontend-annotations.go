@@ -143,7 +143,7 @@ func (c *HAProxyController) handleHTTPRedirect(ingress *Ingress) error {
 		RedirType:  "scheme",
 		Cond:       "if",
 		//TODO: provide option to do strict host matching
-		CondTest:   fmt.Sprintf("{ req.hdr(host),field(1,:) -f %s } !{ ssl_fc }", mapFile),
+		CondTest: fmt.Sprintf("{ req.hdr(host),field(1,:) -f %s } !{ ssl_fc }", mapFile),
 	}
 	c.cfg.FrontendHTTPReqRules[SSL_REDIRECT][key] = httpRule
 
