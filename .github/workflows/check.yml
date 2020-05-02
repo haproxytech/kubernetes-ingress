@@ -6,9 +6,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out code
-        uses: actions/checkout@v1
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 10
       - name: check-commit
-        uses: docker://haproxytech/check-commit:v1.0.0
+        uses: docker://mmhedhbi/check-commit:v1.0.0
       - name: golangci-lint
         uses: docker://golangci/golangci-lint:v1.24
         with:
