@@ -8,6 +8,7 @@ import (
 
 	parser "github.com/haproxytech/config-parser/v2"
 	"github.com/haproxytech/config-parser/v2/types"
+	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 )
 
 // Handle Global and default Annotations
@@ -16,6 +17,7 @@ func (c *HAProxyController) handleGlobalAnnotations() (restart bool, reload bool
 	reload = false
 	reload = c.handleDefaultLogFormat() ||
 		c.handleDefaultMaxconn() ||
+		c.handleDefaultOptions() ||
 		c.handleDefaultTimeouts() ||
 		c.handleNbthread()
 
@@ -133,6 +135,51 @@ func (c *HAProxyController) handleSyslog() (restart, reload bool) {
 	}
 	c.Logger.Error(errParser)
 	return restart, reload
+}
+
+func (c *HAProxyController) handleDefaultOptions() bool {
+	reload := false
+	reload = c.handleDefaultOption("http-server-close") || reload
+	reload = c.handleDefaultOption("http-keep-alive") || reload
+	reload = c.handleDefaultOption("dontlognull") || reload
+	reload = c.handleDefaultOption("logasap") || reload
+	return reload
+}
+
+func (c *HAProxyController) handleDefaultOption(option string) bool {
+	annOption, _ := GetValueFromAnnotations(option, c.cfg.ConfigMap.Annotations)
+	if annOption == nil || annOption.Status == "" {
+		return false
+	}
+	var err error
+	config, _ := c.ActiveConfiguration()
+	if annOption.Status == DELETED {
+		c.Logger.Printf(fmt.Sprintf("Removing '%s' option", option))
+		err = config.Delete(parser.Defaults, parser.DefaultSectionName, fmt.Sprintf("option %s", option))
+		if err != nil {
+			c.Logger.Error(err)
+			return false
+		}
+		return true
+	}
+	enabled, err := utils.GetBoolValue(annOption.Value, option)
+	if err != nil {
+		c.Logger.Err(err)
+		return false
+	}
+	switch enabled {
+	case true:
+		c.Logger.Printf(fmt.Sprintf("Enabling %s", option))
+		err = config.Set(parser.Defaults, parser.DefaultSectionName, fmt.Sprintf("option %s", option), types.SimpleOption{})
+	case false:
+		c.Logger.Printf(fmt.Sprintf("Disabling %s", option))
+		err = config.Set(parser.Defaults, parser.DefaultSectionName, fmt.Sprintf("option %s", option), types.SimpleOption{NoOption: true})
+	}
+	if err != nil {
+		c.Logger.Err(err)
+		return false
+	}
+	return true
 }
 
 func (c *HAProxyController) handleDefaultTimeouts() bool {
