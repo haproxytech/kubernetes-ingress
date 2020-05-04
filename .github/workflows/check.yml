@@ -10,7 +10,7 @@ jobs:
         with:
           fetch-depth: 10
       - name: check-commit
-        uses: docker://haproxytech/check-commit:v1.1.0
+        uses: docker://haproxytech/check-commit:v1.1.1
       - name: golangci-lint
         uses: docker://golangci/golangci-lint:v1.24
         with:
