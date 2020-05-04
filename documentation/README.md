@@ -12,15 +12,19 @@ Options for starting controller can be found in [controller.md](controller.md)
 
 | Annotation | Type | Default | Dependencies | Config map | Ingress | Service |
 | - |:-:|:-:|:-:|:-:|:-:|:-:|
-| [blacklist](#access control) | [IPs or CIDRs](#access control) | "" |  |:large_blue_circle:|:large_blue_circle:|:white_circle:|
+| [blacklist](#access-control) | [IPs or CIDRs](#access-control) | "" |  |:large_blue_circle:|:large_blue_circle:|:white_circle:|
 | [check](#backend-checks) | ["true", "false"] | "true" |  |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:|
 | [check-http](#backend-checks) | string |  | [check](#backend-checks) |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:|
 | [check-interval](#backend-checks) | [time](#time) |  | [check](#backend-checks) |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:|
 | [cookie-persistance](#cookie-persistance) | string | "" |  |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:|
+| [dontlognull](#logging) | ["true", "false"] | "true" |  |:large_blue_circle:|:white_circle:|:white_circle:|
 | [forwarded-for](#x-forwarded-for) | ["true", "false"] | "true" |  |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:|
 | [ingress.class](#ingress-class) | string | "" |  |:white_circle:|:large_blue_circle:|:white_circle:|
+| [http-keep-alive](#http-options) | ["true", "false"] | "true" |  |:large_blue_circle:|:white_circle:|:white_circle:|
+| [http-server-close](#http-options) | ["true", "false"] | "false" |  |:large_blue_circle:|:white_circle:|:white_circle:|
 | [load-balance](#balance-algorithm) | string | "roundrobin" |  |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:|
 | [log-format](#log-format) | string |  |  |:large_blue_circle:|:white_circle:|:white_circle:|
+| [logasap](#logging) | ["true", "false"] | "false" |  |:large_blue_circle:|:white_circle:|:white_circle:|
 | [maxconn](#maximum-concurent-connections) | number |  |  |:large_blue_circle:|:white_circle:|:white_circle:|
 | [nbthread](#number-of-threads) | number | |  |:large_blue_circle:|:white_circle:|:white_circle:|
 | [path-rewrite](#path-rewrite) | string |  |  |:white_circle:|:large_blue_circle:|:large_blue_circle:|
@@ -60,6 +64,42 @@ Options for starting controller can be found in [controller.md](controller.md)
 > This is usefull if we want, for instance, to change default behaviour, but want to keep default for some service. etc.
 
 ### Options
+
+#### Global Options
+
+Global options are set via ConfigMap ([--configmap](controller.md)) annotations.
+Depending on the option, it can be in Global or Default HAProxy section.
+
+##### HTTP Options
+
+- Annotation [`http-server-close`](https://cbonte.github.io/haproxy-dconv/2.0/configuration.html#option%20http-server-close)
+- Annotation [`http-keep-alive`](https://cbonte.github.io/haproxy-dconv/2.0/configuration.html#option%20http-keep-alive)
+
+##### [Log Options](#Logging)
+
+##### Maximum Number of Concurent Connections
+
+- Annotation: `maxconn`
+- Sets the maximum number of concurrent connections for HAProxy.
+
+##### Number of threads
+
+- Annotation: `nbthread`
+- Sets the number of threads for HAProxy.
+- If not used HAProxy will have as many threads as available processors
+
+##### Timeouts
+
+- Annotation [`timeout-http-request`](https://cbonte.github.io/haproxy-dconv/2.0/configuration.html#timeout%20http-request)
+- Annotation [`timeout-check`](https://cbonte.github.io/haproxy-dconv/2.0/configuration.html#timeout%20check)
+- Annotation [`timeout-connect`](https://cbonte.github.io/haproxy-dconv/2.0/configuration.html#timeout%20connect)
+- Annotation [`timeout-client`](https://cbonte.github.io/haproxy-dconv/2.0/configuration.html#timeout%20client)
+- Annotation [`timeout-client-fin`](https://cbonte.github.io/haproxy-dconv/2.0/configuration.html#timeout%20client-fin)
+- Annotation [`timeout-queue`](https://cbonte.github.io/haproxy-dconv/2.0/configuration.html#4-timeout%20queue)
+- Annotation [`timeout-server`](https://cbonte.github.io/haproxy-dconv/2.0/configuration.html#4.2-timeout%20server)
+- Annotation [`timeout-server-fin`](https://cbonte.github.io/haproxy-dconv/2.0/configuration.html#4.2-timeout%20server-fin)
+- Annotation [`timeout-tunnel`](https://cbonte.github.io/haproxy-dconv/2.0/configuration.html#timeout%20tunnel)
+- Annotation [`timeout-http-keep-alive`](https://cbonte.github.io/haproxy-dconv/2.0/configuration.html#timeout%20http-keep-alive)
 
 #### Access control
 
@@ -252,19 +292,10 @@ More information can be found in the official HAProxy [documentation](https://cb
   - HTTP status code on redirect
 	- default is `302`
 
-#### Maximum Concurent Frontend Connections
-
-- Annotation: `maxconn`
-
 #### Maximum Concurent Backend Connections
 
 - Annotation: `pod-maxconn`
 - related to backend servers (pods)
-
-#### Number of threads
-
-- Annotation: `nbthread`
-- default value is number of procesors available
 
 #### Proxy Protocol
 - Annotation: `proxy-protocol`
@@ -326,6 +357,9 @@ More information can be found in the official HAProxy [documentation](https://cb
 
 		syslog-server: address:stdout, format: raw, facility:daemon
 
+- Annotation [`dontlognull`](https://cbonte.github.io/haproxy-dconv/2.0/configuration.html#option%20dontlognull)
+- Annotation [`logasap`](https://cbonte.github.io/haproxy-dconv/2.0/configuration.html#4.2-option%20logasap)
+
 ##### Syslog fields
 
 The following syslog fields can be used:
@@ -338,19 +372,6 @@ The following syslog fields can be used:
 - *minlevel*: Optional minimum level.
 
 More information can be found in the official HAProxy [documentation](https://cbonte.github.io/haproxy-dconv/2.0/configuration.html#3.1-log)
-
-#### Timeouts
-
-- Annotation [`timeout-http-request`](https://cbonte.github.io/haproxy-dconv/2.0/configuration.html#timeout%20http-request)
-- Annotation [`timeout-check`](https://cbonte.github.io/haproxy-dconv/2.0/configuration.html#timeout%20check)
-- Annotation [`timeout-connect`](https://cbonte.github.io/haproxy-dconv/2.0/configuration.html#timeout%20connect)
-- Annotation [`timeout-client`](https://cbonte.github.io/haproxy-dconv/2.0/configuration.html#timeout%20client)
-- Annotation [`timeout-client-fin`](https://cbonte.github.io/haproxy-dconv/2.0/configuration.html#timeout%20client-fin)
-- Annotation [`timeout-queue`](https://cbonte.github.io/haproxy-dconv/2.0/configuration.html#4-timeout%20queue)
-- Annotation [`timeout-server`](https://cbonte.github.io/haproxy-dconv/2.0/configuration.html#4.2-timeout%20server)
-- Annotation [`timeout-server-fin`](https://cbonte.github.io/haproxy-dconv/2.0/configuration.html#4.2-timeout%20server-fin)
-- Annotation [`timeout-tunnel`](https://cbonte.github.io/haproxy-dconv/2.0/configuration.html#timeout%20tunnel)
-- Annotation [`timeout-http-keep-alive`](https://cbonte.github.io/haproxy-dconv/2.0/configuration.html#timeout%20http-keep-alive)
 
 #### X-Forwarded-For
 
