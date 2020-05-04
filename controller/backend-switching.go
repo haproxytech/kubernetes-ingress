@@ -52,7 +52,7 @@ func (c *HAProxyController) refreshBackendSwitching() (reload bool) {
 	}
 	frontends, err := c.frontendsGet()
 	if err != nil {
-		utils.PanicErr(err)
+		c.Logger.Panic(err)
 		return false
 	}
 	// Active backend will hold backends in use
@@ -113,7 +113,7 @@ func (c *HAProxyController) refreshBackendSwitching() (reload bool) {
 				Name:     rule.Backend,
 				Index:    utils.PtrInt64(0),
 			})
-			utils.PanicErr(err)
+			c.Logger.Panic(err)
 		}
 		reload = true
 		delete(c.cfg.BackendSwitchingStatus, frontend.Name)
@@ -131,7 +131,7 @@ func (c *HAProxyController) clearBackends(activeBackends map[string]struct{}) (r
 	for _, backend := range allBackends {
 		if _, ok := activeBackends[backend.Name]; !ok {
 			if err := c.backendDelete(backend.Name); err != nil {
-				utils.PanicErr(err)
+				c.Logger.Panic(err)
 			}
 			reload = true
 		}

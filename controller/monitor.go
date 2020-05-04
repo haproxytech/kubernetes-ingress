@@ -16,14 +16,12 @@ package controller
 
 import (
 	"time"
-
-	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 )
 
 func (c *HAProxyController) syncPeriod() (syncPeriod time.Duration) {
 	d, err := GetValueFromAnnotations("sync-period")
 	if err != nil {
-		utils.PanicErr(err)
+		c.Logger.Panic(err)
 	}
 	syncPeriod, _ = time.ParseDuration(d.Value)
 

@@ -88,7 +88,7 @@ func (c *HAProxyController) handleSecret(ingress Ingress, secret Secret, writeSe
 			filename := path.Join(HAProxyCertDir, fmt.Sprintf("%s_%s_%s.pem.rsa", ingress.Name, secret.Namespace, secret.Name))
 			if writeSecret {
 				if err := c.writeCert(filename, key, crt); err != nil {
-					utils.LogErr(err)
+					c.Logger.Error(err)
 					return false
 				}
 				reload = true
@@ -161,29 +161,29 @@ func (c *HAProxyController) handleHTTPS(usedCerts map[string]struct{}) (reload b
 	// ssl-passthrough
 	if len(c.cfg.BackendSwitchingRules[FrontendSSL]) > 0 {
 		if !c.cfg.SSLPassthrough {
-			utils.PanicErr(c.enableSSLPassthrough())
+			c.Logger.Panic(c.enableSSLPassthrough())
 			c.cfg.SSLPassthrough = true
 			reload = true
 		}
 	} else if c.cfg.SSLPassthrough {
-		utils.PanicErr(c.disableSSLPassthrough())
+		c.Logger.Panic(c.disableSSLPassthrough())
 		c.cfg.SSLPassthrough = false
 		reload = true
 	}
 	// ssl-offload
 	if len(usedCerts) > 0 {
 		if !c.cfg.HTTPS {
-			utils.PanicErr(c.enableSSLOffload(FrontendHTTPS, true))
+			c.Logger.Panic(c.enableSSLOffload(FrontendHTTPS, true))
 			c.cfg.HTTPS = true
 			reload = true
 		}
 	} else if c.cfg.HTTPS {
-		utils.PanicErr(c.disableSSLOffload(FrontendHTTPS))
+		c.Logger.Panic(c.disableSSLOffload(FrontendHTTPS))
 		c.cfg.HTTPS = false
 		reload = true
 	}
 	//remove certs that are not needed
-	utils.LogErr(c.cleanCertDir(usedCerts))
+	c.Logger.Error(c.cleanCertDir(usedCerts))
 
 	return reload
 }

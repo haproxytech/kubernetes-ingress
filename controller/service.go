@@ -82,7 +82,7 @@ func (c *HAProxyController) handleEndpointIP(namespace *Namespace, ingress *Ingr
 		err := c.backendServerCreate(backendName, server)
 		if err != nil {
 			if !strings.Contains(err.Error(), "already exists") {
-				utils.LogErr(err)
+				c.Logger.Error(err)
 				reload = true
 			}
 		} else {
@@ -93,10 +93,10 @@ func (c *HAProxyController) handleEndpointIP(namespace *Namespace, ingress *Ingr
 		if err != nil {
 			if strings.Contains(err.Error(), "does not exist") {
 				err1 := c.backendServerCreate(backendName, server)
-				utils.LogErr(err1)
+				c.Logger.Error(err1)
 				reload = true
 			} else {
-				utils.LogErr(err)
+				c.Logger.Error(err)
 			}
 		}
 		status := "ready"
@@ -107,7 +107,7 @@ func (c *HAProxyController) handleEndpointIP(namespace *Namespace, ingress *Ingr
 	case DELETED:
 		err := c.backendServerDelete(backendName, server.Name)
 		if err != nil && !strings.Contains(err.Error(), "does not exist") {
-			utils.LogErr(err)
+			c.Logger.Error(err)
 		}
 		return true
 	}

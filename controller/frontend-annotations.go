@@ -343,7 +343,7 @@ func (c *HAProxyController) handleRequestSetHdr(ingress *Ingress) error {
 	for _, param := range strings.Split(annSetHdr.Value, "\n") {
 		parts := strings.Fields(param)
 		if len(parts) != 2 {
-			utils.LogErr(fmt.Errorf("incorrect value '%s' in request-set-header annotation", param))
+			c.Logger.Errorf("incorrect value '%s' in request-set-header annotation", param)
 			continue
 		}
 		key := hashStrToUint(fmt.Sprintf("%s-%s-%s", REQUEST_SET_HEADER, parts[0], parts[1]))
@@ -386,7 +386,7 @@ func (c *HAProxyController) handleResponseSetHdr(ingress *Ingress) error {
 	for _, param := range strings.Split(annSetHdr.Value, "\n") {
 		parts := strings.Fields(param)
 		if len(parts) != 2 {
-			utils.LogErr(fmt.Errorf("incorrect value '%s' in response-set-header annotation", param))
+			c.Logger.Errorf("incorrect value '%s' in response-set-header annotation", param)
 			continue
 		}
 		key := hashStrToUint(fmt.Sprintf("%s-%s-%s", RESPONSE_SET_HEADER, parts[0], parts[1]))
@@ -471,7 +471,8 @@ func (c *HAProxyController) handleWhitelisting(ingress *Ingress) error {
 func hashStrToUint(s string) uint64 {
 	h := fnv.New64a()
 	_, err := h.Write([]byte(strings.ToLower(s)))
-	utils.LogErr(err)
+	logger := utils.GetLogger()
+	logger.Error(err)
 	return h.Sum64()
 }
 

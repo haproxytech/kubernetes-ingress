@@ -72,7 +72,7 @@ func (c *HAProxyController) FrontendHTTPRspsRefresh() (reload bool) {
 		// RESPONSE_SET_HEADER
 		for key, httpRule := range c.cfg.FrontendHTTPRspRules[RESPONSE_SET_HEADER] {
 			c.cfg.MapFiles.Modified(key)
-			utils.LogErr(c.frontendHTTPResponseRuleCreate(frontend, httpRule))
+			c.Logger.Error(c.frontendHTTPResponseRuleCreate(frontend, httpRule))
 		}
 	}
 	return true
@@ -95,22 +95,22 @@ func (c *HAProxyController) FrontendHTTPReqsRefresh() (reload bool) {
 		Cond:      "if",
 		CondTest:  "{ ssl_fc }",
 	}
-	utils.LogErr(c.frontendHTTPRequestRuleCreate(FrontendHTTPS, xforwardedprotoRule))
+	c.Logger.Error(c.frontendHTTPRequestRuleCreate(FrontendHTTPS, xforwardedprotoRule))
 	// SSL_REDIRECT
 	for key, httpRule := range c.cfg.FrontendHTTPReqRules[SSL_REDIRECT] {
 		c.cfg.MapFiles.Modified(key)
-		utils.LogErr(c.frontendHTTPRequestRuleCreate(FrontendHTTP, httpRule))
+		c.Logger.Error(c.frontendHTTPRequestRuleCreate(FrontendHTTP, httpRule))
 	}
 	for _, frontend := range []string{FrontendHTTP, FrontendHTTPS} {
 		// REQUEST_SET_HEADER
 		for key, httpRule := range c.cfg.FrontendHTTPReqRules[REQUEST_SET_HEADER] {
 			c.cfg.MapFiles.Modified(key)
-			utils.LogErr(c.frontendHTTPRequestRuleCreate(frontend, httpRule))
+			c.Logger.Error(c.frontendHTTPRequestRuleCreate(frontend, httpRule))
 		}
 		// REQUEST_CAPTURE
 		for key, httpRule := range c.cfg.FrontendHTTPReqRules[REQUEST_CAPTURE] {
 			c.cfg.MapFiles.Modified(key)
-			utils.LogErr(c.frontendHTTPRequestRuleCreate(frontend, httpRule))
+			c.Logger.Error(c.frontendHTTPRequestRuleCreate(frontend, httpRule))
 		}
 		// STATIC: SET_VARIABLE txn.Base (for logging purpose)
 		setVarBaseRule := models.HTTPRequestRule{
@@ -120,7 +120,7 @@ func (c *HAProxyController) FrontendHTTPReqsRefresh() (reload bool) {
 			VarScope: "txn",
 			VarExpr:  "base",
 		}
-		utils.LogErr(c.frontendHTTPRequestRuleCreate(frontend, setVarBaseRule))
+		c.Logger.Error(c.frontendHTTPRequestRuleCreate(frontend, setVarBaseRule))
 		// RATE_LIMIT
 		for tableName, table := range rateLimitTables {
 			_, err := c.backendGet(tableName)
@@ -133,20 +133,20 @@ func (c *HAProxyController) FrontendHTTPReqsRefresh() (reload bool) {
 						Store: fmt.Sprintf("http_req_rate(%d)", *table.period),
 					},
 				})
-				utils.LogErr(err)
+				c.Logger.Error(err)
 			}
 		}
 		for key, httpRule := range c.cfg.FrontendHTTPReqRules[RATE_LIMIT] {
 			c.cfg.MapFiles.Modified(key)
-			utils.LogErr(c.frontendHTTPRequestRuleCreate(frontend, httpRule))
+			c.Logger.Error(c.frontendHTTPRequestRuleCreate(frontend, httpRule))
 		}
 		// BLACKLIST
 		for _, httpRule := range c.cfg.FrontendHTTPReqRules[BLACKLIST] {
-			utils.LogErr(c.frontendHTTPRequestRuleCreate(frontend, httpRule))
+			c.Logger.Error(c.frontendHTTPRequestRuleCreate(frontend, httpRule))
 		}
 		// WHITELIST
 		for _, httpRule := range c.cfg.FrontendHTTPReqRules[WHITELIST] {
-			utils.LogErr(c.frontendHTTPRequestRuleCreate(frontend, httpRule))
+			c.Logger.Error(c.frontendHTTPRequestRuleCreate(frontend, httpRule))
 		}
 	}
 	return true
@@ -163,7 +163,7 @@ func (c *HAProxyController) FrontendTCPreqsRefresh() (reload bool) {
 		c.frontendTCPRequestRuleDeleteAll(frontend)
 		// PROXY_PROTCOL
 		if len(c.cfg.FrontendTCPRules[PROXY_PROTOCOL]) > 0 {
-			utils.LogErr(c.frontendTCPRequestRuleCreate(frontend, c.cfg.FrontendTCPRules[PROXY_PROTOCOL][0]))
+			c.Logger.Error(c.frontendTCPRequestRuleCreate(frontend, c.cfg.FrontendTCPRules[PROXY_PROTOCOL][0]))
 		}
 	}
 	if !c.cfg.SSLPassthrough {
@@ -180,11 +180,11 @@ func (c *HAProxyController) FrontendTCPreqsRefresh() (reload bool) {
 		Cond:     "if",
 		CondTest: "{ req_ssl_hello_type 1 }",
 	})
-	utils.LogErr(err)
+	c.Logger.Error(err)
 	// REQUEST_CAPTURE
 	for key, tcpRule := range c.cfg.FrontendTCPRules[REQUEST_CAPTURE] {
 		c.cfg.MapFiles.Modified(key)
-		utils.LogErr(c.frontendTCPRequestRuleCreate(FrontendSSL, tcpRule))
+		c.Logger.Error(c.frontendTCPRequestRuleCreate(FrontendSSL, tcpRule))
 	}
 	// STATIC: Set-var rule used to log SNI
 	err = c.frontendTCPRequestRuleCreate(FrontendSSL, models.TCPRequestRule{
@@ -195,27 +195,27 @@ func (c *HAProxyController) FrontendTCPreqsRefresh() (reload bool) {
 		Expr:     "req_ssl_sni",
 		Type:     "content",
 	})
-	utils.LogErr(err)
+	c.Logger.Error(err)
 	// STATIC: Inspect delay
 	err = c.frontendTCPRequestRuleCreate(FrontendSSL, models.TCPRequestRule{
 		Index:   utils.PtrInt64(0),
 		Type:    "inspect-delay",
 		Timeout: utils.PtrInt64(5000),
 	})
-	utils.LogErr(err)
+	c.Logger.Error(err)
 	// BLACKLIST
 	for key, tcpRule := range c.cfg.FrontendTCPRules[BLACKLIST] {
 		c.cfg.MapFiles.Modified(key)
-		utils.LogErr(c.frontendTCPRequestRuleCreate(FrontendSSL, tcpRule))
+		c.Logger.Error(c.frontendTCPRequestRuleCreate(FrontendSSL, tcpRule))
 	}
 	// WHITELIST
 	for key, tcpRule := range c.cfg.FrontendTCPRules[WHITELIST] {
 		c.cfg.MapFiles.Modified(key)
-		utils.LogErr(c.frontendTCPRequestRuleCreate(FrontendSSL, tcpRule))
+		c.Logger.Error(c.frontendTCPRequestRuleCreate(FrontendSSL, tcpRule))
 	}
 	// PROXY_PROTCOL
 	if len(c.cfg.FrontendTCPRules[PROXY_PROTOCOL]) > 0 {
-		utils.LogErr(c.frontendTCPRequestRuleCreate(FrontendSSL, c.cfg.FrontendTCPRules[PROXY_PROTOCOL][0]))
+		c.Logger.Error(c.frontendTCPRequestRuleCreate(FrontendSSL, c.cfg.FrontendTCPRules[PROXY_PROTOCOL][0]))
 	}
 	return true
 }
@@ -229,7 +229,7 @@ func (c *HAProxyController) BackendHTTPReqsRefresh() (reload bool) {
 				delete(c.cfg.BackendHTTPRules, backendName)
 			} else {
 				for _, httpRule := range httpReqs.rules {
-					utils.LogErr(c.backendHTTPRequestRuleCreate(backendName, httpRule))
+					c.Logger.Error(c.backendHTTPRequestRuleCreate(backendName, httpRule))
 				}
 			}
 			httpReqs.modified = false

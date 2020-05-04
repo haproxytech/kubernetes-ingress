@@ -8,7 +8,6 @@ import (
 
 	parser "github.com/haproxytech/config-parser/v2"
 	"github.com/haproxytech/config-parser/v2/types"
-	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 )
 
 // Handle Global and default Annotations
@@ -50,7 +49,7 @@ func (c *HAProxyController) handleNbthread() bool {
 			c.ActiveTransactionHasChanges = true
 			reload = true
 		}
-		utils.LogErr(errParser)
+		c.Logger.Error(errParser)
 	}
 	return reload
 }
@@ -69,7 +68,7 @@ func (c *HAProxyController) handleSyslog() (restart, reload bool) {
 		daemonMode = true
 	}
 	errParser := config.Set(parser.Global, parser.GlobalSectionName, "log", nil)
-	utils.LogErr(errParser)
+	c.Logger.Error(errParser)
 	for index, syslogSrv := range strings.Split(annSyslogSrv.Value, "\n") {
 		if syslogSrv == "" {
 			continue
@@ -81,7 +80,7 @@ func (c *HAProxyController) handleSyslog() (restart, reload bool) {
 			if len(paramLst) == 2 {
 				logMap[paramLst[0]] = paramLst[1]
 			} else {
-				utils.LogErr(fmt.Errorf("incorrect syslog param: %s", paramLst))
+				c.Logger.Errorf("incorrect syslog param: %s", paramLst)
 				continue
 			}
 		}
@@ -111,7 +110,7 @@ func (c *HAProxyController) handleSyslog() (restart, reload bool) {
 				case "minlevel":
 					logData.Level = v
 				default:
-					utils.LogErr(fmt.Errorf("unkown syslog param: %s ", k))
+					c.Logger.Errorf("unkown syslog param: %s ", k)
 					continue
 				}
 			}
@@ -120,7 +119,7 @@ func (c *HAProxyController) handleSyslog() (restart, reload bool) {
 				c.ActiveTransactionHasChanges = true
 				reload = true
 			}
-			utils.LogErr(errParser)
+			c.Logger.Error(errParser)
 		}
 	}
 	if stdoutLog {
@@ -132,7 +131,7 @@ func (c *HAProxyController) handleSyslog() (restart, reload bool) {
 		errParser = config.Insert(parser.Global, parser.GlobalSectionName, "daemon", types.Enabled{})
 		restart = true
 	}
-	utils.LogErr(errParser)
+	c.Logger.Error(errParser)
 	return restart, reload
 }
 
@@ -187,7 +186,7 @@ func (c *HAProxyController) handleDefaultMaxconn() bool {
 	}
 	value, err := strconv.ParseInt(annMaxconn.Value, 10, 64)
 	if err != nil {
-		utils.LogErr(err)
+		c.Logger.Error(err)
 		return false
 	}
 
@@ -198,7 +197,7 @@ func (c *HAProxyController) handleDefaultMaxconn() bool {
 	case DELETED:
 		err = config.Set(parser.Defaults, parser.DefaultSectionName, "maxconn", nil)
 		if err != nil {
-			utils.LogErr(err)
+			c.Logger.Error(err)
 			return false
 		}
 		c.Logger.Debug("Removing default maxconn")
@@ -207,7 +206,7 @@ func (c *HAProxyController) handleDefaultMaxconn() bool {
 			Value: value,
 		})
 		if err != nil {
-			utils.LogErr(err)
+			c.Logger.Error(err)
 			return false
 		}
 		c.Logger.Debugf("Setting default maxconn to %d", value)
@@ -226,7 +225,7 @@ func (c *HAProxyController) handleDefaultLogFormat() bool {
 		Value: "'" + annLogFormat.Value + "'",
 	})
 	if err != nil {
-		utils.LogErr(err)
+		c.Logger.Error(err)
 		return false
 	}
 	c.ActiveTransactionHasChanges = true

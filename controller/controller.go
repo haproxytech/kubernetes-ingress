@@ -96,7 +96,7 @@ func (c *HAProxyController) Start(ctx context.Context, osArgs utils.OSArgs) {
 		k8s, err = GetKubernetesClient()
 	}
 	if err != nil {
-		utils.PanicErr(err)
+		c.Logger.Panic(err)
 	}
 	c.k8s = k8s
 
@@ -119,7 +119,7 @@ func (c *HAProxyController) updateHAProxy() error {
 
 	err := c.apiStartTransaction()
 	if err != nil {
-		utils.LogErr(err)
+		c.Logger.Error(err)
 		return err
 	}
 	defer func() {
@@ -129,7 +129,7 @@ func (c *HAProxyController) updateHAProxy() error {
 	restart, reload := c.handleGlobalAnnotations()
 
 	r, err := c.handleDefaultService()
-	utils.LogErr(err)
+	c.Logger.Error(err)
 	reload = reload || r
 
 	usedCerts := map[string]struct{}{}
@@ -140,12 +140,12 @@ func (c *HAProxyController) updateHAProxy() error {
 		}
 		for _, ingress := range namespace.Ingresses {
 			if c.cfg.PublishService != nil && ingress.Status != DELETED {
-				utils.LogErr(c.k8s.UpdateIngressStatus(ingress, c.cfg.PublishService))
+				c.Logger.Error(c.k8s.UpdateIngressStatus(ingress, c.cfg.PublishService))
 			}
 			// handle Default Backend
 			if ingress.DefaultBackend != nil {
 				r, err = c.handlePath(namespace, ingress, &IngressRule{}, ingress.DefaultBackend)
-				utils.LogErr(err)
+				c.Logger.Error(err)
 				reload = reload || r
 			}
 			// handle Ingress rules
@@ -153,7 +153,7 @@ func (c *HAProxyController) updateHAProxy() error {
 				for _, path := range rule.Paths {
 					r, err = c.handlePath(namespace, ingress, rule, path)
 					reload = reload || r
-					utils.LogErr(err)
+					c.Logger.Error(err)
 				}
 			}
 			//handle certs
@@ -166,17 +166,17 @@ func (c *HAProxyController) updateHAProxy() error {
 				}
 			}
 
-			utils.LogErr(c.handleRateLimiting(ingress))
-			utils.LogErr(c.handleRequestCapture(ingress))
-			utils.LogErr(c.handleRequestSetHdr(ingress))
-			utils.LogErr(c.handleResponseSetHdr(ingress))
-			utils.LogErr(c.handleBlacklisting(ingress))
-			utils.LogErr(c.handleWhitelisting(ingress))
-			utils.LogErr(c.handleHTTPRedirect(ingress))
+			c.Logger.Error(c.handleRateLimiting(ingress))
+			c.Logger.Error(c.handleRequestCapture(ingress))
+			c.Logger.Error(c.handleRequestSetHdr(ingress))
+			c.Logger.Error(c.handleResponseSetHdr(ingress))
+			c.Logger.Error(c.handleBlacklisting(ingress))
+			c.Logger.Error(c.handleWhitelisting(ingress))
+			c.Logger.Error(c.handleHTTPRedirect(ingress))
 		}
 	}
 
-	utils.LogErr(c.handleProxyProtocol())
+	c.Logger.Error(c.handleProxyProtocol())
 
 	r = c.handleDefaultCertificate(usedCerts)
 	reload = reload || r
@@ -193,11 +193,11 @@ func (c *HAProxyController) updateHAProxy() error {
 	reload = c.BackendHTTPReqsRefresh() || reload
 
 	r, err = c.cfg.MapFiles.Refresh()
-	utils.LogErr(err)
+	c.Logger.Error(err)
 	reload = reload || r
 
 	r, err = c.handleTCPServices()
-	utils.LogErr(err)
+	c.Logger.Error(err)
 	reload = reload || r
 
 	r = c.refreshBackendSwitching()
@@ -205,13 +205,13 @@ func (c *HAProxyController) updateHAProxy() error {
 
 	err = c.apiCommitTransaction()
 	if err != nil {
-		utils.LogErr(err)
+		c.Logger.Error(err)
 		return err
 	}
 	c.cfg.Clean()
 	if restart {
 		if err := c.haproxyService("restart"); err != nil {
-			utils.LogErr(err)
+			c.Logger.Error(err)
 		} else {
 			c.Logger.Info("HAProxy restarted")
 		}
@@ -219,7 +219,7 @@ func (c *HAProxyController) updateHAProxy() error {
 	}
 	if reload {
 		if err := c.haproxyService("reload"); err != nil {
-			utils.LogErr(err)
+			c.Logger.Error(err)
 		} else {
 			c.Logger.Info("HAProxy reloaded")
 		}
@@ -236,7 +236,7 @@ func (c *HAProxyController) haproxyInitialize() {
 		HAProxyPIDFile = "/var/run/haproxy.pid"
 	}
 	if _, err := os.Stat(HAProxyCFG); err != nil {
-		utils.PanicErr(err)
+		c.Logger.Panic(err)
 	}
 	if HAProxyCertDir == "" {
 		HAProxyCertDir = filepath.Join(c.HAProxyCfgDir, "certs")
@@ -250,7 +250,7 @@ func (c *HAProxyController) haproxyInitialize() {
 	for _, d := range []string{HAProxyCertDir, HAProxyMapDir, HAProxyStateDir} {
 		err := os.MkdirAll(d, 0755)
 		if err != nil {
-			utils.PanicErr(err)
+			c.Logger.Panic(err)
 		}
 	}
 
@@ -263,10 +263,10 @@ func (c *HAProxyController) haproxyInitialize() {
 	}
 
 	c.Logger.Infof("Starting HAProxy with %s", HAProxyCFG)
-	utils.PanicErr(c.haproxyService("start"))
+	c.Logger.Panic(c.haproxyService("start"))
 
 	hostname, err := os.Hostname()
-	utils.LogErr(err)
+	c.Logger.Error(err)
 	c.Logger.Infof("Running on %s", hostname)
 
 	runtimeClient := runtime.Client{}
@@ -274,7 +274,7 @@ func (c *HAProxyController) haproxyInitialize() {
 		0: "/var/run/haproxy-runtime-api.sock",
 	})
 	if err != nil {
-		utils.PanicErr(err)
+		c.Logger.Panic(err)
 	}
 
 	confClient := configuration.Client{}
@@ -284,7 +284,7 @@ func (c *HAProxyController) haproxyInitialize() {
 		Haproxy:                "haproxy",
 	})
 	if err != nil {
-		utils.PanicErr(err)
+		c.Logger.Panic(err)
 	}
 
 	c.NativeAPI = &clientnative.HAProxyClient{
@@ -311,7 +311,7 @@ func (c *HAProxyController) haproxyService(action string) (err error) {
 	switch action {
 	case "start":
 		if processErr == nil {
-			utils.LogErr(fmt.Errorf("haproxy is already running"))
+			c.Logger.Error(fmt.Errorf("haproxy is already running"))
 			return nil
 		}
 		cmd = exec.Command("haproxy", "-W", "-f", HAProxyCFG, "-p", HAProxyPIDFile)
@@ -320,21 +320,21 @@ func (c *HAProxyController) haproxyService(action string) (err error) {
 		return cmd.Start()
 	case "stop":
 		if processErr != nil {
-			utils.LogErr(fmt.Errorf("haproxy  already stopped"))
+			c.Logger.Error(fmt.Errorf("haproxy  already stopped"))
 			return processErr
 		}
 		return process.Signal(syscall.SIGUSR1)
 	case "reload":
-		utils.LogErr(c.saveServerState())
+		c.Logger.Error(c.saveServerState())
 		if processErr != nil {
-			utils.LogErr(fmt.Errorf("haproxy is not running, trying to start it"))
+			c.Logger.Errorf("haproxy is not running, trying to start it")
 			return c.haproxyService("start")
 		}
 		return process.Signal(syscall.SIGUSR2)
 	case "restart":
-		utils.LogErr(c.saveServerState())
+		c.Logger.Error(c.saveServerState())
 		if processErr != nil {
-			utils.LogErr(fmt.Errorf("haproxy is not running, trying to start it"))
+			c.Logger.Errorf("haproxy is not running, trying to start it")
 			return c.haproxyService("start")
 		}
 		pid := strconv.Itoa(process.Pid)
