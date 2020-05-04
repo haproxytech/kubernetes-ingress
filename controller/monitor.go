@@ -63,6 +63,10 @@ func (c *HAProxyController) monitorChanges() {
 	var configMapOk bool
 	if c.osArgs.ConfigMap.Name == "" {
 		configMapOk = true
+		//since we don't have configmap and everywhere in code we expect one we need to create empty one
+		c.cfg.ConfigMap = &ConfigMap{
+			Annotations: MapStringW{},
+		}
 	} else {
 		eventsIngress = []SyncDataEvent{}
 		eventsEndpoints = []SyncDataEvent{}
