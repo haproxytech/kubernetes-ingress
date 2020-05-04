@@ -21,6 +21,9 @@ func (c *HAProxyController) handleGlobalAnnotations() (restart bool, reload bool
 
 	restart, r := c.handleSyslog()
 	reload = reload || r
+	if reload || restart {
+		c.ActiveTransactionHasChanges = true
+	}
 	return restart, reload
 }
 
@@ -40,13 +43,11 @@ func (c *HAProxyController) handleNbthread() bool {
 		}
 		if annNbthread.Status == DELETED {
 			errParser = config.Delete(parser.Global, parser.GlobalSectionName, "nbthread")
-			c.ActiveTransactionHasChanges = true
 			reload = true
 		} else if annNbthread.Status != EMPTY {
 			errParser = config.Insert(parser.Global, parser.GlobalSectionName, "nbthread", types.Int64C{
 				Value: numThreads,
 			})
-			c.ActiveTransactionHasChanges = true
 			reload = true
 		}
 		c.Logger.Error(errParser)
@@ -116,7 +117,6 @@ func (c *HAProxyController) handleSyslog() (restart, reload bool) {
 			}
 			errParser = config.Insert(parser.Global, parser.GlobalSectionName, "log", logData, index)
 			if errParser == nil {
-				c.ActiveTransactionHasChanges = true
 				reload = true
 			}
 			c.Logger.Error(errParser)
@@ -173,7 +173,6 @@ func (c *HAProxyController) handleDefaultTimeout(timeout string) bool {
 			c.Logger.Error(err)
 			return false
 		}
-		c.ActiveTransactionHasChanges = true
 		return true
 	}
 	return false
@@ -211,7 +210,6 @@ func (c *HAProxyController) handleDefaultMaxconn() bool {
 		}
 		c.Logger.Debugf("Setting default maxconn to %d", value)
 	}
-	c.ActiveTransactionHasChanges = true
 	return true
 }
 
@@ -228,6 +226,5 @@ func (c *HAProxyController) handleDefaultLogFormat() bool {
 		c.Logger.Error(err)
 		return false
 	}
-	c.ActiveTransactionHasChanges = true
 	return true
 }
