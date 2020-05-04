@@ -116,16 +116,6 @@ Depending on the option, it can be in Global or Default HAProxy section.
 - Annotation: `load-balance`
 - use in format  `haproxy.org/load-balance: <algorithm> [ <arguments> ]`
 
-#### Log format
-
-- Annotation: `log-format`
-- Specifies the log-format string to use for HTTP traffic logs.
-- Log format string is covered in depth in [HAProxy documentation](https://cbonte.github.io/haproxy-dconv/2.0/configuration.html#8.2.3)
-- Default log-format is:  
-   `"%ci:%cp [%tr] %ft %b/%s %TR/%Tw/%Tc/%Tr/%Ta %ST %B %CC %CS %tsc %ac/%fc/%bc/%sc/%rc %sq/%bq %hr %hs \"%HM %[var(txn.base)] %HV\""`
-  - Which will look like this:  
-  `10.244.0.1:5793 [10/Apr/2020:10:32:50.132] https~ test-echo1-8080/SRV_TFW8V 0/0/1/2/3 200 653 - - ---- 1/1/0/0/0 0/0 "GET test.k8s.local/ HTTP/2.0"`
-
 #### Backend Checks
 
 - Annotation: `check` - activate pod check (tcp checks by default)
@@ -340,23 +330,24 @@ More information can be found in the official HAProxy [documentation](https://cb
 #### Logging
 
 - Annotation `syslog-server`: Takes one or more syslog entries separated by "newlines".
-- Each syslog entry is a "comma" separated [syslog fields](#syslog-fields).
-- "address" and "facility" are mandatory syslog fields.
-- Example:
-  - Single syslog server:
-
-		syslog-server: address:127.0.0.1, port:514, facility:local0
-
-  - Multiple syslog servers:
-
-		syslog-server: |
-			address:127.0.0.1, port:514, facility:local0
-			address:192.168.1.1, port:514, facility:local1
-
-- Logs can also be sent to stdout and viewed with `kubectl logs`:
-
-		syslog-server: address:stdout, format: raw, facility:daemon
-
+  - Each syslog entry is a "comma" separated [syslog fields](#syslog-fields).
+  - "address" and "facility" are mandatory syslog fields.
+  - Example:
+    - Single syslog server:
+		```
+  		syslog-server: address:127.0.0.1, port:514, facility:local0
+	  ```
+    - Multiple syslog servers:
+		```
+  		syslog-server: |
+  			address:127.0.0.1, port:514, facility:local0
+  			address:192.168.1.1, port:514, facility:local1
+		```
+  - Logs can also be sent to stdout and viewed with `kubectl logs`:
+	```
+  	syslog-server: address:stdout, format: raw, facility:daemon
+	```
+  
 - Annotation [`dontlognull`](https://cbonte.github.io/haproxy-dconv/2.0/configuration.html#option%20dontlognull)
 - Annotation [`logasap`](https://cbonte.github.io/haproxy-dconv/2.0/configuration.html#4.2-option%20logasap)
 
@@ -371,7 +362,21 @@ The following syslog fields can be used:
 - *level*:    Optional level to filter outgoing messages.
 - *minlevel*: Optional minimum level.
 
-More information can be found in the official HAProxy [documentation](https://cbonte.github.io/haproxy-dconv/2.0/configuration.html#3.1-log)
+More information can be found in the [HAProxy documentation](https://cbonte.github.io/haproxy-dconv/2.0/configuration.html#3.1-log)
+
+##### Log format
+
+- Annotation: `log-format`
+- Specifies the log-format string to use for HTTP traffic logs.
+- Log format string is covered in depth in [HAProxy documentation](https://cbonte.github.io/haproxy-dconv/2.0/configuration.html#8.2.3)
+- Default log-format is:
+   ```
+	 "%ci:%cp [%tr] %ft %b/%s %TR/%Tw/%Tc/%Tr/%Ta %ST %B %CC %CS %tsc %ac/%fc/%bc/%sc/%rc %sq/%bq %hr %hs \"%HM %[var(txn.base)] %HV\""
+	 ```
+  - Which will look like this:
+  ```
+	10.244.0.1:5793 [10/Apr/2020:10:32:50.132] https~ test-echo1-8080/SRV_TFW8V 0/0/1/2/3 200 653 - - ---- 1/1/0/0/0 0/0 "GET test.k8s.local/ HTTP/2.0"
+	```
 
 #### X-Forwarded-For
 
