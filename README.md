@@ -41,7 +41,7 @@ Thanks for your interest in the project and your willing to contribute:
 
 A Github issue is the right place to discuss feature requests, bug reports or any other subject that needs tracking.
 
-To ask questions, get some help or even have a little chat, you can join our [#ingress-controller](https://haproxy.slack.com/archives/CR9N5UNAZ) channel in [HAProxy Community Slack](https://haproxy.slack.com).
+To ask questions, get some help or even have a little chat, you can join our #ingress-controller channel in [HAProxy Community Slack](https://slack.haproxy.org).
 
 ## License
 
