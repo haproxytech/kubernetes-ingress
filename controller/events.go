@@ -372,6 +372,7 @@ func (c *HAProxyController) processEndpointIPs(data *Endpoints) (updateRequired 
 				if ip.Disabled {
 					status = "maint"
 				}
+				c.Logger.Debugf("server '%s/%s' changed status to %v", data.BackendName, ip.HAProxyName, status)
 				err = c.Client.SetServerState(data.BackendName, ip.HAProxyName, status)
 				if err != nil {
 					c.Logger.Error(err)

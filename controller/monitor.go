@@ -32,7 +32,7 @@ func (c *HAProxyController) monitorChanges() {
 
 	configMapReceivedAndProcessed := make(chan bool)
 	syncPeriod := c.syncPeriod()
-	c.Logger.Infof("executing syncPeriod every %s", syncPeriod.String())
+	c.Logger.Debugf("Executing syncPeriod every %s", syncPeriod.String())
 	go c.SyncData(c.eventChan, configMapReceivedAndProcessed)
 
 	stop := make(chan struct{})
@@ -87,6 +87,7 @@ func (c *HAProxyController) monitorChanges() {
 			eventsEndpoints = []SyncDataEvent{}
 			eventsServices = []SyncDataEvent{}
 			configMapOk = true
+			c.Logger.Debug("Configmap processed")
 			time.Sleep(1 * time.Millisecond)
 		case item := <-cfgChan:
 			c.eventChan <- SyncDataEvent{SyncType: CONFIGMAP, Namespace: item.Namespace, Data: item}

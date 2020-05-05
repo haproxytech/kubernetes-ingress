@@ -91,6 +91,7 @@ func (c *HAProxyController) handleSecret(ingress Ingress, secret Secret, writeSe
 					c.Logger.Error(err)
 					return false
 				}
+				c.Logger.Debugf("Using certtificate from secret '%s/%s'", secret.Namespace, secret.Name)
 				reload = true
 			}
 			certs[filename] = struct{}{}
@@ -161,11 +162,13 @@ func (c *HAProxyController) handleHTTPS(usedCerts map[string]struct{}) (reload b
 	// ssl-passthrough
 	if len(c.cfg.BackendSwitchingRules[FrontendSSL]) > 0 {
 		if !c.cfg.SSLPassthrough {
+			c.Logger.Info("Enabling ssl-passthrough")
 			c.Logger.Panic(c.enableSSLPassthrough())
 			c.cfg.SSLPassthrough = true
 			reload = true
 		}
 	} else if c.cfg.SSLPassthrough {
+		c.Logger.Info("Disabling ssl-passthrough")
 		c.Logger.Panic(c.disableSSLPassthrough())
 		c.cfg.SSLPassthrough = false
 		reload = true
@@ -178,6 +181,7 @@ func (c *HAProxyController) handleHTTPS(usedCerts map[string]struct{}) (reload b
 			reload = true
 		}
 	} else if c.cfg.HTTPS {
+		c.Logger.Info("Disabling ssl offload")
 		c.Logger.Panic(c.disableSSLOffload(FrontendHTTPS))
 		c.cfg.HTTPS = false
 		reload = true

@@ -48,7 +48,7 @@ type K8s struct {
 func GetKubernetesClient() (*K8s, error) {
 	logger := utils.GetK8sAPILogger()
 	if !TRACE_API {
-		logger.SetLevel(utils.Error)
+		logger.SetLevel(utils.Info)
 	}
 	config, err := rest.InClusterConfig()
 	if err != nil {
@@ -69,7 +69,7 @@ func GetKubernetesClient() (*K8s, error) {
 func GetRemoteKubernetesClient(kubeconfig string) (*K8s, error) {
 	logger := utils.GetK8sAPILogger()
 	if !TRACE_API {
-		logger.SetLevel(utils.Error)
+		logger.SetLevel(utils.Info)
 	}
 
 	// use the current context in kubeconfig
@@ -613,9 +613,8 @@ func (k *K8s) UpdateIngressStatus(ingress *Ingress, publishSvc *Service) (err er
 	if _, err = k.API.ExtensionsV1beta1().Ingresses(ingress.Namespace).UpdateStatus(&ingCopy); err != nil {
 		return fmt.Errorf("failed to update LoadBalancer status of ingress%s/%s: %v", ingress.Namespace, ingress.Name, err)
 	}
-	k.Logger.Tracef("successful update of LoadBalancer status of ingress %s/%s", ingress.Namespace, ingress.Name)
+	k.Logger.Debugf("Successful update of LoadBalancer status in ingress %s/%s", ingress.Namespace, ingress.Name)
 	return nil
-
 }
 
 func (k *K8s) GetPublishServiceAddresses(service *corev1.Service, publishSvc *Service) {

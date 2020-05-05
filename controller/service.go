@@ -73,33 +73,28 @@ func (c *HAProxyController) handleEndpoint(namespace *Namespace, ingress *Ingres
 		ip.Status = MODIFIED
 	}
 
+	var errAPI error
 	switch ip.Status {
 	case ADDED, MODIFIED:
-		errEdit := c.Client.BackendServerEdit(backendName, server)
-		if errEdit != nil {
-			if strings.Contains(errEdit.Error(), "does not exist") {
-				if errCreate := c.Client.BackendServerCreate(backendName, server); errCreate != nil {
-					c.Logger.Err(errCreate)
-					return false
-				}
-				return true
+		errAPI = c.Client.BackendServerEdit(backendName, server)
+		if errAPI != nil {
+			if strings.Contains(errAPI.Error(), "does not exist") {
+				c.Logger.Debugf("Creating server '%s/%s'", backendName, server.Name)
+				errAPI = c.Client.BackendServerCreate(backendName, server)
+				break
 			}
-			c.Logger.Error(errEdit)
-			return false
+			c.Logger.Debugf("Updating server '%s/%s'", backendName, server.Name)
 		}
-		status := "ready"
-		if ip.Disabled {
-			status = "maint"
-		}
-		c.Logger.Debugf("Modified: %s - %s - %v", backendName, ip.HAProxyName, status)
+
 	case DELETED:
-		err := c.Client.BackendServerDelete(backendName, server.Name)
-		if err != nil && !strings.Contains(err.Error(), "does not exist") {
-			c.Logger.Error(err)
-		}
-		return true
+		c.Logger.Debugf("Deleting server '%s/%s'", backendName, server.Name)
+		errAPI = c.Client.BackendServerDelete(backendName, server.Name)
 	}
-	return reload
+	if errAPI != nil {
+		c.Logger.Err(errAPI)
+		return false
+	}
+	return false
 }
 
 // handle service of an IngressPath and make corresponding backend configuration in HAProxy
@@ -122,7 +117,7 @@ func (c *HAProxyController) handleService(namespace *Namespace, ingress *Ingress
 		case path.IsSSLPassthrough:
 			c.deleteUseBackendRule(key, FrontendSSL)
 		case path.IsDefaultBackend:
-			c.Logger.Debugf("Removing default_backend %s from ingress", service.Name)
+			c.Logger.Debugf("Removing default backend '%s/%s'", namespace.Name, service.Name)
 			err = c.setDefaultBackend("")
 			reload = true
 		default:
@@ -151,6 +146,7 @@ func (c *HAProxyController) handleService(namespace *Namespace, ingress *Ingress
 		if path.IsTCPService || path.IsSSLPassthrough {
 			backend.Mode = string(TCP)
 		}
+		c.Logger.Debugf("Ingress '%s/%s': Creating new backend '%s'", namespace.Name, ingress.Name, backendName)
 		if err = c.Client.BackendCreate(backend); err != nil {
 			return "", true, reload, err
 		}
@@ -162,6 +158,7 @@ func (c *HAProxyController) handleService(namespace *Namespace, ingress *Ingress
 	activeSSLPassthrough := c.handleSSLPassthrough(ingress, service, path, &backend, newBackend)
 	activeBackendAnn := c.handleBackendAnnotations(ingress, service, &backend, newBackend)
 	if activeBackendAnn || activeSSLPassthrough {
+		c.Logger.Debugf("Ingress '%s/%s': Applying annotations changes to backend '%s'", namespace.Name, ingress.Name, backendName)
 		if err = c.Client.BackendEdit(backend); err != nil {
 			return backendName, newBackend, reload, err
 		}
@@ -183,7 +180,7 @@ func (c *HAProxyController) handleService(namespace *Namespace, ingress *Ingress
 	}
 	switch {
 	case path.IsDefaultBackend:
-		c.Logger.Debugf("Configuring default_backend %s from ingress %s", service.Name, ingress.Name)
+		c.Logger.Debugf("Using service '%s/%s' as default backend", namespace.Name, service.Name)
 		err = c.setDefaultBackend(backendName)
 		reload = true
 	case path.IsSSLPassthrough:

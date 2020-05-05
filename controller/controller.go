@@ -75,6 +75,7 @@ func (c *HAProxyController) Start(ctx context.Context, osArgs utils.OSArgs) {
 
 	if osArgs.OutOfCluster {
 		kubeconfig := filepath.Join(utils.HomeDir(), ".kube", "config")
+		c.Logger.Info("Running Controller out of K8s cluster")
 		if osArgs.KubeConfig != "" {
 			kubeconfig = osArgs.KubeConfig
 		}
@@ -102,6 +103,7 @@ func (c *HAProxyController) Start(ctx context.Context, osArgs utils.OSArgs) {
 
 // Sync HAProxy configuration
 func (c *HAProxyController) updateHAProxy() error {
+	c.Logger.Trace("HAProxy config sync started")
 	reload := false
 
 	err := c.Client.APIStartTransaction()
@@ -211,6 +213,8 @@ func (c *HAProxyController) updateHAProxy() error {
 			c.Logger.Info("HAProxy reloaded")
 		}
 	}
+
+	c.Logger.Trace("HAProxy config sync terminated")
 	return nil
 }
 

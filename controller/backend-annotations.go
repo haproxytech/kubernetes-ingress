@@ -80,6 +80,7 @@ func (c *HAProxyController) handleBackendAnnotations(ingress *Ingress, service *
 			continue
 		}
 		if v.Status != EMPTY || newBackend {
+			c.Logger.Debugf("Backend '%s': Configuring '%s' annotation", backend.Name, k)
 			switch k {
 			case "abortonclose":
 				if err := backend.UpdateAbortOnClose(v.Value); err != nil {
@@ -198,6 +199,7 @@ func (c *HAProxyController) handleServerAnnotations(ingress *Ingress, service *S
 			continue
 		}
 		if v.Status != EMPTY || serverStatus != EMPTY {
+			c.Logger.Tracef("Server '%s': Configuring '%s' annotation", server.Name, k)
 			switch k {
 			case "cookie-persistence":
 				if v.Status == DELETED {

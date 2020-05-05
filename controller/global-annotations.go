@@ -42,6 +42,7 @@ func (c *HAProxyController) handleNbthread() bool {
 			errParser = c.Client.SetNbthread(nil)
 			reload = true
 		} else if annNbthread.Status != EMPTY {
+			c.Logger.Infof("Set NbThread to: '%d'", numThreads)
 			errParser = c.Client.SetNbthread(&numThreads)
 		}
 		c.Logger.Error(errParser)
@@ -109,6 +110,7 @@ func (c *HAProxyController) handleSyslog() (restart, reload bool) {
 					continue
 				}
 			}
+			c.Logger.Infof("Adding log target: '%s'", logData)
 			errParser = c.Client.SetLogTarget(logData, index)
 			if errParser == nil {
 				reload = true
@@ -118,11 +120,13 @@ func (c *HAProxyController) handleSyslog() (restart, reload bool) {
 	}
 	if stdoutLog {
 		if daemonMode {
+			c.Logger.Info("Disabling Daemon mode")
 			errParser = c.Client.SetDaemonMode(nil)
 			restart = true
 		}
 	} else if !daemonMode {
 		enabled := true
+		c.Logger.Info("Enabling Daemon mode")
 		errParser = c.Client.SetDaemonMode(&enabled)
 		restart = true
 	}
@@ -146,7 +150,7 @@ func (c *HAProxyController) handleDefaultOption(option string) bool {
 	}
 	var err error
 	if annOption.Status == DELETED {
-		c.Logger.Printf(fmt.Sprintf("Removing '%s' option", option))
+		c.Logger.Infof("Removing '%s' option", option)
 		err = c.Client.SetDefaulOption(option, nil)
 		if err != nil {
 			c.Logger.Error(err)
@@ -163,7 +167,7 @@ func (c *HAProxyController) handleDefaultOption(option string) bool {
 	if !enabled {
 		action = "Disabling"
 	}
-	c.Logger.Printf(fmt.Sprintf("%s %s", action, option))
+	c.Logger.Infof("%s %s", action, option)
 	err = c.Client.SetDefaulOption(option, &enabled)
 	if err != nil {
 		c.Logger.Err(err)
@@ -197,10 +201,10 @@ func (c *HAProxyController) handleDefaultTimeout(timeout string) bool {
 	if annTimeout.Status != "" {
 		var err error
 		if annTimeout.Status == DELETED {
-			c.Logger.Debugf("Removing default timeout-%s ", timeout)
+			c.Logger.Infof("Removing default timeout-%s ", timeout)
 			err = c.Client.SetDefaulTimeout(timeout, nil)
 		} else {
-			c.Logger.Debugf("Setting default timeout-%s to %s", timeout, annTimeout.Value)
+			c.Logger.Infof("Setting default timeout-%s to %s", timeout, annTimeout.Value)
 			err = c.Client.SetDefaulTimeout(timeout, &annTimeout.Value)
 		}
 		if err != nil {
@@ -232,14 +236,14 @@ func (c *HAProxyController) handleDefaultMaxconn() bool {
 			c.Logger.Error(err)
 			return false
 		}
-		c.Logger.Debug("Removing default maxconn")
+		c.Logger.Info("Removing default maxconn")
 	default:
 		err = c.Client.SetDefaulMaxconn(&value)
 		if err != nil {
 			c.Logger.Error(err)
 			return false
 		}
-		c.Logger.Debugf("Setting default maxconn to %d", value)
+		c.Logger.Infof("Setting default maxconn to %d", value)
 	}
 	return true
 }
@@ -249,6 +253,7 @@ func (c *HAProxyController) handleDefaultLogFormat() bool {
 	if annLogFormat.Status == EMPTY {
 		return false
 	}
+	c.Logger.Infof("Changing default log format to '%s'", annLogFormat.Value)
 	err := c.Client.SetDefaulLogFormat(&annLogFormat.Value)
 	if err != nil {
 		c.Logger.Error(err)

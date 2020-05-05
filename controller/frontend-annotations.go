@@ -59,8 +59,10 @@ func (c *HAProxyController) handleBlacklisting(ingress *Ingress) error {
 		c.cfg.FrontendRulesStatus[HTTP] = MODIFIED
 		c.cfg.FrontendRulesStatus[TCP] = MODIFIED
 		if status == DELETED {
+			c.Logger.Debugf("Ingress %s/%s: Deleting blacklist configuration", ingress.Namespace, ingress.Name)
 			return nil
 		}
+		c.Logger.Debugf("Ingress %s/%s: Configuring blacklist annotation", ingress.Namespace, ingress.Name)
 	}
 	for hostname := range ingress.Rules {
 		mapFiles.AppendHost(key, hostname)
@@ -179,8 +181,10 @@ func (c *HAProxyController) handleProxyProtocol() error {
 	if status != EMPTY {
 		c.cfg.FrontendRulesStatus[TCP] = MODIFIED
 		if status == DELETED {
+			c.Logger.Debugf("Deleting ProxyProtcol configuration")
 			return nil
 		}
+		c.Logger.Debugf("Configuring ProxyProtcol annotation")
 	}
 
 	tcpRule := models.TCPRequestRule{
@@ -230,9 +234,11 @@ func (c *HAProxyController) handleRateLimiting(ingress *Ingress) error {
 		mapFiles.Modified(trackKey)
 		c.cfg.FrontendRulesStatus[HTTP] = MODIFIED
 		if status == DELETED {
+			c.Logger.Debugf("Ingress %s/%s: Deleting rate-limit-requests configuration", ingress.Namespace, ingress.Name)
 			delete(rateLimitTables, tableName)
 			return nil
 		}
+		c.Logger.Debugf("Ingress %s/%s: Configuring rate-limit-requests annotation", ingress.Namespace, ingress.Name)
 	}
 	for hostname := range ingress.Rules {
 		mapFiles.AppendHost(reqsKey, hostname)
@@ -298,8 +304,10 @@ func (c *HAProxyController) handleRequestCapture(ingress *Ingress) error {
 			c.cfg.FrontendRulesStatus[HTTP] = MODIFIED
 			c.cfg.FrontendRulesStatus[TCP] = MODIFIED
 			if status == DELETED {
+				c.Logger.Debugf("Ingress %s/%s: Deleting configuration for '%s' request capture ", ingress.Namespace, ingress.Name, sample)
 				break
 			}
+			c.Logger.Debugf("Ingress %s/%s: Configuring request capture for '%s'", ingress.Namespace, ingress.Name, sample)
 		}
 		for hostname := range ingress.Rules {
 			mapFiles.AppendHost(key, hostname)
@@ -351,8 +359,10 @@ func (c *HAProxyController) handleRequestSetHdr(ingress *Ingress) error {
 			mapFiles.Modified(key)
 			c.cfg.FrontendRulesStatus[HTTP] = MODIFIED
 			if status == DELETED {
+				c.Logger.Debugf("Ingress %s/%s: Deleting configuration for request set '%s' header ", ingress.Namespace, ingress.Name, param)
 				break
 			}
+			c.Logger.Debugf("Ingress %s/%s: Configuring request set '%s' header ", ingress.Namespace, ingress.Name, param)
 		}
 		for hostname := range ingress.Rules {
 			mapFiles.AppendHost(key, hostname)
@@ -440,8 +450,10 @@ func (c *HAProxyController) handleWhitelisting(ingress *Ingress) error {
 		c.cfg.FrontendRulesStatus[HTTP] = MODIFIED
 		c.cfg.FrontendRulesStatus[TCP] = MODIFIED
 		if status == DELETED {
+			c.Logger.Debugf("Ingress %s/%s: Deleting whitelist configuration", ingress.Namespace, ingress.Name)
 			return nil
 		}
+		c.Logger.Debugf("Ingress %s/%s: Configuring whitelist configuration", ingress.Namespace, ingress.Name)
 	}
 	for hostname := range ingress.Rules {
 		mapFiles.AppendHost(key, hostname)

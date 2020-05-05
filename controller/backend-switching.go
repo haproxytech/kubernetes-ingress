@@ -50,6 +50,7 @@ func (c *HAProxyController) refreshBackendSwitching() (reload bool) {
 	if len(c.cfg.BackendSwitchingStatus) == 0 {
 		return false
 	}
+	c.Logger.Debug("Updating Backend Switching rules")
 	frontends, err := c.Client.FrontendsGet()
 	if err != nil {
 		c.Logger.Panic(err)
@@ -130,6 +131,7 @@ func (c *HAProxyController) clearBackends(activeBackends map[string]struct{}) (r
 	}
 	for _, backend := range allBackends {
 		if _, ok := activeBackends[backend.Name]; !ok {
+			c.Logger.Debugf("Deleting backend '%s'", backend.Name)
 			if err := c.Client.BackendDelete(backend.Name); err != nil {
 				c.Logger.Panic(err)
 			}

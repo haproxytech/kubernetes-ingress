@@ -83,6 +83,7 @@ func (c *HAProxyController) FrontendHTTPReqsRefresh() (reload bool) {
 		return false
 	}
 
+	c.Logger.Debug("Updating HTTP request rules for HTTP and HTTPS frontends")
 	// DELETE RULES
 	c.Client.FrontendHTTPRequestRuleDeleteAll(FrontendHTTP)
 	c.Client.FrontendHTTPRequestRuleDeleteAll(FrontendHTTPS)
@@ -156,7 +157,7 @@ func (c *HAProxyController) FrontendTCPreqsRefresh() (reload bool) {
 	if c.cfg.FrontendRulesStatus[TCP] == EMPTY {
 		return false
 	}
-
+	c.Logger.Debug("Updating TCP request rules for HTTP and HTTPS frontends")
 	// HTTP and HTTPS Frrontends
 	for _, frontend := range []string{FrontendHTTP, FrontendHTTPS} {
 		// DELETE RULES
@@ -223,6 +224,7 @@ func (c *HAProxyController) FrontendTCPreqsRefresh() (reload bool) {
 func (c *HAProxyController) BackendHTTPReqsRefresh() (reload bool) {
 	for backendName, httpReqs := range c.cfg.BackendHTTPRules {
 		if httpReqs.modified {
+			c.Logger.Debugf("Updating HTTP request rules for backend '%s'", backendName)
 			reload = true
 			c.Client.BackendHTTPRequestRuleDeleteAll(backendName)
 			if len(httpReqs.rules) == 0 {

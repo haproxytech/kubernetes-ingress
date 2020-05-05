@@ -39,6 +39,7 @@ func (c *HAProxyController) handleTCPServices() (reload bool, err error) {
 		}
 		switch svc.Status {
 		case DELETED:
+			c.Logger.Debugf("Deleting TCP frontend '%s'", frontendName)
 			err = c.Client.FrontendDelete(frontendName)
 			c.Logger.Panic(err)
 			c.cfg.BackendSwitchingStatus["tcp-services"] = struct{}{}
@@ -56,6 +57,7 @@ func (c *HAProxyController) handleTCPServices() (reload bool, err error) {
 			} else {
 				c.Logger.Error(c.disableSSLOffload(frontend.Name))
 			}
+			c.Logger.Debugf("Updating TCP frontend '%s'", frontendName)
 			if err = c.Client.FrontendEdit(frontend); err != nil {
 				c.Logger.Panic(err)
 				continue
@@ -68,6 +70,7 @@ func (c *HAProxyController) handleTCPServices() (reload bool, err error) {
 				Tcplog:         true,
 				DefaultBackend: backendName,
 			}
+			c.Logger.Debugf("Creating TCP frontend '%s'", frontendName)
 			err = c.Client.FrontendCreate(frontend)
 			if err != nil {
 				c.Logger.Panic(err)
