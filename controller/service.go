@@ -57,7 +57,7 @@ func (c *HAProxyController) handleDefaultService() (reload bool, err error) {
 }
 
 // handle the IngressPath related endpoints and make corresponding backend servers configuration in HAProxy
-func (c *HAProxyController) handleEndpointIP(namespace *Namespace, ingress *Ingress, rule *IngressRule, path *IngressPath, service *Service, backendName string, newBackend bool, endpoints *Endpoints, ip *EndpointIP) (reload bool) {
+func (c *HAProxyController) handleEndpoint(namespace *Namespace, ingress *Ingress, path *IngressPath, service *Service, backendName string, newBackend bool, ip *EndpointIP) (reload bool) {
 	reload = false
 	server := models.Server{
 		Name:    ip.HAProxyName,
@@ -220,29 +220,47 @@ func (c *HAProxyController) handleService(namespace *Namespace, ingress *Ingress
 // handle IngressPath and make corresponding HAProxy configuration
 func (c *HAProxyController) handlePath(namespace *Namespace, ingress *Ingress, rule *IngressRule, path *IngressPath) (reload bool, err error) {
 	reload = false
+	// fetch Service
 	service, ok := namespace.Services[path.ServiceName]
 	if !ok {
 		return reload, fmt.Errorf("service '%s' does not exist", path.ServiceName)
 	}
-
+	// handle Backend
 	backendName, newBackend, r, err := c.handleService(namespace, ingress, rule, path, service)
 	reload = reload || r
 	if err != nil {
 		return reload, err
 	}
-
+	// fetch Endpoints
 	endpoints, ok := namespace.Endpoints[service.Name]
 	if !ok {
-		c.Logger.Warningf("No Endpoints found for service '%s'", service.Name)
-		return reload, nil // not an end of world scenario, just log this
+		if service.DNS == "" {
+			c.Logger.Warningf("No Endpoints for service '%s'", service.Name)
+			return reload, nil // not an end of world scenario, just log this
+		}
+		//TODO: currently HAProxy will only resolve server name at startup/reload
+		// This needs to be improved by using HAPorxy resolvers to have resolution at runtime
+		c.Logger.Debugf("Configuring service '%s', of type ExternalName", service.Name)
+		endpoints = &Endpoints{
+			Namespace: "external",
+			Addresses: &EndpointIPs{
+				"external": &EndpointIP{
+					HAProxyName: "external-service",
+					IP:          service.DNS,
+					Disabled:    false,
+					Status:      service.Status,
+				},
+			},
+		}
 	}
+	// resolve TargetPort
 	endpoints.BackendName = backendName
 	if err := c.setTargetPort(path, service, endpoints); err != nil {
 		return reload, err
 	}
-
+	// Handle Backend servers
 	for _, ip := range *endpoints.Addresses {
-		r := c.handleEndpointIP(namespace, ingress, rule, path, service, backendName, newBackend, endpoints, ip)
+		r := c.handleEndpoint(namespace, ingress, path, service, backendName, newBackend, ip)
 		reload = reload || r
 	}
 	return reload, nil
@@ -263,17 +281,21 @@ func (c *HAProxyController) setTargetPort(path *IngressPath, service *Service, e
 								if err := c.NativeAPI.Runtime.SetServerAddr(endpoints.BackendName, EndpointIP.HAProxyName, EndpointIP.IP, int(epPort.Port)); err != nil {
 									c.Logger.Error(err)
 								}
-								c.Logger.Debug("TargetPort for backend %s changed to %d", endpoints.BackendName, epPort.Port)
+								c.Logger.Infof("Servers Port of backend %s changed from %d to %d", endpoints.BackendName, path.TargetPort, epPort.Port)
 							}
 						}
 						path.TargetPort = epPort.Port
 						return nil
 					}
 				}
-				c.Logger.Warningf("Could not find Targetport of '%s' for service %s", sp.Name, service.Name)
-			} // Return nil even if corresponding target port was not found.
-			return nil
+			}
 		}
 	}
-	return fmt.Errorf("servicePort(Str: %s, Int: %d) for serviceName '%s' not found", path.ServicePortString, path.ServicePortInt, service.Name)
+	// TargetPort was not found
+	if path.ServicePortInt != 0 && endpoints.Namespace == "external" {
+		//ExternalName
+		path.TargetPort = path.ServicePortInt
+		return nil
+	}
+	return fmt.Errorf("ingress servicePort(Str: %s, Int: %d) for serviceName '%s' not found", path.ServicePortString, path.ServicePortInt, service.Name)
 }

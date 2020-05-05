@@ -357,6 +357,7 @@ func (k *K8s) EventsServices(channel chan *Service, stop chan struct{}, publishS
 					Annotations: ConvertToMapStringW(data.ObjectMeta.Annotations),
 					Selector:    ConvertToMapStringW(data.Spec.Selector),
 					Ports:       []ServicePort{},
+					DNS:         data.Spec.ExternalName,
 					Status:      status,
 				}
 				for _, sp := range data.Spec.Ports {
@@ -402,6 +403,7 @@ func (k *K8s) EventsServices(channel chan *Service, stop chan struct{}, publishS
 					Annotations: ConvertToMapStringW(data1.ObjectMeta.Annotations),
 					Selector:    ConvertToMapStringW(data1.Spec.Selector),
 					Ports:       []ServicePort{},
+					DNS:         data1.Spec.ExternalName,
 					Status:      status,
 				}
 				for _, sp := range data1.Spec.Ports {
@@ -418,6 +420,7 @@ func (k *K8s) EventsServices(channel chan *Service, stop chan struct{}, publishS
 					Annotations: ConvertToMapStringW(data2.ObjectMeta.Annotations),
 					Selector:    ConvertToMapStringW(data2.Spec.Selector),
 					Ports:       []ServicePort{},
+					DNS:         data1.Spec.ExternalName,
 					Status:      status,
 				}
 				for _, sp := range data2.Spec.Ports {
