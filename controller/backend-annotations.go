@@ -180,7 +180,7 @@ func (c *HAProxyController) handleBackendAnnotations(ingress *Ingress, service *
 }
 
 // Update server with annotations values.
-func (c *HAProxyController) handleServerAnnotations(ingress *Ingress, service *Service, serverModel *models.Server) (activeAnnotations bool) {
+func (c *HAProxyController) handleServerAnnotations(ingress *Ingress, service *Service, serverModel *models.Server, serverStatus Status) (activeAnnotations bool) {
 	activeAnnotations = false
 	server := haproxy.Server(*serverModel)
 
@@ -197,7 +197,7 @@ func (c *HAProxyController) handleServerAnnotations(ingress *Ingress, service *S
 		if v == nil {
 			continue
 		}
-		if v.Status != EMPTY {
+		if v.Status != EMPTY || serverStatus != EMPTY {
 			switch k {
 			case "cookie-persistence":
 				if v.Status == DELETED {

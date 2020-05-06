@@ -57,8 +57,7 @@ func (c *HAProxyController) handleDefaultService() (reload bool, err error) {
 }
 
 // handle the IngressPath related endpoints and make corresponding backend servers configuration in HAProxy
-func (c *HAProxyController) handleEndpoint(namespace *Namespace, ingress *Ingress, path *IngressPath, service *Service, backendName string, newBackend bool, ip *EndpointIP) (reload bool) {
-	reload = false
+func (c *HAProxyController) handleEndpoint(namespace *Namespace, ingress *Ingress, path *IngressPath, service *Service, backendName string, ip EndpointIP) (reload bool) {
 	server := models.Server{
 		Name:    ip.HAProxyName,
 		Address: ip.IP,
@@ -68,36 +67,25 @@ func (c *HAProxyController) handleEndpoint(namespace *Namespace, ingress *Ingres
 	if ip.Disabled {
 		server.Maintenance = "enabled"
 	}
-	annotationsActive := c.handleServerAnnotations(ingress, service, &server)
-	status := ip.Status
-	if status == EMPTY {
-		if newBackend {
-			status = ADDED
-		} else if annotationsActive {
-			status = MODIFIED
-		}
+
+	annotationsActive := c.handleServerAnnotations(ingress, service, &server, ip.Status)
+	if ip.Status == EMPTY && annotationsActive {
+		ip.Status = MODIFIED
 	}
-	switch status {
-	case ADDED:
-		err := c.backendServerCreate(backendName, server)
-		if err != nil {
-			if !strings.Contains(err.Error(), "already exists") {
-				c.Logger.Error(err)
-				reload = true
+
+	switch ip.Status {
+	case ADDED, MODIFIED:
+		errEdit := c.backendServerEdit(backendName, server)
+		if errEdit != nil {
+			if strings.Contains(errEdit.Error(), "does not exist") {
+				if errCreate := c.backendServerCreate(backendName, server); errCreate != nil {
+					c.Logger.Err(errCreate)
+					return false
+				}
+				return true
 			}
-		} else {
-			reload = true
-		}
-	case MODIFIED:
-		err := c.backendServerEdit(backendName, server)
-		if err != nil {
-			if strings.Contains(err.Error(), "does not exist") {
-				err1 := c.backendServerCreate(backendName, server)
-				c.Logger.Error(err1)
-				reload = true
-			} else {
-				c.Logger.Error(err)
-			}
+			c.Logger.Error(errEdit)
+			return false
 		}
 		status := "ready"
 		if ip.Disabled {
@@ -259,8 +247,12 @@ func (c *HAProxyController) handlePath(namespace *Namespace, ingress *Ingress, r
 		return reload, err
 	}
 	// Handle Backend servers
-	for _, ip := range *endpoints.Addresses {
-		r := c.handleEndpoint(namespace, ingress, path, service, backendName, newBackend, ip)
+	for _, endpoint := range *endpoints.Addresses {
+		endpoint := *endpoint
+		if newBackend {
+			endpoint.Status = ADDED
+		}
+		r := c.handleEndpoint(namespace, ingress, path, service, backendName, endpoint)
 		reload = reload || r
 	}
 	return reload, nil
