@@ -15,6 +15,7 @@
 package controller
 
 import (
+	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 	extensions "k8s.io/api/extensions/v1beta1"
 )
 
@@ -151,6 +152,11 @@ func ConvertIngressRules(ingressRules []extensions.IngressRule) map[string]*Ingr
 	rules := make(map[string]*IngressRule)
 	for _, k8sRule := range ingressRules {
 		paths := make(map[string]*IngressPath)
+		if k8sRule.HTTP == nil {
+			logger := utils.GetLogger()
+			logger.Warningf("Ingress HTTP rules for [%s] does not exists", k8sRule.Host)
+			continue
+		}
 		for _, k8sPath := range k8sRule.HTTP.Paths {
 			paths[k8sPath.Path] = &IngressPath{
 				Path:              k8sPath.Path,
