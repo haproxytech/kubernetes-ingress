@@ -253,11 +253,14 @@ func (c *HAProxyController) haproxyInitialize() {
 			c.Logger.Panic(err)
 		}
 	}
+	_, err := os.Create(filepath.Join(HAProxyStateDir, "global"))
+	c.Logger.Err(err)
 
 	cmd := exec.Command("sh", "-c", "haproxy -v")
 	haproxyInfo, err := cmd.Output()
 	if err == nil {
-		c.Logger.Infof("Running with %s", strings.ReplaceAll(string(haproxyInfo), "\n", ""))
+		haproxyInfo := strings.Split(string(haproxyInfo), "\n")
+		c.Logger.Printf("Running with %s", haproxyInfo[0])
 	} else {
 		c.Logger.Error(err)
 	}
