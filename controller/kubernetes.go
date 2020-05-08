@@ -15,6 +15,7 @@
 package controller
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net"
@@ -593,7 +594,7 @@ func (k *K8s) UpdateIngressStatus(ingress *Ingress, publishSvc *Service) (err er
 	}
 
 	// Get Ingress
-	if ingSource, err = k.API.ExtensionsV1beta1().Ingresses(ingress.Namespace).Get(ingress.Name, metav1.GetOptions{}); err != nil {
+	if ingSource, err = k.API.ExtensionsV1beta1().Ingresses(ingress.Namespace).Get(context.Background(), ingress.Name, metav1.GetOptions{}); err != nil {
 		return fmt.Errorf("update ingress status: failed to get ingress %s/%s: %v", ingress.Namespace, ingress.Name, err)
 	}
 	ingCopy = *ingSource
@@ -610,7 +611,7 @@ func (k *K8s) UpdateIngressStatus(ingress *Ingress, publishSvc *Service) (err er
 		ingCopy.Status = extensions.IngressStatus{LoadBalancer: corev1.LoadBalancerStatus{Ingress: lbi}}
 	}
 	// Remove addresses
-	if _, err = k.API.ExtensionsV1beta1().Ingresses(ingress.Namespace).UpdateStatus(&ingCopy); err != nil {
+	if _, err = k.API.ExtensionsV1beta1().Ingresses(ingress.Namespace).UpdateStatus(context.Background(), &ingCopy, metav1.UpdateOptions{}); err != nil {
 		return fmt.Errorf("failed to update LoadBalancer status of ingress%s/%s: %v", ingress.Namespace, ingress.Name, err)
 	}
 	k.Logger.Debugf("Successful update of LoadBalancer status in ingress %s/%s", ingress.Namespace, ingress.Name)
