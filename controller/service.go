@@ -91,7 +91,7 @@ func (c *HAProxyController) handleEndpoint(namespace *Namespace, ingress *Ingres
 		if ip.Disabled {
 			status = "maint"
 		}
-		c.Logger.Debugf("Modified: %s - %s - %v\n", backendName, ip.HAProxyName, status)
+		c.Logger.Debugf("Modified: %s - %s - %v", backendName, ip.HAProxyName, status)
 	case DELETED:
 		err := c.backendServerDelete(backendName, server.Name)
 		if err != nil && !strings.Contains(err.Error(), "does not exist") {
@@ -122,7 +122,7 @@ func (c *HAProxyController) handleService(namespace *Namespace, ingress *Ingress
 		case path.IsSSLPassthrough:
 			c.deleteUseBackendRule(key, FrontendSSL)
 		case path.IsDefaultBackend:
-			c.Logger.Debugf("Removing default_backend %s from ingress \n", service.Name)
+			c.Logger.Debugf("Removing default_backend %s from ingress", service.Name)
 			err = c.setDefaultBackend("")
 			reload = true
 		default:

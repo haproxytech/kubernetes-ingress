@@ -117,7 +117,7 @@ func (k *K8s) EventsNamespaces(channel chan *Namespace, stop chan struct{}) {
 					Secret:    make(map[string]*Secret),
 					Status:    status,
 				}
-				k.Logger.Tracef("%s %s: %s \n", NAMESPACE, item.Status, item.Name)
+				k.Logger.Tracef("%s %s: %s", NAMESPACE, item.Status, item.Name)
 				channel <- item
 			},
 			DeleteFunc: func(obj interface{}) {
@@ -131,7 +131,7 @@ func (k *K8s) EventsNamespaces(channel chan *Namespace, stop chan struct{}) {
 					Secret:    make(map[string]*Secret),
 					Status:    status,
 				}
-				k.Logger.Tracef("%s %s: %s \n", NAMESPACE, item.Status, item.Name)
+				k.Logger.Tracef("%s %s: %s", NAMESPACE, item.Status, item.Name)
 				channel <- item
 			},
 			UpdateFunc: func(oldObj, newObj interface{}) {
@@ -149,7 +149,7 @@ func (k *K8s) EventsNamespaces(channel chan *Namespace, stop chan struct{}) {
 				if item1.Name == item2.Name {
 					return
 				}
-				k.Logger.Tracef("%s %s: %s \n", SERVICE, item2.Status, item2.Name)
+				k.Logger.Tracef("%s %s: %s", SERVICE, item2.Status, item2.Name)
 				channel <- item2
 			},
 		},
@@ -174,7 +174,7 @@ func (k *K8s) EventsEndpoints(channel chan *Endpoints, stop chan struct{}) {
 				if err == ErrIgnored {
 					return
 				}
-				k.Logger.Tracef("%s %s: %s \n", ENDPOINTS, item.Status, item.Service)
+				k.Logger.Tracef("%s %s: %s", ENDPOINTS, item.Status, item.Service)
 				channel <- item
 			},
 			DeleteFunc: func(obj interface{}) {
@@ -182,7 +182,7 @@ func (k *K8s) EventsEndpoints(channel chan *Endpoints, stop chan struct{}) {
 				if err == ErrIgnored {
 					return
 				}
-				k.Logger.Tracef("%s %s: %s \n", ENDPOINTS, item.Status, item.Service)
+				k.Logger.Tracef("%s %s: %s", ENDPOINTS, item.Status, item.Service)
 				channel <- item
 			},
 			UpdateFunc: func(oldObj, newObj interface{}) {
@@ -195,7 +195,7 @@ func (k *K8s) EventsEndpoints(channel chan *Endpoints, stop chan struct{}) {
 					return
 				}
 				//fix modified state for ones that are deleted,new,same
-				k.Logger.Tracef("%s %s: %s \n", ENDPOINTS, item2.Status, item2.Service)
+				k.Logger.Tracef("%s %s: %s", ENDPOINTS, item2.Status, item2.Service)
 				channel <- item2
 			},
 		},
@@ -281,7 +281,7 @@ func (k *K8s) EventsIngresses(channel chan *Ingress, stop chan struct{}) {
 					TLS:            ConvertIngressTLS(data.Spec.TLS),
 					Status:         status,
 				}
-				k.Logger.Tracef("%s %s: %s \n", INGRESS, item.Status, item.Name)
+				k.Logger.Tracef("%s %s: %s", INGRESS, item.Status, item.Name)
 				channel <- item
 			},
 			DeleteFunc: func(obj interface{}) {
@@ -296,7 +296,7 @@ func (k *K8s) EventsIngresses(channel chan *Ingress, stop chan struct{}) {
 					TLS:            ConvertIngressTLS(data.Spec.TLS),
 					Status:         status,
 				}
-				k.Logger.Tracef("%s %s: %s \n", INGRESS, item.Status, item.Name)
+				k.Logger.Tracef("%s %s: %s", INGRESS, item.Status, item.Name)
 				channel <- item
 			},
 			UpdateFunc: func(oldObj, newObj interface{}) {
@@ -324,7 +324,7 @@ func (k *K8s) EventsIngresses(channel chan *Ingress, stop chan struct{}) {
 				if item2.Equal(item1) {
 					return
 				}
-				k.Logger.Tracef("%s %s: %s \n", INGRESS, item2.Status, item2.Name)
+				k.Logger.Tracef("%s %s: %s", INGRESS, item2.Status, item2.Name)
 				channel <- item2
 			},
 		},
@@ -372,7 +372,7 @@ func (k *K8s) EventsServices(channel chan *Service, stop chan struct{}, publishS
 						k.GetPublishServiceAddresses(data, publishSvc)
 					}
 				}
-				k.Logger.Tracef("%s %s: %s \n", SERVICE, item.Status, item.Name)
+				k.Logger.Tracef("%s %s: %s", SERVICE, item.Status, item.Name)
 				channel <- item
 			},
 			DeleteFunc: func(obj interface{}) {
@@ -390,7 +390,7 @@ func (k *K8s) EventsServices(channel chan *Service, stop chan struct{}, publishS
 						publishSvc.Status = DELETED
 					}
 				}
-				k.Logger.Tracef("%s %s: %s \n", SERVICE, item.Status, item.Name)
+				k.Logger.Tracef("%s %s: %s", SERVICE, item.Status, item.Name)
 				channel <- item
 			},
 			UpdateFunc: func(oldObj, newObj interface{}) {
@@ -438,7 +438,7 @@ func (k *K8s) EventsServices(channel chan *Service, stop chan struct{}, publishS
 						k.GetPublishServiceAddresses(data2, publishSvc)
 					}
 				}
-				k.Logger.Tracef("%s %s: %s \n", SERVICE, item2.Status, item2.Name)
+				k.Logger.Tracef("%s %s: %s", SERVICE, item2.Status, item2.Name)
 				channel <- item2
 			},
 		},
@@ -471,7 +471,7 @@ func (k *K8s) EventsConfigfMaps(channel chan *ConfigMap, stop chan struct{}) {
 					Annotations: ConvertToMapStringW(data.Data),
 					Status:      status,
 				}
-				k.Logger.Tracef("%s %s: %s \n", CONFIGMAP, item.Status, item.Name)
+				k.Logger.Tracef("%s %s: %s", CONFIGMAP, item.Status, item.Name)
 				channel <- item
 			},
 			DeleteFunc: func(obj interface{}) {
@@ -483,7 +483,7 @@ func (k *K8s) EventsConfigfMaps(channel chan *ConfigMap, stop chan struct{}) {
 					Annotations: ConvertToMapStringW(data.Data),
 					Status:      status,
 				}
-				k.Logger.Tracef("%s %s: %s \n", CONFIGMAP, item.Status, item.Name)
+				k.Logger.Tracef("%s %s: %s", CONFIGMAP, item.Status, item.Name)
 				channel <- item
 			},
 			UpdateFunc: func(oldObj, newObj interface{}) {
@@ -505,7 +505,7 @@ func (k *K8s) EventsConfigfMaps(channel chan *ConfigMap, stop chan struct{}) {
 				if item2.Equal(item1) {
 					return
 				}
-				k.Logger.Tracef("%s %s: %s \n", CONFIGMAP, item2.Status, item2.Name)
+				k.Logger.Tracef("%s %s: %s", CONFIGMAP, item2.Status, item2.Name)
 				channel <- item2
 			},
 		},
@@ -538,7 +538,7 @@ func (k *K8s) EventsSecrets(channel chan *Secret, stop chan struct{}) {
 					Data:      data.Data,
 					Status:    status,
 				}
-				k.Logger.Tracef("%s %s: %s \n", SECRET, item.Status, item.Name)
+				k.Logger.Tracef("%s %s: %s", SECRET, item.Status, item.Name)
 				channel <- item
 			},
 			DeleteFunc: func(obj interface{}) {
@@ -550,7 +550,7 @@ func (k *K8s) EventsSecrets(channel chan *Secret, stop chan struct{}) {
 					Data:      data.Data,
 					Status:    status,
 				}
-				k.Logger.Tracef("%s %s: %s \n", SECRET, item.Status, item.Name)
+				k.Logger.Tracef("%s %s: %s", SECRET, item.Status, item.Name)
 				channel <- item
 			},
 			UpdateFunc: func(oldObj, newObj interface{}) {
@@ -572,7 +572,7 @@ func (k *K8s) EventsSecrets(channel chan *Secret, stop chan struct{}) {
 				if item2.Equal(item1) {
 					return
 				}
-				k.Logger.Tracef("%s %s: %s \n", SECRET, item2.Status, item2.Name)
+				k.Logger.Tracef("%s %s: %s", SECRET, item2.Status, item2.Name)
 				channel <- item2
 			},
 		},
