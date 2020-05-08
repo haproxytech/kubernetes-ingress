@@ -3,8 +3,10 @@ module github.com/haproxytech/kubernetes-ingress
 go 1.12
 
 require (
+	github.com/haproxytech/client-native v1.2.7
 	github.com/haproxytech/client-native/v2 v2.0.2
 	github.com/haproxytech/config-parser/v2 v2.0.2
+	github.com/haproxytech/models v1.2.5-0.20191122125615-30d0235b81ec
 	github.com/haproxytech/models/v2 v2.0.3-0.20200519154949-68e2e346d888
 	github.com/jessevdk/go-flags v1.4.0
 	k8s.io/api v0.0.0-20190620084959-7cf5895f2711

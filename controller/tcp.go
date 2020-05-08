@@ -39,13 +39,13 @@ func (c *HAProxyController) handleTCPServices() (reload bool, err error) {
 		}
 		switch svc.Status {
 		case DELETED:
-			err = c.frontendDelete(frontendName)
+			err = c.Client.FrontendDelete(frontendName)
 			c.Logger.Panic(err)
 			c.cfg.BackendSwitchingStatus["tcp-services"] = struct{}{}
 			reload = true
 			continue
 		case MODIFIED:
-			frontend, errFt := c.frontendGet(frontendName)
+			frontend, errFt := c.Client.FrontendGet(frontendName)
 			if err != nil {
 				c.Logger.Panic(errFt)
 				continue
@@ -56,7 +56,7 @@ func (c *HAProxyController) handleTCPServices() (reload bool, err error) {
 			} else {
 				c.Logger.Error(c.disableSSLOffload(frontend.Name))
 			}
-			if err = c.frontendEdit(frontend); err != nil {
+			if err = c.Client.FrontendEdit(frontend); err != nil {
 				c.Logger.Panic(err)
 				continue
 			}
@@ -68,16 +68,16 @@ func (c *HAProxyController) handleTCPServices() (reload bool, err error) {
 				Tcplog:         true,
 				DefaultBackend: backendName,
 			}
-			err = c.frontendCreate(frontend)
+			err = c.Client.FrontendCreate(frontend)
 			if err != nil {
 				c.Logger.Panic(err)
 			}
-			err = c.frontendBindCreate(frontendName, models.Bind{
+			err = c.Client.FrontendBindCreate(frontendName, models.Bind{
 				Address: "0.0.0.0:" + port,
 				Name:    "bind_1",
 			})
 			c.Logger.Panic(err)
-			err = c.frontendBindCreate(frontendName, models.Bind{
+			err = c.Client.FrontendBindCreate(frontendName, models.Bind{
 				Address: ":::" + port,
 				Name:    "bind_2",
 				V4v6:    true,

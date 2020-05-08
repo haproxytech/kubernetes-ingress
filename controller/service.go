@@ -75,10 +75,10 @@ func (c *HAProxyController) handleEndpoint(namespace *Namespace, ingress *Ingres
 
 	switch ip.Status {
 	case ADDED, MODIFIED:
-		errEdit := c.backendServerEdit(backendName, server)
+		errEdit := c.Client.BackendServerEdit(backendName, server)
 		if errEdit != nil {
 			if strings.Contains(errEdit.Error(), "does not exist") {
-				if errCreate := c.backendServerCreate(backendName, server); errCreate != nil {
+				if errCreate := c.Client.BackendServerCreate(backendName, server); errCreate != nil {
 					c.Logger.Err(errCreate)
 					return false
 				}
@@ -93,7 +93,7 @@ func (c *HAProxyController) handleEndpoint(namespace *Namespace, ingress *Ingres
 		}
 		c.Logger.Debugf("Modified: %s - %s - %v", backendName, ip.HAProxyName, status)
 	case DELETED:
-		err := c.backendServerDelete(backendName, server.Name)
+		err := c.Client.BackendServerDelete(backendName, server.Name)
 		if err != nil && !strings.Contains(err.Error(), "does not exist") {
 			c.Logger.Error(err)
 		}
@@ -142,7 +142,7 @@ func (c *HAProxyController) handleService(namespace *Namespace, ingress *Ingress
 	newBackend = false
 	reload = false
 	var backend models.Backend
-	if backend, err = c.backendGet(backendName); err != nil {
+	if backend, err = c.Client.BackendGet(backendName); err != nil {
 		mode := "http"
 		backend = models.Backend{
 			Name: backendName,
@@ -151,7 +151,7 @@ func (c *HAProxyController) handleService(namespace *Namespace, ingress *Ingress
 		if path.IsTCPService || path.IsSSLPassthrough {
 			backend.Mode = string(TCP)
 		}
-		if err = c.backendCreate(backend); err != nil {
+		if err = c.Client.BackendCreate(backend); err != nil {
 			return "", true, reload, err
 		}
 		newBackend = true
@@ -162,7 +162,7 @@ func (c *HAProxyController) handleService(namespace *Namespace, ingress *Ingress
 	activeSSLPassthrough := c.handleSSLPassthrough(ingress, service, path, &backend, newBackend)
 	activeBackendAnn := c.handleBackendAnnotations(ingress, service, &backend, newBackend)
 	if activeBackendAnn || activeSSLPassthrough {
-		if err = c.backendEdit(backend); err != nil {
+		if err = c.Client.BackendEdit(backend); err != nil {
 			return backendName, newBackend, reload, err
 		}
 		reload = true
@@ -270,7 +270,7 @@ func (c *HAProxyController) setTargetPort(path *IngressPath, service *Service, e
 						// Dinamically update backend port
 						if path.TargetPort != epPort.Port && path.TargetPort != 0 {
 							for _, EndpointIP := range *endpoints.Addresses {
-								if err := c.NativeAPI.Runtime.SetServerAddr(endpoints.BackendName, EndpointIP.HAProxyName, EndpointIP.IP, int(epPort.Port)); err != nil {
+								if err := c.Client.SetServerAddr(endpoints.BackendName, EndpointIP.HAProxyName, EndpointIP.IP, int(epPort.Port)); err != nil {
 									c.Logger.Error(err)
 								}
 								c.Logger.Infof("Servers Port of backend %s changed from %d to %d", endpoints.BackendName, path.TargetPort, epPort.Port)

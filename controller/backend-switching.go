@@ -50,7 +50,7 @@ func (c *HAProxyController) refreshBackendSwitching() (reload bool) {
 	if len(c.cfg.BackendSwitchingStatus) == 0 {
 		return false
 	}
-	frontends, err := c.frontendsGet()
+	frontends, err := c.Client.FrontendsGet()
 	if err != nil {
 		c.Logger.Panic(err)
 		return false
@@ -83,7 +83,7 @@ func (c *HAProxyController) refreshBackendSwitching() (reload bool) {
 		// use_backend service-ab  if { req.hdr(host) -i example } { path_beg /a/b }
 		// use_backend service-a   if { req.hdr(host) -i example } { path_beg /a }
 		sort.Strings(sortedKeys)
-		c.backendSwitchingRuleDeleteAll(frontend.Name)
+		c.Client.BackendSwitchingRuleDeleteAll(frontend.Name)
 		for _, key := range sortedKeys {
 			rule := useBackendRules[key]
 			var condTest string
@@ -107,7 +107,7 @@ func (c *HAProxyController) refreshBackendSwitching() (reload bool) {
 				}
 				condTest = fmt.Sprintf("{ req_ssl_sni -i %s } ", rule.Host)
 			}
-			err := c.backendSwitchingRuleCreate(frontend.Name, models.BackendSwitchingRule{
+			err := c.Client.BackendSwitchingRuleCreate(frontend.Name, models.BackendSwitchingRule{
 				Cond:     "if",
 				CondTest: condTest,
 				Name:     rule.Backend,
@@ -124,13 +124,13 @@ func (c *HAProxyController) refreshBackendSwitching() (reload bool) {
 
 // Remove unused backends
 func (c *HAProxyController) clearBackends(activeBackends map[string]struct{}) (reload bool) {
-	allBackends, err := c.backendsGet()
+	allBackends, err := c.Client.BackendsGet()
 	if err != nil {
 		return false
 	}
 	for _, backend := range allBackends {
 		if _, ok := activeBackends[backend.Name]; !ok {
-			if err := c.backendDelete(backend.Name); err != nil {
+			if err := c.Client.BackendDelete(backend.Name); err != nil {
 				c.Logger.Panic(err)
 			}
 			reload = true
@@ -141,10 +141,10 @@ func (c *HAProxyController) clearBackends(activeBackends map[string]struct{}) (r
 
 func (c *HAProxyController) setDefaultBackend(backendName string) (err error) {
 	for _, frontendName := range []string{FrontendHTTP, FrontendHTTPS} {
-		frontend, e := c.frontendGet(frontendName)
+		frontend, e := c.Client.FrontendGet(frontendName)
 		if e == nil {
 			frontend.DefaultBackend = backendName
-			e = c.frontendEdit(frontend)
+			e = c.Client.FrontendEdit(frontend)
 		}
 		if e != nil {
 			err = e

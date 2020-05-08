@@ -24,7 +24,7 @@ func (c *HAProxyController) handleGlobalAnnotations() (restart bool, reload bool
 	restart, r := c.handleSyslog()
 	reload = reload || r
 	if reload || restart {
-		c.ActiveTransactionHasChanges = true
+		c.Client.ActiveConfigurationHasChanges()
 	}
 	return restart, reload
 }
@@ -38,7 +38,7 @@ func (c *HAProxyController) handleNbthread() bool {
 		return false
 	}
 	var errParser error
-	config, _ := c.ActiveConfiguration()
+	config, _ := c.Client.ActiveConfiguration()
 	if numthr, errConv := strconv.Atoi(annNbthread.Value); errConv == nil {
 		if numthr < maxProcs {
 			numThreads = int64(numthr)
@@ -62,7 +62,7 @@ func (c *HAProxyController) handleSyslog() (restart, reload bool) {
 	if annSyslogSrv.Status == EMPTY {
 		return false, false
 	}
-	config, _ := c.ActiveConfiguration()
+	config, _ := c.Client.ActiveConfiguration()
 	restart = false
 	reload = false
 	stdoutLog := false
@@ -152,7 +152,7 @@ func (c *HAProxyController) handleDefaultOption(option string) bool {
 		return false
 	}
 	var err error
-	config, _ := c.ActiveConfiguration()
+	config, _ := c.Client.ActiveConfiguration()
 	if annOption.Status == DELETED {
 		c.Logger.Printf(fmt.Sprintf("Removing '%s' option", option))
 		err = config.Delete(parser.Defaults, parser.DefaultSectionName, fmt.Sprintf("option %s", option))
@@ -206,7 +206,7 @@ func (c *HAProxyController) handleDefaultTimeout(timeout string) bool {
 	}
 	if annTimeout.Status != "" {
 		var err error
-		config, _ := c.ActiveConfiguration()
+		config, _ := c.Client.ActiveConfiguration()
 		if annTimeout.Status == DELETED {
 			c.Logger.Debugf("Removing default timeout-%s ", timeout)
 			err = config.Delete(parser.Defaults, parser.DefaultSectionName, fmt.Sprintf("timeout %s", timeout))
@@ -236,7 +236,7 @@ func (c *HAProxyController) handleDefaultMaxconn() bool {
 		return false
 	}
 
-	config, _ := c.ActiveConfiguration()
+	config, _ := c.Client.ActiveConfiguration()
 	switch annMaxconn.Status {
 	case EMPTY:
 		return false
@@ -265,7 +265,7 @@ func (c *HAProxyController) handleDefaultLogFormat() bool {
 	if annLogFormat.Status == EMPTY {
 		return false
 	}
-	config, _ := c.ActiveConfiguration()
+	config, _ := c.Client.ActiveConfiguration()
 	err := config.Set(parser.Defaults, parser.DefaultSectionName, "log-format", types.StringC{
 		Value: "'" + annLogFormat.Value + "'",
 	})

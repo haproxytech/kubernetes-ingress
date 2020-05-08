@@ -25,34 +25,21 @@ import (
 	"strings"
 	"syscall"
 
-	clientnative "github.com/haproxytech/client-native/v2"
-	"github.com/haproxytech/client-native/v2/configuration"
-	"github.com/haproxytech/client-native/v2/runtime"
-	parser "github.com/haproxytech/config-parser/v2"
+	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/api"
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 	"k8s.io/apimachinery/pkg/watch"
 )
 
 // HAProxyController is ingress controller
 type HAProxyController struct {
-	k8s                         *K8s
-	cfg                         Configuration
-	osArgs                      utils.OSArgs
-	NativeAPI                   *clientnative.HAProxyClient
-	ActiveTransaction           string
-	ActiveTransactionHasChanges bool
-	HAProxyCfgDir               string
-	eventChan                   chan SyncDataEvent
-	serverlessPods              map[string]int
-	Logger                      utils.Logger
-}
-
-// Return Parser of current configuration (for config-parser usage)
-func (c *HAProxyController) ActiveConfiguration() (*parser.Parser, error) {
-	if c.ActiveTransaction == "" {
-		return nil, fmt.Errorf("no active transaction")
-	}
-	return c.NativeAPI.Configuration.GetParser(c.ActiveTransaction)
+	k8s            *K8s
+	cfg            Configuration
+	osArgs         utils.OSArgs
+	Client         api.HAProxyClient
+	HAProxyCfgDir  string
+	eventChan      chan SyncDataEvent
+	serverlessPods map[string]int
+	Logger         utils.Logger
 }
 
 // Return HAProxy master process if it exists.
@@ -117,13 +104,13 @@ func (c *HAProxyController) Start(ctx context.Context, osArgs utils.OSArgs) {
 func (c *HAProxyController) updateHAProxy() error {
 	reload := false
 
-	err := c.apiStartTransaction()
+	err := c.Client.APIStartTransaction()
 	if err != nil {
 		c.Logger.Error(err)
 		return err
 	}
 	defer func() {
-		c.apiDisposeTransaction()
+		c.Client.APIDisposeTransaction()
 	}()
 
 	restart, reload := c.handleGlobalAnnotations()
@@ -203,7 +190,7 @@ func (c *HAProxyController) updateHAProxy() error {
 	r = c.refreshBackendSwitching()
 	reload = reload || r
 
-	err = c.apiCommitTransaction()
+	err = c.Client.APICommitTransaction()
 	if err != nil {
 		c.Logger.Error(err)
 		return err
@@ -272,27 +259,9 @@ func (c *HAProxyController) haproxyInitialize() {
 	c.Logger.Error(err)
 	c.Logger.Infof("Running on %s", hostname)
 
-	runtimeClient := runtime.Client{}
-	err = runtimeClient.InitWithSockets(map[int]string{
-		0: "/var/run/haproxy-runtime-api.sock",
-	})
+	c.Client, err = api.Init(HAProxyCFG, "haproxy", "/var/run/haproxy-runtime-api.sock")
 	if err != nil {
 		c.Logger.Panic(err)
-	}
-
-	confClient := configuration.Client{}
-	err = confClient.Init(configuration.ClientParams{
-		ConfigurationFile:      HAProxyCFG,
-		PersistentTransactions: false,
-		Haproxy:                "haproxy",
-	})
-	if err != nil {
-		c.Logger.Panic(err)
-	}
-
-	c.NativeAPI = &clientnative.HAProxyClient{
-		Configuration: &confClient,
-		Runtime:       &runtimeClient,
 	}
 
 	c.cfg.Init(c.osArgs, HAProxyMapDir)
@@ -352,7 +321,7 @@ func (c *HAProxyController) haproxyService(action string) (err error) {
 
 // Saves HAProxy servers state so it is retrieved after reload.
 func (c *HAProxyController) saveServerState() error {
-	result, err := c.NativeAPI.Runtime.ExecuteRaw("show servers state")
+	result, err := c.Client.ExecuteRaw("show servers state")
 	if err != nil {
 		return err
 	}

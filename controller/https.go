@@ -189,14 +189,14 @@ func (c *HAProxyController) handleHTTPS(usedCerts map[string]struct{}) (reload b
 }
 
 func (c *HAProxyController) enableSSLOffload(frontendName string, alpn bool) (err error) {
-	binds, _ := c.frontendBindsGet(frontendName)
+	binds, _ := c.Client.FrontendBindsGet(frontendName)
 	for _, bind := range binds {
 		bind.Ssl = true
 		bind.SslCertificate = HAProxyCertDir
 		if alpn {
 			bind.Alpn = "h2,http/1.1"
 		}
-		err = c.frontendBindEdit(frontendName, *bind)
+		err = c.Client.FrontendBindEdit(frontendName, *bind)
 	}
 	if err != nil {
 		return err
@@ -205,12 +205,12 @@ func (c *HAProxyController) enableSSLOffload(frontendName string, alpn bool) (er
 }
 
 func (c *HAProxyController) disableSSLOffload(frontendName string) (err error) {
-	binds, _ := c.frontendBindsGet(frontendName)
+	binds, _ := c.Client.FrontendBindsGet(frontendName)
 	for _, bind := range binds {
 		bind.Ssl = false
 		bind.SslCertificate = ""
 		bind.Alpn = ""
-		err = c.frontendBindEdit(frontendName, *bind)
+		err = c.Client.FrontendBindEdit(frontendName, *bind)
 	}
 	if err != nil {
 		return err
@@ -227,18 +227,18 @@ func (c *HAProxyController) enableSSLPassthrough() (err error) {
 		LogFormat:      "'%ci:%cp [%t] %ft %b/%s %Tw/%Tc/%Tt %B %ts %ac/%fc/%bc/%sc/%rc %sq/%bq %hr %hs %[var(sess.sni)]'",
 		DefaultBackend: backendHTTPS,
 	}
-	err = c.frontendCreate(frontend)
+	err = c.Client.FrontendCreate(frontend)
 	if err != nil {
 		return err
 	}
-	err = c.frontendBindCreate(FrontendSSL, models.Bind{
+	err = c.Client.FrontendBindCreate(FrontendSSL, models.Bind{
 		Address: "0.0.0.0:443",
 		Name:    "bind_1",
 	})
 	if err != nil {
 		return err
 	}
-	err = c.frontendBindCreate(FrontendSSL, models.Bind{
+	err = c.Client.FrontendBindCreate(FrontendSSL, models.Bind{
 		Address: ":::443",
 		Name:    "bind_2",
 		V4v6:    true,
@@ -246,7 +246,7 @@ func (c *HAProxyController) enableSSLPassthrough() (err error) {
 	if err != nil {
 		return err
 	}
-	err = c.frontendTCPRequestRuleCreate(FrontendSSL, models.TCPRequestRule{
+	err = c.Client.FrontendTCPRequestRuleCreate(FrontendSSL, models.TCPRequestRule{
 		Index:    utils.PtrInt64(0),
 		Action:   "accept",
 		Type:     "content",
@@ -256,7 +256,7 @@ func (c *HAProxyController) enableSSLPassthrough() (err error) {
 	if err != nil {
 		return err
 	}
-	err = c.frontendTCPRequestRuleCreate(FrontendSSL, models.TCPRequestRule{
+	err = c.Client.FrontendTCPRequestRuleCreate(FrontendSSL, models.TCPRequestRule{
 		Index:    utils.PtrInt64(0),
 		Action:   "set-var",
 		VarName:  "sni",
@@ -267,7 +267,7 @@ func (c *HAProxyController) enableSSLPassthrough() (err error) {
 	if err != nil {
 		return err
 	}
-	err = c.frontendTCPRequestRuleCreate(FrontendSSL, models.TCPRequestRule{
+	err = c.Client.FrontendTCPRequestRuleCreate(FrontendSSL, models.TCPRequestRule{
 		Type:    "inspect-delay",
 		Index:   utils.PtrInt64(0),
 		Timeout: utils.PtrInt64(5000),
@@ -277,14 +277,14 @@ func (c *HAProxyController) enableSSLPassthrough() (err error) {
 	}
 	// Create backend for proxy chaining (chaining
 	// ssl-passthrough frontend to ssl-offload backend)
-	err = c.backendCreate(models.Backend{
+	err = c.Client.BackendCreate(models.Backend{
 		Name: backendHTTPS,
 		Mode: "tcp",
 	})
 	if err != nil {
 		return err
 	}
-	err = c.backendServerCreate(backendHTTPS, models.Server{
+	err = c.Client.BackendServerCreate(backendHTTPS, models.Server{
 		Name:    FrontendHTTPS,
 		Address: "127.0.0.1:8443",
 	})
@@ -293,11 +293,11 @@ func (c *HAProxyController) enableSSLPassthrough() (err error) {
 	}
 
 	// Update HTTPS backend to listen for connections from FrontendSSL
-	err = c.frontendBindDeleteAll(FrontendHTTPS)
+	err = c.Client.FrontendBindDeleteAll(FrontendHTTPS)
 	if err != nil {
 		return err
 	}
-	err = c.frontendBindCreate(FrontendHTTPS, models.Bind{
+	err = c.Client.FrontendBindCreate(FrontendHTTPS, models.Bind{
 		Address: "127.0.0.1:8443",
 		Name:    "bind_1",
 	})
@@ -309,11 +309,11 @@ func (c *HAProxyController) disableSSLPassthrough() (err error) {
 	var sslCertificate string
 	var alpn string
 	backendHTTPS := "https"
-	err = c.frontendDelete(FrontendSSL)
+	err = c.Client.FrontendDelete(FrontendSSL)
 	if err != nil {
 		return err
 	}
-	err = c.backendDelete(backendHTTPS)
+	err = c.Client.BackendDelete(backendHTTPS)
 	if err != nil {
 		return err
 	}
@@ -326,7 +326,7 @@ func (c *HAProxyController) disableSSLPassthrough() (err error) {
 		sslCertificate = ""
 		alpn = ""
 	}
-	err = c.frontendBindEdit(FrontendHTTPS, models.Bind{
+	err = c.Client.FrontendBindEdit(FrontendHTTPS, models.Bind{
 		Address:        "0.0.0.0:443",
 		Name:           "bind_1",
 		Ssl:            ssl,
@@ -336,7 +336,7 @@ func (c *HAProxyController) disableSSLPassthrough() (err error) {
 	if err != nil {
 		return err
 	}
-	err = c.frontendBindCreate(FrontendHTTPS, models.Bind{
+	err = c.Client.FrontendBindCreate(FrontendHTTPS, models.Bind{
 		Address:        ":::443",
 		Name:           "bind_2",
 		V4v6:           true,
