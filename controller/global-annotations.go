@@ -6,7 +6,6 @@ import (
 	"strconv"
 	"strings"
 
-	parser "github.com/haproxytech/config-parser/v2"
 	"github.com/haproxytech/config-parser/v2/types"
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 )
@@ -23,9 +22,6 @@ func (c *HAProxyController) handleGlobalAnnotations() (restart bool, reload bool
 
 	restart, r := c.handleSyslog()
 	reload = reload || r
-	if reload || restart {
-		c.Client.ActiveConfigurationHasChanges()
-	}
 	return restart, reload
 }
 
@@ -38,19 +34,15 @@ func (c *HAProxyController) handleNbthread() bool {
 		return false
 	}
 	var errParser error
-	config, _ := c.Client.ActiveConfiguration()
 	if numthr, errConv := strconv.Atoi(annNbthread.Value); errConv == nil {
 		if numthr < maxProcs {
 			numThreads = int64(numthr)
 		}
 		if annNbthread.Status == DELETED {
-			errParser = config.Delete(parser.Global, parser.GlobalSectionName, "nbthread")
+			errParser = c.Client.SetNbthread(nil)
 			reload = true
 		} else if annNbthread.Status != EMPTY {
-			errParser = config.Insert(parser.Global, parser.GlobalSectionName, "nbthread", types.Int64C{
-				Value: numThreads,
-			})
-			reload = true
+			errParser = c.Client.SetNbthread(&numThreads)
 		}
 		c.Logger.Error(errParser)
 	}
@@ -62,15 +54,12 @@ func (c *HAProxyController) handleSyslog() (restart, reload bool) {
 	if annSyslogSrv.Status == EMPTY {
 		return false, false
 	}
-	config, _ := c.Client.ActiveConfiguration()
 	restart = false
 	reload = false
 	stdoutLog := false
-	daemonMode := false
-	if val, _ := config.Get(parser.Global, parser.GlobalSectionName, "daemon"); val != nil {
-		daemonMode = true
-	}
-	errParser := config.Set(parser.Global, parser.GlobalSectionName, "log", nil)
+	daemonMode, errParser := c.Client.EnabledConfig("daemon")
+	c.Logger.Error(errParser)
+	errParser = c.Client.SetLogTarget(nil, -1)
 	c.Logger.Error(errParser)
 	for index, syslogSrv := range strings.Split(annSyslogSrv.Value, "\n") {
 		if syslogSrv == "" {
@@ -117,7 +106,7 @@ func (c *HAProxyController) handleSyslog() (restart, reload bool) {
 					continue
 				}
 			}
-			errParser = config.Insert(parser.Global, parser.GlobalSectionName, "log", logData, index)
+			errParser = c.Client.SetLogTarget(logData, index)
 			if errParser == nil {
 				reload = true
 			}
@@ -126,11 +115,12 @@ func (c *HAProxyController) handleSyslog() (restart, reload bool) {
 	}
 	if stdoutLog {
 		if daemonMode {
-			errParser = config.Delete(parser.Global, parser.GlobalSectionName, "daemon")
+			errParser = c.Client.SetDaemonMode(nil)
 			restart = true
 		}
 	} else if !daemonMode {
-		errParser = config.Insert(parser.Global, parser.GlobalSectionName, "daemon", types.Enabled{})
+		enabled := true
+		errParser = c.Client.SetDaemonMode(&enabled)
 		restart = true
 	}
 	c.Logger.Error(errParser)
@@ -152,10 +142,9 @@ func (c *HAProxyController) handleDefaultOption(option string) bool {
 		return false
 	}
 	var err error
-	config, _ := c.Client.ActiveConfiguration()
 	if annOption.Status == DELETED {
 		c.Logger.Printf(fmt.Sprintf("Removing '%s' option", option))
-		err = config.Delete(parser.Defaults, parser.DefaultSectionName, fmt.Sprintf("option %s", option))
+		err = c.Client.SetDefaulOption(option, nil)
 		if err != nil {
 			c.Logger.Error(err)
 			return false
@@ -167,14 +156,12 @@ func (c *HAProxyController) handleDefaultOption(option string) bool {
 		c.Logger.Err(err)
 		return false
 	}
-	switch enabled {
-	case true:
-		c.Logger.Printf(fmt.Sprintf("Enabling %s", option))
-		err = config.Set(parser.Defaults, parser.DefaultSectionName, fmt.Sprintf("option %s", option), types.SimpleOption{})
-	case false:
-		c.Logger.Printf(fmt.Sprintf("Disabling %s", option))
-		err = config.Set(parser.Defaults, parser.DefaultSectionName, fmt.Sprintf("option %s", option), types.SimpleOption{NoOption: true})
+	action := "Enabling"
+	if !enabled {
+		action = "Disabling"
 	}
+	c.Logger.Printf(fmt.Sprintf("%s %s", action, option))
+	err = c.Client.SetDefaulOption(option, &enabled)
 	if err != nil {
 		c.Logger.Err(err)
 		return false
@@ -206,15 +193,12 @@ func (c *HAProxyController) handleDefaultTimeout(timeout string) bool {
 	}
 	if annTimeout.Status != "" {
 		var err error
-		config, _ := c.Client.ActiveConfiguration()
 		if annTimeout.Status == DELETED {
 			c.Logger.Debugf("Removing default timeout-%s ", timeout)
-			err = config.Delete(parser.Defaults, parser.DefaultSectionName, fmt.Sprintf("timeout %s", timeout))
+			err = c.Client.SetDefaulTimeout(timeout, nil)
 		} else {
 			c.Logger.Debugf("Setting default timeout-%s to %s", timeout, annTimeout.Value)
-			err = config.Set(parser.Defaults, parser.DefaultSectionName, fmt.Sprintf("timeout %s", timeout), types.SimpleTimeout{
-				Value: annTimeout.Value,
-			})
+			err = c.Client.SetDefaulTimeout(timeout, &annTimeout.Value)
 		}
 		if err != nil {
 			c.Logger.Error(err)
@@ -236,21 +220,18 @@ func (c *HAProxyController) handleDefaultMaxconn() bool {
 		return false
 	}
 
-	config, _ := c.Client.ActiveConfiguration()
 	switch annMaxconn.Status {
 	case EMPTY:
 		return false
 	case DELETED:
-		err = config.Set(parser.Defaults, parser.DefaultSectionName, "maxconn", nil)
+		err = c.Client.SetDefaulMaxconn(nil)
 		if err != nil {
 			c.Logger.Error(err)
 			return false
 		}
 		c.Logger.Debug("Removing default maxconn")
 	default:
-		err = config.Set(parser.Defaults, parser.DefaultSectionName, "maxconn", types.Int64C{
-			Value: value,
-		})
+		err = c.Client.SetDefaulMaxconn(&value)
 		if err != nil {
 			c.Logger.Error(err)
 			return false
@@ -265,10 +246,7 @@ func (c *HAProxyController) handleDefaultLogFormat() bool {
 	if annLogFormat.Status == EMPTY {
 		return false
 	}
-	config, _ := c.Client.ActiveConfiguration()
-	err := config.Set(parser.Defaults, parser.DefaultSectionName, "log-format", types.StringC{
-		Value: "'" + annLogFormat.Value + "'",
-	})
+	err := c.Client.SetDefaulLogFormat(&annLogFormat.Value)
 	if err != nil {
 		c.Logger.Error(err)
 		return false

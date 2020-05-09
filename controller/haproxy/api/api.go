@@ -1,18 +1,14 @@
 package api
 
 import (
-	"fmt"
-
 	clientnative "github.com/haproxytech/client-native/v2"
 	"github.com/haproxytech/client-native/v2/configuration"
 	"github.com/haproxytech/client-native/v2/runtime"
-	parser "github.com/haproxytech/config-parser/v2"
+	"github.com/haproxytech/config-parser/v2/types"
 	"github.com/haproxytech/models/v2"
 )
 
 type HAProxyClient interface {
-	ActiveConfiguration() (*parser.Parser, error)
-	ActiveConfigurationHasChanges()
 	APIStartTransaction() error
 	APICommitTransaction() error
 	APIDisposeTransaction()
@@ -29,6 +25,7 @@ type HAProxyClient interface {
 	BackendSwitchingRuleCreate(frontend string, rule models.BackendSwitchingRule) error
 	BackendSwitchingRuleDeleteAll(frontend string)
 	ExecuteRaw(command string) (result []string, err error)
+	EnabledConfig(configType string) (enabled bool, err error)
 	FrontendCreate(frontend models.Frontend) error
 	FrontendDelete(frontendName string) error
 	FrontendsGet() (models.Frontends, error)
@@ -44,6 +41,13 @@ type HAProxyClient interface {
 	FrontendHTTPResponseRuleCreate(frontend string, rule models.HTTPResponseRule) error
 	FrontendTCPRequestRuleDeleteAll(frontend string)
 	FrontendTCPRequestRuleCreate(frontend string, rule models.TCPRequestRule) error
+	SetDaemonMode(enabled *bool) error
+	SetDefaulLogFormat(value *string) error
+	SetDefaulMaxconn(value *int64) error
+	SetDefaulOption(option string, enabled *bool) error
+	SetDefaulTimeout(timeout string, value *string) error
+	SetLogTarget(log *types.Log, index int) error
+	SetNbthread(value *int64) error
 	SetServerAddr(backendName string, serverName string, ip string, port int) error
 	SetServerState(backendName string, serverName string, state string) error
 }
@@ -81,18 +85,6 @@ func Init(configFile, programPath, runtimeSocket string) (client HAProxyClient, 
 	}
 	return &cn, nil
 
-}
-
-// Return Parser of current configuration (for config-parser usage)
-func (c *clientNative) ActiveConfiguration() (*parser.Parser, error) {
-	if c.activeTransaction == "" {
-		return nil, fmt.Errorf("no active transaction")
-	}
-	return c.nativeAPI.Configuration.GetParser(c.activeTransaction)
-}
-
-func (c *clientNative) ActiveConfigurationHasChanges() {
-	c.activeTransactionHasChanges = true
 }
 
 func (c *clientNative) APIStartTransaction() error {
