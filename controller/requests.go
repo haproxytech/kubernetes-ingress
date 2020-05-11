@@ -22,7 +22,6 @@ import (
 )
 
 type FrontendHTTPReqs map[uint64]models.HTTPRequestRule
-type FrontendHTTPRsps map[uint64]models.HTTPResponseRule
 type FrontendTCPReqs map[uint64]models.TCPRequestRule
 type BackendHTTPReqs struct {
 	modified bool
@@ -62,25 +61,6 @@ const (
 	//nolint
 	WHITELIST Rule = "whitelist"
 )
-
-func (c *HAProxyController) FrontendHTTPRspsRefresh() (reload bool) {
-	if c.cfg.FrontendRulesStatus[HTTP] == EMPTY {
-		return false
-	}
-
-	// DELETE RULES
-	c.Client.FrontendHTTPResponseRuleDeleteAll(FrontendHTTP)
-	c.Client.FrontendHTTPResponseRuleDeleteAll(FrontendHTTPS)
-
-	for _, frontend := range []string{FrontendHTTP, FrontendHTTPS} {
-		// RESPONSE_SET_HEADER
-		for key, httpRule := range c.cfg.FrontendHTTPRspRules[RESPONSE_SET_HEADER] {
-			c.cfg.MapFiles.Modified(key)
-			c.Logger.Error(c.Client.FrontendHTTPResponseRuleCreate(frontend, httpRule))
-		}
-	}
-	return true
-}
 
 func (c *HAProxyController) FrontendHTTPReqsRefresh() (reload bool) {
 	if c.cfg.FrontendRulesStatus[HTTP] == EMPTY {
