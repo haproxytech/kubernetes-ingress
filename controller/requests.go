@@ -206,20 +206,20 @@ func (c *HAProxyController) FrontendTCPreqsRefresh() (reload bool) {
 }
 
 func (c *HAProxyController) BackendHTTPReqsRefresh() (reload bool) {
-	for backendName, httpReqs := range c.cfg.BackendHTTPRules {
+	for backendName, httpReqs := range c.cfg.BackendHTTPReqRules {
 		if httpReqs.modified {
 			c.Logger.Debugf("Updating HTTP request rules for backend '%s'", backendName)
 			reload = true
 			c.Client.BackendHTTPRequestRuleDeleteAll(backendName)
 			if len(httpReqs.rules) == 0 {
-				delete(c.cfg.BackendHTTPRules, backendName)
+				delete(c.cfg.BackendHTTPReqRules, backendName)
 			} else {
 				for _, httpRule := range httpReqs.rules {
 					c.Logger.Error(c.Client.BackendHTTPRequestRuleCreate(backendName, httpRule))
 				}
 			}
 			httpReqs.modified = false
-			c.cfg.BackendHTTPRules[backendName] = httpReqs
+			c.cfg.BackendHTTPReqRules[backendName] = httpReqs
 		}
 	}
 	return reload

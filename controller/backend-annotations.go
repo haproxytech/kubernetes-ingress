@@ -149,7 +149,7 @@ func (c *HAProxyController) handleBackendAnnotations(ingress *Ingress, service *
 				}
 				httpReqs.modified = true
 				activeAnnotations = true
-				c.cfg.BackendHTTPRules[backend.Name] = httpReqs
+				c.cfg.BackendHTTPReqRules[backend.Name] = httpReqs
 			case "set-host":
 				httpReqs := c.getBackendHTTPReqs(backend.Name)
 				delete(httpReqs.rules, SET_HOST)
@@ -164,7 +164,7 @@ func (c *HAProxyController) handleBackendAnnotations(ingress *Ingress, service *
 				}
 				httpReqs.modified = true
 				activeAnnotations = true
-				c.cfg.BackendHTTPRules[backend.Name] = httpReqs
+				c.cfg.BackendHTTPReqRules[backend.Name] = httpReqs
 			case "response-set-header":
 				httpRsps := c.getBackendHTTPRsps(backend.Name)
 				delete(httpRsps.rules, RESPONSE_SET_HEADER)
@@ -337,13 +337,13 @@ func (c *HAProxyController) handleCookieAnnotations(ingress *Ingress, service *S
 }
 
 func (c *HAProxyController) getBackendHTTPReqs(backend string) BackendHTTPReqs {
-	httpReqs, ok := c.cfg.BackendHTTPRules[backend]
+	httpReqs, ok := c.cfg.BackendHTTPReqRules[backend]
 	if !ok {
-		c.cfg.BackendHTTPRules[backend] = BackendHTTPReqs{
+		c.cfg.BackendHTTPReqRules[backend] = BackendHTTPReqs{
 			modified: false,
 			rules:    make(map[Rule]models.HTTPRequestRule),
 		}
-		return c.cfg.BackendHTTPRules[backend]
+		return c.cfg.BackendHTTPReqRules[backend]
 	}
 	return httpReqs
 }
