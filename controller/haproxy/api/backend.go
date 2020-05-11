@@ -45,6 +45,19 @@ func (c *clientNative) BackendHTTPRequestRuleDeleteAll(backend string) {
 	}
 }
 
+func (c *clientNative) BackendHTTPResponseRuleCreate(backend string, rule models.HTTPResponseRule) error {
+	c.activeTransactionHasChanges = true
+	return c.nativeAPI.Configuration.CreateHTTPResponseRule("backend", backend, &rule, c.activeTransaction, 0)
+}
+
+func (c *clientNative) BackendHTTPResponseRuleDeleteAll(backend string) {
+	c.activeTransactionHasChanges = true
+	var err error
+	for err == nil {
+		err = c.nativeAPI.Configuration.DeleteHTTPResponseRule(0, "backend", backend, c.activeTransaction, 0)
+	}
+}
+
 func (c *clientNative) BackendServerCreate(backendName string, data models.Server) error {
 	c.activeTransactionHasChanges = true
 	return c.nativeAPI.Configuration.CreateServer(backendName, &data, c.activeTransaction, 0)

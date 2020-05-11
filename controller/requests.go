@@ -28,6 +28,10 @@ type BackendHTTPReqs struct {
 	modified bool
 	rules    map[Rule]models.HTTPRequestRule
 }
+type BackendHTTPRsps struct {
+	modified bool
+	rules    map[Rule]models.HTTPResponseRule
+}
 
 type Rule string
 
@@ -236,6 +240,26 @@ func (c *HAProxyController) BackendHTTPReqsRefresh() (reload bool) {
 			}
 			httpReqs.modified = false
 			c.cfg.BackendHTTPRules[backendName] = httpReqs
+		}
+	}
+	return reload
+}
+
+func (c *HAProxyController) BackendHTTPRspsRefresh() (reload bool) {
+	for backendName, httpRsps := range c.cfg.BackendHTTPRspRules {
+		if httpRsps.modified {
+			c.Logger.Debugf("Updating HTTP response rules for backend '%s'", backendName)
+			reload = true
+			c.Client.BackendHTTPResponseRuleDeleteAll(backendName)
+			if len(httpRsps.rules) == 0 {
+				delete(c.cfg.BackendHTTPRspRules, backendName)
+			} else {
+				for _, httpRule := range httpRsps.rules {
+					c.Logger.Error(c.Client.BackendHTTPResponseRuleCreate(backendName, httpRule))
+				}
+			}
+			httpRsps.modified = false
+			c.cfg.BackendHTTPRspRules[backendName] = httpRsps
 		}
 	}
 	return reload

@@ -44,6 +44,7 @@ type Configuration struct {
 	BackendSwitchingRules  map[string]UseBackendRules
 	BackendSwitchingStatus map[string]struct{}
 	BackendHTTPRules       map[string]BackendHTTPReqs
+	BackendHTTPRspRules    map[string]BackendHTTPRsps
 	HTTPS                  bool
 	SSLPassthrough         bool
 }
@@ -117,6 +118,7 @@ func (c *Configuration) Init(osArgs utils.OSArgs, mapDir string) {
 		c.BackendSwitchingRules[frontend] = UseBackendRules{}
 	}
 	c.BackendHTTPRules = make(map[string]BackendHTTPReqs)
+	c.BackendHTTPRspRules = make(map[string]BackendHTTPRsps)
 }
 
 //GetNamespace returns Namespace. Creates one if not existing

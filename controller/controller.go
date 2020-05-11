@@ -181,6 +181,8 @@ func (c *HAProxyController) updateHAProxy() error {
 
 	reload = c.BackendHTTPReqsRefresh() || reload
 
+	reload = c.BackendHTTPRspsRefresh() || reload
+
 	r, err = c.cfg.MapFiles.Refresh()
 	c.Logger.Error(err)
 	reload = reload || r

@@ -70,6 +70,7 @@ func (c *HAProxyController) handleBackendAnnotations(ingress *Ingress, service *
 		backendAnnotations["check-http"], _ = GetValueFromAnnotations("check-http", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
 		backendAnnotations["forwarded-for"], _ = GetValueFromAnnotations("forwarded-for", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
 		backendAnnotations["path-rewrite"], _ = GetValueFromAnnotations("path-rewrite", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
+		backendAnnotations["response-set-header"], _ = GetValueFromAnnotations("response-set-header", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
 		backendAnnotations["set-host"], _ = GetValueFromAnnotations("set-host", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
 	}
 
@@ -164,6 +165,26 @@ func (c *HAProxyController) handleBackendAnnotations(ingress *Ingress, service *
 				httpReqs.modified = true
 				activeAnnotations = true
 				c.cfg.BackendHTTPRules[backend.Name] = httpReqs
+			case "response-set-header":
+				httpRsps := c.getBackendHTTPRsps(backend.Name)
+				delete(httpRsps.rules, RESPONSE_SET_HEADER)
+				if v.Status != DELETED || newBackend {
+					parts := strings.Fields(v.Value)
+					if len(parts) != 2 {
+						c.Logger.Errorf("incorrect value '%s' in response-set-header annotation", v.Value)
+						continue
+					}
+					httpRule := models.HTTPResponseRule{
+						Index:     utils.PtrInt64(0),
+						Type:      "set-header",
+						HdrName:   parts[0],
+						HdrFormat: parts[1],
+					}
+					httpRsps.rules[RESPONSE_SET_HEADER] = httpRule
+				}
+				httpRsps.modified = true
+				activeAnnotations = true
+				c.cfg.BackendHTTPRspRules[backend.Name] = httpRsps
 			case "timeout-check":
 				if v.Status == DELETED && !newBackend {
 					backend.CheckTimeout = nil
@@ -325,4 +346,16 @@ func (c *HAProxyController) getBackendHTTPReqs(backend string) BackendHTTPReqs {
 		return c.cfg.BackendHTTPRules[backend]
 	}
 	return httpReqs
+}
+
+func (c *HAProxyController) getBackendHTTPRsps(backend string) BackendHTTPRsps {
+	httpRsps, ok := c.cfg.BackendHTTPRspRules[backend]
+	if !ok {
+		c.cfg.BackendHTTPRspRules[backend] = BackendHTTPRsps{
+			modified: false,
+			rules:    make(map[Rule]models.HTTPResponseRule),
+		}
+		return c.cfg.BackendHTTPRspRules[backend]
+	}
+	return httpRsps
 }
