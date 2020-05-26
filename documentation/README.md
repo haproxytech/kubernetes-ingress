@@ -16,7 +16,7 @@ Options for starting controller can be found in [controller.md](controller.md)
 | [check](#backend-checks) | ["true", "false"] | "true" |  |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:|
 | [check-http](#backend-checks) | string |  | [check](#backend-checks) |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:|
 | [check-interval](#backend-checks) | [time](#time) |  | [check](#backend-checks) |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:|
-| [cookie-persistance](#cookie-persistance) | string | "" |  |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:|
+| [cookie-persistence](#cookie-persistence) | string | "" |  |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:|
 | [dontlognull](#logging) | ["true", "false"] | "true" |  |:large_blue_circle:|:white_circle:|:white_circle:|
 | [forwarded-for](#x-forwarded-for) | ["true", "false"] | "true" |  |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:|
 | [ingress.class](#ingress-class) | string | "" |  |:white_circle:|:large_blue_circle:|:white_circle:|
