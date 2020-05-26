@@ -1,7 +1,7 @@
 package controller
 
 import (
-	"github.com/haproxytech/models"
+	"github.com/haproxytech/models/v2"
 )
 
 func (c *HAProxyController) apiStartTransaction() error {

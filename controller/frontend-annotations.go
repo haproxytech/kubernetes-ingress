@@ -22,9 +22,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/haproxytech/client-native/misc"
+	"github.com/haproxytech/client-native/v2/misc"
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
-	"github.com/haproxytech/models"
+	"github.com/haproxytech/models/v2"
 )
 
 const (

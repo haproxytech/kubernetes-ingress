@@ -18,7 +18,7 @@ import (
 	"fmt"
 
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
-	"github.com/haproxytech/models"
+	"github.com/haproxytech/models/v2"
 )
 
 type FrontendHTTPReqs map[uint64]models.HTTPRequestRule

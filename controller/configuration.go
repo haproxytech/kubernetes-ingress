@@ -19,7 +19,7 @@ import (
 
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy"
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
-	"github.com/haproxytech/models"
+	"github.com/haproxytech/models/v2"
 )
 
 //Configuration represents k8s state

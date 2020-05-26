@@ -25,9 +25,9 @@ import (
 	"strings"
 	"syscall"
 
-	clientnative "github.com/haproxytech/client-native"
-	"github.com/haproxytech/client-native/configuration"
-	"github.com/haproxytech/client-native/runtime"
+	clientnative "github.com/haproxytech/client-native/v2"
+	"github.com/haproxytech/client-native/v2/configuration"
+	"github.com/haproxytech/client-native/v2/runtime"
 	parser "github.com/haproxytech/config-parser/v2"
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 	"k8s.io/apimachinery/pkg/watch"
