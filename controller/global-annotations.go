@@ -68,11 +68,14 @@ func (c *HAProxyController) handleSyslog() (restart, reload bool) {
 		syslogSrv = strings.Join(strings.Fields(syslogSrv), "")
 		logMap := make(map[string]string)
 		for _, paramStr := range strings.Split(syslogSrv, ",") {
+			if paramStr == "" {
+				continue
+			}
 			paramLst := strings.Split(paramStr, ":")
 			if len(paramLst) == 2 {
 				logMap[paramLst[0]] = paramLst[1]
 			} else {
-				c.Logger.Errorf("incorrect syslog param: %s", paramLst)
+				c.Logger.Errorf("incorrect syslog param: '%s' in '%s'", paramLst, syslogSrv)
 				continue
 			}
 		}
@@ -102,7 +105,7 @@ func (c *HAProxyController) handleSyslog() (restart, reload bool) {
 				case "minlevel":
 					logData.Level = v
 				default:
-					c.Logger.Errorf("unkown syslog param: %s ", k)
+					c.Logger.Errorf("unkown syslog param: '%s' in '%s' ", k, syslogSrv)
 					continue
 				}
 			}
