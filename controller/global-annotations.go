@@ -14,11 +14,11 @@ import (
 
 func (c *HAProxyController) handleGlobalAnnotations() (restart bool, reload bool) {
 	reload = false
-	reload = c.handleDefaultLogFormat() ||
-		c.handleDefaultMaxconn() ||
-		c.handleDefaultOptions() ||
-		c.handleDefaultTimeouts() ||
-		c.handleNbthread()
+	reload = c.handleDefaultLogFormat() || reload
+	reload = c.handleDefaultMaxconn() || reload
+	reload = c.handleDefaultOptions() || reload
+	reload = c.handleDefaultTimeouts() || reload
+	reload = c.handleNbthread() || reload
 
 	restart, r := c.handleSyslog()
 	reload = reload || r
