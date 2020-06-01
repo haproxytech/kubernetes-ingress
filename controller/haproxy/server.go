@@ -55,16 +55,18 @@ func (s *Server) UpdateMaxconn(value string) error {
 }
 
 func (s *Server) UpdateServerSsl(value string) error {
-	enabled, err := utils.GetBoolValue(value, "ssl")
+	enabled, err := utils.GetBoolValue(value, "server-ssl")
 	if err != nil {
 		return err
 	}
 	if enabled {
 		s.Ssl = "enabled"
 		s.Verify = "none"
+		s.Alpn = "h2,http/1.1"
 	} else {
 		s.Ssl = ""
 		s.Verify = ""
+		s.Alpn = ""
 	}
 	return nil
 }
