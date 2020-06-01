@@ -26,32 +26,40 @@ func (c *HAProxyController) handleGlobalAnnotations() (restart bool, reload bool
 }
 
 func (c *HAProxyController) handleNbthread() bool {
-	reload := false
-	maxProcs := goruntime.GOMAXPROCS(0)
-	numThreads := int64(maxProcs)
 	annNbthread, _ := GetValueFromAnnotations("nbthread", c.cfg.ConfigMap.Annotations)
-	if annNbthread == nil || annNbthread.Status == EMPTY {
+	if annNbthread == nil {
 		return false
 	}
-	var errParser error
-	if numthr, errConv := strconv.Atoi(annNbthread.Value); errConv == nil {
+	var err error
+	switch annNbthread.Status {
+	case EMPTY:
+		return false
+	case DELETED:
+		err = c.Client.SetNbthread(nil)
+	default:
+		maxProcs := goruntime.GOMAXPROCS(0)
+		numThreads := int64(maxProcs)
+		numthr, errConv := strconv.Atoi(annNbthread.Value)
+		if errConv != nil {
+			c.Logger.Err(errConv)
+			return false
+		}
 		if numthr < maxProcs {
 			numThreads = int64(numthr)
 		}
-		if annNbthread.Status == DELETED {
-			errParser = c.Client.SetNbthread(nil)
-			reload = true
-		} else if annNbthread.Status != EMPTY {
-			c.Logger.Infof("Set NbThread to: '%d'", numThreads)
-			errParser = c.Client.SetNbthread(&numThreads)
-		}
-		c.Logger.Error(errParser)
+		c.Logger.Infof("Set NbThread to: '%d'", numThreads)
+		err = c.Client.SetNbthread(&numThreads)
 	}
-	return reload
+	if err != nil {
+		c.Logger.Err(err)
+		return false
+	}
+	return true
 }
 
 func (c *HAProxyController) handleSyslog() (restart, reload bool) {
 	annSyslogSrv, _ := GetValueFromAnnotations("syslog-server", c.cfg.ConfigMap.Annotations)
+	// No need to check for non nil annotation because it has default value.
 	if annSyslogSrv.Status == EMPTY {
 		return false, false
 	}
@@ -145,30 +153,29 @@ func (c *HAProxyController) handleDefaultOptions() bool {
 
 func (c *HAProxyController) handleDefaultOption(option string) bool {
 	annOption, _ := GetValueFromAnnotations(option, c.cfg.ConfigMap.Annotations)
-	if annOption == nil || annOption.Status == "" {
+	if annOption == nil {
 		return false
 	}
 	var err error
-	if annOption.Status == DELETED {
+	switch annOption.Status {
+	case EMPTY:
+		return false
+	case DELETED:
 		c.Logger.Infof("Removing '%s' option", option)
 		err = c.Client.SetDefaulOption(option, nil)
-		if err != nil {
-			c.Logger.Error(err)
+	default:
+		enabled, parseErr := utils.GetBoolValue(annOption.Value, option)
+		if parseErr != nil {
+			c.Logger.Err(parseErr)
 			return false
 		}
-		return true
+		action := "Enabling"
+		if !enabled {
+			action = "Disabling"
+		}
+		c.Logger.Infof("%s %s", action, option)
+		err = c.Client.SetDefaulOption(option, &enabled)
 	}
-	enabled, err := utils.GetBoolValue(annOption.Value, option)
-	if err != nil {
-		c.Logger.Err(err)
-		return false
-	}
-	action := "Enabling"
-	if !enabled {
-		action = "Disabling"
-	}
-	c.Logger.Infof("%s %s", action, option)
-	err = c.Client.SetDefaulOption(option, &enabled)
 	if err != nil {
 		c.Logger.Err(err)
 		return false
@@ -198,22 +205,22 @@ func (c *HAProxyController) handleDefaultTimeout(timeout string) bool {
 	if annTimeout == nil {
 		return false
 	}
-	if annTimeout.Status != "" {
-		var err error
-		if annTimeout.Status == DELETED {
-			c.Logger.Infof("Removing default timeout-%s ", timeout)
-			err = c.Client.SetDefaulTimeout(timeout, nil)
-		} else {
-			c.Logger.Infof("Setting default timeout-%s to %s", timeout, annTimeout.Value)
-			err = c.Client.SetDefaulTimeout(timeout, &annTimeout.Value)
-		}
-		if err != nil {
-			c.Logger.Error(err)
-			return false
-		}
-		return true
+	var err error
+	switch annTimeout.Status {
+	case EMPTY:
+		return false
+	case DELETED:
+		c.Logger.Infof("Removing default timeout-%s ", timeout)
+		err = c.Client.SetDefaulTimeout(timeout, nil)
+	default:
+		c.Logger.Infof("Setting default timeout-%s to %s", timeout, annTimeout.Value)
+		err = c.Client.SetDefaulTimeout(timeout, &annTimeout.Value)
 	}
-	return false
+	if err != nil {
+		c.Logger.Error(err)
+		return false
+	}
+	return true
 }
 
 func (c *HAProxyController) handleDefaultMaxconn() bool {
@@ -221,35 +228,32 @@ func (c *HAProxyController) handleDefaultMaxconn() bool {
 	if annMaxconn == nil {
 		return false
 	}
-	value, err := strconv.ParseInt(annMaxconn.Value, 10, 64)
-	if err != nil {
-		c.Logger.Error(err)
-		return false
-	}
-
+	var err error
 	switch annMaxconn.Status {
 	case EMPTY:
 		return false
 	case DELETED:
-		err = c.Client.SetDefaulMaxconn(nil)
-		if err != nil {
-			c.Logger.Error(err)
-			return false
-		}
 		c.Logger.Info("Removing default maxconn")
+		err = c.Client.SetDefaulMaxconn(nil)
 	default:
-		err = c.Client.SetDefaulMaxconn(&value)
-		if err != nil {
-			c.Logger.Error(err)
+		value, parseErr := strconv.ParseInt(annMaxconn.Value, 10, 64)
+		if parseErr != nil {
+			c.Logger.Error(parseErr)
 			return false
 		}
 		c.Logger.Infof("Setting default maxconn to %d", value)
+		err = c.Client.SetDefaulMaxconn(&value)
+	}
+	if err != nil {
+		c.Logger.Error(err)
+		return false
 	}
 	return true
 }
 
 func (c *HAProxyController) handleDefaultLogFormat() bool {
 	annLogFormat, _ := GetValueFromAnnotations("log-format", c.cfg.ConfigMap.Annotations)
+	// No need check for non nil annotation because it has default value.
 	if annLogFormat.Status == EMPTY {
 		return false
 	}
