@@ -69,9 +69,10 @@ func Init(configFile, programPath, runtimeSocket string) (client HAProxyClient, 
 
 	confClient := configuration.Client{}
 	err = confClient.Init(configuration.ClientParams{
-		ConfigurationFile:      configFile,
-		PersistentTransactions: false,
-		Haproxy:                programPath,
+		ConfigurationFile:         configFile,
+		PersistentTransactions:    false,
+		Haproxy:                   programPath,
+		ValidateConfigurationFile: true,
 	})
 	if err != nil {
 		return nil, err
