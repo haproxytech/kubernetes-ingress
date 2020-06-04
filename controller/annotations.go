@@ -35,7 +35,7 @@ func convertAnnotationName(annotation string) string {
 	return split[len(split)-1]
 }
 
-//GetValueFromAnnotations returns value by checking in multiple annotatins.
+//GetValueFromAnnotations returns value by checking in multiple annotations.
 // moves through list until it finds value
 // if value is new or deleted, we check for next state to correctly set watch & value
 func GetValueFromAnnotations(annotationName string, annotations ...MapStringW) (data *StringW, err error) {
@@ -148,4 +148,5 @@ var defaultAnnotationValues = MapStringW{
 	"timeout-server":          &StringW{Value: "50s"},
 	"timeout-tunnel":          &StringW{Value: "1h"},
 	"timeout-http-keep-alive": &StringW{Value: "1m"},
+	"sync-period":             &StringW{Value: "5s"},
 }
