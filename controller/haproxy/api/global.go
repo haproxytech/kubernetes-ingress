@@ -28,6 +28,14 @@ func (c *clientNative) EnabledConfig(configType string) (enabled bool, err error
 	return false, fmt.Errorf("unsupported option '%s'", configType)
 }
 
+func (c *clientNative) SetConfigSnippet(value *[]string) error {
+	typeValue = nil
+	if value != nil {
+		typeValue = *value
+	}
+	return c.setSectionAttribute(parser.Global, "config-snippet", typeValue)
+}
+
 func (c *clientNative) SetDaemonMode(value *bool) error {
 	typeValue = nil
 	if value != nil {
@@ -114,6 +122,8 @@ func (c *clientNative) setSectionAttribute(section parser.Section, attribute str
 	// Set config value
 	var attributeValue interface{}
 	switch strings.Fields(attribute)[0] {
+	case "config-snippet":
+		attributeValue = types.StringSliceC{Value: value.([]string)}
 	case "daemon":
 		attributeValue = types.Enabled{}
 	case "log":

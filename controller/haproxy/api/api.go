@@ -17,6 +17,7 @@ type HAProxyClient interface {
 	BackendCreate(backend models.Backend) error
 	BackendEdit(backend models.Backend) error
 	BackendDelete(backendName string) error
+	BackendCfgSnippetSet(backendName string, value *[]string) error
 	BackendHTTPRequestRuleCreate(backend string, rule models.HTTPRequestRule) error
 	BackendHTTPRequestRuleDeleteAll(backend string)
 	BackendServerCreate(backendName string, data models.Server) error
@@ -41,6 +42,7 @@ type HAProxyClient interface {
 	FrontendHTTPResponseRuleCreate(frontend string, rule models.HTTPResponseRule) error
 	FrontendTCPRequestRuleDeleteAll(frontend string)
 	FrontendTCPRequestRuleCreate(frontend string, rule models.TCPRequestRule) error
+	SetConfigSnippet(snippet *[]string) error
 	SetDaemonMode(enabled *bool) error
 	SetDefaulLogFormat(value *string) error
 	SetDefaulMaxconn(value *int64) error

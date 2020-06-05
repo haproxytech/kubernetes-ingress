@@ -1,6 +1,7 @@
 package api
 
 import (
+	"github.com/haproxytech/config-parser/v2/types"
 	"github.com/haproxytech/models/v2"
 )
 
@@ -30,6 +31,22 @@ func (c *clientNative) BackendEdit(backend models.Backend) error {
 func (c *clientNative) BackendDelete(backendName string) error {
 	c.activeTransactionHasChanges = true
 	return c.nativeAPI.Configuration.DeleteBackend(backendName, c.activeTransaction, 0)
+}
+
+func (c *clientNative) BackendCfgSnippetSet(backendName string, value *[]string) error {
+	config, err := c.nativeAPI.Configuration.GetParser(c.activeTransaction)
+	if err != nil {
+		return err
+	}
+	if value == nil {
+		err = config.Set("backend", backendName, "config-snippet", nil)
+	} else {
+		err = config.Set("backend", backendName, "config-snippet", types.StringSliceC{Value: *value})
+	}
+	if err != nil {
+		c.activeTransactionHasChanges = true
+	}
+	return err
 }
 
 func (c *clientNative) BackendHTTPRequestRuleCreate(backend string, rule models.HTTPRequestRule) error {

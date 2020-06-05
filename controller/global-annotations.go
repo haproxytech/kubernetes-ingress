@@ -19,6 +19,7 @@ func (c *HAProxyController) handleGlobalAnnotations() (restart bool, reload bool
 	reload = c.handleDefaultOptions() || reload
 	reload = c.handleDefaultTimeouts() || reload
 	reload = c.handleNbthread() || reload
+	reload = c.handleConfigSnippet() || reload
 
 	restart, r := c.handleSyslog()
 	reload = reload || r
@@ -264,4 +265,32 @@ func (c *HAProxyController) handleDefaultLogFormat() bool {
 		return false
 	}
 	return true
+}
+
+func (c *HAProxyController) handleConfigSnippet() bool {
+	annCfgSnippet, _ := GetValueFromAnnotations("config-snippet", c.cfg.ConfigMap.Annotations)
+	if annCfgSnippet == nil {
+		return false
+	}
+	var err error
+	switch annCfgSnippet.Status {
+	case EMPTY:
+		return false
+	case DELETED:
+		c.Logger.Info("Removing global config-snippet")
+		err = c.Client.SetDefaulMaxconn(nil)
+	default:
+		value := strings.SplitN(strings.Trim(annCfgSnippet.Value, "\n"), "\n", -1)
+		if len(value) == 0 {
+			return false
+		}
+		c.Logger.Infof("Setting global config-snippet")
+		err = c.Client.SetConfigSnippet(&value)
+	}
+	if err != nil {
+		c.Logger.Error(err)
+		return false
+	}
+	return true
+
 }

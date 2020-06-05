@@ -16,6 +16,7 @@ Options for starting controller can be found in [controller.md](controller.md)
 | [check](#backend-checks) | ["true", "false"] | "true" |  |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:|
 | [check-http](#backend-checks) | string |  | [check](#backend-checks) |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:|
 | [check-interval](#backend-checks) | [time](#time) |  | [check](#backend-checks) |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:|
+| [config-snippet](#config-snippet) | string | "" |  |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:|
 | [cookie-persistance](#cookie-persistance) | string | "" |  |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:|
 | [dontlognull](#logging) | ["true", "false"] | "true" |  |:large_blue_circle:|:white_circle:|:white_circle:|
 | [forwarded-for](#x-forwarded-for) | ["true", "false"] | "true" |  |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:|
@@ -382,6 +383,29 @@ More information can be found in the [HAProxy documentation](https://cbonte.gith
 
 - Annotation: `forwarded-for`
 - by default enabled, can be disabled per service or globally
+
+### config-snippet
+
+This is for HAProxy power users who want to insert raw HAProxy configuration in a specific section.
+- When used in `configmap` annotations, the configuration snippet will be in the HAProxy `global` section.
+	- Example:
+	```
+	config-snippet: |
+      ssl-default-bind-options no-sslv3 no-tlsv10 no-tlsv11
+      ssl-default-bind-ciphers TLS13-AES-256-GCM-SHA384:TLS13-AES-128-GCM-SHA256:TLS13-CHACHA20-POLY1305-SHA256:EECDH+AESGCM:EECDH+CHACHA20
+      tune.ssl.default-dh-param 2048
+      tune.bufsize 32768
+	```
+- When used in `ingress` or `service` annotations, the configuration will be in the corresponding HAProxy `backend` section.
+	- `service` config snippet will be in the one backend section corresponding to the service.
+	- `ingress` config snippet will be in backend sections of all the services mentioned in the ingress object.
+	- Example:
+	```
+	config-snippet: |
+      http-send-name-header x-dst-server
+      stick-table type string len 32 size 100k expire 30m
+      stick on req.cook(sessionid)
+	```
 
 ### Secrets
 

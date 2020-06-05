@@ -60,9 +60,10 @@ func (c *HAProxyController) handleSSLPassthrough(ingress *Ingress, service *Serv
 func (c *HAProxyController) handleBackendAnnotations(ingress *Ingress, service *Service, backendModel *models.Backend, newBackend bool) (activeAnnotations bool) {
 	activeAnnotations = false
 	backend := haproxy.Backend(*backendModel)
-	backendAnnotations := make(map[string]*StringW, 8)
+	backendAnnotations := make(map[string]*StringW, 9)
 
 	backendAnnotations["abortonclose"], _ = GetValueFromAnnotations("abortonclose", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
+	backendAnnotations["config-snippet"], _ = GetValueFromAnnotations("config-snippet", ingress.Annotations, service.Annotations)
 	backendAnnotations["cookie-persistence"], _ = GetValueFromAnnotations("cookie-persistence", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
 	backendAnnotations["load-balance"], _ = GetValueFromAnnotations("load-balance", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
 	backendAnnotations["timeout-check"], _ = GetValueFromAnnotations("timeout-check", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
@@ -96,6 +97,22 @@ func (c *HAProxyController) handleBackendAnnotations(ingress *Ingress, service *
 					continue
 				}
 				activeAnnotations = true
+			case "config-snippet":
+				var err error
+				if v.Status == DELETED && !newBackend {
+					err = c.Client.BackendCfgSnippetSet(backend.Name, nil)
+				} else {
+					value := strings.SplitN(strings.Trim(v.Value, "\n"), "\n", -1)
+					if len(value) == 0 {
+						continue
+					}
+					err = c.Client.BackendCfgSnippetSet(backend.Name, &value)
+				}
+				if err != nil {
+					c.Logger.Errorf("%s annotation: %s", k, err)
+				} else {
+					activeAnnotations = true
+				}
 			case "cookie-persistence":
 				if v.Status == DELETED && !newBackend {
 					backend.Cookie = nil
