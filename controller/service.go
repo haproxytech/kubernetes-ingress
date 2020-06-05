@@ -67,6 +67,24 @@ func (c *HAProxyController) handleEndpoint(namespace *Namespace, ingress *Ingres
 	if ip.Disabled {
 		server.Maintenance = "enabled"
 	}
+	for _, i := range c.cfg.ConfigMapTCPServices.Annotations {
+		ns, name, _, _, proxyOption, err := tcpOptions(i.Value)
+		if err != nil {
+			c.Logger.Error(err.Error())
+			continue
+		}
+		if ns == service.Namespace && name == service.Name && len(proxyOption) > 0 {
+			switch proxyOption {
+			case "PROXY-V1":
+				server.SendProxy = "enabled"
+			case "PROXY-V2":
+				server.SendProxyV2 = "enabled"
+			default:
+				c.Logger.Errorf("unrecognized enum for PROXY protocol option: %s", proxyOption)
+			}
+			break
+		}
+	}
 
 	annotationsActive := c.handleServerAnnotations(ingress, service, &server, ip.Status)
 	if ip.Status == EMPTY && annotationsActive {
