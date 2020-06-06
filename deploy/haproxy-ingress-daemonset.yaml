@@ -134,7 +134,6 @@ metadata:
   name: haproxy-ingress
   namespace: haproxy-controller
 spec:
-  replicas: 1
   selector:
     matchLabels:
       run: haproxy-ingress
