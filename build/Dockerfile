@@ -39,7 +39,7 @@ RUN mkdir -p /var/run/vars && \
 
 FROM haproxytech/haproxy-alpine:2.1.4
 
-RUN apk --no-cache add socat openssl util-linux openrc htop
+RUN apk --no-cache add socat openssl util-linux openrc htop tzdata
 
 COPY /fs /
 COPY --from=builder /src/fs/haproxy-ingress-controller .

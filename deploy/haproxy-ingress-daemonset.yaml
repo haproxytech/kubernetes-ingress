@@ -169,6 +169,8 @@ spec:
           containerPort: 1024
           hostPort: 1024
         env:
+        - name: TZ
+          value: "Etc/UTC"
         - name: POD_NAME
           valueFrom:
             fieldRef:
