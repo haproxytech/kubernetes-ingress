@@ -57,6 +57,7 @@ Options for starting controller can be found in [controller.md](controller.md)
 | [timeout-server-fin](#timeouts) | [time](#time) |  |  |:large_blue_circle:|:white_circle:|:white_circle:|
 | [timeout-tunnel](#timeouts) | [time](#time) | "1h" |  |:large_blue_circle:|:white_circle:|:white_circle:|
 | [whitelist](#whitelist) | [IPs or CIDRs](#whitelist) | "" |  |:large_blue_circle:|:large_blue_circle:|:white_circle:|
+| [send-proxy-protocol](#send-proxy-protocol) | ["proxy", "proxy-v1", "proxy-v2", ""] | "" |  |:white_circle:|:white_circle:|:large_blue_circle:|
 
 > :information_source: Annotations have hierarchy: `default` <- `Configmap` <- `Ingress` <- `Service`
 >
@@ -305,6 +306,15 @@ More information can be found in the official HAProxy [documentation](https://cb
 
 - Annotation: `pod-maxconn`
 - related to backend servers (pods)
+
+#### Send PROXY Protocol
+
+- Annotation: `send-proxy-protocol`
+  - set backend servers _PROXY_ protocol
+  - by default, no _PROXY_ protocol is applied
+  - allowed enums:
+    - `proxy` and `proxy-v1` for `PROXY V1`
+    - `proxy-v2` for `PROXY V2`
 
 #### Proxy Protocol
 - Annotation: `proxy-protocol`
