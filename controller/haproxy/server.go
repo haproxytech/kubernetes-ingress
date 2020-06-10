@@ -15,13 +15,34 @@
 package haproxy
 
 import (
+	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 	"github.com/haproxytech/models/v2"
 )
 
 type Server models.Server
+
+func (s *Server) ResetSendProxy() {
+	s.SendProxy = ""
+	s.SendProxyV2 = ""
+}
+
+func (s *Server) UpdateSendProxy(value string) (err error) {
+	switch strings.ToLower(value) {
+	case "proxy":
+		s.SendProxy = "enabled"
+	case "proxy-v1":
+		s.SendProxy = "enabled"
+	case "proxy-v2":
+		s.SendProxyV2 = "enabled"
+	default:
+		err = fmt.Errorf("%s is an unknown enum", value)
+	}
+	return
+}
 
 func (s *Server) UpdateCheck(value string) error {
 	enabled, err := utils.GetBoolValue(value, "check")

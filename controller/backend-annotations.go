@@ -213,6 +213,7 @@ func (c *HAProxyController) handleServerAnnotations(ingress *Ingress, service *S
 	serverAnnotations["check-interval"], _ = GetValueFromAnnotations("check-interval", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
 	serverAnnotations["pod-maxconn"], _ = GetValueFromAnnotations("pod-maxconn", service.Annotations)
 	serverAnnotations["server-ssl"], _ = GetValueFromAnnotations("server-ssl", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
+	serverAnnotations["send-proxy-protocol"], _ = GetValueFromAnnotations("send-proxy-protocol", service.Annotations)
 
 	// The DELETED status of an annotation is handled explicitly
 	// only when there is no default annotation value.
@@ -254,6 +255,16 @@ func (c *HAProxyController) handleServerAnnotations(ingress *Ingress, service *S
 				activeAnnotations = true
 			case "server-ssl":
 				if err := server.UpdateServerSsl(v.Value); err != nil {
+					c.Logger.Errorf("%s annotation: %s", k, err)
+					continue
+				}
+				activeAnnotations = true
+			case "send-proxy-protocol":
+				if v.Status == DELETED || len(v.Value) == 0 {
+					server.ResetSendProxy()
+					continue
+				}
+				if err := server.UpdateSendProxy(v.Value); err != nil {
 					c.Logger.Errorf("%s annotation: %s", k, err)
 					continue
 				}
