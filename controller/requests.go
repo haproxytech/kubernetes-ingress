@@ -122,6 +122,15 @@ func (c *HAProxyController) FrontendHTTPReqsRefresh() (reload bool) {
 			VarExpr:  "base",
 		}
 		c.Logger.Error(c.Client.FrontendHTTPRequestRuleCreate(frontend, setVarBaseRule))
+		// STATIC: SET_VARIABLE txn.Host (to use in http-response acls)
+		setVarBaseRule = models.HTTPRequestRule{
+			Index:    utils.PtrInt64(0),
+			Type:     "set-var",
+			VarName:  "Host",
+			VarScope: "txn",
+			VarExpr:  "req.hdr(Host)",
+		}
+		c.Logger.Error(c.Client.FrontendHTTPRequestRuleCreate(frontend, setVarBaseRule))
 		// RATE_LIMIT
 		for tableName, table := range rateLimitTables {
 			_, err := c.Client.BackendGet(tableName)
