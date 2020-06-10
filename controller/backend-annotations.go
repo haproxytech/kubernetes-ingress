@@ -114,6 +114,11 @@ func (c *HAProxyController) handleBackendAnnotations(ingress *Ingress, service *
 					activeAnnotations = true
 				}
 			case "cookie-persistence":
+				if backendAnnotations["config-snippet"] != nil {
+					if strings.Contains(backendAnnotations["config-snippet"].Value, "cookie") {
+						continue
+					}
+				}
 				if v.Status == DELETED && !newBackend {
 					backend.Cookie = nil
 				} else {

@@ -17,7 +17,7 @@ Options for starting controller can be found in [controller.md](controller.md)
 | [check-http](#backend-checks) | string |  | [check](#backend-checks) |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:|
 | [check-interval](#backend-checks) | [time](#time) |  | [check](#backend-checks) |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:|
 | [config-snippet](#config-snippet) | string | "" |  |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:|
-| [cookie-persistance](#cookie-persistance) | string | "" |  |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:|
+| [cookie-persistence](#cookie-persistence) | string | "" |  |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:|
 | [dontlognull](#logging) | ["true", "false"] | "true" |  |:large_blue_circle:|:white_circle:|:white_circle:|
 | [forwarded-for](#x-forwarded-for) | ["true", "false"] | "true" |  |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:|
 | [ingress.class](#ingress-class) | string | "" |  |:white_circle:|:large_blue_circle:|:white_circle:|
@@ -130,7 +130,25 @@ Depending on the option, it can be in Global or Default HAProxy section.
 
 - Configure sticky session via  cookie-based persistence.
 - Annotation: `cookie-persistence <string>` sets the name of the cookie to be used for sticky session.
-- More annotations to fine-tune cookie can be found in controller-annotations.go
+- Configuring the cookie can be done in two different ways:
+	- Using `config-snippet` [annotation](#config-snippet):
+	```
+	config-snippet: |
+		 cookie SRV insert indirect nocache
+	```
+	- Using cookies annotations:
+		- `cookie-domain <string>`
+		- `cookie-dynamic <"true","false">`
+		- `cookie-httponly <"true","false">`
+		- `cookie-indirect <"true","false">`
+		- `cookie-maxidle <int>`
+		- `cookie-maxlife <int>`
+		- `cookie-nocache <"true","false">`
+		- `cookie-postonly <"true","false">`
+		- `cookie-preserve <"true","false">`
+		- `cookie-secure <"true","false">`
+		- `cookie-type <"rewrite", "insert", "prefix">`
+
 
 More information can be found in the official HAProxy [documentation](https://cbonte.github.io/haproxy-dconv/2.0/configuration.html#4-cookie)
 
