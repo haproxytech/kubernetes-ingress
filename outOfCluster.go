@@ -26,22 +26,22 @@ import (
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 )
 
-const (
-	TestFolderPath = "/tmp/haproxy-ingress/"
-)
-
-func setupTestEnv() {
+// When controller is not running on a containerized
+// environment (out of Kubernetes)
+func setupHAProxyEnv(osArgs utils.OSArgs) {
 	logger := utils.GetLogger()
-	logger.Info("Running in test env")
-	cfgDir = path.Join(TestFolderPath, cfgDir)
-	if err := os.MkdirAll(cfgDir, 0755); err != nil {
+	c.HAProxyCfgDir = "/tmp/haproxy-ingress/etc"
+	if osArgs.CfgDir != "" {
+		c.HAProxyCfgDir = osArgs.CfgDir
+	}
+	if err := os.MkdirAll(c.HAProxyCfgDir, 0755); err != nil {
 		logger.Panic(err)
 	}
-	c.HAProxyStateDir = path.Join(TestFolderPath, "/var/state/haproxy/")
+	c.HAProxyStateDir = "/tmp/haproxy-ingress/state/"
 	if err := os.MkdirAll(c.HAProxyStateDir, 0755); err != nil {
 		logger.Panic(err)
 	}
-	c.TransactionDir = path.Join(TestFolderPath, "transactions")
+	c.TransactionDir = path.Join(c.HAProxyCfgDir, "transactions")
 	time.Sleep(2 * time.Second)
 	cmd := exec.Command("pwd")
 	out, err := cmd.CombinedOutput()
@@ -53,15 +53,17 @@ func setupTestEnv() {
 		logger.Panic(err)
 	}
 	logger.Debug(dir)
-	copyFile(path.Join(dir, "fs/etc/haproxy/haproxy.cfg"), cfgDir)
+	if err = copyFile(path.Join(dir, "fs/etc/haproxy/haproxy.cfg"), c.HAProxyCfgDir); err != nil {
+		logger.Panic(err)
+	}
 	logger.Debug(string(out))
 }
 
-func copyFile(src, dst string) {
+func copyFile(src, dst string) (err error) {
 	logger := utils.GetLogger()
 	cmd := fmt.Sprintf("cp %s %s", src, dst)
 	logger.Debug(cmd)
 	result := exec.Command("bash", "-c", cmd)
-	_, err := result.CombinedOutput()
-	logger.Debug(err)
+	_, err = result.CombinedOutput()
+	return
 }

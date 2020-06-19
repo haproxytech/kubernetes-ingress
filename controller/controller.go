@@ -170,7 +170,6 @@ func (c *HAProxyController) Start(ctx context.Context, osArgs utils.OSArgs) {
 
 	if osArgs.OutOfCluster {
 		kubeconfig := filepath.Join(utils.HomeDir(), ".kube", "config")
-		logger.Info("Running Controller out of K8s cluster")
 		if osArgs.KubeConfig != "" {
 			kubeconfig = osArgs.KubeConfig
 		}
@@ -392,7 +391,6 @@ func (c *HAProxyController) haproxyService(action string) (err error) {
 		logger.Infof("HAProxy would be %sed now", action)
 		return nil
 	}
-
 	var cmd *exec.Cmd
 	// if processErr is nil, process variable will automatically
 	// hold information about a running Master HAproxy process

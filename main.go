@@ -31,8 +31,6 @@ import (
 	"github.com/jessevdk/go-flags"
 )
 
-var cfgDir string
-
 func main() {
 
 	var osArgs utils.OSArgs
@@ -112,7 +110,6 @@ func main() {
 	if osArgs.ConfigMapErrorfiles.Name != "" {
 		logger.Printf("Errofile pages defined in %s/%s", osArgs.ConfigMapErrorfiles.Namespace, osArgs.ConfigMapErrorfiles.Name)
 	}
-	logger.FileName = true
 
 	ctx, cancel := context.WithCancel(context.Background())
 	signalC := make(chan os.Signal, 1)
@@ -123,13 +120,15 @@ func main() {
 	}()
 
 	c.HAProxyCfgDir = "/etc/haproxy/"
-	if osArgs.Test {
-		setupTestEnv()
+	if osArgs.OutOfCluster {
+		logger.Print("Running Controller out of K8s cluster")
+		setupHAProxyEnv(osArgs)
 	}
 
 	controller := c.HAProxyController{
 		IngressClass: osArgs.IngressClass,
 	}
+	logger.FileName = true
 	// K8s Store
 	s := store.NewK8sStore()
 	s.SetDefaultAnnotation("default-backend-service", defaultBackendSvc)
