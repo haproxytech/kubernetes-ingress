@@ -69,6 +69,7 @@ type OSArgs struct {
 	NamespaceWhitelist    []string       `long:"namespace-whitelist" description:"whitelisted namespaces"`
 	NamespaceBlacklist    []string       `long:"namespace-blacklist" description:"blacklisted namespaces"`
 	PprofEnabled          bool           `short:"p" description:"enable pprof over https"`
+	Program               string         `long:"program" description:"path to HAProxy program NOTE: works only with OutOfCluster"`
 	CfgDir                string         `long:"config-dir" description:"path to HAProxy configuration directory NOTE: works only with OutOfCluster"`
 	RuntimeDir            string         `long:"runtime-dir" description:"path to HAProxy runtime directory NOTE: works only with OutOfCluster"`
 	OutOfCluster          bool           `short:"e" description:"use as out of cluster controller NOTE: experimental"`

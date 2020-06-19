@@ -55,6 +55,7 @@ const (
 )
 
 var (
+	HAProxyBinary        string
 	HAProxyCFG           string
 	HAProxyCfgDir        string
 	HAProxyCertDir       string
@@ -298,8 +299,17 @@ func (c *HAProxyController) updateHAProxy() error {
 
 //HAProxyInitialize runs HAProxy for the first time so native client can have access to it
 func (c *HAProxyController) haproxyInitialize() {
-	// Initialize fils and directories
 	var err error
+	// HAProxy executable
+	HAProxyBinary = "/usr/local/sbin/haproxy"
+	if c.osArgs.Program != "" {
+		HAProxyBinary = c.osArgs.Program
+	}
+	_, err = os.Stat(HAProxyBinary)
+	if err != nil && !c.osArgs.Test {
+		logger.Panic(err)
+	}
+	// Initialize files and directories
 	if HAProxyCFG == "" {
 		HAProxyCFG = filepath.Join(HAProxyCfgDir, "haproxy.cfg")
 	}
@@ -433,7 +443,7 @@ func (c *HAProxyController) haproxyService(action string) (err error) {
 			logger.Error(fmt.Errorf("haproxy is already running"))
 			return nil
 		}
-		cmd = exec.Command("haproxy", "-W", "-f", HAProxyCFG, "-p", HAProxyPIDFile)
+		cmd = exec.Command(HAProxyBinary, "-W", "-f", HAProxyCFG, "-p", HAProxyPIDFile)
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 		return cmd.Start()
@@ -457,7 +467,7 @@ func (c *HAProxyController) haproxyService(action string) (err error) {
 			return c.haproxyService("start")
 		}
 		pid := strconv.Itoa(process.Pid)
-		cmd = exec.Command("haproxy", "-W", "-f", HAProxyCFG, "-p", HAProxyPIDFile, "-sf", pid)
+		cmd = exec.Command(HAProxyBinary, "-W", "-f", HAProxyCFG, "-p", HAProxyPIDFile, "-sf", pid)
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 		return cmd.Start()
