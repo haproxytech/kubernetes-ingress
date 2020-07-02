@@ -37,7 +37,7 @@ RUN mkdir -p /var/run/vars && \
         -ldflags "-X main.GitRepo=$(cat /var/run/vars/GIT_REPO) -X main.GitTag=$(cat /var/run/vars/GIT_LAST_TAG) -X main.GitCommit=$(cat /var/run/vars/GIT_HEAD_COMMIT) -X main.GitDirty=$(cat /var/run/vars/GIT_MODIFIED) -X main.BuildTime=$(cat /var/run/vars/BUILD_DATE)" \
         -o fs/haproxy-ingress-controller .
 
-FROM haproxytech/haproxy-alpine:2.1.4
+FROM haproxytech/haproxy-alpine:2.1
 
 RUN apk --no-cache add socat openssl util-linux openrc htop tzdata
 
