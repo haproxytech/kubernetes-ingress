@@ -53,14 +53,6 @@ rules:
   - create
   - patch
   - update
-- apiGroups:
-  - extensions
-  resources:
-  - ingresses
-  verbs:
-  - get
-  - list
-  - watch
 
 ---
 kind: ClusterRoleBinding
