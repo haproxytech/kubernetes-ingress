@@ -89,12 +89,14 @@ func (c *HAProxyController) handleEndpoint(namespace *Namespace, ingress *Ingres
 	case DELETED:
 		c.Logger.Debugf("Deleting server '%s/%s'", backendName, server.Name)
 		errAPI = c.Client.BackendServerDelete(backendName, server.Name)
+	default:
+		return false
 	}
 	if errAPI != nil {
 		c.Logger.Err(errAPI)
 		return false
 	}
-	return false
+	return true
 }
 
 // handle service of an IngressPath and make corresponding backend configuration in HAProxy
