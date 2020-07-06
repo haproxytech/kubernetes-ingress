@@ -82,9 +82,9 @@ func (c *HAProxyController) writeCert(filename string, key, crt []byte) error {
 func (c *HAProxyController) handleSecret(ingress Ingress, secret Secret, writeSecret bool, certs map[string]struct{}) (reload bool) {
 	reload = false
 	for _, k := range []string{"tls", "rsa", "ecdsa"} {
-		key, keyOk := secret.Data[k+".key"]
-		crt, crtOk := secret.Data[k+".crt"]
-		if keyOk && crtOk {
+		key := secret.Data[k+".key"]
+		crt := secret.Data[k+".crt"]
+		if len(key) != 0 && len(crt) != 0 {
 			filename := path.Join(HAProxyCertDir, fmt.Sprintf("%s_%s_%s.pem.rsa", ingress.Name, secret.Namespace, secret.Name))
 			if writeSecret {
 				if err := c.writeCert(filename, key, crt); err != nil {
