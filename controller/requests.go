@@ -113,7 +113,7 @@ func (c *HAProxyController) FrontendHTTPReqsRefresh() (reload bool) {
 			c.cfg.MapFiles.Modified(key)
 			c.Logger.Error(c.Client.FrontendHTTPRequestRuleCreate(frontend, httpRule))
 		}
-		// STATIC: SET_VARIABLE txn.Base (for logging purpose)
+		// STATIC: SET_VARIABLE txn.base (for logging purpose)
 		setVarBaseRule := models.HTTPRequestRule{
 			Index:    utils.PtrInt64(0),
 			Type:     "set-var",
@@ -122,11 +122,11 @@ func (c *HAProxyController) FrontendHTTPReqsRefresh() (reload bool) {
 			VarExpr:  "base",
 		}
 		c.Logger.Error(c.Client.FrontendHTTPRequestRuleCreate(frontend, setVarBaseRule))
-		// STATIC: SET_VARIABLE txn.Host (to use in http-response acls)
+		// STATIC: SET_VARIABLE txn.host (to use in http-response acls)
 		setVarBaseRule = models.HTTPRequestRule{
 			Index:    utils.PtrInt64(0),
 			Type:     "set-var",
-			VarName:  "Host",
+			VarName:  "host",
 			VarScope: "txn",
 			VarExpr:  "req.hdr(Host)",
 		}

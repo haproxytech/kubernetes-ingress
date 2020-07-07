@@ -418,7 +418,7 @@ func (c *HAProxyController) handleResponseSetHdr(ingress *Ingress) error {
 			HdrName:   parts[0],
 			HdrFormat: parts[1],
 			Cond:      "if",
-			CondTest:  fmt.Sprintf("{ var(txn.Host) -f %s }", mapFile),
+			CondTest:  fmt.Sprintf("{ var(txn.host) -f %s }", mapFile),
 		}
 		c.cfg.FrontendHTTPRspRules[RESPONSE_SET_HEADER][key] = httpRule
 	}
