@@ -67,6 +67,7 @@ type OSArgs struct {
 	KubeConfig            string         `long:"kubeconfig" default:"" description:"combined with -e. location of kube config file"`
 	NamespaceWhitelist    []string       `long:"namespace-whitelist" description:"whitelisted namespaces"`
 	NamespaceBlacklist    []string       `long:"namespace-blacklist" description:"blacklisted namespaces"`
+	PprofEnabled          bool           `short:"p" description:"enable pprof over https"`
 	OutOfCluster          bool           `short:"e" description:"use as out of cluster controller NOTE: experimental"`
 	Test                  bool           `short:"t" description:"simulate running HAProxy"`
 	Help                  []bool         `short:"h" long:"help" description:"show this help message"`

@@ -257,6 +257,34 @@ func (c *HAProxyController) handlePath(namespace *Namespace, ingress *Ingress, r
 	return reload, nil
 }
 
+// handle pprof backend
+func (c *HAProxyController) handlePprof() (err error) {
+	pprofBackend := "pprof"
+
+	err = c.Client.BackendCreate(models.Backend{
+		Name: pprofBackend,
+		Mode: "http",
+	})
+	if err != nil {
+		return err
+	}
+	err = c.Client.BackendServerCreate(pprofBackend, models.Server{
+		Name:    "pprof",
+		Address: "127.0.0.1:6060",
+	})
+	if err != nil {
+		return err
+	}
+	c.Logger.Debug("pprof backend created")
+	useBackendRule := UseBackendRule{
+		Host:    "",
+		Path:    "/debug/pprof",
+		Backend: pprofBackend,
+	}
+	c.addUseBackendRule("pprof", useBackendRule, FrontendHTTPS)
+	return nil
+}
+
 // Look for the targetPort (Endpoint port) corresponding to the servicePort of the IngressPath
 func (c *HAProxyController) setTargetPort(path *IngressPath, service *Service, endpoints *Endpoints) error {
 	for _, sp := range service.Ports {

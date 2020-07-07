@@ -17,9 +17,13 @@ package main
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
+
+	//nolint
+	_ "net/http/pprof"
 
 	c "github.com/haproxytech/kubernetes-ingress/controller"
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
@@ -72,7 +76,12 @@ func main() {
 	logger.Printf("HAProxy Ingress Controller %s %s%s\n", GitTag, GitCommit, GitDirty)
 	logger.Printf("Build from: %s", GitRepo)
 	logger.Printf("Build date: %s\n", BuildTime)
-
+	if osArgs.PprofEnabled {
+		logger.Warning("pprof endpoint exposed over https")
+		go func() {
+			logger.Error(http.ListenAndServe("127.0.0.1:6060", nil))
+		}()
+	}
 	logger.Printf("ConfigMap: %s/%s", osArgs.ConfigMap.Namespace, osArgs.ConfigMap.Name)
 	logger.Printf("Ingress class: %s", osArgs.IngressClass)
 	logger.Printf("Publish service: %s", osArgs.PublishService)

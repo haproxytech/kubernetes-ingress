@@ -70,6 +70,13 @@ func (c *HAProxyController) Start(ctx context.Context, osArgs utils.OSArgs) {
 
 	c.haproxyInitialize()
 
+	if c.osArgs.PprofEnabled {
+		c.Logger.Error(c.Client.APIStartTransaction())
+		c.Logger.Error(c.handlePprof())
+		c.refreshBackendSwitching()
+		c.Logger.Error(c.Client.APICommitTransaction())
+	}
+
 	var k8s *K8s
 	var err error
 
