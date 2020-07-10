@@ -101,7 +101,7 @@ func (k *K8s) EventsNamespaces(channel chan *Namespace, stop chan struct{}) {
 	_, controller := cache.NewInformer( // also take a look at NewSharedIndexInformer
 		watchlist,
 		&corev1.Namespace{},
-		1*time.Second, //Duration is int64
+		10*time.Minute, //Duration is int64
 		cache.ResourceEventHandlerFuncs{
 			AddFunc: func(obj interface{}) {
 				data := obj.(*corev1.Namespace)
@@ -168,7 +168,7 @@ func (k *K8s) EventsEndpoints(channel chan *Endpoints, stop chan struct{}) {
 	_, controller := cache.NewInformer( // also take a look at NewSharedIndexInformer
 		watchlist,
 		&corev1.Endpoints{},
-		1*time.Second, //Duration is int64
+		10*time.Minute, //Duration is int64
 		cache.ResourceEventHandlerFuncs{
 			AddFunc: func(obj interface{}) {
 				item, err := k.convertToEndpoints(obj, ADDED)
@@ -264,7 +264,7 @@ func (k *K8s) EventsIngresses(channel chan *Ingress, stop chan struct{}) {
 	_, controller := cache.NewInformer( // also take a look at NewSharedIndexInformer
 		watchlist,
 		&extensions.Ingress{},
-		1*time.Second, //Duration is int64
+		10*time.Minute, //Duration is int64
 		cache.ResourceEventHandlerFuncs{
 			AddFunc: func(obj interface{}) {
 				data := obj.(*extensions.Ingress)
@@ -343,7 +343,7 @@ func (k *K8s) EventsServices(channel chan *Service, stop chan struct{}, publishS
 	_, controller := cache.NewInformer( // also take a look at NewSharedIndexInformer
 		watchlist,
 		&corev1.Service{},
-		1*time.Second, //Duration is int64
+		10*time.Minute, //Duration is int64
 		cache.ResourceEventHandlerFuncs{
 			AddFunc: func(obj interface{}) {
 				data := obj.(*corev1.Service)
@@ -457,7 +457,7 @@ func (k *K8s) EventsConfigfMaps(channel chan *ConfigMap, stop chan struct{}) {
 	_, controller := cache.NewInformer( // also take a look at NewSharedIndexInformer
 		watchlist,
 		&corev1.ConfigMap{},
-		1*time.Second, //Duration is int64
+		10*time.Minute, //Duration is int64
 		cache.ResourceEventHandlerFuncs{
 			AddFunc: func(obj interface{}) {
 				data := obj.(*corev1.ConfigMap)
@@ -524,7 +524,7 @@ func (k *K8s) EventsSecrets(channel chan *Secret, stop chan struct{}) {
 	_, controller := cache.NewInformer( // also take a look at NewSharedIndexInformer
 		watchlist,
 		&corev1.Secret{},
-		1*time.Second, //Duration is int64
+		10*time.Minute, //Duration is int64
 		cache.ResourceEventHandlerFuncs{
 			AddFunc: func(obj interface{}) {
 				data := obj.(*corev1.Secret)
