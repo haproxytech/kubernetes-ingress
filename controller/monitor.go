@@ -21,12 +21,12 @@ import (
 	"k8s.io/client-go/tools/cache"
 )
 
-func (c *HAProxyController) syncPeriod() (syncPeriod time.Duration) {
-	d, err := GetValueFromAnnotations("sync-period")
+func (c *HAProxyController) timeFromAnnotation(name string) (duration time.Duration) {
+	d, err := GetValueFromAnnotations(name)
 	if err != nil {
 		c.Logger.Panic(err)
 	}
-	syncPeriod, _ = time.ParseDuration(d.Value)
+	duration, _ = time.ParseDuration(d.Value)
 
 	return
 }
@@ -34,12 +34,12 @@ func (c *HAProxyController) syncPeriod() (syncPeriod time.Duration) {
 func (c *HAProxyController) monitorChanges() {
 
 	configMapReceivedAndProcessed := make(chan bool)
-	syncPeriod := c.syncPeriod()
+	syncPeriod := c.timeFromAnnotation("sync-period")
 	c.Logger.Debugf("Executing syncPeriod every %s", syncPeriod.String())
 	go c.SyncData(c.eventChan, configMapReceivedAndProcessed)
 
 	stop := make(chan struct{})
-	factory := informers.NewSharedInformerFactory(c.k8s.API, 10*time.Minute)
+	factory := informers.NewSharedInformerFactory(c.k8s.API, c.timeFromAnnotation("cache-resync-period"))
 
 	endpointsChan := make(chan *Endpoints, 100)
 	pi := factory.Core().V1().Endpoints().Informer()

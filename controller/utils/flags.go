@@ -74,5 +74,6 @@ type OSArgs struct {
 	IngressClass          string         `long:"ingress.class" default:"" description:"ingress.class to monitor in multiple controllers environment"`
 	PublishService        string         `long:"publish-service" default:"" description:"Takes the form namespace/name. The controller mirrors the address of this service's endpoints to the load-balancer status of all Ingress objects it satisfies"`
 	SyncPeriod            time.Duration  `long:"sync-period" default:"5s" description:"Sets the synchronization period at which the controller executes the configuration sync"`
+	ResyncPeriod          time.Duration  `long:"cache-resync-period" default:"1m" description:"Sets the underlying Shared Informer resync period: higher values will lower down pressure on the GC and subsequently to CPU"`
 	LogLevel              LogLevelValue  `long:"log" default:"info" description:"level of log messages you can see"`
 }

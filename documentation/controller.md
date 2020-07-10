@@ -52,6 +52,12 @@ you can run image with arguments:
   - optional, must be in format `namespace/name`
   - The controller mirrors the address of the service's endpoints to the load-balancer status of all Ingress objects it satisfies.
 
+- `--cache-resync-period`
+  - optional (must adhere to [`time.Duration`](https://golang.org/pkg/time/#ParseDuration) format),
+    sets the default re-synchronization period at which the controller will re-apply the desired state
+  - fine tuning parameter useful for large scale deployments, as reported in the [issue #216](https://github.com/haproxytech/kubernetes-ingress/issues/216)
+  - default value to `10m` (_10 minutes_)
+
 - `--sync-period`
   - optional (must adhere to [`time.Duration`](https://golang.org/pkg/time/#ParseDuration) format),
     sets the synchronization period at which the controller executes the configuration sync
