@@ -19,19 +19,17 @@ import (
 	"errors"
 	"fmt"
 	"net"
-	"time"
-
-	"github.com/haproxytech/kubernetes-ingress/controller/utils"
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	//networking "k8s.io/api/networking/v1beta1"
+	corev1 "k8s.io/api/core/v1"
 	extensions "k8s.io/api/extensions/v1beta1"
-	"k8s.io/apimachinery/pkg/fields"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/clientcmd"
+
+	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 )
 
 //TRACE_API outputs all k8s events received from k8s API
@@ -91,17 +89,8 @@ func GetRemoteKubernetesClient(kubeconfig string) (*K8s, error) {
 	}, nil
 }
 
-func (k *K8s) EventsNamespaces(channel chan *Namespace, stop chan struct{}) {
-	watchlist := cache.NewListWatchFromClient(
-		k.API.CoreV1().RESTClient(),
-		string("namespaces"),
-		corev1.NamespaceAll,
-		fields.Everything(),
-	)
-	_, controller := cache.NewInformer( // also take a look at NewSharedIndexInformer
-		watchlist,
-		&corev1.Namespace{},
-		10*time.Minute, //Duration is int64
+func (k *K8s) EventsNamespaces(channel chan *Namespace, stop chan struct{}, informer cache.SharedIndexInformer) {
+	informer.AddEventHandler(
 		cache.ResourceEventHandlerFuncs{
 			AddFunc: func(obj interface{}) {
 				data := obj.(*corev1.Namespace)
@@ -155,53 +144,42 @@ func (k *K8s) EventsNamespaces(channel chan *Namespace, stop chan struct{}) {
 			},
 		},
 	)
-	go controller.Run(stop)
+	go informer.Run(stop)
 }
 
-func (k *K8s) EventsEndpoints(channel chan *Endpoints, stop chan struct{}) {
-	watchlist := cache.NewListWatchFromClient(
-		k.API.CoreV1().RESTClient(),
-		string("endpoints"),
-		corev1.NamespaceAll,
-		fields.Everything(),
-	)
-	_, controller := cache.NewInformer( // also take a look at NewSharedIndexInformer
-		watchlist,
-		&corev1.Endpoints{},
-		10*time.Minute, //Duration is int64
-		cache.ResourceEventHandlerFuncs{
-			AddFunc: func(obj interface{}) {
-				item, err := k.convertToEndpoints(obj, ADDED)
-				if err == ErrIgnored {
-					return
-				}
-				k.Logger.Tracef("%s %s: %s", ENDPOINTS, item.Status, item.Service)
-				channel <- item
-			},
-			DeleteFunc: func(obj interface{}) {
-				item, err := k.convertToEndpoints(obj, DELETED)
-				if err == ErrIgnored {
-					return
-				}
-				k.Logger.Tracef("%s %s: %s", ENDPOINTS, item.Status, item.Service)
-				channel <- item
-			},
-			UpdateFunc: func(oldObj, newObj interface{}) {
-				item1, err := k.convertToEndpoints(oldObj, EMPTY)
-				if err == ErrIgnored {
-					return
-				}
-				item2, _ := k.convertToEndpoints(newObj, MODIFIED)
-				if item2.Equal(item1) {
-					return
-				}
-				//fix modified state for ones that are deleted,new,same
-				k.Logger.Tracef("%s %s: %s", ENDPOINTS, item2.Status, item2.Service)
-				channel <- item2
-			},
+func (k *K8s) EventsEndpoints(channel chan *Endpoints, stop chan struct{}, informer cache.SharedIndexInformer) {
+	informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc: func(obj interface{}) {
+			item, err := k.convertToEndpoints(obj, ADDED)
+			if err == ErrIgnored {
+				return
+			}
+			k.Logger.Tracef("%s %s: %s", ENDPOINTS, item.Status, item.Service)
+			channel <- item
 		},
-	)
-	go controller.Run(stop)
+		DeleteFunc: func(obj interface{}) {
+			item, err := k.convertToEndpoints(obj, DELETED)
+			if err == ErrIgnored {
+				return
+			}
+			k.Logger.Tracef("%s %s: %s", ENDPOINTS, item.Status, item.Service)
+			channel <- item
+		},
+		UpdateFunc: func(oldObj, newObj interface{}) {
+			item1, err := k.convertToEndpoints(oldObj, EMPTY)
+			if err == ErrIgnored {
+				return
+			}
+			item2, _ := k.convertToEndpoints(newObj, MODIFIED)
+			if item2.Equal(item1) {
+				return
+			}
+			//fix modified state for ones that are deleted,new,same
+			k.Logger.Tracef("%s %s: %s", ENDPOINTS, item2.Status, item2.Service)
+			channel <- item2
+		},
+	})
+	go informer.Run(stop)
 }
 
 func (k *K8s) convertToEndpoints(obj interface{}, status Status) (*Endpoints, error) {
@@ -254,17 +232,8 @@ func (k *K8s) convertToEndpoints(obj interface{}, status Status) (*Endpoints, er
 	return item, nil
 }
 
-func (k *K8s) EventsIngresses(channel chan *Ingress, stop chan struct{}) {
-	watchlist := cache.NewListWatchFromClient(
-		k.API.ExtensionsV1beta1().RESTClient(),
-		string("ingresses"),
-		corev1.NamespaceAll,
-		fields.Everything(),
-	)
-	_, controller := cache.NewInformer( // also take a look at NewSharedIndexInformer
-		watchlist,
-		&extensions.Ingress{},
-		10*time.Minute, //Duration is int64
+func (k *K8s) EventsIngresses(channel chan *Ingress, stop chan struct{}, informer cache.SharedIndexInformer) {
+	informer.AddEventHandler(
 		cache.ResourceEventHandlerFuncs{
 			AddFunc: func(obj interface{}) {
 				data := obj.(*extensions.Ingress)
@@ -330,134 +299,114 @@ func (k *K8s) EventsIngresses(channel chan *Ingress, stop chan struct{}) {
 			},
 		},
 	)
-	go controller.Run(stop)
+	go informer.Run(stop)
 }
 
-func (k *K8s) EventsServices(channel chan *Service, stop chan struct{}, publishSvc *Service) {
-	watchlist := cache.NewListWatchFromClient(
-		k.API.CoreV1().RESTClient(),
-		string(corev1.ResourceServices),
-		corev1.NamespaceAll,
-		fields.Everything(),
-	)
-	_, controller := cache.NewInformer( // also take a look at NewSharedIndexInformer
-		watchlist,
-		&corev1.Service{},
-		10*time.Minute, //Duration is int64
-		cache.ResourceEventHandlerFuncs{
-			AddFunc: func(obj interface{}) {
-				data := obj.(*corev1.Service)
-				var status = ADDED
-				if data.ObjectMeta.GetDeletionTimestamp() != nil {
-					//detect services that are in terminating state
-					status = DELETED
+func (k *K8s) EventsServices(channel chan *Service, stop chan struct{}, informer cache.SharedIndexInformer, publishSvc *Service) {
+	informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc: func(obj interface{}) {
+			data := obj.(*corev1.Service)
+			var status = ADDED
+			if data.ObjectMeta.GetDeletionTimestamp() != nil {
+				//detect services that are in terminating state
+				status = DELETED
+			}
+			item := &Service{
+				Namespace:   data.GetNamespace(),
+				Name:        data.GetName(),
+				Annotations: ConvertToMapStringW(data.ObjectMeta.Annotations),
+				Selector:    ConvertToMapStringW(data.Spec.Selector),
+				Ports:       []ServicePort{},
+				DNS:         data.Spec.ExternalName,
+				Status:      status,
+			}
+			for _, sp := range data.Spec.Ports {
+				item.Ports = append(item.Ports, ServicePort{
+					Name:     sp.Name,
+					Protocol: string(sp.Protocol),
+					Port:     int64(sp.Port),
+				})
+			}
+			if publishSvc != nil {
+				if publishSvc.Namespace == item.Namespace && publishSvc.Name == item.Name {
+					k.GetPublishServiceAddresses(data, publishSvc)
 				}
-				item := &Service{
-					Namespace:   data.GetNamespace(),
-					Name:        data.GetName(),
-					Annotations: ConvertToMapStringW(data.ObjectMeta.Annotations),
-					Selector:    ConvertToMapStringW(data.Spec.Selector),
-					Ports:       []ServicePort{},
-					DNS:         data.Spec.ExternalName,
-					Status:      status,
-				}
-				for _, sp := range data.Spec.Ports {
-					item.Ports = append(item.Ports, ServicePort{
-						Name:     sp.Name,
-						Protocol: string(sp.Protocol),
-						Port:     int64(sp.Port),
-					})
-				}
-				if publishSvc != nil {
-					if publishSvc.Namespace == item.Namespace && publishSvc.Name == item.Name {
-						k.GetPublishServiceAddresses(data, publishSvc)
-					}
-				}
-				k.Logger.Tracef("%s %s: %s", SERVICE, item.Status, item.Name)
-				channel <- item
-			},
-			DeleteFunc: func(obj interface{}) {
-				data := obj.(*corev1.Service)
-				var status = DELETED
-				item := &Service{
-					Namespace:   data.GetNamespace(),
-					Name:        data.GetName(),
-					Annotations: ConvertToMapStringW(data.ObjectMeta.Annotations),
-					Selector:    ConvertToMapStringW(data.Spec.Selector),
-					Status:      status,
-				}
-				if publishSvc != nil {
-					if publishSvc.Namespace == item.Namespace && publishSvc.Name == item.Name {
-						publishSvc.Status = DELETED
-					}
-				}
-				k.Logger.Tracef("%s %s: %s", SERVICE, item.Status, item.Name)
-				channel <- item
-			},
-			UpdateFunc: func(oldObj, newObj interface{}) {
-				data1 := oldObj.(*corev1.Service)
-				data2 := newObj.(*corev1.Service)
-				var status = MODIFIED
-				item1 := &Service{
-					Namespace:   data1.GetNamespace(),
-					Name:        data1.GetName(),
-					Annotations: ConvertToMapStringW(data1.ObjectMeta.Annotations),
-					Selector:    ConvertToMapStringW(data1.Spec.Selector),
-					Ports:       []ServicePort{},
-					DNS:         data1.Spec.ExternalName,
-					Status:      status,
-				}
-				for _, sp := range data1.Spec.Ports {
-					item1.Ports = append(item1.Ports, ServicePort{
-						Name:     sp.Name,
-						Protocol: string(sp.Protocol),
-						Port:     int64(sp.Port),
-					})
-				}
-
-				item2 := &Service{
-					Namespace:   data2.GetNamespace(),
-					Name:        data2.GetName(),
-					Annotations: ConvertToMapStringW(data2.ObjectMeta.Annotations),
-					Selector:    ConvertToMapStringW(data2.Spec.Selector),
-					Ports:       []ServicePort{},
-					DNS:         data1.Spec.ExternalName,
-					Status:      status,
-				}
-				for _, sp := range data2.Spec.Ports {
-					item2.Ports = append(item2.Ports, ServicePort{
-						Name:     sp.Name,
-						Protocol: string(sp.Protocol),
-						Port:     int64(sp.Port),
-					})
-				}
-				if item2.Equal(item1) {
-					return
-				}
-				if publishSvc != nil {
-					if publishSvc.Namespace == item2.Namespace && publishSvc.Name == item2.Name {
-						k.GetPublishServiceAddresses(data2, publishSvc)
-					}
-				}
-				k.Logger.Tracef("%s %s: %s", SERVICE, item2.Status, item2.Name)
-				channel <- item2
-			},
+			}
+			k.Logger.Tracef("%s %s: %s", SERVICE, item.Status, item.Name)
+			channel <- item
 		},
-	)
-	go controller.Run(stop)
+		DeleteFunc: func(obj interface{}) {
+			data := obj.(*corev1.Service)
+			var status = DELETED
+			item := &Service{
+				Namespace:   data.GetNamespace(),
+				Name:        data.GetName(),
+				Annotations: ConvertToMapStringW(data.ObjectMeta.Annotations),
+				Selector:    ConvertToMapStringW(data.Spec.Selector),
+				Status:      status,
+			}
+			if publishSvc != nil {
+				if publishSvc.Namespace == item.Namespace && publishSvc.Name == item.Name {
+					publishSvc.Status = DELETED
+				}
+			}
+			k.Logger.Tracef("%s %s: %s", SERVICE, item.Status, item.Name)
+			channel <- item
+		},
+		UpdateFunc: func(oldObj, newObj interface{}) {
+			data1 := oldObj.(*corev1.Service)
+			data2 := newObj.(*corev1.Service)
+			var status = MODIFIED
+			item1 := &Service{
+				Namespace:   data1.GetNamespace(),
+				Name:        data1.GetName(),
+				Annotations: ConvertToMapStringW(data1.ObjectMeta.Annotations),
+				Selector:    ConvertToMapStringW(data1.Spec.Selector),
+				Ports:       []ServicePort{},
+				DNS:         data1.Spec.ExternalName,
+				Status:      status,
+			}
+			for _, sp := range data1.Spec.Ports {
+				item1.Ports = append(item1.Ports, ServicePort{
+					Name:     sp.Name,
+					Protocol: string(sp.Protocol),
+					Port:     int64(sp.Port),
+				})
+			}
+
+			item2 := &Service{
+				Namespace:   data2.GetNamespace(),
+				Name:        data2.GetName(),
+				Annotations: ConvertToMapStringW(data2.ObjectMeta.Annotations),
+				Selector:    ConvertToMapStringW(data2.Spec.Selector),
+				Ports:       []ServicePort{},
+				DNS:         data1.Spec.ExternalName,
+				Status:      status,
+			}
+			for _, sp := range data2.Spec.Ports {
+				item2.Ports = append(item2.Ports, ServicePort{
+					Name:     sp.Name,
+					Protocol: string(sp.Protocol),
+					Port:     int64(sp.Port),
+				})
+			}
+			if item2.Equal(item1) {
+				return
+			}
+			if publishSvc != nil {
+				if publishSvc.Namespace == item2.Namespace && publishSvc.Name == item2.Name {
+					k.GetPublishServiceAddresses(data2, publishSvc)
+				}
+			}
+			k.Logger.Tracef("%s %s: %s", SERVICE, item2.Status, item2.Name)
+			channel <- item2
+		},
+	})
+	go informer.Run(stop)
 }
 
-func (k *K8s) EventsConfigfMaps(channel chan *ConfigMap, stop chan struct{}) {
-	watchlist := cache.NewListWatchFromClient(
-		k.API.CoreV1().RESTClient(),
-		string(corev1.ResourceConfigMaps),
-		corev1.NamespaceAll,
-		fields.Everything(),
-	)
-	_, controller := cache.NewInformer( // also take a look at NewSharedIndexInformer
-		watchlist,
-		&corev1.ConfigMap{},
-		10*time.Minute, //Duration is int64
+func (k *K8s) EventsConfigfMaps(channel chan *ConfigMap, stop chan struct{}, informer cache.SharedIndexInformer) {
+	informer.AddEventHandler(
 		cache.ResourceEventHandlerFuncs{
 			AddFunc: func(obj interface{}) {
 				data := obj.(*corev1.ConfigMap)
@@ -511,20 +460,11 @@ func (k *K8s) EventsConfigfMaps(channel chan *ConfigMap, stop chan struct{}) {
 			},
 		},
 	)
-	go controller.Run(stop)
+	go informer.Run(stop)
 }
 
-func (k *K8s) EventsSecrets(channel chan *Secret, stop chan struct{}) {
-	watchlist := cache.NewListWatchFromClient(
-		k.API.CoreV1().RESTClient(),
-		string(corev1.ResourceSecrets),
-		corev1.NamespaceAll,
-		fields.Everything(),
-	)
-	_, controller := cache.NewInformer( // also take a look at NewSharedIndexInformer
-		watchlist,
-		&corev1.Secret{},
-		10*time.Minute, //Duration is int64
+func (k *K8s) EventsSecrets(channel chan *Secret, stop chan struct{}, informer cache.SharedIndexInformer) {
+	informer.AddEventHandler(
 		cache.ResourceEventHandlerFuncs{
 			AddFunc: func(obj interface{}) {
 				data := obj.(*corev1.Secret)
@@ -578,7 +518,7 @@ func (k *K8s) EventsSecrets(channel chan *Secret, stop chan struct{}) {
 			},
 		},
 	)
-	go controller.Run(stop)
+	go informer.Run(stop)
 }
 
 func (k *K8s) UpdateIngressStatus(ingress *Ingress, publishSvc *Service) (err error) {
