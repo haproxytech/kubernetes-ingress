@@ -16,6 +16,9 @@ package controller
 
 import (
 	"time"
+
+	"k8s.io/client-go/informers"
+	"k8s.io/client-go/tools/cache"
 )
 
 func (c *HAProxyController) syncPeriod() (syncPeriod time.Duration) {
@@ -36,24 +39,35 @@ func (c *HAProxyController) monitorChanges() {
 	go c.SyncData(c.eventChan, configMapReceivedAndProcessed)
 
 	stop := make(chan struct{})
+	factory := informers.NewSharedInformerFactory(c.k8s.API, 10*time.Minute)
 
-	podEndpoints := make(chan *Endpoints, 100)
-	c.k8s.EventsEndpoints(podEndpoints, stop)
+	endpointsChan := make(chan *Endpoints, 100)
+	pi := factory.Core().V1().Endpoints().Informer()
+	c.k8s.EventsEndpoints(endpointsChan, stop, pi)
 
+	svci := factory.Core().V1().Services().Informer()
 	svcChan := make(chan *Service, 100)
-	c.k8s.EventsServices(svcChan, stop, c.cfg.PublishService)
+	c.k8s.EventsServices(svcChan, stop, svci, c.cfg.PublishService)
 
+	nsi := factory.Core().V1().Namespaces().Informer()
 	nsChan := make(chan *Namespace, 10)
-	c.k8s.EventsNamespaces(nsChan, stop)
+	c.k8s.EventsNamespaces(nsChan, stop, nsi)
 
+	ii := factory.Extensions().V1beta1().Ingresses().Informer()
 	ingChan := make(chan *Ingress, 10)
-	c.k8s.EventsIngresses(ingChan, stop)
+	c.k8s.EventsIngresses(ingChan, stop, ii)
 
+	ci := factory.Core().V1().ConfigMaps().Informer()
 	cfgChan := make(chan *ConfigMap, 10)
-	c.k8s.EventsConfigfMaps(cfgChan, stop)
+	c.k8s.EventsConfigfMaps(cfgChan, stop, ci)
 
+	si := factory.Core().V1().Secrets().Informer()
 	secretChan := make(chan *Secret, 10)
-	c.k8s.EventsSecrets(secretChan, stop)
+	c.k8s.EventsSecrets(secretChan, stop, si)
+
+	if !cache.WaitForCacheSync(stop, pi.HasSynced, svci.HasSynced, nsi.HasSynced, ii.HasSynced, ci.HasSynced, si.HasSynced) {
+		c.Logger.Panic("Caches are not populated due to an underlying error, cannot run the Ingress Controller")
+	}
 
 	// Buffering events so they are handled after configMap is processed
 	var eventsIngress, eventsEndpoints, eventsServices []SyncDataEvent
@@ -94,7 +108,7 @@ func (c *HAProxyController) monitorChanges() {
 		case item := <-nsChan:
 			event := SyncDataEvent{SyncType: NAMESPACE, Namespace: item.Name, Data: item}
 			c.eventChan <- event
-		case item := <-podEndpoints:
+		case item := <-endpointsChan:
 			event := SyncDataEvent{SyncType: ENDPOINTS, Namespace: item.Namespace, Data: item}
 			if configMapOk {
 				c.eventChan <- event
