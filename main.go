@@ -54,6 +54,7 @@ func main() {
 	c.SetDefaultAnnotation("default-backend-service", defaultBackendSvc)
 	c.SetDefaultAnnotation("ssl-certificate", defaultCertificate)
 	c.SetDefaultAnnotation("sync-period", osArgs.SyncPeriod.String())
+	c.SetDefaultAnnotation("cache-resync-period", osArgs.ResyncPeriod.String())
 
 	if len(osArgs.Version) > 0 {
 		fmt.Printf("HAProxy Ingress Controller %s %s%s\n\n", GitTag, GitCommit, GitDirty)
@@ -88,6 +89,7 @@ func main() {
 	logger.Printf("Default backend service: %s", defaultBackendSvc)
 	logger.Printf("Default ssl certificate: %s", defaultCertificate)
 	logger.Printf("Controller sync period: %s", osArgs.SyncPeriod.String())
+	logger.Printf("Kubernetes Shared Informer default resync period: %s", osArgs.ResyncPeriod.String())
 
 	if osArgs.ConfigMapTCPServices.Name != "" {
 		logger.Printf("TCP Services defined in %s/%s", osArgs.ConfigMapTCPServices.Namespace, osArgs.ConfigMapTCPServices.Name)
