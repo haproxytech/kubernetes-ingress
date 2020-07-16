@@ -55,7 +55,6 @@ func (c *HAProxyController) handleBlacklisting(ingress *Ingress) error {
 	mapFiles := c.cfg.MapFiles
 	key := hashStrToUint(fmt.Sprintf("%s-%s", BLACKLIST, annBlacklist.Value))
 	if status != EMPTY {
-		mapFiles.Modified(key)
 		c.cfg.FrontendRulesStatus[HTTP] = MODIFIED
 		c.cfg.FrontendRulesStatus[TCP] = MODIFIED
 		if status == DELETED {
@@ -127,7 +126,6 @@ func (c *HAProxyController) handleHTTPRedirect(ingress *Ingress) error {
 	if !toEnable {
 		if enabled {
 			delete(sslRedirectEnabled, ingress.Namespace+ingress.Name)
-			mapFiles.Modified(key)
 			c.cfg.FrontendRulesStatus[HTTP] = MODIFIED
 		}
 		return nil
@@ -150,7 +148,6 @@ func (c *HAProxyController) handleHTTPRedirect(ingress *Ingress) error {
 	c.cfg.FrontendHTTPReqRules[SSL_REDIRECT][key] = httpRule
 
 	if !enabled {
-		mapFiles.Modified(key)
 		c.cfg.FrontendRulesStatus[HTTP] = MODIFIED
 		sslRedirectEnabled[ingress.Namespace+ingress.Name] = struct{}{}
 	}
@@ -230,8 +227,6 @@ func (c *HAProxyController) handleRateLimiting(ingress *Ingress) error {
 	trackKey := hashStrToUint(fmt.Sprintf("%s-%d", RATE_LIMIT, *rateLimitPeriod))
 	tableName := fmt.Sprintf("RateLimit-%d", *rateLimitPeriod)
 	if status != EMPTY {
-		mapFiles.Modified(reqsKey)
-		mapFiles.Modified(trackKey)
 		c.cfg.FrontendRulesStatus[HTTP] = MODIFIED
 		if status == DELETED {
 			c.Logger.Debugf("Ingress %s/%s: Deleting rate-limit-requests configuration", ingress.Namespace, ingress.Name)
@@ -300,7 +295,6 @@ func (c *HAProxyController) handleRequestCapture(ingress *Ingress) error {
 		}
 		key := hashStrToUint(fmt.Sprintf("%s-%s-%d", REQUEST_CAPTURE, sample, captureLen))
 		if status != EMPTY {
-			mapFiles.Modified(key)
 			c.cfg.FrontendRulesStatus[HTTP] = MODIFIED
 			c.cfg.FrontendRulesStatus[TCP] = MODIFIED
 			if status == DELETED {
@@ -356,7 +350,6 @@ func (c *HAProxyController) handleRequestSetHdr(ingress *Ingress) error {
 		}
 		key := hashStrToUint(fmt.Sprintf("%s-%s-%s", REQUEST_SET_HEADER, parts[0], parts[1]))
 		if status != EMPTY {
-			mapFiles.Modified(key)
 			c.cfg.FrontendRulesStatus[HTTP] = MODIFIED
 			if status == DELETED {
 				c.Logger.Debugf("Ingress %s/%s: Deleting configuration for request set '%s' header ", ingress.Namespace, ingress.Name, param)
@@ -401,7 +394,6 @@ func (c *HAProxyController) handleResponseSetHdr(ingress *Ingress) error {
 		}
 		key := hashStrToUint(fmt.Sprintf("%s-%s-%s", RESPONSE_SET_HEADER, parts[0], parts[1]))
 		if status != EMPTY {
-			mapFiles.Modified(key)
 			c.cfg.FrontendRulesStatus[HTTP] = MODIFIED
 			if status == DELETED {
 				break
@@ -446,7 +438,6 @@ func (c *HAProxyController) handleWhitelisting(ingress *Ingress) error {
 	mapFiles := c.cfg.MapFiles
 	key := hashStrToUint(fmt.Sprintf("%s-%s", WHITELIST, annWhitelist.Value))
 	if status != EMPTY {
-		mapFiles.Modified(key)
 		c.cfg.FrontendRulesStatus[HTTP] = MODIFIED
 		c.cfg.FrontendRulesStatus[TCP] = MODIFIED
 		if status == DELETED {
