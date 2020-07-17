@@ -40,6 +40,7 @@ type HAProxyController struct {
 	eventChan      chan SyncDataEvent
 	serverlessPods map[string]int
 	Logger         utils.Logger
+	UpdateHandlers []UpdateHandler
 }
 
 // Return HAProxy master process if it exists.
@@ -69,6 +70,7 @@ func (c *HAProxyController) Start(ctx context.Context, osArgs utils.OSArgs) {
 	c.osArgs = osArgs
 
 	c.haproxyInitialize()
+	c.initHandlers()
 
 	if c.osArgs.PprofEnabled {
 		c.Logger.Error(c.Client.APIStartTransaction())
@@ -170,6 +172,12 @@ func (c *HAProxyController) updateHAProxy() error {
 			c.Logger.Error(c.handleWhitelisting(ingress))
 			c.Logger.Error(c.handleHTTPRedirect(ingress))
 		}
+	}
+
+	for _, handler := range c.UpdateHandlers {
+		r, err = handler.Update(c.cfg, c.Client, c.Logger)
+		c.Logger.Error(err)
+		reload = reload || r
 	}
 
 	c.Logger.Error(c.handleProxyProtocol())
@@ -276,7 +284,6 @@ func (c *HAProxyController) haproxyInitialize() {
 	}
 
 	c.cfg.Init(c.osArgs, HAProxyMapDir)
-
 }
 
 // Handle HAProxy daemon via Master process
