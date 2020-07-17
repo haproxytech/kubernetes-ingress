@@ -23,7 +23,7 @@ import (
 )
 
 type Maps interface {
-	AppendHost(key uint64, host string)
+	AppendRow(key uint64, row string)
 	Clean()
 	Refresh() (reload bool, err error)
 }
@@ -33,14 +33,14 @@ type mapFiles map[uint64]*mapFile
 var mapDir string
 
 type mapFile struct {
-	hosts       []string
+	rows        []string
 	lastContent string
 }
 
 func (mf *mapFile) getContent() (string, bool) {
 	var content strings.Builder
-	for _, host := range mf.hosts {
-		content.WriteString(host)
+	for _, row := range mf.rows {
+		content.WriteString(row)
 		content.WriteRune('\n')
 	}
 	newContent := content.String()
@@ -55,27 +55,27 @@ func NewMapFiles(path string) Maps {
 	return &maps
 }
 
-func (m *mapFiles) AppendHost(key uint64, host string) {
-	if host == "" {
+func (m *mapFiles) AppendRow(key uint64, row string) {
+	if row == "" {
 		return
 	}
 	if (*m)[key] == nil {
 		(*m)[key] = &mapFile{
-			hosts: []string{host},
+			rows: []string{row},
 		}
 		return
 	}
-	for _, h := range (*m)[key].hosts {
-		if h == host {
+	for _, h := range (*m)[key].rows {
+		if h == row {
 			return
 		}
 	}
-	(*m)[key].hosts = append((*m)[key].hosts, host)
+	(*m)[key].rows = append((*m)[key].rows, row)
 }
 
 func (m *mapFiles) Clean() {
 	for _, mapFile := range *m {
-		mapFile.hosts = []string{}
+		mapFile.rows = []string{}
 	}
 }
 
