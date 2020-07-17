@@ -42,18 +42,22 @@ func (c *HAProxyController) handleBlacklisting(ingress *Ingress) error {
 		return nil
 	}
 	value := strings.Replace(annBlacklist.Value, ",", " ", -1)
+	mapFiles := c.cfg.MapFiles
+	listKey := hashStrToUint(annBlacklist.Value)
 	for _, address := range strings.Fields(value) {
 		if ip := net.ParseIP(address); ip == nil {
 			if _, _, err := net.ParseCIDR(address); err != nil {
 				return fmt.Errorf("incorrect value for blacklist annotation in ingress '%s'", ingress.Name)
 			}
 		}
+		mapFiles.AppendHost(listKey, address)
 	}
 
 	// Update rules
 	status := setStatus(ingress.Status, annBlacklist.Status)
 
 	mapFile := c.prepareHostMapFile(ingress)
+	listMapFile := path.Join(HAProxyMapDir, strconv.FormatUint(listKey, 10)) + ".lst"
 	key := hashStrToUint(fmt.Sprintf("%s-%s-%s-%s", BLACKLIST, ingress.Namespace, ingress.Name, annBlacklist.Value))
 	if status != EMPTY {
 		c.cfg.FrontendRulesStatus[HTTP] = MODIFIED
@@ -70,14 +74,14 @@ func (c *HAProxyController) handleBlacklisting(ingress *Ingress) error {
 		Type:       "deny",
 		DenyStatus: 403,
 		Cond:       "if",
-		CondTest:   fmt.Sprintf("{ req.hdr(Host) -f %s } { src %s }", mapFile, value),
+		CondTest:   fmt.Sprintf("{ req.hdr(Host) -f %s } { src -f %s }", mapFile, listMapFile),
 	}
 	tcpRule := models.TCPRequestRule{
 		Index:    utils.PtrInt64(0),
 		Type:     "content",
 		Action:   "reject",
 		Cond:     "if",
-		CondTest: fmt.Sprintf("{ req_ssl_sni -f %s } { src %s }", mapFile, value),
+		CondTest: fmt.Sprintf("{ req_ssl_sni -f %s } { src -f %s }", mapFile, listMapFile),
 	}
 	c.cfg.FrontendHTTPReqRules[BLACKLIST][key] = httpRule
 	c.cfg.FrontendTCPRules[BLACKLIST][key] = tcpRule
@@ -402,6 +406,8 @@ func (c *HAProxyController) handleWhitelisting(ingress *Ingress) error {
 	if annWhitelist == nil {
 		return nil
 	}
+	mapFiles := c.cfg.MapFiles
+	listKey := hashStrToUint(annWhitelist.Value)
 	value := strings.Replace(annWhitelist.Value, ",", " ", -1)
 	for _, address := range strings.Fields(value) {
 		if ip := net.ParseIP(address); ip == nil {
@@ -409,11 +415,13 @@ func (c *HAProxyController) handleWhitelisting(ingress *Ingress) error {
 				return fmt.Errorf("incorrect value for whitelist annotation in ingress '%s'", ingress.Name)
 			}
 		}
+		mapFiles.AppendHost(listKey, address)
 	}
 
 	// Update rules
 	status := setStatus(ingress.Status, annWhitelist.Status)
 	mapFile := c.prepareHostMapFile(ingress)
+	listMapFile := path.Join(HAProxyMapDir, strconv.FormatUint(listKey, 10)) + ".lst"
 	key := hashStrToUint(fmt.Sprintf("%s-%s-%s-%s", WHITELIST, ingress.Namespace, ingress.Name, annWhitelist.Value))
 	if status != EMPTY {
 		c.cfg.FrontendRulesStatus[HTTP] = MODIFIED
@@ -430,14 +438,14 @@ func (c *HAProxyController) handleWhitelisting(ingress *Ingress) error {
 		Type:       "deny",
 		DenyStatus: 403,
 		Cond:       "if",
-		CondTest:   fmt.Sprintf("{ req.hdr(Host) -f %s } !{ src %s }", mapFile, value),
+		CondTest:   fmt.Sprintf("{ req.hdr(Host) -f %s } !{ src -f %s }", mapFile, listMapFile),
 	}
 	tcpRule := models.TCPRequestRule{
 		Index:    utils.PtrInt64(0),
 		Type:     "content",
 		Action:   "reject",
 		Cond:     "if",
-		CondTest: fmt.Sprintf("{ req_ssl_sni -f %s } !{ src %s }", mapFile, value),
+		CondTest: fmt.Sprintf("{ req_ssl_sni -f %s } !{ src -f %s }", mapFile, listMapFile),
 	}
 	c.cfg.FrontendHTTPReqRules[WHITELIST][key] = httpRule
 	c.cfg.FrontendTCPRules[WHITELIST][key] = tcpRule
