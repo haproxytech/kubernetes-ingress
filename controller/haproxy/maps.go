@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"sort"
 	"strconv"
 	"strings"
 )
@@ -33,12 +34,15 @@ type mapFiles map[uint64]*mapFile
 var mapDir string
 
 type mapFile struct {
-	rows        []string
+	rows        sort.StringSlice
 	lastContent string
 }
 
 func (mf *mapFile) getContent() (string, bool) {
 	var content strings.Builder
+	if !sort.IsSorted(mf.rows) {
+		mf.rows.Sort()
+	}
 	for _, row := range mf.rows {
 		content.WriteString(row)
 		content.WriteRune('\n')
