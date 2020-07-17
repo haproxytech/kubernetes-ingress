@@ -50,7 +50,7 @@ func (c *HAProxyController) handleBlacklisting(ingress *Ingress) error {
 				return fmt.Errorf("incorrect value for blacklist annotation in ingress '%s'", ingress.Name)
 			}
 		}
-		mapFiles.AppendHost(listKey, address)
+		mapFiles.AppendRow(listKey, address)
 	}
 
 	// Update rules
@@ -415,7 +415,7 @@ func (c *HAProxyController) handleWhitelisting(ingress *Ingress) error {
 				return fmt.Errorf("incorrect value for whitelist annotation in ingress '%s'", ingress.Name)
 			}
 		}
-		mapFiles.AppendHost(listKey, address)
+		mapFiles.AppendRow(listKey, address)
 	}
 
 	// Update rules
@@ -476,7 +476,7 @@ func (c *HAProxyController) prepareHostMapFile(ingress *Ingress) string {
 	mapFiles := c.cfg.MapFiles
 	hostKey := hashStrToUint(ingress.Name + "-" + ingress.Namespace)
 	for hostname := range ingress.Rules {
-		mapFiles.AppendHost(hostKey, hostname)
+		mapFiles.AppendRow(hostKey, hostname)
 	}
 	return path.Join(HAProxyMapDir, strconv.FormatUint(hostKey, 10)) + ".lst"
 }
