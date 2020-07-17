@@ -138,7 +138,9 @@ func (c *HAProxyController) SyncData(jobChan <-chan SyncDataEvent, chConfigMapRe
 			if hadChanges {
 				if err := c.updateHAProxy(); err != nil {
 					c.Logger.Error(err)
+					continue
 				}
+				hadChanges = false
 				continue
 			}
 		case NAMESPACE:
