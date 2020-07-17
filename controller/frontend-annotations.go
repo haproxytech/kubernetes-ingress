@@ -510,8 +510,10 @@ func setStatus(ingressStatus, annStatus Status) Status {
 func (c *HAProxyController) prepareHostMapFile(ingress *Ingress) string {
 	mapFiles := c.cfg.MapFiles
 	hostKey := hashStrToUint(ingress.Name + "-" + ingress.Namespace)
-	for hostname := range ingress.Rules {
-		mapFiles.AppendRow(hostKey, hostname)
+	for hostname, host := range ingress.Rules {
+		if host.Status != DELETED {
+			mapFiles.AppendRow(hostKey, hostname)
+		}
 	}
 	return path.Join(HAProxyMapDir, strconv.FormatUint(hostKey, 10)) + ".lst"
 }
