@@ -43,10 +43,6 @@ func (c *HAProxyController) cleanCertDir(usedCerts map[string]struct{}) error {
 	return nil
 }
 
-func (c *HAProxyController) handleDefaultCertificate(certs map[string]struct{}) (reload bool) {
-	return false
-}
-
 func (c *HAProxyController) handleTLSSecret(ingress Ingress, tls IngressTLS, certs map[string]struct{}) (reload bool) {
 	secretData := strings.Split(tls.SecretName.Value, "/")
 	namespaceName := ingress.Namespace
