@@ -72,8 +72,10 @@ func (c *HAProxyController) handleBlacklisting(ingress *Ingress) error {
 		}
 		c.Logger.Debugf("Ingress %s/%s: Configuring blacklist annotation", ingress.Namespace, ingress.Name)
 	}
-	for hostname := range ingress.Rules {
-		mapFiles.AppendRow(key, hostname)
+	for hostname, rule := range ingress.Rules {
+		if rule.Status != DELETED {
+			mapFiles.AppendRow(key, hostname)
+		}
 	}
 
 	mapFile := path.Join(HAProxyMapDir, strconv.FormatUint(key, 10)) + ".lst"
@@ -145,8 +147,10 @@ func (c *HAProxyController) handleHTTPRedirect(ingress *Ingress) error {
 		return nil
 	}
 	//Enable Redirect
-	for hostname := range ingress.Rules {
-		mapFiles.AppendRow(key, hostname)
+	for hostname, rule := range ingress.Rules {
+		if rule.Status != DELETED {
+			mapFiles.AppendRow(key, hostname)
+		}
 	}
 	mapFile := path.Join(HAProxyMapDir, strconv.FormatUint(key, 10)) + ".lst"
 	httpRule := models.HTTPRequestRule{
@@ -254,9 +258,11 @@ func (c *HAProxyController) handleRateLimiting(ingress *Ingress) error {
 		}
 		c.Logger.Debugf("Ingress %s/%s: Configuring rate-limit-requests annotation", ingress.Namespace, ingress.Name)
 	}
-	for hostname := range ingress.Rules {
-		mapFiles.AppendRow(reqsKey, hostname)
-		mapFiles.AppendRow(trackKey, hostname)
+	for hostname, rule := range ingress.Rules {
+		if rule.Status != DELETED {
+			mapFiles.AppendRow(reqsKey, hostname)
+			mapFiles.AppendRow(trackKey, hostname)
+		}
 	}
 	rateLimitTables[tableName] = rateLimitTable{
 		size:   rateLimitSize,
@@ -327,8 +333,10 @@ func (c *HAProxyController) handleRequestCapture(ingress *Ingress) error {
 			}
 			c.Logger.Debugf("Ingress %s/%s: Configuring request capture for '%s'", ingress.Namespace, ingress.Name, sample)
 		}
-		for hostname := range ingress.Rules {
-			mapFiles.AppendRow(key, hostname)
+		for hostname, rule := range ingress.Rules {
+			if rule.Status != DELETED {
+				mapFiles.AppendRow(key, hostname)
+			}
 		}
 
 		mapFile := path.Join(HAProxyMapDir, strconv.FormatUint(key, 10)) + ".lst"
@@ -386,8 +394,10 @@ func (c *HAProxyController) handleRequestSetHdr(ingress *Ingress) error {
 			}
 			c.Logger.Debugf("Ingress %s/%s: Configuring request set '%s' header ", ingress.Namespace, ingress.Name, param)
 		}
-		for hostname := range ingress.Rules {
-			mapFiles.AppendRow(key, hostname)
+		for hostname, rule := range ingress.Rules {
+			if rule.Status != DELETED {
+				mapFiles.AppendRow(key, hostname)
+			}
 		}
 
 		mapFile := path.Join(HAProxyMapDir, strconv.FormatUint(key, 10)) + ".lst"
@@ -432,8 +442,10 @@ func (c *HAProxyController) handleResponseSetHdr(ingress *Ingress) error {
 				break
 			}
 		}
-		for hostname := range ingress.Rules {
-			mapFiles.AppendRow(key, hostname)
+		for hostname, rule := range ingress.Rules {
+			if rule.Status != DELETED {
+				mapFiles.AppendRow(key, hostname)
+			}
 		}
 
 		mapFile := path.Join(HAProxyMapDir, strconv.FormatUint(key, 10)) + ".lst"
@@ -487,8 +499,10 @@ func (c *HAProxyController) handleWhitelisting(ingress *Ingress) error {
 		}
 		c.Logger.Debugf("Ingress %s/%s: Configuring whitelist configuration", ingress.Namespace, ingress.Name)
 	}
-	for hostname := range ingress.Rules {
-		mapFiles.AppendRow(key, hostname)
+	for hostname, rule := range ingress.Rules {
+		if rule.Status != DELETED {
+			mapFiles.AppendRow(key, hostname)
+		}
 	}
 
 	mapFile := path.Join(HAProxyMapDir, strconv.FormatUint(key, 10)) + ".lst"
