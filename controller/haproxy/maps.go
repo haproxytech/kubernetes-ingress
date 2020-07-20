@@ -18,7 +18,6 @@ import (
 	"fmt"
 	"os"
 	"path"
-	"sort"
 	"strconv"
 	"strings"
 )
@@ -34,23 +33,29 @@ type mapFiles map[uint64]*mapFile
 var mapDir string
 
 type mapFile struct {
-	rows        sort.StringSlice
-	lastContent string
+	rows   map[string]bool
+	hasNew bool
 }
 
-func (mf *mapFile) getContent() (string, bool) {
+func (mf *mapFile) getContent() string {
 	var content strings.Builder
-	if !sort.IsSorted(mf.rows) {
-		mf.rows.Sort()
-	}
-	for _, row := range mf.rows {
-		content.WriteString(row)
+	for r, removed := range mf.rows {
+		if removed {
+			continue
+		}
+		content.WriteString(r)
 		content.WriteRune('\n')
 	}
-	newContent := content.String()
-	modified := newContent != mf.lastContent
-	mf.lastContent = newContent
-	return content.String(), modified
+	return content.String()
+}
+
+func (mf *mapFile) isModified() bool {
+	for _, removed := range mf.rows {
+		if removed {
+			return true
+		}
+	}
+	return mf.hasNew
 }
 
 func NewMapFiles(path string) Maps {
@@ -65,21 +70,25 @@ func (m *mapFiles) AppendRow(key uint64, row string) {
 	}
 	if (*m)[key] == nil {
 		(*m)[key] = &mapFile{
-			rows: []string{row},
-		}
-		return
-	}
-	for _, h := range (*m)[key].rows {
-		if h == row {
-			return
+			rows: make(map[string]bool),
 		}
 	}
-	(*m)[key].rows = append((*m)[key].rows, row)
+	if _, ok := (*m)[key].rows[row]; !ok {
+		(*m)[key].hasNew = true
+	}
+	(*m)[key].rows[row] = false
 }
 
 func (m *mapFiles) Clean() {
 	for _, mapFile := range *m {
-		mapFile.rows = []string{}
+		for key, removed := range mapFile.rows {
+			if removed {
+				delete(mapFile.rows, key)
+				continue
+			}
+			mapFile.rows[key] = true
+		}
+		mapFile.hasNew = false
 	}
 }
 
@@ -102,8 +111,8 @@ func (m *mapFiles) Refresh() (reload bool, err error) {
 	reload = false
 	var retErr mapRefreshError
 	for key, mapFile := range *m {
-		content, modified := mapFile.getContent()
-		if modified {
+		if mapFile.isModified() {
+			content := mapFile.getContent()
 			var f *os.File
 			filename := path.Join(mapDir, strconv.FormatUint(key, 10)) + ".lst"
 			if content == "" {
