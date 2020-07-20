@@ -15,7 +15,6 @@
 package controller
 
 import (
-	"fmt"
 	"io/ioutil"
 	"os"
 	"path"
@@ -44,83 +43,7 @@ func (c *HAProxyController) cleanCertDir(usedCerts map[string]struct{}) error {
 	return nil
 }
 
-func (c *HAProxyController) writeCert(filename string, key, crt []byte) error {
-	var f *os.File
-	var err error
-	if f, err = os.Create(filename); err != nil {
-		c.Logger.Error(err)
-		return err
-	}
-	defer f.Close()
-	if _, err = f.Write(key); err != nil {
-		c.Logger.Error(err)
-		return err
-	}
-	//Force writing a newline so that parsing does not barf
-	if len(key) > 0 && key[len(key)-1] != byte('\n') {
-		c.Logger.Warningf("secret key in %s does not end with \\n, appending it to avoid mangling key and certificate", filename)
-		if _, err = f.WriteString("\n"); err != nil {
-			c.Logger.Error(err)
-			return err
-		}
-	}
-	if _, err = f.Write(crt); err != nil {
-		c.Logger.Error(err)
-		return err
-	}
-	if err = f.Sync(); err != nil {
-		c.Logger.Error(err)
-		return err
-	}
-	if err = f.Close(); err != nil {
-		c.Logger.Error(err)
-		return err
-	}
-	return nil
-}
-
-func (c *HAProxyController) handleSecret(ingress Ingress, secret Secret, writeSecret bool, certs map[string]struct{}) (reload bool) {
-	reload = false
-	for _, k := range []string{"tls", "rsa", "ecdsa"} {
-		key := secret.Data[k+".key"]
-		crt := secret.Data[k+".crt"]
-		if len(key) != 0 && len(crt) != 0 {
-			filename := path.Join(HAProxyCertDir, fmt.Sprintf("%s_%s_%s.pem.rsa", ingress.Name, secret.Namespace, secret.Name))
-			if writeSecret {
-				if err := c.writeCert(filename, key, crt); err != nil {
-					c.Logger.Error(err)
-					return false
-				}
-				c.Logger.Debugf("Using certtificate from secret '%s/%s'", secret.Namespace, secret.Name)
-				reload = true
-			}
-			certs[filename] = struct{}{}
-		}
-	}
-	return reload
-}
-
 func (c *HAProxyController) handleDefaultCertificate(certs map[string]struct{}) (reload bool) {
-	secretAnn, defSecretErr := GetValueFromAnnotations("ssl-certificate", c.cfg.ConfigMap.Annotations)
-	writeSecret := false
-	if defSecretErr == nil {
-		if secretAnn.Status != DELETED && secretAnn.Status != EMPTY {
-			writeSecret = true
-		}
-		secretData := strings.Split(secretAnn.Value, "/")
-		namespace, namespaceOK := c.cfg.Namespace[secretData[0]]
-		if len(secretData) == 2 && namespaceOK {
-			secret, ok := namespace.Secret[secretData[1]]
-			if ok {
-				if secret.Status != EMPTY && secret.Status != DELETED {
-					writeSecret = true
-				}
-				return c.handleSecret(Ingress{
-					Name: "0",
-				}, *secret, writeSecret, certs)
-			}
-		}
-	}
 	return false
 }
 
@@ -155,7 +78,8 @@ func (c *HAProxyController) handleTLSSecret(ingress Ingress, tls IngressTLS, cer
 	if secret.Status == EMPTY && tls.Status == EMPTY {
 		writeSecret = false
 	}
-	return c.handleSecret(ingress, *secret, writeSecret, certs)
+	reload, _ = HandleSecret(ingress, *secret, writeSecret, certs, c.Logger)
+	return reload
 }
 
 func (c *HAProxyController) handleHTTPS(usedCerts map[string]struct{}) (reload bool) {

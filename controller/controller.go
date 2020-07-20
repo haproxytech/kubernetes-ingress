@@ -131,6 +131,7 @@ func (c *HAProxyController) updateHAProxy() error {
 	reload = reload || r
 
 	usedCerts := map[string]struct{}{}
+	c.cfg.UsedCerts = usedCerts
 
 	for _, namespace := range c.cfg.Namespace {
 		if !namespace.Relevant {
@@ -179,11 +180,6 @@ func (c *HAProxyController) updateHAProxy() error {
 		c.Logger.Error(err)
 		reload = reload || r
 	}
-
-	c.Logger.Error(c.handleProxyProtocol())
-
-	r = c.handleDefaultCertificate(usedCerts)
-	reload = reload || r
 
 	r = c.handleHTTPS(usedCerts)
 	reload = reload || r

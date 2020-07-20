@@ -46,6 +46,7 @@ type Configuration struct {
 	BackendHTTPRules       map[string]BackendHTTPReqs
 	HTTPS                  bool
 	SSLPassthrough         bool
+	UsedCerts              map[string]struct{}
 }
 
 func (c *Configuration) IsRelevantNamespace(namespace string) bool {

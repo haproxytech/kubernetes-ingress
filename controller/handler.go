@@ -24,5 +24,8 @@ type UpdateHandler interface {
 }
 
 func (c *HAProxyController) initHandlers() {
-	c.UpdateHandlers = []UpdateHandler{}
+	c.UpdateHandlers = []UpdateHandler{
+		ProxyProtocol{},
+		DefaultCertificate{},
+	}
 }
