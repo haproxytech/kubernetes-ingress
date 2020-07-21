@@ -73,7 +73,7 @@ func (c *clientNative) ErrorFileCreate(code int, enabled *bool) error {
 	return c.setSectionAttribute(parser.Defaults, fmt.Sprintf("errorfile %d", code), typeValue)
 }
 
-func (c *clientNative) SetDefaulTimeout(timeout string, value *types.SimpleTimeout) error {
+func (c *clientNative) SetDefaultTimeout(timeout string, value *types.SimpleTimeout) error {
 	return c.setSectionAttribute(parser.Defaults, fmt.Sprintf("timeout %s", timeout), value)
 }
 
@@ -135,7 +135,7 @@ func (c *clientNative) setSectionAttribute(section parser.Section, attribute str
 		}
 		attribute = "errorfile"
 	default:
-		return fmt.Errorf("insupported attribute '%s'", attribute)
+		return fmt.Errorf("unsupported attribute '%s'", attribute)
 	}
 
 	if len(index) > 0 {
