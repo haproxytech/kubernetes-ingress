@@ -52,6 +52,27 @@ func (c *clientNative) SetDefaultOption(option string, value *types.SimpleOption
 	return c.setSectionAttribute(parser.Defaults, fmt.Sprintf("option %s", option), value)
 }
 
+func (c *clientNative) ErrorFileDelete(index int) error {
+	// Get current Parser Instance
+	if c.activeTransaction == "" {
+		return fmt.Errorf("no active transaction")
+	}
+	config, err := c.nativeAPI.Configuration.GetParser(c.activeTransaction)
+	if err != nil {
+		return err
+	}
+	c.activeTransactionHasChanges = true
+	return config.Delete(parser.Defaults, parser.DefaultSectionName, "errorfile", index)
+}
+
+func (c *clientNative) ErrorFileCreate(code int, enabled *bool) error {
+	if enabled == nil {
+		return nil
+	}
+	typeValue := fmt.Sprintf("/etc/haproxy/errors/%d.http", code)
+	return c.setSectionAttribute(parser.Defaults, fmt.Sprintf("errorfile %d", code), typeValue)
+}
+
 func (c *clientNative) SetDefaulTimeout(timeout string, value *types.SimpleTimeout) error {
 	return c.setSectionAttribute(parser.Defaults, fmt.Sprintf("timeout %s", timeout), value)
 }
@@ -107,6 +128,12 @@ func (c *clientNative) setSectionAttribute(section parser.Section, attribute str
 		value = value.(*types.SimpleOption)
 	case "timeout":
 		value = value.(*types.SimpleTimeout)
+	case "errorfile":
+		value = types.ErrorFile{
+			Code: strings.Fields(attribute)[1],
+			File: value.(string),
+		}
+		attribute = "errorfile"
 	default:
 		return fmt.Errorf("insupported attribute '%s'", attribute)
 	}

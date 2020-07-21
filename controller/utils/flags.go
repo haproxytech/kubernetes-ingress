@@ -64,6 +64,7 @@ type OSArgs struct {
 	DefaultCertificate    NamespaceValue `long:"default-ssl-certificate" default:"" description:"secret name of the certificate"`
 	ConfigMap             NamespaceValue `long:"configmap" description:"configmap designated for HAProxy" default:""`
 	ConfigMapTCPServices  NamespaceValue `long:"configmap-tcp-services" description:"configmap used to define tcp services" default:""`
+	ConfigMapErrorfile    NamespaceValue `long:"configmap-errorfile" description:"configmap used to define custom error pages according to status code" default:""`
 	KubeConfig            string         `long:"kubeconfig" default:"" description:"combined with -e. location of kube config file"`
 	NamespaceWhitelist    []string       `long:"namespace-whitelist" description:"whitelisted namespaces"`
 	NamespaceBlacklist    []string       `long:"namespace-blacklist" description:"blacklisted namespaces"`

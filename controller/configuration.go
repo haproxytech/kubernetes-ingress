@@ -35,6 +35,7 @@ type Configuration struct {
 	IngressClass           string
 	ConfigMap              *ConfigMap
 	ConfigMapTCPServices   *ConfigMap
+	ConfigMapErrorfile     *ConfigMap
 	PublishService         *Service
 	MapFiles               haproxy.Maps
 	FrontendHTTPReqRules   map[Rule]FrontendHTTPReqs

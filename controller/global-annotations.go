@@ -2,11 +2,14 @@ package controller
 
 import (
 	"fmt"
+	"os"
 	goruntime "runtime"
 	"strconv"
 	"strings"
 
+	"github.com/google/renameio"
 	"github.com/haproxytech/config-parser/v2/types"
+
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 )
 
@@ -140,6 +143,70 @@ func (c *HAProxyController) handleSyslog() (restart, reload bool) {
 	}
 	c.Logger.Error(errParser)
 	return restart, reload
+}
+
+func (c *HAProxyController) mangleErrorFile(shouldReload *bool, index *int, key string, value *StringW) (err error) {
+	defer func() { *index++ }()
+
+	var code int
+	filePath := fmt.Sprintf("/etc/haproxy/errors/%s", key)
+
+	c.Logger.Debugf("Processing errorfile key '%s'", key)
+
+	key = strings.Replace(key, ".http", "", -1)
+	code, err = strconv.Atoi(key)
+	if err != nil {
+		c.Logger.Warning("Skipping %s, cannot parse as status code (%s)", code, err.Error())
+		return nil
+	}
+
+	switch value.Status {
+	case DELETED:
+		*shouldReload = true
+		c.Logger.Debugf("errorfile for code '%d' has been deleted", code)
+		if err = os.Remove(filePath); err != nil {
+			c.Logger.Warning("cannot remove file for errorcode %d, %s", code, err.Error())
+			return err
+		}
+		return c.Client.ErrorFileDelete(*index)
+	case ADDED:
+		*shouldReload = true
+		c.Logger.Debugf("errorfile for code '%d' has been created", code)
+		if err = renameio.WriteFile(filePath, []byte(value.Value), os.ModePerm); err != nil {
+			c.Logger.Warning("cannot write file for errorcode %d, %s", code, err.Error())
+			return err
+		}
+		return c.Client.ErrorFileCreate(code, func(v bool) *bool {
+			return &v
+		}(true))
+	case MODIFIED:
+		*shouldReload = true
+		if err = renameio.WriteFile(filePath, []byte(value.Value), os.ModePerm); err != nil {
+			c.Logger.Warning("cannot write file for errorcode %d, %s", code, err.Error())
+			return err
+		}
+		c.Logger.Debugf("errorfile for code '%d' has been modified", code)
+	case EMPTY:
+		c.Logger.Debugf("errorfile for code '%d' is empty: no changes", code)
+	}
+	return
+}
+
+func (c *HAProxyController) handleErrorFile() (reload bool, err error) {
+	if c.cfg.ConfigMapErrorfile == nil {
+		return false, nil
+	}
+
+	reload = false
+	var index int
+
+	for key, value := range c.cfg.ConfigMapErrorfile.Annotations {
+		if err := c.mangleErrorFile(&reload, &index, key, value); err != nil {
+			c.Logger.Errorf("Cannot set errorfile for key %s: %s", key, err.Error())
+			return false, err
+		}
+	}
+	return reload, nil
 }
 
 func (c *HAProxyController) handleDefaultOptions() bool {
