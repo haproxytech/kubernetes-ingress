@@ -196,6 +196,10 @@ func (c *HAProxyController) updateHAProxy() error {
 	c.Logger.Error(err)
 	reload = reload || r
 
+	r, err = c.handleErrorFile()
+	c.Logger.Error(err)
+	reload = reload || r
+
 	r, err = c.handleTCPServices()
 	c.Logger.Error(err)
 	reload = reload || r
