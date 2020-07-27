@@ -38,34 +38,53 @@ func (c *HAProxyController) monitorChanges() {
 	c.Logger.Debugf("Executing syncPeriod every %s", syncPeriod.String())
 	go c.SyncData(c.eventChan, configMapReceivedAndProcessed)
 
+	informersSynced := []cache.InformerSynced{}
 	stop := make(chan struct{})
-	factory := informers.NewSharedInformerFactory(c.k8s.API, c.timeFromAnnotation("cache-resync-period"))
-
 	endpointsChan := make(chan *Endpoints, 100)
-	pi := factory.Core().V1().Endpoints().Informer()
-	c.k8s.EventsEndpoints(endpointsChan, stop, pi)
-
-	svci := factory.Core().V1().Services().Informer()
 	svcChan := make(chan *Service, 100)
-	c.k8s.EventsServices(svcChan, stop, svci, c.cfg.PublishService)
-
-	nsi := factory.Core().V1().Namespaces().Informer()
 	nsChan := make(chan *Namespace, 10)
-	c.k8s.EventsNamespaces(nsChan, stop, nsi)
-
-	ii := factory.Extensions().V1beta1().Ingresses().Informer()
 	ingChan := make(chan *Ingress, 10)
-	c.k8s.EventsIngresses(ingChan, stop, ii)
-
-	ci := factory.Core().V1().ConfigMaps().Informer()
 	cfgChan := make(chan *ConfigMap, 10)
-	c.k8s.EventsConfigfMaps(cfgChan, stop, ci)
-
-	si := factory.Core().V1().Secrets().Informer()
 	secretChan := make(chan *Secret, 10)
-	c.k8s.EventsSecrets(secretChan, stop, si)
 
-	if !cache.WaitForCacheSync(stop, pi.HasSynced, svci.HasSynced, nsi.HasSynced, ii.HasSynced, ci.HasSynced, si.HasSynced) {
+	var namespaces []string
+	if len(c.cfg.NamespacesAccess.Whitelist) == 0 {
+		namespaces = []string{""}
+	} else {
+		for ns := range c.cfg.NamespacesAccess.Whitelist {
+			namespaces = append(namespaces, ns)
+		}
+	}
+
+	for _, namespace := range namespaces {
+		factory := informers.NewSharedInformerFactoryWithOptions(c.k8s.API, c.timeFromAnnotation("cache-resync-period"), informers.WithNamespace(namespace))
+
+		pi := factory.Core().V1().Endpoints().Informer()
+		informersSynced = append(informersSynced, pi.HasSynced)
+		c.k8s.EventsEndpoints(endpointsChan, stop, pi)
+
+		svci := factory.Core().V1().Services().Informer()
+		informersSynced = append(informersSynced, svci.HasSynced)
+		c.k8s.EventsServices(svcChan, stop, svci, c.cfg.PublishService)
+
+		nsi := factory.Core().V1().Namespaces().Informer()
+		informersSynced = append(informersSynced, nsi.HasSynced)
+		c.k8s.EventsNamespaces(nsChan, stop, nsi)
+
+		ii := factory.Extensions().V1beta1().Ingresses().Informer()
+		informersSynced = append(informersSynced, ii.HasSynced)
+		c.k8s.EventsIngresses(ingChan, stop, ii)
+
+		ci := factory.Core().V1().ConfigMaps().Informer()
+		informersSynced = append(informersSynced, ci.HasSynced)
+		c.k8s.EventsConfigfMaps(cfgChan, stop, ci)
+
+		si := factory.Core().V1().Secrets().Informer()
+		informersSynced = append(informersSynced, si.HasSynced)
+		c.k8s.EventsSecrets(secretChan, stop, si)
+	}
+
+	if !cache.WaitForCacheSync(stop, informersSynced...) {
 		c.Logger.Panic("Caches are not populated due to an underlying error, cannot run the Ingress Controller")
 	}
 
