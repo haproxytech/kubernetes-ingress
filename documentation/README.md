@@ -346,9 +346,10 @@ More information can be found in the official HAProxy [documentation](https://cb
 
 - Annotation `server-ssl`
   - Use ssl for backend servers.
+  - Enable HTTP/2 support for backend severs.
   - Current implementation does not verify server certificates.
 - Example:
-    `server server1 127.0.0.1:443 ssl verify none`
+    `server server1 127.0.0.1:443 ssl alpn h2,http/1.1 verify none`
 
 #### Servers slots increment
 
