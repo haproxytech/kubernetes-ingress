@@ -119,7 +119,7 @@ func (c *HAProxyController) handleSyslog() (restart, reload bool) {
 					continue
 				}
 			}
-			c.Logger.Infof("Adding log target: '%s'", logData)
+			c.Logger.Infof("Adding log target: 'address: %s, facility: %s'", logData.Address, logData.Facility)
 			errParser = c.Client.SetLogTarget(logData, index)
 			if errParser == nil {
 				reload = true
