@@ -50,7 +50,7 @@ func main() {
 	logger.SetLevel(osArgs.LogLevel.LogLevel)
 
 	defaultBackendSvc := fmt.Sprintf("%s/%s", osArgs.DefaultBackendService.Namespace, osArgs.DefaultBackendService.Name)
-	defaultCertificate := fmt.Sprintf("%s/%s", osArgs.DefaultBackendService.Namespace, osArgs.DefaultCertificate.Name)
+	defaultCertificate := fmt.Sprintf("%s/%s", osArgs.DefaultCertificate.Namespace, osArgs.DefaultCertificate.Name)
 	c.SetDefaultAnnotation("default-backend-service", defaultBackendSvc)
 	c.SetDefaultAnnotation("ssl-certificate", defaultCertificate)
 	c.SetDefaultAnnotation("sync-period", osArgs.SyncPeriod.String())
