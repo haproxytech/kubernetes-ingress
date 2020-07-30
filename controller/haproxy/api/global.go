@@ -9,7 +9,7 @@ import (
 	"github.com/haproxytech/config-parser/v2/types"
 )
 
-func (c *clientNative) EnabledConfig(configType string) (enabled bool, err error) {
+func (c *clientNative) GetConfig(configType string) (enabled bool, err error) {
 	// Get current Parser Instance
 	if c.activeTransaction == "" {
 		return false, fmt.Errorf("no active transaction")
@@ -19,12 +19,17 @@ func (c *clientNative) EnabledConfig(configType string) (enabled bool, err error
 		return false, err
 	}
 	if configType == "daemon" {
-		val, err := config.Get(parser.Global, parser.GlobalSectionName, "daemon")
-		if val != nil {
-			return true, err
-		}
+		_, err = config.Get(parser.Global, parser.GlobalSectionName, "daemon")
+	} else {
+		err = fmt.Errorf("unsupported config '%s'", configType)
 	}
-	return false, fmt.Errorf("unsupported option '%s'", configType)
+	if err == nil {
+		return true, nil
+	}
+	if err.Error() == "no data" {
+		return false, nil
+	}
+	return false, err
 }
 
 func (c *clientNative) SetConfigSnippet(value *types.StringSliceC) error {

@@ -26,7 +26,6 @@ type HAProxyClient interface {
 	BackendSwitchingRuleCreate(frontend string, rule models.BackendSwitchingRule) error
 	BackendSwitchingRuleDeleteAll(frontend string)
 	ExecuteRaw(command string) (result []string, err error)
-	EnabledConfig(configType string) (enabled bool, err error)
 	FrontendCreate(frontend models.Frontend) error
 	FrontendDelete(frontendName string) error
 	FrontendsGet() (models.Frontends, error)
@@ -42,6 +41,7 @@ type HAProxyClient interface {
 	FrontendHTTPResponseRuleCreate(frontend string, rule models.HTTPResponseRule) error
 	FrontendTCPRequestRuleDeleteAll(frontend string)
 	FrontendTCPRequestRuleCreate(frontend string, rule models.TCPRequestRule) error
+	GetConfig(configType string) (enabled bool, err error)
 	SetConfigSnippet(snippet *types.StringSliceC) error
 	SetDaemonMode(value *types.Enabled) error
 	SetDefaulLogFormat(value *types.StringC) error

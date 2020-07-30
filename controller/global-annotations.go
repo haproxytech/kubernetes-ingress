@@ -67,7 +67,7 @@ func (c *HAProxyController) handleSyslog() (restart, reload bool) {
 	restart = false
 	reload = false
 	stdoutLog := false
-	daemonMode, errParser := c.Client.EnabledConfig("daemon")
+	daemonMode, errParser := c.Client.GetConfig("daemon")
 	c.Logger.Error(errParser)
 	errParser = c.Client.SetLogTarget(nil, -1)
 	c.Logger.Error(errParser)
