@@ -49,7 +49,7 @@ func (c *HAProxyController) handleNbthread() bool {
 			numThreads = int64(numthr)
 		}
 		c.Logger.Infof("Set NbThread to: '%d'", numThreads)
-		err = c.Client.SetNbthread(&numThreads)
+		err = c.Client.SetNbthread(&types.Int64C{Value: numThreads})
 	}
 	if err != nil {
 		c.Logger.Err(err)
@@ -134,9 +134,8 @@ func (c *HAProxyController) handleSyslog() (restart, reload bool) {
 			restart = true
 		}
 	} else if !daemonMode {
-		enabled := true
 		c.Logger.Info("Enabling Daemon mode")
-		errParser = c.Client.SetDaemonMode(&enabled)
+		errParser = c.Client.SetDaemonMode(&types.Enabled{})
 		restart = true
 	}
 	c.Logger.Error(errParser)
@@ -175,7 +174,7 @@ func (c *HAProxyController) handleDefaultOption(option string) bool {
 			action = "Disabling"
 		}
 		c.Logger.Infof("%s %s", action, option)
-		err = c.Client.SetDefaulOption(option, &enabled)
+		err = c.Client.SetDefaulOption(option, &types.SimpleOption{NoOption: !enabled})
 	}
 	if err != nil {
 		c.Logger.Err(err)
@@ -215,7 +214,7 @@ func (c *HAProxyController) handleDefaultTimeout(timeout string) bool {
 		err = c.Client.SetDefaulTimeout(timeout, nil)
 	default:
 		c.Logger.Infof("Setting default timeout-%s to %s", timeout, annTimeout.Value)
-		err = c.Client.SetDefaulTimeout(timeout, &annTimeout.Value)
+		err = c.Client.SetDefaulTimeout(timeout, &types.SimpleTimeout{Value: annTimeout.Value})
 	}
 	if err != nil {
 		c.Logger.Error(err)
@@ -243,7 +242,7 @@ func (c *HAProxyController) handleDefaultMaxconn() bool {
 			return false
 		}
 		c.Logger.Infof("Setting default maxconn to %d", value)
-		err = c.Client.SetDefaulMaxconn(&value)
+		err = c.Client.SetDefaulMaxconn(&types.Int64C{Value: value})
 	}
 	if err != nil {
 		c.Logger.Error(err)
@@ -259,7 +258,7 @@ func (c *HAProxyController) handleDefaultLogFormat() bool {
 		return false
 	}
 	c.Logger.Infof("Changing default log format to '%s'", annLogFormat.Value)
-	err := c.Client.SetDefaulLogFormat(&annLogFormat.Value)
+	err := c.Client.SetDefaulLogFormat(&types.StringC{Value: "'" + annLogFormat.Value + "'"})
 	if err != nil {
 		c.Logger.Error(err)
 		return false
@@ -285,7 +284,7 @@ func (c *HAProxyController) handleConfigSnippet() bool {
 			return false
 		}
 		c.Logger.Infof("Setting global config-snippet")
-		err = c.Client.SetConfigSnippet(&value)
+		err = c.Client.SetConfigSnippet(&types.StringSliceC{Value: value})
 	}
 	if err != nil {
 		c.Logger.Error(err)

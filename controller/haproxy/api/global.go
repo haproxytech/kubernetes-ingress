@@ -2,13 +2,12 @@ package api
 
 import (
 	"fmt"
+	"reflect"
 	"strings"
 
 	parser "github.com/haproxytech/config-parser/v2"
 	"github.com/haproxytech/config-parser/v2/types"
 )
-
-var typeValue interface{}
 
 func (c *clientNative) EnabledConfig(configType string) (enabled bool, err error) {
 	// Get current Parser Instance
@@ -28,68 +27,36 @@ func (c *clientNative) EnabledConfig(configType string) (enabled bool, err error
 	return false, fmt.Errorf("unsupported option '%s'", configType)
 }
 
-func (c *clientNative) SetConfigSnippet(value *[]string) error {
-	typeValue = nil
-	if value != nil {
-		typeValue = *value
-	}
-	return c.setSectionAttribute(parser.Global, "config-snippet", typeValue)
+func (c *clientNative) SetConfigSnippet(value *types.StringSliceC) error {
+	return c.setSectionAttribute(parser.Global, "config-snippet", value)
 }
 
-func (c *clientNative) SetDaemonMode(value *bool) error {
-	typeValue = nil
-	if value != nil {
-		typeValue = *value
-	}
-	return c.setSectionAttribute(parser.Global, "daemon", typeValue)
+func (c *clientNative) SetDaemonMode(value *types.Enabled) error {
+	return c.setSectionAttribute(parser.Global, "daemon", value)
 }
 
-func (c *clientNative) SetDefaulLogFormat(value *string) error {
-	typeValue = nil
-	if value != nil {
-		typeValue = *value
-	}
-	return c.setSectionAttribute(parser.Defaults, "log-format", typeValue)
+func (c *clientNative) SetDefaulLogFormat(value *types.StringC) error {
+	return c.setSectionAttribute(parser.Defaults, "log-format", value)
 }
 
-func (c *clientNative) SetDefaulMaxconn(value *int64) error {
-	typeValue = nil
-	if value != nil {
-		typeValue = *value
-	}
-	return c.setSectionAttribute(parser.Global, "maxconn", typeValue)
+func (c *clientNative) SetDefaulMaxconn(value *types.Int64C) error {
+	return c.setSectionAttribute(parser.Global, "maxconn", value)
 }
 
-func (c *clientNative) SetDefaulOption(option string, enabled *bool) error {
-	typeValue = nil
-	if enabled != nil {
-		typeValue = *enabled
-	}
-	return c.setSectionAttribute(parser.Defaults, fmt.Sprintf("option %s", option), typeValue)
+func (c *clientNative) SetDefaulOption(option string, value *types.SimpleOption) error {
+	return c.setSectionAttribute(parser.Defaults, fmt.Sprintf("option %s", option), value)
 }
 
-func (c *clientNative) SetDefaulTimeout(timeout string, value *string) error {
-	typeValue = nil
-	if value != nil {
-		typeValue = *value
-	}
-	return c.setSectionAttribute(parser.Defaults, fmt.Sprintf("timeout %s", timeout), typeValue)
+func (c *clientNative) SetDefaulTimeout(timeout string, value *types.SimpleTimeout) error {
+	return c.setSectionAttribute(parser.Defaults, fmt.Sprintf("timeout %s", timeout), value)
 }
 
-func (c *clientNative) SetLogTarget(log *types.Log, index int) error {
-	typeValue = nil
-	if log != nil {
-		typeValue = *log
-	}
-	return c.setSectionAttribute(parser.Global, "log", typeValue, index)
+func (c *clientNative) SetLogTarget(value *types.Log, index int) error {
+	return c.setSectionAttribute(parser.Global, "log", value, index)
 }
 
-func (c *clientNative) SetNbthread(value *int64) error {
-	typeValue = nil
-	if value != nil {
-		typeValue = *value
-	}
-	return c.setSectionAttribute(parser.Global, "nbthread", typeValue)
+func (c *clientNative) SetNbthread(value *types.Int64C) error {
+	return c.setSectionAttribute(parser.Global, "nbthread", value)
 }
 
 func (c *clientNative) setSectionAttribute(section parser.Section, attribute string, value interface{}, index ...int) error {
@@ -112,7 +79,7 @@ func (c *clientNative) setSectionAttribute(section parser.Section, attribute str
 		return fmt.Errorf("incorrect section type '%s'", section)
 	}
 	// Delete config
-	if value == nil {
+	if reflect.ValueOf(value).IsNil() {
 		err = config.Set(section, sectionName, attribute, nil)
 		if err == nil {
 			c.activeTransactionHasChanges = true
@@ -120,35 +87,29 @@ func (c *clientNative) setSectionAttribute(section parser.Section, attribute str
 		return err
 	}
 	// Set config value
-	var attributeValue interface{}
 	switch strings.Fields(attribute)[0] {
 	case "config-snippet":
-		attributeValue = types.StringSliceC{Value: value.([]string)}
+		value = value.(*types.StringSliceC)
 	case "daemon":
-		attributeValue = types.Enabled{}
+		value = value.(*types.Enabled)
 	case "log":
-		attributeValue = value.(types.Log)
+		value = value.(*types.Log)
 	case "log-format":
-		attributeValue = types.StringC{
-			Value: "'" + value.(string) + "'",
-		}
+		value = value.(*types.StringC)
 	case "nbthread", "maxconn":
-		attributeValue = types.Int64C{
-			Value: value.(int64),
-		}
+		value = value.(*types.Int64C)
 	case "option":
-		attributeValue = types.SimpleOption{
-			NoOption: !value.(bool),
-		}
+		value = value.(*types.SimpleOption)
 	case "timeout":
-		attributeValue = types.SimpleTimeout{Value: value.(string)}
+		value = value.(*types.SimpleTimeout)
 	default:
 		return fmt.Errorf("insupported attribute '%s'", attribute)
 	}
+
 	if len(index) > 0 {
-		err = config.Insert(section, sectionName, attribute, attributeValue, index[0])
+		err = config.Insert(section, sectionName, attribute, value, index[0])
 	} else {
-		err = config.Set(section, sectionName, attribute, attributeValue)
+		err = config.Set(section, sectionName, attribute, value)
 	}
 	if err == nil {
 		c.activeTransactionHasChanges = true
