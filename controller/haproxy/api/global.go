@@ -40,15 +40,15 @@ func (c *clientNative) SetDaemonMode(value *types.Enabled) error {
 	return c.setSectionAttribute(parser.Global, "daemon", value)
 }
 
-func (c *clientNative) SetDefaulLogFormat(value *types.StringC) error {
+func (c *clientNative) SetDefaultLogFormat(value *types.StringC) error {
 	return c.setSectionAttribute(parser.Defaults, "log-format", value)
 }
 
-func (c *clientNative) SetDefaulMaxconn(value *types.Int64C) error {
+func (c *clientNative) SetDefaultMaxconn(value *types.Int64C) error {
 	return c.setSectionAttribute(parser.Global, "maxconn", value)
 }
 
-func (c *clientNative) SetDefaulOption(option string, value *types.SimpleOption) error {
+func (c *clientNative) SetDefaultOption(option string, value *types.SimpleOption) error {
 	return c.setSectionAttribute(parser.Defaults, fmt.Sprintf("option %s", option), value)
 }
 

@@ -162,7 +162,7 @@ func (c *HAProxyController) handleDefaultOption(option string) bool {
 		return false
 	case DELETED:
 		c.Logger.Infof("Removing '%s' option", option)
-		err = c.Client.SetDefaulOption(option, nil)
+		err = c.Client.SetDefaultOption(option, nil)
 	default:
 		enabled, parseErr := utils.GetBoolValue(annOption.Value, option)
 		if parseErr != nil {
@@ -174,7 +174,7 @@ func (c *HAProxyController) handleDefaultOption(option string) bool {
 			action = "Disabling"
 		}
 		c.Logger.Infof("%s %s", action, option)
-		err = c.Client.SetDefaulOption(option, &types.SimpleOption{NoOption: !enabled})
+		err = c.Client.SetDefaultOption(option, &types.SimpleOption{NoOption: !enabled})
 	}
 	if err != nil {
 		c.Logger.Err(err)
@@ -234,7 +234,7 @@ func (c *HAProxyController) handleDefaultMaxconn() bool {
 		return false
 	case DELETED:
 		c.Logger.Info("Removing default maxconn")
-		err = c.Client.SetDefaulMaxconn(nil)
+		err = c.Client.SetDefaultMaxconn(nil)
 	default:
 		value, parseErr := strconv.ParseInt(annMaxconn.Value, 10, 64)
 		if parseErr != nil {
@@ -242,7 +242,7 @@ func (c *HAProxyController) handleDefaultMaxconn() bool {
 			return false
 		}
 		c.Logger.Infof("Setting default maxconn to %d", value)
-		err = c.Client.SetDefaulMaxconn(&types.Int64C{Value: value})
+		err = c.Client.SetDefaultMaxconn(&types.Int64C{Value: value})
 	}
 	if err != nil {
 		c.Logger.Error(err)
@@ -258,7 +258,7 @@ func (c *HAProxyController) handleDefaultLogFormat() bool {
 		return false
 	}
 	c.Logger.Infof("Changing default log format to '%s'", annLogFormat.Value)
-	err := c.Client.SetDefaulLogFormat(&types.StringC{Value: "'" + annLogFormat.Value + "'"})
+	err := c.Client.SetDefaultLogFormat(&types.StringC{Value: "'" + annLogFormat.Value + "'"})
 	if err != nil {
 		c.Logger.Error(err)
 		return false
@@ -277,7 +277,7 @@ func (c *HAProxyController) handleConfigSnippet() bool {
 		return false
 	case DELETED:
 		c.Logger.Info("Removing global config-snippet")
-		err = c.Client.SetDefaulMaxconn(nil)
+		err = c.Client.SetDefaultMaxconn(nil)
 	default:
 		value := strings.SplitN(strings.Trim(annCfgSnippet.Value, "\n"), "\n", -1)
 		if len(value) == 0 {
