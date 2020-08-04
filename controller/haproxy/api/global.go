@@ -9,30 +9,15 @@ import (
 	"github.com/haproxytech/config-parser/v2/types"
 )
 
-func (c *clientNative) GetConfig(configType string) (enabled bool, err error) {
-	// Get current Parser Instance
-	if c.activeTransaction == "" {
-		return false, fmt.Errorf("no active transaction")
+func (c *clientNative) GlobalConfigEnabled(config string) (enabled bool, err error) {
+	p, pErr := c.getParser(parser.Global, "", config)
+	if p == nil {
+		return false, pErr
 	}
-	config, err := c.nativeAPI.Configuration.GetParser(c.activeTransaction)
-	if err != nil {
-		return false, err
-	}
-	if configType == "daemon" {
-		_, err = config.Get(parser.Global, parser.GlobalSectionName, "daemon")
-	} else {
-		err = fmt.Errorf("unsupported config '%s'", configType)
-	}
-	if err == nil {
-		return true, nil
-	}
-	if err.Error() == "no data" {
-		return false, nil
-	}
-	return false, err
+	return true, nil
 }
 
-func (c *clientNative) SetConfigSnippet(value *types.StringSliceC) error {
+func (c *clientNative) SetGlobalCfgSnippet(value *types.StringSliceC) error {
 	return c.setSectionAttribute(parser.Global, "config-snippet", value)
 }
 
@@ -44,33 +29,12 @@ func (c *clientNative) SetDefaultLogFormat(value *types.StringC) error {
 	return c.setSectionAttribute(parser.Defaults, "log-format", value)
 }
 
-func (c *clientNative) SetDefaultMaxconn(value *types.Int64C) error {
+func (c *clientNative) SetGlobalMaxconn(value *types.Int64C) error {
 	return c.setSectionAttribute(parser.Global, "maxconn", value)
 }
 
 func (c *clientNative) SetDefaultOption(option string, value *types.SimpleOption) error {
 	return c.setSectionAttribute(parser.Defaults, fmt.Sprintf("option %s", option), value)
-}
-
-func (c *clientNative) ErrorFileDelete(index int) error {
-	// Get current Parser Instance
-	if c.activeTransaction == "" {
-		return fmt.Errorf("no active transaction")
-	}
-	config, err := c.nativeAPI.Configuration.GetParser(c.activeTransaction)
-	if err != nil {
-		return err
-	}
-	c.activeTransactionHasChanges = true
-	return config.Delete(parser.Defaults, parser.DefaultSectionName, "errorfile", index)
-}
-
-func (c *clientNative) ErrorFileCreate(code int, enabled *bool) error {
-	if enabled == nil {
-		return nil
-	}
-	typeValue := fmt.Sprintf("/etc/haproxy/errors/%d.http", code)
-	return c.setSectionAttribute(parser.Defaults, fmt.Sprintf("errorfile %d", code), typeValue)
 }
 
 func (c *clientNative) SetDefaultTimeout(timeout string, value *types.SimpleTimeout) error {
@@ -147,4 +111,37 @@ func (c *clientNative) setSectionAttribute(section parser.Section, attribute str
 		c.activeTransactionHasChanges = true
 	}
 	return err
+}
+
+func (c *clientNative) getParser(section parser.Section, sectionName string, attribute string) (p parser.ParserInterface, err error) {
+	if section == "" || attribute == "" {
+		return nil, fmt.Errorf("missing param")
+	}
+	// Get current Parser Instance
+	if c.activeTransaction == "" {
+		return nil, fmt.Errorf("no active transaction")
+	}
+	config, err := c.nativeAPI.Configuration.GetParser(c.activeTransaction)
+	if err != nil {
+		return nil, err
+	}
+	// section lookup
+	var parsers *parser.Parsers
+	ok := false
+	switch section {
+	case parser.Global, parser.Defaults:
+		parsers, ok = config.Parsers[section]["data"]
+	case parser.Frontends, parser.Backends:
+		parsers, ok = config.Parsers[section][sectionName]
+	}
+	if !ok {
+		return nil, fmt.Errorf("section '%s %s' not found", section, sectionName)
+	}
+	// parser lookup
+	for _, parser := range parsers.Parsers {
+		if parser.GetParserName() == attribute {
+			return parser, nil
+		}
+	}
+	return nil, nil
 }

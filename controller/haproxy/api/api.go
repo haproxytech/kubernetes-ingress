@@ -40,14 +40,14 @@ type HAProxyClient interface {
 	FrontendHTTPResponseRuleCreate(frontend string, rule models.HTTPResponseRule) error
 	FrontendTCPRequestRuleDeleteAll(frontend string)
 	FrontendTCPRequestRuleCreate(frontend string, rule models.TCPRequestRule) error
-	GetConfig(configType string) (enabled bool, err error)
-	SetConfigSnippet(snippet *types.StringSliceC) error
+	GlobalConfigEnabled(config string) (enabled bool, err error)
 	SetDaemonMode(value *types.Enabled) error
 	SetDefaultErrorFile(value *types.ErrorFile, index int) error
 	SetDefaultLogFormat(value *types.StringC) error
-	SetDefaultMaxconn(value *types.Int64C) error
+	SetGlobalMaxconn(value *types.Int64C) error
 	SetDefaultOption(option string, value *types.SimpleOption) error
 	SetDefaultTimeout(timeout string, value *types.SimpleTimeout) error
+	SetGlobalCfgSnippet(snippet *types.StringSliceC) error
 	SetLogTarget(value *types.Log, index int) error
 	SetNbthread(value *(types.Int64C)) error
 	SetServerAddr(backendName string, serverName string, ip string, port int) error

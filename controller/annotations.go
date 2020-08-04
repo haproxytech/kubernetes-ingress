@@ -16,6 +16,8 @@ package controller
 
 import (
 	"strings"
+
+	"github.com/haproxytech/kubernetes-ingress/controller/annotations"
 )
 
 //ConvertToMapStringW removes prefixes in annotation
@@ -148,4 +150,33 @@ var defaultAnnotationValues = MapStringW{
 	"timeout-server":          &StringW{Value: "50s"},
 	"timeout-tunnel":          &StringW{Value: "1h"},
 	"timeout-http-keep-alive": &StringW{Value: "1m"},
+}
+
+// Handle Global and default Annotations
+func (c *HAProxyController) handleGlobalAnnotations() (restart bool, reload bool) {
+	var r annotations.Result
+	for name, annotation := range annotations.Global {
+		cfgMapAnn, _ := GetValueFromAnnotations(name, c.cfg.ConfigMap.Annotations)
+		if cfgMapAnn == nil {
+			continue
+		}
+		switch cfgMapAnn.Status {
+		case EMPTY:
+			continue
+		case DELETED:
+			r = annotation.Delete(c.Client)
+		default:
+			if err := annotation.Parse(cfgMapAnn.Value); err != nil {
+				c.Logger.Error(err)
+			} else {
+				r = annotation.Update(c.Client)
+			}
+		}
+		if r == 1 {
+			reload = true
+		} else if r == 2 {
+			restart = true
+		}
+	}
+	return restart, reload
 }
