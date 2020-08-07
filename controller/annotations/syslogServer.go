@@ -112,7 +112,7 @@ func (a *syslogServers) Update(c api.HAProxyClient) Result {
 		}
 	}
 	// stdout logging won't work with daemon mode
-	daemonMode, err := c.GlobalConfigEnabled("daemon")
+	daemonMode, err := c.GlobalConfigEnabled("global", "daemon")
 	logger.Error(err)
 	if a.stdout {
 		if daemonMode {

@@ -9,12 +9,50 @@ import (
 	"github.com/haproxytech/config-parser/v2/types"
 )
 
-func (c *clientNative) GlobalConfigEnabled(config string) (enabled bool, err error) {
-	p, pErr := c.getParser(parser.Global, "", config)
+// section can be "global" or "defaults"
+func (c *clientNative) GlobalConfigEnabled(section string, config string) (enabled bool, err error) {
+	var pSection parser.Section
+	switch section {
+	case "global":
+		pSection = parser.Global
+	case "defaults":
+		pSection = parser.Defaults
+	default:
+		return false, fmt.Errorf("incorrect section '%s': it can be either global or defaults", section)
+	}
+	p, pErr := c.getParser(pSection, "", config)
 	if p == nil {
 		return false, pErr
+	} else if data, err := p.Get(false); data == nil {
+		return false, err
 	}
 	return true, nil
+}
+
+// section can be "global" or "defaults"
+func (c *clientNative) GlobalWriteConfig(section string, config string) (result string, err error) {
+	var pSection parser.Section
+	switch section {
+	case "global":
+		pSection = parser.Global
+	case "defaults":
+		pSection = parser.Defaults
+	default:
+		return "", fmt.Errorf("incorrect section '%s': it can be either global or defaults", section)
+	}
+	p, err := c.getParser(pSection, "", config)
+	if p == nil {
+		return "", err
+	}
+	lines, err := p.Result()
+	if err != nil {
+		return "", err
+	}
+	var buf []string
+	for _, line := range lines {
+		buf = append(buf, line.Data)
+	}
+	return strings.Join(buf, "\n"), nil
 }
 
 func (c *clientNative) SetGlobalCfgSnippet(value *types.StringSliceC) error {

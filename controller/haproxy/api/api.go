@@ -40,7 +40,8 @@ type HAProxyClient interface {
 	FrontendHTTPResponseRuleCreate(frontend string, rule models.HTTPResponseRule) error
 	FrontendTCPRequestRuleDeleteAll(frontend string)
 	FrontendTCPRequestRuleCreate(frontend string, rule models.TCPRequestRule) error
-	GlobalConfigEnabled(config string) (enabled bool, err error)
+	GlobalConfigEnabled(section string, config string) (enabled bool, err error)
+	GlobalWriteConfig(section string, config string) (result string, err error)
 	SetDaemonMode(value *types.Enabled) error
 	SetDefaultErrorFile(value *types.ErrorFile, index int) error
 	SetDefaultLogFormat(value *types.StringC) error
