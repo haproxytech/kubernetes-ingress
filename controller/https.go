@@ -113,7 +113,10 @@ func (c *HAProxyController) handleHTTPS(usedCerts map[string]struct{}) (reload b
 }
 
 func (c *HAProxyController) enableSSLOffload(frontendName string, alpn bool) (err error) {
-	binds, _ := c.Client.FrontendBindsGet(frontendName)
+	binds, err := c.Client.FrontendBindsGet(frontendName)
+	if err != nil {
+		return err
+	}
 	for _, bind := range binds {
 		bind.Ssl = true
 		bind.SslCertificate = HAProxyCertDir
@@ -129,7 +132,10 @@ func (c *HAProxyController) enableSSLOffload(frontendName string, alpn bool) (er
 }
 
 func (c *HAProxyController) disableSSLOffload(frontendName string) (err error) {
-	binds, _ := c.Client.FrontendBindsGet(frontendName)
+	binds, err := c.Client.FrontendBindsGet(frontendName)
+	if err != nil {
+		return err
+	}
 	for _, bind := range binds {
 		bind.Ssl = false
 		bind.SslCertificate = ""
@@ -217,21 +223,13 @@ func (c *HAProxyController) enableSSLPassthrough() (err error) {
 	}
 
 	// Update HTTPS backend to listen for connections from FrontendSSL
-	err = c.Client.FrontendBindDeleteAll(FrontendHTTPS)
-	if err != nil {
+	if err = c.editBindAddress(FrontendHTTPS, "127.0.0.1:8443", "127.0.0.1:8443"); err != nil {
 		return err
 	}
-	err = c.Client.FrontendBindCreate(FrontendHTTPS, models.Bind{
-		Address: "127.0.0.1:8443",
-		Name:    "bind_1",
-	})
-	return err
+	return nil
 }
 
 func (c *HAProxyController) disableSSLPassthrough() (err error) {
-	var ssl bool
-	var sslCertificate string
-	var alpn string
 	backendHTTPS := "https"
 	err = c.Client.FrontendDelete(FrontendSSL)
 	if err != nil {
@@ -241,32 +239,28 @@ func (c *HAProxyController) disableSSLPassthrough() (err error) {
 	if err != nil {
 		return err
 	}
-	if c.cfg.HTTPS {
-		ssl = true
-		sslCertificate = HAProxyCertDir
-		alpn = "h2,http/1.1"
-	} else {
-		ssl = false
-		sslCertificate = ""
-		alpn = ""
+	if err = c.editBindAddress(FrontendHTTPS, "0.0.0.0:443", ":::443"); err != nil {
+		return err
 	}
-	err = c.Client.FrontendBindEdit(FrontendHTTPS, models.Bind{
-		Address:        "0.0.0.0:443",
-		Name:           "bind_1",
-		Ssl:            ssl,
-		SslCertificate: sslCertificate,
-		Alpn:           alpn,
-	})
+	return nil
+}
+
+func (c *HAProxyController) editBindAddress(frontend string, ipv4, ipv6 string) (err error) {
+	binds, err := c.Client.FrontendBindsGet(frontend)
 	if err != nil {
 		return err
 	}
-	err = c.Client.FrontendBindCreate(FrontendHTTPS, models.Bind{
-		Address:        ":::443",
-		Name:           "bind_2",
-		V4v6:           true,
-		Ssl:            ssl,
-		SslCertificate: sslCertificate,
-		Alpn:           alpn,
-	})
-	return err
+	for _, bind := range binds {
+		if bind.Name == "bind_1" {
+			bind.Address = ipv4
+			bind.Port = nil
+		} else if bind.Name == "bind_2" {
+			bind.Address = ipv6
+			bind.Port = nil
+		}
+		if err = c.Client.FrontendBindEdit(FrontendHTTPS, *bind); err != nil {
+			return err
+		}
+	}
+	return nil
 }

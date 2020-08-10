@@ -47,18 +47,6 @@ func (c *clientNative) FrontendBindEdit(frontend string, bind models.Bind) error
 	return c.nativeAPI.Configuration.EditBind(bind.Name, frontend, &bind, c.activeTransaction, 0)
 }
 
-func (c *clientNative) FrontendBindDeleteAll(frontend string) error {
-	c.activeTransactionHasChanges = true
-	binds, _ := c.FrontendBindsGet(frontend)
-	for _, bind := range binds {
-		err := c.nativeAPI.Configuration.DeleteBind(bind.Name, frontend, c.activeTransaction, 0)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
 func (c *clientNative) FrontendHTTPRequestRuleDeleteAll(frontend string) {
 	c.activeTransactionHasChanges = true
 	var err error

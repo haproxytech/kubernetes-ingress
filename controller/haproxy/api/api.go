@@ -34,7 +34,6 @@ type HAProxyClient interface {
 	FrontendBindsGet(frontend string) (models.Binds, error)
 	FrontendBindCreate(frontend string, bind models.Bind) error
 	FrontendBindEdit(frontend string, bind models.Bind) error
-	FrontendBindDeleteAll(frontend string) error
 	FrontendHTTPRequestRuleDeleteAll(frontend string)
 	FrontendHTTPResponseRuleDeleteAll(frontend string)
 	FrontendHTTPRequestRuleCreate(frontend string, rule models.HTTPRequestRule) error
