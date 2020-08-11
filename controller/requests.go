@@ -166,9 +166,12 @@ func (c *HAProxyController) FrontendTCPreqsRefresh() (reload bool) {
 	for _, frontend := range []string{FrontendHTTP, FrontendHTTPS} {
 		// DELETE RULES
 		c.Client.FrontendTCPRequestRuleDeleteAll(frontend)
-		// PROXY_PROTCOL
-		if len(c.cfg.FrontendTCPRules[PROXY_PROTOCOL]) > 0 {
-			c.Logger.Error(c.Client.FrontendTCPRequestRuleCreate(frontend, c.cfg.FrontendTCPRules[PROXY_PROTOCOL][0]))
+	}
+	// PROXY_PROTCOL
+	if len(c.cfg.FrontendTCPRules[PROXY_PROTOCOL]) > 0 {
+		c.Logger.Error(c.Client.FrontendTCPRequestRuleCreate(FrontendHTTP, c.cfg.FrontendTCPRules[PROXY_PROTOCOL][0]))
+		if !c.cfg.SSLPassthrough {
+			c.Logger.Error(c.Client.FrontendTCPRequestRuleCreate(FrontendHTTPS, c.cfg.FrontendTCPRules[PROXY_PROTOCOL][0]))
 		}
 	}
 	if !c.cfg.SSLPassthrough {
