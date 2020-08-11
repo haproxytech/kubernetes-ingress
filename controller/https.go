@@ -215,17 +215,19 @@ func (c *HAProxyController) enableSSLPassthrough() (err error) {
 		return err
 	}
 	err = c.Client.BackendServerCreate(backendHTTPS, models.Server{
-		Name:    FrontendHTTPS,
-		Address: "127.0.0.1:8443",
+		Name:        FrontendHTTPS,
+		Address:     "127.0.0.1:8443",
+		SendProxyV2: "enabled",
 	})
 	if err != nil {
 		return err
 	}
 
-	// Update HTTPS backend to listen for connections from FrontendSSL
-	if err = c.editBindAddress(FrontendHTTPS, "127.0.0.1:8443", "127.0.0.1:8443"); err != nil {
+	if err = c.bindSSLPassthrough(true); err != nil {
 		return err
 	}
+	// Some TCP rules depend on ssl-passthrough
+	c.cfg.FrontendRulesStatus[TCP] = MODIFIED
 	return nil
 }
 
@@ -239,24 +241,36 @@ func (c *HAProxyController) disableSSLPassthrough() (err error) {
 	if err != nil {
 		return err
 	}
-	if err = c.editBindAddress(FrontendHTTPS, "0.0.0.0:443", ":::443"); err != nil {
+	if err = c.bindSSLPassthrough(false); err != nil {
 		return err
 	}
+	// Some TCP rules depend on ssl-passthrough
+	c.cfg.FrontendRulesStatus[TCP] = MODIFIED
 	return nil
 }
 
-func (c *HAProxyController) editBindAddress(frontend string, ipv4, ipv6 string) (err error) {
-	binds, err := c.Client.FrontendBindsGet(frontend)
+func (c *HAProxyController) bindSSLPassthrough(enabled bool) (err error) {
+	binds, err := c.Client.FrontendBindsGet(FrontendHTTPS)
 	if err != nil {
 		return err
+	}
+	var ipv4, ipv6 string
+	if enabled {
+		ipv4 = "127.0.0.1:8443"
+		ipv6 = "127.0.0.1:8443"
+	} else {
+		ipv4 = "0.0.0.0:443"
+		ipv6 = ":::443"
 	}
 	for _, bind := range binds {
 		if bind.Name == "bind_1" {
 			bind.Address = ipv4
 			bind.Port = nil
+			bind.AcceptProxy = enabled
 		} else if bind.Name == "bind_2" {
 			bind.Address = ipv6
 			bind.Port = nil
+			bind.AcceptProxy = enabled
 		}
 		if err = c.Client.FrontendBindEdit(FrontendHTTPS, *bind); err != nil {
 			return err
