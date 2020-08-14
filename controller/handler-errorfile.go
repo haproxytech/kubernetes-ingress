@@ -22,7 +22,6 @@ import (
 	"github.com/haproxytech/config-parser/v2/types"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/api"
 	"github.com/haproxytech/kubernetes-ingress/controller/store"
-	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 )
 
 type ErrorFile struct {
@@ -30,7 +29,7 @@ type ErrorFile struct {
 	modified       bool
 }
 
-func (e ErrorFile) Update(k store.K8s, cfg Configuration, api api.HAProxyClient, logger utils.Logger) (reload bool, err error) {
+func (e ErrorFile) Update(k store.K8s, cfg Configuration, api api.HAProxyClient) (reload bool, err error) {
 	if k.ConfigMaps[Errorfiles] == nil {
 		return false, nil
 	}
@@ -44,7 +43,7 @@ func (e ErrorFile) Update(k store.K8s, cfg Configuration, api api.HAProxyClient,
 			e.httpErrorCodes = append(e.httpErrorCodes, code)
 			continue
 		case DELETED:
-			logger.Debugf("deleting errorfile associated to '%d' error code ", code)
+			logger.Debugf("deleting errorfile associated to '%s' error code ", code)
 			if err = os.Remove(filePath); err != nil {
 				logger.Errorf("failed deleting '%s': %s", filePath, err)
 			}
@@ -57,11 +56,11 @@ func (e ErrorFile) Update(k store.K8s, cfg Configuration, api api.HAProxyClient,
 				}
 			}
 			if c != code {
-				logger.Error("HTTP error code '%d' not supported", code)
+				logger.Error("HTTP error code '%s' not supported", code)
 				continue
 			}
 			e.httpErrorCodes = append(e.httpErrorCodes, code)
-			logger.Debugf("Setting errorfile associated to '%d' error code", code)
+			logger.Debugf("Setting errorfile associated to '%s' error code", code)
 			if err = renameio.WriteFile(filePath, []byte(value.Value), os.ModePerm); err != nil {
 				logger.Errorf("failed writing errorfile '%s': %s", filePath, err)
 				continue
@@ -70,12 +69,12 @@ func (e ErrorFile) Update(k store.K8s, cfg Configuration, api api.HAProxyClient,
 		}
 	}
 	if e.modified {
-		return e.updateAPI(api, logger), nil
+		return e.updateAPI(api), nil
 	}
 	return false, nil
 }
 
-func (e ErrorFile) updateAPI(api api.HAProxyClient, logger utils.Logger) (reload bool) {
+func (e ErrorFile) updateAPI(api api.HAProxyClient) (reload bool) {
 	logger.Error(api.SetDefaultErrorFile(nil, -1))
 	for index, code := range e.httpErrorCodes {
 		err := api.SetDefaultErrorFile(&types.ErrorFile{Code: code, File: filepath.Join(HAProxyErrFileDir, code)}, index)

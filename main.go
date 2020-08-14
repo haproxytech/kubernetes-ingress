@@ -111,7 +111,6 @@ func main() {
 
 	controller := c.HAProxyController{
 		HAProxyCfgDir: cfgDir,
-		Logger:        logger,
 		IngressClass:  osArgs.IngressClass,
 	}
 	// K8s Store

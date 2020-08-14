@@ -55,7 +55,7 @@ func (c *HAProxyController) handleBlacklisting(ingress *store.Ingress) error {
 	}
 
 	if len(ingress.Rules) == 0 {
-		c.Logger.Debugf("Ingress %s/%s: Skipping blacklist configuration, no rules defined", ingress.Namespace, ingress.Name)
+		logger.Debugf("Ingress %s/%s: Skipping blacklist configuration, no rules defined", ingress.Namespace, ingress.Name)
 		return nil
 	}
 
@@ -68,10 +68,10 @@ func (c *HAProxyController) handleBlacklisting(ingress *store.Ingress) error {
 		c.cfg.FrontendRulesModified[HTTP] = true
 		c.cfg.FrontendRulesModified[TCP] = true
 		if status == DELETED {
-			c.Logger.Debugf("Ingress %s/%s: Deleting blacklist configuration", ingress.Namespace, ingress.Name)
+			logger.Debugf("Ingress %s/%s: Deleting blacklist configuration", ingress.Namespace, ingress.Name)
 			return nil
 		}
-		c.Logger.Debugf("Ingress %s/%s: Configuring blacklist annotation", ingress.Namespace, ingress.Name)
+		logger.Debugf("Ingress %s/%s: Configuring blacklist annotation", ingress.Namespace, ingress.Name)
 	}
 	for hostname, rule := range ingress.Rules {
 		if rule.Status != DELETED {
@@ -132,7 +132,7 @@ func (c *HAProxyController) handleHTTPRedirect(ingress *store.Ingress) error {
 	}
 
 	if len(ingress.Rules) == 0 {
-		c.Logger.Debugf("Ingress %s/%s: Skipping redirect configuration, no rules defined", ingress.Namespace, ingress.Name)
+		logger.Debugf("Ingress %s/%s: Skipping redirect configuration, no rules defined", ingress.Namespace, ingress.Name)
 		return nil
 	}
 
@@ -193,7 +193,7 @@ func (c *HAProxyController) handleRateLimiting(ingress *store.Ingress) error {
 	rateLimitSize := misc.ParseSize(annRateLimitSize.Value)
 
 	if len(ingress.Rules) == 0 {
-		c.Logger.Debugf("Ingress %s/%s: Skipping rate-limit configuration, no rules defined", ingress.Namespace, ingress.Name)
+		logger.Debugf("Ingress %s/%s: Skipping rate-limit configuration, no rules defined", ingress.Namespace, ingress.Name)
 		return nil
 	}
 
@@ -211,11 +211,11 @@ func (c *HAProxyController) handleRateLimiting(ingress *store.Ingress) error {
 	if status != EMPTY {
 		c.cfg.FrontendRulesModified[HTTP] = true
 		if status == DELETED {
-			c.Logger.Debugf("Ingress %s/%s: Deleting rate-limit-requests configuration", ingress.Namespace, ingress.Name)
+			logger.Debugf("Ingress %s/%s: Deleting rate-limit-requests configuration", ingress.Namespace, ingress.Name)
 			delete(rateLimitTables, tableName)
 			return nil
 		}
-		c.Logger.Debugf("Ingress %s/%s: Configuring rate-limit-requests annotation", ingress.Namespace, ingress.Name)
+		logger.Debugf("Ingress %s/%s: Configuring rate-limit-requests annotation", ingress.Namespace, ingress.Name)
 	}
 	for hostname, rule := range ingress.Rules {
 		if rule.Status != DELETED {
@@ -271,7 +271,7 @@ func (c *HAProxyController) handleRequestCapture(ingress *store.Ingress) error {
 	}
 
 	if len(ingress.Rules) == 0 {
-		c.Logger.Debugf("Ingress %s/%s: Skipping capture configuration, no rules defined", ingress.Namespace, ingress.Name)
+		logger.Debugf("Ingress %s/%s: Skipping capture configuration, no rules defined", ingress.Namespace, ingress.Name)
 		return nil
 	}
 
@@ -287,10 +287,10 @@ func (c *HAProxyController) handleRequestCapture(ingress *store.Ingress) error {
 			c.cfg.FrontendRulesModified[HTTP] = true
 			c.cfg.FrontendRulesModified[TCP] = true
 			if status == DELETED {
-				c.Logger.Debugf("Ingress %s/%s: Deleting configuration for '%s' request capture ", ingress.Namespace, ingress.Name, sample)
+				logger.Debugf("Ingress %s/%s: Deleting configuration for '%s' request capture ", ingress.Namespace, ingress.Name, sample)
 				break
 			}
-			c.Logger.Debugf("Ingress %s/%s: Configuring request capture for '%s'", ingress.Namespace, ingress.Name, sample)
+			logger.Debugf("Ingress %s/%s: Configuring request capture for '%s'", ingress.Namespace, ingress.Name, sample)
 		}
 		for hostname, rule := range ingress.Rules {
 			if rule.Status != DELETED {
@@ -331,7 +331,7 @@ func (c *HAProxyController) handleRequestSetHdr(ingress *store.Ingress) error {
 	}
 
 	if len(ingress.Rules) == 0 {
-		c.Logger.Debugf("Ingress %s/%s: Skipping request-set-hdr configuration, no rules defined", ingress.Namespace, ingress.Name)
+		logger.Debugf("Ingress %s/%s: Skipping request-set-hdr configuration, no rules defined", ingress.Namespace, ingress.Name)
 		return nil
 	}
 
@@ -341,17 +341,17 @@ func (c *HAProxyController) handleRequestSetHdr(ingress *store.Ingress) error {
 	for _, param := range strings.Split(annSetHdr.Value, "\n") {
 		parts := strings.Fields(param)
 		if len(parts) != 2 {
-			c.Logger.Errorf("incorrect value '%s' in request-set-header annotation", param)
+			logger.Errorf("incorrect value '%s' in request-set-header annotation", param)
 			continue
 		}
 		key := hashStrToUint(fmt.Sprintf("%s-%s-%s", REQUEST_SET_HEADER, parts[0], parts[1]))
 		if status != EMPTY {
 			c.cfg.FrontendRulesModified[HTTP] = true
 			if status == DELETED {
-				c.Logger.Debugf("Ingress %s/%s: Deleting configuration for request set '%s' header ", ingress.Namespace, ingress.Name, param)
+				logger.Debugf("Ingress %s/%s: Deleting configuration for request set '%s' header ", ingress.Namespace, ingress.Name, param)
 				break
 			}
-			c.Logger.Debugf("Ingress %s/%s: Configuring request set '%s' header ", ingress.Namespace, ingress.Name, param)
+			logger.Debugf("Ingress %s/%s: Configuring request set '%s' header ", ingress.Namespace, ingress.Name, param)
 		}
 		for hostname, rule := range ingress.Rules {
 			if rule.Status != DELETED {
@@ -383,7 +383,7 @@ func (c *HAProxyController) handleResponseSetHdr(ingress *store.Ingress) error {
 
 	// Update rules
 	if len(ingress.Rules) == 0 {
-		c.Logger.Debugf("Ingress %s/%s: Skipping response-set-header configuration, no rules defined", ingress.Namespace, ingress.Name)
+		logger.Debugf("Ingress %s/%s: Skipping response-set-header configuration, no rules defined", ingress.Namespace, ingress.Name)
 		return nil
 	}
 	status := setStatus(ingress.Status, annSetHdr.Status)
@@ -391,7 +391,7 @@ func (c *HAProxyController) handleResponseSetHdr(ingress *store.Ingress) error {
 	for _, param := range strings.Split(annSetHdr.Value, "\n") {
 		parts := strings.Fields(param)
 		if len(parts) != 2 {
-			c.Logger.Errorf("incorrect value '%s' in response-set-header annotation", param)
+			logger.Errorf("incorrect value '%s' in response-set-header annotation", param)
 			continue
 		}
 		key := hashStrToUint(fmt.Sprintf("%s-%s-%s", RESPONSE_SET_HEADER, parts[0], parts[1]))
@@ -441,7 +441,7 @@ func (c *HAProxyController) handleWhitelisting(ingress *store.Ingress) error {
 	}
 
 	if len(ingress.Rules) == 0 {
-		c.Logger.Debugf("Ingress %s/%s: Skipping whitelist configuration, no rules defined", ingress.Namespace, ingress.Name)
+		logger.Debugf("Ingress %s/%s: Skipping whitelist configuration, no rules defined", ingress.Namespace, ingress.Name)
 		return nil
 	}
 
@@ -453,10 +453,10 @@ func (c *HAProxyController) handleWhitelisting(ingress *store.Ingress) error {
 		c.cfg.FrontendRulesModified[HTTP] = true
 		c.cfg.FrontendRulesModified[TCP] = true
 		if status == DELETED {
-			c.Logger.Debugf("Ingress %s/%s: Deleting whitelist configuration", ingress.Namespace, ingress.Name)
+			logger.Debugf("Ingress %s/%s: Deleting whitelist configuration", ingress.Namespace, ingress.Name)
 			return nil
 		}
-		c.Logger.Debugf("Ingress %s/%s: Configuring whitelist configuration", ingress.Namespace, ingress.Name)
+		logger.Debugf("Ingress %s/%s: Configuring whitelist configuration", ingress.Namespace, ingress.Name)
 	}
 	for hostname, rule := range ingress.Rules {
 		if rule.Status != DELETED {
@@ -488,7 +488,6 @@ func (c *HAProxyController) handleWhitelisting(ingress *store.Ingress) error {
 func hashStrToUint(s string) uint64 {
 	h := fnv.New64a()
 	_, err := h.Write([]byte(strings.ToLower(s)))
-	logger := utils.GetLogger()
 	logger.Error(err)
 	return h.Sum64()
 }

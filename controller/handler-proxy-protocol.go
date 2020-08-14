@@ -27,7 +27,7 @@ import (
 
 type ProxyProtocol struct{}
 
-func (p ProxyProtocol) Update(k store.K8s, cfg Configuration, api api.HAProxyClient, logger utils.Logger) (reload bool, err error) {
+func (p ProxyProtocol) Update(k store.K8s, cfg Configuration, api api.HAProxyClient) (reload bool, err error) {
 	//  Get and validate annotations
 	annProxyProtocol, _ := k.GetValueFromAnnotations("proxy-protocol", k.ConfigMaps[Main].Annotations)
 	if annProxyProtocol == nil {

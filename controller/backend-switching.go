@@ -50,10 +50,10 @@ func (c *HAProxyController) refreshBackendSwitching() (reload bool) {
 	if len(c.cfg.BackendSwitchingModified) == 0 {
 		return false
 	}
-	c.Logger.Debug("Updating Backend Switching rules")
+	logger.Debug("Updating Backend Switching rules")
 	frontends, err := c.Client.FrontendsGet()
 	if err != nil {
-		c.Logger.Panic(err)
+		logger.Panic(err)
 		return false
 	}
 	// Active backend will hold backends in use
@@ -98,12 +98,12 @@ func (c *HAProxyController) refreshBackendSwitching() (reload bool) {
 					condTest = fmt.Sprintf("%s{ path_beg %s }", condTest, rule.Path)
 				}
 				if condTest == "" {
-					c.Logger.Infof("both Host and Path are empty for frontend %v with backend %v, SKIP", frontend, rule.Backend)
+					logger.Infof("both Host and Path are empty for frontend %v with backend %v, SKIP", frontend, rule.Backend)
 					continue
 				}
 			case "tcp":
 				if rule.Host == "" {
-					c.Logger.Infof("Empty SNI for backend %s, SKIP", rule.Backend)
+					logger.Infof("Empty SNI for backend %s, SKIP", rule.Backend)
 					continue
 				}
 				condTest = fmt.Sprintf("{ req_ssl_sni -i %s } ", rule.Host)
@@ -114,7 +114,7 @@ func (c *HAProxyController) refreshBackendSwitching() (reload bool) {
 				Name:     rule.Backend,
 				Index:    utils.PtrInt64(0),
 			})
-			c.Logger.Panic(err)
+			logger.Panic(err)
 		}
 		reload = true
 		delete(c.cfg.BackendSwitchingModified, frontend.Name)
@@ -131,9 +131,9 @@ func (c *HAProxyController) clearBackends(activeBackends map[string]struct{}) (r
 	}
 	for _, backend := range allBackends {
 		if _, ok := activeBackends[backend.Name]; !ok {
-			c.Logger.Debugf("Deleting backend '%s'", backend.Name)
+			logger.Debugf("Deleting backend '%s'", backend.Name)
 			if err := c.Client.BackendDelete(backend.Name); err != nil {
-				c.Logger.Panic(err)
+				logger.Panic(err)
 			}
 			reload = true
 		}

@@ -46,7 +46,7 @@ type K8s struct {
 
 //GetKubernetesClient returns new client that communicates with k8s
 func GetKubernetesClient() (*K8s, error) {
-	logger := utils.GetK8sAPILogger()
+	logger = utils.GetK8sAPILogger()
 	if !TRACE_API {
 		logger.SetLevel(utils.Info)
 	}
@@ -67,7 +67,7 @@ func GetKubernetesClient() (*K8s, error) {
 
 //GetRemoteKubernetesClient returns new client that communicates with k8s
 func GetRemoteKubernetesClient(kubeconfig string) (*K8s, error) {
-	logger := utils.GetK8sAPILogger()
+	logger = utils.GetK8sAPILogger()
 	if !TRACE_API {
 		logger.SetLevel(utils.Info)
 	}

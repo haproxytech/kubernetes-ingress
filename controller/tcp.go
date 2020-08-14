@@ -26,7 +26,7 @@ func (c *HAProxyController) handleTCPServices() (reload bool, err error) {
 		}
 		svcName := strings.Split(parts[0], "/")
 		if len(svcName) != 2 {
-			c.Logger.Errorf("incorrect Service Name '%s'", parts[0])
+			logger.Errorf("incorrect Service Name '%s'", parts[0])
 			continue
 		}
 		namespace := svcName[0]
@@ -40,27 +40,27 @@ func (c *HAProxyController) handleTCPServices() (reload bool, err error) {
 		}
 		switch svc.Status {
 		case DELETED:
-			c.Logger.Debugf("Deleting TCP frontend '%s'", frontendName)
+			logger.Debugf("Deleting TCP frontend '%s'", frontendName)
 			err = c.Client.FrontendDelete(frontendName)
-			c.Logger.Panic(err)
+			logger.Panic(err)
 			c.cfg.BackendSwitchingModified["tcp-services"] = struct{}{}
 			reload = true
 			continue
 		case MODIFIED:
 			frontend, errFt := c.Client.FrontendGet(frontendName)
 			if err != nil {
-				c.Logger.Panic(errFt)
+				logger.Panic(errFt)
 				continue
 			}
 			frontend.DefaultBackend = backendName
 			if sslOption == "ssl" {
-				c.Logger.Error(c.enableSSLOffload(frontend.Name, false))
+				logger.Error(c.enableSSLOffload(frontend.Name, false))
 			} else {
-				c.Logger.Error(c.disableSSLOffload(frontend.Name))
+				logger.Error(c.disableSSLOffload(frontend.Name))
 			}
-			c.Logger.Debugf("Updating TCP frontend '%s'", frontendName)
+			logger.Debugf("Updating TCP frontend '%s'", frontendName)
 			if err = c.Client.FrontendEdit(frontend); err != nil {
-				c.Logger.Panic(err)
+				logger.Panic(err)
 				continue
 			}
 			reload = true
@@ -71,26 +71,26 @@ func (c *HAProxyController) handleTCPServices() (reload bool, err error) {
 				Tcplog:         true,
 				DefaultBackend: backendName,
 			}
-			c.Logger.Debugf("Creating TCP frontend '%s'", frontendName)
+			logger.Debugf("Creating TCP frontend '%s'", frontendName)
 			err = c.Client.FrontendCreate(frontend)
 			if err != nil {
-				c.Logger.Panic(err)
+				logger.Panic(err)
 			}
 			err = c.Client.FrontendBindCreate(frontendName, models.Bind{
 				Address: "0.0.0.0:" + port,
 				Name:    "bind_1",
 			})
-			c.Logger.Panic(err)
+			logger.Panic(err)
 			err = c.Client.FrontendBindCreate(frontendName, models.Bind{
 				Address: ":::" + port,
 				Name:    "bind_2",
 				V4v6:    true,
 			})
 			if err != nil {
-				c.Logger.Panic(err)
+				logger.Panic(err)
 			}
 			if sslOption == "ssl" {
-				c.Logger.Error(c.enableSSLOffload(frontend.Name, false))
+				logger.Error(c.enableSSLOffload(frontend.Name, false))
 			}
 			reload = true
 		}
@@ -98,7 +98,7 @@ func (c *HAProxyController) handleTCPServices() (reload bool, err error) {
 		// Handle Backend
 		var servicePort int64
 		if servicePort, err = strconv.ParseInt(svcPort, 10, 64); err != nil {
-			c.Logger.Error(err)
+			logger.Error(err)
 			continue
 		}
 		ingress := &store.Ingress{

@@ -64,10 +64,10 @@ func (c *HAProxyController) alignSrvSlots(endpoints *store.Endpoints) (reload bo
 	srvName = ""
 	for serverSlots < len(endpoints.HAProxySrvs) && len(disabledSrv[i:]) > 0 {
 		srvName = disabledSrv[i]
-		c.Logger.Debugf("Deleting server '%s/%s'", endpoints.BackendName, srvName)
+		logger.Debugf("Deleting server '%s/%s'", endpoints.BackendName, srvName)
 		errAPI := c.Client.BackendServerDelete(endpoints.BackendName, srvName)
 		if errAPI != nil {
-			c.Logger.Error(errAPI)
+			logger.Error(errAPI)
 			return
 		}
 		delete(endpoints.HAProxySrvs, srvName)
@@ -111,12 +111,12 @@ func (c *HAProxyController) handleEndpoints(namespace *store.Namespace, ingress 
 	endpoints, ok := namespace.Endpoints[service.Name]
 	if !ok {
 		if service.DNS == "" {
-			c.Logger.Warningf("No Endpoints for service '%s'", service.Name)
+			logger.Warningf("No Endpoints for service '%s'", service.Name)
 			return false // not an end of world scenario, just log this
 		}
 		//TODO: currently HAProxy will only resolve server name at startup/reload
 		// This needs to be improved by using HAPorxy resolvers to have resolution at runtime
-		c.Logger.Debugf("Configuring service '%s', of type ExternalName", service.Name)
+		logger.Debugf("Configuring service '%s', of type ExternalName", service.Name)
 		endpoints = &store.Endpoints{
 			Namespace: "external",
 			HAProxySrvs: map[string]*store.HAProxySrv{
@@ -134,7 +134,7 @@ func (c *HAProxyController) handleEndpoints(namespace *store.Namespace, ingress 
 	portUpdated, err := c.setTargetPort(path, service, endpoints)
 	reload = reload || portUpdated
 	if err != nil {
-		c.Logger.Error(err)
+		logger.Error(err)
 		return false
 	}
 	// Handle Backend servers
@@ -171,12 +171,12 @@ func (c *HAProxyController) handleHAProxSrv(endpoints *store.Endpoints, srvName 
 	c.handleServerAnnotations(&server, annotations)
 	errAPI := c.Client.BackendServerEdit(endpoints.BackendName, server)
 	if errAPI == nil {
-		c.Logger.Debugf("Updating server '%s/%s'", endpoints.BackendName, server.Name)
+		logger.Debugf("Updating server '%s/%s'", endpoints.BackendName, server.Name)
 		return
 	}
 	if strings.Contains(errAPI.Error(), "does not exist") {
-		c.Logger.Debugf("Creating server '%s/%s'", endpoints.BackendName, server.Name)
-		c.Logger.Error(c.Client.BackendServerCreate(endpoints.BackendName, server))
+		logger.Debugf("Creating server '%s/%s'", endpoints.BackendName, server.Name)
+		logger.Error(c.Client.BackendServerCreate(endpoints.BackendName, server))
 	}
 }
 
@@ -203,7 +203,7 @@ func (c *HAProxyController) setTargetPort(path *store.IngressPath, service *stor
 					return update, nil
 				}
 			}
-			c.Logger.Warningf("Could not find '%s' Targetport for service '%s'", sp.Name, service.Name)
+			logger.Warningf("Could not find '%s' Targetport for service '%s'", sp.Name, service.Name)
 			return update, nil
 		}
 	}
@@ -245,16 +245,16 @@ func (c *HAProxyController) processEndpointsSrvs(oldEndpoints, newEndpoints *sto
 	for srvName, srv := range newEndpoints.HAProxySrvs {
 		if srv.Modified {
 			if newEndpoints.BackendName == "" {
-				c.Logger.Errorf("No backend Name for endpoints of service `%s` ", newEndpoints.Service.Value)
+				logger.Errorf("No backend Name for endpoints of service `%s` ", newEndpoints.Service.Value)
 				break
 			}
-			c.Logger.Error(c.Client.SetServerAddr(newEndpoints.BackendName, srvName, srv.IP, 0))
+			logger.Error(c.Client.SetServerAddr(newEndpoints.BackendName, srvName, srv.IP, 0))
 			status := "ready"
 			if srv.Disabled {
 				status = "maint"
 			}
-			c.Logger.Debugf("server '%s/%s' changed status to %v", newEndpoints.BackendName, srvName, status)
-			c.Logger.Error(c.Client.SetServerState(newEndpoints.BackendName, srvName, status))
+			logger.Debugf("server '%s/%s' changed status to %v", newEndpoints.BackendName, srvName, status)
+			logger.Error(c.Client.SetServerState(newEndpoints.BackendName, srvName, status))
 		}
 	}
 }

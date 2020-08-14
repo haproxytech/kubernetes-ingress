@@ -38,7 +38,7 @@ func (c *HAProxyController) handleSSLPassthrough(ingress *store.Ingress, service
 	if status != EMPTY || newBackend {
 		enabled, err := utils.GetBoolValue(annSSLPassthrough.Value, "ssl-passthrough")
 		if err != nil {
-			c.Logger.Errorf("ssl-passthrough annotation: %s", err)
+			logger.Errorf("ssl-passthrough annotation: %s", err)
 			return updateBackendSwitching
 		}
 		if enabled {
@@ -82,11 +82,11 @@ func (c *HAProxyController) handleBackendAnnotations(ingress *store.Ingress, ser
 			continue
 		}
 		if v.Status != EMPTY || newBackend {
-			c.Logger.Debugf("Backend '%s': Configuring '%s' annotation", backend.Name, k)
+			logger.Debugf("Backend '%s': Configuring '%s' annotation", backend.Name, k)
 			switch k {
 			case "abortonclose":
 				if err := backend.UpdateAbortOnClose(v.Value); err != nil {
-					c.Logger.Error(err)
+					logger.Error(err)
 					continue
 				}
 				activeAnnotations = true
@@ -94,7 +94,7 @@ func (c *HAProxyController) handleBackendAnnotations(ingress *store.Ingress, ser
 				if v.Status == DELETED && !newBackend {
 					backend.Httpchk = nil
 				} else if err := backend.UpdateHttpchk(v.Value); err != nil {
-					c.Logger.Errorf("%s annotation: %s", k, err)
+					logger.Errorf("%s annotation: %s", k, err)
 					continue
 				}
 				activeAnnotations = true
@@ -110,7 +110,7 @@ func (c *HAProxyController) handleBackendAnnotations(ingress *store.Ingress, ser
 					err = c.Client.BackendCfgSnippetSet(backend.Name, &value)
 				}
 				if err != nil {
-					c.Logger.Errorf("%s annotation: %s", k, err)
+					logger.Errorf("%s annotation: %s", k, err)
 				} else {
 					activeAnnotations = true
 				}
@@ -125,20 +125,20 @@ func (c *HAProxyController) handleBackendAnnotations(ingress *store.Ingress, ser
 				} else {
 					cookie := c.handleCookieAnnotations(ingress, service)
 					if err := backend.UpdateCookie(&cookie); err != nil {
-						c.Logger.Errorf("%s annotation: %s", k, err)
+						logger.Errorf("%s annotation: %s", k, err)
 						continue
 					}
 				}
 				activeAnnotations = true
 			case "forwarded-for":
 				if err := backend.UpdateForwardfor(v.Value); err != nil {
-					c.Logger.Errorf("%s annotation: %s", k, err)
+					logger.Errorf("%s annotation: %s", k, err)
 					continue
 				}
 				activeAnnotations = true
 			case "load-balance":
 				if err := backend.UpdateBalance(v.Value); err != nil {
-					c.Logger.Errorf("%s annotation: %s", k, err)
+					logger.Errorf("%s annotation: %s", k, err)
 					continue
 				}
 				activeAnnotations = true
@@ -164,7 +164,7 @@ func (c *HAProxyController) handleBackendAnnotations(ingress *store.Ingress, ser
 							PathFmt:   parts[1],
 						}
 					default:
-						c.Logger.Errorf("incorrect param '%s' in path-rewrite annotation", v.Value)
+						logger.Errorf("incorrect param '%s' in path-rewrite annotation", v.Value)
 						continue
 					}
 					httpReqs.rules[PATH_REWRITE] = httpRule
@@ -191,7 +191,7 @@ func (c *HAProxyController) handleBackendAnnotations(ingress *store.Ingress, ser
 				if v.Status == DELETED && !newBackend {
 					backend.CheckTimeout = nil
 				} else if err := backend.UpdateCheckTimeout(v.Value); err != nil {
-					c.Logger.Errorf("%s annotation: %s", k, err)
+					logger.Errorf("%s annotation: %s", k, err)
 					continue
 				}
 				activeAnnotations = true
@@ -213,7 +213,7 @@ func (c *HAProxyController) handleServerAnnotations(serverModel *models.Server, 
 		if v == nil {
 			continue
 		}
-		c.Logger.Tracef("Server '%s': Configuring '%s' annotation", server.Name, k)
+		logger.Tracef("Server '%s': Configuring '%s' annotation", server.Name, k)
 		switch k {
 		case "cookie-persistence":
 			if v.Status == DELETED {
@@ -223,26 +223,26 @@ func (c *HAProxyController) handleServerAnnotations(serverModel *models.Server, 
 			}
 		case "check":
 			if err := server.UpdateCheck(v.Value); err != nil {
-				c.Logger.Errorf("%s annotation: %s", k, err)
+				logger.Errorf("%s annotation: %s", k, err)
 				continue
 			}
 		case "check-interval":
 			if v.Status == DELETED {
 				server.Inter = nil
 			} else if err := server.UpdateInter(v.Value); err != nil {
-				c.Logger.Errorf("%s annotation: %s", k, err)
+				logger.Errorf("%s annotation: %s", k, err)
 				continue
 			}
 		case "pod-maxconn":
 			if v.Status == DELETED {
 				server.Maxconn = nil
 			} else if err := server.UpdateMaxconn(v.Value); err != nil {
-				c.Logger.Errorf("%s annotation: %s", k, err)
+				logger.Errorf("%s annotation: %s", k, err)
 				continue
 			}
 		case "server-ssl":
 			if err := server.UpdateServerSsl(v.Value); err != nil {
-				c.Logger.Errorf("%s annotation: %s", k, err)
+				logger.Errorf("%s annotation: %s", k, err)
 				continue
 			}
 		case "send-proxy-protocol":
@@ -251,7 +251,7 @@ func (c *HAProxyController) handleServerAnnotations(serverModel *models.Server, 
 				continue
 			}
 			if err := server.UpdateSendProxy(v.Value); err != nil {
-				c.Logger.Errorf("%s annotation: %s", k, err)
+				logger.Errorf("%s annotation: %s", k, err)
 				continue
 			}
 		}
@@ -288,41 +288,41 @@ func (c *HAProxyController) handleCookieAnnotations(ingress *store.Ingress, serv
 			cookie.Domains = domains
 		case "cookie-dynamic":
 			dynamic, err := utils.GetBoolValue(v.Value, "cookie-dynamic")
-			c.Logger.Error(err)
+			logger.Error(err)
 			cookie.Dynamic = dynamic
 		case "cookie-httponly":
 			httponly, err := utils.GetBoolValue(v.Value, "cookie-httponly")
-			c.Logger.Error(err)
+			logger.Error(err)
 			cookie.Httponly = httponly
 		case "cookie-indirect":
 			indirect, err := utils.GetBoolValue(v.Value, "cookie-indirect")
-			c.Logger.Error(err)
+			logger.Error(err)
 			cookie.Indirect = indirect
 		case "cookie-maxidle":
 			maxidle, err := strconv.ParseInt(v.Value, 10, 64)
-			c.Logger.Error(err)
+			logger.Error(err)
 			cookie.Maxidle = maxidle
 		case "cookie-maxlife":
 			maxlife, err := strconv.ParseInt(v.Value, 10, 64)
-			c.Logger.Error(err)
+			logger.Error(err)
 			cookie.Maxlife = maxlife
 		case "cookie-nocache":
 			nocache, err := utils.GetBoolValue(v.Value, "cookie-nocache")
-			c.Logger.Error(err)
+			logger.Error(err)
 			cookie.Nocache = nocache
 		case "cookie-persistence":
 			cookie.Name = utils.PtrString(v.Value)
 		case "cookie-postonly":
 			postonly, err := utils.GetBoolValue(v.Value, "cookie-postonly")
-			c.Logger.Error(err)
+			logger.Error(err)
 			cookie.Postonly = postonly
 		case "cookie-preserve":
 			preserve, err := utils.GetBoolValue(v.Value, "cookie-preserve")
-			c.Logger.Error(err)
+			logger.Error(err)
 			cookie.Preserve = preserve
 		case "cookie-secure":
 			secure, err := utils.GetBoolValue(v.Value, "cookie-secure")
-			c.Logger.Error(err)
+			logger.Error(err)
 			cookie.Secure = secure
 		case "cookie-type":
 			cookie.Type = v.Value

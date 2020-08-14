@@ -57,14 +57,14 @@ func (c *HAProxyController) handleTLSSecret(ingress store.Ingress, tls store.Ing
 	namespace, namespaceOK := c.Store.Namespaces[namespaceName]
 	if !namespaceOK {
 		if tls.Status != EMPTY {
-			c.Logger.Warningf("namespace [%s] does not exist, ignoring.", namespaceName)
+			logger.Warningf("namespace [%s] does not exist, ignoring.", namespaceName)
 		}
 		return false
 	}
 	secret, secretOK := namespace.Secret[secretName]
 	if !secretOK {
 		if tls.Status != EMPTY {
-			c.Logger.Warningf("secret [%s/%s] does not exist, ignoring.", namespaceName, secretName)
+			logger.Warningf("secret [%s/%s] does not exist, ignoring.", namespaceName, secretName)
 		}
 		return false
 	}
@@ -75,7 +75,7 @@ func (c *HAProxyController) handleTLSSecret(ingress store.Ingress, tls store.Ing
 	if secret.Status == EMPTY && tls.Status == EMPTY {
 		writeSecret = false
 	}
-	reload, _ = HandleSecret(ingress, *secret, writeSecret, certs, c.Logger)
+	reload, _ = HandleSecret(ingress, *secret, writeSecret, certs, logger)
 	return reload
 }
 
@@ -83,32 +83,32 @@ func (c *HAProxyController) handleHTTPS(usedCerts map[string]struct{}) (reload b
 	// ssl-passthrough
 	if len(c.cfg.BackendSwitchingRules[FrontendSSL]) > 0 {
 		if !c.cfg.SSLPassthrough {
-			c.Logger.Info("Enabling ssl-passthrough")
-			c.Logger.Panic(c.enableSSLPassthrough())
+			logger.Info("Enabling ssl-passthrough")
+			logger.Panic(c.enableSSLPassthrough())
 			c.cfg.SSLPassthrough = true
 			reload = true
 		}
 	} else if c.cfg.SSLPassthrough {
-		c.Logger.Info("Disabling ssl-passthrough")
-		c.Logger.Panic(c.disableSSLPassthrough())
+		logger.Info("Disabling ssl-passthrough")
+		logger.Panic(c.disableSSLPassthrough())
 		c.cfg.SSLPassthrough = false
 		reload = true
 	}
 	// ssl-offload
 	if len(usedCerts) > 0 {
 		if !c.cfg.HTTPS {
-			c.Logger.Panic(c.enableSSLOffload(FrontendHTTPS, true))
+			logger.Panic(c.enableSSLOffload(FrontendHTTPS, true))
 			c.cfg.HTTPS = true
 			reload = true
 		}
 	} else if c.cfg.HTTPS {
-		c.Logger.Info("Disabling ssl offload")
-		c.Logger.Panic(c.disableSSLOffload(FrontendHTTPS))
+		logger.Info("Disabling ssl offload")
+		logger.Panic(c.disableSSLOffload(FrontendHTTPS))
 		c.cfg.HTTPS = false
 		reload = true
 	}
 	//remove certs that are not needed
-	c.Logger.Error(c.cleanCertDir(usedCerts))
+	logger.Error(c.cleanCertDir(usedCerts))
 
 	return reload
 }

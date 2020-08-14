@@ -26,7 +26,7 @@ import (
 func (c *HAProxyController) timeFromAnnotation(name string) (duration time.Duration) {
 	d, err := c.Store.GetValueFromAnnotations(name)
 	if err != nil {
-		c.Logger.Panic(err)
+		logger.Panic(err)
 	}
 	duration, _ = time.ParseDuration(d.Value)
 
@@ -37,7 +37,7 @@ func (c *HAProxyController) monitorChanges() {
 
 	configMapReceivedAndProcessed := make(chan bool)
 	syncPeriod := c.timeFromAnnotation("sync-period")
-	c.Logger.Debugf("Executing syncPeriod every %s", syncPeriod.String())
+	logger.Debugf("Executing syncPeriod every %s", syncPeriod.String())
 	go c.SyncData(c.eventChan, configMapReceivedAndProcessed)
 
 	informersSynced := []cache.InformerSynced{}
@@ -66,7 +66,7 @@ func (c *HAProxyController) monitorChanges() {
 		if ns != c.osArgs.ConfigMap.Namespace {
 			namespaces = append(namespaces, c.osArgs.ConfigMap.Namespace)
 		}
-		c.Logger.Infof("Whitelisted Namespaces: %s", namespaces)
+		logger.Infof("Whitelisted Namespaces: %s", namespaces)
 	}
 
 	for _, namespace := range namespaces {
@@ -98,7 +98,7 @@ func (c *HAProxyController) monitorChanges() {
 	}
 
 	if !cache.WaitForCacheSync(stop, informersSynced...) {
-		c.Logger.Panic("Caches are not populated due to an underlying error, cannot run the Ingress Controller")
+		logger.Panic("Caches are not populated due to an underlying error, cannot run the Ingress Controller")
 	}
 
 	// Buffering events so they are handled after configMap is processed
@@ -133,7 +133,7 @@ func (c *HAProxyController) monitorChanges() {
 			eventsEndpoints = []SyncDataEvent{}
 			eventsServices = []SyncDataEvent{}
 			configMapOk = true
-			c.Logger.Info("Configmap processed")
+			logger.Info("Configmap processed")
 			time.Sleep(1 * time.Millisecond)
 		case item := <-cfgChan:
 			c.eventChan <- SyncDataEvent{SyncType: CONFIGMAP, Namespace: item.Namespace, Data: item}
@@ -198,7 +198,7 @@ func (c *HAProxyController) SyncData(jobChan <-chan SyncDataEvent, chConfigMapRe
 		case COMMAND:
 			if hadChanges {
 				if err := c.updateHAProxy(); err != nil {
-					c.Logger.Error(err)
+					logger.Error(err)
 					continue
 				}
 				hadChanges = false

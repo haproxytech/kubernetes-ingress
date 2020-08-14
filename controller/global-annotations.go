@@ -33,7 +33,7 @@ func (c *HAProxyController) handleGlobalAnnotations() (restart bool, reload bool
 			r = annotation.Delete(c.Client)
 		default:
 			if err := annotation.Parse(cfgMapAnn.Value); err != nil {
-				c.Logger.Error(err)
+				logger.Error(err)
 			} else {
 				r = annotation.Update(c.Client)
 			}
