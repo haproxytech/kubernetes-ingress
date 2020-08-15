@@ -48,12 +48,23 @@ func (c *HAProxyController) monitorChanges() {
 	secretChan := make(chan *Secret, 10)
 
 	var namespaces []string
+	var ns string
 	if len(c.cfg.NamespacesAccess.Whitelist) == 0 {
 		namespaces = []string{""}
 	} else {
-		for ns := range c.cfg.NamespacesAccess.Whitelist {
+		for ns = range c.cfg.NamespacesAccess.Whitelist {
 			namespaces = append(namespaces, ns)
 		}
+		// Make sure that configmap namespace is whitelisted
+		for _, ns = range namespaces {
+			if ns == c.osArgs.ConfigMap.Namespace {
+				break
+			}
+		}
+		if ns != c.osArgs.ConfigMap.Namespace {
+			namespaces = append(namespaces, c.osArgs.ConfigMap.Namespace)
+		}
+		c.Logger.Infof("Whitelisted Namespaces: %s", namespaces)
 	}
 
 	for _, namespace := range namespaces {
@@ -120,7 +131,7 @@ func (c *HAProxyController) monitorChanges() {
 			eventsEndpoints = []SyncDataEvent{}
 			eventsServices = []SyncDataEvent{}
 			configMapOk = true
-			c.Logger.Debug("Configmap processed")
+			c.Logger.Info("Configmap processed")
 			time.Sleep(1 * time.Millisecond)
 		case item := <-cfgChan:
 			c.eventChan <- SyncDataEvent{SyncType: CONFIGMAP, Namespace: item.Namespace, Data: item}

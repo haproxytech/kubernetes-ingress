@@ -35,6 +35,7 @@ you can run image with arguments:
   - class of ingress object to monitor in multiple controllers environment
 - `--namespace-whitelist`
   - optional, if listed only selected namespaces will be monitored
+  - namespace of the configmap is always on the list of selected/whitelisted namespaces.
   - :information_source: `namespace-whitelist` has priority over blacklisting.
   - if we need to monitor more than one namespace add it multiple times:
   
