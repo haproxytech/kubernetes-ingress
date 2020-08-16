@@ -246,10 +246,13 @@ func (c *HAProxyController) haproxyInitialize() {
 	if HAProxyMapDir == "" {
 		HAProxyMapDir = filepath.Join(c.HAProxyCfgDir, "maps")
 	}
+	if HAProxyErrFileDir == "" {
+		HAProxyErrFileDir = filepath.Join(c.HAProxyCfgDir, "errors")
+	}
 	if HAProxyStateDir == "" {
 		HAProxyStateDir = "/var/state/haproxy/"
 	}
-	for _, d := range []string{HAProxyCertDir, HAProxyMapDir, HAProxyStateDir} {
+	for _, d := range []string{HAProxyCertDir, HAProxyMapDir, HAProxyErrFileDir, HAProxyStateDir} {
 		err := os.MkdirAll(d, 0755)
 		if err != nil {
 			c.Logger.Panic(err)

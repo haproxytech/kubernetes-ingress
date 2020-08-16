@@ -94,6 +94,9 @@ func main() {
 	if osArgs.ConfigMapTCPServices.Name != "" {
 		logger.Printf("TCP Services defined in %s/%s", osArgs.ConfigMapTCPServices.Namespace, osArgs.ConfigMapTCPServices.Name)
 	}
+	if osArgs.ConfigMapErrorfiles.Name != "" {
+		logger.Printf("Errofile pages defined in %s/%s", osArgs.ConfigMapErrorfiles.Namespace, osArgs.ConfigMapErrorfiles.Name)
+	}
 	logger.FileName = true
 
 	ctx, cancel := context.WithCancel(context.Background())

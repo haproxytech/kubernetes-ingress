@@ -27,5 +27,6 @@ func (c *HAProxyController) initHandlers() {
 	c.UpdateHandlers = []UpdateHandler{
 		ProxyProtocol{},
 		DefaultCertificate{},
+		ErrorFile{},
 	}
 }

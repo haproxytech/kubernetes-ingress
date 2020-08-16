@@ -26,11 +26,12 @@ const (
 )
 
 var (
-	HAProxyCFG      string
-	HAProxyCertDir  string
-	HAProxyStateDir string
-	HAProxyMapDir   string
-	HAProxyPIDFile  string
+	HAProxyCFG        string
+	HAProxyCertDir    string
+	HAProxyStateDir   string
+	HAProxyMapDir     string
+	HAProxyErrFileDir string
+	HAProxyPIDFile    string
 )
 
 //ServicePort describes port of a service

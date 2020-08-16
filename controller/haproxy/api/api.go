@@ -43,10 +43,11 @@ type HAProxyClient interface {
 	GetConfig(configType string) (enabled bool, err error)
 	SetConfigSnippet(snippet *types.StringSliceC) error
 	SetDaemonMode(value *types.Enabled) error
+	SetDefaultErrorFile(value *types.ErrorFile, index int) error
 	SetDefaultLogFormat(value *types.StringC) error
 	SetDefaultMaxconn(value *types.Int64C) error
 	SetDefaultOption(option string, value *types.SimpleOption) error
-	SetDefaulTimeout(timeout string, value *types.SimpleTimeout) error
+	SetDefaultTimeout(timeout string, value *types.SimpleTimeout) error
 	SetLogTarget(value *types.Log, index int) error
 	SetNbthread(value *(types.Int64C)) error
 	SetServerAddr(backendName string, serverName string, ip string, port int) error

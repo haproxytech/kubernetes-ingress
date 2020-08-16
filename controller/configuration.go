@@ -35,6 +35,7 @@ type Configuration struct {
 	IngressClass           string
 	ConfigMap              *ConfigMap
 	ConfigMapTCPServices   *ConfigMap
+	ConfigMapErrorfile     *ConfigMap
 	PublishService         *Service
 	MapFiles               haproxy.Maps
 	FrontendHTTPReqRules   map[Rule]FrontendHTTPReqs
@@ -241,6 +242,15 @@ func (c *Configuration) Clean() {
 		default:
 			c.ConfigMapTCPServices.Status = EMPTY
 			c.ConfigMapTCPServices.Annotations.Clean()
+		}
+	}
+	if c.ConfigMapErrorfile != nil {
+		switch c.ConfigMapErrorfile.Status {
+		case DELETED:
+			c.ConfigMapErrorfile = nil
+		default:
+			c.ConfigMapErrorfile.Status = EMPTY
+			c.ConfigMapErrorfile.Annotations.Clean()
 		}
 	}
 	c.MapFiles.Clean()

@@ -25,6 +25,26 @@ you can run image with arguments:
        tcp/redis:6379
    ```
   - Ports of TCP services should be exposed on the controller's kubernetes service
+- `--configmap-errorfile`
+  - optional, must be in format `{errorcode}:{file content}`
+  - Example:
+    ```yaml
+    apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: errorfile
+      namespace: default
+    data:
+      503: |-
+        HTTP/1.0 503 Service Unavailable
+        Cache-Control: no-cache
+        Connection: close
+        Content-Type: text/html
+    
+        <html><body><h1>Oops, that's embarassing!</h1>
+        There are no servers available to handle your request.
+        </body></html>
+    ```
 - `--default-backend-service`
   - must be in format `namespace/name`
 - `--default-ssl-certificate`

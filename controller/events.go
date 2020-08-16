@@ -460,6 +460,7 @@ func (c *HAProxyController) eventConfigMap(ns *Namespace, data *ConfigMap, chCon
 	//TODO refractor this so we remember all configmaps, since we now use more that one
 	configmap := false
 	configmapTCP := false
+	configmapErrorfile := false
 
 	if ns.Name == c.osArgs.ConfigMap.Namespace && data.Name == c.osArgs.ConfigMap.Name {
 		configmap = true
@@ -467,6 +468,10 @@ func (c *HAProxyController) eventConfigMap(ns *Namespace, data *ConfigMap, chCon
 	if ns.Name == c.osArgs.ConfigMapTCPServices.Namespace && data.Name == c.osArgs.ConfigMapTCPServices.Name {
 		configmapTCP = true
 	}
+	if ns.Name == c.osArgs.ConfigMapErrorfiles.Namespace && data.Name == c.osArgs.ConfigMapErrorfiles.Name {
+		configmapErrorfile = true
+	}
+
 	if configmap {
 		switch data.Status {
 		case MODIFIED:
@@ -519,8 +524,35 @@ func (c *HAProxyController) eventConfigMap(ns *Namespace, data *ConfigMap, chCon
 			c.cfg.ConfigMapTCPServices.Status = DELETED
 		}
 	}
+
+	if configmapErrorfile {
+		switch data.Status {
+		case MODIFIED:
+			different := data.Annotations.SetStatus(c.cfg.ConfigMapErrorfile.Annotations)
+			c.cfg.ConfigMapErrorfile = data
+			if !different {
+				data.Status = EMPTY
+			} else {
+				updateRequired = true
+			}
+		case ADDED:
+			if c.cfg.ConfigMapErrorfile == nil {
+				c.cfg.ConfigMapErrorfile = data
+				updateRequired = true
+				return updateRequired
+			}
+			if !c.cfg.ConfigMapErrorfile.Equal(data) {
+				data.Status = MODIFIED
+				return c.eventConfigMap(ns, data, chConfigMapReceivedAndProcessed)
+			}
+		case DELETED:
+			c.cfg.ConfigMapErrorfile.Annotations.SetStatusState(DELETED)
+			c.cfg.ConfigMapErrorfile.Status = DELETED
+		}
+	}
 	return updateRequired
 }
+
 func (c *HAProxyController) eventSecret(ns *Namespace, data *Secret) (updateRequired bool) {
 	updateRequired = false
 	switch data.Status {

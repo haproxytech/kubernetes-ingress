@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/haproxytech/config-parser/v2/types"
+
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 )
 
@@ -211,10 +212,10 @@ func (c *HAProxyController) handleDefaultTimeout(timeout string) bool {
 		return false
 	case DELETED:
 		c.Logger.Infof("Removing default timeout-%s ", timeout)
-		err = c.Client.SetDefaulTimeout(timeout, nil)
+		err = c.Client.SetDefaultTimeout(timeout, nil)
 	default:
 		c.Logger.Infof("Setting default timeout-%s to %s", timeout, annTimeout.Value)
-		err = c.Client.SetDefaulTimeout(timeout, &types.SimpleTimeout{Value: annTimeout.Value})
+		err = c.Client.SetDefaultTimeout(timeout, &types.SimpleTimeout{Value: annTimeout.Value})
 	}
 	if err != nil {
 		c.Logger.Error(err)
