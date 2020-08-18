@@ -492,6 +492,7 @@ func (c *HAProxyController) eventConfigMap(ns *Namespace, data *ConfigMap, chCon
 		case DELETED:
 			c.cfg.ConfigMap.Annotations.SetStatusState(DELETED)
 			c.cfg.ConfigMap.Status = DELETED
+			updateRequired = true
 		}
 	}
 
@@ -518,6 +519,7 @@ func (c *HAProxyController) eventConfigMap(ns *Namespace, data *ConfigMap, chCon
 		case DELETED:
 			c.cfg.ConfigMapTCPServices.Annotations.SetStatusState(DELETED)
 			c.cfg.ConfigMapTCPServices.Status = DELETED
+			updateRequired = true
 		}
 	}
 	return updateRequired
