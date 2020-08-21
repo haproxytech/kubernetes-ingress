@@ -42,7 +42,7 @@ func (c *HAProxyController) handleTCPServices() (reload bool, err error) {
 			c.Logger.Debugf("Deleting TCP frontend '%s'", frontendName)
 			err = c.Client.FrontendDelete(frontendName)
 			c.Logger.Panic(err)
-			c.cfg.BackendSwitchingStatus["tcp-services"] = struct{}{}
+			c.cfg.BackendSwitchingModified["tcp-services"] = struct{}{}
 			reload = true
 			continue
 		case MODIFIED:

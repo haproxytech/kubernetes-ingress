@@ -227,7 +227,7 @@ func (c *HAProxyController) enableSSLPassthrough() (err error) {
 		return err
 	}
 	// Some TCP rules depend on ssl-passthrough
-	c.cfg.FrontendRulesStatus[TCP] = MODIFIED
+	c.cfg.FrontendRulesModified[TCP] = true
 	return nil
 }
 
@@ -245,7 +245,7 @@ func (c *HAProxyController) disableSSLPassthrough() (err error) {
 		return err
 	}
 	// Some TCP rules depend on ssl-passthrough
-	c.cfg.FrontendRulesStatus[TCP] = MODIFIED
+	c.cfg.FrontendRulesModified[TCP] = true
 	return nil
 }
 

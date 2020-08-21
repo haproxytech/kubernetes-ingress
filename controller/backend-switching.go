@@ -34,20 +34,20 @@ type UseBackendRule struct {
 func (c *HAProxyController) addUseBackendRule(key string, rule UseBackendRule, frontends ...string) {
 	for _, frontendName := range frontends {
 		c.cfg.BackendSwitchingRules[frontendName][key] = rule
-		c.cfg.BackendSwitchingStatus[frontendName] = struct{}{}
+		c.cfg.BackendSwitchingModified[frontendName] = struct{}{}
 	}
 }
 
 func (c *HAProxyController) deleteUseBackendRule(key string, frontends ...string) {
 	for _, frontendName := range frontends {
 		delete(c.cfg.BackendSwitchingRules[frontendName], key)
-		c.cfg.BackendSwitchingStatus[frontendName] = struct{}{}
+		c.cfg.BackendSwitchingModified[frontendName] = struct{}{}
 	}
 }
 
 //  Recreate use_backend rules
 func (c *HAProxyController) refreshBackendSwitching() (reload bool) {
-	if len(c.cfg.BackendSwitchingStatus) == 0 {
+	if len(c.cfg.BackendSwitchingModified) == 0 {
 		return false
 	}
 	c.Logger.Debug("Updating Backend Switching rules")
@@ -72,7 +72,7 @@ func (c *HAProxyController) refreshBackendSwitching() (reload bool) {
 			activeBackends[rule.Backend] = struct{}{}
 			sortedKeys = append(sortedKeys, key)
 		}
-		if _, ok := c.cfg.BackendSwitchingStatus[frontend.Name]; !ok {
+		if _, ok := c.cfg.BackendSwitchingModified[frontend.Name]; !ok {
 			// No need to refresh rules if the use_backend rules
 			// of the frontend were not updated
 			continue
@@ -117,7 +117,7 @@ func (c *HAProxyController) refreshBackendSwitching() (reload bool) {
 			c.Logger.Panic(err)
 		}
 		reload = true
-		delete(c.cfg.BackendSwitchingStatus, frontend.Name)
+		delete(c.cfg.BackendSwitchingModified, frontend.Name)
 	}
 	reload = c.clearBackends(activeBackends) || reload
 	return reload

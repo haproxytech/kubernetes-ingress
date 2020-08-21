@@ -60,7 +60,7 @@ const (
 )
 
 func (c *HAProxyController) FrontendHTTPRspsRefresh() (reload bool) {
-	if c.cfg.FrontendRulesStatus[HTTP] == EMPTY {
+	if !c.cfg.FrontendRulesModified[HTTP] {
 		return false
 	}
 
@@ -78,7 +78,7 @@ func (c *HAProxyController) FrontendHTTPRspsRefresh() (reload bool) {
 }
 
 func (c *HAProxyController) FrontendHTTPReqsRefresh() (reload bool) {
-	if c.cfg.FrontendRulesStatus[HTTP] == EMPTY {
+	if !c.cfg.FrontendRulesModified[HTTP] {
 		return false
 	}
 
@@ -158,7 +158,7 @@ func (c *HAProxyController) FrontendHTTPReqsRefresh() (reload bool) {
 }
 
 func (c *HAProxyController) FrontendTCPreqsRefresh() (reload bool) {
-	if c.cfg.FrontendRulesStatus[TCP] == EMPTY {
+	if !c.cfg.FrontendRulesModified[TCP] {
 		return false
 	}
 	c.Logger.Debug("Updating TCP request rules for HTTP and HTTPS frontends")

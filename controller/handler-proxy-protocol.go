@@ -48,7 +48,7 @@ func (p ProxyProtocol) Update(cfg Configuration, api api.HAProxyClient, logger u
 	// Since this is a Configmap Annotation ONLY, no need to
 	// track ingress hosts in Map file
 	if status != EMPTY {
-		cfg.FrontendRulesStatus[TCP] = MODIFIED
+		cfg.FrontendRulesModified[TCP] = true
 		if status == DELETED {
 			logger.Debugf("Deleting ProxyProtcol configuration")
 			return false, nil

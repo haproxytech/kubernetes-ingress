@@ -30,24 +30,24 @@ type NamespacesWatch struct {
 }
 
 type Configuration struct {
-	Namespace              map[string]*Namespace
-	NamespacesAccess       NamespacesWatch
-	IngressClass           string
-	ConfigMap              *ConfigMap
-	ConfigMapTCPServices   *ConfigMap
-	ConfigMapErrorfile     *ConfigMap
-	PublishService         *Service
-	MapFiles               haproxy.Maps
-	FrontendHTTPReqRules   map[Rule]FrontendHTTPReqs
-	FrontendHTTPRspRules   map[Rule]FrontendHTTPRsps
-	FrontendTCPRules       map[Rule]FrontendTCPReqs
-	FrontendRulesStatus    map[Mode]Status
-	BackendSwitchingRules  map[string]UseBackendRules
-	BackendSwitchingStatus map[string]struct{}
-	BackendHTTPRules       map[string]BackendHTTPReqs
-	HTTPS                  bool
-	SSLPassthrough         bool
-	UsedCerts              map[string]struct{}
+	Namespace                map[string]*Namespace
+	NamespacesAccess         NamespacesWatch
+	IngressClass             string
+	ConfigMap                *ConfigMap
+	ConfigMapTCPServices     *ConfigMap
+	ConfigMapErrorfile       *ConfigMap
+	PublishService           *Service
+	MapFiles                 haproxy.Maps
+	FrontendHTTPReqRules     map[Rule]FrontendHTTPReqs
+	FrontendHTTPRspRules     map[Rule]FrontendHTTPRsps
+	FrontendTCPRules         map[Rule]FrontendTCPReqs
+	FrontendRulesModified    map[Mode]bool
+	BackendSwitchingRules    map[string]UseBackendRules
+	BackendSwitchingModified map[string]struct{}
+	BackendHTTPRules         map[string]BackendHTTPReqs
+	HTTPS                    bool
+	SSLPassthrough           bool
+	UsedCerts                map[string]struct{}
 }
 
 func (c *Configuration) IsRelevantNamespace(namespace string) bool {
@@ -104,9 +104,9 @@ func (c *Configuration) Init(osArgs utils.OSArgs, mapDir string) {
 	for _, rule := range []Rule{BLACKLIST, REQUEST_CAPTURE, PROXY_PROTOCOL, WHITELIST} {
 		c.FrontendTCPRules[rule] = make(map[uint64]models.TCPRequestRule)
 	}
-	c.FrontendRulesStatus = map[Mode]Status{
-		HTTP: EMPTY,
-		TCP:  EMPTY,
+	c.FrontendRulesModified = map[Mode]bool{
+		HTTP: false,
+		TCP:  false,
 	}
 	c.MapFiles = haproxy.NewMapFiles(mapDir)
 
@@ -114,7 +114,7 @@ func (c *Configuration) Init(osArgs utils.OSArgs, mapDir string) {
 	rateLimitTables = make(map[string]rateLimitTable)
 
 	c.BackendSwitchingRules = make(map[string]UseBackendRules)
-	c.BackendSwitchingStatus = make(map[string]struct{})
+	c.BackendSwitchingModified = make(map[string]struct{})
 	for _, frontend := range []string{FrontendHTTP, FrontendHTTPS, FrontendSSL} {
 		c.BackendSwitchingRules[frontend] = UseBackendRules{}
 	}
@@ -263,8 +263,8 @@ func (c *Configuration) Clean() {
 	for rule := range c.FrontendTCPRules {
 		c.FrontendTCPRules[rule] = make(map[uint64]models.TCPRequestRule)
 	}
-	c.FrontendRulesStatus[HTTP] = EMPTY
-	c.FrontendRulesStatus[TCP] = EMPTY
+	c.FrontendRulesModified[HTTP] = false
+	c.FrontendRulesModified[TCP] = false
 	defaultAnnotationValues.Clean()
 	if c.PublishService != nil {
 		c.PublishService.Status = EMPTY
