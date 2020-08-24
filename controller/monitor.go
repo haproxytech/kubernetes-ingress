@@ -17,6 +17,7 @@ package controller
 import (
 	"time"
 
+	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/tools/cache"
 )
@@ -105,7 +106,7 @@ func (c *HAProxyController) monitorChanges() {
 	if c.osArgs.ConfigMap.Name == "" {
 		configMapOk = true
 		//since we don't have configmap and everywhere in code we expect one we need to create empty one
-		c.cfg.ConfigMap = &ConfigMap{
+		c.cfg.ConfigMaps[Main] = &ConfigMap{
 			Annotations: MapStringW{},
 		}
 	} else {
@@ -174,6 +175,21 @@ func (c *HAProxyController) monitorChanges() {
 //All the changes must come through this function
 func (c *HAProxyController) SyncData(jobChan <-chan SyncDataEvent, chConfigMapReceivedAndProcessed chan bool) {
 	hadChanges := false
+	var cm string
+	ConfigMapsArgs := map[string]utils.NamespaceValue{
+		Main: utils.NamespaceValue{
+			Namespace: c.osArgs.ConfigMap.Namespace,
+			Name:      c.osArgs.ConfigMap.Name,
+		},
+		TCPServices: utils.NamespaceValue{
+			Namespace: c.osArgs.ConfigMapTCPServices.Namespace,
+			Name:      c.osArgs.ConfigMapTCPServices.Name,
+		},
+		Errorfiles: utils.NamespaceValue{
+			Namespace: c.osArgs.ConfigMapErrorfiles.Namespace,
+			Name:      c.osArgs.ConfigMapErrorfiles.Name,
+		},
+	}
 	for job := range jobChan {
 		ns := c.cfg.GetNamespace(job.Namespace)
 		change := false
@@ -196,7 +212,10 @@ func (c *HAProxyController) SyncData(jobChan <-chan SyncDataEvent, chConfigMapRe
 		case SERVICE:
 			change = c.eventService(ns, job.Data.(*Service))
 		case CONFIGMAP:
-			change = c.eventConfigMap(ns, job.Data.(*ConfigMap), chConfigMapReceivedAndProcessed)
+			change, cm = c.eventConfigMap(ns, job.Data.(*ConfigMap), ConfigMapsArgs)
+			if cm == Main && c.cfg.ConfigMaps[Main].Status == ADDED {
+				chConfigMapReceivedAndProcessed <- true
+			}
 		case SECRET:
 			change = c.eventSecret(ns, job.Data.(*Secret))
 		}

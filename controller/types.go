@@ -20,9 +20,14 @@ import (
 )
 
 const (
+	// Frontends
 	FrontendHTTP  = "http"
 	FrontendHTTPS = "https"
 	FrontendSSL   = "ssl"
+	// Configmaps
+	Main        = "main"
+	TCPServices = "tcpservices"
+	Errorfiles  = "errorfiles"
 )
 
 var (

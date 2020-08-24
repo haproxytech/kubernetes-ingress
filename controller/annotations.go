@@ -156,7 +156,7 @@ var defaultAnnotationValues = MapStringW{
 func (c *HAProxyController) handleGlobalAnnotations() (restart bool, reload bool) {
 	var r annotations.Result
 	for name, annotation := range annotations.Global {
-		cfgMapAnn, _ := GetValueFromAnnotations(name, c.cfg.ConfigMap.Annotations)
+		cfgMapAnn, _ := GetValueFromAnnotations(name, c.cfg.ConfigMaps[Main].Annotations)
 		if cfgMapAnn == nil {
 			continue
 		}

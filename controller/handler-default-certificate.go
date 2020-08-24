@@ -24,7 +24,7 @@ import (
 type DefaultCertificate struct{}
 
 func (d DefaultCertificate) Update(cfg Configuration, api api.HAProxyClient, logger utils.Logger) (reload bool, err error) {
-	secretAnn, defSecretErr := GetValueFromAnnotations("ssl-certificate", cfg.ConfigMap.Annotations)
+	secretAnn, defSecretErr := GetValueFromAnnotations("ssl-certificate", cfg.ConfigMaps[Main].Annotations)
 	writeSecret := false
 	if defSecretErr == nil {
 		if secretAnn.Status != DELETED && secretAnn.Status != EMPTY {

@@ -30,12 +30,10 @@ type NamespacesWatch struct {
 }
 
 type Configuration struct {
+	ConfigMaps               map[string]*ConfigMap
 	Namespace                map[string]*Namespace
 	NamespacesAccess         NamespacesWatch
 	IngressClass             string
-	ConfigMap                *ConfigMap
-	ConfigMapTCPServices     *ConfigMap
-	ConfigMapErrorfile       *ConfigMap
 	PublishService           *Service
 	MapFiles                 haproxy.Maps
 	FrontendHTTPReqRules     map[Rule]FrontendHTTPReqs
@@ -89,6 +87,8 @@ func (c *Configuration) Init(osArgs utils.OSArgs, mapDir string) {
 			Addresses: []string{},
 		}
 	}
+
+	c.ConfigMaps = make(map[string]*ConfigMap)
 
 	c.Namespace = make(map[string]*Namespace)
 
@@ -228,29 +228,13 @@ func (c *Configuration) Clean() {
 			}
 		}
 	}
-	c.ConfigMap.Annotations.Clean()
-	switch c.ConfigMap.Status {
-	case DELETED:
-		c.ConfigMap = nil
-	default:
-		c.ConfigMap.Status = EMPTY
-	}
-	if c.ConfigMapTCPServices != nil {
-		switch c.ConfigMapTCPServices.Status {
+	for _, cm := range c.ConfigMaps {
+		switch cm.Status {
 		case DELETED:
-			c.ConfigMapTCPServices = nil
+			cm = nil
 		default:
-			c.ConfigMapTCPServices.Status = EMPTY
-			c.ConfigMapTCPServices.Annotations.Clean()
-		}
-	}
-	if c.ConfigMapErrorfile != nil {
-		switch c.ConfigMapErrorfile.Status {
-		case DELETED:
-			c.ConfigMapErrorfile = nil
-		default:
-			c.ConfigMapErrorfile.Status = EMPTY
-			c.ConfigMapErrorfile.Annotations.Clean()
+			cm.Status = EMPTY
+			cm.Annotations.Clean()
 		}
 	}
 	c.MapFiles.Clean()

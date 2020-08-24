@@ -37,7 +37,7 @@ var rateLimitTables map[string]rateLimitTable
 
 func (c *HAProxyController) handleBlacklisting(ingress *Ingress) error {
 	//  Get and validate annotations
-	annBlacklist, _ := GetValueFromAnnotations("blacklist", ingress.Annotations, c.cfg.ConfigMap.Annotations)
+	annBlacklist, _ := GetValueFromAnnotations("blacklist", ingress.Annotations, c.cfg.ConfigMaps[Main].Annotations)
 	if annBlacklist == nil {
 		return nil
 	}
@@ -103,8 +103,8 @@ func (c *HAProxyController) handleHTTPRedirect(ingress *Ingress) error {
 	//  Get and validate annotations
 	var err error
 	toEnable := false
-	annSSLRedirect, _ := GetValueFromAnnotations("ssl-redirect", ingress.Annotations, c.cfg.ConfigMap.Annotations)
-	annRedirectCode, _ := GetValueFromAnnotations("ssl-redirect-code", ingress.Annotations, c.cfg.ConfigMap.Annotations)
+	annSSLRedirect, _ := GetValueFromAnnotations("ssl-redirect", ingress.Annotations, c.cfg.ConfigMaps[Main].Annotations)
+	annRedirectCode, _ := GetValueFromAnnotations("ssl-redirect-code", ingress.Annotations, c.cfg.ConfigMaps[Main].Annotations)
 	_, enabled := sslRedirectEnabled[ingress.Namespace+ingress.Name]
 	if annSSLRedirect == nil {
 		if len(ingress.TLS) > 0 {
@@ -174,7 +174,7 @@ func (c *HAProxyController) handleHTTPRedirect(ingress *Ingress) error {
 
 func (c *HAProxyController) handleRateLimiting(ingress *Ingress) error {
 	//  Get and validate annotations
-	annRateLimitReq, _ := GetValueFromAnnotations("rate-limit-requests", ingress.Annotations, c.cfg.ConfigMap.Annotations)
+	annRateLimitReq, _ := GetValueFromAnnotations("rate-limit-requests", ingress.Annotations, c.cfg.ConfigMaps[Main].Annotations)
 	if annRateLimitReq == nil {
 		return nil
 	}
@@ -183,12 +183,12 @@ func (c *HAProxyController) handleRateLimiting(ingress *Ingress) error {
 		return err
 	}
 	// Following annotaitons have default values
-	annRateLimitPeriod, _ := GetValueFromAnnotations("rate-limit-period", ingress.Annotations, c.cfg.ConfigMap.Annotations)
+	annRateLimitPeriod, _ := GetValueFromAnnotations("rate-limit-period", ingress.Annotations, c.cfg.ConfigMaps[Main].Annotations)
 	rateLimitPeriod, err := utils.ParseTime(annRateLimitPeriod.Value)
 	if err != nil {
 		return err
 	}
-	annRateLimitSize, _ := GetValueFromAnnotations("rate-limit-size", ingress.Annotations, c.cfg.ConfigMap.Annotations)
+	annRateLimitSize, _ := GetValueFromAnnotations("rate-limit-size", ingress.Annotations, c.cfg.ConfigMaps[Main].Annotations)
 	rateLimitSize := misc.ParseSize(annRateLimitSize.Value)
 
 	if len(ingress.Rules) == 0 {
@@ -250,8 +250,8 @@ func (c *HAProxyController) handleRateLimiting(ingress *Ingress) error {
 
 func (c *HAProxyController) handleRequestCapture(ingress *Ingress) error {
 	//  Get and validate annotations
-	annReqCapture, _ := GetValueFromAnnotations("request-capture", ingress.Annotations, c.cfg.ConfigMap.Annotations)
-	annCaptureLen, _ := GetValueFromAnnotations("request-capture-len", ingress.Annotations, c.cfg.ConfigMap.Annotations)
+	annReqCapture, _ := GetValueFromAnnotations("request-capture", ingress.Annotations, c.cfg.ConfigMaps[Main].Annotations)
+	annCaptureLen, _ := GetValueFromAnnotations("request-capture-len", ingress.Annotations, c.cfg.ConfigMaps[Main].Annotations)
 	if annReqCapture == nil {
 		return nil
 	}
@@ -324,7 +324,7 @@ func (c *HAProxyController) handleRequestCapture(ingress *Ingress) error {
 
 func (c *HAProxyController) handleRequestSetHdr(ingress *Ingress) error {
 	//  Get and validate annotations
-	annSetHdr, err := GetValueFromAnnotations("request-set-header", ingress.Annotations, c.cfg.ConfigMap.Annotations)
+	annSetHdr, err := GetValueFromAnnotations("request-set-header", ingress.Annotations, c.cfg.ConfigMaps[Main].Annotations)
 	if annSetHdr == nil {
 		return nil
 	}
@@ -375,7 +375,7 @@ func (c *HAProxyController) handleRequestSetHdr(ingress *Ingress) error {
 
 func (c *HAProxyController) handleResponseSetHdr(ingress *Ingress) error {
 	//  Get and validate annotations
-	annSetHdr, err := GetValueFromAnnotations("response-set-header", ingress.Annotations, c.cfg.ConfigMap.Annotations)
+	annSetHdr, err := GetValueFromAnnotations("response-set-header", ingress.Annotations, c.cfg.ConfigMaps[Main].Annotations)
 	if annSetHdr == nil {
 		return nil
 	}
@@ -423,7 +423,7 @@ func (c *HAProxyController) handleResponseSetHdr(ingress *Ingress) error {
 
 func (c *HAProxyController) handleWhitelisting(ingress *Ingress) error {
 	//  Get and validate annotations
-	annWhitelist, _ := GetValueFromAnnotations("whitelist", ingress.Annotations, c.cfg.ConfigMap.Annotations)
+	annWhitelist, _ := GetValueFromAnnotations("whitelist", ingress.Annotations, c.cfg.ConfigMaps[Main].Annotations)
 	if annWhitelist == nil {
 		return nil
 	}

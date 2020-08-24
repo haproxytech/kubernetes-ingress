@@ -302,7 +302,7 @@ func (c *HAProxyController) setModifiedStatusEndpoints(oldObj, newObj *Endpoints
 
 	}
 
-	annIncrement, _ := GetValueFromAnnotations("servers-increment", c.cfg.ConfigMap.Annotations)
+	annIncrement, _ := GetValueFromAnnotations("servers-increment", c.cfg.ConfigMaps[Main].Annotations)
 	incrementSize := int64(128)
 	if increment, err := strconv.ParseInt(annIncrement.Value, 10, 64); err == nil {
 		incrementSize = increment
@@ -338,7 +338,7 @@ func (c *HAProxyController) setModifiedStatusEndpoints(oldObj, newObj *Endpoints
 
 func (c *HAProxyController) processEndpointIPs(data *Endpoints) (updateRequired bool) {
 	updateRequired = false
-	annIncrement, _ := GetValueFromAnnotations("servers-increment", c.cfg.ConfigMap.Annotations)
+	annIncrement, _ := GetValueFromAnnotations("servers-increment", c.cfg.ConfigMaps[Main].Annotations)
 	incrementSize := int64(128)
 	if increment, err := strconv.ParseInt(annIncrement.Value, 10, 64); err == nil {
 		incrementSize = increment
@@ -456,105 +456,39 @@ func (c *HAProxyController) eventService(ns *Namespace, data *Service) (updateRe
 	return updateRequired
 }
 
-func (c *HAProxyController) eventConfigMap(ns *Namespace, data *ConfigMap, chConfigMapReceivedAndProcessed chan bool) (updateRequired bool) {
+func (c *HAProxyController) eventConfigMap(ns *Namespace, data *ConfigMap, configMapArgs map[string]utils.NamespaceValue) (updateRequired bool, configMap string) {
 	updateRequired = false
-	//TODO refractor this so we remember all configmaps, since we now use more that one
-	configmap := false
-	configmapTCP := false
-	configmapErrorfile := false
-
-	if ns.Name == c.osArgs.ConfigMap.Namespace && data.Name == c.osArgs.ConfigMap.Name {
-		configmap = true
-	}
-	if ns.Name == c.osArgs.ConfigMapTCPServices.Namespace && data.Name == c.osArgs.ConfigMapTCPServices.Name {
-		configmapTCP = true
-	}
-	if ns.Name == c.osArgs.ConfigMapErrorfiles.Namespace && data.Name == c.osArgs.ConfigMapErrorfiles.Name {
-		configmapErrorfile = true
-	}
-
-	if configmap {
+	for cm, nsValue := range configMapArgs {
+		if nsValue.Namespace != ns.Name || nsValue.Name != data.Name {
+			continue
+		}
 		switch data.Status {
 		case MODIFIED:
-			different := data.Annotations.SetStatus(c.cfg.ConfigMap.Annotations)
-			c.cfg.ConfigMap = data
+			different := data.Annotations.SetStatus(c.cfg.ConfigMaps[cm].Annotations)
+			c.cfg.ConfigMaps[cm] = data
 			if !different {
 				data.Status = EMPTY
 			} else {
 				updateRequired = true
 			}
 		case ADDED:
-			if c.cfg.ConfigMap == nil {
-				chConfigMapReceivedAndProcessed <- true
-				c.cfg.ConfigMap = data
+			if c.cfg.ConfigMaps[cm] == nil {
+				c.cfg.ConfigMaps[cm] = data
 				updateRequired = true
-				return updateRequired
+				return updateRequired, cm
 			}
-			if !c.cfg.ConfigMap.Equal(data) {
+			if !c.cfg.ConfigMaps[cm].Equal(data) {
 				data.Status = MODIFIED
-				return c.eventConfigMap(ns, data, chConfigMapReceivedAndProcessed)
+				return c.eventConfigMap(ns, data, configMapArgs)
 			}
 		case DELETED:
-			c.cfg.ConfigMap.Annotations.SetStatusState(DELETED)
-			c.cfg.ConfigMap.Status = DELETED
+			c.cfg.ConfigMaps[cm].Annotations.SetStatusState(DELETED)
+			c.cfg.ConfigMaps[cm].Status = DELETED
 			updateRequired = true
 		}
+		return updateRequired, cm
 	}
-
-	if configmapTCP {
-		switch data.Status {
-		case MODIFIED:
-			different := data.Annotations.SetStatus(c.cfg.ConfigMapTCPServices.Annotations)
-			c.cfg.ConfigMapTCPServices = data
-			if !different {
-				data.Status = EMPTY
-			} else {
-				updateRequired = true
-			}
-		case ADDED:
-			if c.cfg.ConfigMapTCPServices == nil {
-				c.cfg.ConfigMapTCPServices = data
-				updateRequired = true
-				return updateRequired
-			}
-			if !c.cfg.ConfigMapTCPServices.Equal(data) {
-				data.Status = MODIFIED
-				return c.eventConfigMap(ns, data, chConfigMapReceivedAndProcessed)
-			}
-		case DELETED:
-			c.cfg.ConfigMapTCPServices.Annotations.SetStatusState(DELETED)
-			c.cfg.ConfigMapTCPServices.Status = DELETED
-			updateRequired = true
-		}
-	}
-
-	if configmapErrorfile {
-		switch data.Status {
-		case MODIFIED:
-			different := data.Annotations.SetStatus(c.cfg.ConfigMapErrorfile.Annotations)
-			c.cfg.ConfigMapErrorfile = data
-			if !different {
-				data.Status = EMPTY
-			} else {
-				updateRequired = true
-			}
-		case ADDED:
-			if c.cfg.ConfigMapErrorfile == nil {
-				c.cfg.ConfigMapErrorfile = data
-				updateRequired = true
-				return updateRequired
-			}
-			if !c.cfg.ConfigMapErrorfile.Equal(data) {
-				data.Status = MODIFIED
-				return c.eventConfigMap(ns, data, chConfigMapReceivedAndProcessed)
-			}
-		case DELETED:
-			c.cfg.ConfigMapErrorfile.Annotations.SetStatusState(DELETED)
-			c.cfg.ConfigMapErrorfile.Status = DELETED
-			updateRequired = true
-		}
-	}
-	return updateRequired
+	return false, ""
 }
 
 func (c *HAProxyController) eventSecret(ns *Namespace, data *Secret) (updateRequired bool) {

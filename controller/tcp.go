@@ -9,10 +9,10 @@ import (
 )
 
 func (c *HAProxyController) handleTCPServices() (reload bool, err error) {
-	if c.cfg.ConfigMapTCPServices == nil {
+	if c.cfg.ConfigMaps[TCPServices] == nil {
 		return false, nil
 	}
-	for port, svc := range c.cfg.ConfigMapTCPServices.Annotations {
+	for port, svc := range c.cfg.ConfigMaps[TCPServices].Annotations {
 		// Get TCP service from ConfigMap
 		// parts[0]: Service Name
 		// parts[1]: Service Port

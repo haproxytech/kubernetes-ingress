@@ -28,7 +28,7 @@ type ProxyProtocol struct{}
 
 func (p ProxyProtocol) Update(cfg Configuration, api api.HAProxyClient, logger utils.Logger) (reload bool, err error) {
 	//  Get and validate annotations
-	annProxyProtocol, _ := GetValueFromAnnotations("proxy-protocol", cfg.ConfigMap.Annotations)
+	annProxyProtocol, _ := GetValueFromAnnotations("proxy-protocol", cfg.ConfigMaps[Main].Annotations)
 	if annProxyProtocol == nil {
 		return false, nil
 	}
