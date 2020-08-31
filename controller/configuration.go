@@ -203,18 +203,18 @@ func (c *Configuration) Clean() {
 				delete(namespace.Endpoints, data.Service.Value)
 			default:
 				data.Status = EMPTY
-				for _, port := range *data.Ports {
+				for _, port := range data.Ports {
 					port.Status = EMPTY
 				}
-				for key, adr := range *data.Addresses {
+				for key, adr := range data.Addresses {
 					switch adr.Status {
 					case DELETED:
-						delete(*data.Addresses, key)
+						delete(data.Addresses, key)
 					default:
 						adr.Status = EMPTY
 					}
 				}
-				for _, adr := range *data.Addresses {
+				for _, adr := range data.Addresses {
 					adr.Status = EMPTY
 				}
 			}

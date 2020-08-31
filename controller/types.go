@@ -70,8 +70,8 @@ type Endpoints struct {
 	Namespace   string
 	Service     StringW
 	BackendName string
-	Ports       *EndpointPorts
-	Addresses   *EndpointIPs
+	Ports       EndpointPorts
+	Addresses   EndpointIPs
 	Status      Status
 }
 

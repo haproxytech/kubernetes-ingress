@@ -233,7 +233,7 @@ func (c *HAProxyController) handlePath(namespace *Namespace, ingress *Ingress, r
 		c.Logger.Debugf("Configuring service '%s', of type ExternalName", service.Name)
 		endpoints = &Endpoints{
 			Namespace: "external",
-			Addresses: &EndpointIPs{
+			Addresses: EndpointIPs{
 				"external": &EndpointIP{
 					HAProxyName: "external-service",
 					IP:          service.DNS,
@@ -250,7 +250,7 @@ func (c *HAProxyController) handlePath(namespace *Namespace, ingress *Ingress, r
 		return reload
 	}
 	// Handle Backend servers
-	for _, endpoint := range *endpoints.Addresses {
+	for _, endpoint := range endpoints.Addresses {
 		endpoint := *endpoint
 		if newBackend {
 			endpoint.Status = ADDED
@@ -301,11 +301,11 @@ func (c *HAProxyController) setTargetPort(path *IngressPath, service *Service, e
 		if sp.Name == path.ServicePortString || sp.Port == path.ServicePortInt {
 			// Service.Port lookup: Service.Port --> Endpoints.Port
 			if endpoints != nil {
-				for _, epPort := range *endpoints.Ports {
+				for _, epPort := range endpoints.Ports {
 					if epPort.Name == sp.Name {
 						// Dinamically update backend port
 						if path.TargetPort != epPort.Port && path.TargetPort != 0 {
-							for _, EndpointIP := range *endpoints.Addresses {
+							for _, EndpointIP := range endpoints.Addresses {
 								if err := c.Client.SetServerAddr(endpoints.BackendName, EndpointIP.HAProxyName, EndpointIP.IP, int(epPort.Port)); err != nil {
 									c.Logger.Error(err)
 								}
