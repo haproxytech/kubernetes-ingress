@@ -237,10 +237,10 @@ func (c *HAProxyController) eventEndpoints(ns *Namespace, data *Endpoints) (upda
 			}
 			return updateRequired
 		}
-		for _, ip := range *data.Addresses {
+		for _, ip := range data.Addresses {
 			ip.Status = ADDED
 		}
-		for _, port := range *data.Ports {
+		for _, port := range data.Ports {
 			port.Status = ADDED
 		}
 		ns.Endpoints[data.Service.Value] = data
@@ -258,39 +258,31 @@ func (c *HAProxyController) eventEndpoints(ns *Namespace, data *Endpoints) (upda
 }
 
 func (c *HAProxyController) setModifiedStatusEndpoints(oldObj, newObj *Endpoints) {
-	if newObj.Namespace != oldObj.Namespace {
-		newObj.Status = MODIFIED
-	}
-	if newObj.Service.Value != oldObj.Service.Value {
-		newObj.Service.OldValue = oldObj.Service.Value
-		newObj.Service.Status = MODIFIED
-		newObj.Status = MODIFIED
-	}
-	for _, adrNew := range *newObj.Addresses {
+	for _, adrNew := range newObj.Addresses {
 		adrNew.Status = ADDED
 	}
-	for oldKey, adrOld := range *oldObj.Addresses {
-		for _, adrNew := range *newObj.Addresses {
+	for oldKey, adrOld := range oldObj.Addresses {
+		for _, adrNew := range newObj.Addresses {
 			if adrOld.IP == adrNew.IP {
 				adrNew.HAProxyName = adrOld.HAProxyName
 				adrNew.Status = adrOld.Status
-				delete(*oldObj.Addresses, oldKey)
+				delete(oldObj.Addresses, oldKey)
 				break
 			}
 		}
 
 	}
-	for oldKey, adrOld := range *oldObj.Addresses {
+	for oldKey, adrOld := range oldObj.Addresses {
 		if !adrOld.Disabled {
 			// it not disabled so it must be now, no longer exists
 			adrOld.IP = "127.0.0.1"
 			adrOld.Disabled = true
 			adrOld.Status = MODIFIED
-			(*newObj.Addresses)[fmt.Sprintf("SRV_%s", utils.RandomString(5))] = adrOld
+			newObj.Addresses[fmt.Sprintf("SRV_%s", utils.RandomString(5))] = adrOld
 		} else {
 			//try to find one that is added so we can switch them
 			replaced := false
-			for _, adrNew := range *newObj.Addresses {
+			for _, adrNew := range newObj.Addresses {
 				if adrNew.Status == ADDED {
 					replaced = true
 					adrNew.HAProxyName = adrOld.HAProxyName
@@ -299,7 +291,7 @@ func (c *HAProxyController) setModifiedStatusEndpoints(oldObj, newObj *Endpoints
 				}
 			}
 			if !replaced {
-				(*newObj.Addresses)[oldKey] = adrOld
+				newObj.Addresses[oldKey] = adrOld
 			}
 		}
 
@@ -311,7 +303,7 @@ func (c *HAProxyController) setModifiedStatusEndpoints(oldObj, newObj *Endpoints
 		incrementSize = increment
 	}
 	numDisabled := int64(0)
-	for _, adr := range *newObj.Addresses {
+	for _, adr := range newObj.Addresses {
 		if adr.Disabled {
 			numDisabled++
 		}
@@ -319,7 +311,7 @@ func (c *HAProxyController) setModifiedStatusEndpoints(oldObj, newObj *Endpoints
 
 	if numDisabled > incrementSize {
 		alreadyDeleted := int64(0)
-		for _, adr := range *newObj.Addresses {
+		for _, adr := range newObj.Addresses {
 			if adr.Status == DELETED {
 				alreadyDeleted++
 			}
@@ -329,7 +321,7 @@ func (c *HAProxyController) setModifiedStatusEndpoints(oldObj, newObj *Endpoints
 		if toDisable == 0 {
 			return
 		}
-		for _, adr := range *newObj.Addresses {
+		for _, adr := range newObj.Addresses {
 			if adr.Disabled && toDisable > 0 {
 				adr.IP = "127.0.0.1"
 				adr.Status = DELETED
@@ -341,80 +333,37 @@ func (c *HAProxyController) setModifiedStatusEndpoints(oldObj, newObj *Endpoints
 
 func (c *HAProxyController) processEndpointIPs(data *Endpoints) (updateRequired bool) {
 	updateRequired = false
-	annIncrement, _ := GetValueFromAnnotations("servers-increment", c.cfg.ConfigMap.Annotations)
-	incrementSize := int64(128)
-	if increment, err := strconv.ParseInt(annIncrement.Value, 10, 64); err == nil {
-		incrementSize = increment
-	}
-
-	usedNames := map[string]struct{}{}
-	for _, ip := range *data.Addresses {
-		if ip.HAProxyName != "" {
-			usedNames[ip.HAProxyName] = struct{}{}
-		}
-	}
-	for _, ip := range *data.Addresses {
+	for _, ip := range data.Addresses {
 		switch ip.Status {
 		case ADDED:
 			//added on haproxy update
-			ip.Status = ADDED
 			ip.HAProxyName = fmt.Sprintf("SRV_%s", utils.RandomString(5))
-			for _, ok := usedNames[ip.HAProxyName]; ok; {
-				ip.HAProxyName = fmt.Sprintf("SRV_%s", utils.RandomString(5))
-			}
-			usedNames[ip.HAProxyName] = struct{}{}
 			updateRequired = true
 		case MODIFIED:
 			if data.BackendName != "" {
-				err := c.Client.SetServerAddr(data.BackendName, ip.HAProxyName, ip.IP, 0)
-				if err != nil {
-					c.Logger.Error(err)
-					updateRequired = true
-				}
-				status := "ready"
-				if ip.Disabled {
-					status = "maint"
-				}
-				c.Logger.Debugf("server '%s/%s' changed status to %v", data.BackendName, ip.HAProxyName, status)
-				err = c.Client.SetServerState(data.BackendName, ip.HAProxyName, status)
-				if err != nil {
-					c.Logger.Error(err)
-					updateRequired = true
-				}
-			} else {
 				//this is ok since if exists, we edit current data
 				ip.Status = ADDED
+				updateRequired = true
+				break
+			}
+			err := c.Client.SetServerAddr(data.BackendName, ip.HAProxyName, ip.IP, 0)
+			if err != nil {
+				c.Logger.Error(err)
+				updateRequired = true
+			}
+			status := "ready"
+			if ip.Disabled {
+				status = "maint"
+			}
+			c.Logger.Debugf("server '%s/%s' changed status to %v", data.BackendName, ip.HAProxyName, status)
+			err = c.Client.SetServerState(data.BackendName, ip.HAProxyName, status)
+			if err != nil {
+				c.Logger.Error(err)
 				updateRequired = true
 			}
 		case DELETED:
 			//removed on haproxy update
 			updateRequired = true
-		}
-	}
-
-	//align new number of backend servers if necessary
-	podsNumber := int64(len(*data.Addresses))
-	if podsNumber%incrementSize == 0 {
-		return updateRequired
-	}
-	toCreate := int(incrementSize - podsNumber%incrementSize)
-	if toCreate == 0 {
-		return updateRequired
-	}
-	updateRequired = true
-	for index := 0; index < toCreate; index++ {
-		hAProxyName := fmt.Sprintf("SRV_%s", utils.RandomString(5))
-		for _, ok := usedNames[hAProxyName]; ok; {
-			hAProxyName = fmt.Sprintf("SRV_%s", utils.RandomString(5))
-			usedNames[hAProxyName] = struct{}{}
-		}
-
-		(*data.Addresses)[hAProxyName] = &EndpointIP{
-			IP:          "127.0.0.1",
-			Name:        hAProxyName,
-			HAProxyName: hAProxyName,
-			Disabled:    true,
-			Status:      ADDED,
 		}
 	}
 	return updateRequired

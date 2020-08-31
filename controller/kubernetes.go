@@ -236,8 +236,8 @@ func (k *K8s) convertToEndpoints(obj interface{}, status Status) (*Endpoints, er
 	item := &Endpoints{
 		Namespace: data.GetNamespace(),
 		Service:   StringW{Value: data.GetName()},
-		Ports:     &EndpointPorts{},
-		Addresses: &EndpointIPs{},
+		Ports:     EndpointPorts{},
+		Addresses: EndpointIPs{},
 		Status:    status,
 	}
 	for _, subset := range data.Subsets {
@@ -255,10 +255,10 @@ func (k *K8s) convertToEndpoints(obj interface{}, status Status) (*Endpoints, er
 			} else {
 				key = fmt.Sprintf("%s%s%v", address.IP, address.Hostname, address.NodeName)
 			}
-			(*item.Addresses)[key] = eip
+			item.Addresses[key] = eip
 		}
 		for _, port := range subset.Ports {
-			*item.Ports = append(*item.Ports, &EndpointPort{
+			item.Ports = append(item.Ports, &EndpointPort{
 				Name:     port.Name,
 				Protocol: string(port.Protocol),
 				Port:     int64(port.Port),

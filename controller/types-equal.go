@@ -30,13 +30,13 @@ func (a *EndpointPort) Equal(b *EndpointPort) bool {
 	return true
 }
 
-func (a *EndpointPorts) Equal(b *EndpointPorts) bool {
-	if len(*a) != len(*b) {
+func (a EndpointPorts) Equal(b EndpointPorts) bool {
+	if len(a) != len(b) {
 		return false
 	}
-	for _, value := range *a {
+	for _, value := range a {
 		found := false
-		for _, value2 := range *b {
+		for _, value2 := range b {
 			if value.Equal(value2) {
 				found = true
 				break
@@ -53,13 +53,13 @@ func (a *EndpointIP) Equal(b *EndpointIP) bool {
 	return a.IP == b.IP
 }
 
-func (a *EndpointIPs) Equal(b *EndpointIPs) bool {
-	if len(*a) != len(*b) {
+func (a EndpointIPs) Equal(b EndpointIPs) bool {
+	if len(a) != len(b) {
 		return false
 	}
-	for _, value := range *a {
+	for _, value := range a {
 		found := false
-		for _, value2 := range *b {
+		for _, value2 := range b {
 			if value.Equal(value2) {
 				found = true
 				break
