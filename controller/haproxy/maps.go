@@ -15,22 +15,24 @@
 package haproxy
 
 import (
-	"fmt"
 	"os"
 	"path"
 	"strconv"
 	"strings"
+
+	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 )
 
 type Maps interface {
 	AppendRow(key uint64, row string)
 	Clean()
-	Refresh() (reload bool, err error)
+	Refresh() (reload bool)
 }
 
 type mapFiles map[uint64]*mapFile
 
 var mapDir string
+var logger = utils.GetLogger()
 
 type mapFile struct {
 	rows   map[string]bool
@@ -92,44 +94,29 @@ func (m *mapFiles) Clean() {
 	}
 }
 
-type mapRefreshError struct {
-	error
-}
-
-func (m *mapRefreshError) add(nErr error) {
-	if nErr == nil {
-		return
-	}
-	if m.error == nil {
-		m.error = nErr
-		return
-	}
-	m.error = fmt.Errorf("%w\n%s", m.error, nErr)
-}
-
-func (m *mapFiles) Refresh() (reload bool, err error) {
+func (m *mapFiles) Refresh() (reload bool) {
 	reload = false
-	var retErr mapRefreshError
 	for key, mapFile := range *m {
 		if mapFile.isModified() {
 			content := mapFile.getContent()
 			var f *os.File
+			var err error
 			filename := path.Join(mapDir, strconv.FormatUint(key, 10)) + ".lst"
 			if content == "" {
-				rErr := os.Remove(filename)
-				retErr.add(rErr)
+				logger.Error(os.Remove(filename))
 				delete(*m, key)
 				continue
 			} else if f, err = os.Create(filename); err != nil {
-				retErr.add(err)
+				logger.Error(err)
 				continue
 			}
 			defer f.Close()
 			if _, err = f.WriteString(content); err != nil {
-				return reload, err
+				logger.Error(err)
+				return reload
 			}
 			reload = true
 		}
 	}
-	return reload, retErr.error
+	return reload
 }

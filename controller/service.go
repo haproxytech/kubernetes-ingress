@@ -23,24 +23,26 @@ import (
 )
 
 // handle defaultBackned configured via cli param "default-backend-service"
-func (c *HAProxyController) handleDefaultService() (reload bool, err error) {
-	reload = false
+func (c *HAProxyController) handleDefaultService() (reload bool) {
 	dsvcData, _ := GetValueFromAnnotations("default-backend-service")
 	dsvc := strings.Split(dsvcData.Value, "/")
 
 	if len(dsvc) != 2 {
-		return reload, fmt.Errorf("default service invalid data")
+		c.Logger.Errorf("default service invalid data")
+		return false
 	}
 	if dsvc[0] == "" || dsvc[1] == "" {
-		return reload, nil
+		return false
 	}
 	namespace, ok := c.cfg.Namespace[dsvc[0]]
 	if !ok {
-		return reload, fmt.Errorf("default service invalid namespace " + dsvc[0])
+		c.Logger.Errorf("default service invalid namespace " + dsvc[0])
+		return false
 	}
 	service, ok := namespace.Services[dsvc[1]]
 	if !ok {
-		return reload, fmt.Errorf("service '" + dsvc[1] + "' does not exist")
+		c.Logger.Errorf("service '" + dsvc[1] + "' does not exist")
+		return false
 	}
 	ingress := &Ingress{
 		Namespace:   namespace.Name,
@@ -205,25 +207,26 @@ func (c *HAProxyController) handleService(namespace *Namespace, ingress *Ingress
 }
 
 // handle IngressPath and make corresponding HAProxy configuration
-func (c *HAProxyController) handlePath(namespace *Namespace, ingress *Ingress, rule *IngressRule, path *IngressPath) (reload bool, err error) {
-	reload = false
+func (c *HAProxyController) handlePath(namespace *Namespace, ingress *Ingress, rule *IngressRule, path *IngressPath) (reload bool) {
 	// fetch Service
 	service, ok := namespace.Services[path.ServiceName]
 	if !ok {
-		return reload, fmt.Errorf("service '%s' does not exist", path.ServiceName)
+		c.Logger.Errorf("service '%s' does not exist", path.ServiceName)
+		return false
 	}
 	// handle Backend
 	backendName, newBackend, r, err := c.handleService(namespace, ingress, rule, path, service)
 	reload = reload || r
 	if err != nil {
-		return reload, err
+		c.Logger.Error(err)
+		return reload
 	}
 	// fetch Endpoints
 	endpoints, ok := namespace.Endpoints[service.Name]
 	if !ok {
 		if service.DNS == "" {
 			c.Logger.Warningf("No Endpoints for service '%s'", service.Name)
-			return reload, nil // not an end of world scenario, just log this
+			return reload // not an end of world scenario, just log this
 		}
 		//TODO: currently HAProxy will only resolve server name at startup/reload
 		// This needs to be improved by using HAPorxy resolvers to have resolution at runtime
@@ -243,7 +246,8 @@ func (c *HAProxyController) handlePath(namespace *Namespace, ingress *Ingress, r
 	// resolve TargetPort
 	endpoints.BackendName = backendName
 	if err := c.setTargetPort(path, service, endpoints); err != nil {
-		return reload, err
+		c.Logger.Error(err)
+		return reload
 	}
 	// Handle Backend servers
 	for _, endpoint := range *endpoints.Addresses {
@@ -254,7 +258,7 @@ func (c *HAProxyController) handlePath(namespace *Namespace, ingress *Ingress, r
 		r := c.handleEndpoint(namespace, ingress, path, service, backendName, endpoint)
 		reload = reload || r
 	}
-	return reload, nil
+	return reload
 }
 
 // Look for the targetPort (Endpoint port) corresponding to the servicePort of the IngressPath

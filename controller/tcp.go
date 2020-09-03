@@ -8,10 +8,11 @@ import (
 	"github.com/haproxytech/models/v2"
 )
 
-func (c *HAProxyController) handleTCPServices() (reload bool, err error) {
+func (c *HAProxyController) handleTCPServices() (reload bool) {
 	if c.cfg.ConfigMapTCPServices == nil {
-		return false, nil
+		return false
 	}
+	var err error
 	for port, svc := range c.cfg.ConfigMapTCPServices.Annotations {
 		// Get TCP service from ConfigMap
 		// parts[0]: Service Name
@@ -112,9 +113,7 @@ func (c *HAProxyController) handleTCPServices() (reload bool, err error) {
 			Status:         svc.Status,
 		}
 		nsmmp := c.cfg.GetNamespace(namespace)
-		r, errBck := c.handlePath(nsmmp, ingress, nil, path)
-		c.Logger.Error(errBck)
-		reload = reload || r
+		reload = c.handlePath(nsmmp, ingress, nil, path) || reload
 	}
-	return reload, err
+	return reload
 }

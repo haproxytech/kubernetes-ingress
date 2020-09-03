@@ -117,9 +117,7 @@ func (c *HAProxyController) updateHAProxy() error {
 
 	restart, reload := c.handleGlobalAnnotations()
 
-	r, err := c.handleDefaultService()
-	c.Logger.Error(err)
-	reload = reload || r
+	reload = c.handleDefaultService() || reload
 
 	usedCerts := map[string]struct{}{}
 
@@ -133,16 +131,12 @@ func (c *HAProxyController) updateHAProxy() error {
 			}
 			// handle Default Backend
 			if ingress.DefaultBackend != nil {
-				r, err = c.handlePath(namespace, ingress, &IngressRule{}, ingress.DefaultBackend)
-				c.Logger.Error(err)
-				reload = reload || r
+				reload = c.handlePath(namespace, ingress, &IngressRule{}, ingress.DefaultBackend) || reload
 			}
 			// handle Ingress rules
 			for _, rule := range ingress.Rules {
 				for _, path := range rule.Paths {
-					r, err = c.handlePath(namespace, ingress, rule, path)
-					reload = reload || r
-					c.Logger.Error(err)
+					reload = c.handlePath(namespace, ingress, rule, path) || reload
 				}
 			}
 			//handle certs
@@ -150,8 +144,7 @@ func (c *HAProxyController) updateHAProxy() error {
 			for _, tls := range ingress.TLS {
 				if _, ok := ingressSecrets[tls.SecretName.Value]; !ok {
 					ingressSecrets[tls.SecretName.Value] = struct{}{}
-					r = c.handleTLSSecret(*ingress, *tls, usedCerts)
-					reload = reload || r
+					reload = c.handleTLSSecret(*ingress, *tls, usedCerts) || reload
 				}
 			}
 
@@ -160,25 +153,23 @@ func (c *HAProxyController) updateHAProxy() error {
 				c.Logger.Debugf("Ingress %s/%s: no rules defined", ingress.Namespace, ingress.Name)
 				continue
 			}
-			c.Logger.Error(c.handleRateLimiting(ingress))
-			c.Logger.Error(c.handleRequestCapture(ingress))
-			c.Logger.Error(c.handleRequestSetHdr(ingress))
-			c.Logger.Error(c.handleRequestPathRewrite(ingress))
-			c.Logger.Error(c.handleRequestSetHost(ingress))
-			c.Logger.Error(c.handleResponseSetHdr(ingress))
-			c.Logger.Error(c.handleBlacklisting(ingress))
-			c.Logger.Error(c.handleWhitelisting(ingress))
-			c.Logger.Error(c.handleHTTPRedirect(ingress))
+			c.handleRateLimiting(ingress)
+			c.handleRequestCapture(ingress)
+			c.handleRequestSetHdr(ingress)
+			c.handleRequestPathRewrite(ingress)
+			c.handleRequestSetHost(ingress)
+			c.handleResponseSetHdr(ingress)
+			c.handleBlacklisting(ingress)
+			c.handleWhitelisting(ingress)
+			c.handleHTTPRedirect(ingress)
 		}
 	}
 
-	c.Logger.Error(c.handleProxyProtocol())
+	c.handleProxyProtocol()
 
-	r = c.handleDefaultCertificate(usedCerts)
-	reload = reload || r
+	reload = c.handleDefaultCertificate(usedCerts) || reload
 
-	r = c.handleHTTPS(usedCerts)
-	reload = reload || r
+	reload = c.handleHTTPS(usedCerts) || reload
 
 	reload = c.FrontendHTTPReqsRefresh() || reload
 
@@ -186,16 +177,11 @@ func (c *HAProxyController) updateHAProxy() error {
 
 	reload = c.FrontendTCPreqsRefresh() || reload
 
-	r, err = c.cfg.MapFiles.Refresh()
-	c.Logger.Error(err)
-	reload = reload || r
+	reload = c.cfg.MapFiles.Refresh() || reload
 
-	r, err = c.handleTCPServices()
-	c.Logger.Error(err)
-	reload = reload || r
+	reload = c.handleTCPServices() || reload
 
-	r = c.refreshBackendSwitching()
-	reload = reload || r
+	reload = c.refreshBackendSwitching() || reload
 
 	err = c.Client.APICommitTransaction()
 	if err != nil {

@@ -35,11 +35,11 @@ const (
 var sslRedirectEnabled map[string]struct{}
 var rateLimitTables map[string]rateLimitTable
 
-func (c *HAProxyController) handleBlacklisting(ingress *Ingress) error {
+func (c *HAProxyController) handleBlacklisting(ingress *Ingress) {
 	//  Get and validate annotations
 	annBlacklist, _ := GetValueFromAnnotations("blacklist", ingress.Annotations, c.cfg.ConfigMap.Annotations)
 	if annBlacklist == nil {
-		return nil
+		return
 	}
 	value := strings.Replace(annBlacklist.Value, ",", " ", -1)
 	mapFiles := c.cfg.MapFiles
@@ -47,7 +47,8 @@ func (c *HAProxyController) handleBlacklisting(ingress *Ingress) error {
 	for _, address := range strings.Fields(value) {
 		if ip := net.ParseIP(address); ip == nil {
 			if _, _, err := net.ParseCIDR(address); err != nil {
-				return fmt.Errorf("incorrect value for blacklist annotation in ingress '%s'", ingress.Name)
+				c.Logger.Errorf("incorrect value for blacklist annotation in ingress '%s'", ingress.Name)
+				return
 			}
 		}
 		mapFiles.AppendRow(listKey, address)
@@ -63,7 +64,7 @@ func (c *HAProxyController) handleBlacklisting(ingress *Ingress) error {
 		c.cfg.FrontendRulesStatus[TCP] = MODIFIED
 		if status == DELETED {
 			c.Logger.Debugf("Ingress %s/%s: Deleting blacklist configuration", ingress.Namespace, ingress.Name)
-			return nil
+			return
 		}
 		c.Logger.Debugf("Ingress %s/%s: Configuring blacklist annotation", ingress.Namespace, ingress.Name)
 	}
@@ -92,11 +93,9 @@ func (c *HAProxyController) handleBlacklisting(ingress *Ingress) error {
 	}
 	c.cfg.FrontendHTTPReqRules[BLACKLIST][key] = httpRule
 	c.cfg.FrontendTCPRules[BLACKLIST][key] = tcpRule
-
-	return nil
 }
 
-func (c *HAProxyController) handleHTTPRedirect(ingress *Ingress) error {
+func (c *HAProxyController) handleHTTPRedirect(ingress *Ingress) {
 	//  Get and validate annotations
 	var err error
 	toEnable := false
@@ -105,13 +104,15 @@ func (c *HAProxyController) handleHTTPRedirect(ingress *Ingress) error {
 	_, enabled := sslRedirectEnabled[ingress.Namespace+ingress.Name]
 	if annSSLRedirect != nil && annSSLRedirect.Status != DELETED {
 		if toEnable, err = utils.GetBoolValue(annSSLRedirect.Value, "ssl-redirect"); err != nil {
-			return err
+			c.Logger.Error(err)
+			return
 		}
 	} else if tlsEnabled(ingress) {
 		toEnable = true
 	}
 	var sslRedirectCode int64
 	if sslRedirectCode, err = strconv.ParseInt(annRedirectCode.Value, 10, 64); err != nil {
+		c.Logger.Error(err)
 		sslRedirectCode = defaultSSLRedirectCode
 	}
 
@@ -126,7 +127,7 @@ func (c *HAProxyController) handleHTTPRedirect(ingress *Ingress) error {
 			delete(sslRedirectEnabled, ingress.Namespace+ingress.Name)
 			c.cfg.FrontendRulesStatus[HTTP] = MODIFIED
 		}
-		return nil
+		return
 	}
 
 	//Configure redirection
@@ -150,20 +151,20 @@ func (c *HAProxyController) handleHTTPRedirect(ingress *Ingress) error {
 		CondTest:   makeACL(" !{ ssl_fc }", mapFile),
 	}
 	c.cfg.FrontendHTTPReqRules[SSL_REDIRECT][key] = httpRule
-	return nil
 }
 
-func (c *HAProxyController) handleProxyProtocol() error {
+func (c *HAProxyController) handleProxyProtocol() {
 	//  Get and validate annotations
 	annProxyProtocol, _ := GetValueFromAnnotations("proxy-protocol", c.cfg.ConfigMap.Annotations)
 	if annProxyProtocol == nil {
-		return nil
+		return
 	}
 	value := strings.Replace(annProxyProtocol.Value, ",", " ", -1)
 	for _, address := range strings.Fields(value) {
 		if ip := net.ParseIP(address); ip == nil {
 			if _, _, err := net.ParseCIDR(address); err != nil {
-				return fmt.Errorf("incorrect value for proxy-protocol annotation ")
+				c.Logger.Errorf("incorrect value for proxy-protocol annotation ")
+				return
 			}
 		}
 	}
@@ -178,7 +179,7 @@ func (c *HAProxyController) handleProxyProtocol() error {
 		c.cfg.FrontendRulesStatus[TCP] = MODIFIED
 		if status == DELETED {
 			c.Logger.Debugf("Deleting ProxyProtcol configuration")
-			return nil
+			return
 		}
 		c.Logger.Debugf("Configuring ProxyProtcol annotation")
 	}
@@ -191,25 +192,25 @@ func (c *HAProxyController) handleProxyProtocol() error {
 		CondTest: fmt.Sprintf("{ src %s }", value),
 	}
 	c.cfg.FrontendTCPRules[PROXY_PROTOCOL][0] = tcpRule
-
-	return nil
 }
 
-func (c *HAProxyController) handleRateLimiting(ingress *Ingress) error {
+func (c *HAProxyController) handleRateLimiting(ingress *Ingress) {
 	//  Get and validate annotations
 	annRateLimitReq, _ := GetValueFromAnnotations("rate-limit-requests", ingress.Annotations, c.cfg.ConfigMap.Annotations)
 	if annRateLimitReq == nil {
-		return nil
+		return
 	}
 	reqsLimit, err := strconv.ParseInt(annRateLimitReq.Value, 10, 64)
 	if err != nil {
-		return err
+		c.Logger.Error(err)
+		return
 	}
 	// Following annotaitons have default values
 	annRateLimitPeriod, _ := GetValueFromAnnotations("rate-limit-period", ingress.Annotations, c.cfg.ConfigMap.Annotations)
 	rateLimitPeriod, err := utils.ParseTime(annRateLimitPeriod.Value)
 	if err != nil {
-		return err
+		c.Logger.Error(err)
+		return
 	}
 	annRateLimitSize, _ := GetValueFromAnnotations("rate-limit-size", ingress.Annotations, c.cfg.ConfigMap.Annotations)
 	rateLimitSize := misc.ParseSize(annRateLimitSize.Value)
@@ -230,7 +231,7 @@ func (c *HAProxyController) handleRateLimiting(ingress *Ingress) error {
 		if status == DELETED {
 			c.Logger.Debugf("Ingress %s/%s: Deleting rate-limit-requests configuration", ingress.Namespace, ingress.Name)
 			delete(rateLimitTables, tableName)
-			return nil
+			return
 		}
 		c.Logger.Debugf("Ingress %s/%s: Configuring rate-limit-requests annotation", ingress.Namespace, ingress.Name)
 	}
@@ -265,21 +266,21 @@ func (c *HAProxyController) handleRateLimiting(ingress *Ingress) error {
 	}
 	c.cfg.FrontendHTTPReqRules[RATE_LIMIT][trackKey] = httpTrackRule
 	c.cfg.FrontendHTTPReqRules[RATE_LIMIT][reqsKey] = httpDenyRule
-	return nil
 }
 
-func (c *HAProxyController) handleRequestCapture(ingress *Ingress) error {
+func (c *HAProxyController) handleRequestCapture(ingress *Ingress) {
 	//  Get and validate annotations
 	annReqCapture, _ := GetValueFromAnnotations("request-capture", ingress.Annotations, c.cfg.ConfigMap.Annotations)
 	annCaptureLen, _ := GetValueFromAnnotations("request-capture-len", ingress.Annotations, c.cfg.ConfigMap.Annotations)
 	if annReqCapture == nil {
-		return nil
+		return
 	}
 	var captureLen int64
 	var err error
 	if annCaptureLen != nil {
 		captureLen, err = strconv.ParseInt(annCaptureLen.Value, 10, 64)
 		if err != nil {
+			c.Logger.Error(err)
 			captureLen = defaultCaptureLen
 		}
 		if annCaptureLen.Status == DELETED {
@@ -336,14 +337,13 @@ func (c *HAProxyController) handleRequestCapture(ingress *Ingress) error {
 		c.cfg.FrontendTCPRules[REQUEST_CAPTURE][key] = tcpRule
 	}
 
-	return err
 }
 
-func (c *HAProxyController) handleRequestSetHdr(ingress *Ingress) error {
+func (c *HAProxyController) handleRequestSetHdr(ingress *Ingress) {
 	//  Get and validate annotations
-	annSetHdr, err := GetValueFromAnnotations("request-set-header", ingress.Annotations, c.cfg.ConfigMap.Annotations)
+	annSetHdr, _ := GetValueFromAnnotations("request-set-header", ingress.Annotations, c.cfg.ConfigMap.Annotations)
 	if annSetHdr == nil {
-		return nil
+		return
 	}
 
 	// Update rules
@@ -384,14 +384,13 @@ func (c *HAProxyController) handleRequestSetHdr(ingress *Ingress) error {
 		c.cfg.FrontendHTTPReqRules[REQUEST_SET_HEADER][key] = httpRule
 	}
 
-	return err
 }
 
-func (c *HAProxyController) handleRequestSetHost(ingress *Ingress) error {
+func (c *HAProxyController) handleRequestSetHost(ingress *Ingress) {
 	//  Get and validate annotations
-	annSetHost, err := GetValueFromAnnotations("set-host", ingress.Annotations, c.cfg.ConfigMap.Annotations)
+	annSetHost, _ := GetValueFromAnnotations("set-host", ingress.Annotations, c.cfg.ConfigMap.Annotations)
 	if annSetHost == nil {
-		return nil
+		return
 	}
 
 	// Update rules
@@ -402,7 +401,7 @@ func (c *HAProxyController) handleRequestSetHost(ingress *Ingress) error {
 		c.cfg.FrontendRulesStatus[HTTP] = MODIFIED
 		if status == DELETED {
 			c.Logger.Debugf("Ingress %s/%s: Deleting request-set-host configuration", ingress.Namespace, ingress.Name)
-			return nil
+			return
 		}
 		c.Logger.Debugf("Ingress %s/%s: Configuring request-set-host", ingress.Namespace, ingress.Name)
 	}
@@ -425,14 +424,13 @@ func (c *HAProxyController) handleRequestSetHost(ingress *Ingress) error {
 	}
 	c.cfg.FrontendHTTPReqRules[REQUEST_SET_HOST][key] = httpRule
 
-	return err
 }
 
-func (c *HAProxyController) handleRequestPathRewrite(ingress *Ingress) error {
+func (c *HAProxyController) handleRequestPathRewrite(ingress *Ingress) {
 	//  Get and validate annotations
-	annPathRewrite, err := GetValueFromAnnotations("path-rewrite", ingress.Annotations, c.cfg.ConfigMap.Annotations)
+	annPathRewrite, _ := GetValueFromAnnotations("path-rewrite", ingress.Annotations, c.cfg.ConfigMap.Annotations)
 	if annPathRewrite == nil {
-		return nil
+		return
 	}
 
 	// Update rules
@@ -444,7 +442,7 @@ func (c *HAProxyController) handleRequestPathRewrite(ingress *Ingress) error {
 		c.cfg.FrontendRulesStatus[HTTP] = MODIFIED
 		if status == DELETED {
 			c.Logger.Debugf("Ingress %s/%s: Deleting path-rewrite configuration", ingress.Namespace, ingress.Name)
-			return nil
+			return
 		}
 		c.Logger.Debugf("Ingress %s/%s: Configuring path-rewrite", ingress.Namespace, ingress.Name)
 	}
@@ -482,14 +480,13 @@ func (c *HAProxyController) handleRequestPathRewrite(ingress *Ingress) error {
 	}
 
 	c.cfg.FrontendHTTPReqRules[REQUEST_PATH_REWRITE][key] = httpRule
-	return err
 }
 
-func (c *HAProxyController) handleResponseSetHdr(ingress *Ingress) error {
+func (c *HAProxyController) handleResponseSetHdr(ingress *Ingress) {
 	//  Get and validate annotations
-	annSetHdr, err := GetValueFromAnnotations("response-set-header", ingress.Annotations, c.cfg.ConfigMap.Annotations)
+	annSetHdr, _ := GetValueFromAnnotations("response-set-header", ingress.Annotations, c.cfg.ConfigMap.Annotations)
 	if annSetHdr == nil {
-		return nil
+		return
 	}
 
 	// Update rules
@@ -527,15 +524,13 @@ func (c *HAProxyController) handleResponseSetHdr(ingress *Ingress) error {
 		}
 		c.cfg.FrontendHTTPRspRules[RESPONSE_SET_HEADER][key] = httpRule
 	}
-
-	return err
 }
 
-func (c *HAProxyController) handleWhitelisting(ingress *Ingress) error {
+func (c *HAProxyController) handleWhitelisting(ingress *Ingress) {
 	//  Get and validate annotations
 	annWhitelist, _ := GetValueFromAnnotations("whitelist", ingress.Annotations, c.cfg.ConfigMap.Annotations)
 	if annWhitelist == nil {
-		return nil
+		return
 	}
 	mapFiles := c.cfg.MapFiles
 	listKey := hashStrToUint(annWhitelist.Value)
@@ -543,7 +538,8 @@ func (c *HAProxyController) handleWhitelisting(ingress *Ingress) error {
 	for _, address := range strings.Fields(value) {
 		if ip := net.ParseIP(address); ip == nil {
 			if _, _, err := net.ParseCIDR(address); err != nil {
-				return fmt.Errorf("incorrect value for whitelist annotation in ingress '%s'", ingress.Name)
+				c.Logger.Errorf("incorrect value for whitelist annotation in ingress '%s'", ingress.Name)
+				return
 			}
 		}
 		mapFiles.AppendRow(listKey, address)
@@ -558,7 +554,7 @@ func (c *HAProxyController) handleWhitelisting(ingress *Ingress) error {
 		c.cfg.FrontendRulesStatus[TCP] = MODIFIED
 		if status == DELETED {
 			c.Logger.Debugf("Ingress %s/%s: Deleting whitelist configuration", ingress.Namespace, ingress.Name)
-			return nil
+			return
 		}
 		c.Logger.Debugf("Ingress %s/%s: Configuring whitelist configuration", ingress.Namespace, ingress.Name)
 	}
@@ -587,8 +583,6 @@ func (c *HAProxyController) handleWhitelisting(ingress *Ingress) error {
 	}
 	c.cfg.FrontendHTTPReqRules[WHITELIST][key] = httpRule
 	c.cfg.FrontendTCPRules[WHITELIST][key] = tcpRule
-
-	return nil
 }
 
 func hashStrToUint(s string) uint64 {
