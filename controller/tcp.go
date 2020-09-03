@@ -112,9 +112,7 @@ func (c *HAProxyController) handleTCPServices() (reload bool, err error) {
 			Status:         svc.Status,
 		}
 		nsmmp := c.cfg.GetNamespace(namespace)
-		r, errBck := c.handlePath(nsmmp, ingress, nil, path)
-		c.Logger.Error(errBck)
-		reload = reload || r
+		reload = c.handlePath(nsmmp, ingress, nil, path) || reload
 	}
 	return reload, err
 }

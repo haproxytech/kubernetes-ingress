@@ -126,9 +126,7 @@ func (c *HAProxyController) updateHAProxy() error {
 
 	restart, reload := c.handleGlobalAnnotations()
 
-	r, err := c.handleDefaultService()
-	c.Logger.Error(err)
-	reload = reload || r
+	reload = c.handleDefaultService() || reload
 
 	usedCerts := map[string]struct{}{}
 	c.cfg.UsedCerts = usedCerts
@@ -143,16 +141,12 @@ func (c *HAProxyController) updateHAProxy() error {
 			}
 			// handle Default Backend
 			if ingress.DefaultBackend != nil {
-				r, err = c.handlePath(namespace, ingress, &IngressRule{}, ingress.DefaultBackend)
-				c.Logger.Error(err)
-				reload = reload || r
+				reload = c.handlePath(namespace, ingress, &IngressRule{}, ingress.DefaultBackend) || reload
 			}
 			// handle Ingress rules
 			for _, rule := range ingress.Rules {
 				for _, path := range rule.Paths {
-					r, err = c.handlePath(namespace, ingress, rule, path)
-					reload = reload || r
-					c.Logger.Error(err)
+					reload = c.handlePath(namespace, ingress, rule, path) || reload
 				}
 			}
 			//handle certs
@@ -160,8 +154,7 @@ func (c *HAProxyController) updateHAProxy() error {
 			for _, tls := range ingress.TLS {
 				if _, ok := ingressSecrets[tls.SecretName.Value]; !ok {
 					ingressSecrets[tls.SecretName.Value] = struct{}{}
-					r = c.handleTLSSecret(*ingress, *tls, usedCerts)
-					reload = reload || r
+					reload = c.handleTLSSecret(*ingress, *tls, usedCerts) || reload
 				}
 			}
 
@@ -175,22 +168,12 @@ func (c *HAProxyController) updateHAProxy() error {
 		}
 	}
 
+	var r bool
 	for _, handler := range c.UpdateHandlers {
 		r, err = handler.Update(c.cfg, c.Client, c.Logger)
 		c.Logger.Error(err)
 		reload = reload || r
 	}
-
-	r = c.handleHTTPS(usedCerts)
-	reload = reload || r
-
-	reload = c.FrontendHTTPReqsRefresh() || reload
-
-	reload = c.FrontendHTTPRspsRefresh() || reload
-
-	reload = c.FrontendTCPreqsRefresh() || reload
-
-	reload = c.BackendHTTPReqsRefresh() || reload
 
 	r, err = c.cfg.MapFiles.Refresh()
 	c.Logger.Error(err)
@@ -200,8 +183,17 @@ func (c *HAProxyController) updateHAProxy() error {
 	c.Logger.Error(err)
 	reload = reload || r
 
-	r = c.refreshBackendSwitching()
-	reload = reload || r
+	reload = c.handleHTTPS(usedCerts) || reload
+
+	reload = c.FrontendHTTPReqsRefresh() || reload
+
+	reload = c.FrontendHTTPRspsRefresh() || reload
+
+	reload = c.FrontendTCPreqsRefresh() || reload
+
+	reload = c.BackendHTTPReqsRefresh() || reload
+
+	reload = c.refreshBackendSwitching() || reload
 
 	err = c.Client.APICommitTransaction()
 	if err != nil {
