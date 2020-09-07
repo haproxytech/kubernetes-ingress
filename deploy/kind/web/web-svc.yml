@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: web-#GROUP#
+  labels:
+    name: web-#GROUP#
+  annotations:
+    ingress.kubernetes.io/use-resolver: kubernetes
+    check: "true"
+    forwarded-for: "true"
+    load-balance: roundrobin
+    pod-maxconn: "1000"
+spec:
+  selector:
+    name: web-#GROUP# 
+  ports:
+   - port: 8181
+     targetPort: 8181
+     name: "http"

@@ -1,0 +1,22 @@
+apiVersion: kind.x-k8s.io/v1alpha4
+networking:
+  apiServerAddress: "127.0.0.1"
+  apiServerPort: 6443
+kind: Cluster
+nodes:
+  - role: control-plane
+    #image: kindest/node:v1.16.4
+    #image: kindest/node:v1.18.2
+    extraPortMappings:
+      - hostPort: 30080
+        containerPort: 30080
+        #listenAddress: "0.0.0.0" # Optional, defaults to "0.0.0.0"
+        #protocol: udp # Optional, defaults to tcp
+      - hostPort: 30443
+        containerPort: 443
+      - hostPort: 31024
+        containerPort: 1024
+      - hostPort: 32766
+        containerPort: 32766
+      - hostPort: 32767
+        containerPort: 32767
