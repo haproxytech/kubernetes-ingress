@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+ name: haproxy-configmap
+ namespace: haproxy-controller
+data:
+  placeholder-1: ""
+  placeholder-2: ""
+  check: "true"
+  rate-limit: "true"
+  rate-limit-expire: 30m
+  rate-limit-interval: 10s
+  rate-limit-size: 100k
+  ssl-redirect: "false"
+  ssl-redirect-code: "302"
+  ssl-passthrough: "false"
+  timeout-client: 50s
+  timeout-connect: 5s
+  timeout-http-keep-alive: 1m
+  timeout-http-request: 5s
+  timeout-queue: 5s
+  timeout-server: 50s
+  timeout-tunnel: 1h

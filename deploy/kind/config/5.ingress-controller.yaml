@@ -1,0 +1,87 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+ labels:
+   run: haproxy-ingress
+ name: haproxy-ingress
+ namespace: haproxy-controller
+spec:
+ replicas: 1
+ selector:
+   matchLabels:
+     run: haproxy-ingress
+ template:
+   metadata:
+     labels:
+       run: haproxy-ingress
+   spec:
+     serviceAccountName: haproxy-ingress-service-account
+     containers:
+     - name: haproxy-ingress
+       image: TAG/IMAGE
+       imagePullPolicy: Never
+       resources:
+         limits:
+           memory: 512Mi
+         requests:
+           memory: 256Mi
+       args:
+       - --default-backend-service=default/ingress-default-backend
+       - --default-ssl-certificate=default/tls-secret
+       - --configmap=$(POD_NAMESPACE)/haproxy-configmap
+       - --configmap-tcp-services=$(POD_NAMESPACE)/haproxy-configmap-tcp
+       - --ingress.class=haproxy
+       - --log=trace
+       ports:
+       - name: http
+         containerPort: 80
+       - name: https
+         containerPort: 443
+       - name: stat
+         containerPort: 1024
+       - name: tcp1
+         containerPort: 32766
+       - name: tcp2
+         containerPort: 32767
+       env:
+       - name: POD_NAME
+         valueFrom:
+           fieldRef:
+             fieldPath: metadata.name
+       - name: POD_NAMESPACE
+         valueFrom:
+           fieldRef:
+             fieldPath: metadata.namespace
+---
+apiVersion: v1
+kind: Service
+metadata:  
+  name: haproxy-ingress
+  namespace: haproxy-controller
+spec:
+  selector:    
+    run: haproxy-ingress
+  type: NodePort
+  ports:  
+  - name: http
+    port: 80
+    targetPort: 80
+    nodePort: 30080
+    protocol: TCP
+  - name: https
+    port: 443
+    targetPort: 443
+    nodePort: 30443
+    protocol: TCP
+  - name: stat
+    port: 1024
+    targetPort: 1024
+    nodePort: 31024
+  - name: tcp1
+    port: 32766
+    targetPort: 32766
+    nodePort: 32766
+  - name: tcp2
+    port: 32767
+    targetPort: 32767
+    nodePort: 32767
