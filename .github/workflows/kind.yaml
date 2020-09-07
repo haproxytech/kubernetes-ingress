@@ -1,0 +1,25 @@
+name: "KinD cluster test"
+on: [pull_request, push]
+
+jobs:
+  kind:    
+    strategy:
+        matrix:
+          k8s-version: ['v1.16.9', 'v1.17.5', 'v1.18.6']
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@master
+    - uses: actions/setup-go@v2
+      with:
+        go-version: '^1.15.1' # The Go version to download (if necessary) and use.
+    - uses: engineerd/setup-kind@v0.4.0
+      with:
+          name: dev
+          config: deploy/kind/kind-config.yaml
+          image: kindest/node:${{ matrix.k8s-version }}
+          version: v0.8.1          
+    - name: Setup
+      run: deploy/kind/ci.sh
+    - name: Test
+      run: go run deploy/kind/test.go
+      
