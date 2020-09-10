@@ -93,7 +93,11 @@ func (k *K8s) EventsNamespaces(channel chan *Namespace, stop chan struct{}, info
 	informer.AddEventHandler(
 		cache.ResourceEventHandlerFuncs{
 			AddFunc: func(obj interface{}) {
-				data := obj.(*corev1.Namespace)
+				data, ok := obj.(*corev1.Namespace)
+				if !ok {
+					k.Logger.Errorf("%s: Invalid data from k8s api, %s", NAMESPACE, obj)
+					return
+				}
 				var status = ADDED
 				if data.ObjectMeta.GetDeletionTimestamp() != nil {
 					//detect services that are in terminating state
@@ -111,7 +115,11 @@ func (k *K8s) EventsNamespaces(channel chan *Namespace, stop chan struct{}, info
 				channel <- item
 			},
 			DeleteFunc: func(obj interface{}) {
-				data := obj.(*corev1.Namespace)
+				data, ok := obj.(*corev1.Namespace)
+				if !ok {
+					k.Logger.Errorf("%s: Invalid data from k8s api, %s", NAMESPACE, obj)
+					return
+				}
 				var status = DELETED
 				item := &Namespace{
 					Name:      data.GetName(),
@@ -125,8 +133,16 @@ func (k *K8s) EventsNamespaces(channel chan *Namespace, stop chan struct{}, info
 				channel <- item
 			},
 			UpdateFunc: func(oldObj, newObj interface{}) {
-				data1 := oldObj.(*corev1.Namespace)
-				data2 := newObj.(*corev1.Namespace)
+				data1, ok := oldObj.(*corev1.Namespace)
+				if !ok {
+					k.Logger.Errorf("%s: Invalid data from k8s api, %s", NAMESPACE, oldObj)
+					return
+				}
+				data2, ok := newObj.(*corev1.Namespace)
+				if !ok {
+					k.Logger.Errorf("%s: Invalid data from k8s api, %s", NAMESPACE, newObj)
+					return
+				}
 				var status = MODIFIED
 				item1 := &Namespace{
 					Name:   data1.GetName(),
@@ -183,7 +199,11 @@ func (k *K8s) EventsEndpoints(channel chan *Endpoints, stop chan struct{}, infor
 }
 
 func (k *K8s) convertToEndpoints(obj interface{}, status Status) (*Endpoints, error) {
-	data := obj.(*corev1.Endpoints)
+	data, ok := obj.(*corev1.Endpoints)
+	if !ok {
+		k.Logger.Errorf("%s: Invalid data from k8s api, %s", ENDPOINTS, obj)
+		return nil, ErrIgnored
+	}
 	if data.GetNamespace() == "kube-system" {
 		if data.ObjectMeta.Name == "kube-controller-manager" ||
 			data.ObjectMeta.Name == "kube-scheduler" ||
@@ -236,7 +256,11 @@ func (k *K8s) EventsIngresses(channel chan *Ingress, stop chan struct{}, informe
 	informer.AddEventHandler(
 		cache.ResourceEventHandlerFuncs{
 			AddFunc: func(obj interface{}) {
-				data := obj.(*extensions.Ingress)
+				data, ok := obj.(*extensions.Ingress)
+				if !ok {
+					k.Logger.Errorf("%s: Invalid data from k8s api, %s", INGRESS, obj)
+					return
+				}
 				var status = ADDED
 				if data.ObjectMeta.GetDeletionTimestamp() != nil {
 					//detect services that are in terminating state
@@ -255,7 +279,11 @@ func (k *K8s) EventsIngresses(channel chan *Ingress, stop chan struct{}, informe
 				channel <- item
 			},
 			DeleteFunc: func(obj interface{}) {
-				data := obj.(*extensions.Ingress)
+				data, ok := obj.(*extensions.Ingress)
+				if !ok {
+					k.Logger.Errorf("%s: Invalid data from k8s api, %s", INGRESS, obj)
+					return
+				}
 				var status = DELETED
 				item := &Ingress{
 					Namespace:      data.GetNamespace(),
@@ -270,8 +298,16 @@ func (k *K8s) EventsIngresses(channel chan *Ingress, stop chan struct{}, informe
 				channel <- item
 			},
 			UpdateFunc: func(oldObj, newObj interface{}) {
-				data1 := oldObj.(*extensions.Ingress)
-				data2 := newObj.(*extensions.Ingress)
+				data1, ok := oldObj.(*extensions.Ingress)
+				if !ok {
+					k.Logger.Errorf("%s: Invalid data from k8s api, %s", INGRESS, oldObj)
+					return
+				}
+				data2, ok := newObj.(*extensions.Ingress)
+				if !ok {
+					k.Logger.Errorf("%s: Invalid data from k8s api, %s", INGRESS, newObj)
+					return
+				}
 				var status = MODIFIED
 				item1 := &Ingress{
 					Namespace:      data1.GetNamespace(),
@@ -305,7 +341,11 @@ func (k *K8s) EventsIngresses(channel chan *Ingress, stop chan struct{}, informe
 func (k *K8s) EventsServices(channel chan *Service, stop chan struct{}, informer cache.SharedIndexInformer, publishSvc *Service) {
 	informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
-			data := obj.(*corev1.Service)
+			data, ok := obj.(*corev1.Service)
+			if !ok {
+				k.Logger.Errorf("%s: Invalid data from k8s api, %s", SERVICE, obj)
+				return
+			}
 			var status = ADDED
 			if data.ObjectMeta.GetDeletionTimestamp() != nil {
 				//detect services that are in terminating state
@@ -336,7 +376,11 @@ func (k *K8s) EventsServices(channel chan *Service, stop chan struct{}, informer
 			channel <- item
 		},
 		DeleteFunc: func(obj interface{}) {
-			data := obj.(*corev1.Service)
+			data, ok := obj.(*corev1.Service)
+			if !ok {
+				k.Logger.Errorf("%s: Invalid data from k8s api, %s", SERVICE, obj)
+				return
+			}
 			var status = DELETED
 			item := &Service{
 				Namespace:   data.GetNamespace(),
@@ -354,8 +398,16 @@ func (k *K8s) EventsServices(channel chan *Service, stop chan struct{}, informer
 			channel <- item
 		},
 		UpdateFunc: func(oldObj, newObj interface{}) {
-			data1 := oldObj.(*corev1.Service)
-			data2 := newObj.(*corev1.Service)
+			data1, ok := oldObj.(*corev1.Service)
+			if !ok {
+				k.Logger.Errorf("%s: Invalid data from k8s api, %s", SERVICE, oldObj)
+				return
+			}
+			data2, ok := newObj.(*corev1.Service)
+			if !ok {
+				k.Logger.Errorf("%s: Invalid data from k8s api, %s", SERVICE, newObj)
+				return
+			}
 			var status = MODIFIED
 			item1 := &Service{
 				Namespace:   data1.GetNamespace(),
@@ -409,7 +461,11 @@ func (k *K8s) EventsConfigfMaps(channel chan *ConfigMap, stop chan struct{}, inf
 	informer.AddEventHandler(
 		cache.ResourceEventHandlerFuncs{
 			AddFunc: func(obj interface{}) {
-				data := obj.(*corev1.ConfigMap)
+				data, ok := obj.(*corev1.ConfigMap)
+				if !ok {
+					k.Logger.Errorf("%s: Invalid data from k8s api, %s", CONFIGMAP, obj)
+					return
+				}
 				var status = ADDED
 				if data.ObjectMeta.GetDeletionTimestamp() != nil {
 					//detect services that are in terminating state
@@ -425,7 +481,11 @@ func (k *K8s) EventsConfigfMaps(channel chan *ConfigMap, stop chan struct{}, inf
 				channel <- item
 			},
 			DeleteFunc: func(obj interface{}) {
-				data := obj.(*corev1.ConfigMap)
+				data, ok := obj.(*corev1.ConfigMap)
+				if !ok {
+					k.Logger.Errorf("%s: Invalid data from k8s api, %s", CONFIGMAP, obj)
+					return
+				}
 				var status = DELETED
 				item := &ConfigMap{
 					Namespace:   data.GetNamespace(),
@@ -437,8 +497,16 @@ func (k *K8s) EventsConfigfMaps(channel chan *ConfigMap, stop chan struct{}, inf
 				channel <- item
 			},
 			UpdateFunc: func(oldObj, newObj interface{}) {
-				data1 := oldObj.(*corev1.ConfigMap)
-				data2 := newObj.(*corev1.ConfigMap)
+				data1, ok := oldObj.(*corev1.ConfigMap)
+				if !ok {
+					k.Logger.Errorf("%s: Invalid data from k8s api, %s", CONFIGMAP, oldObj)
+					return
+				}
+				data2, ok := newObj.(*corev1.ConfigMap)
+				if !ok {
+					k.Logger.Errorf("%s: Invalid data from k8s api, %s", CONFIGMAP, newObj)
+					return
+				}
 				var status = MODIFIED
 				item1 := &ConfigMap{
 					Namespace:   data1.GetNamespace(),
@@ -467,7 +535,11 @@ func (k *K8s) EventsSecrets(channel chan *Secret, stop chan struct{}, informer c
 	informer.AddEventHandler(
 		cache.ResourceEventHandlerFuncs{
 			AddFunc: func(obj interface{}) {
-				data := obj.(*corev1.Secret)
+				data, ok := obj.(*corev1.Secret)
+				if !ok {
+					k.Logger.Errorf("%s: Invalid data from k8s api, %s", SECRET, obj)
+					return
+				}
 				var status = ADDED
 				if data.ObjectMeta.GetDeletionTimestamp() != nil {
 					//detect services that are in terminating state
@@ -483,7 +555,11 @@ func (k *K8s) EventsSecrets(channel chan *Secret, stop chan struct{}, informer c
 				channel <- item
 			},
 			DeleteFunc: func(obj interface{}) {
-				data := obj.(*corev1.Secret)
+				data, ok := obj.(*corev1.Secret)
+				if !ok {
+					k.Logger.Errorf("%s: Invalid data from k8s api, %s", SECRET, obj)
+					return
+				}
 				var status = DELETED
 				item := &Secret{
 					Namespace: data.GetNamespace(),
@@ -495,8 +571,16 @@ func (k *K8s) EventsSecrets(channel chan *Secret, stop chan struct{}, informer c
 				channel <- item
 			},
 			UpdateFunc: func(oldObj, newObj interface{}) {
-				data1 := oldObj.(*corev1.Secret)
-				data2 := newObj.(*corev1.Secret)
+				data1, ok := oldObj.(*corev1.Secret)
+				if !ok {
+					k.Logger.Errorf("%s: Invalid data from k8s api, %s", SECRET, oldObj)
+					return
+				}
+				data2, ok := newObj.(*corev1.Secret)
+				if !ok {
+					k.Logger.Errorf("%s: Invalid data from k8s api, %s", SECRET, newObj)
+					return
+				}
 				var status = MODIFIED
 				item1 := &Secret{
 					Namespace: data1.GetNamespace(),
