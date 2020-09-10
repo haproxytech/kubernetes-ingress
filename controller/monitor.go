@@ -208,7 +208,7 @@ func (c *HAProxyController) SyncData(jobChan <-chan SyncDataEvent, chConfigMapRe
 		case INGRESS:
 			change = c.eventIngress(ns, job.Data.(*Ingress))
 		case ENDPOINTS:
-			change = c.eventEndpoints(ns, job.Data.(*Endpoints))
+			change = c.eventEndpoints(ns, job.Data.(*Endpoints), c.processEndpointsSrvs)
 		case SERVICE:
 			change = c.eventService(ns, job.Data.(*Service))
 		case CONFIGMAP:

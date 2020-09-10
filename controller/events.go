@@ -206,7 +206,7 @@ func (c *HAProxyController) eventIngress(ns *Namespace, data *Ingress) (updateRe
 	return updateRequired
 }
 
-func (c *HAProxyController) eventEndpoints(ns *Namespace, data *Endpoints) (updateRequired bool) {
+func (c *HAProxyController) eventEndpoints(ns *Namespace, data *Endpoints, processEndpointsSrvs func(oldEndpoints, newEndpoints *Endpoints)) (updateRequired bool) {
 	updateRequired = false
 	switch data.Status {
 	case MODIFIED:
@@ -220,14 +220,14 @@ func (c *HAProxyController) eventEndpoints(ns *Namespace, data *Endpoints) (upda
 			return false
 		}
 		data.BackendName = oldEndpoints.BackendName
-		c.processEndpointsSrvs(oldEndpoints, newEndpoints)
+		processEndpointsSrvs(oldEndpoints, newEndpoints)
 		ns.Endpoints[data.Service.Value] = newEndpoints
 		return true
 	case ADDED:
 		if old, ok := ns.Endpoints[data.Service.Value]; ok {
 			if !old.Equal(data) {
 				data.Status = MODIFIED
-				return c.eventEndpoints(ns, data)
+				return c.eventEndpoints(ns, data, processEndpointsSrvs)
 			}
 			return updateRequired
 		}
@@ -245,54 +245,6 @@ func (c *HAProxyController) eventEndpoints(ns *Namespace, data *Endpoints) (upda
 		}
 	}
 	return updateRequired
-}
-
-func (c *HAProxyController) processEndpointsSrvs(oldEndpoints, newEndpoints *Endpoints) {
-	// Compare new Endpoints with old Endpoints Addresses and sync HAProxySrvs
-	// Also by the end we will have a temporary array holding available HAProxysrv slots
-	available := []*HAProxySrv{}
-	newEndpoints.HAProxySrvs = oldEndpoints.HAProxySrvs
-	for _, srv := range newEndpoints.HAProxySrvs {
-		if _, ok := newEndpoints.Addresses[srv.IP]; !ok {
-			available = append(available, srv)
-			if !srv.Disabled {
-				srv.IP = "127.0.0.1"
-				srv.Disabled = true
-				srv.Modified = true
-			}
-		}
-	}
-	// Check available HAProxySrvs to add new Addreses
-	availableIdx := len(available) - 1
-	for newAdr := range newEndpoints.Addresses {
-		if availableIdx < 0 {
-			break
-		}
-		if _, ok := oldEndpoints.Addresses[newAdr]; !ok {
-			srv := available[availableIdx]
-			srv.IP = newAdr
-			srv.Disabled = false
-			srv.Modified = true
-			available = available[:availableIdx]
-			availableIdx--
-		}
-	}
-	// Dynamically updates HAProxy backend servers  with HAProxySrvs content
-	for srvName, srv := range newEndpoints.HAProxySrvs {
-		if srv.Modified {
-			if newEndpoints.BackendName == "" {
-				c.Logger.Errorf("No backend Name for endpoints of service `%s` ", newEndpoints.Service.Value)
-				break
-			}
-			c.Logger.Error(c.Client.SetServerAddr(newEndpoints.BackendName, srvName, srv.IP, 0))
-			status := "ready"
-			if srv.Disabled {
-				status = "maint"
-			}
-			c.Logger.Debugf("server '%s/%s' changed status to %v", newEndpoints.BackendName, srvName, status)
-			c.Logger.Error(c.Client.SetServerState(newEndpoints.BackendName, srvName, status))
-		}
-	}
 }
 
 func (c *HAProxyController) eventService(ns *Namespace, data *Service) (updateRequired bool) {

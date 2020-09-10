@@ -206,3 +206,52 @@ func (c *HAProxyController) setTargetPort(path *IngressPath, service *Service, e
 	}
 	return fmt.Errorf("ingress servicePort(Str: %s, Int: %d) not found for backend '%s'", path.ServicePortString, path.ServicePortInt, endpoints.BackendName)
 }
+
+// processEndpointsSrvs dynamically update HAProxy backend servers with modified Addresses
+func (c *HAProxyController) processEndpointsSrvs(oldEndpoints, newEndpoints *Endpoints) {
+	// Compare new Endpoints with old Endpoints Addresses and sync HAProxySrvs
+	// Also by the end we will have a temporary array holding available HAProxysrv slots
+	available := []*HAProxySrv{}
+	newEndpoints.HAProxySrvs = oldEndpoints.HAProxySrvs
+	for _, srv := range newEndpoints.HAProxySrvs {
+		if _, ok := newEndpoints.Addresses[srv.IP]; !ok {
+			available = append(available, srv)
+			if !srv.Disabled {
+				srv.IP = "127.0.0.1"
+				srv.Disabled = true
+				srv.Modified = true
+			}
+		}
+	}
+	// Check available HAProxySrvs to add new Addreses
+	availableIdx := len(available) - 1
+	for newAdr := range newEndpoints.Addresses {
+		if availableIdx < 0 {
+			break
+		}
+		if _, ok := oldEndpoints.Addresses[newAdr]; !ok {
+			srv := available[availableIdx]
+			srv.IP = newAdr
+			srv.Disabled = false
+			srv.Modified = true
+			available = available[:availableIdx]
+			availableIdx--
+		}
+	}
+	// Dynamically updates HAProxy backend servers  with HAProxySrvs content
+	for srvName, srv := range newEndpoints.HAProxySrvs {
+		if srv.Modified {
+			if newEndpoints.BackendName == "" {
+				c.Logger.Errorf("No backend Name for endpoints of service `%s` ", newEndpoints.Service.Value)
+				break
+			}
+			c.Logger.Error(c.Client.SetServerAddr(newEndpoints.BackendName, srvName, srv.IP, 0))
+			status := "ready"
+			if srv.Disabled {
+				status = "maint"
+			}
+			c.Logger.Debugf("server '%s/%s' changed status to %v", newEndpoints.BackendName, srvName, status)
+			c.Logger.Error(c.Client.SetServerState(newEndpoints.BackendName, srvName, status))
+		}
+	}
+}
