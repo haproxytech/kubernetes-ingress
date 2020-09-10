@@ -1,12 +1,12 @@
 package annotations
 
 func (suite *AnnotationSuite) TestNbthreadUpdate() {
-	test := "8"
+	test := "1"
 	a := &nbthread{}
 	if suite.NoError(a.Parse(test)) {
 		suite.Equal(RELOAD, a.Update(suite.client))
 		result, _ := suite.client.GlobalWriteConfig("global", "nbthread")
-		suite.Equal("nbthread 8", result)
+		suite.Equal("nbthread 1", result)
 	}
 }
 
