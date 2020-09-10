@@ -21,5 +21,5 @@ jobs:
     - name: Setup
       run: deploy/kind/ci.sh
     - name: Test
-      run: go run deploy/kind/test.go
+      run: go test ./... --tags=integration
       
