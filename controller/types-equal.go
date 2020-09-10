@@ -49,29 +49,6 @@ func (a EndpointPorts) Equal(b EndpointPorts) bool {
 	return true
 }
 
-func (a *EndpointIP) Equal(b *EndpointIP) bool {
-	return a.IP == b.IP
-}
-
-func (a EndpointIPs) Equal(b EndpointIPs) bool {
-	if len(a) != len(b) {
-		return false
-	}
-	for _, value := range a {
-		found := false
-		for _, value2 := range b {
-			if value.Equal(value2) {
-				found = true
-				break
-			}
-		}
-		if !found {
-			return false
-		}
-	}
-	return true
-}
-
 //Equal checks if Ingress Paths are equal
 func (a *IngressPath) Equal(b *IngressPath) bool {
 	if a == nil || b == nil {
@@ -236,8 +213,13 @@ func (a *Endpoints) Equal(b *Endpoints) bool {
 	if !a.Ports.Equal(b.Ports) {
 		return false
 	}
-	if !a.Addresses.Equal(b.Addresses) {
+	if len(a.Addresses) != len(b.Addresses) {
 		return false
+	}
+	for adr := range a.Addresses {
+		if _, ok := b.Addresses[adr]; !ok {
+			return false
+		}
 	}
 
 	return true

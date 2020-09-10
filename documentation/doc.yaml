@@ -751,7 +751,7 @@ annotations:
     example: ['set-host: "example.local"']
   - title: servers-increment
     type: number
-    group: servers-slots-increment
+    group: servers-slots
     dependencies: ""
     default: "42"
     description:
@@ -766,6 +766,25 @@ annotations:
     - configmap
     version_min: "1.4"
     example: ['servers-increment: 75']
+  - title: servers-slots
+    type: number
+    group: servers-slots
+    dependencies: ""
+    default: "42"
+    description:
+    - Sets the number of servers slots that should be provisioned on a backend.
+      If this number is greater than discovered endpoints, the remaining slots will
+      be disabled (on stand by), ready to be used dynamically (without reload).
+      if the number of server slots is lower than discovered endpoints then controller
+      will create new server slots and reload.
+    tip:
+      - This deprecates `servers-increment` annotation.
+    values:
+    - Integer value indicating the number of disabled servers to add. Defaults to 42.
+    applies_to:
+    - configmap
+    version_min: "1.5"
+    example: ['servers-slots: 75']
   - title: ssl-certificate
     type: string
     group: tls-secret
@@ -1051,4 +1070,4 @@ annotations:
     - ingress
     version_min: "1.4"
     example: ['whitelist: "192.168.1.0/24, 192.168.2.100"']
-    
+

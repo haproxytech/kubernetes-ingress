@@ -206,16 +206,8 @@ func (c *Configuration) Clean() {
 				for _, port := range data.Ports {
 					port.Status = EMPTY
 				}
-				for key, adr := range data.Addresses {
-					switch adr.Status {
-					case DELETED:
-						delete(data.Addresses, key)
-					default:
-						adr.Status = EMPTY
-					}
-				}
-				for _, adr := range data.Addresses {
-					adr.Status = EMPTY
+				for _, srv := range data.HAProxySrvs {
+					srv.Modified = false
 				}
 			}
 		}

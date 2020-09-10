@@ -15,9 +15,6 @@
 package controller
 
 import (
-	"fmt"
-	"strconv"
-
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 )
 
@@ -217,15 +214,15 @@ func (c *HAProxyController) eventEndpoints(ns *Namespace, data *Endpoints) (upda
 		oldEndpoints, ok := ns.Endpoints[data.Service.Value]
 		if !ok {
 			c.Logger.Warningf("Endpoints '%s' not registered with controller !", data.Service)
-			return updateRequired
+			return false
 		}
 		if oldEndpoints.Equal(newEndpoints) {
-			return updateRequired
+			return false
 		}
 		data.BackendName = oldEndpoints.BackendName
-		c.setModifiedStatusEndpoints(oldEndpoints, newEndpoints)
-		updateRequired = updateRequired || c.processEndpointIPs(newEndpoints)
+		c.processEndpointsSrvs(oldEndpoints, newEndpoints)
 		ns.Endpoints[data.Service.Value] = newEndpoints
+		return true
 	case ADDED:
 		if old, ok := ns.Endpoints[data.Service.Value]; ok {
 			if !old.Equal(data) {
@@ -234,14 +231,10 @@ func (c *HAProxyController) eventEndpoints(ns *Namespace, data *Endpoints) (upda
 			}
 			return updateRequired
 		}
-		for _, ip := range data.Addresses {
-			ip.Status = ADDED
-		}
 		for _, port := range data.Ports {
 			port.Status = ADDED
 		}
 		ns.Endpoints[data.Service.Value] = data
-		updateRequired = updateRequired || c.processEndpointIPs(data)
 	case DELETED:
 		oldData, ok := ns.Endpoints[data.Service.Value]
 		if ok {
@@ -254,116 +247,52 @@ func (c *HAProxyController) eventEndpoints(ns *Namespace, data *Endpoints) (upda
 	return updateRequired
 }
 
-func (c *HAProxyController) setModifiedStatusEndpoints(oldObj, newObj *Endpoints) {
-	for _, adrNew := range newObj.Addresses {
-		adrNew.Status = ADDED
+func (c *HAProxyController) processEndpointsSrvs(oldEndpoints, newEndpoints *Endpoints) {
+	// Compare new Endpoints with old Endpoints Addresses and sync HAProxySrvs
+	// Also by the end we will have a temporary array holding available HAProxysrv slots
+	available := []*HAProxySrv{}
+	newEndpoints.HAProxySrvs = oldEndpoints.HAProxySrvs
+	for _, srv := range newEndpoints.HAProxySrvs {
+		if _, ok := newEndpoints.Addresses[srv.IP]; !ok {
+			available = append(available, srv)
+			if !srv.Disabled {
+				srv.IP = "127.0.0.1"
+				srv.Disabled = true
+				srv.Modified = true
+			}
+		}
 	}
-	for oldKey, adrOld := range oldObj.Addresses {
-		for _, adrNew := range newObj.Addresses {
-			if adrOld.IP == adrNew.IP {
-				adrNew.HAProxyName = adrOld.HAProxyName
-				adrNew.Status = adrOld.Status
-				delete(oldObj.Addresses, oldKey)
+	// Check available HAProxySrvs to add new Addreses
+	availableIdx := len(available) - 1
+	for newAdr := range newEndpoints.Addresses {
+		if availableIdx < 0 {
+			break
+		}
+		if _, ok := oldEndpoints.Addresses[newAdr]; !ok {
+			srv := available[availableIdx]
+			srv.IP = newAdr
+			srv.Disabled = false
+			srv.Modified = true
+			available = available[:availableIdx]
+			availableIdx--
+		}
+	}
+	// Dynamically updates HAProxy backend servers  with HAProxySrvs content
+	for srvName, srv := range newEndpoints.HAProxySrvs {
+		if srv.Modified {
+			if newEndpoints.BackendName == "" {
+				c.Logger.Errorf("No backend Name for endpoints of service `%s` ", newEndpoints.Service.Value)
 				break
 			}
-		}
-
-	}
-	for oldKey, adrOld := range oldObj.Addresses {
-		if !adrOld.Disabled {
-			// it not disabled so it must be now, no longer exists
-			adrOld.IP = "127.0.0.1"
-			adrOld.Disabled = true
-			adrOld.Status = MODIFIED
-			newObj.Addresses[fmt.Sprintf("SRV_%s", utils.RandomString(5))] = adrOld
-		} else {
-			//try to find one that is added so we can switch them
-			replaced := false
-			for _, adrNew := range newObj.Addresses {
-				if adrNew.Status == ADDED {
-					replaced = true
-					adrNew.HAProxyName = adrOld.HAProxyName
-					adrNew.Status = MODIFIED
-					break
-				}
-			}
-			if !replaced {
-				newObj.Addresses[oldKey] = adrOld
-			}
-		}
-
-	}
-
-	annIncrement, _ := GetValueFromAnnotations("servers-increment", c.cfg.ConfigMaps[Main].Annotations)
-	incrementSize := int64(128)
-	if increment, err := strconv.ParseInt(annIncrement.Value, 10, 64); err == nil {
-		incrementSize = increment
-	}
-	numDisabled := int64(0)
-	for _, adr := range newObj.Addresses {
-		if adr.Disabled {
-			numDisabled++
-		}
-	}
-
-	if numDisabled > incrementSize {
-		alreadyDeleted := int64(0)
-		for _, adr := range newObj.Addresses {
-			if adr.Status == DELETED {
-				alreadyDeleted++
-			}
-		}
-		division := numDisabled / incrementSize
-		toDisable := division*incrementSize - alreadyDeleted
-		if toDisable == 0 {
-			return
-		}
-		for _, adr := range newObj.Addresses {
-			if adr.Disabled && toDisable > 0 {
-				adr.IP = "127.0.0.1"
-				adr.Status = DELETED
-				toDisable--
-			}
-		}
-	}
-}
-
-func (c *HAProxyController) processEndpointIPs(data *Endpoints) (updateRequired bool) {
-	updateRequired = false
-	for _, ip := range data.Addresses {
-		switch ip.Status {
-		case ADDED:
-			//added on haproxy update
-			ip.HAProxyName = fmt.Sprintf("SRV_%s", utils.RandomString(5))
-			updateRequired = true
-		case MODIFIED:
-			if data.BackendName != "" {
-				//this is ok since if exists, we edit current data
-				ip.Status = ADDED
-				updateRequired = true
-				break
-			}
-			err := c.Client.SetServerAddr(data.BackendName, ip.HAProxyName, ip.IP, 0)
-			if err != nil {
-				c.Logger.Error(err)
-				updateRequired = true
-			}
+			c.Logger.Error(c.Client.SetServerAddr(newEndpoints.BackendName, srvName, srv.IP, 0))
 			status := "ready"
-			if ip.Disabled {
+			if srv.Disabled {
 				status = "maint"
 			}
-			c.Logger.Debugf("server '%s/%s' changed status to %v", data.BackendName, ip.HAProxyName, status)
-			err = c.Client.SetServerState(data.BackendName, ip.HAProxyName, status)
-			if err != nil {
-				c.Logger.Error(err)
-				updateRequired = true
-			}
-		case DELETED:
-			//removed on haproxy update
-			updateRequired = true
+			c.Logger.Debugf("server '%s/%s' changed status to %v", newEndpoints.BackendName, srvName, status)
+			c.Logger.Error(c.Client.SetServerState(newEndpoints.BackendName, srvName, status))
 		}
 	}
-	return updateRequired
 }
 
 func (c *HAProxyController) eventService(ns *Namespace, data *Service) (updateRequired bool) {
