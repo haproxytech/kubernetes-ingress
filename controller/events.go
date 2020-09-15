@@ -398,6 +398,7 @@ func (c *HAProxyController) processEndpointIPs(data *Endpoints) (updateRequired 
 	if toCreate == 0 {
 		return updateRequired
 	}
+	updateRequired = true
 	for index := 0; index < toCreate; index++ {
 		hAProxyName := fmt.Sprintf("SRV_%s", utils.RandomString(5))
 		for _, ok := usedNames[hAProxyName]; ok; {
