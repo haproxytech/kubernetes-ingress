@@ -287,10 +287,15 @@ func (c *HAProxyController) handlePprof() (err error) {
 
 // Look for the targetPort (Endpoint port) corresponding to the servicePort of the IngressPath
 func (c *HAProxyController) setTargetPort(path *IngressPath, service *Service, endpoints *Endpoints) error {
+	//ExternalName
+	if path.ServicePortInt != 0 && endpoints.Namespace == "external" {
+		path.TargetPort = path.ServicePortInt
+		return nil
+	}
+	// Ingress.ServicePort lookup: Ingress.ServicePort --> Service.Port
 	for _, sp := range service.Ports {
-		// Find corresponding servicePort
 		if sp.Name == path.ServicePortString || sp.Port == path.ServicePortInt {
-			// Find the corresponding targetPort in Endpoints ports
+			// Service.Port lookup: Service.Port --> Endpoints.Port
 			if endpoints != nil {
 				for _, epPort := range *endpoints.Ports {
 					if epPort.Name == sp.Name {
@@ -300,7 +305,7 @@ func (c *HAProxyController) setTargetPort(path *IngressPath, service *Service, e
 								if err := c.Client.SetServerAddr(endpoints.BackendName, EndpointIP.HAProxyName, EndpointIP.IP, int(epPort.Port)); err != nil {
 									c.Logger.Error(err)
 								}
-								c.Logger.Infof("Servers Port of backend %s changed from %d to %d", endpoints.BackendName, path.TargetPort, epPort.Port)
+								c.Logger.Infof("TargetPort of backend '%s' changed from %d to %d", endpoints.BackendName, path.TargetPort, epPort.Port)
 							}
 						}
 						path.TargetPort = epPort.Port
@@ -308,13 +313,9 @@ func (c *HAProxyController) setTargetPort(path *IngressPath, service *Service, e
 					}
 				}
 			}
+			c.Logger.Warningf("Could not find '%s' Targetport for service '%s'", sp.Name, service.Name)
+			return nil
 		}
 	}
-	// TargetPort was not found
-	if path.ServicePortInt != 0 && endpoints.Namespace == "external" {
-		//ExternalName
-		path.TargetPort = path.ServicePortInt
-		return nil
-	}
-	return fmt.Errorf("ingress servicePort(Str: %s, Int: %d) for serviceName '%s' not found", path.ServicePortString, path.ServicePortInt, service.Name)
+	return fmt.Errorf("ingress servicePort(Str: %s, Int: %d) not found for backend '%s'", path.ServicePortString, path.ServicePortInt, endpoints.BackendName)
 }
