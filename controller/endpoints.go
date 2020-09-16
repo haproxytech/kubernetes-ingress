@@ -112,6 +112,7 @@ func (c *HAProxyController) handleEndpoints(namespace *Namespace, ingress *Ingre
 				},
 			},
 		}
+		namespace.Endpoints[service.Name] = endpoints
 	}
 	// resolve TargetPort
 	endpoints.BackendName = backendName
@@ -124,18 +125,18 @@ func (c *HAProxyController) handleEndpoints(namespace *Namespace, ingress *Ingre
 		c.createSrvSlots(endpoints)
 	}
 	c.alignSrvSlots(endpoints)
+	annotations, activeAnnotations := c.getServerAnnotations(ingress, service)
 	for srvName, srv := range endpoints.HAProxySrvs {
-		if newBackend {
-			srv.Modified = true
+		if !newBackend && !srv.Modified && !activeAnnotations {
+			continue
 		}
-		reload = c.handleEndpoint(namespace, ingress, path, service, endpoints, srvName) || reload
-
+		reload = c.handleEndpoint(endpoints, srvName, path.TargetPort, annotations) || reload
 	}
 	return reload
 }
 
-// handleEndpoint creates/edits corresponding backend server
-func (c *HAProxyController) handleEndpoint(namespace *Namespace, ingress *Ingress, path *IngressPath, service *Service, endpoints *Endpoints, srvName string) (reload bool) {
+// handleEndpoint creates/updates corresponding HAProxy backend server
+func (c *HAProxyController) handleEndpoint(endpoints *Endpoints, srvName string, port int64, annotations map[string]*StringW) (reload bool) {
 	srv, ok := endpoints.HAProxySrvs[srvName]
 	if !ok {
 		return
@@ -143,19 +144,13 @@ func (c *HAProxyController) handleEndpoint(namespace *Namespace, ingress *Ingres
 	server := models.Server{
 		Name:    srvName,
 		Address: srv.IP,
-		Port:    &path.TargetPort,
+		Port:    &port,
 		Weight:  utils.PtrInt64(128),
 	}
 	if srv.Disabled {
 		server.Maintenance = "enabled"
 	}
-	annotationsActive := c.handleServerAnnotations(ingress, service, &server, srv.Modified)
-	if !srv.Modified {
-		if !annotationsActive {
-			return false
-		}
-		srv.Modified = true
-	}
+	c.handleServerAnnotations(&server, annotations)
 	errAPI := c.Client.BackendServerEdit(endpoints.BackendName, server)
 	if errAPI == nil {
 		c.Logger.Debugf("Updating server '%s/%s'", endpoints.BackendName, server.Name)
@@ -207,7 +202,7 @@ func (c *HAProxyController) setTargetPort(path *IngressPath, service *Service, e
 	return fmt.Errorf("ingress servicePort(Str: %s, Int: %d) not found for backend '%s'", path.ServicePortString, path.ServicePortInt, endpoints.BackendName)
 }
 
-// processEndpointsSrvs dynamically update HAProxy backend servers with modified Addresses
+// processEndpointsSrvs dynamically update (via runtime socket) HAProxy backend servers with modified Addresses
 func (c *HAProxyController) processEndpointsSrvs(oldEndpoints, newEndpoints *Endpoints) {
 	// Compare new Endpoints with old Endpoints Addresses and sync HAProxySrvs
 	// Also by the end we will have a temporary array holding available HAProxysrv slots
