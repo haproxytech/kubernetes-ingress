@@ -23,32 +23,6 @@ func (a *ServicePort) Equal(b *ServicePort) bool {
 	return true
 }
 
-func (a *EndpointPort) Equal(b *EndpointPort) bool {
-	if a.Name != b.Name || a.Protocol != b.Protocol || a.Port != b.Port {
-		return false
-	}
-	return true
-}
-
-func (a EndpointPorts) Equal(b EndpointPorts) bool {
-	if len(a) != len(b) {
-		return false
-	}
-	for _, value := range a {
-		found := false
-		for _, value2 := range b {
-			if value.Equal(value2) {
-				found = true
-				break
-			}
-		}
-		if !found {
-			return false
-		}
-	}
-	return true
-}
-
 //Equal checks if Ingress Paths are equal
 func (a *IngressPath) Equal(b *IngressPath) bool {
 	if a == nil || b == nil {
@@ -210,8 +184,16 @@ func (a *Endpoints) Equal(b *Endpoints) bool {
 	if a.Service != b.Service {
 		return false
 	}
-	if !a.Ports.Equal(b.Ports) {
+	if len(a.Ports) != len(b.Ports) {
 		return false
+	}
+	for port := range a.Ports {
+		if _, ok := b.Ports[port]; !ok {
+			return false
+		}
+		if a.Ports[port] != b.Ports[port] {
+			return false
+		}
 	}
 	if len(a.Addresses) != len(b.Addresses) {
 		return false

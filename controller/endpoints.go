@@ -179,20 +179,18 @@ func (c *HAProxyController) setTargetPort(path *IngressPath, service *Service, e
 		if sp.Name == path.ServicePortString || sp.Port == path.ServicePortInt {
 			// Service.Port lookup: Service.Port --> Endpoints.Port
 			if endpoints != nil {
-				for _, epPort := range endpoints.Ports {
-					if epPort.Name == sp.Name {
+				if targetPort, ok := endpoints.Ports[sp.Name]; ok {
+					if path.TargetPort != targetPort && path.TargetPort != 0 {
 						// Dinamically update backend port
-						if path.TargetPort != epPort.Port && path.TargetPort != 0 {
-							for srvName, srv := range endpoints.HAProxySrvs {
-								if err := c.Client.SetServerAddr(endpoints.BackendName, srvName, srv.IP, int(epPort.Port)); err != nil {
-									c.Logger.Error(err)
-								}
-								c.Logger.Infof("TargetPort of backend '%s' changed from %d to %d", endpoints.BackendName, path.TargetPort, epPort.Port)
+						for srvName, srv := range endpoints.HAProxySrvs {
+							if err := c.Client.SetServerAddr(endpoints.BackendName, srvName, srv.IP, int(targetPort)); err != nil {
+								c.Logger.Error(err)
 							}
+							c.Logger.Infof("TargetPort of backend '%s' changed from %d to %d", endpoints.BackendName, path.TargetPort, targetPort)
 						}
-						path.TargetPort = epPort.Port
-						return nil
 					}
+					path.TargetPort = targetPort
+					return nil
 				}
 			}
 			c.Logger.Warningf("Could not find '%s' Targetport for service '%s'", sp.Name, service.Name)

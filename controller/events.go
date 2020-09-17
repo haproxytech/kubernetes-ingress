@@ -231,9 +231,6 @@ func (c *HAProxyController) eventEndpoints(ns *Namespace, data *Endpoints, proce
 			}
 			return updateRequired
 		}
-		for _, port := range data.Ports {
-			port.Status = ADDED
-		}
 		ns.Endpoints[data.Service.Value] = data
 	case DELETED:
 		oldData, ok := ns.Endpoints[data.Service.Value]

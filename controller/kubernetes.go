@@ -219,7 +219,7 @@ func (k *K8s) convertToEndpoints(obj interface{}, status Status) (*Endpoints, er
 	item := &Endpoints{
 		Namespace:   data.GetNamespace(),
 		Service:     StringW{Value: data.GetName()},
-		Ports:       EndpointPorts{},
+		Ports:       make(map[string]int64),
 		Addresses:   make(map[string]struct{}),
 		HAProxySrvs: make(map[string]*HAProxySrv),
 		Status:      status,
@@ -229,12 +229,7 @@ func (k *K8s) convertToEndpoints(obj interface{}, status Status) (*Endpoints, er
 			item.Addresses[address.IP] = struct{}{}
 		}
 		for _, port := range subset.Ports {
-			item.Ports = append(item.Ports, &EndpointPort{
-				Name:     port.Name,
-				Protocol: string(port.Protocol),
-				Port:     int64(port.Port),
-				Status:   status,
-			})
+			item.Ports[port.Name] = int64(port.Port)
 		}
 	}
 	return item, nil

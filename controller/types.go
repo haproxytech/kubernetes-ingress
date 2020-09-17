@@ -53,21 +53,12 @@ type HAProxySrv struct {
 	Modified bool
 }
 
-type EndpointPort struct {
-	Name     string
-	Protocol string
-	Port     int64
-	Status   Status
-}
-
-type EndpointPorts []*EndpointPort
-
 //Endpoints is usefull data from k8s structures about Endpoints
 type Endpoints struct {
 	Namespace   string
 	Service     StringW
 	BackendName string
-	Ports       EndpointPorts
+	Ports       map[string]int64
 	Addresses   map[string]struct{}
 	HAProxySrvs map[string]*HAProxySrv
 	Status      Status
