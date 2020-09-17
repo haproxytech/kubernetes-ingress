@@ -177,6 +177,9 @@ func (c *HAProxyController) handlePath(namespace *Namespace, ingress *Ingress, r
 		c.Logger.Error(err)
 		return reload
 	}
+	if path.Status == DELETED {
+		return reload
+	}
 	// handle backend servers
 	return c.handleEndpoints(namespace, ingress, path, service, backendName, newBackend)
 }
