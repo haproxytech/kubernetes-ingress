@@ -17,13 +17,14 @@ package controller
 import (
 	"fmt"
 
+	"github.com/haproxytech/kubernetes-ingress/controller/haproxy"
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 	"github.com/haproxytech/models/v2"
 )
 
-type FrontendHTTPReqs map[uint64]models.HTTPRequestRule
-type FrontendHTTPRsps map[uint64]models.HTTPResponseRule
-type FrontendTCPReqs map[uint64]models.TCPRequestRule
+type FrontendHTTPReqs map[haproxy.MapID]models.HTTPRequestRule
+type FrontendHTTPRsps map[haproxy.MapID]models.HTTPResponseRule
+type FrontendTCPReqs map[haproxy.MapID]models.TCPRequestRule
 
 type Rule string
 

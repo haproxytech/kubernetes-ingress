@@ -39,15 +39,15 @@ func (c *Configuration) Init(mapDir string) {
 
 	c.FrontendHTTPReqRules = make(map[Rule]FrontendHTTPReqs)
 	for _, rule := range []Rule{BLACKLIST, SSL_REDIRECT, RATE_LIMIT, REQUEST_CAPTURE, REQUEST_SET_HEADER, REQUEST_SET_HOST, REQUEST_PATH_REWRITE, WHITELIST} {
-		c.FrontendHTTPReqRules[rule] = make(map[uint64]models.HTTPRequestRule)
+		c.FrontendHTTPReqRules[rule] = make(map[haproxy.MapID]models.HTTPRequestRule)
 	}
 	c.FrontendHTTPRspRules = make(map[Rule]FrontendHTTPRsps)
 	for _, rule := range []Rule{RESPONSE_SET_HEADER} {
-		c.FrontendHTTPRspRules[rule] = make(map[uint64]models.HTTPResponseRule)
+		c.FrontendHTTPRspRules[rule] = make(map[haproxy.MapID]models.HTTPResponseRule)
 	}
 	c.FrontendTCPRules = make(map[Rule]FrontendTCPReqs)
 	for _, rule := range []Rule{BLACKLIST, REQUEST_CAPTURE, PROXY_PROTOCOL, WHITELIST} {
-		c.FrontendTCPRules[rule] = make(map[uint64]models.TCPRequestRule)
+		c.FrontendTCPRules[rule] = make(map[haproxy.MapID]models.TCPRequestRule)
 	}
 	c.FrontendRulesModified = map[Mode]bool{
 		HTTP: false,
@@ -70,13 +70,13 @@ func (c *Configuration) Init(mapDir string) {
 func (c *Configuration) Clean() {
 	c.MapFiles.Clean()
 	for rule := range c.FrontendHTTPReqRules {
-		c.FrontendHTTPReqRules[rule] = make(map[uint64]models.HTTPRequestRule)
+		c.FrontendHTTPReqRules[rule] = make(map[haproxy.MapID]models.HTTPRequestRule)
 	}
 	for rule := range c.FrontendHTTPRspRules {
-		c.FrontendHTTPRspRules[rule] = make(map[uint64]models.HTTPResponseRule)
+		c.FrontendHTTPRspRules[rule] = make(map[haproxy.MapID]models.HTTPResponseRule)
 	}
 	for rule := range c.FrontendTCPRules {
-		c.FrontendTCPRules[rule] = make(map[uint64]models.TCPRequestRule)
+		c.FrontendTCPRules[rule] = make(map[haproxy.MapID]models.TCPRequestRule)
 	}
 	c.FrontendRulesModified[HTTP] = false
 	c.FrontendRulesModified[TCP] = false

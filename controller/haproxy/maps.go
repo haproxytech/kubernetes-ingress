@@ -17,18 +17,10 @@ package haproxy
 import (
 	"fmt"
 	"os"
-	"path"
-	"strconv"
 	"strings"
 )
 
-type Maps interface {
-	AppendRow(key uint64, row string)
-	Clean()
-	Refresh() (reload bool, err error)
-}
-
-type mapFiles map[uint64]*mapFile
+type Maps map[MapID]*mapFile
 
 var mapDir string
 
@@ -60,33 +52,33 @@ func (mf *mapFile) isModified() bool {
 
 func NewMapFiles(path string) Maps {
 	mapDir = path
-	var maps mapFiles = make(map[uint64]*mapFile)
-	return &maps
+	var maps Maps = make(map[MapID]*mapFile)
+	return maps
 }
 
-func (m *mapFiles) AppendRow(key uint64, row string) {
+func (m Maps) AppendRow(id MapID, row string) {
 	if row == "" {
 		return
 	}
-	if (*m)[key] == nil {
-		(*m)[key] = &mapFile{
+	if m[id] == nil {
+		m[id] = &mapFile{
 			rows: make(map[string]bool),
 		}
 	}
-	if _, ok := (*m)[key].rows[row]; !ok {
-		(*m)[key].hasNew = true
+	if _, ok := m[id].rows[row]; !ok {
+		m[id].hasNew = true
 	}
-	(*m)[key].rows[row] = false
+	m[id].rows[row] = false
 }
 
-func (m *mapFiles) Clean() {
-	for _, mapFile := range *m {
-		for key, removed := range mapFile.rows {
+func (m Maps) Clean() {
+	for _, mapFile := range m {
+		for id, removed := range mapFile.rows {
 			if removed {
-				delete(mapFile.rows, key)
+				delete(mapFile.rows, id)
 				continue
 			}
-			mapFile.rows[key] = true
+			mapFile.rows[id] = true
 		}
 		mapFile.hasNew = false
 	}
@@ -107,18 +99,18 @@ func (m *mapRefreshError) add(nErr error) {
 	m.error = fmt.Errorf("%w\n%s", m.error, nErr)
 }
 
-func (m *mapFiles) Refresh() (reload bool, err error) {
+func (m Maps) Refresh() (reload bool, err error) {
 	reload = false
 	var retErr mapRefreshError
-	for key, mapFile := range *m {
+	for id, mapFile := range m {
 		if mapFile.isModified() {
 			content := mapFile.getContent()
 			var f *os.File
-			filename := path.Join(mapDir, strconv.FormatUint(key, 10)) + ".lst"
+			filename := id.Path()
 			if content == "" {
 				rErr := os.Remove(filename)
 				retErr.add(rErr)
-				delete(*m, key)
+				delete(m, id)
 				continue
 			} else if f, err = os.Create(filename); err != nil {
 				retErr.add(err)

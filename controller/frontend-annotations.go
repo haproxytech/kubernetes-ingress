@@ -16,17 +16,15 @@ package controller
 
 import (
 	"fmt"
-	"hash/fnv"
 	"net"
-	"path"
 	"strconv"
 	"strings"
 
 	"github.com/haproxytech/client-native/v2/misc"
-	"github.com/haproxytech/models/v2"
-
+	"github.com/haproxytech/kubernetes-ingress/controller/haproxy"
 	"github.com/haproxytech/kubernetes-ingress/controller/store"
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
+	"github.com/haproxytech/models/v2"
 )
 
 const (
@@ -45,21 +43,21 @@ func (c *HAProxyController) handleBlacklisting(ingress *store.Ingress) error {
 	}
 	value := strings.Replace(annBlacklist.Value, ",", " ", -1)
 	mapFiles := c.cfg.MapFiles
-	listKey := hashStrToUint(annBlacklist.Value)
+	mapID, _ := haproxy.NewMapID(annBlacklist.Value)
 	for _, address := range strings.Fields(value) {
 		if ip := net.ParseIP(address); ip == nil {
 			if _, _, err := net.ParseCIDR(address); err != nil {
 				return fmt.Errorf("incorrect value for blacklist annotation in ingress '%s'", ingress.Name)
 			}
 		}
-		mapFiles.AppendRow(listKey, address)
+		mapFiles.AppendRow(mapID, address)
 	}
 
 	// Update rules
 	status := setStatus(ingress.Status, annBlacklist.Status)
 
-	listMapFile := path.Join(HAProxyMapDir, strconv.FormatUint(listKey, 10)) + ".lst"
-	key := hashStrToUint(fmt.Sprintf("%s-%s", BLACKLIST, annBlacklist.Value))
+	ipsMapFile := mapID.Path()
+	mapID, _ = haproxy.NewMapID(fmt.Sprintf("%s-%s", BLACKLIST, annBlacklist.Value))
 	if status != EMPTY {
 		c.cfg.FrontendRulesModified[HTTP] = true
 		c.cfg.FrontendRulesModified[TCP] = true
@@ -72,28 +70,28 @@ func (c *HAProxyController) handleBlacklisting(ingress *store.Ingress) error {
 	for hostname, rule := range ingress.Rules {
 		if rule.Status != DELETED {
 			for path := range rule.Paths {
-				mapFiles.AppendRow(key, hostname+path)
+				mapFiles.AppendRow(mapID, hostname+path)
 			}
 		}
 	}
 
-	mapFile := path.Join(HAProxyMapDir, strconv.FormatUint(key, 10)) + ".lst"
+	hostsMapFile := mapID.Path()
 	httpRule := models.HTTPRequestRule{
 		Index:      utils.PtrInt64(0),
 		Type:       "deny",
 		DenyStatus: 403,
 		Cond:       "if",
-		CondTest:   makeACL(fmt.Sprintf(" { src -f %s }", listMapFile), mapFile),
+		CondTest:   makeACL(fmt.Sprintf(" { src -f %s }", hostsMapFile), ipsMapFile),
 	}
 	tcpRule := models.TCPRequestRule{
 		Index:    utils.PtrInt64(0),
 		Type:     "content",
 		Action:   "reject",
 		Cond:     "if",
-		CondTest: fmt.Sprintf("{ req_ssl_sni -f %s } { src -f %s }", mapFile, listMapFile),
+		CondTest: fmt.Sprintf("{ req_ssl_sni -f %s } { src -f %s }", hostsMapFile, ipsMapFile),
 	}
-	c.cfg.FrontendHTTPReqRules[BLACKLIST][key] = httpRule
-	c.cfg.FrontendTCPRules[BLACKLIST][key] = tcpRule
+	c.cfg.FrontendHTTPReqRules[BLACKLIST][mapID] = httpRule
+	c.cfg.FrontendTCPRules[BLACKLIST][mapID] = tcpRule
 
 	return nil
 }
@@ -132,16 +130,16 @@ func (c *HAProxyController) handleHTTPRedirect(ingress *store.Ingress) error {
 	}
 
 	//Configure redirection
-	key := hashStrToUint(fmt.Sprintf("%s-%d", SSL_REDIRECT, sslRedirectCode))
+	mapID, _ := haproxy.NewMapID(fmt.Sprintf("%s-%d", SSL_REDIRECT, sslRedirectCode))
 	mapFiles := c.cfg.MapFiles
 	for hostname, rule := range ingress.Rules {
 		if rule.Status != DELETED {
 			for path := range rule.Paths {
-				mapFiles.AppendRow(key, hostname+path)
+				mapFiles.AppendRow(mapID, hostname+path)
 			}
 		}
 	}
-	mapFile := path.Join(HAProxyMapDir, strconv.FormatUint(key, 10)) + ".lst"
+	hostsMapFile := mapID.Path()
 	httpRule := models.HTTPRequestRule{
 		Index:      utils.PtrInt64(0),
 		Type:       "redirect",
@@ -149,9 +147,9 @@ func (c *HAProxyController) handleHTTPRedirect(ingress *store.Ingress) error {
 		RedirValue: "https",
 		RedirType:  "scheme",
 		Cond:       "if",
-		CondTest:   makeACL(" !{ ssl_fc }", mapFile),
+		CondTest:   makeACL(" !{ ssl_fc }", hostsMapFile),
 	}
-	c.cfg.FrontendHTTPReqRules[SSL_REDIRECT][key] = httpRule
+	c.cfg.FrontendHTTPReqRules[SSL_REDIRECT][mapID] = httpRule
 	return nil
 }
 
@@ -188,8 +186,8 @@ func (c *HAProxyController) handleRateLimiting(ingress *store.Ingress) error {
 		}
 	}
 	mapFiles := c.cfg.MapFiles
-	reqsKey := hashStrToUint(fmt.Sprintf("%s-%d-%d", RATE_LIMIT, *rateLimitPeriod, reqsLimit))
-	trackKey := hashStrToUint(fmt.Sprintf("%s-%d", RATE_LIMIT, *rateLimitPeriod))
+	reqsMapID, _ := haproxy.NewMapID(fmt.Sprintf("%s-%d-%d", RATE_LIMIT, *rateLimitPeriod, reqsLimit))
+	trackMapID, _ := haproxy.NewMapID(fmt.Sprintf("%s-%d", RATE_LIMIT, *rateLimitPeriod))
 	tableName := fmt.Sprintf("RateLimit-%d", *rateLimitPeriod)
 	if status != EMPTY {
 		c.cfg.FrontendRulesModified[HTTP] = true
@@ -203,8 +201,8 @@ func (c *HAProxyController) handleRateLimiting(ingress *store.Ingress) error {
 	for hostname, rule := range ingress.Rules {
 		if rule.Status != DELETED {
 			for path := range rule.Paths {
-				mapFiles.AppendRow(reqsKey, hostname+path)
-				mapFiles.AppendRow(trackKey, hostname+path)
+				mapFiles.AppendRow(reqsMapID, hostname+path)
+				mapFiles.AppendRow(trackMapID, hostname+path)
 			}
 		}
 	}
@@ -212,7 +210,7 @@ func (c *HAProxyController) handleRateLimiting(ingress *store.Ingress) error {
 		size:   rateLimitSize,
 		period: rateLimitPeriod,
 	}
-	trackMapFile := path.Join(HAProxyMapDir, strconv.FormatUint(trackKey, 10)) + ".lst"
+	trackMapFile := trackMapID.Path()
 	httpTrackRule := models.HTTPRequestRule{
 		Index:         utils.PtrInt64(0),
 		Type:          "track-sc0",
@@ -221,7 +219,7 @@ func (c *HAProxyController) handleRateLimiting(ingress *store.Ingress) error {
 		Cond:          "if",
 		CondTest:      makeACL("", trackMapFile),
 	}
-	reqsMapFile := path.Join(HAProxyMapDir, strconv.FormatUint(reqsKey, 10)) + ".lst"
+	reqsMapFile := reqsMapID.Path()
 	httpDenyRule := models.HTTPRequestRule{
 		Index:      utils.PtrInt64(1),
 		Type:       "deny",
@@ -229,8 +227,8 @@ func (c *HAProxyController) handleRateLimiting(ingress *store.Ingress) error {
 		Cond:       "if",
 		CondTest:   makeACL(fmt.Sprintf(" { sc0_http_req_rate(%s) gt %d }", tableName, reqsLimit), reqsMapFile),
 	}
-	c.cfg.FrontendHTTPReqRules[RATE_LIMIT][trackKey] = httpTrackRule
-	c.cfg.FrontendHTTPReqRules[RATE_LIMIT][reqsKey] = httpDenyRule
+	c.cfg.FrontendHTTPReqRules[RATE_LIMIT][trackMapID] = httpTrackRule
+	c.cfg.FrontendHTTPReqRules[RATE_LIMIT][reqsMapID] = httpDenyRule
 	return nil
 }
 
@@ -262,7 +260,7 @@ func (c *HAProxyController) handleRequestCapture(ingress *store.Ingress) error {
 		if sample == "" {
 			continue
 		}
-		key := hashStrToUint(fmt.Sprintf("%s-%s-%d", REQUEST_CAPTURE, sample, captureLen))
+		mapID, _ := haproxy.NewMapID(fmt.Sprintf("%s-%s-%d", REQUEST_CAPTURE, sample, captureLen))
 		if status != EMPTY {
 			c.cfg.FrontendRulesModified[HTTP] = true
 			c.cfg.FrontendRulesModified[TCP] = true
@@ -275,19 +273,19 @@ func (c *HAProxyController) handleRequestCapture(ingress *store.Ingress) error {
 		for hostname, rule := range ingress.Rules {
 			if rule.Status != DELETED {
 				for path := range rule.Paths {
-					mapFiles.AppendRow(key, hostname+path)
+					mapFiles.AppendRow(mapID, hostname+path)
 				}
 			}
 		}
 
-		mapFile := path.Join(HAProxyMapDir, strconv.FormatUint(key, 10)) + ".lst"
+		hostsMapFile := mapID.Path()
 		httpRule := models.HTTPRequestRule{
 			Index:         utils.PtrInt64(0),
 			Type:          "capture",
 			CaptureSample: sample,
 			Cond:          "if",
 			CaptureLen:    captureLen,
-			CondTest:      makeACL("", mapFile),
+			CondTest:      makeACL("", hostsMapFile),
 		}
 		tcpRule := models.TCPRequestRule{
 			Index:      utils.PtrInt64(0),
@@ -296,10 +294,10 @@ func (c *HAProxyController) handleRequestCapture(ingress *store.Ingress) error {
 			CaptureLen: captureLen,
 			Expr:       sample,
 			Cond:       "if",
-			CondTest:   fmt.Sprintf("{ req_ssl_sni -f %s }", mapFile),
+			CondTest:   fmt.Sprintf("{ req_ssl_sni -f %s }", hostsMapFile),
 		}
-		c.cfg.FrontendHTTPReqRules[REQUEST_CAPTURE][key] = httpRule
-		c.cfg.FrontendTCPRules[REQUEST_CAPTURE][key] = tcpRule
+		c.cfg.FrontendHTTPReqRules[REQUEST_CAPTURE][mapID] = httpRule
+		c.cfg.FrontendTCPRules[REQUEST_CAPTURE][mapID] = tcpRule
 	}
 
 	return err
@@ -321,7 +319,7 @@ func (c *HAProxyController) handleRequestSetHdr(ingress *store.Ingress) error {
 			logger.Errorf("incorrect value '%s' in request-set-header annotation", param)
 			continue
 		}
-		key := hashStrToUint(fmt.Sprintf("%s-%s-%s", REQUEST_SET_HEADER, parts[0], parts[1]))
+		mapID, _ := haproxy.NewMapID(fmt.Sprintf("%s-%s-%s", REQUEST_SET_HEADER, parts[0], parts[1]))
 		if status != EMPTY {
 			c.cfg.FrontendRulesModified[HTTP] = true
 			if status == DELETED {
@@ -333,21 +331,21 @@ func (c *HAProxyController) handleRequestSetHdr(ingress *store.Ingress) error {
 		for hostname, rule := range ingress.Rules {
 			if rule.Status != DELETED {
 				for path := range rule.Paths {
-					mapFiles.AppendRow(key, hostname+path)
+					mapFiles.AppendRow(mapID, hostname+path)
 				}
 			}
 		}
 
-		mapFile := path.Join(HAProxyMapDir, strconv.FormatUint(key, 10)) + ".lst"
+		hostsMapFile := mapID.Path()
 		httpRule := models.HTTPRequestRule{
 			Index:     utils.PtrInt64(0),
 			Type:      "set-header",
 			HdrName:   parts[0],
 			HdrFormat: parts[1],
 			Cond:      "if",
-			CondTest:  makeACL("", mapFile),
+			CondTest:  makeACL("", hostsMapFile),
 		}
-		c.cfg.FrontendHTTPReqRules[REQUEST_SET_HEADER][key] = httpRule
+		c.cfg.FrontendHTTPReqRules[REQUEST_SET_HEADER][mapID] = httpRule
 	}
 
 	return err
@@ -368,7 +366,7 @@ func (c *HAProxyController) handleRequestSetHost(ingress *store.Ingress) error {
 	// Update rules
 	status := setStatus(ingress.Status, annSetHost.Status)
 	mapFiles := c.cfg.MapFiles
-	key := hashStrToUint(fmt.Sprintf("%s-%s", REQUEST_SET_HOST, annSetHost.Value))
+	mapID, _ := haproxy.NewMapID(fmt.Sprintf("%s-%s", REQUEST_SET_HOST, annSetHost.Value))
 	if status != EMPTY {
 		c.cfg.FrontendRulesModified[HTTP] = true
 		if status == DELETED {
@@ -380,21 +378,21 @@ func (c *HAProxyController) handleRequestSetHost(ingress *store.Ingress) error {
 	for hostname, rule := range ingress.Rules {
 		if rule.Status != DELETED {
 			for path := range rule.Paths {
-				mapFiles.AppendRow(key, hostname+path)
+				mapFiles.AppendRow(mapID, hostname+path)
 			}
 		}
 	}
 
-	mapFile := path.Join(HAProxyMapDir, strconv.FormatUint(key, 10)) + ".lst"
+	hostsMapFile := mapID.Path()
 	httpRule := models.HTTPRequestRule{
 		Index:     utils.PtrInt64(0),
 		Type:      "set-header",
 		HdrName:   "Host",
 		HdrFormat: annSetHost.Value,
 		Cond:      "if",
-		CondTest:  makeACL("", mapFile),
+		CondTest:  makeACL("", hostsMapFile),
 	}
-	c.cfg.FrontendHTTPReqRules[REQUEST_SET_HOST][key] = httpRule
+	c.cfg.FrontendHTTPReqRules[REQUEST_SET_HOST][mapID] = httpRule
 
 	return err
 }
@@ -415,7 +413,7 @@ func (c *HAProxyController) handleRequestPathRewrite(ingress *store.Ingress) err
 	status := setStatus(ingress.Status, annPathRewrite.Status)
 	mapFiles := c.cfg.MapFiles
 	parts := strings.Fields(strings.TrimSpace(annPathRewrite.Value))
-	key := hashStrToUint(fmt.Sprintf("%s-%s", REQUEST_PATH_REWRITE, annPathRewrite.Value))
+	mapID, _ := haproxy.NewMapID(fmt.Sprintf("%s-%s", REQUEST_PATH_REWRITE, annPathRewrite.Value))
 	if status != EMPTY {
 		c.cfg.FrontendRulesModified[HTTP] = true
 		if status == DELETED {
@@ -427,13 +425,13 @@ func (c *HAProxyController) handleRequestPathRewrite(ingress *store.Ingress) err
 	for hostname, rule := range ingress.Rules {
 		if rule.Status != DELETED {
 			for path := range rule.Paths {
-				mapFiles.AppendRow(key, hostname+path)
+				mapFiles.AppendRow(mapID, hostname+path)
 			}
 		}
 	}
 
 	var httpRule models.HTTPRequestRule
-	mapFile := path.Join(HAProxyMapDir, strconv.FormatUint(key, 10)) + ".lst"
+	hostsMapFile := mapID.Path()
 	switch len(parts) {
 	case 1:
 		httpRule = models.HTTPRequestRule{
@@ -442,7 +440,7 @@ func (c *HAProxyController) handleRequestPathRewrite(ingress *store.Ingress) err
 			PathMatch: "(.*)",
 			PathFmt:   parts[0],
 			Cond:      "if",
-			CondTest:  makeACL("", mapFile),
+			CondTest:  makeACL("", hostsMapFile),
 		}
 	case 2:
 		httpRule = models.HTTPRequestRule{
@@ -451,13 +449,13 @@ func (c *HAProxyController) handleRequestPathRewrite(ingress *store.Ingress) err
 			PathMatch: parts[0],
 			PathFmt:   parts[1],
 			Cond:      "if",
-			CondTest:  makeACL("", mapFile),
+			CondTest:  makeACL("", hostsMapFile),
 		}
 	default:
 		logger.Errorf("incorrect param '%s' in path-rewrite annotation", annPathRewrite.Value)
 	}
 
-	c.cfg.FrontendHTTPReqRules[REQUEST_PATH_REWRITE][key] = httpRule
+	c.cfg.FrontendHTTPReqRules[REQUEST_PATH_REWRITE][mapID] = httpRule
 	return err
 }
 
@@ -477,7 +475,7 @@ func (c *HAProxyController) handleResponseSetHdr(ingress *store.Ingress) error {
 			logger.Errorf("incorrect value '%s' in response-set-header annotation", param)
 			continue
 		}
-		key := hashStrToUint(fmt.Sprintf("%s-%s-%s", RESPONSE_SET_HEADER, parts[0], parts[1]))
+		mapID, _ := haproxy.NewMapID(fmt.Sprintf("%s-%s-%s", RESPONSE_SET_HEADER, parts[0], parts[1]))
 		if status != EMPTY {
 			c.cfg.FrontendRulesModified[HTTP] = true
 			if status == DELETED {
@@ -487,21 +485,21 @@ func (c *HAProxyController) handleResponseSetHdr(ingress *store.Ingress) error {
 		for hostname, rule := range ingress.Rules {
 			if rule.Status != DELETED {
 				for path := range rule.Paths {
-					mapFiles.AppendRow(key, hostname+path)
+					mapFiles.AppendRow(mapID, hostname+path)
 				}
 			}
 		}
 
-		mapFile := path.Join(HAProxyMapDir, strconv.FormatUint(key, 10)) + ".lst"
+		hostsMapFile := mapID.Path()
 		httpRule := models.HTTPResponseRule{
 			Index:     utils.PtrInt64(0),
 			Type:      "set-header",
 			HdrName:   parts[0],
 			HdrFormat: parts[1],
 			Cond:      "if",
-			CondTest:  makeACL("", mapFile),
+			CondTest:  makeACL("", hostsMapFile),
 		}
-		c.cfg.FrontendHTTPRspRules[RESPONSE_SET_HEADER][key] = httpRule
+		c.cfg.FrontendHTTPRspRules[RESPONSE_SET_HEADER][mapID] = httpRule
 	}
 
 	return err
@@ -514,7 +512,7 @@ func (c *HAProxyController) handleWhitelisting(ingress *store.Ingress) error {
 		return nil
 	}
 	mapFiles := c.cfg.MapFiles
-	listKey := hashStrToUint(annWhitelist.Value)
+	mapID, _ := haproxy.NewMapID(annWhitelist.Value)
 	value := strings.Replace(annWhitelist.Value, ",", " ", -1)
 	for _, address := range strings.Fields(value) {
 		if ip := net.ParseIP(address); ip == nil {
@@ -522,13 +520,13 @@ func (c *HAProxyController) handleWhitelisting(ingress *store.Ingress) error {
 				return fmt.Errorf("incorrect value for whitelist annotation in ingress '%s'", ingress.Name)
 			}
 		}
-		mapFiles.AppendRow(listKey, address)
+		mapFiles.AppendRow(mapID, address)
 	}
 
 	// Update rules
 	status := setStatus(ingress.Status, annWhitelist.Status)
-	listMapFile := path.Join(HAProxyMapDir, strconv.FormatUint(listKey, 10)) + ".lst"
-	key := hashStrToUint(fmt.Sprintf("%s-%s", WHITELIST, annWhitelist.Value))
+	ipsMapFile := mapID.Path()
+	mapID, _ = haproxy.NewMapID(fmt.Sprintf("%s-%s", WHITELIST, annWhitelist.Value))
 	if status != EMPTY {
 		c.cfg.FrontendRulesModified[HTTP] = true
 		c.cfg.FrontendRulesModified[TCP] = true
@@ -541,37 +539,30 @@ func (c *HAProxyController) handleWhitelisting(ingress *store.Ingress) error {
 	for hostname, rule := range ingress.Rules {
 		if rule.Status != DELETED {
 			for path := range rule.Paths {
-				mapFiles.AppendRow(key, hostname+path)
+				mapFiles.AppendRow(mapID, hostname+path)
 			}
 		}
 	}
 
-	mapFile := path.Join(HAProxyMapDir, strconv.FormatUint(key, 10)) + ".lst"
+	hostsMapFile := mapID.Path()
 	httpRule := models.HTTPRequestRule{
 		Index:      utils.PtrInt64(0),
 		Type:       "deny",
 		DenyStatus: 403,
 		Cond:       "if",
-		CondTest:   makeACL(fmt.Sprintf(" !{ src -f %s }", listMapFile), mapFile),
+		CondTest:   makeACL(fmt.Sprintf(" !{ src -f %s }", hostsMapFile), ipsMapFile),
 	}
 	tcpRule := models.TCPRequestRule{
 		Index:    utils.PtrInt64(0),
 		Type:     "content",
 		Action:   "reject",
 		Cond:     "if",
-		CondTest: fmt.Sprintf("{ req_ssl_sni -f %s } !{ src -f %s }", mapFile, listMapFile),
+		CondTest: fmt.Sprintf("{ req_ssl_sni -f %s } !{ src -f %s }", hostsMapFile, ipsMapFile),
 	}
-	c.cfg.FrontendHTTPReqRules[WHITELIST][key] = httpRule
-	c.cfg.FrontendTCPRules[WHITELIST][key] = tcpRule
+	c.cfg.FrontendHTTPReqRules[WHITELIST][mapID] = httpRule
+	c.cfg.FrontendTCPRules[WHITELIST][mapID] = tcpRule
 
 	return nil
-}
-
-func hashStrToUint(s string) uint64 {
-	h := fnv.New64a()
-	_, err := h.Write([]byte(strings.ToLower(s)))
-	logger.Error(err)
-	return h.Sum64()
 }
 
 // Return status for ingress annotations
