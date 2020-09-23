@@ -18,27 +18,28 @@ import (
 	"strings"
 
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/api"
+	"github.com/haproxytech/kubernetes-ingress/controller/store"
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 )
 
 type DefaultCertificate struct{}
 
-func (d DefaultCertificate) Update(cfg Configuration, api api.HAProxyClient, logger utils.Logger) (reload bool, err error) {
-	secretAnn, defSecretErr := GetValueFromAnnotations("ssl-certificate", cfg.ConfigMaps[Main].Annotations)
+func (d DefaultCertificate) Update(k store.K8s, cfg Configuration, api api.HAProxyClient, logger utils.Logger) (reload bool, err error) {
+	secretAnn, defSecretErr := k.GetValueFromAnnotations("ssl-certificate", k.ConfigMaps[Main].Annotations)
 	writeSecret := false
 	if defSecretErr == nil {
 		if secretAnn.Status != DELETED && secretAnn.Status != EMPTY {
 			writeSecret = true
 		}
 		secretData := strings.Split(secretAnn.Value, "/")
-		namespace, namespaceOK := cfg.Namespace[secretData[0]]
+		namespace, namespaceOK := k.Namespaces[secretData[0]]
 		if len(secretData) == 2 && namespaceOK {
 			secret, ok := namespace.Secret[secretData[1]]
 			if ok {
 				if secret.Status != EMPTY && secret.Status != DELETED {
 					writeSecret = true
 				}
-				return HandleSecret(Ingress{
+				return HandleSecret(store.Ingress{
 					Name: "0",
 				}, *secret, writeSecret, cfg.UsedCerts, logger)
 			}

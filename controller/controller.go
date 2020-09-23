@@ -26,13 +26,43 @@ import (
 	"syscall"
 
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/api"
+	"github.com/haproxytech/kubernetes-ingress/controller/store"
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 	"k8s.io/apimachinery/pkg/watch"
+)
+
+const (
+	// Configmaps
+	Main        = "main"
+	TCPServices = "tcpservices"
+	Errorfiles  = "errorfiles"
+	//frontends
+	FrontendHTTP  = "http"
+	FrontendHTTPS = "https"
+	FrontendSSL   = "ssl"
+	//Status
+	ADDED    store.Status = store.ADDED
+	DELETED  store.Status = store.DELETED
+	ERROR    store.Status = store.ERROR
+	EMPTY    store.Status = store.EMPTY
+	MODIFIED store.Status = store.MODIFIED
+)
+
+var (
+	HAProxyCFG        string
+	HAProxyCertDir    string
+	HAProxyStateDir   string
+	HAProxyMapDir     string
+	HAProxyErrFileDir string
+	HAProxyPIDFile    string
 )
 
 // HAProxyController is ingress controller
 type HAProxyController struct {
 	k8s            *K8s
+	Store          store.K8s
+	PublishService *store.Service
+	IngressClass   string
 	cfg            Configuration
 	osArgs         utils.OSArgs
 	Client         api.HAProxyClient
@@ -77,6 +107,16 @@ func (c *HAProxyController) Start(ctx context.Context, osArgs utils.OSArgs) {
 		c.Logger.Error(c.handlePprof())
 		c.refreshBackendSwitching()
 		c.Logger.Error(c.Client.APICommitTransaction())
+	}
+
+	parts := strings.Split(osArgs.PublishService, "/")
+	if len(parts) == 2 {
+		c.PublishService = &store.Service{
+			Namespace: parts[0],
+			Name:      parts[1],
+			Status:    EMPTY,
+			Addresses: []string{},
+		}
 	}
 
 	var k8s *K8s
@@ -131,17 +171,17 @@ func (c *HAProxyController) updateHAProxy() error {
 	usedCerts := map[string]struct{}{}
 	c.cfg.UsedCerts = usedCerts
 
-	for _, namespace := range c.cfg.Namespace {
+	for _, namespace := range c.Store.Namespaces {
 		if !namespace.Relevant {
 			continue
 		}
 		for _, ingress := range namespace.Ingresses {
-			if c.cfg.PublishService != nil && ingress.Status != DELETED {
-				c.Logger.Error(c.k8s.UpdateIngressStatus(ingress, c.cfg.PublishService))
+			if c.PublishService != nil && ingress.Status != DELETED {
+				c.Logger.Error(c.k8s.UpdateIngressStatus(ingress, c.PublishService))
 			}
 			// handle Default Backend
 			if ingress.DefaultBackend != nil {
-				reload = c.handlePath(namespace, ingress, &IngressRule{}, ingress.DefaultBackend) || reload
+				reload = c.handlePath(namespace, ingress, &store.IngressRule{}, ingress.DefaultBackend) || reload
 			}
 			// handle Ingress rules
 			for _, rule := range ingress.Rules {
@@ -170,7 +210,7 @@ func (c *HAProxyController) updateHAProxy() error {
 
 	var r bool
 	for _, handler := range c.UpdateHandlers {
-		r, err = handler.Update(c.cfg, c.Client, c.Logger)
+		r, err = handler.Update(c.Store, c.cfg, c.Client, c.Logger)
 		c.Logger.Error(err)
 		reload = reload || r
 	}
@@ -200,7 +240,7 @@ func (c *HAProxyController) updateHAProxy() error {
 		c.Logger.Error(err)
 		return err
 	}
-	c.cfg.Clean()
+	c.clean()
 	if restart {
 		if err := c.haproxyService("restart"); err != nil {
 			c.Logger.Error(err)
@@ -274,7 +314,7 @@ func (c *HAProxyController) haproxyInitialize() {
 		c.Logger.Panic(err)
 	}
 
-	c.cfg.Init(c.osArgs, HAProxyMapDir)
+	c.cfg.Init(HAProxyMapDir)
 }
 
 // Handle HAProxy daemon via Master process
@@ -353,4 +393,12 @@ func (c *HAProxyController) saveServerState() error {
 		return err
 	}
 	return nil
+}
+
+func (c *HAProxyController) clean() {
+	c.Store.Clean()
+	c.cfg.Clean()
+	if c.PublishService != nil {
+		c.PublishService.Status = EMPTY
+	}
 }

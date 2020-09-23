@@ -15,26 +15,13 @@
 package controller
 
 import (
-	"strings"
-
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy"
-	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 	"github.com/haproxytech/models/v2"
 )
 
 //Configuration represents k8s state
 
-type NamespacesWatch struct {
-	Whitelist map[string]struct{}
-	Blacklist map[string]struct{}
-}
-
 type Configuration struct {
-	ConfigMaps               map[string]*ConfigMap
-	Namespace                map[string]*Namespace
-	NamespacesAccess         NamespacesWatch
-	IngressClass             string
-	PublishService           *Service
 	MapFiles                 haproxy.Maps
 	FrontendHTTPReqRules     map[Rule]FrontendHTTPReqs
 	FrontendHTTPRspRules     map[Rule]FrontendHTTPRsps
@@ -48,49 +35,8 @@ type Configuration struct {
 	UsedCerts                map[string]struct{}
 }
 
-func (c *Configuration) IsRelevantNamespace(namespace string) bool {
-	if namespace == "" {
-		return false
-	}
-	if len(c.NamespacesAccess.Whitelist) > 0 {
-		_, ok := c.NamespacesAccess.Whitelist[namespace]
-		return ok
-	}
-	_, ok := c.NamespacesAccess.Blacklist[namespace]
-	return !ok
-}
-
 //Init initialize configuration
-func (c *Configuration) Init(osArgs utils.OSArgs, mapDir string) {
-
-	c.NamespacesAccess = NamespacesWatch{
-		Whitelist: map[string]struct{}{},
-		Blacklist: map[string]struct{}{
-			"kube-system": {},
-		},
-	}
-	for _, namespace := range osArgs.NamespaceWhitelist {
-		c.NamespacesAccess.Whitelist[namespace] = struct{}{}
-	}
-	for _, namespace := range osArgs.NamespaceBlacklist {
-		c.NamespacesAccess.Blacklist[namespace] = struct{}{}
-	}
-
-	c.IngressClass = osArgs.IngressClass
-
-	parts := strings.Split(osArgs.PublishService, "/")
-	if len(parts) == 2 {
-		c.PublishService = &Service{
-			Namespace: parts[0],
-			Name:      parts[1],
-			Status:    EMPTY,
-			Addresses: []string{},
-		}
-	}
-
-	c.ConfigMaps = make(map[string]*ConfigMap)
-
-	c.Namespace = make(map[string]*Namespace)
+func (c *Configuration) Init(mapDir string) {
 
 	c.FrontendHTTPReqRules = make(map[Rule]FrontendHTTPReqs)
 	for _, rule := range []Rule{BLACKLIST, SSL_REDIRECT, RATE_LIMIT, REQUEST_CAPTURE, REQUEST_SET_HEADER, WHITELIST} {
@@ -121,111 +67,9 @@ func (c *Configuration) Init(osArgs utils.OSArgs, mapDir string) {
 	c.BackendHTTPRules = make(map[string]BackendHTTPReqs)
 }
 
-//GetNamespace returns Namespace. Creates one if not existing
-func (c *Configuration) GetNamespace(name string) *Namespace {
-	namespace, ok := c.Namespace[name]
-	if ok {
-		return namespace
-	}
-	newNamespace := c.NewNamespace(name)
-	return newNamespace
-}
-
-//NewNamespace returns new initialized Namespace
-func (c *Configuration) NewNamespace(name string) *Namespace {
-	newNamespace := &Namespace{
-		Name:      name,
-		Relevant:  c.IsRelevantNamespace(name),
-		Endpoints: make(map[string]*Endpoints),
-		Services:  make(map[string]*Service),
-		Ingresses: make(map[string]*Ingress),
-		Secret:    make(map[string]*Secret),
-		Status:    ADDED,
-	}
-	c.Namespace[name] = newNamespace
-	return newNamespace
-}
-
 //Clean cleans all the statuses of various data that was changed
 //deletes them completely or just resets them if needed
 func (c *Configuration) Clean() {
-	for _, namespace := range c.Namespace {
-		for _, data := range namespace.Ingresses {
-			for _, tls := range data.TLS {
-				switch tls.Status {
-				case DELETED:
-					delete(data.TLS, tls.Host)
-					continue
-				default:
-					tls.Status = EMPTY
-				}
-			}
-			if data.DefaultBackend != nil {
-				data.DefaultBackend.Status = EMPTY
-			}
-			for _, rule := range data.Rules {
-				switch rule.Status {
-				case DELETED:
-					delete(data.Rules, rule.Host)
-					continue
-				default:
-					rule.Status = EMPTY
-					for _, path := range rule.Paths {
-						switch path.Status {
-						case DELETED:
-							delete(rule.Paths, path.Path)
-						default:
-							path.Status = EMPTY
-						}
-					}
-				}
-			}
-			data.Annotations.Clean()
-			switch data.Status {
-			case DELETED:
-				delete(namespace.Ingresses, data.Name)
-			default:
-				data.Status = EMPTY
-			}
-		}
-		for _, data := range namespace.Services {
-			data.Annotations.Clean()
-			switch data.Status {
-			case DELETED:
-				delete(namespace.Services, data.Name)
-			default:
-				data.Status = EMPTY
-			}
-		}
-		for _, data := range namespace.Endpoints {
-			switch data.Status {
-			case DELETED:
-				delete(namespace.Endpoints, data.Service.Value)
-			default:
-				data.Status = EMPTY
-				for _, srv := range data.HAProxySrvs {
-					srv.Modified = false
-				}
-			}
-		}
-		for _, data := range namespace.Secret {
-			switch data.Status {
-			case DELETED:
-				delete(namespace.Secret, data.Name)
-			default:
-				data.Status = EMPTY
-			}
-		}
-	}
-	for _, cm := range c.ConfigMaps {
-		switch cm.Status {
-		case DELETED:
-			cm = nil
-		default:
-			cm.Status = EMPTY
-			cm.Annotations.Clean()
-		}
-	}
 	c.MapFiles.Clean()
 	for rule := range c.FrontendHTTPReqRules {
 		c.FrontendHTTPReqRules[rule] = make(map[uint64]models.HTTPRequestRule)
@@ -238,8 +82,4 @@ func (c *Configuration) Clean() {
 	}
 	c.FrontendRulesModified[HTTP] = false
 	c.FrontendRulesModified[TCP] = false
-	defaultAnnotationValues.Clean()
-	if c.PublishService != nil {
-		c.PublishService.Status = EMPTY
-	}
 }

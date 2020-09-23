@@ -19,10 +19,11 @@ import (
 	"os"
 	"path"
 
+	"github.com/haproxytech/kubernetes-ingress/controller/store"
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 )
 
-func HandleSecret(ingress Ingress, secret Secret, writeSecret bool, certs map[string]struct{}, logger utils.Logger) (reload bool, err error) {
+func HandleSecret(ingress store.Ingress, secret store.Secret, writeSecret bool, certs map[string]struct{}, logger utils.Logger) (reload bool, err error) {
 	reload = false
 	for _, k := range []string{"tls", "rsa", "ecdsa"} {
 		key := secret.Data[k+".key"]

@@ -21,6 +21,7 @@ import (
 	"github.com/google/renameio"
 	"github.com/haproxytech/config-parser/v2/types"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/api"
+	"github.com/haproxytech/kubernetes-ingress/controller/store"
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 )
 
@@ -29,14 +30,14 @@ type ErrorFile struct {
 	modified       bool
 }
 
-func (e ErrorFile) Update(cfg Configuration, api api.HAProxyClient, logger utils.Logger) (reload bool, err error) {
-	if cfg.ConfigMaps[Errorfiles] == nil {
+func (e ErrorFile) Update(k store.K8s, cfg Configuration, api api.HAProxyClient, logger utils.Logger) (reload bool, err error) {
+	if k.ConfigMaps[Errorfiles] == nil {
 		return false, nil
 	}
 
 	var codes = [15]string{"200", "400", "401", "403", "404", "405", "407", "408", "410", "425", "429", "500", "502", "503", "504"}
 
-	for code, value := range cfg.ConfigMaps[Errorfiles].Annotations {
+	for code, value := range k.ConfigMaps[Errorfiles].Annotations {
 		filePath := filepath.Join(HAProxyErrFileDir, code)
 		switch value.Status {
 		case EMPTY:

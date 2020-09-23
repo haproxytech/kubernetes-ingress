@@ -26,6 +26,7 @@ import (
 	_ "net/http/pprof"
 
 	c "github.com/haproxytech/kubernetes-ingress/controller"
+	"github.com/haproxytech/kubernetes-ingress/controller/store"
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 	"github.com/jessevdk/go-flags"
 )
@@ -51,10 +52,6 @@ func main() {
 
 	defaultBackendSvc := fmt.Sprintf("%s/%s", osArgs.DefaultBackendService.Namespace, osArgs.DefaultBackendService.Name)
 	defaultCertificate := fmt.Sprintf("%s/%s", osArgs.DefaultCertificate.Namespace, osArgs.DefaultCertificate.Name)
-	c.SetDefaultAnnotation("default-backend-service", defaultBackendSvc)
-	c.SetDefaultAnnotation("ssl-certificate", defaultCertificate)
-	c.SetDefaultAnnotation("sync-period", osArgs.SyncPeriod.String())
-	c.SetDefaultAnnotation("cache-resync-period", osArgs.CacheResyncPeriod.String())
 
 	if len(osArgs.Version) > 0 {
 		fmt.Printf("HAProxy Ingress Controller %s %s%s\n\n", GitTag, GitCommit, GitDirty)
@@ -115,6 +112,21 @@ func main() {
 	controller := c.HAProxyController{
 		HAProxyCfgDir: cfgDir,
 		Logger:        logger,
+		IngressClass:  osArgs.IngressClass,
 	}
+	// K8s Store
+	s := store.NewK8sStore()
+	s.SetDefaultAnnotation("default-backend-service", defaultBackendSvc)
+	s.SetDefaultAnnotation("ssl-certificate", defaultCertificate)
+	s.SetDefaultAnnotation("sync-period", osArgs.SyncPeriod.String())
+	s.SetDefaultAnnotation("cache-resync-period", osArgs.CacheResyncPeriod.String())
+	for _, namespace := range osArgs.NamespaceWhitelist {
+		s.NamespacesAccess.Whitelist[namespace] = struct{}{}
+	}
+	for _, namespace := range osArgs.NamespaceBlacklist {
+		s.NamespacesAccess.Blacklist[namespace] = struct{}{}
+	}
+	controller.Store = s
+	// Start
 	controller.Start(ctx, osArgs)
 }

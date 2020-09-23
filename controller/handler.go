@@ -16,11 +16,12 @@ package controller
 
 import (
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/api"
+	"github.com/haproxytech/kubernetes-ingress/controller/store"
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 )
 
 type UpdateHandler interface {
-	Update(cfg Configuration, api api.HAProxyClient, logger utils.Logger) (reload bool, err error)
+	Update(k store.K8s, cfg Configuration, api api.HAProxyClient, logger utils.Logger) (reload bool, err error)
 }
 
 func (c *HAProxyController) initHandlers() {

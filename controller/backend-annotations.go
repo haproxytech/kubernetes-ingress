@@ -19,17 +19,18 @@ import (
 	"strings"
 
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy"
+	"github.com/haproxytech/kubernetes-ingress/controller/store"
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 	"github.com/haproxytech/models/v2"
 )
 
-func (c *HAProxyController) handleSSLPassthrough(ingress *Ingress, service *Service, path *IngressPath, backend *models.Backend, newBackend bool) (updateBackendSwitching bool) {
+func (c *HAProxyController) handleSSLPassthrough(ingress *store.Ingress, service *store.Service, path *store.IngressPath, backend *models.Backend, newBackend bool) (updateBackendSwitching bool) {
 
 	if path.IsTCPService || path.IsDefaultBackend {
 		return false
 	}
 	updateBackendSwitching = false
-	annSSLPassthrough, _ := GetValueFromAnnotations("ssl-passthrough", service.Annotations, ingress.Annotations, c.cfg.ConfigMaps[Main].Annotations)
+	annSSLPassthrough, _ := c.Store.GetValueFromAnnotations("ssl-passthrough", service.Annotations, ingress.Annotations, c.Store.ConfigMaps[Main].Annotations)
 	status := annSSLPassthrough.Status
 	if status == EMPTY {
 		status = path.Status
@@ -57,21 +58,21 @@ func (c *HAProxyController) handleSSLPassthrough(ingress *Ingress, service *Serv
 }
 
 // Update backend with annotations values.
-func (c *HAProxyController) handleBackendAnnotations(ingress *Ingress, service *Service, backendModel *models.Backend, newBackend bool) (activeAnnotations bool) {
+func (c *HAProxyController) handleBackendAnnotations(ingress *store.Ingress, service *store.Service, backendModel *models.Backend, newBackend bool) (activeAnnotations bool) {
 	activeAnnotations = false
 	backend := haproxy.Backend(*backendModel)
-	backendAnnotations := make(map[string]*StringW, 9)
+	backendAnnotations := make(map[string]*store.StringW, 9)
 
-	backendAnnotations["abortonclose"], _ = GetValueFromAnnotations("abortonclose", service.Annotations, ingress.Annotations, c.cfg.ConfigMaps[Main].Annotations)
-	backendAnnotations["config-snippet"], _ = GetValueFromAnnotations("config-snippet", ingress.Annotations, service.Annotations)
-	backendAnnotations["cookie-persistence"], _ = GetValueFromAnnotations("cookie-persistence", service.Annotations, ingress.Annotations, c.cfg.ConfigMaps[Main].Annotations)
-	backendAnnotations["load-balance"], _ = GetValueFromAnnotations("load-balance", service.Annotations, ingress.Annotations, c.cfg.ConfigMaps[Main].Annotations)
-	backendAnnotations["timeout-check"], _ = GetValueFromAnnotations("timeout-check", service.Annotations, ingress.Annotations, c.cfg.ConfigMaps[Main].Annotations)
+	backendAnnotations["abortonclose"], _ = c.Store.GetValueFromAnnotations("abortonclose", service.Annotations, ingress.Annotations, c.Store.ConfigMaps[Main].Annotations)
+	backendAnnotations["config-snippet"], _ = c.Store.GetValueFromAnnotations("config-snippet", ingress.Annotations, service.Annotations)
+	backendAnnotations["cookie-persistence"], _ = c.Store.GetValueFromAnnotations("cookie-persistence", service.Annotations, ingress.Annotations, c.Store.ConfigMaps[Main].Annotations)
+	backendAnnotations["load-balance"], _ = c.Store.GetValueFromAnnotations("load-balance", service.Annotations, ingress.Annotations, c.Store.ConfigMaps[Main].Annotations)
+	backendAnnotations["timeout-check"], _ = c.Store.GetValueFromAnnotations("timeout-check", service.Annotations, ingress.Annotations, c.Store.ConfigMaps[Main].Annotations)
 	if backend.Mode == "http" {
-		backendAnnotations["check-http"], _ = GetValueFromAnnotations("check-http", service.Annotations, ingress.Annotations, c.cfg.ConfigMaps[Main].Annotations)
-		backendAnnotations["forwarded-for"], _ = GetValueFromAnnotations("forwarded-for", service.Annotations, ingress.Annotations, c.cfg.ConfigMaps[Main].Annotations)
-		backendAnnotations["path-rewrite"], _ = GetValueFromAnnotations("path-rewrite", service.Annotations, ingress.Annotations, c.cfg.ConfigMaps[Main].Annotations)
-		backendAnnotations["set-host"], _ = GetValueFromAnnotations("set-host", service.Annotations, ingress.Annotations, c.cfg.ConfigMaps[Main].Annotations)
+		backendAnnotations["check-http"], _ = c.Store.GetValueFromAnnotations("check-http", service.Annotations, ingress.Annotations, c.Store.ConfigMaps[Main].Annotations)
+		backendAnnotations["forwarded-for"], _ = c.Store.GetValueFromAnnotations("forwarded-for", service.Annotations, ingress.Annotations, c.Store.ConfigMaps[Main].Annotations)
+		backendAnnotations["path-rewrite"], _ = c.Store.GetValueFromAnnotations("path-rewrite", service.Annotations, ingress.Annotations, c.Store.ConfigMaps[Main].Annotations)
+		backendAnnotations["set-host"], _ = c.Store.GetValueFromAnnotations("set-host", service.Annotations, ingress.Annotations, c.Store.ConfigMaps[Main].Annotations)
 	}
 
 	// The DELETED status of an annotation is handled explicitly
@@ -203,7 +204,7 @@ func (c *HAProxyController) handleBackendAnnotations(ingress *Ingress, service *
 }
 
 // Update server with annotations values.
-func (c *HAProxyController) handleServerAnnotations(serverModel *models.Server, annotations map[string]*StringW) {
+func (c *HAProxyController) handleServerAnnotations(serverModel *models.Server, annotations map[string]*store.StringW) {
 	server := haproxy.Server(*serverModel)
 
 	// The DELETED status of an annotation is handled explicitly
@@ -258,21 +259,21 @@ func (c *HAProxyController) handleServerAnnotations(serverModel *models.Server, 
 	*serverModel = models.Server(server)
 }
 
-func (c *HAProxyController) handleCookieAnnotations(ingress *Ingress, service *Service) models.Cookie {
+func (c *HAProxyController) handleCookieAnnotations(ingress *store.Ingress, service *store.Service) models.Cookie {
 
-	cookieAnnotations := make(map[string]*StringW, 11)
-	cookieAnnotations["cookie-persistence"], _ = GetValueFromAnnotations("cookie-persistence", service.Annotations, ingress.Annotations, c.cfg.ConfigMaps[Main].Annotations)
-	cookieAnnotations["cookie-domain"], _ = GetValueFromAnnotations("cookie-domain", service.Annotations, ingress.Annotations, c.cfg.ConfigMaps[Main].Annotations)
-	cookieAnnotations["cookie-dynamic"], _ = GetValueFromAnnotations("cookie-dynamic", service.Annotations, ingress.Annotations, c.cfg.ConfigMaps[Main].Annotations)
-	cookieAnnotations["cookie-httponly"], _ = GetValueFromAnnotations("cookie-httponly", service.Annotations, ingress.Annotations, c.cfg.ConfigMaps[Main].Annotations)
-	cookieAnnotations["cookie-indirect"], _ = GetValueFromAnnotations("cookie-indirect", service.Annotations, ingress.Annotations, c.cfg.ConfigMaps[Main].Annotations)
-	cookieAnnotations["cookie-maxidle"], _ = GetValueFromAnnotations("cookie-maxidle", service.Annotations, ingress.Annotations, c.cfg.ConfigMaps[Main].Annotations)
-	cookieAnnotations["cookie-maxlife"], _ = GetValueFromAnnotations("cookie-maxlife", service.Annotations, ingress.Annotations, c.cfg.ConfigMaps[Main].Annotations)
-	cookieAnnotations["cookie-nocache"], _ = GetValueFromAnnotations("cookie-nocache", service.Annotations, ingress.Annotations, c.cfg.ConfigMaps[Main].Annotations)
-	cookieAnnotations["cookie-postonly"], _ = GetValueFromAnnotations("cookie-postonly", service.Annotations, ingress.Annotations, c.cfg.ConfigMaps[Main].Annotations)
-	cookieAnnotations["cookie-preserve"], _ = GetValueFromAnnotations("cookie-preserve", service.Annotations, ingress.Annotations, c.cfg.ConfigMaps[Main].Annotations)
-	cookieAnnotations["cookie-secure"], _ = GetValueFromAnnotations("cookie-secure", service.Annotations, ingress.Annotations, c.cfg.ConfigMaps[Main].Annotations)
-	cookieAnnotations["cookie-type"], _ = GetValueFromAnnotations("cookie-type", service.Annotations, ingress.Annotations, c.cfg.ConfigMaps[Main].Annotations)
+	cookieAnnotations := make(map[string]*store.StringW, 11)
+	cookieAnnotations["cookie-persistence"], _ = c.Store.GetValueFromAnnotations("cookie-persistence", service.Annotations, ingress.Annotations, c.Store.ConfigMaps[Main].Annotations)
+	cookieAnnotations["cookie-domain"], _ = c.Store.GetValueFromAnnotations("cookie-domain", service.Annotations, ingress.Annotations, c.Store.ConfigMaps[Main].Annotations)
+	cookieAnnotations["cookie-dynamic"], _ = c.Store.GetValueFromAnnotations("cookie-dynamic", service.Annotations, ingress.Annotations, c.Store.ConfigMaps[Main].Annotations)
+	cookieAnnotations["cookie-httponly"], _ = c.Store.GetValueFromAnnotations("cookie-httponly", service.Annotations, ingress.Annotations, c.Store.ConfigMaps[Main].Annotations)
+	cookieAnnotations["cookie-indirect"], _ = c.Store.GetValueFromAnnotations("cookie-indirect", service.Annotations, ingress.Annotations, c.Store.ConfigMaps[Main].Annotations)
+	cookieAnnotations["cookie-maxidle"], _ = c.Store.GetValueFromAnnotations("cookie-maxidle", service.Annotations, ingress.Annotations, c.Store.ConfigMaps[Main].Annotations)
+	cookieAnnotations["cookie-maxlife"], _ = c.Store.GetValueFromAnnotations("cookie-maxlife", service.Annotations, ingress.Annotations, c.Store.ConfigMaps[Main].Annotations)
+	cookieAnnotations["cookie-nocache"], _ = c.Store.GetValueFromAnnotations("cookie-nocache", service.Annotations, ingress.Annotations, c.Store.ConfigMaps[Main].Annotations)
+	cookieAnnotations["cookie-postonly"], _ = c.Store.GetValueFromAnnotations("cookie-postonly", service.Annotations, ingress.Annotations, c.Store.ConfigMaps[Main].Annotations)
+	cookieAnnotations["cookie-preserve"], _ = c.Store.GetValueFromAnnotations("cookie-preserve", service.Annotations, ingress.Annotations, c.Store.ConfigMaps[Main].Annotations)
+	cookieAnnotations["cookie-secure"], _ = c.Store.GetValueFromAnnotations("cookie-secure", service.Annotations, ingress.Annotations, c.Store.ConfigMaps[Main].Annotations)
+	cookieAnnotations["cookie-type"], _ = c.Store.GetValueFromAnnotations("cookie-type", service.Annotations, ingress.Annotations, c.Store.ConfigMaps[Main].Annotations)
 	cookie := models.Cookie{}
 	for k, v := range cookieAnnotations {
 		if v == nil {
@@ -342,14 +343,14 @@ func (c *HAProxyController) getBackendHTTPReqs(backend string) BackendHTTPReqs {
 	return httpReqs
 }
 
-func (c *HAProxyController) getServerAnnotations(ingress *Ingress, service *Service) (srvAnnotations map[string]*StringW, activeAnnotations bool) {
-	srvAnnotations = make(map[string]*StringW, 5)
-	srvAnnotations["cookie-persistence"], _ = GetValueFromAnnotations("cookie-persistence", service.Annotations, ingress.Annotations, c.cfg.ConfigMaps[Main].Annotations)
-	srvAnnotations["check"], _ = GetValueFromAnnotations("check", service.Annotations, ingress.Annotations, c.cfg.ConfigMaps[Main].Annotations)
-	srvAnnotations["check-interval"], _ = GetValueFromAnnotations("check-interval", service.Annotations, ingress.Annotations, c.cfg.ConfigMaps[Main].Annotations)
-	srvAnnotations["pod-maxconn"], _ = GetValueFromAnnotations("pod-maxconn", service.Annotations)
-	srvAnnotations["server-ssl"], _ = GetValueFromAnnotations("server-ssl", service.Annotations, ingress.Annotations, c.cfg.ConfigMaps[Main].Annotations)
-	srvAnnotations["send-proxy-protocol"], _ = GetValueFromAnnotations("send-proxy-protocol", service.Annotations)
+func (c *HAProxyController) getServerAnnotations(ingress *store.Ingress, service *store.Service) (srvAnnotations map[string]*store.StringW, activeAnnotations bool) {
+	srvAnnotations = make(map[string]*store.StringW, 5)
+	srvAnnotations["cookie-persistence"], _ = c.Store.GetValueFromAnnotations("cookie-persistence", service.Annotations, ingress.Annotations, c.Store.ConfigMaps[Main].Annotations)
+	srvAnnotations["check"], _ = c.Store.GetValueFromAnnotations("check", service.Annotations, ingress.Annotations, c.Store.ConfigMaps[Main].Annotations)
+	srvAnnotations["check-interval"], _ = c.Store.GetValueFromAnnotations("check-interval", service.Annotations, ingress.Annotations, c.Store.ConfigMaps[Main].Annotations)
+	srvAnnotations["pod-maxconn"], _ = c.Store.GetValueFromAnnotations("pod-maxconn", service.Annotations)
+	srvAnnotations["server-ssl"], _ = c.Store.GetValueFromAnnotations("server-ssl", service.Annotations, ingress.Annotations, c.Store.ConfigMaps[Main].Annotations)
+	srvAnnotations["send-proxy-protocol"], _ = c.Store.GetValueFromAnnotations("send-proxy-protocol", service.Annotations)
 	for k, v := range srvAnnotations {
 		if v == nil {
 			delete(srvAnnotations, k)

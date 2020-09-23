@@ -5,14 +5,15 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/haproxytech/kubernetes-ingress/controller/store"
 	"github.com/haproxytech/models/v2"
 )
 
 func (c *HAProxyController) handleTCPServices() (reload bool, err error) {
-	if c.cfg.ConfigMaps[TCPServices] == nil {
+	if c.Store.ConfigMaps[TCPServices] == nil {
 		return false, nil
 	}
-	for port, svc := range c.cfg.ConfigMaps[TCPServices].Annotations {
+	for port, svc := range c.Store.ConfigMaps[TCPServices].Annotations {
 		// Get TCP service from ConfigMap
 		// parts[0]: Service Name
 		// parts[1]: Service Port
@@ -100,18 +101,18 @@ func (c *HAProxyController) handleTCPServices() (reload bool, err error) {
 			c.Logger.Error(err)
 			continue
 		}
-		ingress := &Ingress{
+		ingress := &store.Ingress{
 			Namespace:   namespace,
-			Annotations: MapStringW{},
-			Rules:       map[string]*IngressRule{},
+			Annotations: store.MapStringW{},
+			Rules:       map[string]*store.IngressRule{},
 		}
-		path := &IngressPath{
+		path := &store.IngressPath{
 			ServiceName:    service,
 			ServicePortInt: servicePort,
 			IsTCPService:   true,
 			Status:         svc.Status,
 		}
-		nsmmp := c.cfg.GetNamespace(namespace)
+		nsmmp := c.Store.GetNamespace(namespace)
 		reload = c.handlePath(nsmmp, ingress, nil, path) || reload
 	}
 	return reload, err

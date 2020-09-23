@@ -20,6 +20,7 @@ import (
 	"path"
 	"strings"
 
+	"github.com/haproxytech/kubernetes-ingress/controller/store"
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 	"github.com/haproxytech/models/v2"
 )
@@ -43,7 +44,7 @@ func (c *HAProxyController) cleanCertDir(usedCerts map[string]struct{}) error {
 	return nil
 }
 
-func (c *HAProxyController) handleTLSSecret(ingress Ingress, tls IngressTLS, certs map[string]struct{}) (reload bool) {
+func (c *HAProxyController) handleTLSSecret(ingress store.Ingress, tls store.IngressTLS, certs map[string]struct{}) (reload bool) {
 	secretData := strings.Split(tls.SecretName.Value, "/")
 	namespaceName := ingress.Namespace
 	var secretName string
@@ -53,7 +54,7 @@ func (c *HAProxyController) handleTLSSecret(ingress Ingress, tls IngressTLS, cer
 	} else {
 		secretName = secretData[0] // only secretname is here
 	}
-	namespace, namespaceOK := c.cfg.Namespace[namespaceName]
+	namespace, namespaceOK := c.Store.Namespaces[namespaceName]
 	if !namespaceOK {
 		if tls.Status != EMPTY {
 			c.Logger.Warningf("namespace [%s] does not exist, ignoring.", namespaceName)

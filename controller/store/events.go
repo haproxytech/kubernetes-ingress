@@ -12,30 +12,30 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package controller
+package store
 
 import (
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 )
 
-func (c *HAProxyController) eventNamespace(ns *Namespace, data *Namespace) (updateRequired bool) {
+func (k K8s) EventNamespace(ns *Namespace, data *Namespace) (updateRequired bool) {
 	updateRequired = false
 	switch data.Status {
 	case ADDED:
-		_ = c.cfg.GetNamespace(data.Name)
+		_ = k.GetNamespace(data.Name)
 	case DELETED:
-		_, ok := c.cfg.Namespace[data.Name]
+		_, ok := k.Namespaces[data.Name]
 		if ok {
-			delete(c.cfg.Namespace, data.Name)
+			delete(k.Namespaces, data.Name)
 			updateRequired = true
 		} else {
-			c.Logger.Warningf("Namespace '%s' not registered with controller, cannot delete !", data.Name)
+			logger.Warningf("Namespace '%s' not registered with controller, cannot delete !", data.Name)
 		}
 	}
 	return updateRequired
 }
 
-func (c *HAProxyController) eventIngress(ns *Namespace, data *Ingress) (updateRequired bool) {
+func (k K8s) EventIngress(ns *Namespace, data *Ingress, controllerClass string) (updateRequired bool) {
 	ingressClass := ""
 	updateRequired = false
 	switch data.Status {
@@ -44,14 +44,14 @@ func (c *HAProxyController) eventIngress(ns *Namespace, data *Ingress) (updateRe
 		oldIngress, ok := ns.Ingresses[data.Name]
 		if !ok {
 			newIngress.Status = ADDED
-			return c.eventIngress(ns, newIngress)
+			return k.EventIngress(ns, newIngress, ingressClass)
 		}
 		if annIngressClass, ok := data.Annotations["ingress.class"]; ok {
 			ingressClass = annIngressClass.Value
 		}
-		if ingressClass != c.cfg.IngressClass {
+		if ingressClass != controllerClass {
 			newIngress.Status = DELETED
-			return c.eventIngress(ns, newIngress)
+			return k.EventIngress(ns, newIngress, ingressClass)
 		}
 		if oldIngress.Equal(data) {
 			return false
@@ -150,20 +150,20 @@ func (c *HAProxyController) eventIngress(ns *Namespace, data *Ingress) (updateRe
 		}
 		ns.Ingresses[data.Name] = newIngress
 		//diffStr := cmp.Diff(oldIngress, newIngress)
-		//c.Logger.Tracef("Ingress modified %s %s", data.Name, diffStr)
+		//logger.Tracef("Ingress modified %s %s", data.Name, diffStr)
 		updateRequired = true
 	case ADDED:
 		if annIngressClass, ok := data.Annotations["ingress.class"]; ok {
 			ingressClass = annIngressClass.Value
 		}
-		if ingressClass != c.cfg.IngressClass {
+		if ingressClass != controllerClass {
 			return false
 		}
 		if old, ok := ns.Ingresses[data.Name]; ok {
 			data.Status = old.Status
 			if !old.Equal(data) {
 				data.Status = MODIFIED
-				return c.eventIngress(ns, data)
+				return k.EventIngress(ns, data, ingressClass)
 			}
 			return updateRequired
 		}
@@ -200,20 +200,20 @@ func (c *HAProxyController) eventIngress(ns *Namespace, data *Ingress) (updateRe
 			ingress.Annotations.SetStatusState(DELETED)
 			updateRequired = true
 		} else {
-			c.Logger.Warningf("Ingress '%s' not registered with controller, cannot delete !", data.Name)
+			logger.Warningf("Ingress '%s' not registered with controller, cannot delete !", data.Name)
 		}
 	}
 	return updateRequired
 }
 
-func (c *HAProxyController) eventEndpoints(ns *Namespace, data *Endpoints, processEndpointsSrvs func(oldEndpoints, newEndpoints *Endpoints)) (updateRequired bool) {
+func (k K8s) EventEndpoints(ns *Namespace, data *Endpoints, processEndpointsSrvs func(oldEndpoints, newEndpoints *Endpoints)) (updateRequired bool) {
 	updateRequired = false
 	switch data.Status {
 	case MODIFIED:
 		newEndpoints := data
 		oldEndpoints, ok := ns.Endpoints[data.Service.Value]
 		if !ok {
-			c.Logger.Warningf("Endpoints '%s' not registered with controller !", data.Service)
+			logger.Warningf("Endpoints '%s' not registered with controller !", data.Service)
 			return false
 		}
 		if oldEndpoints.Equal(newEndpoints) {
@@ -227,7 +227,7 @@ func (c *HAProxyController) eventEndpoints(ns *Namespace, data *Endpoints, proce
 		if old, ok := ns.Endpoints[data.Service.Value]; ok {
 			if !old.Equal(data) {
 				data.Status = MODIFIED
-				return c.eventEndpoints(ns, data, processEndpointsSrvs)
+				return k.EventEndpoints(ns, data, processEndpointsSrvs)
 			}
 			return updateRequired
 		}
@@ -238,13 +238,13 @@ func (c *HAProxyController) eventEndpoints(ns *Namespace, data *Endpoints, proce
 			oldData.Status = DELETED
 			updateRequired = true
 		} else {
-			c.Logger.Warningf("Endpoints '%s' not registered with controller, cannot delete !", oldData.Service)
+			logger.Warningf("Endpoints '%s' not registered with controller, cannot delete !", oldData.Service)
 		}
 	}
 	return updateRequired
 }
 
-func (c *HAProxyController) eventService(ns *Namespace, data *Service) (updateRequired bool) {
+func (k K8s) EventService(ns *Namespace, data *Service) (updateRequired bool) {
 	updateRequired = false
 	switch data.Status {
 	case MODIFIED:
@@ -252,7 +252,7 @@ func (c *HAProxyController) eventService(ns *Namespace, data *Service) (updateRe
 		oldService, ok := ns.Services[data.Name]
 		if !ok {
 			//intentionally do not add it. TODO see if our idea of only watching is ok
-			c.Logger.Warningf("Service '%s' not registered with controller !", data.Name)
+			logger.Warningf("Service '%s' not registered with controller !", data.Name)
 		}
 		if oldService.Equal(newService) {
 			return updateRequired
@@ -264,7 +264,7 @@ func (c *HAProxyController) eventService(ns *Namespace, data *Service) (updateRe
 		if old, ok := ns.Services[data.Name]; ok {
 			if !old.Equal(data) {
 				data.Status = MODIFIED
-				return c.eventService(ns, data)
+				return k.EventService(ns, data)
 			}
 			return updateRequired
 		}
@@ -277,13 +277,13 @@ func (c *HAProxyController) eventService(ns *Namespace, data *Service) (updateRe
 			service.Annotations.SetStatusState(DELETED)
 			updateRequired = true
 		} else {
-			c.Logger.Warningf("Service '%s' not registered with controller, cannot delete !", data.Name)
+			logger.Warningf("Service '%s' not registered with controller, cannot delete !", data.Name)
 		}
 	}
 	return updateRequired
 }
 
-func (c *HAProxyController) eventConfigMap(ns *Namespace, data *ConfigMap, configMapArgs map[string]utils.NamespaceValue) (updateRequired bool, configMap string) {
+func (k K8s) EventConfigMap(ns *Namespace, data *ConfigMap, configMapArgs map[string]utils.NamespaceValue) (updateRequired bool, configMap string) {
 	updateRequired = false
 	for cm, nsValue := range configMapArgs {
 		if nsValue.Namespace != ns.Name || nsValue.Name != data.Name {
@@ -291,26 +291,26 @@ func (c *HAProxyController) eventConfigMap(ns *Namespace, data *ConfigMap, confi
 		}
 		switch data.Status {
 		case MODIFIED:
-			different := data.Annotations.SetStatus(c.cfg.ConfigMaps[cm].Annotations)
-			c.cfg.ConfigMaps[cm] = data
+			different := data.Annotations.SetStatus(k.ConfigMaps[cm].Annotations)
+			k.ConfigMaps[cm] = data
 			if !different {
 				data.Status = EMPTY
 			} else {
 				updateRequired = true
 			}
 		case ADDED:
-			if c.cfg.ConfigMaps[cm] == nil {
-				c.cfg.ConfigMaps[cm] = data
+			if k.ConfigMaps[cm] == nil {
+				k.ConfigMaps[cm] = data
 				updateRequired = true
 				return updateRequired, cm
 			}
-			if !c.cfg.ConfigMaps[cm].Equal(data) {
+			if !k.ConfigMaps[cm].Equal(data) {
 				data.Status = MODIFIED
-				return c.eventConfigMap(ns, data, configMapArgs)
+				return k.EventConfigMap(ns, data, configMapArgs)
 			}
 		case DELETED:
-			c.cfg.ConfigMaps[cm].Annotations.SetStatusState(DELETED)
-			c.cfg.ConfigMaps[cm].Status = DELETED
+			k.ConfigMaps[cm].Annotations.SetStatusState(DELETED)
+			k.ConfigMaps[cm].Status = DELETED
 			updateRequired = true
 		}
 		return updateRequired, cm
@@ -318,7 +318,7 @@ func (c *HAProxyController) eventConfigMap(ns *Namespace, data *ConfigMap, confi
 	return false, ""
 }
 
-func (c *HAProxyController) eventSecret(ns *Namespace, data *Secret) (updateRequired bool) {
+func (k K8s) EventSecret(ns *Namespace, data *Secret) (updateRequired bool) {
 	updateRequired = false
 	switch data.Status {
 	case MODIFIED:
@@ -326,7 +326,7 @@ func (c *HAProxyController) eventSecret(ns *Namespace, data *Secret) (updateRequ
 		oldSecret, ok := ns.Secret[data.Name]
 		if !ok {
 			//intentionally do not add it. TODO see if our idea of only watching is ok
-			c.Logger.Warningf("Secret '%s' not registered with controller !", data.Name)
+			logger.Warningf("Secret '%s' not registered with controller !", data.Name)
 			return updateRequired
 		}
 		if oldSecret.Equal(data) {
@@ -338,7 +338,7 @@ func (c *HAProxyController) eventSecret(ns *Namespace, data *Secret) (updateRequ
 		if old, ok := ns.Secret[data.Name]; ok {
 			if !old.Equal(data) {
 				data.Status = MODIFIED
-				return c.eventSecret(ns, data)
+				return k.EventSecret(ns, data)
 			}
 			return updateRequired
 		}
@@ -349,7 +349,7 @@ func (c *HAProxyController) eventSecret(ns *Namespace, data *Secret) (updateRequ
 		if ok {
 			updateRequired = true
 		} else {
-			c.Logger.Warningf("Secret '%s' not registered with controller, cannot delete !", data.Name)
+			logger.Warningf("Secret '%s' not registered with controller, cannot delete !", data.Name)
 		}
 	}
 	return updateRequired

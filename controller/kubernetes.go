@@ -29,6 +29,7 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/clientcmd"
 
+	"github.com/haproxytech/kubernetes-ingress/controller/store"
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 )
 
@@ -89,7 +90,7 @@ func GetRemoteKubernetesClient(kubeconfig string) (*K8s, error) {
 	}, nil
 }
 
-func (k *K8s) EventsNamespaces(channel chan *Namespace, stop chan struct{}, informer cache.SharedIndexInformer) {
+func (k *K8s) EventsNamespaces(channel chan *store.Namespace, stop chan struct{}, informer cache.SharedIndexInformer) {
 	informer.AddEventHandler(
 		cache.ResourceEventHandlerFuncs{
 			AddFunc: func(obj interface{}) {
@@ -103,12 +104,12 @@ func (k *K8s) EventsNamespaces(channel chan *Namespace, stop chan struct{}, info
 					//detect services that are in terminating state
 					status = DELETED
 				}
-				item := &Namespace{
+				item := &store.Namespace{
 					Name:      data.GetName(),
-					Endpoints: make(map[string]*Endpoints),
-					Services:  make(map[string]*Service),
-					Ingresses: make(map[string]*Ingress),
-					Secret:    make(map[string]*Secret),
+					Endpoints: make(map[string]*store.Endpoints),
+					Services:  make(map[string]*store.Service),
+					Ingresses: make(map[string]*store.Ingress),
+					Secret:    make(map[string]*store.Secret),
 					Status:    status,
 				}
 				k.Logger.Tracef("%s %s: %s", NAMESPACE, item.Status, item.Name)
@@ -121,12 +122,12 @@ func (k *K8s) EventsNamespaces(channel chan *Namespace, stop chan struct{}, info
 					return
 				}
 				var status = DELETED
-				item := &Namespace{
+				item := &store.Namespace{
 					Name:      data.GetName(),
-					Endpoints: make(map[string]*Endpoints),
-					Services:  make(map[string]*Service),
-					Ingresses: make(map[string]*Ingress),
-					Secret:    make(map[string]*Secret),
+					Endpoints: make(map[string]*store.Endpoints),
+					Services:  make(map[string]*store.Service),
+					Ingresses: make(map[string]*store.Ingress),
+					Secret:    make(map[string]*store.Secret),
 					Status:    status,
 				}
 				k.Logger.Tracef("%s %s: %s", NAMESPACE, item.Status, item.Name)
@@ -144,11 +145,11 @@ func (k *K8s) EventsNamespaces(channel chan *Namespace, stop chan struct{}, info
 					return
 				}
 				var status = MODIFIED
-				item1 := &Namespace{
+				item1 := &store.Namespace{
 					Name:   data1.GetName(),
 					Status: status,
 				}
-				item2 := &Namespace{
+				item2 := &store.Namespace{
 					Name:   data2.GetName(),
 					Status: status,
 				}
@@ -163,7 +164,7 @@ func (k *K8s) EventsNamespaces(channel chan *Namespace, stop chan struct{}, info
 	go informer.Run(stop)
 }
 
-func (k *K8s) EventsEndpoints(channel chan *Endpoints, stop chan struct{}, informer cache.SharedIndexInformer) {
+func (k *K8s) EventsEndpoints(channel chan *store.Endpoints, stop chan struct{}, informer cache.SharedIndexInformer) {
 	informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			item, err := k.convertToEndpoints(obj, ADDED)
@@ -198,7 +199,7 @@ func (k *K8s) EventsEndpoints(channel chan *Endpoints, stop chan struct{}, infor
 	go informer.Run(stop)
 }
 
-func (k *K8s) convertToEndpoints(obj interface{}, status Status) (*Endpoints, error) {
+func (k *K8s) convertToEndpoints(obj interface{}, status store.Status) (*store.Endpoints, error) {
 	data, ok := obj.(*corev1.Endpoints)
 	if !ok {
 		k.Logger.Errorf("%s: Invalid data from k8s api, %s", ENDPOINTS, obj)
@@ -216,12 +217,12 @@ func (k *K8s) convertToEndpoints(obj interface{}, status Status) (*Endpoints, er
 		//detect endpoints that are in terminating state
 		status = DELETED
 	}
-	item := &Endpoints{
+	item := &store.Endpoints{
 		Namespace:   data.GetNamespace(),
-		Service:     StringW{Value: data.GetName()},
+		Service:     store.StringW{Value: data.GetName()},
 		Ports:       make(map[string]int64),
 		Addresses:   make(map[string]struct{}),
-		HAProxySrvs: make(map[string]*HAProxySrv),
+		HAProxySrvs: make(map[string]*store.HAProxySrv),
 		Status:      status,
 	}
 	for _, subset := range data.Subsets {
@@ -235,7 +236,7 @@ func (k *K8s) convertToEndpoints(obj interface{}, status Status) (*Endpoints, er
 	return item, nil
 }
 
-func (k *K8s) EventsIngresses(channel chan *Ingress, stop chan struct{}, informer cache.SharedIndexInformer) {
+func (k *K8s) EventsIngresses(channel chan *store.Ingress, stop chan struct{}, informer cache.SharedIndexInformer) {
 	informer.AddEventHandler(
 		cache.ResourceEventHandlerFuncs{
 			AddFunc: func(obj interface{}) {
@@ -249,13 +250,13 @@ func (k *K8s) EventsIngresses(channel chan *Ingress, stop chan struct{}, informe
 					//detect services that are in terminating state
 					status = DELETED
 				}
-				item := &Ingress{
+				item := &store.Ingress{
 					Namespace:      data.GetNamespace(),
 					Name:           data.GetName(),
-					Annotations:    ConvertToMapStringW(data.ObjectMeta.Annotations),
-					Rules:          ConvertIngressRules(data.Spec.Rules),
-					DefaultBackend: ConvertIngressBackend(data.Spec.Backend),
-					TLS:            ConvertIngressTLS(data.Spec.TLS),
+					Annotations:    store.ConvertToMapStringW(data.ObjectMeta.Annotations),
+					Rules:          store.ConvertIngressRules(data.Spec.Rules),
+					DefaultBackend: store.ConvertIngressBackend(data.Spec.Backend),
+					TLS:            store.ConvertIngressTLS(data.Spec.TLS),
 					Status:         status,
 				}
 				k.Logger.Tracef("%s %s: %s", INGRESS, item.Status, item.Name)
@@ -268,13 +269,13 @@ func (k *K8s) EventsIngresses(channel chan *Ingress, stop chan struct{}, informe
 					return
 				}
 				var status = DELETED
-				item := &Ingress{
+				item := &store.Ingress{
 					Namespace:      data.GetNamespace(),
 					Name:           data.GetName(),
-					Annotations:    ConvertToMapStringW(data.ObjectMeta.Annotations),
-					Rules:          ConvertIngressRules(data.Spec.Rules),
-					DefaultBackend: ConvertIngressBackend(data.Spec.Backend),
-					TLS:            ConvertIngressTLS(data.Spec.TLS),
+					Annotations:    store.ConvertToMapStringW(data.ObjectMeta.Annotations),
+					Rules:          store.ConvertIngressRules(data.Spec.Rules),
+					DefaultBackend: store.ConvertIngressBackend(data.Spec.Backend),
+					TLS:            store.ConvertIngressTLS(data.Spec.TLS),
 					Status:         status,
 				}
 				k.Logger.Tracef("%s %s: %s", INGRESS, item.Status, item.Name)
@@ -292,22 +293,22 @@ func (k *K8s) EventsIngresses(channel chan *Ingress, stop chan struct{}, informe
 					return
 				}
 				var status = MODIFIED
-				item1 := &Ingress{
+				item1 := &store.Ingress{
 					Namespace:      data1.GetNamespace(),
 					Name:           data1.GetName(),
-					Annotations:    ConvertToMapStringW(data1.ObjectMeta.Annotations),
-					Rules:          ConvertIngressRules(data1.Spec.Rules),
-					DefaultBackend: ConvertIngressBackend(data1.Spec.Backend),
-					TLS:            ConvertIngressTLS(data1.Spec.TLS),
+					Annotations:    store.ConvertToMapStringW(data1.ObjectMeta.Annotations),
+					Rules:          store.ConvertIngressRules(data1.Spec.Rules),
+					DefaultBackend: store.ConvertIngressBackend(data1.Spec.Backend),
+					TLS:            store.ConvertIngressTLS(data1.Spec.TLS),
 					Status:         status,
 				}
-				item2 := &Ingress{
+				item2 := &store.Ingress{
 					Namespace:      data2.GetNamespace(),
 					Name:           data2.GetName(),
-					Annotations:    ConvertToMapStringW(data2.ObjectMeta.Annotations),
-					Rules:          ConvertIngressRules(data2.Spec.Rules),
-					DefaultBackend: ConvertIngressBackend(data2.Spec.Backend),
-					TLS:            ConvertIngressTLS(data2.Spec.TLS),
+					Annotations:    store.ConvertToMapStringW(data2.ObjectMeta.Annotations),
+					Rules:          store.ConvertIngressRules(data2.Spec.Rules),
+					DefaultBackend: store.ConvertIngressBackend(data2.Spec.Backend),
+					TLS:            store.ConvertIngressTLS(data2.Spec.TLS),
 					Status:         status,
 				}
 				if item2.Equal(item1) {
@@ -321,7 +322,7 @@ func (k *K8s) EventsIngresses(channel chan *Ingress, stop chan struct{}, informe
 	go informer.Run(stop)
 }
 
-func (k *K8s) EventsServices(channel chan *Service, stop chan struct{}, informer cache.SharedIndexInformer, publishSvc *Service) {
+func (k *K8s) EventsServices(channel chan *store.Service, stop chan struct{}, informer cache.SharedIndexInformer, publishSvc *store.Service) {
 	informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			data, ok := obj.(*corev1.Service)
@@ -334,17 +335,17 @@ func (k *K8s) EventsServices(channel chan *Service, stop chan struct{}, informer
 				//detect services that are in terminating state
 				status = DELETED
 			}
-			item := &Service{
+			item := &store.Service{
 				Namespace:   data.GetNamespace(),
 				Name:        data.GetName(),
-				Annotations: ConvertToMapStringW(data.ObjectMeta.Annotations),
-				Selector:    ConvertToMapStringW(data.Spec.Selector),
-				Ports:       []ServicePort{},
+				Annotations: store.ConvertToMapStringW(data.ObjectMeta.Annotations),
+				Selector:    store.ConvertToMapStringW(data.Spec.Selector),
+				Ports:       []store.ServicePort{},
 				DNS:         data.Spec.ExternalName,
 				Status:      status,
 			}
 			for _, sp := range data.Spec.Ports {
-				item.Ports = append(item.Ports, ServicePort{
+				item.Ports = append(item.Ports, store.ServicePort{
 					Name:     sp.Name,
 					Protocol: string(sp.Protocol),
 					Port:     int64(sp.Port),
@@ -365,11 +366,11 @@ func (k *K8s) EventsServices(channel chan *Service, stop chan struct{}, informer
 				return
 			}
 			var status = DELETED
-			item := &Service{
+			item := &store.Service{
 				Namespace:   data.GetNamespace(),
 				Name:        data.GetName(),
-				Annotations: ConvertToMapStringW(data.ObjectMeta.Annotations),
-				Selector:    ConvertToMapStringW(data.Spec.Selector),
+				Annotations: store.ConvertToMapStringW(data.ObjectMeta.Annotations),
+				Selector:    store.ConvertToMapStringW(data.Spec.Selector),
 				Status:      status,
 			}
 			if publishSvc != nil {
@@ -392,34 +393,34 @@ func (k *K8s) EventsServices(channel chan *Service, stop chan struct{}, informer
 				return
 			}
 			var status = MODIFIED
-			item1 := &Service{
+			item1 := &store.Service{
 				Namespace:   data1.GetNamespace(),
 				Name:        data1.GetName(),
-				Annotations: ConvertToMapStringW(data1.ObjectMeta.Annotations),
-				Selector:    ConvertToMapStringW(data1.Spec.Selector),
-				Ports:       []ServicePort{},
+				Annotations: store.ConvertToMapStringW(data1.ObjectMeta.Annotations),
+				Selector:    store.ConvertToMapStringW(data1.Spec.Selector),
+				Ports:       []store.ServicePort{},
 				DNS:         data1.Spec.ExternalName,
 				Status:      status,
 			}
 			for _, sp := range data1.Spec.Ports {
-				item1.Ports = append(item1.Ports, ServicePort{
+				item1.Ports = append(item1.Ports, store.ServicePort{
 					Name:     sp.Name,
 					Protocol: string(sp.Protocol),
 					Port:     int64(sp.Port),
 				})
 			}
 
-			item2 := &Service{
+			item2 := &store.Service{
 				Namespace:   data2.GetNamespace(),
 				Name:        data2.GetName(),
-				Annotations: ConvertToMapStringW(data2.ObjectMeta.Annotations),
-				Selector:    ConvertToMapStringW(data2.Spec.Selector),
-				Ports:       []ServicePort{},
+				Annotations: store.ConvertToMapStringW(data2.ObjectMeta.Annotations),
+				Selector:    store.ConvertToMapStringW(data2.Spec.Selector),
+				Ports:       []store.ServicePort{},
 				DNS:         data1.Spec.ExternalName,
 				Status:      status,
 			}
 			for _, sp := range data2.Spec.Ports {
-				item2.Ports = append(item2.Ports, ServicePort{
+				item2.Ports = append(item2.Ports, store.ServicePort{
 					Name:     sp.Name,
 					Protocol: string(sp.Protocol),
 					Port:     int64(sp.Port),
@@ -440,7 +441,7 @@ func (k *K8s) EventsServices(channel chan *Service, stop chan struct{}, informer
 	go informer.Run(stop)
 }
 
-func (k *K8s) EventsConfigfMaps(channel chan *ConfigMap, stop chan struct{}, informer cache.SharedIndexInformer) {
+func (k *K8s) EventsConfigfMaps(channel chan *store.ConfigMap, stop chan struct{}, informer cache.SharedIndexInformer) {
 	informer.AddEventHandler(
 		cache.ResourceEventHandlerFuncs{
 			AddFunc: func(obj interface{}) {
@@ -454,10 +455,10 @@ func (k *K8s) EventsConfigfMaps(channel chan *ConfigMap, stop chan struct{}, inf
 					//detect services that are in terminating state
 					status = DELETED
 				}
-				item := &ConfigMap{
+				item := &store.ConfigMap{
 					Namespace:   data.GetNamespace(),
 					Name:        data.GetName(),
-					Annotations: ConvertToMapStringW(data.Data),
+					Annotations: store.ConvertToMapStringW(data.Data),
 					Status:      status,
 				}
 				k.Logger.Tracef("%s %s: %s", CONFIGMAP, item.Status, item.Name)
@@ -470,10 +471,10 @@ func (k *K8s) EventsConfigfMaps(channel chan *ConfigMap, stop chan struct{}, inf
 					return
 				}
 				var status = DELETED
-				item := &ConfigMap{
+				item := &store.ConfigMap{
 					Namespace:   data.GetNamespace(),
 					Name:        data.GetName(),
-					Annotations: ConvertToMapStringW(data.Data),
+					Annotations: store.ConvertToMapStringW(data.Data),
 					Status:      status,
 				}
 				k.Logger.Tracef("%s %s: %s", CONFIGMAP, item.Status, item.Name)
@@ -491,16 +492,16 @@ func (k *K8s) EventsConfigfMaps(channel chan *ConfigMap, stop chan struct{}, inf
 					return
 				}
 				var status = MODIFIED
-				item1 := &ConfigMap{
+				item1 := &store.ConfigMap{
 					Namespace:   data1.GetNamespace(),
 					Name:        data1.GetName(),
-					Annotations: ConvertToMapStringW(data1.Data),
+					Annotations: store.ConvertToMapStringW(data1.Data),
 					Status:      status,
 				}
-				item2 := &ConfigMap{
+				item2 := &store.ConfigMap{
 					Namespace:   data2.GetNamespace(),
 					Name:        data2.GetName(),
-					Annotations: ConvertToMapStringW(data2.Data),
+					Annotations: store.ConvertToMapStringW(data2.Data),
 					Status:      status,
 				}
 				if item2.Equal(item1) {
@@ -514,7 +515,7 @@ func (k *K8s) EventsConfigfMaps(channel chan *ConfigMap, stop chan struct{}, inf
 	go informer.Run(stop)
 }
 
-func (k *K8s) EventsSecrets(channel chan *Secret, stop chan struct{}, informer cache.SharedIndexInformer) {
+func (k *K8s) EventsSecrets(channel chan *store.Secret, stop chan struct{}, informer cache.SharedIndexInformer) {
 	informer.AddEventHandler(
 		cache.ResourceEventHandlerFuncs{
 			AddFunc: func(obj interface{}) {
@@ -528,7 +529,7 @@ func (k *K8s) EventsSecrets(channel chan *Secret, stop chan struct{}, informer c
 					//detect services that are in terminating state
 					status = DELETED
 				}
-				item := &Secret{
+				item := &store.Secret{
 					Namespace: data.GetNamespace(),
 					Name:      data.GetName(),
 					Data:      data.Data,
@@ -544,7 +545,7 @@ func (k *K8s) EventsSecrets(channel chan *Secret, stop chan struct{}, informer c
 					return
 				}
 				var status = DELETED
-				item := &Secret{
+				item := &store.Secret{
 					Namespace: data.GetNamespace(),
 					Name:      data.GetName(),
 					Data:      data.Data,
@@ -565,13 +566,13 @@ func (k *K8s) EventsSecrets(channel chan *Secret, stop chan struct{}, informer c
 					return
 				}
 				var status = MODIFIED
-				item1 := &Secret{
+				item1 := &store.Secret{
 					Namespace: data1.GetNamespace(),
 					Name:      data1.GetName(),
 					Data:      data1.Data,
 					Status:    status,
 				}
-				item2 := &Secret{
+				item2 := &store.Secret{
 					Namespace: data2.GetNamespace(),
 					Name:      data2.GetName(),
 					Data:      data2.Data,
@@ -588,7 +589,7 @@ func (k *K8s) EventsSecrets(channel chan *Secret, stop chan struct{}, informer c
 	go informer.Run(stop)
 }
 
-func (k *K8s) UpdateIngressStatus(ingress *Ingress, publishSvc *Service) (err error) {
+func (k *K8s) UpdateIngressStatus(ingress *store.Ingress, publishSvc *store.Service) (err error) {
 	var ingSource *extensions.Ingress
 	var ingCopy extensions.Ingress
 	status := publishSvc.Status
@@ -625,7 +626,7 @@ func (k *K8s) UpdateIngressStatus(ingress *Ingress, publishSvc *Service) (err er
 	return nil
 }
 
-func (k *K8s) GetPublishServiceAddresses(service *corev1.Service, publishSvc *Service) {
+func (k *K8s) GetPublishServiceAddresses(service *corev1.Service, publishSvc *store.Service) {
 	addresses := []string{}
 	switch service.Spec.Type {
 	case corev1.ServiceTypeExternalName:

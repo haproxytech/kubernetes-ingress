@@ -23,6 +23,7 @@ import (
 	"strings"
 
 	"github.com/haproxytech/client-native/v2/misc"
+	"github.com/haproxytech/kubernetes-ingress/controller/store"
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 	"github.com/haproxytech/models/v2"
 )
@@ -35,9 +36,9 @@ const (
 var sslRedirectEnabled map[string]struct{}
 var rateLimitTables map[string]rateLimitTable
 
-func (c *HAProxyController) handleBlacklisting(ingress *Ingress) error {
+func (c *HAProxyController) handleBlacklisting(ingress *store.Ingress) error {
 	//  Get and validate annotations
-	annBlacklist, _ := GetValueFromAnnotations("blacklist", ingress.Annotations, c.cfg.ConfigMaps[Main].Annotations)
+	annBlacklist, _ := c.Store.GetValueFromAnnotations("blacklist", ingress.Annotations, c.Store.ConfigMaps[Main].Annotations)
 	if annBlacklist == nil {
 		return nil
 	}
@@ -99,12 +100,12 @@ func (c *HAProxyController) handleBlacklisting(ingress *Ingress) error {
 	return nil
 }
 
-func (c *HAProxyController) handleHTTPRedirect(ingress *Ingress) error {
+func (c *HAProxyController) handleHTTPRedirect(ingress *store.Ingress) error {
 	//  Get and validate annotations
 	var err error
 	toEnable := false
-	annSSLRedirect, _ := GetValueFromAnnotations("ssl-redirect", ingress.Annotations, c.cfg.ConfigMaps[Main].Annotations)
-	annRedirectCode, _ := GetValueFromAnnotations("ssl-redirect-code", ingress.Annotations, c.cfg.ConfigMaps[Main].Annotations)
+	annSSLRedirect, _ := c.Store.GetValueFromAnnotations("ssl-redirect", ingress.Annotations, c.Store.ConfigMaps[Main].Annotations)
+	annRedirectCode, _ := c.Store.GetValueFromAnnotations("ssl-redirect-code", ingress.Annotations, c.Store.ConfigMaps[Main].Annotations)
 	_, enabled := sslRedirectEnabled[ingress.Namespace+ingress.Name]
 	if annSSLRedirect == nil {
 		if len(ingress.TLS) > 0 {
@@ -172,9 +173,9 @@ func (c *HAProxyController) handleHTTPRedirect(ingress *Ingress) error {
 	return nil
 }
 
-func (c *HAProxyController) handleRateLimiting(ingress *Ingress) error {
+func (c *HAProxyController) handleRateLimiting(ingress *store.Ingress) error {
 	//  Get and validate annotations
-	annRateLimitReq, _ := GetValueFromAnnotations("rate-limit-requests", ingress.Annotations, c.cfg.ConfigMaps[Main].Annotations)
+	annRateLimitReq, _ := c.Store.GetValueFromAnnotations("rate-limit-requests", ingress.Annotations, c.Store.ConfigMaps[Main].Annotations)
 	if annRateLimitReq == nil {
 		return nil
 	}
@@ -183,12 +184,12 @@ func (c *HAProxyController) handleRateLimiting(ingress *Ingress) error {
 		return err
 	}
 	// Following annotaitons have default values
-	annRateLimitPeriod, _ := GetValueFromAnnotations("rate-limit-period", ingress.Annotations, c.cfg.ConfigMaps[Main].Annotations)
+	annRateLimitPeriod, _ := c.Store.GetValueFromAnnotations("rate-limit-period", ingress.Annotations, c.Store.ConfigMaps[Main].Annotations)
 	rateLimitPeriod, err := utils.ParseTime(annRateLimitPeriod.Value)
 	if err != nil {
 		return err
 	}
-	annRateLimitSize, _ := GetValueFromAnnotations("rate-limit-size", ingress.Annotations, c.cfg.ConfigMaps[Main].Annotations)
+	annRateLimitSize, _ := c.Store.GetValueFromAnnotations("rate-limit-size", ingress.Annotations, c.Store.ConfigMaps[Main].Annotations)
 	rateLimitSize := misc.ParseSize(annRateLimitSize.Value)
 
 	if len(ingress.Rules) == 0 {
@@ -197,7 +198,7 @@ func (c *HAProxyController) handleRateLimiting(ingress *Ingress) error {
 	}
 
 	// Update rules
-	var status Status
+	var status store.Status
 	if annRateLimitReq.Status != EMPTY {
 		status = setStatus(ingress.Status, annRateLimitReq.Status)
 	} else {
@@ -248,10 +249,10 @@ func (c *HAProxyController) handleRateLimiting(ingress *Ingress) error {
 	return nil
 }
 
-func (c *HAProxyController) handleRequestCapture(ingress *Ingress) error {
+func (c *HAProxyController) handleRequestCapture(ingress *store.Ingress) error {
 	//  Get and validate annotations
-	annReqCapture, _ := GetValueFromAnnotations("request-capture", ingress.Annotations, c.cfg.ConfigMaps[Main].Annotations)
-	annCaptureLen, _ := GetValueFromAnnotations("request-capture-len", ingress.Annotations, c.cfg.ConfigMaps[Main].Annotations)
+	annReqCapture, _ := c.Store.GetValueFromAnnotations("request-capture", ingress.Annotations, c.Store.ConfigMaps[Main].Annotations)
+	annCaptureLen, _ := c.Store.GetValueFromAnnotations("request-capture-len", ingress.Annotations, c.Store.ConfigMaps[Main].Annotations)
 	if annReqCapture == nil {
 		return nil
 	}
@@ -322,9 +323,9 @@ func (c *HAProxyController) handleRequestCapture(ingress *Ingress) error {
 	return err
 }
 
-func (c *HAProxyController) handleRequestSetHdr(ingress *Ingress) error {
+func (c *HAProxyController) handleRequestSetHdr(ingress *store.Ingress) error {
 	//  Get and validate annotations
-	annSetHdr, err := GetValueFromAnnotations("request-set-header", ingress.Annotations, c.cfg.ConfigMaps[Main].Annotations)
+	annSetHdr, err := c.Store.GetValueFromAnnotations("request-set-header", ingress.Annotations, c.Store.ConfigMaps[Main].Annotations)
 	if annSetHdr == nil {
 		return nil
 	}
@@ -373,9 +374,9 @@ func (c *HAProxyController) handleRequestSetHdr(ingress *Ingress) error {
 	return err
 }
 
-func (c *HAProxyController) handleResponseSetHdr(ingress *Ingress) error {
+func (c *HAProxyController) handleResponseSetHdr(ingress *store.Ingress) error {
 	//  Get and validate annotations
-	annSetHdr, err := GetValueFromAnnotations("response-set-header", ingress.Annotations, c.cfg.ConfigMaps[Main].Annotations)
+	annSetHdr, err := c.Store.GetValueFromAnnotations("response-set-header", ingress.Annotations, c.Store.ConfigMaps[Main].Annotations)
 	if annSetHdr == nil {
 		return nil
 	}
@@ -421,9 +422,9 @@ func (c *HAProxyController) handleResponseSetHdr(ingress *Ingress) error {
 	return err
 }
 
-func (c *HAProxyController) handleWhitelisting(ingress *Ingress) error {
+func (c *HAProxyController) handleWhitelisting(ingress *store.Ingress) error {
 	//  Get and validate annotations
-	annWhitelist, _ := GetValueFromAnnotations("whitelist", ingress.Annotations, c.cfg.ConfigMaps[Main].Annotations)
+	annWhitelist, _ := c.Store.GetValueFromAnnotations("whitelist", ingress.Annotations, c.Store.ConfigMaps[Main].Annotations)
 	if annWhitelist == nil {
 		return nil
 	}
@@ -493,7 +494,7 @@ func hashStrToUint(s string) uint64 {
 }
 
 // Return status for ingress annotations
-func setStatus(ingressStatus, annStatus Status) Status {
+func setStatus(ingressStatus, annStatus store.Status) store.Status {
 	if ingressStatus == DELETED || annStatus == DELETED {
 		return DELETED
 	}

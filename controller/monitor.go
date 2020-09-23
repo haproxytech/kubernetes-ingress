@@ -17,13 +17,14 @@ package controller
 import (
 	"time"
 
+	"github.com/haproxytech/kubernetes-ingress/controller/store"
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/tools/cache"
 )
 
 func (c *HAProxyController) timeFromAnnotation(name string) (duration time.Duration) {
-	d, err := GetValueFromAnnotations(name)
+	d, err := c.Store.GetValueFromAnnotations(name)
 	if err != nil {
 		c.Logger.Panic(err)
 	}
@@ -41,19 +42,19 @@ func (c *HAProxyController) monitorChanges() {
 
 	informersSynced := []cache.InformerSynced{}
 	stop := make(chan struct{})
-	endpointsChan := make(chan *Endpoints, 100)
-	svcChan := make(chan *Service, 100)
-	nsChan := make(chan *Namespace, 10)
-	ingChan := make(chan *Ingress, 10)
-	cfgChan := make(chan *ConfigMap, 10)
-	secretChan := make(chan *Secret, 10)
+	endpointsChan := make(chan *store.Endpoints, 100)
+	svcChan := make(chan *store.Service, 100)
+	nsChan := make(chan *store.Namespace, 10)
+	ingChan := make(chan *store.Ingress, 10)
+	cfgChan := make(chan *store.ConfigMap, 10)
+	secretChan := make(chan *store.Secret, 10)
 
 	var namespaces []string
 	var ns string
-	if len(c.cfg.NamespacesAccess.Whitelist) == 0 {
+	if len(c.Store.NamespacesAccess.Whitelist) == 0 {
 		namespaces = []string{""}
 	} else {
-		for ns = range c.cfg.NamespacesAccess.Whitelist {
+		for ns = range c.Store.NamespacesAccess.Whitelist {
 			namespaces = append(namespaces, ns)
 		}
 		// Make sure that configmap namespace is whitelisted
@@ -77,7 +78,7 @@ func (c *HAProxyController) monitorChanges() {
 
 		svci := factory.Core().V1().Services().Informer()
 		informersSynced = append(informersSynced, svci.HasSynced)
-		c.k8s.EventsServices(svcChan, stop, svci, c.cfg.PublishService)
+		c.k8s.EventsServices(svcChan, stop, svci, c.PublishService)
 
 		nsi := factory.Core().V1().Namespaces().Informer()
 		informersSynced = append(informersSynced, nsi.HasSynced)
@@ -106,8 +107,8 @@ func (c *HAProxyController) monitorChanges() {
 	if c.osArgs.ConfigMap.Name == "" {
 		configMapOk = true
 		//since we don't have configmap and everywhere in code we expect one we need to create empty one
-		c.cfg.ConfigMaps[Main] = &ConfigMap{
-			Annotations: MapStringW{},
+		c.Store.ConfigMaps[Main] = &store.ConfigMap{
+			Annotations: store.MapStringW{},
 		}
 	} else {
 		eventsIngress = []SyncDataEvent{}
@@ -191,7 +192,7 @@ func (c *HAProxyController) SyncData(jobChan <-chan SyncDataEvent, chConfigMapRe
 		},
 	}
 	for job := range jobChan {
-		ns := c.cfg.GetNamespace(job.Namespace)
+		ns := c.Store.GetNamespace(job.Namespace)
 		change := false
 		switch job.SyncType {
 		case COMMAND:
@@ -204,20 +205,20 @@ func (c *HAProxyController) SyncData(jobChan <-chan SyncDataEvent, chConfigMapRe
 				continue
 			}
 		case NAMESPACE:
-			change = c.eventNamespace(ns, job.Data.(*Namespace))
+			change = c.Store.EventNamespace(ns, job.Data.(*store.Namespace))
 		case INGRESS:
-			change = c.eventIngress(ns, job.Data.(*Ingress))
+			change = c.Store.EventIngress(ns, job.Data.(*store.Ingress), c.IngressClass)
 		case ENDPOINTS:
-			change = c.eventEndpoints(ns, job.Data.(*Endpoints), c.processEndpointsSrvs)
+			change = c.Store.EventEndpoints(ns, job.Data.(*store.Endpoints), c.processEndpointsSrvs)
 		case SERVICE:
-			change = c.eventService(ns, job.Data.(*Service))
+			change = c.Store.EventService(ns, job.Data.(*store.Service))
 		case CONFIGMAP:
-			change, cm = c.eventConfigMap(ns, job.Data.(*ConfigMap), ConfigMapsArgs)
-			if cm == Main && c.cfg.ConfigMaps[Main].Status == ADDED {
+			change, cm = c.Store.EventConfigMap(ns, job.Data.(*store.ConfigMap), ConfigMapsArgs)
+			if cm == Main && c.Store.ConfigMaps[Main].Status == ADDED {
 				chConfigMapReceivedAndProcessed <- true
 			}
 		case SECRET:
-			change = c.eventSecret(ns, job.Data.(*Secret))
+			change = c.Store.EventSecret(ns, job.Data.(*store.Secret))
 		}
 		hadChanges = hadChanges || change
 	}
