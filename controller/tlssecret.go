@@ -18,10 +18,46 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"strings"
 
 	"github.com/haproxytech/kubernetes-ingress/controller/store"
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 )
+
+func (c *HAProxyController) handleTLSSecret(ingress store.Ingress, tls store.IngressTLS, certs map[string]struct{}) (reload bool) {
+	secretData := strings.Split(tls.SecretName.Value, "/")
+	namespaceName := ingress.Namespace
+	var secretName string
+	if len(secretData) > 1 {
+		namespaceName = secretData[0]
+		secretName = secretData[1]
+	} else {
+		secretName = secretData[0] // only secretname is here
+	}
+	namespace, namespaceOK := c.Store.Namespaces[namespaceName]
+	if !namespaceOK {
+		if tls.Status != EMPTY {
+			logger.Warningf("namespace [%s] does not exist, ignoring.", namespaceName)
+		}
+		return false
+	}
+	secret, secretOK := namespace.Secret[secretName]
+	if !secretOK {
+		if tls.Status != EMPTY {
+			logger.Warningf("secret [%s/%s] does not exist, ignoring.", namespaceName, secretName)
+		}
+		return false
+	}
+	if secret.Status == DELETED || tls.Status == DELETED {
+		return false
+	}
+	writeSecret := true
+	if secret.Status == EMPTY && tls.Status == EMPTY {
+		writeSecret = false
+	}
+	reload, _ = HandleSecret(ingress, *secret, writeSecret, certs, logger)
+	return reload
+}
 
 func HandleSecret(ingress store.Ingress, secret store.Secret, writeSecret bool, certs map[string]struct{}, logger utils.Logger) (reload bool, err error) {
 	reload = false

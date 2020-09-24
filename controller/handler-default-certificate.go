@@ -38,9 +38,10 @@ func (d DefaultCertificate) Update(k store.K8s, cfg Configuration, api api.HAPro
 				if secret.Status != EMPTY && secret.Status != DELETED {
 					writeSecret = true
 				}
-				return HandleSecret(store.Ingress{
+				reload, err = HandleSecret(store.Ingress{
 					Name: "0",
 				}, *secret, writeSecret, cfg.UsedCerts, logger)
+				return reload, err
 			}
 		}
 	}
