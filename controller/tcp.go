@@ -54,9 +54,9 @@ func (c *HAProxyController) handleTCPServices() (reload bool, err error) {
 			}
 			frontend.DefaultBackend = backendName
 			if sslOption == "ssl" {
-				logger.Error(c.enableSSLOffload(frontend.Name, false))
+				logger.Error(c.Client.FrontendEnableSSLOffload(frontend.Name, HAProxyCertDir, false))
 			} else {
-				logger.Error(c.disableSSLOffload(frontend.Name))
+				logger.Error(c.Client.FrontendDisableSSLOffload(frontend.Name))
 			}
 			logger.Debugf("Updating TCP frontend '%s'", frontendName)
 			if err = c.Client.FrontendEdit(frontend); err != nil {
@@ -90,7 +90,7 @@ func (c *HAProxyController) handleTCPServices() (reload bool, err error) {
 				logger.Panic(err)
 			}
 			if sslOption == "ssl" {
-				logger.Error(c.enableSSLOffload(frontend.Name, false))
+				logger.Error(c.Client.FrontendEnableSSLOffload(frontend.Name, HAProxyCertDir, false))
 			}
 			reload = true
 		}

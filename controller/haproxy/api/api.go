@@ -31,6 +31,8 @@ type HAProxyClient interface {
 	FrontendsGet() (models.Frontends, error)
 	FrontendGet(frontendName string) (models.Frontend, error)
 	FrontendEdit(frontend models.Frontend) error
+	FrontendEnableSSLOffload(frontendName string, certDir string, alpn bool) (err error)
+	FrontendDisableSSLOffload(frontendName string) (err error)
 	FrontendBindsGet(frontend string) (models.Binds, error)
 	FrontendBindCreate(frontend string, bind models.Bind) error
 	FrontendBindEdit(frontend string, bind models.Bind) error

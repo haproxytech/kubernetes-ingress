@@ -97,13 +97,13 @@ func (c *HAProxyController) handleHTTPS(usedCerts map[string]struct{}) (reload b
 	// ssl-offload
 	if len(usedCerts) > 0 {
 		if !c.cfg.HTTPS {
-			logger.Panic(c.enableSSLOffload(FrontendHTTPS, true))
+			logger.Panic(c.Client.FrontendEnableSSLOffload(FrontendHTTPS, HAProxyCertDir, true))
 			c.cfg.HTTPS = true
 			reload = true
 		}
 	} else if c.cfg.HTTPS {
 		logger.Info("Disabling ssl offload")
-		logger.Panic(c.disableSSLOffload(FrontendHTTPS))
+		logger.Panic(c.Client.FrontendDisableSSLOffload(FrontendHTTPS))
 		c.cfg.HTTPS = false
 		reload = true
 	}
@@ -111,42 +111,6 @@ func (c *HAProxyController) handleHTTPS(usedCerts map[string]struct{}) (reload b
 	logger.Error(c.cleanCertDir(usedCerts))
 
 	return reload
-}
-
-func (c *HAProxyController) enableSSLOffload(frontendName string, alpn bool) (err error) {
-	binds, err := c.Client.FrontendBindsGet(frontendName)
-	if err != nil {
-		return err
-	}
-	for _, bind := range binds {
-		bind.Ssl = true
-		bind.SslCertificate = HAProxyCertDir
-		if alpn {
-			bind.Alpn = "h2,http/1.1"
-		}
-		err = c.Client.FrontendBindEdit(frontendName, *bind)
-	}
-	if err != nil {
-		return err
-	}
-	return err
-}
-
-func (c *HAProxyController) disableSSLOffload(frontendName string) (err error) {
-	binds, err := c.Client.FrontendBindsGet(frontendName)
-	if err != nil {
-		return err
-	}
-	for _, bind := range binds {
-		bind.Ssl = false
-		bind.SslCertificate = ""
-		bind.Alpn = ""
-		err = c.Client.FrontendBindEdit(frontendName, *bind)
-	}
-	if err != nil {
-		return err
-	}
-	return err
 }
 
 func (c *HAProxyController) enableSSLPassthrough() (err error) {
