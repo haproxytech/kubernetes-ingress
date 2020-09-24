@@ -29,5 +29,6 @@ func (c *HAProxyController) initHandlers() {
 		DefaultCertificate{},
 		ErrorFile{},
 		HTTPS{certDir: HAProxyCertDir},
+		TCPHandler{handlePath: c.handlePath},
 	}
 }

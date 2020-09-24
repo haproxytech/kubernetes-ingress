@@ -221,10 +221,6 @@ func (c *HAProxyController) updateHAProxy() error {
 	logger.Error(err)
 	reload = reload || r
 
-	r, err = c.handleTCPServices()
-	logger.Error(err)
-	reload = reload || r
-
 	reload = c.FrontendHTTPReqsRefresh() || reload
 
 	reload = c.FrontendHTTPRspsRefresh() || reload
