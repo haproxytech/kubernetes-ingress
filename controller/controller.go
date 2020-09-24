@@ -210,26 +210,13 @@ func (c *HAProxyController) updateHAProxy() error {
 		}
 	}
 
-	var r bool
 	for _, handler := range c.UpdateHandlers {
-		r, err = handler.Update(c.Store, c.cfg, c.Client)
-		logger.Error(err)
+		r, errHandler := handler.Update(c.Store, c.cfg, c.Client)
+		logger.Error(errHandler)
 		reload = reload || r
 	}
 
-	r, err = c.cfg.MapFiles.Refresh()
-	logger.Error(err)
-	reload = reload || r
-
-	reload = c.FrontendHTTPReqsRefresh() || reload
-
-	reload = c.FrontendHTTPRspsRefresh() || reload
-
-	reload = c.FrontendTCPreqsRefresh() || reload
-
-	reload = c.BackendHTTPReqsRefresh() || reload
-
-	reload = c.refreshBackendSwitching() || reload
+	reload = c.Refresh() || reload
 
 	err = c.Client.APICommitTransaction()
 	if err != nil {
@@ -397,4 +384,16 @@ func (c *HAProxyController) clean() {
 	if c.PublishService != nil {
 		c.PublishService.Status = EMPTY
 	}
+}
+
+func (c *HAProxyController) Refresh() (reload bool) {
+	reload = c.FrontendHTTPReqsRefresh() || reload
+	reload = c.FrontendHTTPRspsRefresh() || reload
+	reload = c.FrontendTCPreqsRefresh() || reload
+	reload = c.BackendHTTPReqsRefresh() || reload
+	reload = c.refreshBackendSwitching() || reload
+	r, err := c.cfg.MapFiles.Refresh()
+	reload = reload || r
+	logger.Error(err)
+	return reload
 }
