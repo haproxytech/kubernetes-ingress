@@ -109,6 +109,32 @@ func (c *HAProxyController) FrontendHTTPReqsRefresh() (reload bool) {
 		for _, httpRule := range c.cfg.FrontendHTTPReqRules[REQUEST_CAPTURE] {
 			c.Logger.Error(c.Client.FrontendHTTPRequestRuleCreate(frontend, httpRule))
 		}
+		// RATE_LIMIT
+		for tableName, table := range rateLimitTables {
+			_, err := c.Client.BackendGet(tableName)
+			if err != nil {
+				err := c.Client.BackendCreate(models.Backend{
+					Name: tableName,
+					StickTable: &models.BackendStickTable{
+						Type:  "ip",
+						Size:  table.size,
+						Store: fmt.Sprintf("http_req_rate(%d)", *table.period),
+					},
+				})
+				c.Logger.Error(err)
+			}
+		}
+		for _, httpRule := range c.cfg.FrontendHTTPReqRules[RATE_LIMIT] {
+			c.Logger.Error(c.Client.FrontendHTTPRequestRuleCreate(frontend, httpRule))
+		}
+		// BLACKLIST
+		for _, httpRule := range c.cfg.FrontendHTTPReqRules[BLACKLIST] {
+			c.Logger.Error(c.Client.FrontendHTTPRequestRuleCreate(frontend, httpRule))
+		}
+		// WHITELIST
+		for _, httpRule := range c.cfg.FrontendHTTPReqRules[WHITELIST] {
+			c.Logger.Error(c.Client.FrontendHTTPRequestRuleCreate(frontend, httpRule))
+		}
 		// STATIC: SET_VARIABLE txn.base (for logging purpose)
 		setVarRule := models.HTTPRequestRule{
 			Index:    utils.PtrInt64(0),
@@ -136,32 +162,6 @@ func (c *HAProxyController) FrontendHTTPReqsRefresh() (reload bool) {
 			VarExpr:  "req.hdr(Host),field(1,:)",
 		}
 		c.Logger.Error(c.Client.FrontendHTTPRequestRuleCreate(frontend, setVarRule))
-		// RATE_LIMIT
-		for tableName, table := range rateLimitTables {
-			_, err := c.Client.BackendGet(tableName)
-			if err != nil {
-				err := c.Client.BackendCreate(models.Backend{
-					Name: tableName,
-					StickTable: &models.BackendStickTable{
-						Type:  "ip",
-						Size:  table.size,
-						Store: fmt.Sprintf("http_req_rate(%d)", *table.period),
-					},
-				})
-				c.Logger.Error(err)
-			}
-		}
-		for _, httpRule := range c.cfg.FrontendHTTPReqRules[RATE_LIMIT] {
-			c.Logger.Error(c.Client.FrontendHTTPRequestRuleCreate(frontend, httpRule))
-		}
-		// BLACKLIST
-		for _, httpRule := range c.cfg.FrontendHTTPReqRules[BLACKLIST] {
-			c.Logger.Error(c.Client.FrontendHTTPRequestRuleCreate(frontend, httpRule))
-		}
-		// WHITELIST
-		for _, httpRule := range c.cfg.FrontendHTTPReqRules[WHITELIST] {
-			c.Logger.Error(c.Client.FrontendHTTPRequestRuleCreate(frontend, httpRule))
-		}
 	}
 	return true
 }
