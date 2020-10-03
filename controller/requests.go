@@ -110,23 +110,32 @@ func (c *HAProxyController) FrontendHTTPReqsRefresh() (reload bool) {
 			c.Logger.Error(c.Client.FrontendHTTPRequestRuleCreate(frontend, httpRule))
 		}
 		// STATIC: SET_VARIABLE txn.base (for logging purpose)
-		setVarBaseRule := models.HTTPRequestRule{
+		setVarRule := models.HTTPRequestRule{
 			Index:    utils.PtrInt64(0),
 			Type:     "set-var",
 			VarName:  "base",
 			VarScope: "txn",
 			VarExpr:  "base",
 		}
-		c.Logger.Error(c.Client.FrontendHTTPRequestRuleCreate(frontend, setVarBaseRule))
-		// STATIC: SET_VARIABLE txn.host (to use in http-response acls)
-		setVarBaseRule = models.HTTPRequestRule{
+		c.Logger.Error(c.Client.FrontendHTTPRequestRuleCreate(frontend, setVarRule))
+		// STATIC: SET_VARIABLE txn.path (to use in http rules)
+		setVarRule = models.HTTPRequestRule{
+			Index:    utils.PtrInt64(0),
+			Type:     "set-var",
+			VarName:  "path",
+			VarScope: "txn",
+			VarExpr:  "path",
+		}
+		c.Logger.Error(c.Client.FrontendHTTPRequestRuleCreate(frontend, setVarRule))
+		// STATIC: SET_VARIABLE txn.host (to use in http rules)
+		setVarRule = models.HTTPRequestRule{
 			Index:    utils.PtrInt64(0),
 			Type:     "set-var",
 			VarName:  "host",
 			VarScope: "txn",
-			VarExpr:  "req.hdr(Host)",
+			VarExpr:  "req.hdr(Host),field(1,:)",
 		}
-		c.Logger.Error(c.Client.FrontendHTTPRequestRuleCreate(frontend, setVarBaseRule))
+		c.Logger.Error(c.Client.FrontendHTTPRequestRuleCreate(frontend, setVarRule))
 		// RATE_LIMIT
 		for tableName, table := range rateLimitTables {
 			_, err := c.Client.BackendGet(tableName)
