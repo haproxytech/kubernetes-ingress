@@ -38,16 +38,21 @@ func ConvertIngressRules(ingressRules []extensions.IngressRule) map[string]*Ingr
 				Status:            "",
 			}
 		}
-		rules[k8sRule.Host] = &IngressRule{
-			Host:   k8sRule.Host,
-			Paths:  paths,
-			Status: "",
+		if rule, ok := rules[k8sRule.Host]; ok {
+			for path, ingressPath := range paths {
+				rule.Paths[path] = ingressPath
+			}
+		} else {
+			rules[k8sRule.Host] = &IngressRule{
+				Host:   k8sRule.Host,
+				Paths:  paths,
+				Status: "",
+			}
 		}
 	}
 	return rules
 }
 
-//ConvertIngressRules converts data from kubernetes format
 func ConvertIngressTLS(ingressTLS []extensions.IngressTLS) map[string]*IngressTLS {
 	tls := make(map[string]*IngressTLS)
 	for _, k8sTLS := range ingressTLS {
