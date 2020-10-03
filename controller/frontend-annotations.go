@@ -75,7 +75,9 @@ func (c *HAProxyController) handleBlacklisting(ingress *store.Ingress) error {
 	}
 	for hostname, rule := range ingress.Rules {
 		if rule.Status != DELETED {
-			mapFiles.AppendRow(key, hostname)
+			for path := range rule.Paths {
+				mapFiles.AppendRow(key, hostname+path)
+			}
 		}
 	}
 
@@ -85,7 +87,7 @@ func (c *HAProxyController) handleBlacklisting(ingress *store.Ingress) error {
 		Type:       "deny",
 		DenyStatus: 403,
 		Cond:       "if",
-		CondTest:   fmt.Sprintf("{ req.hdr(Host) -f %s } { src -f %s }", mapFile, listMapFile),
+		CondTest:   makeACL(fmt.Sprintf(" { src -f %s }", listMapFile), mapFile),
 	}
 	tcpRule := models.TCPRequestRule{
 		Index:    utils.PtrInt64(0),
@@ -150,7 +152,9 @@ func (c *HAProxyController) handleHTTPRedirect(ingress *store.Ingress) error {
 	//Enable Redirect
 	for hostname, rule := range ingress.Rules {
 		if rule.Status != DELETED {
-			mapFiles.AppendRow(key, hostname)
+			for path := range rule.Paths {
+				mapFiles.AppendRow(key, hostname+path)
+			}
 		}
 	}
 	mapFile := path.Join(HAProxyMapDir, strconv.FormatUint(key, 10)) + ".lst"
@@ -161,8 +165,7 @@ func (c *HAProxyController) handleHTTPRedirect(ingress *store.Ingress) error {
 		RedirValue: "https",
 		RedirType:  "scheme",
 		Cond:       "if",
-		//TODO: provide option to do strict host matching
-		CondTest: fmt.Sprintf("{ req.hdr(host),field(1,:) -f %s } !{ ssl_fc }", mapFile),
+		CondTest:   makeACL(" !{ ssl_fc }", mapFile),
 	}
 	c.cfg.FrontendHTTPReqRules[SSL_REDIRECT][key] = httpRule
 
@@ -219,8 +222,10 @@ func (c *HAProxyController) handleRateLimiting(ingress *store.Ingress) error {
 	}
 	for hostname, rule := range ingress.Rules {
 		if rule.Status != DELETED {
-			mapFiles.AppendRow(reqsKey, hostname)
-			mapFiles.AppendRow(trackKey, hostname)
+			for path := range rule.Paths {
+				mapFiles.AppendRow(reqsKey, hostname+path)
+				mapFiles.AppendRow(trackKey, hostname+path)
+			}
 		}
 	}
 	rateLimitTables[tableName] = rateLimitTable{
@@ -234,7 +239,7 @@ func (c *HAProxyController) handleRateLimiting(ingress *store.Ingress) error {
 		TrackSc0Key:   "src",
 		TrackSc0Table: tableName,
 		Cond:          "if",
-		CondTest:      fmt.Sprintf("{ req.hdr(Host) -f %s }", trackMapFile),
+		CondTest:      makeACL("", trackMapFile),
 	}
 	reqsMapFile := path.Join(HAProxyMapDir, strconv.FormatUint(reqsKey, 10)) + ".lst"
 	httpDenyRule := models.HTTPRequestRule{
@@ -242,7 +247,7 @@ func (c *HAProxyController) handleRateLimiting(ingress *store.Ingress) error {
 		Type:       "deny",
 		DenyStatus: 403,
 		Cond:       "if",
-		CondTest:   fmt.Sprintf("{ req.hdr(Host) -f %s } { sc0_http_req_rate(%s) gt %d }", reqsMapFile, tableName, reqsLimit),
+		CondTest:   makeACL(fmt.Sprintf(" { sc0_http_req_rate(%s) gt %d }", tableName, reqsLimit), reqsMapFile),
 	}
 	c.cfg.FrontendHTTPReqRules[RATE_LIMIT][trackKey] = httpTrackRule
 	c.cfg.FrontendHTTPReqRules[RATE_LIMIT][reqsKey] = httpDenyRule
@@ -294,7 +299,9 @@ func (c *HAProxyController) handleRequestCapture(ingress *store.Ingress) error {
 		}
 		for hostname, rule := range ingress.Rules {
 			if rule.Status != DELETED {
-				mapFiles.AppendRow(key, hostname)
+				for path := range rule.Paths {
+					mapFiles.AppendRow(key, hostname+path)
+				}
 			}
 		}
 
@@ -305,7 +312,7 @@ func (c *HAProxyController) handleRequestCapture(ingress *store.Ingress) error {
 			CaptureSample: sample,
 			Cond:          "if",
 			CaptureLen:    captureLen,
-			CondTest:      fmt.Sprintf("{ req.hdr(Host) -f %s }", mapFile),
+			CondTest:      makeACL("", mapFile),
 		}
 		tcpRule := models.TCPRequestRule{
 			Index:      utils.PtrInt64(0),
@@ -355,7 +362,9 @@ func (c *HAProxyController) handleRequestSetHdr(ingress *store.Ingress) error {
 		}
 		for hostname, rule := range ingress.Rules {
 			if rule.Status != DELETED {
-				mapFiles.AppendRow(key, hostname)
+				for path := range rule.Paths {
+					mapFiles.AppendRow(key, hostname+path)
+				}
 			}
 		}
 
@@ -366,7 +375,7 @@ func (c *HAProxyController) handleRequestSetHdr(ingress *store.Ingress) error {
 			HdrName:   parts[0],
 			HdrFormat: parts[1],
 			Cond:      "if",
-			CondTest:  fmt.Sprintf("{ req.hdr(Host) -f %s }", mapFile),
+			CondTest:  makeACL("", mapFile),
 		}
 		c.cfg.FrontendHTTPReqRules[REQUEST_SET_HEADER][key] = httpRule
 	}
@@ -403,7 +412,9 @@ func (c *HAProxyController) handleResponseSetHdr(ingress *store.Ingress) error {
 		}
 		for hostname, rule := range ingress.Rules {
 			if rule.Status != DELETED {
-				mapFiles.AppendRow(key, hostname)
+				for path := range rule.Paths {
+					mapFiles.AppendRow(key, hostname+path)
+				}
 			}
 		}
 
@@ -414,7 +425,7 @@ func (c *HAProxyController) handleResponseSetHdr(ingress *store.Ingress) error {
 			HdrName:   parts[0],
 			HdrFormat: parts[1],
 			Cond:      "if",
-			CondTest:  fmt.Sprintf("{ var(txn.host) -f %s }", mapFile),
+			CondTest:  makeACL("", mapFile),
 		}
 		c.cfg.FrontendHTTPRspRules[RESPONSE_SET_HEADER][key] = httpRule
 	}
@@ -460,7 +471,9 @@ func (c *HAProxyController) handleWhitelisting(ingress *store.Ingress) error {
 	}
 	for hostname, rule := range ingress.Rules {
 		if rule.Status != DELETED {
-			mapFiles.AppendRow(key, hostname)
+			for path := range rule.Paths {
+				mapFiles.AppendRow(key, hostname+path)
+			}
 		}
 	}
 
@@ -470,7 +483,7 @@ func (c *HAProxyController) handleWhitelisting(ingress *store.Ingress) error {
 		Type:       "deny",
 		DenyStatus: 403,
 		Cond:       "if",
-		CondTest:   fmt.Sprintf("{ req.hdr(Host) -f %s } !{ src -f %s }", mapFile, listMapFile),
+		CondTest:   makeACL(fmt.Sprintf(" !{ src -f %s }", listMapFile), mapFile),
 	}
 	tcpRule := models.TCPRequestRule{
 		Index:    utils.PtrInt64(0),
@@ -501,4 +514,11 @@ func setStatus(ingressStatus, annStatus store.Status) store.Status {
 		return EMPTY
 	}
 	return MODIFIED
+}
+
+func makeACL(acl string, mapFile string) (result string) {
+	result = fmt.Sprintf("{ var(txn.host),concat(,txn.path) -m beg -f %s }", mapFile) + acl
+	result += " or " + fmt.Sprintf("{ var(txn.host) -f %s }", mapFile) + acl
+	result += " or " + fmt.Sprintf("{ var(txn.path) -m beg -f %s }", mapFile) + acl
+	return result
 }
