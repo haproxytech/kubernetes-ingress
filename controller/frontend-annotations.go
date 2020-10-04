@@ -86,7 +86,7 @@ func (c *HAProxyController) handleBlacklisting(ingress *Ingress) error {
 		Type:       "deny",
 		DenyStatus: 403,
 		Cond:       "if",
-		CondTest:   fmt.Sprintf("{ var(txn.host),concat(,txn.path),lower -m sub -f %s } { src -f %s }", mapFile, listMapFile),
+		CondTest:   fmt.Sprintf("{ var(txn.host),concat(,txn.path) -m sub -f %s } { src -f %s }", mapFile, listMapFile),
 	}
 	tcpRule := models.TCPRequestRule{
 		Index:    utils.PtrInt64(0),
@@ -164,7 +164,7 @@ func (c *HAProxyController) handleHTTPRedirect(ingress *Ingress) error {
 		RedirValue: "https",
 		RedirType:  "scheme",
 		Cond:       "if",
-		CondTest:   fmt.Sprintf("{ var(txn.host),concat(,txn.path),lower -m sub -f %s } !{ ssl_fc }", mapFile),
+		CondTest:   fmt.Sprintf("{ var(txn.host),concat(,txn.path) -m sub -f %s } !{ ssl_fc }", mapFile),
 	}
 	c.cfg.FrontendHTTPReqRules[SSL_REDIRECT][key] = httpRule
 
@@ -280,7 +280,7 @@ func (c *HAProxyController) handleRateLimiting(ingress *Ingress) error {
 		TrackSc0Key:   "src",
 		TrackSc0Table: tableName,
 		Cond:          "if",
-		CondTest:      fmt.Sprintf("{ var(txn.host),concat(,txn.path),lower -m sub -f %s }", trackMapFile),
+		CondTest:      fmt.Sprintf("{ var(txn.host),concat(,txn.path) -m sub -f %s }", trackMapFile),
 	}
 	reqsMapFile := path.Join(HAProxyMapDir, strconv.FormatUint(reqsKey, 10)) + ".lst"
 	httpDenyRule := models.HTTPRequestRule{
@@ -288,7 +288,7 @@ func (c *HAProxyController) handleRateLimiting(ingress *Ingress) error {
 		Type:       "deny",
 		DenyStatus: 403,
 		Cond:       "if",
-		CondTest:   fmt.Sprintf("{ var(txn.host),concat(,txn.path),lower -m sub -f %s } { sc0_http_req_rate(%s) gt %d }", reqsMapFile, tableName, reqsLimit),
+		CondTest:   fmt.Sprintf("{ var(txn.host),concat(,txn.path) -m sub -f %s } { sc0_http_req_rate(%s) gt %d }", reqsMapFile, tableName, reqsLimit),
 	}
 	c.cfg.FrontendHTTPReqRules[RATE_LIMIT][trackKey] = httpTrackRule
 	c.cfg.FrontendHTTPReqRules[RATE_LIMIT][reqsKey] = httpDenyRule
@@ -353,7 +353,7 @@ func (c *HAProxyController) handleRequestCapture(ingress *Ingress) error {
 			CaptureSample: sample,
 			Cond:          "if",
 			CaptureLen:    captureLen,
-			CondTest:      fmt.Sprintf("{ var(txn.host),concat(,txn.path),lower -m sub -f %s }", mapFile),
+			CondTest:      fmt.Sprintf("{ var(txn.host),concat(,txn.path) -m sub -f %s }", mapFile),
 		}
 		tcpRule := models.TCPRequestRule{
 			Index:      utils.PtrInt64(0),
@@ -416,7 +416,7 @@ func (c *HAProxyController) handleRequestSetHdr(ingress *Ingress) error {
 			HdrName:   parts[0],
 			HdrFormat: parts[1],
 			Cond:      "if",
-			CondTest:  fmt.Sprintf("{ var(txn.host),concat(,txn.path),lower -m sub -f %s }", mapFile),
+			CondTest:  fmt.Sprintf("{ var(txn.host),concat(,txn.path) -m sub -f %s }", mapFile),
 		}
 		c.cfg.FrontendHTTPReqRules[REQUEST_SET_HEADER][key] = httpRule
 	}
@@ -524,7 +524,7 @@ func (c *HAProxyController) handleWhitelisting(ingress *Ingress) error {
 		Type:       "deny",
 		DenyStatus: 403,
 		Cond:       "if",
-		CondTest:   fmt.Sprintf("{ var(txn.host),concat(,txn.path),lower -m sub -f %s } !{ src -f %s }", mapFile, listMapFile),
+		CondTest:   fmt.Sprintf("{ var(txn.host),concat(,txn.path) -m sub -f %s } !{ src -f %s }", mapFile, listMapFile),
 	}
 	tcpRule := models.TCPRequestRule{
 		Index:    utils.PtrInt64(0),
