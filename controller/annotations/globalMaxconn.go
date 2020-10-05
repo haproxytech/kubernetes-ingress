@@ -4,11 +4,17 @@ import (
 	"strconv"
 
 	"github.com/haproxytech/config-parser/v2/types"
+
+	"github.com/haproxytech/kubernetes-ingress/controller/configsnippet"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/api"
 )
 
 type globalMaxconn struct {
 	data *types.Int64C
+}
+
+func (a *globalMaxconn) Overridden(configSnippet string) error {
+	return configsnippet.NewGenericAttribute("maxconn").Overridden(configSnippet)
 }
 
 func (a *globalMaxconn) Parse(input string) error {

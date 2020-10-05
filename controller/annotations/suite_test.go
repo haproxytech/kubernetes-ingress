@@ -3,8 +3,9 @@ package annotations
 import (
 	"testing"
 
-	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/api"
 	"github.com/stretchr/testify/suite"
+
+	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/api"
 )
 
 type AnnotationSuite struct {

@@ -36,3 +36,22 @@ func (suite *AnnotationSuite) TestSyslogServerFail() {
 	suite.T().Log(err)
 	suite.Error(err)
 }
+
+func (suite *AnnotationSuite) TestSyslogServerOverriddenOk() {
+	suite.Run("empty", func() {
+		err := (&syslogServers{}).Overridden("")
+		suite.T().Log(err)
+		suite.NoError(err)
+	})
+	suite.Run("data", func() {
+		err := (&syslogServers{}).Overridden("random-data")
+		suite.T().Log(err)
+		suite.NoError(err)
+	})
+}
+
+func (suite *AnnotationSuite) TestSyslogServerOverriddenFail() {
+	err := (&syslogServers{}).Overridden("log stdout format raw daemon")
+	suite.T().Log(err)
+	suite.Error(err)
+}

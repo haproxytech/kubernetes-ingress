@@ -6,12 +6,18 @@ import (
 	"strings"
 
 	"github.com/haproxytech/config-parser/v2/types"
+
+	"github.com/haproxytech/kubernetes-ingress/controller/configsnippet"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/api"
 )
 
 type syslogServers struct {
 	data   []*types.Log
 	stdout bool
+}
+
+func (a *syslogServers) Overridden(configSnippet string) error {
+	return configsnippet.NewGenericAttribute("log").Overridden(configSnippet)
 }
 
 // Input is multiple syslog lines

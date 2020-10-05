@@ -5,12 +5,18 @@ import (
 	"time"
 
 	"github.com/haproxytech/config-parser/v2/types"
+
+	"github.com/haproxytech/kubernetes-ingress/controller/configsnippet"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/api"
 )
 
 type defaultTimeout struct {
 	name string
 	data *types.SimpleTimeout
+}
+
+func (a *defaultTimeout) Overridden(configSnippet string) error {
+	return configsnippet.NewGenericAttribute("timeout " + a.name).Overridden(configSnippet)
 }
 
 func (a *defaultTimeout) Parse(input string) error {

@@ -19,3 +19,22 @@ func (suite *AnnotationSuite) TestDefaultLogFormatFail() {
 	suite.T().Log(err)
 	suite.Error(err)
 }
+
+func (suite *AnnotationSuite) TestDefaultLogOverriddenOk() {
+	suite.Run("empty", func() {
+		err := (&globalMaxconn{}).Overridden("")
+		suite.T().Log(err)
+		suite.NoError(err)
+	})
+	suite.Run("data", func() {
+		err := (&defaultLogFormat{}).Overridden("random-data")
+		suite.T().Log(err)
+		suite.NoError(err)
+	})
+}
+
+func (suite *AnnotationSuite) TestDefaultLogOverriddenFail() {
+	err := (&defaultLogFormat{}).Overridden(`log-format '%ci:%cp [%tr] %ft %b/%s %TR/%Tw/%Tc/%Tr/%Ta %ST %B %CC %CS %tsc %ac/%fc/%bc/%sc/%rc %sq/%bq %hr %hs "%HM %[var(txn.base)] %HV"'`)
+	suite.T().Log(err)
+	suite.Error(err)
+}

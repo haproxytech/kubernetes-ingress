@@ -29,3 +29,16 @@ func (suite *AnnotationSuite) TestGlobalCfgSnippetFail() {
 	suite.T().Log(err)
 	suite.Error(err)
 }
+
+func (suite *AnnotationSuite) TestGlobalCfgSnippetOverriddenOk() {
+	suite.Run("empty", func() {
+		err := (&globalCfgSnippet{}).Overridden("")
+		suite.T().Log(err)
+		suite.NoError(err)
+	})
+	suite.Run("data", func() {
+		err := (&globalCfgSnippet{}).Overridden("random-data")
+		suite.T().Log(err)
+		suite.NoError(err)
+	})
+}

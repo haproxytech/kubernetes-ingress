@@ -17,3 +17,22 @@ func (suite *AnnotationSuite) TestNbthreadFail() {
 	suite.T().Log(err)
 	suite.Error(err)
 }
+
+func (suite *AnnotationSuite) TestNbthreadrOverriddenOk() {
+	suite.Run("empty", func() {
+		err := (&nbthread{}).Overridden("")
+		suite.T().Log(err)
+		suite.NoError(err)
+	})
+	suite.Run("data", func() {
+		err := (&nbthread{}).Overridden("random-data")
+		suite.T().Log(err)
+		suite.NoError(err)
+	})
+}
+
+func (suite *AnnotationSuite) TestNbthreadOverriddenFail() {
+	err := (&nbthread{}).Overridden("nbthread 4")
+	suite.T().Log(err)
+	suite.Error(err)
+}

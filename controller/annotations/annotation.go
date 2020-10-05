@@ -1,11 +1,13 @@
 package annotations
 
 import (
+	"github.com/haproxytech/kubernetes-ingress/controller/configsnippet"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/api"
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 )
 
 type annotation interface {
+	configsnippet.Overridden
 	Parse(input string) error
 	Update(client api.HAProxyClient) Result
 	Delete(client api.HAProxyClient) Result

@@ -12,6 +12,11 @@ type globalCfgSnippet struct {
 	data *types.StringSliceC
 }
 
+// globalCfgSnippet cannot override itself
+func (a *globalCfgSnippet) Overridden(configSnippet string) error {
+	return nil
+}
+
 func (a *globalCfgSnippet) Parse(input string) error {
 	var cfgLines []string
 	for _, line := range strings.SplitN(strings.Trim(input, "\n"), "\n", -1) {

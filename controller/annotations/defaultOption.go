@@ -2,6 +2,8 @@ package annotations
 
 import (
 	"github.com/haproxytech/config-parser/v2/types"
+
+	"github.com/haproxytech/kubernetes-ingress/controller/configsnippet"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/api"
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 )
@@ -9,6 +11,10 @@ import (
 type defaultOption struct {
 	name string
 	data *types.SimpleOption
+}
+
+func (a *defaultOption) Overridden(configSnippet string) error {
+	return configsnippet.NewGenericAttribute("option " + a.name).Overridden(configSnippet)
 }
 
 func (a *defaultOption) Parse(input string) error {

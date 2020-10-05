@@ -30,3 +30,36 @@ func (suite *AnnotationSuite) TestDefaultOptionFail() {
 	suite.T().Log(err)
 	suite.Error(err)
 }
+
+func (suite *AnnotationSuite) TestDefaultOptionOverriddenOk() {
+	for _, n := range []string{
+		"http-server-close",
+		"http-keep-alive",
+		"dontlognull",
+		"logasap",
+	} {
+		suite.Run("empty", func() {
+			err := (&defaultOption{name: n}).Overridden("")
+			suite.T().Log(err)
+			suite.NoError(err)
+		})
+		suite.Run("data", func() {
+			err := (&defaultOption{name: n}).Overridden("random-data")
+			suite.T().Log(err)
+			suite.NoError(err)
+		})
+	}
+}
+
+func (suite *AnnotationSuite) TestDefaultOptionOverriddenFail() {
+	for n, cs := range map[string]string{
+		"http-server-close": "option http-server-close",
+		"http-keep-alive":   "option http-keep-alive",
+		"dontlognull":       "option dontlognull",
+		"logasap":           "option logasap",
+	} {
+		err := (&defaultOption{name: n}).Overridden(cs)
+		suite.T().Log(err)
+		suite.Error(err)
+	}
+}

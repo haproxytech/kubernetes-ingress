@@ -5,11 +5,17 @@ import (
 	"strconv"
 
 	"github.com/haproxytech/config-parser/v2/types"
+
+	"github.com/haproxytech/kubernetes-ingress/controller/configsnippet"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/api"
 )
 
 type nbthread struct {
 	data *types.Int64C
+}
+
+func (a *nbthread) Overridden(configSnippet string) error {
+	return configsnippet.NewGenericAttribute("nbthread").Overridden(configSnippet)
 }
 
 func (a *nbthread) Parse(input string) error {

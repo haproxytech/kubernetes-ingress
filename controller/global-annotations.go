@@ -21,11 +21,23 @@ import (
 // Handle Global and default Annotations
 func (c *HAProxyController) handleGlobalAnnotations() (restart bool, reload bool) {
 	var r annotations.Result
+
+	var cs string
+	if a, _ := c.Store.GetValueFromAnnotations("config-snippet", c.Store.ConfigMaps[Main].Annotations); a != nil {
+		cs = a.Value
+	}
+
 	for name, annotation := range annotations.Global {
 		cfgMapAnn, _ := c.Store.GetValueFromAnnotations(name, c.Store.ConfigMaps[Main].Annotations)
 		if cfgMapAnn == nil {
 			continue
 		}
+
+		if err := annotation.Overridden(cs); err != nil {
+			logger.Warning(err.Error())
+			continue
+		}
+
 		switch cfgMapAnn.Status {
 		case EMPTY:
 			continue

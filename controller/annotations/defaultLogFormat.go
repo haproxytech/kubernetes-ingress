@@ -5,11 +5,17 @@ import (
 	"strings"
 
 	"github.com/haproxytech/config-parser/v2/types"
+
+	"github.com/haproxytech/kubernetes-ingress/controller/configsnippet"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/api"
 )
 
 type defaultLogFormat struct {
 	data *types.StringC
+}
+
+func (a *defaultLogFormat) Overridden(configSnippet string) error {
+	return configsnippet.NewGenericAttribute("log-format").Overridden(configSnippet)
 }
 
 func (a *defaultLogFormat) Parse(input string) error {

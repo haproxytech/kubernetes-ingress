@@ -34,3 +34,46 @@ func (suite *AnnotationSuite) TestDefaultTimeoutFail() {
 	suite.T().Log(err)
 	suite.Error(err)
 }
+
+func (suite *AnnotationSuite) TestDefaultTimeoutOverriddenOk() {
+	for _, n := range []string{
+		"http-request",
+		"http-keep-alive",
+		"connect",
+		"queue",
+		"tunnel",
+		"client",
+		"client-fin",
+		"server",
+		"server-fin",
+	} {
+		suite.Run("empty", func() {
+			err := (&defaultTimeout{name: n}).Overridden("")
+			suite.T().Log(err)
+			suite.NoError(err)
+		})
+		suite.Run("data", func() {
+			err := (&defaultTimeout{name: n}).Overridden("random-data")
+			suite.T().Log(err)
+			suite.NoError(err)
+		})
+	}
+}
+
+func (suite *AnnotationSuite) TestDefaultTimeoutOverriddenFail() {
+	for n, cs := range map[string]string{
+		"http-request":    "timeout http-request 5s",
+		"http-keep-alive": "timeout http-keep-alive 1s",
+		"connect":         "timeout connect 5s",
+		"queue":           "timeout queue 5s",
+		"tunnel":          "timeout tunnel 1h",
+		"client":          "timeout client 1m",
+		"client-fin":      "timeout client-fin 5s",
+		"server":          "timeout server 1m",
+		"server-fin":      "timeout server-fin 5s",
+	} {
+		err := (&defaultTimeout{name: n}).Overridden(cs)
+		suite.T().Log(err)
+		suite.Error(err)
+	}
+}

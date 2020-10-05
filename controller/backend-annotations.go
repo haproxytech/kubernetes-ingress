@@ -18,10 +18,12 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/haproxytech/models/v2"
+
+	"github.com/haproxytech/kubernetes-ingress/controller/configsnippet"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy"
 	"github.com/haproxytech/kubernetes-ingress/controller/store"
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
-	"github.com/haproxytech/models/v2"
 )
 
 func (c *HAProxyController) handleSSLPassthrough(ingress *store.Ingress, service *store.Service, path *store.IngressPath, backend *models.Backend, newBackend bool) (updateBackendSwitching bool) {
@@ -75,6 +77,11 @@ func (c *HAProxyController) handleBackendAnnotations(ingress *store.Ingress, ser
 		backendAnnotations["set-host"], _ = c.Store.GetValueFromAnnotations("set-host", service.Annotations, ingress.Annotations, c.Store.ConfigMaps[Main].Annotations)
 	}
 
+	var cs string
+	if a, ok := backendAnnotations["config-snippet"]; ok && a != nil {
+		cs = a.Value
+	}
+
 	// The DELETED status of an annotation is handled explicitly
 	// only when there is no default annotation value.
 	for k, v := range backendAnnotations {
@@ -85,12 +92,20 @@ func (c *HAProxyController) handleBackendAnnotations(ingress *store.Ingress, ser
 			logger.Debugf("Backend '%s': Configuring '%s' annotation", backend.Name, k)
 			switch k {
 			case "abortonclose":
+				if err := configsnippet.NewGenericAttribute("option abort").Overridden(cs); err != nil {
+					logger.Warning(err.Error())
+					continue
+				}
 				if err := backend.UpdateAbortOnClose(v.Value); err != nil {
 					logger.Error(err)
 					continue
 				}
 				activeAnnotations = true
 			case "check-http":
+				if err := configsnippet.NewGenericAttribute("option httpchk").Overridden(cs); err != nil {
+					logger.Warning(err.Error())
+					continue
+				}
 				if v.Status == DELETED && !newBackend {
 					backend.Httpchk = nil
 				} else if err := backend.UpdateHttpchk(v.Value); err != nil {
@@ -115,10 +130,9 @@ func (c *HAProxyController) handleBackendAnnotations(ingress *store.Ingress, ser
 					activeAnnotations = true
 				}
 			case "cookie-persistence":
-				if backendAnnotations["config-snippet"] != nil {
-					if strings.Contains(backendAnnotations["config-snippet"].Value, "cookie") {
-						continue
-					}
+				if err := configsnippet.NewGenericAttribute("cookie").Overridden(cs); err != nil {
+					logger.Warning(err.Error())
+					continue
 				}
 				if v.Status == DELETED && !newBackend {
 					backend.Cookie = nil
@@ -131,12 +145,20 @@ func (c *HAProxyController) handleBackendAnnotations(ingress *store.Ingress, ser
 				}
 				activeAnnotations = true
 			case "forwarded-for":
+				if err := configsnippet.NewGenericAttribute("option forwardfor").Overridden(cs); err != nil {
+					logger.Warning(err.Error())
+					continue
+				}
 				if err := backend.UpdateForwardfor(v.Value); err != nil {
 					logger.Errorf("%s annotation: %s", k, err)
 					continue
 				}
 				activeAnnotations = true
 			case "load-balance":
+				if err := configsnippet.NewGenericAttribute("balance").Overridden(cs); err != nil {
+					logger.Warning(err.Error())
+					continue
+				}
 				if err := backend.UpdateBalance(v.Value); err != nil {
 					logger.Errorf("%s annotation: %s", k, err)
 					continue
@@ -188,6 +210,10 @@ func (c *HAProxyController) handleBackendAnnotations(ingress *store.Ingress, ser
 				activeAnnotations = true
 				c.cfg.BackendHTTPRules[backend.Name] = httpReqs
 			case "timeout-check":
+				if err := configsnippet.NewGenericAttribute("timeout check").Overridden(cs); err != nil {
+					logger.Warning(err.Error())
+					continue
+				}
 				if v.Status == DELETED && !newBackend {
 					backend.CheckTimeout = nil
 				} else if err := backend.UpdateCheckTimeout(v.Value); err != nil {
