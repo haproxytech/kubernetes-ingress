@@ -500,13 +500,13 @@ logasap: "true"
 
 Possible values:
 
-- address - IP address where the syslog server is listening; **Required**; Defaults to 127.0.0.1.
-- facility - One of the 24 syslog facilities (kern, user, mail, daemon, auth, syslog, lpr, news, uucp, cron, auth2, ftp, ntp, audit, alert, con2, local0, local1, local2, local3, local4, local5, local6, local7); In general, you will want to use one of the localX values, since the others are registered for specific types of applications; **Required**; Defaults to local0.
-- format - Syslog format, one of the following - rfc3164, rfc5424, short, raw; Defaults to rfc3164.
-- length -  Maximum syslog line length; Defaults to 1024.
-- level - Maximum verbosity level to filter outgoing messages; Only messages with a severity at least as important as this level will be sent; Use one of the following - emerg, alert, crit, err, warning, notice, info, debug; Defaults to 'notice'.
-- minlevel - Minimum verbosity level. Logs emitted with a more severe level than this one will be capped to this level.
-- port - Port number where the syslog server is listening; Defaults to 514.
+- address - **Required** - IP address where the syslog server is listening.
+- facility - **Required** - One of the 24 syslog facilities (kern, user, mail, daemon, auth, syslog, lpr, news, uucp, cron, auth2, ftp, ntp, audit, alert, con2, local0, local1, local2, local3, local4, local5, local6, local7); In general, you will want to use one of the localX values, since the others are registered for specific types of applications.
+- format - Syslog format, one of the following - rfc3164, rfc5424, short, raw. to rfc3164. HAProxy **default** is rfc3164
+- length -  Maximum syslog line length. HAProxy **default** is 1024.
+- level - Maximum verbosity level to filter outgoing messages; Only messages with a severity at least as important as this level will be sent; Use one of the following (emerg, alert, crit, err, warning, notice, info, debug); Traffic logs are emitted at "info" or higher severity. Haproxy **default** is to send all messages.
+- minlevel - Minimum verbosity level. Logs emitted with a more severe level than this one will be capped to this level. HAProxy **default** does not set a minlevel.
+- port - Port number where the syslog server is listening. HAProxy **default** is 514.
 
 Example:
 
