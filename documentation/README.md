@@ -512,10 +512,10 @@ Example:
 
 ```yaml
 # a single entry
-syslog-server: address:192.158.1.1, port:514, facility:local0
+syslog-server: "address:192.158.1.1, port:514, facility:local0"
 
 # log to stdout
-syslog-server: address:stdout, format: raw, facility:daemon
+syslog-server: "address:stdout, format: raw, facility:daemon"
 
 # multiple entries
 syslog-server: |
