@@ -542,6 +542,21 @@ annotations:
     - ingress
     version_min: "1.4"
     example: ['rate-limit-period: "1m"']
+  - title: rate-limit-status-code
+    type: 'string'
+    group: rate-limit
+    dependencies: ""
+    default: 403
+    description:
+      - Sets the status code to return upon rate limiting has been triggered.
+    tip: []
+    values:
+      - HTTP status codes; Defaults to 403
+    applies_to:
+      - configmap
+      - ingress
+    version_min: "1.5"
+    example: ['rate-limit-status-code: "429"']
   - title: rate-limit-requests
     type: number
     group: rate-limit

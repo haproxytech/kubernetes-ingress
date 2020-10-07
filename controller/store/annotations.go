@@ -136,6 +136,7 @@ var defaultAnnotationValues = MapStringW{
 	"log-format":              &StringW{Value: "%ci:%cp [%tr] %ft %b/%s %TR/%Tw/%Tc/%Tr/%Ta %ST %B %CC %CS %tsc %ac/%fc/%bc/%sc/%rc %sq/%bq %hr %hs \"%HM %[var(txn.base)] %HV\""},
 	"rate-limit-size":         &StringW{Value: "100k"},
 	"rate-limit-period":       &StringW{Value: "1s"},
+	"rate-limit-status-code":  &StringW{Value: "403"},
 	"ssl-redirect-code":       &StringW{Value: "302"},
 	"ssl-passthrough":         &StringW{Value: "false"},
 	"server-ssl":              &StringW{Value: "false"},

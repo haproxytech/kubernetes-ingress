@@ -23,9 +23,10 @@ import (
 	"strings"
 
 	"github.com/haproxytech/client-native/v2/misc"
+	"github.com/haproxytech/models/v2"
+
 	"github.com/haproxytech/kubernetes-ingress/controller/store"
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
-	"github.com/haproxytech/models/v2"
 )
 
 const (
@@ -186,7 +187,7 @@ func (c *HAProxyController) handleRateLimiting(ingress *store.Ingress) error {
 	if err != nil {
 		return err
 	}
-	// Following annotaitons have default values
+	// Following annotations have default values
 	annRateLimitPeriod, _ := c.Store.GetValueFromAnnotations("rate-limit-period", ingress.Annotations, c.Store.ConfigMaps[Main].Annotations)
 	rateLimitPeriod, err := utils.ParseTime(annRateLimitPeriod.Value)
 	if err != nil {
@@ -195,17 +196,23 @@ func (c *HAProxyController) handleRateLimiting(ingress *store.Ingress) error {
 	annRateLimitSize, _ := c.Store.GetValueFromAnnotations("rate-limit-size", ingress.Annotations, c.Store.ConfigMaps[Main].Annotations)
 	rateLimitSize := misc.ParseSize(annRateLimitSize.Value)
 
+	annRateLimitCode, _ := c.Store.GetValueFromAnnotations("rate-limit-status-code", ingress.Annotations, c.Store.ConfigMaps[Main].Annotations)
+	rateLimitCode, err := utils.ParseInt(annRateLimitCode.Value)
+	if err != nil {
+		return err
+	}
+
 	if len(ingress.Rules) == 0 {
 		logger.Debugf("Ingress %s/%s: Skipping rate-limit configuration, no rules defined", ingress.Namespace, ingress.Name)
 		return nil
 	}
 
 	// Update rules
-	var status store.Status
-	if annRateLimitReq.Status != EMPTY {
-		status = setStatus(ingress.Status, annRateLimitReq.Status)
-	} else {
-		status = setStatus(ingress.Status, annRateLimitPeriod.Status)
+	status := setStatus(ingress.Status, annRateLimitReq.Status)
+	if status == EMPTY {
+		if annRateLimitPeriod.Status != EMPTY || annRateLimitCode.Status != EMPTY {
+			status = MODIFIED
+		}
 	}
 	mapFiles := c.cfg.MapFiles
 	reqsKey := hashStrToUint(fmt.Sprintf("%s-%d-%d", RATE_LIMIT, *rateLimitPeriod, reqsLimit))
@@ -245,7 +252,7 @@ func (c *HAProxyController) handleRateLimiting(ingress *store.Ingress) error {
 	httpDenyRule := models.HTTPRequestRule{
 		Index:      utils.PtrInt64(1),
 		Type:       "deny",
-		DenyStatus: 403,
+		DenyStatus: rateLimitCode,
 		Cond:       "if",
 		CondTest:   makeACL(fmt.Sprintf(" { sc0_http_req_rate(%s) gt %d }", tableName, reqsLimit), reqsMapFile),
 	}

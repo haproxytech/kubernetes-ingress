@@ -49,6 +49,14 @@ func PtrString(value string) *string {
 	return &value
 }
 
+func ParseInt(data string) (v int64, err error) {
+	i, err := strconv.Atoi(data)
+	if err == nil {
+		v = int64(i)
+	}
+	return
+}
+
 func ParseTime(data string) (*int64, error) {
 	var v int64
 	var err error
