@@ -87,6 +87,16 @@ func main() {
 	logger.Printf("Default ssl certificate: %s", defaultCertificate)
 	logger.Printf("Controller sync period: %s", osArgs.SyncPeriod.String())
 	logger.Debugf("Kubernetes Informers resync period: %s", osArgs.CacheResyncPeriod.String())
+	if !osArgs.DisableHTTP {
+		logger.Printf("Frontend HTTP listening on: %d", osArgs.HTTPBindPort)
+	}
+	if !osArgs.DisableHTTPS {
+		logger.Printf("Frontend HTTPS listening on: %d", osArgs.HTTPSBindPort)
+	}
+	logger.Printf("Disabling HTTP frontend: %t", osArgs.DisableHTTP)
+	logger.Printf("Disabling HTTPS frontend: %t", osArgs.DisableHTTPS)
+	logger.Printf("Disabling IPv4 support: %t", osArgs.DisableIPV4)
+	logger.Printf("Disabling IPv6 support: %t", osArgs.DisableIPV6)
 
 	if osArgs.ConfigMapTCPServices.Name != "" {
 		logger.Printf("TCP Services defined in %s/%s", osArgs.ConfigMapTCPServices.Namespace, osArgs.ConfigMapTCPServices.Name)

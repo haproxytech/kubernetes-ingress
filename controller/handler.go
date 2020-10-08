@@ -28,7 +28,12 @@ func (c *HAProxyController) initHandlers() {
 		ProxyProtocol{},
 		DefaultCertificate{},
 		ErrorFile{},
-		HTTPS{certDir: HAProxyCertDir},
+		HTTPS{
+			certDir: HAProxyCertDir,
+			ipv4:    !c.osArgs.DisableIPV4,
+			ipv6:    !c.osArgs.DisableIPV6,
+			port:    c.osArgs.HTTPSBindPort,
+		},
 		TCPHandler{handlePath: c.handlePath},
 	}
 }

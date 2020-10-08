@@ -36,7 +36,7 @@ type Configuration struct {
 }
 
 //Init initialize configuration
-func (c *Configuration) Init(mapDir string) {
+func (c *Configuration) Init(mapDir string, httpsEnabled bool) {
 
 	c.FrontendHTTPReqRules = make(map[Rule]FrontendHTTPReqs)
 	for _, rule := range []Rule{BLACKLIST, SSL_REDIRECT, RATE_LIMIT, REQUEST_CAPTURE, REQUEST_SET_HEADER, WHITELIST} {
@@ -65,6 +65,8 @@ func (c *Configuration) Init(mapDir string) {
 		c.BackendSwitchingRules[frontend] = UseBackendRules{}
 	}
 	c.BackendHTTPRules = make(map[string]BackendHTTPReqs)
+
+	c.HTTPS = httpsEnabled
 }
 
 //Clean cleans all the statuses of various data that was changed

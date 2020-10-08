@@ -15,21 +15,49 @@
 package controller
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path"
 
+	"github.com/haproxytech/models/v2"
+
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/api"
 	"github.com/haproxytech/kubernetes-ingress/controller/store"
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
-	"github.com/haproxytech/models/v2"
 )
 
 type HTTPS struct {
+	ipv4    bool
+	ipv6    bool
+	port    int64
 	certDir string
 }
 
+func (h HTTPS) bindList() (binds []models.Bind) {
+	if h.ipv4 {
+		binds = append(binds, models.Bind{
+			Address: "0.0.0.0",
+			Port:    utils.PtrInt64(h.port),
+			Name:    "bind_1",
+		})
+	}
+	if h.ipv6 {
+		binds = append(binds, models.Bind{
+			Address: "::",
+			Port:    utils.PtrInt64(h.port),
+			Name:    "bind_2",
+			V4v6:    true,
+		})
+	}
+	return
+}
+
 func (h HTTPS) Update(k store.K8s, cfg Configuration, api api.HAProxyClient) (reload bool, err error) {
+	if !cfg.HTTPS {
+		logger.Debugf("Cannot proceed with SSL Passthrough update, HTTPS is disabled")
+		return false, nil
+	}
 	// ssl-passthrough
 	if len(cfg.BackendSwitchingRules[FrontendSSL]) > 0 {
 		if !cfg.SSLPassthrough {
@@ -76,20 +104,10 @@ func (h HTTPS) enableSSLPassthrough(cfg Configuration, api api.HAProxyClient) (e
 	if err != nil {
 		return err
 	}
-	err = api.FrontendBindCreate(FrontendSSL, models.Bind{
-		Address: "0.0.0.0:443",
-		Name:    "bind_1",
-	})
-	if err != nil {
-		return err
-	}
-	err = api.FrontendBindCreate(FrontendSSL, models.Bind{
-		Address: ":::443",
-		Name:    "bind_2",
-		V4v6:    true,
-	})
-	if err != nil {
-		return err
+	for _, b := range h.bindList() {
+		if err = api.FrontendBindCreate(FrontendSSL, b); err != nil {
+			return fmt.Errorf("cannot create bind for SSL Passthrough: %s", err.Error())
+		}
 	}
 	err = api.FrontendTCPRequestRuleCreate(FrontendSSL, models.TCPRequestRule{
 		Index:    utils.PtrInt64(0),
@@ -165,29 +183,10 @@ func (h HTTPS) disableSSLPassthrough(cfg Configuration, api api.HAProxyClient) (
 }
 
 func (h HTTPS) bindSSLPassthrough(enabled bool, api api.HAProxyClient) (err error) {
-	binds, err := api.FrontendBindsGet(FrontendHTTPS)
-	if err != nil {
-		return err
-	}
-	var ipv4, ipv6 string
-	if enabled {
-		ipv4 = "127.0.0.1:8443"
-		ipv6 = "127.0.0.1:8443"
-	} else {
-		ipv4 = "0.0.0.0:443"
-		ipv6 = ":::443"
-	}
-	for _, bind := range binds {
-		if bind.Name == "bind_1" {
-			bind.Address = ipv4
-			bind.Port = nil
-			bind.AcceptProxy = enabled
-		} else if bind.Name == "bind_2" {
-			bind.Address = ipv6
-			bind.Port = nil
-			bind.AcceptProxy = enabled
-		}
-		if err = api.FrontendBindEdit(FrontendHTTPS, *bind); err != nil {
+	for _, bind := range h.bindList() {
+		bind.Port = utils.PtrInt64(8443)
+		bind.AcceptProxy = enabled
+		if err = api.FrontendBindEdit(FrontendHTTPS, bind); err != nil {
 			return err
 		}
 	}

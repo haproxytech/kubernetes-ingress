@@ -77,4 +77,12 @@ type OSArgs struct {
 	SyncPeriod            time.Duration  `long:"sync-period" default:"5s" description:"Sets the period at which the controller syncs HAProxy configuration file"`
 	CacheResyncPeriod     time.Duration  `long:"cache-resync-period" default:"10m" description:"Sets the underlying Shared Informer resync period: resyncing controller with informers cache"`
 	LogLevel              LogLevelValue  `long:"log" default:"info" description:"level of log messages you can see"`
+	DisableIPV4           bool           `long:"disable-ipv4" description:"toggle to disable the IPv4 protocol from all frontends"`
+	IPV4BindAddr          string         `long:"ipv4-bind-address" default:"0.0.0.0" description:"IPv4 address the Ingress Controller listens on (if enabled)"`
+	DisableIPV6           bool           `long:"disable-ipv6" description:"toggle to disable the IPv6 protocol from all frontends"`
+	IPV6BindAddr          string         `long:"ipv6-bind-address" default:"::" description:"IPv6 address the Ingress Controller listens on (if enabled)"`
+	HTTPBindPort          int64          `long:"http-bind-port" default:"80" description:"port to listen on for HTTP traffic"`
+	DisableHTTP           bool           `long:"disable-http" description:"toggle to disable the HTTP frontend"`
+	HTTPSBindPort         int64          `long:"https-bind-port" default:"443" description:"port to listen on for HTTPS traffic"`
+	DisableHTTPS          bool           `long:"disable-https" description:"toggle to disable the HTTPs frontend"`
 }

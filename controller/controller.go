@@ -25,10 +25,12 @@ import (
 	"strings"
 	"syscall"
 
+	"github.com/haproxytech/models/v2"
+	"k8s.io/apimachinery/pkg/watch"
+
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/api"
 	"github.com/haproxytech/kubernetes-ingress/controller/store"
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
-	"k8s.io/apimachinery/pkg/watch"
 )
 
 const (
@@ -41,11 +43,11 @@ const (
 	FrontendHTTPS = "https"
 	FrontendSSL   = "ssl"
 	//Status
-	ADDED    store.Status = store.ADDED
-	DELETED  store.Status = store.DELETED
-	ERROR    store.Status = store.ERROR
-	EMPTY    store.Status = store.EMPTY
-	MODIFIED store.Status = store.MODIFIED
+	ADDED    = store.ADDED
+	DELETED  = store.DELETED
+	ERROR    = store.ERROR
+	EMPTY    = store.EMPTY
+	MODIFIED = store.MODIFIED
 )
 
 var (
@@ -95,6 +97,20 @@ func (c *HAProxyController) HAProxyProcess() (*os.Process, error) {
 	return process, err
 }
 
+// Wrapping a Native-Client transaction and commit it.
+// Returning an error to let panic or log it upon the scenario.
+func (c *HAProxyController) clientClosure(fn func()) (err error) {
+	if err = c.Client.APIStartTransaction(); err != nil {
+		return
+	}
+	fn()
+	if err = c.Client.APICommitTransaction(); err != nil {
+		return
+	}
+	c.Client.APIDisposeTransaction()
+	return
+}
+
 // Start initialize and run HAProxyController
 func (c *HAProxyController) Start(ctx context.Context, osArgs utils.OSArgs) {
 
@@ -102,13 +118,29 @@ func (c *HAProxyController) Start(ctx context.Context, osArgs utils.OSArgs) {
 
 	logger.SetLevel(osArgs.LogLevel.LogLevel)
 	c.haproxyInitialize()
+	logger.Panic(c.clientClosure(func() {
+		var http, https bool
+		var err error
+
+		if !c.osArgs.DisableHTTP {
+			http, err = c.handleBind("http", c.osArgs.HTTPBindPort)
+		}
+		if !c.osArgs.DisableHTTPS {
+			https, err = c.handleBind("https", c.osArgs.HTTPSBindPort)
+		}
+		if http || https {
+			err = c.haproxyService("restart")
+		}
+
+		logger.Panic(err)
+	}))
 	c.initHandlers()
 
 	if c.osArgs.PprofEnabled {
-		logger.Error(c.Client.APIStartTransaction())
-		logger.Error(c.handlePprof())
-		c.refreshBackendSwitching()
-		logger.Error(c.Client.APICommitTransaction())
+		logger.Error(c.clientClosure(func() {
+			logger.Error(c.handlePprof())
+			c.refreshBackendSwitching()
+		}))
 	}
 
 	parts := strings.Split(osArgs.PublishService, "/")
@@ -297,7 +329,32 @@ func (c *HAProxyController) haproxyInitialize() {
 		logger.Panic(err)
 	}
 
-	c.cfg.Init(HAProxyMapDir)
+	c.cfg.Init(HAProxyMapDir, !c.osArgs.DisableHTTPS)
+}
+
+func (c *HAProxyController) handleBind(protocol string, port int64) (bool, error) {
+	var binds []models.Bind
+	if !c.osArgs.DisableIPV4 {
+		binds = append(binds, models.Bind{
+			Name:    "bind_1",
+			Address: c.osArgs.IPV4BindAddr,
+			Port:    utils.PtrInt64(port),
+		})
+	}
+	if !c.osArgs.DisableIPV6 {
+		binds = append(binds, models.Bind{
+			Name:    "bind_2",
+			Address: c.osArgs.IPV6BindAddr,
+			Port:    utils.PtrInt64(port),
+			V4v6:    true,
+		})
+	}
+	for _, b := range binds {
+		if err := c.Client.FrontendBindCreate(protocol, b); err != nil {
+			return false, fmt.Errorf("cannot create bind %s for protocol %s: %s", b.Name, protocol, err.Error())
+		}
+	}
+	return len(binds) > 0, nil
 }
 
 // Handle HAProxy daemon via Master process
