@@ -565,6 +565,7 @@ annotations:
     description:
     - Sets the maximum number of requests that will be accepted from a source IP address
       during the `rate-limit-period`.
+    - To track the http requests rate, a stick-table named "Ratelimit-<period-in-ms>" will be created. Example, If the rate-limit-period is set to 2s the name of the table will be "Ratelimit-2000".
     tip:
     - If this number is exceeded, HAProxy will deny requests with 403 status code
     values:
@@ -605,7 +606,7 @@ annotations:
     - Captures samples of the request using [sample expression](#sample-expression) 
       and log them in HAProxy traffic logs.
     values:
-    - A header value, e.g. `hrd(header-name)`
+    - A header value, e.g. `hdr(header-name)`
     - A cookie value, e.g. `cookie(cookie-name)`
     - Multiple expressions by using a multiline YAML string
     applies_to:
@@ -662,7 +663,7 @@ annotations:
       to set the Host header after service selection, use [set-host](#set-host) annotation.
     values:
     - The name of the field, following by its value, e.g. Ingress-ID abcd123
-    - Multiple headers can be set using a multilane YAML string
+    - Multiple headers can be set using a multiline YAML string
     applies_to:
     - configmap
     - ingress

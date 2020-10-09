@@ -686,6 +686,7 @@ rate-limit-status-code: "429"
 ##### `rate-limit-requests`
 
   Sets the maximum number of requests that will be accepted from a source IP address during the `rate-limit-period`.
+  To track the http requests rate, a stick-table named "Ratelimit-<period-in-ms>" will be created. Example, If the rate-limit-period is set to 2s the name of the table will be "Ratelimit-2000".
 
   Available on:  `configmap`  `ingress`
 
@@ -735,7 +736,7 @@ rate-limit-size: 1000000
 
 Possible values:
 
-- A header value, e.g. `hrd(header-name)`
+- A header value, e.g. `hdr(header-name)`
 - A cookie value, e.g. `cookie(cookie-name)`
 - Multiple expressions by using a multiline YAML string
 
@@ -799,7 +800,7 @@ request-capture-len: 350
 Possible values:
 
 - The name of the field, following by its value, e.g. Ingress-ID abcd123
-- Multiple headers can be set using a multilane YAML string
+- Multiple headers can be set using a multiline YAML string
 
 Example (configmap):
 
