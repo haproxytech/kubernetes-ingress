@@ -39,7 +39,7 @@ func (c *HAProxyController) monitorChanges() {
 	configMapReceivedAndProcessed := make(chan bool)
 	syncPeriod := c.timeFromAnnotation("sync-period")
 	logger.Debugf("Executing syncPeriod every %s", syncPeriod.String())
-	go c.SyncData(c.eventChan, configMapReceivedAndProcessed)
+	go c.SyncData(configMapReceivedAndProcessed)
 
 	informersSynced := []cache.InformerSynced{}
 	stop := make(chan struct{})
@@ -175,7 +175,7 @@ func (c *HAProxyController) monitorChanges() {
 
 //SyncData gets all kubernetes changes, aggregates them and apply to HAProxy.
 //All the changes must come through this function
-func (c *HAProxyController) SyncData(jobChan <-chan SyncDataEvent, chConfigMapReceivedAndProcessed chan bool) {
+func (c *HAProxyController) SyncData(chConfigMapReceivedAndProcessed chan bool) {
 	hadChanges := false
 	var cm string
 	ConfigMapsArgs := map[string]utils.NamespaceValue{
@@ -192,7 +192,7 @@ func (c *HAProxyController) SyncData(jobChan <-chan SyncDataEvent, chConfigMapRe
 			Name:      c.osArgs.ConfigMapErrorfiles.Name,
 		},
 	}
-	for job := range jobChan {
+	for job := range c.eventChan {
 		ns := c.Store.GetNamespace(job.Namespace)
 		change := false
 		switch job.SyncType {
