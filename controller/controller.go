@@ -155,6 +155,11 @@ func (c *HAProxyController) updateHAProxy() error {
 				}
 			}
 
+			//handle Ingress annotations
+			if len(ingress.Rules) == 0 {
+				c.Logger.Debugf("Ingress %s/%s: no rules defined", ingress.Namespace, ingress.Name)
+				continue
+			}
 			c.Logger.Error(c.handleRateLimiting(ingress))
 			c.Logger.Error(c.handleRequestCapture(ingress))
 			c.Logger.Error(c.handleRequestSetHdr(ingress))

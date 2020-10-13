@@ -53,11 +53,6 @@ func (c *HAProxyController) handleBlacklisting(ingress *Ingress) error {
 		mapFiles.AppendRow(listKey, address)
 	}
 
-	if len(ingress.Rules) == 0 {
-		c.Logger.Debugf("Ingress %s/%s: Skipping blacklist configuration, no rules defined", ingress.Namespace, ingress.Name)
-		return nil
-	}
-
 	// Update rules
 	status := setStatus(ingress.Status, annBlacklist.Status)
 
@@ -130,11 +125,6 @@ func (c *HAProxyController) handleHTTPRedirect(ingress *Ingress) error {
 	var sslRedirectCode int64
 	if sslRedirectCode, err = strconv.ParseInt(annRedirectCode.Value, 10, 64); err != nil {
 		sslRedirectCode = defaultSSLRedirectCode
-	}
-
-	if len(ingress.Rules) == 0 {
-		c.Logger.Debugf("Ingress %s/%s: Skipping redirect configuration, no rules defined", ingress.Namespace, ingress.Name)
-		return nil
 	}
 
 	// Update Rules
@@ -236,11 +226,6 @@ func (c *HAProxyController) handleRateLimiting(ingress *Ingress) error {
 	annRateLimitSize, _ := GetValueFromAnnotations("rate-limit-size", ingress.Annotations, c.cfg.ConfigMap.Annotations)
 	rateLimitSize := misc.ParseSize(annRateLimitSize.Value)
 
-	if len(ingress.Rules) == 0 {
-		c.Logger.Debugf("Ingress %s/%s: Skipping rate-limit configuration, no rules defined", ingress.Namespace, ingress.Name)
-		return nil
-	}
-
 	// Update rules
 	var status Status
 	if annRateLimitReq.Status != EMPTY {
@@ -316,11 +301,6 @@ func (c *HAProxyController) handleRequestCapture(ingress *Ingress) error {
 		captureLen = defaultCaptureLen
 	}
 
-	if len(ingress.Rules) == 0 {
-		c.Logger.Debugf("Ingress %s/%s: Skipping capture configuration, no rules defined", ingress.Namespace, ingress.Name)
-		return nil
-	}
-
 	// Update rules
 	status := setStatus(ingress.Status, annReqCapture.Status)
 	mapFiles := c.cfg.MapFiles
@@ -378,11 +358,6 @@ func (c *HAProxyController) handleRequestSetHdr(ingress *Ingress) error {
 		return nil
 	}
 
-	if len(ingress.Rules) == 0 {
-		c.Logger.Debugf("Ingress %s/%s: Skipping request-set-hdr configuration, no rules defined", ingress.Namespace, ingress.Name)
-		return nil
-	}
-
 	// Update rules
 	status := setStatus(ingress.Status, annSetHdr.Status)
 	mapFiles := c.cfg.MapFiles
@@ -431,11 +406,6 @@ func (c *HAProxyController) handleRequestSetHost(ingress *Ingress) error {
 		return nil
 	}
 
-	if len(ingress.Rules) == 0 {
-		c.Logger.Debugf("Ingress %s/%s: Skipping request-set-host configuration, no rules defined", ingress.Namespace, ingress.Name)
-		return nil
-	}
-
 	// Update rules
 	status := setStatus(ingress.Status, annSetHost.Status)
 	mapFiles := c.cfg.MapFiles
@@ -474,11 +444,6 @@ func (c *HAProxyController) handleRequestPathRewrite(ingress *Ingress) error {
 	//  Get and validate annotations
 	annPathRewrite, err := GetValueFromAnnotations("path-rewrite", ingress.Annotations, c.cfg.ConfigMap.Annotations)
 	if annPathRewrite == nil {
-		return nil
-	}
-
-	if len(ingress.Rules) == 0 {
-		c.Logger.Debugf("Ingress %s/%s: Skipping path-rewrite configuration, no rules defined", ingress.Namespace, ingress.Name)
 		return nil
 	}
 
@@ -540,10 +505,6 @@ func (c *HAProxyController) handleResponseSetHdr(ingress *Ingress) error {
 	}
 
 	// Update rules
-	if len(ingress.Rules) == 0 {
-		c.Logger.Debugf("Ingress %s/%s: Skipping response-set-header configuration, no rules defined", ingress.Namespace, ingress.Name)
-		return nil
-	}
 	status := setStatus(ingress.Status, annSetHdr.Status)
 	mapFiles := c.cfg.MapFiles
 	for _, param := range strings.Split(annSetHdr.Value, "\n") {
@@ -598,11 +559,6 @@ func (c *HAProxyController) handleWhitelisting(ingress *Ingress) error {
 			}
 		}
 		mapFiles.AppendRow(listKey, address)
-	}
-
-	if len(ingress.Rules) == 0 {
-		c.Logger.Debugf("Ingress %s/%s: Skipping whitelist configuration, no rules defined", ingress.Namespace, ingress.Name)
-		return nil
 	}
 
 	// Update rules
