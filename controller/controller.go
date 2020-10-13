@@ -232,6 +232,10 @@ func (c *HAProxyController) updateHAProxy() error {
 				}
 			}
 
+			if len(ingress.Rules) == 0 {
+				logger.Debugf("Ingress %s/%s: no rules defined", ingress.Namespace, ingress.Name)
+				continue
+			}
 			logger.Error(c.handleRateLimiting(ingress))
 			logger.Error(c.handleRequestCapture(ingress))
 			logger.Error(c.handleRequestPathRewrite(ingress))
