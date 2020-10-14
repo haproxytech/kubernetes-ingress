@@ -9,8 +9,8 @@ require (
 	github.com/haproxytech/models/v2 v2.0.3-0.20200529121530-35dd2bba1993
 	github.com/jessevdk/go-flags v1.4.0
 	github.com/stretchr/testify v1.6.1
-	k8s.io/api v0.18.5
-	k8s.io/apimachinery v0.18.5
-	k8s.io/client-go v0.18.5
-	k8s.io/utils v0.0.0-20200324210504-a9aa75ae1b89
+	k8s.io/api v0.19.0
+	k8s.io/apimachinery v0.19.0
+	k8s.io/client-go v0.19.0
+	k8s.io/utils v0.0.0-20200729134348-d5654de09c73
 )

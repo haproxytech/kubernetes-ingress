@@ -20,9 +20,11 @@ import (
 	"fmt"
 	"net"
 
-	//networking "k8s.io/api/networking/v1beta1"
 	corev1 "k8s.io/api/core/v1"
-	extensions "k8s.io/api/extensions/v1beta1"
+	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
+	networkingv1 "k8s.io/api/networking/v1"
+	networkingv1beta "k8s.io/api/networking/v1beta1"
+	k8serror "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -240,77 +242,39 @@ func (k *K8s) EventsIngresses(channel chan *store.Ingress, stop chan struct{}, i
 	informer.AddEventHandler(
 		cache.ResourceEventHandlerFuncs{
 			AddFunc: func(obj interface{}) {
-				data, ok := obj.(*extensions.Ingress)
-				if !ok {
+				item, err := store.ConvertToIngress(obj)
+				if err != nil {
 					k.Logger.Errorf("%s: Invalid data from k8s api, %s", INGRESS, obj)
 					return
-				}
-				var status = ADDED
-				if data.ObjectMeta.GetDeletionTimestamp() != nil {
-					//detect services that are in terminating state
-					status = DELETED
-				}
-				item := &store.Ingress{
-					Namespace:      data.GetNamespace(),
-					Name:           data.GetName(),
-					Annotations:    store.ConvertToMapStringW(data.ObjectMeta.Annotations),
-					Rules:          store.ConvertIngressRules(data.Spec.Rules),
-					DefaultBackend: store.ConvertIngressBackend(data.Spec.Backend),
-					TLS:            store.ConvertIngressTLS(data.Spec.TLS),
-					Status:         status,
 				}
 				k.Logger.Tracef("%s %s: %s", INGRESS, item.Status, item.Name)
 				channel <- item
 			},
 			DeleteFunc: func(obj interface{}) {
-				data, ok := obj.(*extensions.Ingress)
-				if !ok {
+				item, err := store.ConvertToIngress(obj)
+				if err != nil {
 					k.Logger.Errorf("%s: Invalid data from k8s api, %s", INGRESS, obj)
 					return
 				}
-				var status = DELETED
-				item := &store.Ingress{
-					Namespace:      data.GetNamespace(),
-					Name:           data.GetName(),
-					Annotations:    store.ConvertToMapStringW(data.ObjectMeta.Annotations),
-					Rules:          store.ConvertIngressRules(data.Spec.Rules),
-					DefaultBackend: store.ConvertIngressBackend(data.Spec.Backend),
-					TLS:            store.ConvertIngressTLS(data.Spec.TLS),
-					Status:         status,
-				}
+				item.Status = DELETED
 				k.Logger.Tracef("%s %s: %s", INGRESS, item.Status, item.Name)
 				channel <- item
 			},
 			UpdateFunc: func(oldObj, newObj interface{}) {
-				data1, ok := oldObj.(*extensions.Ingress)
-				if !ok {
+				item1, err := store.ConvertToIngress(oldObj)
+				if err != nil {
 					k.Logger.Errorf("%s: Invalid data from k8s api, %s", INGRESS, oldObj)
 					return
 				}
-				data2, ok := newObj.(*extensions.Ingress)
-				if !ok {
-					k.Logger.Errorf("%s: Invalid data from k8s api, %s", INGRESS, newObj)
+				item1.Status = MODIFIED
+
+				item2, err := store.ConvertToIngress(newObj)
+				if err != nil {
+					k.Logger.Errorf("%s: Invalid data from k8s api, %s", INGRESS, oldObj)
 					return
 				}
-				var status = MODIFIED
-				item1 := &store.Ingress{
-					Namespace:      data1.GetNamespace(),
-					Name:           data1.GetName(),
-					Annotations:    store.ConvertToMapStringW(data1.ObjectMeta.Annotations),
-					Rules:          store.ConvertIngressRules(data1.Spec.Rules),
-					DefaultBackend: store.ConvertIngressBackend(data1.Spec.Backend),
-					TLS:            store.ConvertIngressTLS(data1.Spec.TLS),
-					Status:         status,
-				}
-				item2 := &store.Ingress{
-					Namespace:      data2.GetNamespace(),
-					Name:           data2.GetName(),
-					Annotations:    store.ConvertToMapStringW(data2.ObjectMeta.Annotations),
-					Rules:          store.ConvertIngressRules(data2.Spec.Rules),
-					DefaultBackend: store.ConvertIngressBackend(data2.Spec.Backend),
-					TLS:            store.ConvertIngressTLS(data2.Spec.TLS),
-					Status:         status,
-				}
+				item1.Status = MODIFIED
+
 				if item2.Equal(item1) {
 					return
 				}
@@ -590,23 +554,17 @@ func (k *K8s) EventsSecrets(channel chan *store.Secret, stop chan struct{}, info
 }
 
 func (k *K8s) UpdateIngressStatus(ingress *store.Ingress, publishSvc *store.Service) (err error) {
-	var ingSource *extensions.Ingress
-	var ingCopy extensions.Ingress
-	status := publishSvc.Status
-	lbi := []corev1.LoadBalancerIngress{}
-	if status == EMPTY {
+	var status store.Status
+
+	if status = publishSvc.Status; status == EMPTY {
 		if ingress.Status == EMPTY {
 			return nil
 		}
 		status = ingress.Status
 	}
 
-	// Get Ingress
-	if ingSource, err = k.API.ExtensionsV1beta1().Ingresses(ingress.Namespace).Get(context.Background(), ingress.Name, metav1.GetOptions{}); err != nil {
-		return fmt.Errorf("update ingress status: failed to get ingress %s/%s: %v", ingress.Namespace, ingress.Name, err)
-	}
-	ingCopy = *ingSource
-	ingCopy.Status = extensions.IngressStatus{LoadBalancer: corev1.LoadBalancerStatus{Ingress: lbi}}
+	var lbi []corev1.LoadBalancerIngress
+
 	// Update addresses
 	if status == ADDED || status == MODIFIED {
 		for _, addr := range publishSvc.Addresses {
@@ -616,13 +574,48 @@ func (k *K8s) UpdateIngressStatus(ingress *store.Ingress, publishSvc *store.Serv
 				lbi = append(lbi, corev1.LoadBalancerIngress{IP: addr})
 			}
 		}
-		ingCopy.Status = extensions.IngressStatus{LoadBalancer: corev1.LoadBalancerStatus{Ingress: lbi}}
 	}
-	// Remove addresses
-	if _, err = k.API.ExtensionsV1beta1().Ingresses(ingress.Namespace).UpdateStatus(context.Background(), &ingCopy, metav1.UpdateOptions{}); err != nil {
-		return fmt.Errorf("failed to update LoadBalancer status of ingress%s/%s: %v", ingress.Namespace, ingress.Name, err)
+
+	switch ingress.APIVersion {
+	// Required for Kubernetes < 1.14
+	case "extensions/v1beta1":
+		var ingSource *extensionsv1beta1.Ingress
+		ingSource, err = k.API.ExtensionsV1beta1().Ingresses(ingress.Namespace).Get(context.Background(), ingress.Name, metav1.GetOptions{})
+		if err != nil {
+			break
+		}
+		ingCopy := ingSource.DeepCopy()
+		ingCopy.Status = extensionsv1beta1.IngressStatus{LoadBalancer: corev1.LoadBalancerStatus{Ingress: lbi}}
+		_, err = k.API.ExtensionsV1beta1().Ingresses(ingress.Namespace).UpdateStatus(context.Background(), ingCopy, metav1.UpdateOptions{})
+	// Required for Kubernetes < 1.19
+	case "networking.k8s.io/v1beta1":
+		var ingSource *networkingv1beta.Ingress
+		ingSource, err = k.API.NetworkingV1beta1().Ingresses(ingress.Namespace).Get(context.Background(), ingress.Name, metav1.GetOptions{})
+		if err != nil {
+			break
+		}
+		ingCopy := ingSource.DeepCopy()
+		ingCopy.Status = networkingv1beta.IngressStatus{LoadBalancer: corev1.LoadBalancerStatus{Ingress: lbi}}
+		_, err = k.API.NetworkingV1beta1().Ingresses(ingress.Namespace).UpdateStatus(context.Background(), ingCopy, metav1.UpdateOptions{})
+	case "networking.k8s.io/v1":
+		var ingSource *networkingv1.Ingress
+		ingSource, err = k.API.NetworkingV1().Ingresses(ingress.Namespace).Get(context.Background(), ingress.Name, metav1.GetOptions{})
+		if err != nil {
+			break
+		}
+		ingCopy := ingSource.DeepCopy()
+		ingCopy.Status = networkingv1.IngressStatus{LoadBalancer: corev1.LoadBalancerStatus{Ingress: lbi}}
+		_, err = k.API.NetworkingV1().Ingresses(ingress.Namespace).UpdateStatus(context.Background(), ingCopy, metav1.UpdateOptions{})
+	}
+
+	if k8serror.IsNotFound(err) {
+		return fmt.Errorf("update ingress status: failed to get ingress %s/%s: %v", ingress.Namespace, ingress.Name, err)
+	}
+	if err != nil {
+		return fmt.Errorf("failed to update LoadBalancer status of ingress %s/%s: %v", ingress.Namespace, ingress.Name, err)
 	}
 	k.Logger.Debugf("Successful update of LoadBalancer status in ingress %s/%s", ingress.Namespace, ingress.Name)
+
 	return nil
 }
 
@@ -668,4 +661,20 @@ func (k *K8s) GetPublishServiceAddresses(service *corev1.Service, publishSvc *st
 	}
 	publishSvc.Addresses = addresses
 	publishSvc.Status = MODIFIED
+}
+
+func (k *K8s) IsNetworkingV1Beta1ApiSupported() bool {
+	vi, _ := k.API.Discovery().ServerVersion()
+	major, _ := utils.ParseInt(vi.Major)
+	minor, _ := utils.ParseInt(vi.Minor)
+
+	return major == 1 && minor >= 14 && minor < 22
+}
+
+func (k *K8s) IsNetworkingV1ApiSupported() bool {
+	vi, _ := k.API.Discovery().ServerVersion()
+	major, _ := utils.ParseInt(vi.Major)
+	minor, _ := utils.ParseInt(vi.Minor)
+
+	return major == 1 && minor >= 19
 }

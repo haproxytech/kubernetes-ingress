@@ -15,69 +15,267 @@
 package store
 
 import (
+	"fmt"
+
+	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
+	networkingv1 "k8s.io/api/networking/v1"
+	networkingv1beta1 "k8s.io/api/networking/v1beta1"
+
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
-	extensions "k8s.io/api/extensions/v1beta1"
 )
 
-//ConvertIngressRules converts data from kubernetes format
-func ConvertIngressRules(ingressRules []extensions.IngressRule) map[string]*IngressRule {
-	rules := make(map[string]*IngressRule)
-	for _, k8sRule := range ingressRules {
-		paths := make(map[string]*IngressPath)
-		if k8sRule.HTTP == nil {
-			logger := utils.GetLogger()
-			logger.Warningf("Ingress HTTP rules for [%s] does not exists", k8sRule.Host)
-			continue
-		}
-		for _, k8sPath := range k8sRule.HTTP.Paths {
-			paths[k8sPath.Path] = &IngressPath{
-				Path:              k8sPath.Path,
-				ServiceName:       k8sPath.Backend.ServiceName,
-				ServicePortInt:    int64(k8sPath.Backend.ServicePort.IntValue()),
-				ServicePortString: k8sPath.Backend.ServicePort.StrVal,
+// ConvertToIngress detects the interface{} provided by the SharedInformer and select
+// the proper strategy to convert and return the resource as a store.Ingress struct
+func ConvertToIngress(resource interface{}) (f *Ingress, err error) {
+	switch t := resource.(type) {
+	case *networkingv1beta1.Ingress:
+		f = ingressNetworkingV1Beta1Strategy{obj: resource.(*networkingv1beta1.Ingress)}.Convert()
+	case *extensionsv1beta1.Ingress:
+		f = ingressExtensionsStrategy{obj: resource.(*extensionsv1beta1.Ingress)}.Convert()
+	case *networkingv1.Ingress:
+		f = ingressNetworkingV1Strategy{obj: resource.(*networkingv1.Ingress)}.Convert()
+	default:
+		err = fmt.Errorf("unrecognized type for: %T", t)
+	}
+	return
+}
+
+// ingressNetworkingV1Beta1Strategy is the Strategy implementation for converting an
+// ingresses.networking.k8s.io/v1beta1 object into a store.Ingress resource.
+type ingressNetworkingV1Beta1Strategy struct {
+	obj *networkingv1beta1.Ingress
+}
+
+func (n ingressNetworkingV1Beta1Strategy) Convert() *Ingress {
+	return &Ingress{
+		APIVersion:  "networking.k8s.io/v1beta1",
+		Namespace:   n.obj.GetNamespace(),
+		Name:        n.obj.GetName(),
+		Annotations: ConvertToMapStringW(n.obj.GetAnnotations()),
+		Rules: func(ingressRules []networkingv1beta1.IngressRule) map[string]*IngressRule {
+			rules := make(map[string]*IngressRule)
+			for _, k8sRule := range ingressRules {
+				paths := make(map[string]*IngressPath)
+				if k8sRule.HTTP == nil {
+					logger := utils.GetLogger()
+					logger.Warningf("Ingress HTTP rules for [%s] does not exists", k8sRule.Host)
+					continue
+				}
+				for _, k8sPath := range k8sRule.HTTP.Paths {
+					paths[k8sPath.Path] = &IngressPath{
+						Path:              k8sPath.Path,
+						ServiceName:       k8sPath.Backend.ServiceName,
+						ServicePortInt:    int64(k8sPath.Backend.ServicePort.IntValue()),
+						ServicePortString: k8sPath.Backend.ServicePort.StrVal,
+						Status:            "",
+					}
+				}
+				if rule, ok := rules[k8sRule.Host]; ok {
+					for path, ingressPath := range paths {
+						rule.Paths[path] = ingressPath
+					}
+				} else {
+					rules[k8sRule.Host] = &IngressRule{
+						Host:   k8sRule.Host,
+						Paths:  paths,
+						Status: "",
+					}
+				}
+			}
+			return rules
+		}(n.obj.Spec.Rules),
+		DefaultBackend: func(ingressBackend *networkingv1beta1.IngressBackend) *IngressPath {
+			if ingressBackend == nil {
+				return nil
+			}
+			return &IngressPath{
+				ServiceName:       ingressBackend.ServiceName,
+				ServicePortInt:    int64(ingressBackend.ServicePort.IntValue()),
+				ServicePortString: ingressBackend.ServicePort.StrVal,
+				IsDefaultBackend:  true,
 				Status:            "",
 			}
-		}
-		if rule, ok := rules[k8sRule.Host]; ok {
-			for path, ingressPath := range paths {
-				rule.Paths[path] = ingressPath
+		}(n.obj.Spec.Backend),
+		TLS: func(ingressTLS []networkingv1beta1.IngressTLS) map[string]*IngressTLS {
+			tls := make(map[string]*IngressTLS)
+			for _, k8sTLS := range ingressTLS {
+				for _, host := range k8sTLS.Hosts {
+					tls[host] = &IngressTLS{
+						Host: host,
+						SecretName: StringW{
+							Value: k8sTLS.SecretName,
+						},
+						Status: EMPTY,
+					}
+				}
 			}
-		} else {
-			rules[k8sRule.Host] = &IngressRule{
-				Host:   k8sRule.Host,
-				Paths:  paths,
-				Status: "",
+			return tls
+		}(n.obj.Spec.TLS),
+		Status: func() Status {
+			if n.obj.ObjectMeta.GetDeletionTimestamp() != nil {
+				return DELETED
 			}
-		}
+			return ADDED
+		}(),
 	}
-	return rules
 }
 
-func ConvertIngressTLS(ingressTLS []extensions.IngressTLS) map[string]*IngressTLS {
-	tls := make(map[string]*IngressTLS)
-	for _, k8sTLS := range ingressTLS {
-		for _, host := range k8sTLS.Hosts {
-			tls[host] = &IngressTLS{
-				Host: host,
-				SecretName: StringW{
-					Value: k8sTLS.SecretName,
-				},
-				Status: EMPTY,
-			}
-		}
-	}
-	return tls
+// ingressExtensionsStrategy is the Strategy implementation for converting an
+// ingresses.extensions/v1beta1 object into a store.Ingress resource.
+type ingressExtensionsStrategy struct {
+	obj *extensionsv1beta1.Ingress
 }
 
-func ConvertIngressBackend(ingressBackend *extensions.IngressBackend) *IngressPath {
-	if ingressBackend == nil {
-		return nil
+func (e ingressExtensionsStrategy) Convert() *Ingress {
+	return &Ingress{
+		APIVersion:  "extensions/v1beta1",
+		Namespace:   e.obj.GetNamespace(),
+		Name:        e.obj.GetName(),
+		Annotations: ConvertToMapStringW(e.obj.GetAnnotations()),
+		Rules: func(ingressRules []extensionsv1beta1.IngressRule) map[string]*IngressRule {
+			rules := make(map[string]*IngressRule)
+			for _, k8sRule := range ingressRules {
+				paths := make(map[string]*IngressPath)
+				if k8sRule.HTTP == nil {
+					logger := utils.GetLogger()
+					logger.Warningf("Ingress HTTP rules for [%s] does not exists", k8sRule.Host)
+					continue
+				}
+				for _, k8sPath := range k8sRule.HTTP.Paths {
+					paths[k8sPath.Path] = &IngressPath{
+						Path:              k8sPath.Path,
+						ServiceName:       k8sPath.Backend.ServiceName,
+						ServicePortInt:    int64(k8sPath.Backend.ServicePort.IntValue()),
+						ServicePortString: k8sPath.Backend.ServicePort.StrVal,
+						Status:            "",
+					}
+				}
+				if rule, ok := rules[k8sRule.Host]; ok {
+					for path, ingressPath := range paths {
+						rule.Paths[path] = ingressPath
+					}
+				} else {
+					rules[k8sRule.Host] = &IngressRule{
+						Host:   k8sRule.Host,
+						Paths:  paths,
+						Status: "",
+					}
+				}
+			}
+			return rules
+		}(e.obj.Spec.Rules),
+		DefaultBackend: func(ingressBackend *extensionsv1beta1.IngressBackend) *IngressPath {
+			if ingressBackend == nil {
+				return nil
+			}
+			return &IngressPath{
+				ServiceName:       ingressBackend.ServiceName,
+				ServicePortInt:    int64(ingressBackend.ServicePort.IntValue()),
+				ServicePortString: ingressBackend.ServicePort.StrVal,
+				IsDefaultBackend:  true,
+				Status:            "",
+			}
+		}(e.obj.Spec.Backend),
+		TLS: func(ingressTLS []extensionsv1beta1.IngressTLS) map[string]*IngressTLS {
+			tls := make(map[string]*IngressTLS)
+			for _, k8sTLS := range ingressTLS {
+				for _, host := range k8sTLS.Hosts {
+					tls[host] = &IngressTLS{
+						Host: host,
+						SecretName: StringW{
+							Value: k8sTLS.SecretName,
+						},
+						Status: EMPTY,
+					}
+				}
+			}
+			return tls
+		}(e.obj.Spec.TLS),
+		Status: func() Status {
+			if e.obj.ObjectMeta.GetDeletionTimestamp() != nil {
+				return DELETED
+			}
+			return ADDED
+		}(),
 	}
-	return &IngressPath{
-		ServiceName:       ingressBackend.ServiceName,
-		ServicePortInt:    int64(ingressBackend.ServicePort.IntValue()),
-		ServicePortString: ingressBackend.ServicePort.StrVal,
-		IsDefaultBackend:  true,
-		Status:            "",
+}
+
+// ingressNetworkingV1Strategy is the Strategy implementation for converting an
+// ingresses.networking.k8s.io/v1 object into a store.Ingress resource.
+type ingressNetworkingV1Strategy struct {
+	obj *networkingv1.Ingress
+}
+
+func (n ingressNetworkingV1Strategy) Convert() *Ingress {
+	return &Ingress{
+		APIVersion:  "networking.k8s.io/v1",
+		Namespace:   n.obj.GetNamespace(),
+		Name:        n.obj.GetName(),
+		Annotations: ConvertToMapStringW(n.obj.GetAnnotations()),
+		Rules: func(ingressRules []networkingv1.IngressRule) map[string]*IngressRule {
+			rules := make(map[string]*IngressRule)
+			for _, k8sRule := range ingressRules {
+				paths := make(map[string]*IngressPath)
+				if k8sRule.HTTP == nil {
+					logger := utils.GetLogger()
+					logger.Warningf("Ingress HTTP rules for [%s] does not exists", k8sRule.Host)
+					continue
+				}
+				for _, k8sPath := range k8sRule.HTTP.Paths {
+					paths[k8sPath.Path] = &IngressPath{
+						Path:              k8sPath.Path,
+						ServiceName:       k8sPath.Backend.Service.Name,
+						ServicePortInt:    int64(k8sPath.Backend.Service.Port.Number),
+						ServicePortString: k8sPath.Backend.Service.Port.Name,
+						Status:            "",
+					}
+				}
+				if rule, ok := rules[k8sRule.Host]; ok {
+					for path, ingressPath := range paths {
+						rule.Paths[path] = ingressPath
+					}
+				} else {
+					rules[k8sRule.Host] = &IngressRule{
+						Host:   k8sRule.Host,
+						Paths:  paths,
+						Status: "",
+					}
+				}
+			}
+			return rules
+		}(n.obj.Spec.Rules),
+		DefaultBackend: func(ingressBackend *networkingv1.IngressBackend) *IngressPath {
+			if ingressBackend == nil {
+				return nil
+			}
+			return &IngressPath{
+				ServiceName:       ingressBackend.Service.Name,
+				ServicePortInt:    int64(ingressBackend.Service.Port.Number),
+				ServicePortString: ingressBackend.Service.Port.Name,
+				IsDefaultBackend:  true,
+				Status:            "",
+			}
+		}(n.obj.Spec.DefaultBackend),
+		TLS: func(ingressTLS []networkingv1.IngressTLS) map[string]*IngressTLS {
+			tls := make(map[string]*IngressTLS)
+			for _, k8sTLS := range ingressTLS {
+				for _, host := range k8sTLS.Hosts {
+					tls[host] = &IngressTLS{
+						Host: host,
+						SecretName: StringW{
+							Value: k8sTLS.SecretName,
+						},
+						Status: EMPTY,
+					}
+				}
+			}
+			return tls
+		}(n.obj.Spec.TLS),
+		Status: func() Status {
+			if n.obj.ObjectMeta.GetDeletionTimestamp() != nil {
+				return DELETED
+			}
+			return ADDED
+		}(),
 	}
 }

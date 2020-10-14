@@ -85,6 +85,8 @@ type IngressRule struct {
 
 //Ingress is usefull data from k8s structures about ingress
 type Ingress struct {
+	// Required for K8s.UpdateIngressStatus to select proper versioned Client Set
+	APIVersion     string
 	Namespace      string
 	Name           string
 	Annotations    MapStringW

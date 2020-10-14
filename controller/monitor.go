@@ -85,7 +85,22 @@ func (c *HAProxyController) monitorChanges() {
 		informersSynced = append(informersSynced, nsi.HasSynced)
 		c.k8s.EventsNamespaces(nsChan, stop, nsi)
 
-		ii := factory.Extensions().V1beta1().Ingresses().Informer()
+		// Enabling networking.k8s.io/v1 Ingress support only to >= 1.19
+		if c.k8s.IsNetworkingV1ApiSupported() {
+			ii := factory.Networking().V1().Ingresses().Informer()
+			informersSynced = append(informersSynced, ii.HasSynced)
+			c.k8s.EventsIngresses(ingChan, stop, ii)
+		}
+		// Handling deprecated Ingress resources:
+		// https://github.com/kubernetes/enhancements/issues/1453
+		var ii cache.SharedIndexInformer
+		if c.k8s.IsNetworkingV1Beta1ApiSupported() {
+			logger.Warningf("Running on Kubernetes < 1.22: using ingresses.networking.k8s.io/v1beta1 for the Ingress/v1beta1 resources")
+			ii = factory.Networking().V1beta1().Ingresses().Informer()
+		} else {
+			logger.Warningf("Running on Kubernetes < 1.14: using ingresses.extensions/v1beta1 for the Ingress shared informer, networking.k8s.io API group is not available")
+			ii = factory.Extensions().V1beta1().Ingresses().Informer()
+		}
 		informersSynced = append(informersSynced, ii.HasSynced)
 		c.k8s.EventsIngresses(ingChan, stop, ii)
 
@@ -179,15 +194,15 @@ func (c *HAProxyController) SyncData(chConfigMapReceivedAndProcessed chan bool) 
 	hadChanges := false
 	var cm string
 	ConfigMapsArgs := map[string]utils.NamespaceValue{
-		Main: utils.NamespaceValue{
+		Main: {
 			Namespace: c.osArgs.ConfigMap.Namespace,
 			Name:      c.osArgs.ConfigMap.Name,
 		},
-		TCPServices: utils.NamespaceValue{
+		TCPServices: {
 			Namespace: c.osArgs.ConfigMapTCPServices.Namespace,
 			Name:      c.osArgs.ConfigMapTCPServices.Name,
 		},
-		Errorfiles: utils.NamespaceValue{
+		Errorfiles: {
 			Namespace: c.osArgs.ConfigMapErrorfiles.Namespace,
 			Name:      c.osArgs.ConfigMapErrorfiles.Name,
 		},
