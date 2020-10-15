@@ -28,7 +28,7 @@ type HAProxySrv struct {
 	Modified bool
 }
 
-//Endpoints is usefull data from k8s structures about Endpoints
+//Endpoints is useful data from k8s structures about Endpoints
 type Endpoints struct {
 	Namespace   string
 	Service     StringW
@@ -39,7 +39,7 @@ type Endpoints struct {
 	Status      Status
 }
 
-//Service is usefull data from k8s structures about service
+//Service is useful data from k8s structures about service
 type Service struct {
 	Namespace   string
 	Name        string
@@ -51,7 +51,7 @@ type Service struct {
 	Status      Status
 }
 
-//Namespace is usefull data from k8s structures about namespace
+//Namespace is useful data from k8s structures about namespace
 type Namespace struct {
 	_         [0]int
 	Name      string
@@ -63,7 +63,7 @@ type Namespace struct {
 	Status    Status
 }
 
-//IngressPath is usefull data from k8s structures about ingress path
+//IngressPath is useful data from k8s structures about ingress path
 type IngressPath struct {
 	ServiceName       string
 	ServicePortInt    int64
@@ -76,14 +76,14 @@ type IngressPath struct {
 	Status            Status
 }
 
-//IngressRule is usefull data from k8s structures about ingress rule
+//IngressRule is useful data from k8s structures about ingress rule
 type IngressRule struct {
 	Host   string
 	Paths  map[string]*IngressPath
 	Status Status
 }
 
-//Ingress is usefull data from k8s structures about ingress
+//Ingress is useful data from k8s structures about ingress
 type Ingress struct {
 	// Required for K8s.UpdateIngressStatus to select proper versioned Client Set
 	APIVersion     string
@@ -103,7 +103,7 @@ type IngressTLS struct {
 	Status     Status
 }
 
-//ConfigMap is usefull data from k8s structures about configmap
+//ConfigMap is useful data from k8s structures about configmap
 type ConfigMap struct {
 	Namespace   string
 	Name        string
@@ -111,7 +111,7 @@ type ConfigMap struct {
 	Status      Status
 }
 
-//Secret is usefull data from k8s structures about secret
+//Secret is useful data from k8s structures about secret
 type Secret struct {
 	Namespace string
 	Name      string

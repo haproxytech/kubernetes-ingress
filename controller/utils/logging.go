@@ -42,7 +42,7 @@ const (
 // level can be defined only as `trace`, `debug`, `info`, `warning`, `error`
 // error and panic are always printed, panic also exits application.
 //
-// if nil is sent, it won't be printed. This is usefull for printing errors only
+// if nil is sent, it won't be printed. This is useful for printing errors only
 // if they exist.
 // ```
 // if err != nil {
