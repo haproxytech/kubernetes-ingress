@@ -85,8 +85,8 @@ func (c *HAProxyController) monitorChanges() {
 		informersSynced = append(informersSynced, nsi.HasSynced)
 		c.k8s.EventsNamespaces(nsChan, stop, nsi)
 
-		// Enabling networking.k8s.io/v1 Ingress support only to >= 1.19
 		if c.k8s.IsNetworkingV1ApiSupported() {
+			// Enabling networking.k8s.io/v1 Ingress support only to >= 1.19
 			ii := factory.Networking().V1().Ingresses().Informer()
 			informersSynced = append(informersSynced, ii.HasSynced)
 			c.k8s.EventsIngresses(ingChan, stop, ii)

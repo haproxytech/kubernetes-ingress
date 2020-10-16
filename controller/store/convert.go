@@ -46,11 +46,24 @@ type ingressNetworkingV1Beta1Strategy struct {
 	obj *networkingv1beta1.Ingress
 }
 
+func getIngressClass(annotations map[string]string, specValue *string) string {
+	// Giving priority to annotation due to backward compatibility as suggested
+	// by Kuberentes documentation.
+	if v, ok := annotations["kubernetes.io/ingress.class"]; ok {
+		return v
+	}
+	if specValue != nil {
+		return *specValue
+	}
+	return ""
+}
+
 func (n ingressNetworkingV1Beta1Strategy) Convert() *Ingress {
 	return &Ingress{
 		APIVersion:  "networking.k8s.io/v1beta1",
 		Namespace:   n.obj.GetNamespace(),
 		Name:        n.obj.GetName(),
+		Class:       getIngressClass(n.obj.GetAnnotations(), n.obj.Spec.IngressClassName),
 		Annotations: ConvertToMapStringW(n.obj.GetAnnotations()),
 		Rules: func(ingressRules []networkingv1beta1.IngressRule) map[string]*IngressRule {
 			rules := make(map[string]*IngressRule)
@@ -131,6 +144,7 @@ func (e ingressExtensionsStrategy) Convert() *Ingress {
 		APIVersion:  "extensions/v1beta1",
 		Namespace:   e.obj.GetNamespace(),
 		Name:        e.obj.GetName(),
+		Class:       getIngressClass(e.obj.GetAnnotations(), e.obj.Spec.IngressClassName),
 		Annotations: ConvertToMapStringW(e.obj.GetAnnotations()),
 		Rules: func(ingressRules []extensionsv1beta1.IngressRule) map[string]*IngressRule {
 			rules := make(map[string]*IngressRule)
@@ -211,6 +225,7 @@ func (n ingressNetworkingV1Strategy) Convert() *Ingress {
 		APIVersion:  "networking.k8s.io/v1",
 		Namespace:   n.obj.GetNamespace(),
 		Name:        n.obj.GetName(),
+		Class:       getIngressClass(n.obj.GetAnnotations(), n.obj.Spec.IngressClassName),
 		Annotations: ConvertToMapStringW(n.obj.GetAnnotations()),
 		Rules: func(ingressRules []networkingv1.IngressRule) map[string]*IngressRule {
 			rules := make(map[string]*IngressRule)

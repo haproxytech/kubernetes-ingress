@@ -36,7 +36,7 @@ func (k K8s) EventNamespace(ns *Namespace, data *Namespace) (updateRequired bool
 }
 
 func (k K8s) EventIngress(ns *Namespace, data *Ingress, controllerClass string) (updateRequired bool) {
-	ingressClass := ""
+	ingressClass := data.Class
 	updateRequired = false
 	switch data.Status {
 	case MODIFIED:
@@ -45,9 +45,6 @@ func (k K8s) EventIngress(ns *Namespace, data *Ingress, controllerClass string) 
 		if !ok {
 			newIngress.Status = ADDED
 			return k.EventIngress(ns, newIngress, ingressClass)
-		}
-		if annIngressClass, ok := data.Annotations["ingress.class"]; ok {
-			ingressClass = annIngressClass.Value
 		}
 		if ingressClass != controllerClass {
 			newIngress.Status = DELETED
@@ -153,9 +150,6 @@ func (k K8s) EventIngress(ns *Namespace, data *Ingress, controllerClass string) 
 		//logger.Tracef("Ingress modified %s %s", data.Name, diffStr)
 		updateRequired = true
 	case ADDED:
-		if annIngressClass, ok := data.Annotations["ingress.class"]; ok {
-			ingressClass = annIngressClass.Value
-		}
 		if ingressClass != controllerClass {
 			return false
 		}

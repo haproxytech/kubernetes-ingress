@@ -36,7 +36,10 @@ import (
 )
 
 //TRACE_API outputs all k8s events received from k8s API
-const TRACE_API = false //nolint golint
+const (
+	TRACE_API       = false //nolint golint
+	CONTROLLER_NAME = "haproxy.org/ingress-controller"
+)
 
 var ErrIgnored = errors.New("Ignored resource") //nolint golint
 
@@ -677,4 +680,32 @@ func (k *K8s) IsNetworkingV1ApiSupported() bool {
 	minor, _ := utils.ParseInt(vi.Minor)
 
 	return major == 1 && minor >= 19
+}
+
+func (k *K8s) IsMatchingSelectedIngressClass(name string) error {
+	var controllerName string
+
+	if k.IsNetworkingV1ApiSupported() {
+		ic, err := k.API.NetworkingV1().IngressClasses().Get(context.Background(), name, metav1.GetOptions{})
+		if err != nil {
+			return fmt.Errorf("the requested IngressClass %s doesn't exist", name)
+		}
+		controllerName = ic.Spec.Controller
+	}
+	if k.IsNetworkingV1Beta1ApiSupported() {
+		ic, err := k.API.NetworkingV1beta1().IngressClasses().Get(context.Background(), name, metav1.GetOptions{})
+		if err != nil {
+			return fmt.Errorf("the requested IngressClass %s doesn't exist", name)
+		}
+		controllerName = ic.Spec.Controller
+	}
+	if len(controllerName) == 0 {
+		k.Logger.Warning("Running on Kubernetes < 1.14, IngressClass resource is not implemented, ignoring")
+		return nil
+	}
+
+	if controllerName != CONTROLLER_NAME {
+		return fmt.Errorf("the selected IngressClass doesn't match the HAProxy Ingress Controller name, expected %v", CONTROLLER_NAME)
+	}
+	return nil
 }

@@ -185,6 +185,13 @@ func (c *HAProxyController) Start(ctx context.Context, osArgs utils.OSArgs) {
 		logger.Infof("Running on Kubernetes version: %s %s", k8sVersion.String(), k8sVersion.Platform)
 	}
 
+	// Starting from Kubernetes 1.19 a valid IngressClass resource must be used:
+	// checking if the provided one is correctly registered with the current
+	// HAProxy Ingress Controller instance.
+	if len(c.IngressClass) > 0 {
+		logger.Panic(c.k8s.IsMatchingSelectedIngressClass(c.IngressClass))
+	}
+
 	c.serverlessPods = map[string]int{}
 	c.eventChan = make(chan SyncDataEvent, watch.DefaultChanSize*6)
 	go c.monitorChanges()

@@ -86,6 +86,9 @@ func (a *Ingress) Equal(b *Ingress) bool {
 	if a.Name != b.Name {
 		return false
 	}
+	if a.Class != b.Class {
+		return false
+	}
 	if len(a.Rules) != len(b.Rules) {
 		return false
 	}
