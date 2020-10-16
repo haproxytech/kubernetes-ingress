@@ -18,17 +18,19 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 	"github.com/haproxytech/models/v2"
+
+	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 )
 
 type UseBackendRules map[string]UseBackendRule
 
 type UseBackendRule struct {
-	Host      string
-	Path      string
-	Backend   string
-	Namespace string
+	Host       string
+	Path       string
+	ExactMatch bool
+	Backend    string
+	Namespace  string
 }
 
 func (c *HAProxyController) addUseBackendRule(key string, rule UseBackendRule, frontends ...string) {
@@ -95,7 +97,11 @@ func (c *HAProxyController) refreshBackendSwitching() (reload bool) {
 					condTest = fmt.Sprintf("{ var(txn.host) %s } ", rule.Host)
 				}
 				if rule.Path != "" {
-					condTest = fmt.Sprintf("%s{ var(txn.path) -m beg %s }", condTest, rule.Path)
+					if rule.ExactMatch {
+						condTest = fmt.Sprintf("%s{ var(txn.path) %s }", condTest, rule.Path)
+					} else {
+						condTest = fmt.Sprintf("%s{ var(txn.path) -m beg %s }", condTest, rule.Path)
+					}
 				}
 				if condTest == "" {
 					logger.Infof("both Host and Path are empty for frontend %v with backend %v, SKIP", frontend, rule.Backend)

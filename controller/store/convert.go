@@ -77,6 +77,7 @@ func (n ingressNetworkingV1Beta1Strategy) Convert() *Ingress {
 				for _, k8sPath := range k8sRule.HTTP.Paths {
 					paths[k8sPath.Path] = &IngressPath{
 						Path:              k8sPath.Path,
+						ExactPathMatch:    k8sPath.PathType != nil && *k8sPath.PathType == networkingv1beta1.PathTypeExact,
 						ServiceName:       k8sPath.Backend.ServiceName,
 						ServicePortInt:    int64(k8sPath.Backend.ServicePort.IntValue()),
 						ServicePortString: k8sPath.Backend.ServicePort.StrVal,
@@ -158,6 +159,7 @@ func (e ingressExtensionsStrategy) Convert() *Ingress {
 				for _, k8sPath := range k8sRule.HTTP.Paths {
 					paths[k8sPath.Path] = &IngressPath{
 						Path:              k8sPath.Path,
+						ExactPathMatch:    k8sPath.PathType != nil && *k8sPath.PathType == extensionsv1beta1.PathTypeExact,
 						ServiceName:       k8sPath.Backend.ServiceName,
 						ServicePortInt:    int64(k8sPath.Backend.ServicePort.IntValue()),
 						ServicePortString: k8sPath.Backend.ServicePort.StrVal,
@@ -239,6 +241,7 @@ func (n ingressNetworkingV1Strategy) Convert() *Ingress {
 				for _, k8sPath := range k8sRule.HTTP.Paths {
 					paths[k8sPath.Path] = &IngressPath{
 						Path:              k8sPath.Path,
+						ExactPathMatch:    k8sPath.PathType != nil && *k8sPath.PathType == networkingv1.PathTypeExact,
 						ServiceName:       k8sPath.Backend.Service.Name,
 						ServicePortInt:    int64(k8sPath.Backend.Service.Port.Number),
 						ServicePortString: k8sPath.Backend.Service.Port.Name,

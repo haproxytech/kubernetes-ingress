@@ -36,8 +36,9 @@ import (
 )
 
 //TRACE_API outputs all k8s events received from k8s API
+//nolint golint
 const (
-	TRACE_API       = false //nolint golint
+	TRACE_API       = false
 	CONTROLLER_NAME = "haproxy.org/ingress-controller"
 )
 

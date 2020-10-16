@@ -18,8 +18,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/haproxytech/kubernetes-ingress/controller/store"
 	"github.com/haproxytech/models/v2"
+
+	"github.com/haproxytech/kubernetes-ingress/controller/store"
 )
 
 // handle defaultBackned configured via cli param "default-backend-service"
@@ -134,10 +135,11 @@ func (c *HAProxyController) handleService(namespace *store.Namespace, ingress *s
 	// Update backendSwitching
 	key := fmt.Sprintf("%s-%s-%s-%s", rule.Host, path.Path, namespace.Name, ingress.Name)
 	useBackendRule := UseBackendRule{
-		Host:      rule.Host,
-		Path:      path.Path,
-		Backend:   backendName,
-		Namespace: namespace.Name,
+		Host:       rule.Host,
+		Path:       path.Path,
+		ExactMatch: path.ExactPathMatch,
+		Backend:    backendName,
+		Namespace:  namespace.Name,
 	}
 	switch {
 	case path.IsDefaultBackend:
@@ -205,9 +207,10 @@ func (c *HAProxyController) handlePprof() (err error) {
 	}
 	logger.Debug("pprof backend created")
 	useBackendRule := UseBackendRule{
-		Host:    "",
-		Path:    "/debug/pprof",
-		Backend: pprofBackend,
+		Host:       "",
+		Path:       "/debug/pprof",
+		ExactMatch: false,
+		Backend:    pprofBackend,
 	}
 	c.addUseBackendRule("pprof", useBackendRule, FrontendHTTPS)
 	return nil
