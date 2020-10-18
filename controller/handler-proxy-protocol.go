@@ -15,56 +15,40 @@
 package controller
 
 import (
-	"fmt"
 	"net"
 	"strings"
 
+	"github.com/haproxytech/kubernetes-ingress/controller/haproxy"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/api"
+	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/rules"
 	"github.com/haproxytech/kubernetes-ingress/controller/store"
-	"github.com/haproxytech/kubernetes-ingress/controller/utils"
-	"github.com/haproxytech/models/v2"
 )
 
 type ProxyProtocol struct{}
 
 func (p ProxyProtocol) Update(k store.K8s, cfg *Configuration, api api.HAProxyClient) (reload bool, err error) {
-	//  Get and validate annotations
+	//  Get annotation status
 	annProxyProtocol, _ := k.GetValueFromAnnotations("proxy-protocol", k.ConfigMaps[Main].Annotations)
 	if annProxyProtocol == nil {
 		return false, nil
 	}
-	value := strings.Replace(annProxyProtocol.Value, ",", " ", -1)
-	for _, address := range strings.Fields(value) {
+	if annProxyProtocol.Status == DELETED {
+		logger.Debugf("Deleting ProxyProtcol configuration")
+		return false, nil
+	}
+	// Validate annotation
+	ips, _ := haproxy.NewMapID(annProxyProtocol.Value)
+	for _, address := range strings.Split(annProxyProtocol.Value, ",") {
 		if ip := net.ParseIP(address); ip == nil {
-			if _, _, err := net.ParseCIDR(address); err != nil {
-				return false, fmt.Errorf("incorrect value for proxy-protocol annotation ")
+			if _, _, err = net.ParseCIDR(address); err != nil {
+				logger.Errorf("incorrect address '%s' in proxy-protocol annotation", address)
+				continue
 			}
+			cfg.MapFiles.AppendRow(ips, address)
 		}
 	}
-
-	// Get Rules status
-	status := annProxyProtocol.Status
-
-	// Update rules
-	// Since this is a Configmap Annotation ONLY, no need to
-	// track ingress hosts in Map file
-	if status != EMPTY {
-		cfg.FrontendRulesModified[TCP] = true
-		if status == DELETED {
-			logger.Debugf("Deleting ProxyProtcol configuration")
-			return false, nil
-		}
-		logger.Debugf("Configuring ProxyProtcol annotation")
-	}
-
-	tcpRule := models.TCPRequestRule{
-		Index:    utils.PtrInt64(0),
-		Type:     "connection",
-		Action:   "expect-proxy layer4",
-		Cond:     "if",
-		CondTest: fmt.Sprintf("{ src %s }", value),
-	}
-	cfg.FrontendTCPRules[PROXY_PROTOCOL][0] = tcpRule
-
-	return false, nil
+	// Configure Annotation
+	logger.Debugf("Configuring ProxyProtcol annotation")
+	err = cfg.HAProxyRules.AddRule(rules.ReqProxyProtocol{SrcIPs: ips}, 0, FrontendHTTP, FrontendHTTPS)
+	return false, err
 }

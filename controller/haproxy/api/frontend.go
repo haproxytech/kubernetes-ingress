@@ -19,6 +19,7 @@ func (c *clientNative) FrontendsGet() (models.Frontends, error) {
 	return frontends, err
 }
 
+//TODO return pointer instead
 func (c *clientNative) FrontendGet(frontendName string) (models.Frontend, error) {
 	_, frontend, err := c.nativeAPI.Configuration.GetFrontend(frontendName, c.activeTransaction)
 	if err != nil {
@@ -83,22 +84,6 @@ func (c *clientNative) FrontendBindEdit(frontend string, bind models.Bind) error
 	return c.nativeAPI.Configuration.EditBind(bind.Name, frontend, &bind, c.activeTransaction, 0)
 }
 
-func (c *clientNative) FrontendHTTPRequestRuleDeleteAll(frontend string) {
-	c.activeTransactionHasChanges = true
-	var err error
-	for err == nil {
-		err = c.nativeAPI.Configuration.DeleteHTTPRequestRule(0, "frontend", frontend, c.activeTransaction, 0)
-	}
-}
-
-func (c *clientNative) FrontendHTTPResponseRuleDeleteAll(frontend string) {
-	c.activeTransactionHasChanges = true
-	var err error
-	for err == nil {
-		err = c.nativeAPI.Configuration.DeleteHTTPResponseRule(0, "frontend", frontend, c.activeTransaction, 0)
-	}
-}
-
 func (c *clientNative) FrontendHTTPRequestRuleCreate(frontend string, rule models.HTTPRequestRule) error {
 	c.activeTransactionHasChanges = true
 	return c.nativeAPI.Configuration.CreateHTTPRequestRule("frontend", frontend, &rule, c.activeTransaction, 0)
@@ -109,15 +94,22 @@ func (c *clientNative) FrontendHTTPResponseRuleCreate(frontend string, rule mode
 	return c.nativeAPI.Configuration.CreateHTTPResponseRule("frontend", frontend, &rule, c.activeTransaction, 0)
 }
 
-func (c *clientNative) FrontendTCPRequestRuleDeleteAll(frontend string) {
-	c.activeTransactionHasChanges = true
-	var err error
-	for err == nil {
-		err = c.nativeAPI.Configuration.DeleteTCPRequestRule(0, "frontend", frontend, c.activeTransaction, 0)
-	}
-}
-
 func (c *clientNative) FrontendTCPRequestRuleCreate(frontend string, rule models.TCPRequestRule) error {
 	c.activeTransactionHasChanges = true
 	return c.nativeAPI.Configuration.CreateTCPRequestRule("frontend", frontend, &rule, c.activeTransaction, 0)
+}
+
+func (c *clientNative) FrontendRuleDeleteAll(frontend string) {
+	c.activeTransactionHasChanges = true
+	var err error
+	for err == nil {
+		err = c.nativeAPI.Configuration.DeleteHTTPRequestRule(0, "frontend", frontend, c.activeTransaction, 0)
+	}
+	for err == nil {
+		err = c.nativeAPI.Configuration.DeleteHTTPResponseRule(0, "frontend", frontend, c.activeTransaction, 0)
+	}
+	for err == nil {
+		err = c.nativeAPI.Configuration.DeleteTCPRequestRule(0, "frontend", frontend, c.activeTransaction, 0)
+	}
+	// No usage of TCPResonpeRules yet.
 }

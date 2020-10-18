@@ -19,7 +19,7 @@ type HAProxyClient interface {
 	BackendDelete(backendName string) error
 	BackendCfgSnippetSet(backendName string, value *[]string) error
 	BackendHTTPRequestRuleCreate(backend string, rule models.HTTPRequestRule) error
-	BackendHTTPRequestRuleDeleteAll(backend string)
+	BackendRuleDeleteAll(backend string)
 	BackendServerCreate(backendName string, data models.Server) error
 	BackendServerEdit(backendName string, data models.Server) error
 	BackendServerDelete(backendName string, serverName string) error
@@ -36,12 +36,10 @@ type HAProxyClient interface {
 	FrontendBindsGet(frontend string) (models.Binds, error)
 	FrontendBindCreate(frontend string, bind models.Bind) error
 	FrontendBindEdit(frontend string, bind models.Bind) error
-	FrontendHTTPRequestRuleDeleteAll(frontend string)
-	FrontendHTTPResponseRuleDeleteAll(frontend string)
 	FrontendHTTPRequestRuleCreate(frontend string, rule models.HTTPRequestRule) error
 	FrontendHTTPResponseRuleCreate(frontend string, rule models.HTTPResponseRule) error
-	FrontendTCPRequestRuleDeleteAll(frontend string)
 	FrontendTCPRequestRuleCreate(frontend string, rule models.TCPRequestRule) error
+	FrontendRuleDeleteAll(frontend string)
 	GlobalConfigEnabled(section string, config string) (enabled bool, err error)
 	GlobalWriteConfig(section string, config string) (result string, err error)
 	SetDaemonMode(value *types.Enabled) error

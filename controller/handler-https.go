@@ -23,6 +23,7 @@ import (
 	"github.com/haproxytech/models/v2"
 
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/api"
+	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/rules"
 	"github.com/haproxytech/kubernetes-ingress/controller/store"
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 )
@@ -96,6 +97,7 @@ func (h HTTPS) Update(k store.K8s, cfg *Configuration, api api.HAProxyClient) (r
 			cfg.SSLPassthrough = true
 			reload = true
 		}
+		logger.Error(h.sslPassthroughRules(k, cfg))
 	} else if cfg.SSLPassthrough {
 		logger.Info("Disabling ssl-passthrough")
 		logger.Panic(h.disableSSLPassthrough(cfg, api))
@@ -126,50 +128,20 @@ func (h HTTPS) enableSSLPassthrough(cfg *Configuration, api api.HAProxyClient) (
 			return fmt.Errorf("cannot create bind for SSL Passthrough: %s", err.Error())
 		}
 	}
-	err = api.FrontendTCPRequestRuleCreate(FrontendSSL, models.TCPRequestRule{
-		Index:    utils.PtrInt64(0),
-		Action:   "accept",
-		Type:     "content",
-		Cond:     "if",
-		CondTest: "{ req_ssl_hello_type 1 }",
-	})
-	if err != nil {
-		return err
-	}
-	err = api.FrontendTCPRequestRuleCreate(FrontendSSL, models.TCPRequestRule{
-		Index:    utils.PtrInt64(0),
-		Action:   "set-var",
-		VarName:  "sni",
-		VarScope: "sess",
-		Expr:     "req_ssl_sni",
-		Type:     "content",
-	})
-	if err != nil {
-		return err
-	}
-	err = api.FrontendTCPRequestRuleCreate(FrontendSSL, models.TCPRequestRule{
-		Type:    "inspect-delay",
-		Index:   utils.PtrInt64(0),
-		Timeout: utils.PtrInt64(5000),
-	})
-	if err != nil {
-		return err
-	}
 	// Create backend for proxy chaining (chaining
 	// ssl-passthrough frontend to ssl-offload backend)
 	err = api.BackendCreate(models.Backend{
 		Name: backendHTTPS,
 		Mode: "tcp",
 	})
-	if err != nil {
-		return err
-	}
-	err = api.BackendServerCreate(backendHTTPS, models.Server{
+	_ = api.BackendServerCreate(backendHTTPS, models.Server{
 		Name:        FrontendHTTPS,
 		Address:     "127.0.0.1",
 		Port:        utils.PtrInt64(h.port),
 		SendProxyV2: "enabled",
 	})
+	_ = h.toggleSSLPassthrough(true, cfg.HTTPS, api)
+	//TODO: stack errors
 	if err != nil {
 		return err
 	}
@@ -177,8 +149,6 @@ func (h HTTPS) enableSSLPassthrough(cfg *Configuration, api api.HAProxyClient) (
 	if err = h.toggleSSLPassthrough(true, cfg.HTTPS, api); err != nil {
 		return err
 	}
-	// Some TCP rules depend on ssl-passthrough
-	cfg.FrontendRulesModified[TCP] = true
 	return nil
 }
 
@@ -195,8 +165,6 @@ func (h HTTPS) disableSSLPassthrough(cfg *Configuration, api api.HAProxyClient) 
 	if err = h.toggleSSLPassthrough(false, cfg.HTTPS, api); err != nil {
 		return err
 	}
-	// Some TCP rules depend on ssl-passthrough
-	cfg.FrontendRulesModified[TCP] = true
 	return nil
 }
 
@@ -229,4 +197,29 @@ func (h HTTPS) CleanCertDir(usedCerts map[string]struct{}) error {
 		}
 	}
 	return nil
+}
+
+func (h HTTPS) sslPassthroughRules(k store.K8s, cfg *Configuration) error {
+	inspectTimeout := utils.PtrInt64(5000)
+	annTimeout, _ := k.GetValueFromAnnotations("timeout-client", k.ConfigMaps[Main].Annotations)
+	if annTimeout != nil {
+		if value, errParse := utils.ParseTime(annTimeout.Value); errParse == nil {
+			inspectTimeout = value
+		} else {
+			logger.Error(errParse)
+		}
+	}
+
+	cfg.HAProxyRules.EnableSSLPassThrough(FrontendSSL, FrontendHTTPS)
+	err := cfg.HAProxyRules.AddRule(rules.ReqAcceptContent{}, 0, FrontendSSL)
+	_ = cfg.HAProxyRules.AddRule(rules.ReqSetVar{
+		Name:       "sni",
+		Scope:      "sess",
+		Expression: "req_ssl_sni",
+	}, 0, FrontendSSL)
+	_ = cfg.HAProxyRules.AddRule(rules.ReqInspectDelay{
+		Timeout: inspectTimeout,
+	}, 0, FrontendSSL)
+	//TODO: handle stacking error
+	return err
 }

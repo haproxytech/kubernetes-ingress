@@ -137,6 +137,7 @@ var defaultAnnotationValues = MapStringW{
 	"rate-limit-size":         &StringW{Value: "100k"},
 	"rate-limit-period":       &StringW{Value: "1s"},
 	"rate-limit-status-code":  &StringW{Value: "403"},
+	"request-capture-len":     &StringW{Value: "128"},
 	"ssl-redirect-code":       &StringW{Value: "302"},
 	"ssl-passthrough":         &StringW{Value: "false"},
 	"server-ssl":              &StringW{Value: "false"},

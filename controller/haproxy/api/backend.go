@@ -54,9 +54,10 @@ func (c *clientNative) BackendHTTPRequestRuleCreate(backend string, rule models.
 	return c.nativeAPI.Configuration.CreateHTTPRequestRule("backend", backend, &rule, c.activeTransaction, 0)
 }
 
-func (c *clientNative) BackendHTTPRequestRuleDeleteAll(backend string) {
+func (c *clientNative) BackendRuleDeleteAll(backend string) {
 	c.activeTransactionHasChanges = true
 	var err error
+	// Currently we are only using HTTPRequest rules on backend
 	for err == nil {
 		err = c.nativeAPI.Configuration.DeleteHTTPRequestRule(0, "backend", backend, c.activeTransaction, 0)
 	}

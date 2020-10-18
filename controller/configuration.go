@@ -16,17 +16,14 @@ package controller
 
 import (
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy"
-	"github.com/haproxytech/models/v2"
+	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/rules"
 )
 
 //Configuration represents k8s state
 
 type Configuration struct {
 	MapFiles                 haproxy.Maps
-	FrontendHTTPReqRules     map[Rule]FrontendHTTPReqs
-	FrontendHTTPRspRules     map[Rule]FrontendHTTPRsps
-	FrontendTCPRules         map[Rule]FrontendTCPReqs
-	FrontendRulesModified    map[Mode]bool
+	HAProxyRules             haproxy.Rules
 	BackendSwitchingRules    map[string]UseBackendRules
 	BackendSwitchingModified map[string]struct{}
 	HTTPS                    bool
@@ -37,25 +34,9 @@ type Configuration struct {
 //Init initialize configuration
 func (c *Configuration) Init(mapDir string) {
 
-	c.FrontendHTTPReqRules = make(map[Rule]FrontendHTTPReqs)
-	for _, rule := range []Rule{BLACKLIST, SSL_REDIRECT, RATE_LIMIT, REQUEST_CAPTURE, REQUEST_SET_HEADER, REQUEST_SET_HOST, REQUEST_PATH_REWRITE, WHITELIST} {
-		c.FrontendHTTPReqRules[rule] = make(map[haproxy.MapID]models.HTTPRequestRule)
-	}
-	c.FrontendHTTPRspRules = make(map[Rule]FrontendHTTPRsps)
-	for _, rule := range []Rule{RESPONSE_SET_HEADER} {
-		c.FrontendHTTPRspRules[rule] = make(map[haproxy.MapID]models.HTTPResponseRule)
-	}
-	c.FrontendTCPRules = make(map[Rule]FrontendTCPReqs)
-	for _, rule := range []Rule{BLACKLIST, REQUEST_CAPTURE, PROXY_PROTOCOL, WHITELIST} {
-		c.FrontendTCPRules[rule] = make(map[haproxy.MapID]models.TCPRequestRule)
-	}
-	c.FrontendRulesModified = map[Mode]bool{
-		HTTP: false,
-		TCP:  false,
-	}
 	c.MapFiles = haproxy.NewMapFiles(mapDir)
+	c.HAProxyRulesInit()
 
-	sslRedirectEnabled = make(map[string]struct{})
 	rateLimitTables = make(map[string]rateLimitTable)
 
 	c.BackendSwitchingRules = make(map[string]UseBackendRules)
@@ -69,15 +50,28 @@ func (c *Configuration) Init(mapDir string) {
 //deletes them completely or just resets them if needed
 func (c *Configuration) Clean() {
 	c.MapFiles.Clean()
-	for rule := range c.FrontendHTTPReqRules {
-		c.FrontendHTTPReqRules[rule] = make(map[haproxy.MapID]models.HTTPRequestRule)
-	}
-	for rule := range c.FrontendHTTPRspRules {
-		c.FrontendHTTPRspRules[rule] = make(map[haproxy.MapID]models.HTTPResponseRule)
-	}
-	for rule := range c.FrontendTCPRules {
-		c.FrontendTCPRules[rule] = make(map[haproxy.MapID]models.TCPRequestRule)
-	}
-	c.FrontendRulesModified[HTTP] = false
-	c.FrontendRulesModified[TCP] = false
+	c.HAProxyRulesInit()
+}
+
+func (c *Configuration) HAProxyRulesInit() {
+	c.HAProxyRules = haproxy.NewRules()
+	_ = c.HAProxyRules.AddRule(rules.SetHdr{
+		ForwardedProto: true,
+	}, 0, FrontendHTTPS)
+	_ = c.HAProxyRules.AddRule(rules.ReqSetVar{
+		Name:       "base",
+		Scope:      "txn",
+		Expression: "base",
+	}, 1, FrontendHTTP, FrontendHTTPS)
+	_ = c.HAProxyRules.AddRule(rules.ReqSetVar{
+		Name:       "path",
+		Scope:      "txn",
+		Expression: "path,lower",
+	}, 2, FrontendHTTP, FrontendHTTPS)
+	_ = c.HAProxyRules.AddRule(rules.ReqSetVar{
+		Name:       "host",
+		Scope:      "txn",
+		Expression: "req.hdr(Host),field(1,:),lower",
+	}, 3, FrontendHTTP, FrontendHTTPS)
+	//TODO: handle stacking error
 }

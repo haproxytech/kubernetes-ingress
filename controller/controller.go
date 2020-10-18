@@ -239,19 +239,12 @@ func (c *HAProxyController) updateHAProxy() error {
 				}
 			}
 
+			// Ingress Annotations
 			if len(ingress.Rules) == 0 {
 				logger.Debugf("Ingress %s/%s: no rules defined", ingress.Namespace, ingress.Name)
 				continue
 			}
-			logger.Error(c.handleRateLimiting(ingress))
-			logger.Error(c.handleRequestCapture(ingress))
-			logger.Error(c.handleRequestPathRewrite(ingress))
-			logger.Error(c.handleRequestSetHost(ingress))
-			logger.Error(c.handleRequestSetHdr(ingress))
-			logger.Error(c.handleResponseSetHdr(ingress))
-			logger.Error(c.handleBlacklisting(ingress))
-			logger.Error(c.handleWhitelisting(ingress))
-			logger.Error(c.handleHTTPRedirect(ingress))
+			c.handleIngressAnnotations(ingress)
 		}
 	}
 
@@ -462,9 +455,7 @@ func (c *HAProxyController) clean() {
 }
 
 func (c *HAProxyController) Refresh() (reload bool) {
-	reload = c.FrontendHTTPReqsRefresh() || reload
-	reload = c.FrontendHTTPRspsRefresh() || reload
-	reload = c.FrontendTCPreqsRefresh() || reload
+	reload = c.cfg.HAProxyRules.Refresh(c.Client) || reload
 	reload = c.refreshBackendSwitching() || reload
 	r, err := c.cfg.MapFiles.Refresh()
 	reload = reload || r
