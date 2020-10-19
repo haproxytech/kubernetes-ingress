@@ -160,6 +160,9 @@ func (k K8s) EventIngress(ns *Namespace, data *Ingress, controllerClass string) 
 			return false
 		}
 		if old, ok := ns.Ingresses[data.Name]; ok {
+			if old.Status == DELETED {
+				ns.Ingresses[data.Name].Status = ADDED
+			}
 			data.Status = old.Status
 			if !old.Equal(data) {
 				data.Status = MODIFIED
@@ -225,6 +228,9 @@ func (k K8s) EventEndpoints(ns *Namespace, data *Endpoints, processEndpointsSrvs
 		return true
 	case ADDED:
 		if old, ok := ns.Endpoints[data.Service.Value]; ok {
+			if old.Status == DELETED {
+				ns.Endpoints[data.Service.Value].Status = ADDED
+			}
 			if !old.Equal(data) {
 				data.Status = MODIFIED
 				return k.EventEndpoints(ns, data, processEndpointsSrvs)
@@ -262,6 +268,9 @@ func (k K8s) EventService(ns *Namespace, data *Service) (updateRequired bool) {
 		updateRequired = true
 	case ADDED:
 		if old, ok := ns.Services[data.Name]; ok {
+			if old.Status == DELETED {
+				ns.Services[data.Name].Status = ADDED
+			}
 			if !old.Equal(data) {
 				data.Status = MODIFIED
 				return k.EventService(ns, data)
@@ -336,6 +345,9 @@ func (k K8s) EventSecret(ns *Namespace, data *Secret) (updateRequired bool) {
 		updateRequired = true
 	case ADDED:
 		if old, ok := ns.Secret[data.Name]; ok {
+			if old.Status == DELETED {
+				ns.Secret[data.Name].Status = ADDED
+			}
 			if !old.Equal(data) {
 				data.Status = MODIFIED
 				return k.EventSecret(ns, data)
