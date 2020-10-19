@@ -17,10 +17,11 @@ package controller
 import (
 	"time"
 
-	"github.com/haproxytech/kubernetes-ingress/controller/store"
-	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/tools/cache"
+
+	"github.com/haproxytech/kubernetes-ingress/controller/store"
+	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 )
 
 func (c *HAProxyController) timeFromAnnotation(name string) (duration time.Duration) {
