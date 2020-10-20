@@ -12,21 +12,30 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package client
+// +build integration
+
+package tests
 
 import (
-	"fmt"
-	"log"
-	"os"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+
+	kindclient "github.com/haproxytech/kubernetes-ingress/deploy/kind/tests/http"
 )
 
-func checkErr(err error) {
-	if err != nil {
-		log.Panic(err)
-	}
-}
+func Test_Tcp_Reach(t *testing.T) {
+	client := kindclient.NewClient(t, "haproxy.org", 32766)
 
-func failAndExit(msg string, a ...interface{}) {
-	fmt.Printf(msg, a...)
-	os.Exit(1)
+	counter := map[string]int{}
+	for i := 0; i < 4; i++ {
+		func() {
+			resp, close := client.Do("/gidc")
+			defer close()
+			counter[newReachResponse(t, resp).Name()]++
+		}()
+	}
+	for _, v := range counter {
+		assert.Equal(t, 4, v)
+	}
 }
