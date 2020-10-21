@@ -13,7 +13,7 @@ nodes:
         #listenAddress: "0.0.0.0" # Optional, defaults to "0.0.0.0"
         #protocol: udp # Optional, defaults to tcp
       - hostPort: 30443
-        containerPort: 443
+        containerPort: 30443
       - hostPort: 31024
         containerPort: 1024
       - hostPort: 32766
