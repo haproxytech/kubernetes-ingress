@@ -28,26 +28,40 @@ import (
 )
 
 type HTTPS struct {
-	ipv4    bool
-	ipv6    bool
-	port    int64
-	certDir string
+	addrIpv4 string
+	ipv4     bool
+	addrIpv6 string
+	ipv6     bool
+	port     int64
+	certDir  string
 }
 
-func (h HTTPS) bindList() (binds []models.Bind) {
+func (h HTTPS) bindList(passhthrough bool) (binds []models.Bind) {
 	if h.ipv4 {
 		binds = append(binds, models.Bind{
-			Address: "0.0.0.0",
-			Port:    utils.PtrInt64(h.port),
-			Name:    "bind_1",
+			Address: func() (addr string) {
+				addr = h.addrIpv4
+				if passhthrough {
+					addr = "127.0.0.1"
+				}
+				return
+			}(),
+			Port: utils.PtrInt64(h.port),
+			Name: "bind_1",
 		})
 	}
 	if h.ipv6 {
 		binds = append(binds, models.Bind{
-			Address: "::",
-			Port:    utils.PtrInt64(h.port),
-			Name:    "bind_2",
-			V4v6:    true,
+			Address: func() (addr string) {
+				addr = h.addrIpv6
+				if passhthrough {
+					addr = "::1"
+				}
+				return
+			}(),
+			Port: utils.PtrInt64(h.port),
+			Name: "bind_2",
+			V4v6: true,
 		})
 	}
 	return
@@ -104,7 +118,7 @@ func (h HTTPS) enableSSLPassthrough(cfg Configuration, api api.HAProxyClient) (e
 	if err != nil {
 		return err
 	}
-	for _, b := range h.bindList() {
+	for _, b := range h.bindList(false) {
 		if err = api.FrontendBindCreate(FrontendSSL, b); err != nil {
 			return fmt.Errorf("cannot create bind for SSL Passthrough: %s", err.Error())
 		}
@@ -186,7 +200,7 @@ func (h HTTPS) disableSSLPassthrough(cfg Configuration, api api.HAProxyClient) (
 // this could collide if running the Ingress Controller in HostNetwork mode.
 // TODO(prometherion): making this configurable
 func (h HTTPS) bindSSLPassthrough(enabled bool, api api.HAProxyClient) (err error) {
-	for _, bind := range h.bindList() {
+	for _, bind := range h.bindList(true) {
 		bind.Port = utils.PtrInt64(8443)
 		bind.AcceptProxy = enabled
 		if err = api.FrontendBindEdit(FrontendHTTPS, bind); err != nil {
