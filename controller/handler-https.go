@@ -182,6 +182,9 @@ func (h HTTPS) disableSSLPassthrough(cfg Configuration, api api.HAProxyClient) (
 	return nil
 }
 
+// Upon SSL passthrough we have to select a hard-coded port number (8443):
+// this could collide if running the Ingress Controller in HostNetwork mode.
+// TODO(prometherion): making this configurable
 func (h HTTPS) bindSSLPassthrough(enabled bool, api api.HAProxyClient) (err error) {
 	for _, bind := range h.bindList() {
 		bind.Port = utils.PtrInt64(8443)
