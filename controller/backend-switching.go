@@ -80,9 +80,9 @@ func (c *HAProxyController) refreshBackendSwitching() (reload bool) {
 		// host/path are part of use_backend keys, so sorting keys will
 		// result in sorted use_backend rules where the longest path will match first.
 		// Example:
-		// use_backend service-abc if { req.hdr(host) -i example } { path_beg /a/b/c }
-		// use_backend service-ab  if { req.hdr(host) -i example } { path_beg /a/b }
-		// use_backend service-a   if { req.hdr(host) -i example } { path_beg /a }
+		// use_backend service-abc if { var(txn.host) example } { var(txn.path) -m beg /a/b/c }
+		// use_backend service-ab  if { var(txn.host) example } { var(txn.path) -m beg /a/b }
+		// use_backend service-a   if { var(txn.host) example } { var(txn.path) -m beg /a }
 		sort.Strings(sortedKeys)
 		c.Client.BackendSwitchingRuleDeleteAll(frontend.Name)
 		for _, key := range sortedKeys {
@@ -92,10 +92,10 @@ func (c *HAProxyController) refreshBackendSwitching() (reload bool) {
 			case "http":
 				if rule.Host != "" {
 					//TODO: provide option to do strict host matching
-					condTest = fmt.Sprintf("{ req.hdr(host),field(1,:) -i %s } ", rule.Host)
+					condTest = fmt.Sprintf("{ var(txn.host) %s } ", rule.Host)
 				}
 				if rule.Path != "" {
-					condTest = fmt.Sprintf("%s{ path_beg %s }", condTest, rule.Path)
+					condTest = fmt.Sprintf("%s{ var(txn.path) -m beg %s }", condTest, rule.Path)
 				}
 				if condTest == "" {
 					logger.Infof("both Host and Path are empty for frontend %v with backend %v, SKIP", frontend, rule.Backend)
