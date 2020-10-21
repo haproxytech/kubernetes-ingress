@@ -27,7 +27,7 @@ Options for starting controller can be found in [controller.md](controller.md)
 | [logasap](#logging) | ["true", "false"] | "false" |  |:large_blue_circle:|:white_circle:|:white_circle:|
 | [maxconn](#maximum-concurent-connections) | number |  |  |:large_blue_circle:|:white_circle:|:white_circle:|
 | [nbthread](#number-of-threads) | number | |  |:large_blue_circle:|:white_circle:|:white_circle:|
-| [path-rewrite](#path-rewrite) | string |  |  |:white_circle:|:large_blue_circle:|:large_blue_circle:|
+| [path-rewrite](#path-rewrite) | string |  |  |:large_blue_circle:|:large_blue_circle:|:white_circle:|
 | [pod-maxconn](#maximum-concurent-backend-connections) | number |  |  |:white_circle:|:white_circle:|:large_blue_circle:|
 | [proxy-protocol](#proxy-protocol) | [IPs or CIDRs](#proxy-protocol) |   |  |:large_blue_circle:|:white_circle:|:white_circle:|
 | [rate-limit-period](#rate-limit) | [time](#time)| 1s |  |:large_blue_circle:|:large_blue_circle:|:white_circle:|
@@ -38,7 +38,7 @@ Options for starting controller can be found in [controller.md](controller.md)
 | [request-set-header](#request-set-header) | string |  |  |:large_blue_circle:|:large_blue_circle:|:white_circle:|
 | [response-set-header](#response-set-header) | string |  |  |:large_blue_circle:|:large_blue_circle:|:white_circle:|
 | [server-ssl](#server-ssl) | ["true", "false"] | "false" |  |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:|
-| [set-host](#set-host) | string |  |  |:white_circle:|:large_blue_circle:|:large_blue_circle:|
+| [set-host](#set-host) | string |  |  |:large_blue_circle:|:large_blue_circle:|:white_circle:|
 | [servers-increment](#servers-slots-increment) | number | "42" |  |:large_blue_circle:|:white_circle:|:white_circle:|
 | [ssl-certificate](#tls-secret) | string |  |  |:large_blue_circle:|:white_circle:|:white_circle:|
 | [ssl-passthrough](#https) | ["true", "false"] | "false" |  |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:|

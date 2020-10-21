@@ -60,7 +60,7 @@ func (c *HAProxyController) handleSSLPassthrough(ingress *Ingress, service *Serv
 func (c *HAProxyController) handleBackendAnnotations(ingress *Ingress, service *Service, backendModel *models.Backend, newBackend bool) (activeAnnotations bool) {
 	activeAnnotations = false
 	backend := haproxy.Backend(*backendModel)
-	backendAnnotations := make(map[string]*StringW, 8)
+	backendAnnotations := make(map[string]*StringW, 6)
 
 	backendAnnotations["abortonclose"], _ = GetValueFromAnnotations("abortonclose", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
 	backendAnnotations["cookie-persistence"], _ = GetValueFromAnnotations("cookie-persistence", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
@@ -69,8 +69,6 @@ func (c *HAProxyController) handleBackendAnnotations(ingress *Ingress, service *
 	if backend.Mode == "http" {
 		backendAnnotations["check-http"], _ = GetValueFromAnnotations("check-http", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
 		backendAnnotations["forwarded-for"], _ = GetValueFromAnnotations("forwarded-for", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
-		backendAnnotations["path-rewrite"], _ = GetValueFromAnnotations("path-rewrite", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
-		backendAnnotations["set-host"], _ = GetValueFromAnnotations("set-host", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
 	}
 
 	// The DELETED status of an annotation is handled explicitly
@@ -115,59 +113,6 @@ func (c *HAProxyController) handleBackendAnnotations(ingress *Ingress, service *
 				activeAnnotations = true
 			case "load-balance":
 				if err := backend.UpdateBalance(v.Value); err != nil {
-					c.Logger.Errorf("%s annotation: %s", k, err)
-					continue
-				}
-				activeAnnotations = true
-			case "path-rewrite":
-				httpReqs := c.getBackendHTTPReqs(backend.Name)
-				delete(httpReqs.rules, PATH_REWRITE)
-				if v.Status != DELETED || newBackend {
-					var httpRule models.HTTPRequestRule
-					parts := strings.Fields(strings.TrimSpace(v.Value))
-					switch len(parts) {
-					case 1:
-						httpRule = models.HTTPRequestRule{
-							Index:     utils.PtrInt64(0),
-							Type:      "replace-path",
-							PathMatch: "(.*)",
-							PathFmt:   parts[0],
-						}
-					case 2:
-						httpRule = models.HTTPRequestRule{
-							Index:     utils.PtrInt64(0),
-							Type:      "replace-path",
-							PathMatch: parts[0],
-							PathFmt:   parts[1],
-						}
-					default:
-						c.Logger.Errorf("incorrect param '%s' in path-rewrite annotation", v.Value)
-						continue
-					}
-					httpReqs.rules[PATH_REWRITE] = httpRule
-				}
-				httpReqs.modified = true
-				activeAnnotations = true
-				c.cfg.BackendHTTPRules[backend.Name] = httpReqs
-			case "set-host":
-				httpReqs := c.getBackendHTTPReqs(backend.Name)
-				delete(httpReqs.rules, SET_HOST)
-				if v.Status != DELETED || newBackend {
-					httpRule := models.HTTPRequestRule{
-						Index:     utils.PtrInt64(0),
-						Type:      "set-header",
-						HdrName:   "Host",
-						HdrFormat: v.Value,
-					}
-					httpReqs.rules[SET_HOST] = httpRule
-				}
-				httpReqs.modified = true
-				activeAnnotations = true
-				c.cfg.BackendHTTPRules[backend.Name] = httpReqs
-			case "timeout-check":
-				if v.Status == DELETED && !newBackend {
-					backend.CheckTimeout = nil
-				} else if err := backend.UpdateCheckTimeout(v.Value); err != nil {
 					c.Logger.Errorf("%s annotation: %s", k, err)
 					continue
 				}
@@ -313,16 +258,4 @@ func (c *HAProxyController) handleCookieAnnotations(ingress *Ingress, service *S
 		}
 	}
 	return cookie
-}
-
-func (c *HAProxyController) getBackendHTTPReqs(backend string) BackendHTTPReqs {
-	httpReqs, ok := c.cfg.BackendHTTPRules[backend]
-	if !ok {
-		c.cfg.BackendHTTPRules[backend] = BackendHTTPReqs{
-			modified: false,
-			rules:    make(map[Rule]models.HTTPRequestRule),
-		}
-		return c.cfg.BackendHTTPRules[backend]
-	}
-	return httpReqs
 }

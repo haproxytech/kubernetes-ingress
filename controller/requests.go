@@ -24,10 +24,6 @@ import (
 type FrontendHTTPReqs map[uint64]models.HTTPRequestRule
 type FrontendHTTPRsps map[uint64]models.HTTPResponseRule
 type FrontendTCPReqs map[uint64]models.TCPRequestRule
-type BackendHTTPReqs struct {
-	modified bool
-	rules    map[Rule]models.HTTPRequestRule
-}
 
 type Rule string
 
@@ -42,11 +38,11 @@ const (
 	//nolint
 	RATE_LIMIT Rule = "rate-limit"
 	//nolint
-	SET_HOST Rule = "set-host"
+	REQUEST_SET_HOST Rule = "set-host"
 	//nolint
 	SSL_REDIRECT Rule = "ssl-redirect"
 	//nolint
-	PATH_REWRITE Rule = "path-rewrite"
+	REQUEST_PATH_REWRITE Rule = "path-rewrite"
 	//nolint
 	PROXY_PROTOCOL Rule = "proxy-protocol"
 	//nolint
@@ -107,6 +103,14 @@ func (c *HAProxyController) FrontendHTTPReqsRefresh() (reload bool) {
 		}
 		// REQUEST_CAPTURE
 		for _, httpRule := range c.cfg.FrontendHTTPReqRules[REQUEST_CAPTURE] {
+			c.Logger.Error(c.Client.FrontendHTTPRequestRuleCreate(frontend, httpRule))
+		}
+		// REQUEST_PATH_REWRITE
+		for _, httpRule := range c.cfg.FrontendHTTPReqRules[REQUEST_PATH_REWRITE] {
+			c.Logger.Error(c.Client.FrontendHTTPRequestRuleCreate(frontend, httpRule))
+		}
+		// REQUEST_SET_HOST
+		for _, httpRule := range c.cfg.FrontendHTTPReqRules[REQUEST_SET_HOST] {
 			c.Logger.Error(c.Client.FrontendHTTPRequestRuleCreate(frontend, httpRule))
 		}
 		// RATE_LIMIT
@@ -241,24 +245,4 @@ func (c *HAProxyController) FrontendTCPreqsRefresh() (reload bool) {
 		c.Logger.Error(c.Client.FrontendTCPRequestRuleCreate(FrontendSSL, c.cfg.FrontendTCPRules[PROXY_PROTOCOL][0]))
 	}
 	return true
-}
-
-func (c *HAProxyController) BackendHTTPReqsRefresh() (reload bool) {
-	for backendName, httpReqs := range c.cfg.BackendHTTPRules {
-		if httpReqs.modified {
-			c.Logger.Debugf("Updating HTTP request rules for backend '%s'", backendName)
-			reload = true
-			c.Client.BackendHTTPRequestRuleDeleteAll(backendName)
-			if len(httpReqs.rules) == 0 {
-				delete(c.cfg.BackendHTTPRules, backendName)
-			} else {
-				for _, httpRule := range httpReqs.rules {
-					c.Logger.Error(c.Client.BackendHTTPRequestRuleCreate(backendName, httpRule))
-				}
-			}
-			httpReqs.modified = false
-			c.cfg.BackendHTTPRules[backendName] = httpReqs
-		}
-	}
-	return reload
 }

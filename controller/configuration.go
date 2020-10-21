@@ -43,7 +43,6 @@ type Configuration struct {
 	FrontendRulesStatus    map[Mode]Status
 	BackendSwitchingRules  map[string]UseBackendRules
 	BackendSwitchingStatus map[string]struct{}
-	BackendHTTPRules       map[string]BackendHTTPReqs
 	HTTPS                  bool
 	SSLPassthrough         bool
 }
@@ -91,7 +90,7 @@ func (c *Configuration) Init(osArgs utils.OSArgs, mapDir string) {
 	c.Namespace = make(map[string]*Namespace)
 
 	c.FrontendHTTPReqRules = make(map[Rule]FrontendHTTPReqs)
-	for _, rule := range []Rule{BLACKLIST, SSL_REDIRECT, RATE_LIMIT, REQUEST_CAPTURE, REQUEST_SET_HEADER, WHITELIST} {
+	for _, rule := range []Rule{BLACKLIST, SSL_REDIRECT, RATE_LIMIT, REQUEST_CAPTURE, REQUEST_SET_HEADER, REQUEST_SET_HOST, REQUEST_PATH_REWRITE, WHITELIST} {
 		c.FrontendHTTPReqRules[rule] = make(map[uint64]models.HTTPRequestRule)
 	}
 	c.FrontendHTTPRspRules = make(map[Rule]FrontendHTTPRsps)
@@ -116,7 +115,6 @@ func (c *Configuration) Init(osArgs utils.OSArgs, mapDir string) {
 	for _, frontend := range []string{FrontendHTTP, FrontendHTTPS, FrontendSSL} {
 		c.BackendSwitchingRules[frontend] = UseBackendRules{}
 	}
-	c.BackendHTTPRules = make(map[string]BackendHTTPReqs)
 }
 
 //GetNamespace returns Namespace. Creates one if not existing
