@@ -119,17 +119,13 @@ func (c *HAProxyController) Start(ctx context.Context, osArgs utils.OSArgs) {
 	logger.SetLevel(osArgs.LogLevel.LogLevel)
 	c.haproxyInitialize()
 	logger.Panic(c.clientClosure(func() {
-		var http, https bool
 		var err error
 
 		if !c.osArgs.DisableHTTP {
-			http, err = c.handleBind("http", c.osArgs.HTTPBindPort)
+			_, err = c.handleBind("http", c.osArgs.HTTPBindPort)
 		}
 		if !c.osArgs.DisableHTTPS {
-			https, err = c.handleBind("https", c.osArgs.HTTPSBindPort)
-		}
-		if http || https {
-			err = c.haproxyService("restart")
+			_, err = c.handleBind("https", c.osArgs.HTTPSBindPort)
 		}
 
 		logger.Panic(err)
