@@ -17,6 +17,14 @@ Image can be run with arguments:
 | [`--namespace-blacklist`](#--namespace-blacklist) |  |
 | [`--namespace-whitelist`](#--namespace-whitelist) |  |
 | [`--publish-service`](#--publish-service) |  |
+| [`--disable-ipv4`](#--disable-ipv4) :construction:(dev) | `false` |
+| [`--disable-ipv6`](#--disable-ipv6) :construction:(dev) | `false` |
+| [`--ipv4-bind-address`](#--ipv4-bind-address) :construction:(dev) | `0.0.0.0` |
+| [`--ipv6-bind-address`](#--ipv6-bind-address) :construction:(dev) | `::` |
+| [`--http-bind-port`](#--http-bind-port) :construction:(dev) | `80` |
+| [`--https-bind-port`](#--https-bind-port) :construction:(dev) | `443` |
+| [`--disable-http`](#--disable-http) :construction:(dev) | `false` |
+| [`--disable-https`](#--disable-https) :construction:(dev) | `false` |
 | [`--sync-period`](#--sync-period) | `5s` |
 | [`--cache-resync-period`](#--cache-resync-period) :construction:(dev) | `10m` |
 | [`--log`](#--log) | `info` |
@@ -188,6 +196,182 @@ Example:
 ```yaml
 args:
   - --publish-service=default/kubernetes-ingress
+```
+
+<p align='right'><a href='#haproxy-kubernetes-ingress-controller'>:arrow_up_small: back to top</a></p>
+
+***
+
+### `--disable-ipv4`
+
+
+  > :construction: this is only available from next version, currently available in dev build
+
+  Disabling the IPv4 bind support.
+
+Possible values:
+
+- Boolean value, just need to declare the flag to disable the IPv4.
+
+Example:
+
+```yaml
+args:
+  - --disable-ipv4
+```
+
+<p align='right'><a href='#haproxy-kubernetes-ingress-controller'>:arrow_up_small: back to top</a></p>
+
+***
+
+### `--disable-ipv6`
+
+
+  > :construction: this is only available from next version, currently available in dev build
+
+  Disabling the IPv6 bind support.
+
+Possible values:
+
+- Boolean value, just need to declare the flag to disable the IPv6.
+
+Example:
+
+```yaml
+args:
+  - --disable-ipv6
+```
+
+<p align='right'><a href='#haproxy-kubernetes-ingress-controller'>:arrow_up_small: back to top</a></p>
+
+***
+
+### `--ipv4-bind-address`
+
+
+  > :construction: this is only available from next version, currently available in dev build
+
+  Customize the IPv4 binding address.
+
+Possible values:
+
+- A valid IPv4 addresses. Default: 0.0.0.0
+
+Example:
+
+```yaml
+args:
+  - --ipv4-bind-address=10.0.0.1
+```
+
+<p align='right'><a href='#haproxy-kubernetes-ingress-controller'>:arrow_up_small: back to top</a></p>
+
+***
+
+### `--ipv6-bind-address`
+
+
+  > :construction: this is only available from next version, currently available in dev build
+
+  Customize the IPv6 binding address.
+
+Possible values:
+
+- A valid IPv6 addresses. Default: ::
+
+Example:
+
+```yaml
+args:
+  - --ipv6-bind-address=::ffff:c0a8:5909
+```
+
+<p align='right'><a href='#haproxy-kubernetes-ingress-controller'>:arrow_up_small: back to top</a></p>
+
+***
+
+### `--http-bind-port`
+
+
+  > :construction: this is only available from next version, currently available in dev build
+
+  Customize the HTTP frontend binding port.
+
+Possible values:
+
+- A valid port in the range. Default: 80
+
+Example:
+
+```yaml
+args:
+  - --http-bind-port=8080
+```
+
+<p align='right'><a href='#haproxy-kubernetes-ingress-controller'>:arrow_up_small: back to top</a></p>
+
+***
+
+### `--https-bind-port`
+
+
+  > :construction: this is only available from next version, currently available in dev build
+
+  Customize the HTTPS frontend binding port.
+
+Possible values:
+
+- A valid port in the range. Default: 443
+
+Example:
+
+```yaml
+args:
+  - --http-bind-port=8443
+```
+
+<p align='right'><a href='#haproxy-kubernetes-ingress-controller'>:arrow_up_small: back to top</a></p>
+
+***
+
+### `--disable-http`
+
+
+  > :construction: this is only available from next version, currently available in dev build
+
+  Disabling the HTTP frontend.
+
+Possible values:
+
+- Boolean value, just need to declare the flag to disable the HTTP frontend.
+
+Example:
+
+```yaml
+args:
+  - --disable-http
+```
+
+<p align='right'><a href='#haproxy-kubernetes-ingress-controller'>:arrow_up_small: back to top</a></p>
+
+***
+
+### `--disable-https`
+
+
+  > :construction: this is only available from next version, currently available in dev build
+
+  Disabling the HTTPS frontend.
+
+Possible values:
+
+- Boolean value, just need to declare the flag to disable the HTTPS frontend.
+
+Example:
+
+```yaml
+args:
+  - --disable-https
 ```
 
 <p align='right'><a href='#haproxy-kubernetes-ingress-controller'>:arrow_up_small: back to top</a></p>

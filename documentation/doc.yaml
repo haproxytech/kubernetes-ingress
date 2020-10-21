@@ -92,6 +92,102 @@ image_arguments:
     example: |-
       args:
         - --publish-service=default/kubernetes-ingress
+  - argument: --disable-ipv4
+    description: Disabling the IPv4 bind support.
+    values:
+      - Boolean value, just need to declare the flag to disable the IPv4.
+    default: false
+    version_min: "1.5"
+    example: |-
+      args:
+        - --disable-ipv4
+    helm: |-
+      helm install haproxy haproxytech/kubernetes-ingress \
+        --set-string "controller.extraArgs={--disable-ipv4}"
+  - argument: --disable-ipv6
+    description: Disabling the IPv6 bind support.
+    values:
+      - Boolean value, just need to declare the flag to disable the IPv6.
+    default: false
+    version_min: "1.5"
+    example: |-
+      args:
+        - --disable-ipv6
+    helm: |-
+      helm install haproxy haproxytech/kubernetes-ingress \
+        --set-string "controller.extraArgs={--disable-ipv6}"
+  - argument: --ipv4-bind-address
+    description: Customize the IPv4 binding address.
+    values:
+      - "A valid IPv4 addresses. Default: 0.0.0.0"
+    default: 0.0.0.0
+    version_min: "1.5"
+    example: |-
+      args:
+        - --ipv4-bind-address=10.0.0.1
+    helm: |-
+      helm install haproxy haproxytech/kubernetes-ingress \
+        --set-string "controller.extraArgs={--ipv4-bind-address=10.0.0.1}"
+  - argument: --ipv6-bind-address
+    description: Customize the IPv6 binding address.
+    values:
+      - "A valid IPv6 addresses. Default: ::"
+    default: "::"
+    version_min: "1.5"
+    example: |-
+      args:
+        - --ipv6-bind-address=::ffff:c0a8:5909
+    helm: |-
+      helm install haproxy haproxytech/kubernetes-ingress \
+        --set-string "controller.extraArgs={--ipv6-bind-address=::ffff:c0a8:5909}"
+  - argument: --http-bind-port
+    description: Customize the HTTP frontend binding port.
+    values:
+      - "A valid port in the range. Default: 80"
+    default: 80
+    version_min: "1.5"
+    example: |-
+      args:
+        - --http-bind-port=8080
+    helm: |-
+      helm install haproxy haproxytech/kubernetes-ingress \
+        --set-string "controller.extraArgs={--http-bind-port=8080}"
+  - argument: --https-bind-port
+    description: Customize the HTTPS frontend binding port.
+    values:
+      - "A valid port in the range. Default: 443"
+    default: 443
+    version_min: "1.5"
+    example: |-
+      args:
+        - --http-bind-port=8443
+    helm: |-
+      helm install haproxy haproxytech/kubernetes-ingress \
+        --set-string "controller.extraArgs={--http-bind-port=8443}"
+  - argument: --disable-http
+    description: Disabling the HTTP frontend.
+    values:
+      - Boolean value, just need to declare the flag to disable the HTTP frontend.
+    default: false
+    version_min: "1.5"
+    example: |-
+      args:
+        - --disable-http
+    helm: |-
+      helm install haproxy haproxytech/kubernetes-ingress \
+        --set-string "controller.extraArgs={--disable-http}"
+  - argument: --disable-https
+    description: Disabling the HTTPS frontend.
+    values:
+      - Boolean value, just need to declare the flag to disable the HTTPS frontend.
+    default: false
+    version_min: "1.5"
+    example: |-
+      args:
+        - --disable-https
+    helm: |-
+      helm install haproxy haproxytech/kubernetes-ingress \
+        --set-string "controller.extraArgs={--disable-https}"
   - argument: --sync-period
     description: The interval at which the controller syncs its configuration with updated Kubernetes objects.
     values:
