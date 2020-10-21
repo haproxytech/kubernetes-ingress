@@ -487,8 +487,8 @@ annotations:
     - A single path, such as "/", to turn any path into "/"
     - Two parameters. A regular expression to match and a path to replace it with.
     applies_to:
+    - configmap
     - ingress
-    - service
     version_min: "1.4"
     example:
     - 'path-rewrite: "/"                        # replace all paths with /'
@@ -761,8 +761,8 @@ annotations:
     values:
     - The value of the Host header
     applies_to:
+    - configmap
     - ingress
-    - service
     version_min: "1.4"
     example: ['set-host: "example.local"']
   - title: servers-increment

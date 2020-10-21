@@ -234,6 +234,8 @@ func (c *HAProxyController) updateHAProxy() error {
 
 			logger.Error(c.handleRateLimiting(ingress))
 			logger.Error(c.handleRequestCapture(ingress))
+			logger.Error(c.handleRequestPathRewrite(ingress))
+			logger.Error(c.handleRequestSetHost(ingress))
 			logger.Error(c.handleRequestSetHdr(ingress))
 			logger.Error(c.handleResponseSetHdr(ingress))
 			logger.Error(c.handleBlacklisting(ingress))
@@ -447,7 +449,6 @@ func (c *HAProxyController) Refresh() (reload bool) {
 	reload = c.FrontendHTTPReqsRefresh() || reload
 	reload = c.FrontendHTTPRspsRefresh() || reload
 	reload = c.FrontendTCPreqsRefresh() || reload
-	reload = c.BackendHTTPReqsRefresh() || reload
 	reload = c.refreshBackendSwitching() || reload
 	r, err := c.cfg.MapFiles.Refresh()
 	reload = reload || r

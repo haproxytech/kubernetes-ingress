@@ -390,6 +390,114 @@ func (c *HAProxyController) handleRequestSetHdr(ingress *store.Ingress) error {
 	return err
 }
 
+func (c *HAProxyController) handleRequestSetHost(ingress *store.Ingress) error {
+	//  Get and validate annotations
+	annSetHost, err := c.Store.GetValueFromAnnotations("set-host", ingress.Annotations, c.Store.ConfigMaps[Main].Annotations)
+	if annSetHost == nil {
+		return nil
+	}
+
+	if len(ingress.Rules) == 0 {
+		logger.Debugf("Ingress %s/%s: Skipping request-set-host configuration, no rules defined", ingress.Namespace, ingress.Name)
+		return nil
+	}
+
+	// Update rules
+	status := setStatus(ingress.Status, annSetHost.Status)
+	mapFiles := c.cfg.MapFiles
+	key := hashStrToUint(fmt.Sprintf("%s-%s", REQUEST_SET_HOST, annSetHost.Value))
+	if status != EMPTY {
+		c.cfg.FrontendRulesModified[HTTP] = true
+		if status == DELETED {
+			logger.Debugf("Ingress %s/%s: Deleting request-set-host configuration", ingress.Namespace, ingress.Name)
+			return nil
+		}
+		logger.Debugf("Ingress %s/%s: Configuring request-set-host", ingress.Namespace, ingress.Name)
+	}
+	for hostname, rule := range ingress.Rules {
+		if rule.Status != DELETED {
+			for path := range rule.Paths {
+				mapFiles.AppendRow(key, hostname+path)
+			}
+		}
+	}
+
+	mapFile := path.Join(HAProxyMapDir, strconv.FormatUint(key, 10)) + ".lst"
+	httpRule := models.HTTPRequestRule{
+		Index:     utils.PtrInt64(0),
+		Type:      "set-header",
+		HdrName:   "Host",
+		HdrFormat: annSetHost.Value,
+		Cond:      "if",
+		CondTest:  makeACL("", mapFile),
+	}
+	c.cfg.FrontendHTTPReqRules[REQUEST_SET_HOST][key] = httpRule
+
+	return err
+}
+
+func (c *HAProxyController) handleRequestPathRewrite(ingress *store.Ingress) error {
+	//  Get and validate annotations
+	annPathRewrite, err := c.Store.GetValueFromAnnotations("path-rewrite", ingress.Annotations, c.Store.ConfigMaps[Main].Annotations)
+	if annPathRewrite == nil {
+		return nil
+	}
+
+	if len(ingress.Rules) == 0 {
+		logger.Debugf("Ingress %s/%s: Skipping path-rewrite configuration, no rules defined", ingress.Namespace, ingress.Name)
+		return nil
+	}
+
+	// Update rules
+	status := setStatus(ingress.Status, annPathRewrite.Status)
+	mapFiles := c.cfg.MapFiles
+	parts := strings.Fields(strings.TrimSpace(annPathRewrite.Value))
+	key := hashStrToUint(fmt.Sprintf("%s-%s", REQUEST_PATH_REWRITE, annPathRewrite.Value))
+	if status != EMPTY {
+		c.cfg.FrontendRulesModified[HTTP] = true
+		if status == DELETED {
+			logger.Debugf("Ingress %s/%s: Deleting path-rewrite configuration", ingress.Namespace, ingress.Name)
+			return nil
+		}
+		logger.Debugf("Ingress %s/%s: Configuring path-rewrite", ingress.Namespace, ingress.Name)
+	}
+	for hostname, rule := range ingress.Rules {
+		if rule.Status != DELETED {
+			for path := range rule.Paths {
+				mapFiles.AppendRow(key, hostname+path)
+			}
+		}
+	}
+
+	var httpRule models.HTTPRequestRule
+	mapFile := path.Join(HAProxyMapDir, strconv.FormatUint(key, 10)) + ".lst"
+	switch len(parts) {
+	case 1:
+		httpRule = models.HTTPRequestRule{
+			Index:     utils.PtrInt64(0),
+			Type:      "replace-path",
+			PathMatch: "(.*)",
+			PathFmt:   parts[0],
+			Cond:      "if",
+			CondTest:  makeACL("", mapFile),
+		}
+	case 2:
+		httpRule = models.HTTPRequestRule{
+			Index:     utils.PtrInt64(0),
+			Type:      "replace-path",
+			PathMatch: parts[0],
+			PathFmt:   parts[1],
+			Cond:      "if",
+			CondTest:  makeACL("", mapFile),
+		}
+	default:
+		logger.Errorf("incorrect param '%s' in path-rewrite annotation", annPathRewrite.Value)
+	}
+
+	c.cfg.FrontendHTTPReqRules[REQUEST_PATH_REWRITE][key] = httpRule
+	return err
+}
+
 func (c *HAProxyController) handleResponseSetHdr(ingress *store.Ingress) error {
 	//  Get and validate annotations
 	annSetHdr, err := c.Store.GetValueFromAnnotations("response-set-header", ingress.Annotations, c.Store.ConfigMaps[Main].Annotations)
