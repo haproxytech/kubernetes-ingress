@@ -25,6 +25,8 @@ import (
 	"strings"
 	"syscall"
 
+	"github.com/haproxytech/client-native/v2/configuration"
+	parser "github.com/haproxytech/config-parser/v2"
 	"github.com/haproxytech/models/v2"
 	"k8s.io/apimachinery/pkg/watch"
 
@@ -118,20 +120,29 @@ func (c *HAProxyController) Start(ctx context.Context, osArgs utils.OSArgs) {
 
 	logger.SetLevel(osArgs.LogLevel.LogLevel)
 	c.haproxyInitialize()
-	logger.Panic(c.clientClosure(func() {
+	c.initHandlers()
+
+	// handling dynamic frontend binding
+	{
 		var err error
+		var http, https bool
+
+		p := &parser.Parser{}
+		logger.Panic(p.LoadData(HAProxyCFG))
 
 		if !c.osArgs.DisableHTTP {
-			_, err = c.handleBind("http", c.osArgs.HTTPBindPort)
+			http, err = c.handleBind(p, "http", c.osArgs.HTTPBindPort)
 		}
 		if !c.osArgs.DisableHTTPS {
-			_, err = c.handleBind("https", c.osArgs.HTTPSBindPort)
+			https, err = c.handleBind(p, "https", c.osArgs.HTTPSBindPort)
+		}
+
+		if err == nil && (http || https) {
+			err = p.Save(HAProxyCFG)
 		}
 
 		logger.Panic(err)
-	}))
-	c.initHandlers()
-
+	}
 	if c.osArgs.PprofEnabled {
 		logger.Error(c.clientClosure(func() {
 			logger.Error(c.handlePprof())
@@ -283,6 +294,7 @@ func (c *HAProxyController) haproxyInitialize() {
 	if HAProxyCFG == "" {
 		HAProxyCFG = filepath.Join(c.HAProxyCfgDir, "haproxy.cfg")
 	}
+
 	if HAProxyPIDFile == "" {
 		HAProxyPIDFile = "/var/run/haproxy.pid"
 	}
@@ -334,7 +346,7 @@ func (c *HAProxyController) haproxyInitialize() {
 	c.cfg.Init(HAProxyMapDir, !c.osArgs.DisableHTTPS)
 }
 
-func (c *HAProxyController) handleBind(protocol string, port int64) (bool, error) {
+func (c *HAProxyController) handleBind(p *parser.Parser, protocol string, port int64) (reload bool, err error) {
 	var binds []models.Bind
 	if !c.osArgs.DisableIPV4 {
 		binds = append(binds, models.Bind{
@@ -351,12 +363,16 @@ func (c *HAProxyController) handleBind(protocol string, port int64) (bool, error
 			V4v6:    true,
 		})
 	}
-	for _, b := range binds {
-		if err := c.Client.FrontendBindCreate(protocol, b); err != nil {
+	for i, b := range binds {
+		if err = p.Insert(parser.Frontends, protocol, "bind", configuration.SerializeBind(b), i+1); err != nil {
 			return false, fmt.Errorf("cannot create bind %s for protocol %s: %s", b.Name, protocol, err.Error())
 		}
 	}
-	return len(binds) > 0, nil
+	reload = len(binds) > 0
+	if reload {
+		err = p.Delete(parser.Frontends, protocol, "bind", 0)
+	}
+	return
 }
 
 // Handle HAProxy daemon via Master process
