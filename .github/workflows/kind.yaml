@@ -2,7 +2,7 @@ name: "KinD cluster test"
 on: [pull_request, push]
 
 jobs:
-  kind:    
+  kind:
     strategy:
         matrix:
           k8s-version: ['v1.16.9', 'v1.17.5', 'v1.18.6']
@@ -17,9 +17,8 @@ jobs:
           name: dev
           config: deploy/kind/kind-config.yaml
           image: kindest/node:${{ matrix.k8s-version }}
-          version: v0.8.1          
+          version: v0.8.1
     - name: Setup
       run: deploy/kind/ci.sh
     - name: Test
       run: go test ./... --tags=integration
-      
