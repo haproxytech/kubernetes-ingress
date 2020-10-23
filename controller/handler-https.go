@@ -28,6 +28,7 @@ import (
 )
 
 type HTTPS struct {
+	enabled  bool
 	addrIpv4 string
 	ipv4     bool
 	addrIpv6 string
@@ -68,7 +69,7 @@ func (h HTTPS) bindList(passhthrough bool) (binds []models.Bind) {
 }
 
 func (h HTTPS) Update(k store.K8s, cfg Configuration, api api.HAProxyClient) (reload bool, err error) {
-	if !cfg.HTTPS {
+	if h.enabled {
 		logger.Debugf("Cannot proceed with SSL Passthrough update, HTTPS is disabled")
 		return false, nil
 	}

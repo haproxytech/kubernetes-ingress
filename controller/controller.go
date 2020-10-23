@@ -343,7 +343,7 @@ func (c *HAProxyController) haproxyInitialize() {
 		logger.Panic(err)
 	}
 
-	c.cfg.Init(HAProxyMapDir, !c.osArgs.DisableHTTPS)
+	c.cfg.Init(HAProxyMapDir)
 }
 
 func (c *HAProxyController) handleBind(p *parser.Parser, protocol string, port int64) (reload bool, err error) {

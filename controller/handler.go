@@ -29,6 +29,7 @@ func (c *HAProxyController) initHandlers() {
 		DefaultCertificate{},
 		ErrorFile{},
 		HTTPS{
+			enabled:  !c.osArgs.DisableHTTPS,
 			certDir:  HAProxyCertDir,
 			ipv4:     !c.osArgs.DisableIPV4,
 			addrIpv4: c.osArgs.IPV4BindAddr,
