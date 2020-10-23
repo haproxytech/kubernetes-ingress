@@ -239,6 +239,68 @@ func ApproveCSRAndGetCertificate(t *testing.T, clientset *kubernetes.Clientset, 
 	return csr.Status.Certificate
 }
 
+// prometherion: source-code of the Docker image
+// quay.io/prometherion/proxy-protocol-app:latest is available here:
+// https://github.com/prometherion/test-app
+// TODO: evaluate to host the sample apps source-code in the HAProxy GitHub org
+func NewProxyProtocol(name, release string) (deployment *appsv1.Deployment, svc *corev1.Service) {
+	deployment = &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: fmt.Sprintf("%s-%s", name, release),
+		},
+		Spec: appsv1.DeploymentSpec{
+			Replicas: pointer.Int32Ptr(1),
+			Selector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					"app": fmt.Sprintf("%s-%s", name, release),
+				},
+			},
+			Template: corev1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{
+						"app": fmt.Sprintf("%s-%s", name, release),
+					},
+				},
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{
+						{
+							Name:  name,
+							Image: "quay.io/prometherion/proxy-protocol-app:latest",
+							Ports: []corev1.ContainerPort{
+								{
+									Name:          "http",
+									ContainerPort: 8080,
+									Protocol:      corev1.ProtocolTCP,
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	svc = &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: fmt.Sprintf("%s-%s", name, release),
+		},
+		Spec: corev1.ServiceSpec{
+			Ports: []corev1.ServicePort{
+				{
+					Port:       8080,
+					TargetPort: intstr.FromString("http"),
+					Protocol:   corev1.ProtocolTCP,
+					Name:       "http",
+				},
+			},
+			Selector: map[string]string{
+				"app": fmt.Sprintf("%s-%s", name, release),
+			},
+			Type: corev1.ServiceTypeClusterIP,
+		},
+	}
+	return
+}
+
 func NewOffloadedSsl(name, release string) (deployment *appsv1.Deployment, svc *corev1.Service) {
 	deployment = &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
