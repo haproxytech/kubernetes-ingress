@@ -28,7 +28,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/haproxytech/kubernetes-ingress/deploy/kind/tests/http"
+	kindclient "github.com/haproxytech/kubernetes-ingress/deploy/kind/tests/client"
 	"github.com/haproxytech/kubernetes-ingress/deploy/kind/tests/k8s"
 )
 
@@ -69,7 +69,7 @@ func Test_Http_MatchPath(t *testing.T) {
 					Hostname string `json:"hostname"`
 				}
 
-				client := http.New(t, ing.Spec.Rules[0].Host)
+				client := kindclient.New(t, ing.Spec.Rules[0].Host)
 				res, c := client.Do(path)
 				defer c()
 

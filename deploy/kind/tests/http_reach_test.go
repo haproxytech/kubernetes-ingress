@@ -25,7 +25,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	kindclient "github.com/haproxytech/kubernetes-ingress/deploy/kind/tests/http"
+	kindclient "github.com/haproxytech/kubernetes-ingress/deploy/kind/tests/client"
 )
 
 type reachResponse struct {

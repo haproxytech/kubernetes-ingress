@@ -31,7 +31,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 
-	"github.com/haproxytech/kubernetes-ingress/deploy/kind/tests/http"
+	kindclient "github.com/haproxytech/kubernetes-ingress/deploy/kind/tests/client"
 	"github.com/haproxytech/kubernetes-ingress/deploy/kind/tests/k8s"
 )
 
@@ -61,7 +61,7 @@ func Test_Endpoint_Update(t *testing.T) {
 
 	// waiting the Ingress is handled correctly
 	assert.Eventually(t, func() bool {
-		client := http.New(t, ing.Spec.Rules[0].Host)
+		client := kindclient.New(t, ing.Spec.Rules[0].Host)
 		res, c := client.Do("/")
 		defer c()
 
@@ -105,7 +105,7 @@ func Test_Endpoint_Update(t *testing.T) {
 			}
 
 			assert.Eventually(t, func() bool {
-				client := http.New(t, ing.Spec.Rules[0].Host)
+				client := kindclient.New(t, ing.Spec.Rules[0].Host)
 				res, c := client.Do("/")
 				defer c()
 
