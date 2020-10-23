@@ -232,7 +232,7 @@ func ApproveCSRAndGetCertificate(t *testing.T, clientset *kubernetes.Clientset, 
 			panic(err)
 		}
 		return csr.Status.Certificate != nil
-	}, time.Minute, 10*time.Second) {
+	}, time.Minute, time.Second) {
 		t.FailNow()
 	}
 

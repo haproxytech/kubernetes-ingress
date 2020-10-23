@@ -59,10 +59,10 @@ func Test_Http_Send_Proxy(t *testing.T) {
 		defer c()
 
 		body, err := ioutil.ReadAll(res.Body)
-		if !assert.Nil(t, err) {
+		if err != nil {
 			return false
 		}
 
-		return assert.Equal(t, body, []byte("hello!"))
-	}, time.Minute, 10*time.Second)
+		return string(body) == "hello!"
+	}, time.Minute, time.Second)
 }

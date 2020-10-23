@@ -124,20 +124,21 @@ func Test_Https(t *testing.T) {
 
 	assert.Eventually(t, func() bool {
 		res, err := client.Do(req)
-		if !assert.Nil(t, err) {
+		if err != nil {
 			return false
 		}
 
 		body, err := ioutil.ReadAll(res.Body)
-		if !assert.Nil(t, err) {
+		if err != nil {
 			return false
 		}
 
 		response := &podInfoResponse{}
-		if !assert.Nil(t, json.Unmarshal(body, response)) {
+		err = json.Unmarshal(body, response)
+		if err != nil {
 			return false
 		}
 
 		return strings.HasPrefix(response.Hostname, ing.Name)
-	}, time.Minute, 10*time.Second)
+	}, time.Minute, time.Second)
 }

@@ -120,15 +120,15 @@ func Test_Https_Ssl_Offload(t *testing.T) {
 
 	assert.Eventually(t, func() bool {
 		res, err := client.Do(req)
-		if !assert.Nil(t, err) {
+		if err != nil {
 			return false
 		}
 
 		body, err := ioutil.ReadAll(res.Body)
-		if !assert.Nil(t, err) {
+		if err != nil {
 			return false
 		}
 
 		return strings.HasPrefix(string(body), ing.Name)
-	}, time.Minute, 10*time.Second)
+	}, time.Minute, time.Second)
 }

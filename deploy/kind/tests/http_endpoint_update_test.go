@@ -66,7 +66,9 @@ func Test_Endpoint_Update(t *testing.T) {
 		defer c()
 
 		body, err := ioutil.ReadAll(res.Body)
-		assert.Nil(t, err)
+		if err != nil {
+			return false
+		}
 
 		response := &podInfoResponse{}
 		if err := json.Unmarshal(body, response); err != nil {
@@ -110,7 +112,9 @@ func Test_Endpoint_Update(t *testing.T) {
 				defer c()
 
 				body, err := ioutil.ReadAll(res.Body)
-				assert.Nil(t, err)
+				if err != nil {
+					return false
+				}
 
 				response := &podInfoResponse{}
 				if err := json.Unmarshal(body, response); err != nil {
