@@ -57,7 +57,7 @@ func (c *HAProxyController) handleGlobalAnnotations() (restart bool, reload bool
 		}
 		// TODO: study if we can handle this inside annotation's Update function
 		// In which case, Update should also receive controller's Config
-		if name == "timeout-connect" && c.cfg.SSLPassthrough {
+		if name == "timeout-client" && c.cfg.SSLPassthrough {
 			c.cfg.FrontendRulesModified[TCP] = true
 		}
 	}
