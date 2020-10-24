@@ -218,7 +218,7 @@ func (c *HAProxyController) FrontendTCPreqsRefresh() (reload bool) {
 	c.Logger.Error(err)
 	// STATIC: Inspect delay
 	inspectTimeout := utils.PtrInt64(5000)
-	annTimeout, _ := GetValueFromAnnotations("timeout-connect", c.cfg.ConfigMap.Annotations)
+	annTimeout, _ := GetValueFromAnnotations("timeout-client", c.cfg.ConfigMap.Annotations)
 	if annTimeout != nil {
 		if value, errParse := utils.ParseTime(annTimeout.Value); errParse == nil {
 			inspectTimeout = value

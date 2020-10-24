@@ -186,14 +186,14 @@ func (c *HAProxyController) handleDefaultOption(option string) bool {
 func (c *HAProxyController) handleDefaultTimeouts() bool {
 	hasChanges := false
 	hasChanges = c.handleDefaultTimeout("http-request") || hasChanges
-	if c.handleDefaultTimeout("connect") {
+	hasChanges = c.handleDefaultTimeout("connect") || hasChanges
+	if c.handleDefaultTimeout("client") {
 		// Update Inspect delay timeout
 		if c.cfg.SSLPassthrough {
 			c.cfg.FrontendRulesStatus[TCP] = MODIFIED
 		}
 		hasChanges = true
 	}
-	hasChanges = c.handleDefaultTimeout("client") || hasChanges
 	hasChanges = c.handleDefaultTimeout("client-fin") || hasChanges
 	hasChanges = c.handleDefaultTimeout("queue") || hasChanges
 	hasChanges = c.handleDefaultTimeout("server") || hasChanges
