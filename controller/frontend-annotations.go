@@ -103,42 +103,35 @@ func (c *HAProxyController) handleHTTPRedirect(ingress *Ingress) error {
 	annSSLRedirect, _ := GetValueFromAnnotations("ssl-redirect", ingress.Annotations, c.cfg.ConfigMap.Annotations)
 	annRedirectCode, _ := GetValueFromAnnotations("ssl-redirect-code", ingress.Annotations, c.cfg.ConfigMap.Annotations)
 	_, enabled := sslRedirectEnabled[ingress.Namespace+ingress.Name]
-	if annSSLRedirect == nil {
-		if len(ingress.TLS) > 0 {
-			toEnable = true
-		} else if !enabled {
-			// Nothing to do
-			return nil
+	if annSSLRedirect != nil && annSSLRedirect.Status != DELETED {
+		if toEnable, err = utils.GetBoolValue(annSSLRedirect.Value, "ssl-redirect"); err != nil {
+			return err
 		}
-	} else {
-		switch annSSLRedirect.Status {
-		case DELETED:
-			if len(ingress.TLS) > 0 {
-				toEnable = true
-			}
-		default:
-			if toEnable, err = utils.GetBoolValue(annSSLRedirect.Value, "ssl-redirect"); err != nil {
-				return err
-			}
-		}
+	} else if tlsEnabled(ingress) {
+		toEnable = true
 	}
 	var sslRedirectCode int64
 	if sslRedirectCode, err = strconv.ParseInt(annRedirectCode.Value, 10, 64); err != nil {
 		sslRedirectCode = defaultSSLRedirectCode
 	}
 
-	// Update Rules
-	key := hashStrToUint(fmt.Sprintf("%s-%d", SSL_REDIRECT, sslRedirectCode))
-	mapFiles := c.cfg.MapFiles
-	// Disable Redirect
-	if !toEnable {
+	// Redirection status
+	if toEnable {
+		if !enabled {
+			c.cfg.FrontendRulesStatus[HTTP] = MODIFIED
+			sslRedirectEnabled[ingress.Namespace+ingress.Name] = struct{}{}
+		}
+	} else {
 		if enabled {
 			delete(sslRedirectEnabled, ingress.Namespace+ingress.Name)
 			c.cfg.FrontendRulesStatus[HTTP] = MODIFIED
 		}
 		return nil
 	}
-	//Enable Redirect
+
+	//Configure redirection
+	key := hashStrToUint(fmt.Sprintf("%s-%d", SSL_REDIRECT, sslRedirectCode))
+	mapFiles := c.cfg.MapFiles
 	for hostname, rule := range ingress.Rules {
 		if rule.Status != DELETED {
 			for path := range rule.Paths {
@@ -157,11 +150,6 @@ func (c *HAProxyController) handleHTTPRedirect(ingress *Ingress) error {
 		CondTest:   makeACL(" !{ ssl_fc }", mapFile),
 	}
 	c.cfg.FrontendHTTPReqRules[SSL_REDIRECT][key] = httpRule
-
-	if !enabled {
-		c.cfg.FrontendRulesStatus[HTTP] = MODIFIED
-		sslRedirectEnabled[ingress.Namespace+ingress.Name] = struct{}{}
-	}
 	return nil
 }
 
@@ -627,4 +615,13 @@ func makeACL(acl string, mapFile string) (result string) {
 	result += " or " + fmt.Sprintf("{ var(txn.host) -f %s }", mapFile) + acl
 	result += " or " + fmt.Sprintf("{ var(txn.path) -m beg -f %s }", mapFile) + acl
 	return result
+}
+
+func tlsEnabled(ingress *Ingress) bool {
+	for _, tls := range ingress.TLS {
+		if tls.Status != DELETED {
+			return true
+		}
+	}
+	return false
 }

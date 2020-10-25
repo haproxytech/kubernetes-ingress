@@ -200,6 +200,9 @@ func (c *HAProxyController) eventIngress(ns *Namespace, data *Ingress) (updateRe
 					path.Status = DELETED
 				}
 			}
+			for _, tls := range ingress.TLS {
+				tls.Status = DELETED
+			}
 			ingress.Annotations.SetStatusState(DELETED)
 			updateRequired = true
 		} else {
