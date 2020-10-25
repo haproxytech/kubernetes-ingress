@@ -268,15 +268,15 @@ More information can be found in the official HAProxy [documentation](https://cb
 
 #### Https
 
-- HAProxy will decrypt/offload HTTPS traffic if certificates are defined.
-- Certificate can be defined in Ingress object: `spec.tls[].secretName`. Please see [tls-secret](#tls-secret) for format
+- SSL offloading/decryption will be automatically enabled if valid SSL certificates are provided.
+- Certificates can be provided via [tls-secrets](#tls-secret).
 - Annotation `ssl-passthrough`
   - by default ssl-passthrough is disabled.
 	- Make HAProxy send TLS traffic directly to the backend instead of offloading it.
 	- Traffic is proxied in TCP mode which makes unavailable a number of the controller annotations (requiring HTTP mode).
 - Annotation `ssl-redirect`
-  - redirects http trafic to https
-  - by default, for an ingress with TLS enabled,  the controller redirects (302) to HTTPS.
+  - Redirects http trafic to https
+  - SSL redirection is enabled by default for any ingress resource defined with a TLS section `spec.tls[].secretName`.
 	- Automatic redirects, when TLS enabled, can be disabled by setting annotation to "false" in configmap.
 - Annotation `ssl-redirect-code`
   - HTTP status code on redirect
@@ -387,16 +387,17 @@ More information can be found in the [HAProxy documentation](https://cbonte.gith
 
 #### tls-secret
 
-- define through pod arguments
+- Controller will look into kubernetes tls secrets for valid SSL certificates to configure in HAProxy.
+- A default certificate can be provided via controller [argument](controller.md):
   - `--default-ssl-certificate`=\<namespace\>/\<secret\>
 - Annotation `ssl-certificate` in config map
   - \<namespace\>/\<secret\>
   - this replaces default certificate
-- certificate can be defined in Ingress object: `spec.tls[].secretName`
-- single certificate secret can contain two items:
+- Certificates can be defined in Ingress object: `spec.tls[].secretName`
+- Single certificate secret can contain two items:
   - tls.key
   - tls.crt
-- certificate secret with `rsa` and `ecdsa` certificates:
+- Certificate secret with `rsa` and `ecdsa` certificates:
   - :information_source: only one certificate is also acceptable setup
   - rsa.key
   - rsa.crt
