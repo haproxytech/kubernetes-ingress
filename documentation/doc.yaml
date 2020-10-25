@@ -158,21 +158,22 @@ groups:
       More information can be found in the official HAProxy [documentation](https://cbonte.github.io/haproxy-dconv/2.0/configuration.html#4-cookie)
   https:
     header: |-
-      - HAProxy will decrypt/offload HTTPS traffic if certificates are defined.
-      - Certificate can be defined in Ingress object: `spec.tls[].secretName`. Please see [tls-secret](#tls-secret) for format     
+      - SSL offloading/decryption will be automatically enabled if valid SSL certificates are provided.
+      - Certificates can be provided via [tls-secrets](#tls-secret).
   access-control:
     header: |-
       - Access control is disabled by default
       - Access control can be set for all traffic (annotation on configmap) or for a set of hosts (annotation on ingress)
   tls-secret:
     header: |
-      - can be defined through pod arguments `--default-ssl-certificate`=\<namespace\>/\<secret\>
-      - certificate can be defined in Ingress object: spec.tls[].secretName
+      - Controller will look into kubernetes tls secrets for valid SSL certificates to configure in HAProxy.
+      - A default certificate can be provided via controller [argument](controller.md) `--default-ssl-certificate`=\<namespace\>/\<secret\>
+      - Certificates can be defined in Ingress object: `spec.tls[].secretName`
     footer: |
-      - single certificate secret can contain two items:
+      - Single certificate secret can contain two items:
         - tls.key
         - tls.crt
-      - certificate secret with `rsa` and `ecdsa` certificates:
+      - Certificate secret with `rsa` and `ecdsa` certificates:
         - :information_source: only one certificate (rsa/ecdsa) is also acceptable setup
         - rsa.key
         - rsa.crt
@@ -842,11 +843,10 @@ annotations:
     dependencies: tls-secret
     default: "false"
     description:
-    - Sets whether to redirect traffic from HTTP to HTTPS. By default, this is activated
-      when `ssl-certificate` is set.
+    - Sets whether to redirect traffic from HTTP to HTTPS.
     tip:
-    - if TLS is enabled, by default, the controller redirects (302) to HTTPS.
-    - Automatic redirects, when TLS enabled, can be disabled by setting annotation to
+    - SSL redirection is enabled by default for any ingress resource defined with a TLS section `spec.tls[].secretName`.
+    - Automatic redirects for ingress resources with TLS enabled, can be disabled by setting annotation to
       "false" in configmap
     values:
     - "true"

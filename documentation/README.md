@@ -336,8 +336,8 @@ http-server-close: "true"
 
 #### Https
 
-- HAProxy will decrypt/offload HTTPS traffic if certificates are defined.
-- Certificate can be defined in Ingress object: `spec.tls[].secretName`. Please see [tls-secret](#tls-secret) for format     
+- SSL offloading/decryption will be automatically enabled if valid SSL certificates are provided.
+- Certificates can be provided via [tls-secrets](#tls-secret).
 
 ##### `ssl-passthrough`
 
@@ -360,13 +360,13 @@ ssl-passthrough: "true"
 
 ##### `ssl-redirect`
 
-  Sets whether to redirect traffic from HTTP to HTTPS. By default, this is activated when `ssl-certificate` is set.
+  Sets whether to redirect traffic from HTTP to HTTPS.
 
   Available on:  `configmap`  `ingress`
 
-  :information_source: if TLS is enabled, by default, the controller redirects (302) to HTTPS.
+  :information_source: SSL redirection is enabled by default for any ingress resource defined with a TLS section `spec.tls[].secretName`.
 
-  :information_source: Automatic redirects, when TLS enabled, can be disabled by setting annotation to "false" in configmap
+  :information_source: Automatic redirects for ingress resources with TLS enabled, can be disabled by setting annotation to "false" in configmap
 
 Possible values:
 
@@ -1158,8 +1158,9 @@ timeout-tunnel: 30m
 
 #### Tls Secret
 
-- can be defined through pod arguments `--default-ssl-certificate`=\<namespace\>/\<secret\>
-- certificate can be defined in Ingress object: spec.tls[].secretName
+- Controller will look into kubernetes tls secrets for valid SSL certificates to configure in HAProxy.
+- A default certificate can be provided via controller [argument](controller.md) `--default-ssl-certificate`=\<namespace\>/\<secret\>
+- Certificates can be defined in Ingress object: `spec.tls[].secretName`
 
 
 ##### `ssl-certificate`
@@ -1180,10 +1181,10 @@ Example:
 ssl-certificate: "default/tls-secret"
 ```
 
-- single certificate secret can contain two items:
+- Single certificate secret can contain two items:
   - tls.key
   - tls.crt
-- certificate secret with `rsa` and `ecdsa` certificates:
+- Certificate secret with `rsa` and `ecdsa` certificates:
   - :information_source: only one certificate (rsa/ecdsa) is also acceptable setup
   - rsa.key
   - rsa.crt
