@@ -200,6 +200,9 @@ func (k K8s) EventIngress(ns *Namespace, data *Ingress, controllerClass string) 
 					path.Status = DELETED
 				}
 			}
+			for _, tls := range ingress.TLS {
+				tls.Status = DELETED
+			}
 			ingress.Annotations.SetStatusState(DELETED)
 			updateRequired = true
 		} else {
