@@ -119,7 +119,7 @@ func (c *HAProxyController) handleHTTPRedirect(ingress *store.Ingress) error {
 
 	// Redirection status
 	if toEnable {
-		if !enabled {
+		if !enabled || annRedirectCode.Status != EMPTY {
 			c.cfg.FrontendRulesModified[HTTP] = true
 			sslRedirectEnabled[ingress.Namespace+ingress.Name] = struct{}{}
 		}
