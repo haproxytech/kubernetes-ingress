@@ -91,6 +91,10 @@ func NewIngress(name, release, path string) *networkingv1beta1.Ingress {
 	}
 }
 
+func EditServicePort(service *corev1.Service, port int32) {
+	service.Spec.Ports[0].Port = port
+}
+
 func NewService(name, release string) *corev1.Service {
 	return &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
@@ -156,6 +160,18 @@ func NewDeployment(name, release string) *appsv1.Deployment {
 			},
 		},
 	}
+}
+
+func EditPodImage(deployment *appsv1.Deployment, image string) {
+	deployment.Spec.Template.Spec.Containers[0].Image = image
+}
+
+func EditPodCommand(deployment *appsv1.Deployment, command ...string) {
+	deployment.Spec.Template.Spec.Containers[0].Command = command
+}
+
+func EditPodExposedPort(deployment *appsv1.Deployment, port int32) {
+	deployment.Spec.Template.Spec.Containers[0].Ports[0].ContainerPort = port
 }
 
 func NewCertificateSigningRequest(name, release string, key *rsa.PrivateKey, dnsNames ...string) *certificatesv1beta1.CertificateSigningRequest {
