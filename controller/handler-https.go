@@ -69,7 +69,7 @@ func (h HTTPS) bindList(passhthrough bool) (binds []models.Bind) {
 }
 
 func (h HTTPS) Update(k store.K8s, cfg Configuration, api api.HAProxyClient) (reload bool, err error) {
-	if h.enabled {
+	if !h.enabled {
 		logger.Debugf("Cannot proceed with SSL Passthrough update, HTTPS is disabled")
 		return false, nil
 	}
