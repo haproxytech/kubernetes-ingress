@@ -203,8 +203,7 @@ func (c *HAProxyController) setTargetPort(path *store.IngressPath, service *stor
 					return update, nil
 				}
 			}
-			logger.Warningf("Could not find '%s' Targetport for service '%s'", sp.Name, service.Name)
-			return update, nil
+			return update, fmt.Errorf("Could not find '%s' Targetport for service '%s'", sp.Name, service.Name)
 		}
 	}
 	return update, fmt.Errorf("ingress servicePort(Str: %s, Int: %d) not found for backend '%s'", path.ServicePortString, path.ServicePortInt, endpoints.BackendName)
