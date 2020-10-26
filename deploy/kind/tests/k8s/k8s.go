@@ -52,6 +52,14 @@ func New(t *testing.T) *kubernetes.Clientset {
 	return cs
 }
 
+func AddAnnotations(ing metav1.Object, additionals map[string]string) {
+	a := ing.GetAnnotations()
+	for k, v := range additionals {
+		a[k] = v
+	}
+	ing.SetAnnotations(a)
+}
+
 func NewIngress(name, release, path string) *networkingv1beta1.Ingress {
 	return &networkingv1beta1.Ingress{
 		ObjectMeta: metav1.ObjectMeta{
