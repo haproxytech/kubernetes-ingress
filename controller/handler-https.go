@@ -47,8 +47,9 @@ func (h HTTPS) bindList(passhthrough bool) (binds []models.Bind) {
 				}
 				return
 			}(),
-			Port: utils.PtrInt64(h.port),
-			Name: "bind_1",
+			Port:        utils.PtrInt64(h.port),
+			Name:        "bind_1",
+			AcceptProxy: passhthrough,
 		})
 	}
 	if h.ipv6 {
@@ -60,9 +61,10 @@ func (h HTTPS) bindList(passhthrough bool) (binds []models.Bind) {
 				}
 				return
 			}(),
-			Port: utils.PtrInt64(h.port),
-			Name: "bind_2",
-			V4v6: true,
+			Port:        utils.PtrInt64(h.port),
+			AcceptProxy: passhthrough,
+			Name:        "bind_2",
+			V4v6:        true,
 		})
 	}
 	return
@@ -72,6 +74,19 @@ func (h HTTPS) Update(k store.K8s, cfg Configuration, api api.HAProxyClient) (re
 	if !h.enabled {
 		logger.Debugf("Cannot proceed with SSL Passthrough update, HTTPS is disabled")
 		return false, nil
+	}
+	// ssl-offload
+	if len(cfg.UsedCerts) > 0 {
+		if !cfg.HTTPS {
+			logger.Panic(api.FrontendEnableSSLOffload(FrontendHTTPS, h.certDir, true))
+			cfg.HTTPS = true
+			reload = true
+		}
+	} else if cfg.HTTPS {
+		logger.Info("Disabling ssl offload")
+		logger.Panic(api.FrontendDisableSSLOffload(FrontendHTTPS))
+		cfg.HTTPS = false
+		reload = true
 	}
 	// ssl-passthrough
 	if len(cfg.BackendSwitchingRules[FrontendSSL]) > 0 {
@@ -85,19 +100,6 @@ func (h HTTPS) Update(k store.K8s, cfg Configuration, api api.HAProxyClient) (re
 		logger.Info("Disabling ssl-passthrough")
 		logger.Panic(h.disableSSLPassthrough(cfg, api))
 		cfg.SSLPassthrough = false
-		reload = true
-	}
-	// ssl-offload
-	if len(cfg.UsedCerts) > 0 {
-		if !cfg.HTTPS {
-			logger.Panic(api.FrontendEnableSSLOffload(FrontendHTTPS, h.certDir, true))
-			cfg.HTTPS = true
-			reload = true
-		}
-	} else if cfg.HTTPS {
-		logger.Info("Disabling ssl offload")
-		logger.Panic(api.FrontendDisableSSLOffload(FrontendHTTPS))
-		cfg.HTTPS = false
 		reload = true
 	}
 	//remove certs that are not needed
@@ -164,14 +166,15 @@ func (h HTTPS) enableSSLPassthrough(cfg Configuration, api api.HAProxyClient) (e
 	}
 	err = api.BackendServerCreate(backendHTTPS, models.Server{
 		Name:        FrontendHTTPS,
-		Address:     "127.0.0.1:8443",
+		Address:     "127.0.0.1",
+		Port:        utils.PtrInt64(h.port),
 		SendProxyV2: "enabled",
 	})
 	if err != nil {
 		return err
 	}
 
-	if err = h.bindSSLPassthrough(true, api); err != nil {
+	if err = h.toggleSSLPassthrough(true, cfg.HTTPS, api); err != nil {
 		return err
 	}
 	// Some TCP rules depend on ssl-passthrough
@@ -189,7 +192,7 @@ func (h HTTPS) disableSSLPassthrough(cfg Configuration, api api.HAProxyClient) (
 	if err != nil {
 		return err
 	}
-	if err = h.bindSSLPassthrough(false, api); err != nil {
+	if err = h.toggleSSLPassthrough(false, cfg.HTTPS, api); err != nil {
 		return err
 	}
 	// Some TCP rules depend on ssl-passthrough
@@ -197,16 +200,14 @@ func (h HTTPS) disableSSLPassthrough(cfg Configuration, api api.HAProxyClient) (
 	return nil
 }
 
-// Upon SSL passthrough we have to select a hard-coded port number (8443):
-// this could collide if running the Ingress Controller in HostNetwork mode.
-// TODO(prometherion): making this configurable
-func (h HTTPS) bindSSLPassthrough(enabled bool, api api.HAProxyClient) (err error) {
-	for _, bind := range h.bindList(true) {
-		bind.Port = utils.PtrInt64(8443)
-		bind.AcceptProxy = enabled
+func (h HTTPS) toggleSSLPassthrough(passthrough, offload bool, api api.HAProxyClient) (err error) {
+	for _, bind := range h.bindList(passthrough) {
 		if err = api.FrontendBindEdit(FrontendHTTPS, bind); err != nil {
 			return err
 		}
+	}
+	if offload {
+		logger.Panic(api.FrontendEnableSSLOffload(FrontendHTTPS, h.certDir, true))
 	}
 	return nil
 }
