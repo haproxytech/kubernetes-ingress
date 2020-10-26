@@ -70,7 +70,7 @@ func (h HTTPS) bindList(passhthrough bool) (binds []models.Bind) {
 	return
 }
 
-func (h HTTPS) Update(k store.K8s, cfg Configuration, api api.HAProxyClient) (reload bool, err error) {
+func (h HTTPS) Update(k store.K8s, cfg *Configuration, api api.HAProxyClient) (reload bool, err error) {
 	if !h.enabled {
 		logger.Debugf("Cannot proceed with SSL Passthrough update, HTTPS is disabled")
 		return false, nil
@@ -108,7 +108,7 @@ func (h HTTPS) Update(k store.K8s, cfg Configuration, api api.HAProxyClient) (re
 	return reload, nil
 }
 
-func (h HTTPS) enableSSLPassthrough(cfg Configuration, api api.HAProxyClient) (err error) {
+func (h HTTPS) enableSSLPassthrough(cfg *Configuration, api api.HAProxyClient) (err error) {
 	// Create TCP frontend for ssl-passthrough
 	backendHTTPS := "https"
 	frontend := models.Frontend{
@@ -182,7 +182,7 @@ func (h HTTPS) enableSSLPassthrough(cfg Configuration, api api.HAProxyClient) (e
 	return nil
 }
 
-func (h HTTPS) disableSSLPassthrough(cfg Configuration, api api.HAProxyClient) (err error) {
+func (h HTTPS) disableSSLPassthrough(cfg *Configuration, api api.HAProxyClient) (err error) {
 	backendHTTPS := "https"
 	err = api.FrontendDelete(FrontendSSL)
 	if err != nil {

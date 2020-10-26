@@ -20,7 +20,7 @@ import (
 )
 
 type UpdateHandler interface {
-	Update(k store.K8s, cfg Configuration, api api.HAProxyClient) (reload bool, err error)
+	Update(k store.K8s, cfg *Configuration, api api.HAProxyClient) (reload bool, err error)
 }
 
 func (c *HAProxyController) initHandlers() {

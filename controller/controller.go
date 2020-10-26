@@ -256,7 +256,7 @@ func (c *HAProxyController) updateHAProxy() error {
 	}
 
 	for _, handler := range c.UpdateHandlers {
-		r, errHandler := handler.Update(c.Store, c.cfg, c.Client)
+		r, errHandler := handler.Update(c.Store, &c.cfg, c.Client)
 		logger.Error(errHandler)
 		reload = reload || r
 	}

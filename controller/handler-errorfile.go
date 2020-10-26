@@ -29,7 +29,7 @@ type ErrorFile struct {
 	modified       bool
 }
 
-func (e ErrorFile) Update(k store.K8s, cfg Configuration, api api.HAProxyClient) (reload bool, err error) {
+func (e ErrorFile) Update(k store.K8s, cfg *Configuration, api api.HAProxyClient) (reload bool, err error) {
 	if k.ConfigMaps[Errorfiles] == nil {
 		return false, nil
 	}

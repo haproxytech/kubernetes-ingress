@@ -23,7 +23,7 @@ import (
 
 type DefaultCertificate struct{}
 
-func (d DefaultCertificate) Update(k store.K8s, cfg Configuration, api api.HAProxyClient) (reload bool, err error) {
+func (d DefaultCertificate) Update(k store.K8s, cfg *Configuration, api api.HAProxyClient) (reload bool, err error) {
 	secretAnn, defSecretErr := k.GetValueFromAnnotations("ssl-certificate", k.ConfigMaps[Main].Annotations)
 	writeSecret := false
 	if defSecretErr == nil {

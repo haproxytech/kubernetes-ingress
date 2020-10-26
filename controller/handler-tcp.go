@@ -15,7 +15,7 @@ type TCPHandler struct {
 	handlePath func(namespace *store.Namespace, ingress *store.Ingress, rule *store.IngressRule, path *store.IngressPath) (reload bool)
 }
 
-func (t TCPHandler) Update(k store.K8s, cfg Configuration, api api.HAProxyClient) (reload bool, err error) {
+func (t TCPHandler) Update(k store.K8s, cfg *Configuration, api api.HAProxyClient) (reload bool, err error) {
 	if k.ConfigMaps[TCPServices] == nil {
 		return false, nil
 	}
