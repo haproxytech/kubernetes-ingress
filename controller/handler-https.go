@@ -130,26 +130,20 @@ func (h HTTPS) enableSSLPassthrough(cfg *Configuration, api api.HAProxyClient) (
 	}
 	// Create backend for proxy chaining (chaining
 	// ssl-passthrough frontend to ssl-offload backend)
-	err = api.BackendCreate(models.Backend{
-		Name: backendHTTPS,
-		Mode: "tcp",
-	})
-	_ = api.BackendServerCreate(backendHTTPS, models.Server{
-		Name:        FrontendHTTPS,
-		Address:     "127.0.0.1",
-		Port:        utils.PtrInt64(h.port),
-		SendProxyV2: "enabled",
-	})
-	_ = h.toggleSSLPassthrough(true, cfg.HTTPS, api)
-	//TODO: stack errors
-	if err != nil {
-		return err
-	}
-
-	if err = h.toggleSSLPassthrough(true, cfg.HTTPS, api); err != nil {
-		return err
-	}
-	return nil
+	var errors utils.Errors
+	errors.Add(
+		api.BackendCreate(models.Backend{
+			Name: backendHTTPS,
+			Mode: "tcp",
+		}),
+		api.BackendServerCreate(backendHTTPS, models.Server{
+			Name:        FrontendHTTPS,
+			Address:     "127.0.0.1",
+			Port:        utils.PtrInt64(h.port),
+			SendProxyV2: "enabled",
+		}),
+		h.toggleSSLPassthrough(true, cfg.HTTPS, api))
+	return errors.Result()
 }
 
 func (h HTTPS) disableSSLPassthrough(cfg *Configuration, api api.HAProxyClient) (err error) {
@@ -211,15 +205,17 @@ func (h HTTPS) sslPassthroughRules(k store.K8s, cfg *Configuration) error {
 	}
 
 	cfg.HAProxyRules.EnableSSLPassThrough(FrontendSSL, FrontendHTTPS)
-	err := cfg.HAProxyRules.AddRule(rules.ReqAcceptContent{}, 0, FrontendSSL)
-	_ = cfg.HAProxyRules.AddRule(rules.ReqSetVar{
-		Name:       "sni",
-		Scope:      "sess",
-		Expression: "req_ssl_sni",
-	}, 0, FrontendSSL)
-	_ = cfg.HAProxyRules.AddRule(rules.ReqInspectDelay{
-		Timeout: inspectTimeout,
-	}, 0, FrontendSSL)
-	//TODO: handle stacking error
-	return err
+	errors := utils.Errors{}
+	errors.Add(
+		cfg.HAProxyRules.AddRule(rules.ReqAcceptContent{}, 0, FrontendSSL),
+		cfg.HAProxyRules.AddRule(rules.ReqSetVar{
+			Name:       "sni",
+			Scope:      "sess",
+			Expression: "req_ssl_sni",
+		}, 0, FrontendSSL),
+		cfg.HAProxyRules.AddRule(rules.ReqInspectDelay{
+			Timeout: inspectTimeout,
+		}, 0, FrontendSSL),
+	)
+	return errors.Result()
 }

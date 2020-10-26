@@ -200,6 +200,7 @@ func (c *HAProxyController) handleRequestCapture(ingress *store.Ingress) error {
 	}
 
 	// Configure annotation
+	errors := utils.Errors{}
 	for _, sample := range strings.Split(annReqCapture.Value, "\n") {
 		logger.Debugf("Ingress %s/%s: Configuring request capture for '%s'", ingress.Namespace, ingress.Name, sample)
 		if sample == "" {
@@ -218,11 +219,9 @@ func (c *HAProxyController) handleRequestCapture(ingress *store.Ingress) error {
 			Expression: sample,
 			CaptureLen: captureLen,
 		}
-		err = c.cfg.HAProxyRules.AddRule(reqCapture, match, FrontendHTTP, FrontendHTTPS)
+		errors.Add(c.cfg.HAProxyRules.AddRule(reqCapture, match, FrontendHTTP, FrontendHTTPS))
 	}
-
-	// TODO handle stacking error
-	return err
+	return errors.Result()
 }
 
 func (c *HAProxyController) handleRequestSetHdr(ingress *store.Ingress) error {
@@ -236,7 +235,7 @@ func (c *HAProxyController) handleRequestSetHdr(ingress *store.Ingress) error {
 		return nil
 	}
 	// Configure annotation
-	var err error
+	errors := utils.Errors{}
 	for _, param := range strings.Split(annReqSetHdr.Value, "\n") {
 		parts := strings.Fields(param)
 		if len(parts) != 2 {
@@ -257,10 +256,9 @@ func (c *HAProxyController) handleRequestSetHdr(ingress *store.Ingress) error {
 			HdrName:   parts[0],
 			HdrFormat: parts[1],
 		}
-		err = c.cfg.HAProxyRules.AddRule(reqSetHdr, match, FrontendHTTP, FrontendHTTPS)
+		errors.Add(c.cfg.HAProxyRules.AddRule(reqSetHdr, match, FrontendHTTP, FrontendHTTPS))
 	}
-	//TODO: handle stacking errors
-	return err
+	return errors.Result()
 }
 
 func (c *HAProxyController) handleRequestSetHost(ingress *store.Ingress) error {
@@ -344,7 +342,7 @@ func (c *HAProxyController) handleResponseSetHdr(ingress *store.Ingress) error {
 		return nil
 	}
 	// Configure annotation
-	var err error
+	errors := utils.Errors{}
 	for _, param := range strings.Split(annResSetHdr.Value, "\n") {
 		parts := strings.Fields(param)
 		if len(parts) != 2 {
@@ -366,10 +364,9 @@ func (c *HAProxyController) handleResponseSetHdr(ingress *store.Ingress) error {
 			HdrFormat: parts[1],
 			Response:  true,
 		}
-		err = c.cfg.HAProxyRules.AddRule(resSetHdr, match, FrontendHTTP, FrontendHTTPS)
+		errors.Add(c.cfg.HAProxyRules.AddRule(resSetHdr, match, FrontendHTTP, FrontendHTTPS))
 	}
-	//TODO: handle stacking errors
-	return err
+	return errors.Result()
 }
 
 func (c *HAProxyController) handleWhitelisting(ingress *store.Ingress) error {

@@ -17,6 +17,7 @@ package controller
 import (
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/rules"
+	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 )
 
 //Configuration represents k8s state
@@ -35,7 +36,7 @@ type Configuration struct {
 func (c *Configuration) Init(mapDir string) {
 
 	c.MapFiles = haproxy.NewMapFiles(mapDir)
-	c.HAProxyRulesInit()
+	logger.Panic(c.HAProxyRulesInit())
 
 	rateLimitTables = make(map[string]rateLimitTable)
 
@@ -50,28 +51,31 @@ func (c *Configuration) Init(mapDir string) {
 //deletes them completely or just resets them if needed
 func (c *Configuration) Clean() {
 	c.MapFiles.Clean()
-	c.HAProxyRulesInit()
+	logger.Panic(c.HAProxyRulesInit())
 }
 
-func (c *Configuration) HAProxyRulesInit() {
+func (c *Configuration) HAProxyRulesInit() error {
 	c.HAProxyRules = haproxy.NewRules()
-	_ = c.HAProxyRules.AddRule(rules.SetHdr{
-		ForwardedProto: true,
-	}, 0, FrontendHTTPS)
-	_ = c.HAProxyRules.AddRule(rules.ReqSetVar{
-		Name:       "base",
-		Scope:      "txn",
-		Expression: "base",
-	}, 1, FrontendHTTP, FrontendHTTPS)
-	_ = c.HAProxyRules.AddRule(rules.ReqSetVar{
-		Name:       "path",
-		Scope:      "txn",
-		Expression: "path,lower",
-	}, 2, FrontendHTTP, FrontendHTTPS)
-	_ = c.HAProxyRules.AddRule(rules.ReqSetVar{
-		Name:       "host",
-		Scope:      "txn",
-		Expression: "req.hdr(Host),field(1,:),lower",
-	}, 3, FrontendHTTP, FrontendHTTPS)
-	//TODO: handle stacking error
+	var errors utils.Errors
+	errors.Add(
+		c.HAProxyRules.AddRule(rules.SetHdr{
+			ForwardedProto: true,
+		}, 0, FrontendHTTPS),
+		c.HAProxyRules.AddRule(rules.ReqSetVar{
+			Name:       "base",
+			Scope:      "txn",
+			Expression: "base",
+		}, 1, FrontendHTTP, FrontendHTTPS),
+		c.HAProxyRules.AddRule(rules.ReqSetVar{
+			Name:       "path",
+			Scope:      "txn",
+			Expression: "path,lower",
+		}, 2, FrontendHTTP, FrontendHTTPS),
+		c.HAProxyRules.AddRule(rules.ReqSetVar{
+			Name:       "host",
+			Scope:      "txn",
+			Expression: "req.hdr(Host),field(1,:),lower",
+		}, 3, FrontendHTTP, FrontendHTTPS),
+	)
+	return errors.Result()
 }

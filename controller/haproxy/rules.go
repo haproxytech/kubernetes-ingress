@@ -96,9 +96,10 @@ func (r Rules) Refresh(client api.HAProxyClient) (reload bool) {
 		// so first rule inserted will be last in the list
 		for ruleType := RES_SET_HEADER; ruleType >= REQ_ACCEPT_CONTENT; ruleType-- {
 			for _, rule := range feRules.rules[ruleType] {
-				// TODO: handle stacking errors
 				if err := rule.Create(client, &fe); err == nil {
 					reload = true
+				} else {
+					logger.Error(err)
 				}
 			}
 		}
