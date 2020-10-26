@@ -1,0 +1,30 @@
+apiVersion: kind.x-k8s.io/v1alpha4
+networking:
+  apiServerAddress: 0.0.0.0
+  apiServerPort: 6443
+# add to the apiServer certSANs the name of the docker (dind) service in order to be able to reach the cluster through it
+kubeadmConfigPatchesJSON6902:
+  - group: kubeadm.k8s.io
+    version: v1beta2
+    kind: ClusterConfiguration
+    patch: |
+      - op: add
+        path: /apiServer/certSANs/-
+        value: docker
+kind: Cluster
+nodes:
+  - role: control-plane
+    image: kindest/node:K8S_VERSION
+    extraPortMappings:
+      - hostPort: 30080
+        containerPort: 30080
+        #listenAddress: "0.0.0.0" # Optional, defaults to "0.0.0.0"
+        #protocol: udp # Optional, defaults to tcp
+      - hostPort: 30443
+        containerPort: 30443
+      - hostPort: 31024
+        containerPort: 1024
+      - hostPort: 32766
+        containerPort: 32766
+      - hostPort: 32767
+        containerPort: 32767

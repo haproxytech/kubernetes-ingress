@@ -22,6 +22,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -33,6 +34,12 @@ import (
 )
 
 func Test_Set_Source_Ip(t *testing.T) {
+
+	kindURL := os.Getenv("KIND_URL")
+	if kindURL == "" {
+		kindURL = "127.0.0.1"
+	}
+
 	type tc struct {
 		HeaderName string
 		IpValue    string
@@ -91,7 +98,7 @@ func Test_Set_Source_Ip(t *testing.T) {
 						}
 
 						if addr == ing.Spec.Rules[0].Host+":80" {
-							addr = "127.0.0.1:30080"
+							addr = kindURL + ":30080"
 						}
 						return dialer.DialContext(ctx, network, addr)
 					},

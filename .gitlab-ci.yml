@@ -1,6 +1,13 @@
 stages:
   - lint
   - test
+  - kind
+variables:
+  KUBECTL: v1.19.3
+  KIND: v0.9.0
+  DOCKER_HOST: tcp://docker:2375
+  DOCKER_DRIVER: overlay2
+
 golangci_lint:
   stage: lint
   image:
@@ -29,3 +36,39 @@ test:
   script:
     - go build -v .
     - go test -v ./...
+.kind_deployment:
+  image: docker:stable
+  services:
+    - name: docker:18.09.7-dind
+      alias: docker
+  tags:
+    - go
+  stage: kind
+  script:
+    - apk add -U wget git go curl
+    - wget -q -o /dev/null -O &> /dev/null /usr/local/bin/kind https://github.com/kubernetes-sigs/kind/releases/download/${KIND}/kind-linux-amd64
+    - chmod +x /usr/local/bin/kind
+    - wget -q -o /dev/null -O &> /dev/null /usr/local/bin/kubectl https://storage.googleapis.com/kubernetes-release/release/${KUBECTL}/bin/linux/amd64/kubectl
+    - chmod +x /usr/local/bin/kubectl
+    - sed -i "s/K8S_VERSION/$K8S_VERSION/g" ".gitlab/kind-config.yaml"
+    - kind create cluster --name=dev --config=./.gitlab/kind-config.yaml
+    - sed -i -E -e "s/localhost|0\.0\.0\.0|127\.0\.0\.1/docker/g" "$HOME/.kube/config"
+    - sed -i -E -e "s/localhost|0\.0\.0\.0|127\.0\.0\.1/docker/g" "deploy/kind/ci.sh"
+    - sed -i -E -e "s/localhost|0\.0\.0\.0|127\.0\.0\.1/docker/g" "deploy/kind/tests/client/client.go"
+    - until kubectl get nodes -o wide;do sleep 2; done
+    - CI_ENV=gitlab deploy/kind/create.sh
+    - KIND_URL=docker go test -v ./... --tags=integration
+  after_script:
+    - kind delete cluster --name=dev
+k8s_16:
+  variables:
+    K8S_VERSION: v1.16.9
+  extends: .kind_deployment
+k8s_17:
+  variables:
+    K8S_VERSION: v1.17.5
+  extends: .kind_deployment
+k8s_18:
+  variables:
+    K8S_VERSION: v1.18.6
+  extends: .kind_deployment

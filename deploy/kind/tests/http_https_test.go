@@ -28,6 +28,7 @@ import (
 	"net"
 	h "net/http"
 	"net/url"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -40,6 +41,12 @@ import (
 )
 
 func Test_Https(t *testing.T) {
+
+	kindURL := os.Getenv("KIND_URL")
+	if kindURL == "" {
+		kindURL = "127.0.0.1"
+	}
+
 	var err error
 
 	cs := k8s.New(t)
@@ -105,7 +112,7 @@ func Test_Https(t *testing.T) {
 				}
 
 				if addr == ing.Spec.Rules[0].Host+":443" {
-					addr = "127.0.0.1:30443"
+					addr = kindURL + ":30443"
 				}
 				return dialer.DialContext(ctx, network, addr)
 			},

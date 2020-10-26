@@ -17,6 +17,7 @@ package client
 import (
 	"fmt"
 	"net/http"
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -43,7 +44,11 @@ func NewClient(t *testing.T, host string, port int) *Client {
 }
 
 func (c *Client) Do(url string) (*http.Response, func() error) {
-	req, err := http.NewRequest("GET", fmt.Sprintf("%s://127.0.0.1:%d%s", c.Type, c.Port, url), nil)
+	kindURL := os.Getenv("KIND_URL")
+	if kindURL == "" {
+		kindURL = "127.0.0.1"
+	}
+	req, err := http.NewRequest("GET", fmt.Sprintf("%s://%s:%d%s", c.Type, kindURL, c.Port, url), nil)
 	assert.Nil(c.T, err)
 
 	req.Host = c.Host

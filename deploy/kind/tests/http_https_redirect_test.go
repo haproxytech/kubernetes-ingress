@@ -26,6 +26,7 @@ import (
 	"net"
 	h "net/http"
 	"net/url"
+	"os"
 	"testing"
 	"time"
 
@@ -38,6 +39,11 @@ import (
 
 func Test_Https_Redirect(t *testing.T) {
 	var err error
+
+	kindURL := os.Getenv("KIND_URL")
+	if kindURL == "" {
+		kindURL = "127.0.0.1"
+	}
 
 	cs := k8s.New(t)
 
@@ -107,7 +113,7 @@ func Test_Https_Redirect(t *testing.T) {
 				}
 
 				if addr == ing.Spec.Rules[0].Host+":80" {
-					addr = "127.0.0.1:30080"
+					addr = kindURL + ":30080"
 				}
 				return dialer.DialContext(ctx, network, addr)
 			},
@@ -133,7 +139,6 @@ func Test_Https_Redirect(t *testing.T) {
 		}
 		return
 	}
-
 
 	t.Run("enabled", func(t *testing.T) {
 		e := copyAnnotations(a)
