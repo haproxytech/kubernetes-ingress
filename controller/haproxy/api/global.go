@@ -55,39 +55,39 @@ func (c *clientNative) GlobalWriteConfig(section string, config string) (result 
 	return strings.Join(buf, "\n"), nil
 }
 
-func (c *clientNative) SetGlobalCfgSnippet(value *types.StringSliceC) error {
+func (c *clientNative) GlobalCfgSnippet(value *types.StringSliceC) error {
 	return c.setSectionAttribute(parser.Global, "config-snippet", value)
 }
 
-func (c *clientNative) SetDaemonMode(value *types.Enabled) error {
+func (c *clientNative) DaemonMode(value *types.Enabled) error {
 	return c.setSectionAttribute(parser.Global, "daemon", value)
 }
 
-func (c *clientNative) SetDefaultLogFormat(value *types.StringC) error {
+func (c *clientNative) DefaultLogFormat(value *types.StringC) error {
 	return c.setSectionAttribute(parser.Defaults, "log-format", value)
 }
 
-func (c *clientNative) SetGlobalMaxconn(value *types.Int64C) error {
+func (c *clientNative) GlobalMaxconn(value *types.Int64C) error {
 	return c.setSectionAttribute(parser.Global, "maxconn", value)
 }
 
-func (c *clientNative) SetDefaultOption(option string, value *types.SimpleOption) error {
+func (c *clientNative) DefaultOption(option string, value *types.SimpleOption) error {
 	return c.setSectionAttribute(parser.Defaults, fmt.Sprintf("option %s", option), value)
 }
 
-func (c *clientNative) SetDefaultTimeout(timeout string, value *types.SimpleTimeout) error {
+func (c *clientNative) DefaultTimeout(timeout string, value *types.SimpleTimeout) error {
 	return c.setSectionAttribute(parser.Defaults, fmt.Sprintf("timeout %s", timeout), value)
 }
 
-func (c *clientNative) SetDefaultErrorFile(value *types.ErrorFile, index int) error {
+func (c *clientNative) DefaultErrorFile(value *types.ErrorFile, index int) error {
 	return c.setSectionAttribute(parser.Defaults, "errorfile", value, index)
 }
 
-func (c *clientNative) SetLogTarget(value *types.Log, index int) error {
+func (c *clientNative) LogTarget(value *types.Log, index int) error {
 	return c.setSectionAttribute(parser.Global, "log", value, index)
 }
 
-func (c *clientNative) SetNbthread(value *types.Int64C) error {
+func (c *clientNative) Nbthread(value *types.Int64C) error {
 	return c.setSectionAttribute(parser.Global, "nbthread", value)
 }
 

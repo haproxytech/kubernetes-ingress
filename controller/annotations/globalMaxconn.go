@@ -28,7 +28,7 @@ func (a *globalMaxconn) Parse(input string) error {
 
 func (a *globalMaxconn) Delete(c api.HAProxyClient) Result {
 	logger.Infof("Removing default maxconn")
-	if err := c.SetGlobalMaxconn(nil); err != nil {
+	if err := c.GlobalMaxconn(nil); err != nil {
 		logger.Error(err)
 		return NONE
 	}
@@ -41,7 +41,7 @@ func (a *globalMaxconn) Update(c api.HAProxyClient) Result {
 		return NONE
 	}
 	logger.Infof("Setting default maxconn to: '%d'", a.data.Value)
-	if err := c.SetGlobalMaxconn(a.data); err != nil {
+	if err := c.GlobalMaxconn(a.data); err != nil {
 		logger.Error(err)
 		return NONE
 	}

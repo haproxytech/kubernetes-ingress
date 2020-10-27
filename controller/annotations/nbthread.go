@@ -33,7 +33,7 @@ func (a *nbthread) Parse(input string) error {
 
 func (a *nbthread) Delete(c api.HAProxyClient) Result {
 	logger.Infof("Removing nbThread option")
-	if err := c.SetNbthread(nil); err != nil {
+	if err := c.Nbthread(nil); err != nil {
 		logger.Error(err)
 		return NONE
 	}
@@ -46,7 +46,7 @@ func (a *nbthread) Update(c api.HAProxyClient) Result {
 		return NONE
 	}
 	logger.Infof("Setting nbThread to: '%d'", a.data.Value)
-	if err := c.SetNbthread(a.data); err != nil {
+	if err := c.Nbthread(a.data); err != nil {
 		logger.Error(err)
 		return NONE
 	}

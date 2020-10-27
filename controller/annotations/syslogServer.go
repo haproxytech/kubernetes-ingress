@@ -95,7 +95,7 @@ func (a *syslogServers) Parse(input string) error {
 
 func (a *syslogServers) Delete(c api.HAProxyClient) Result {
 	logger.Infof("Removing log targets ")
-	if err := c.SetLogTarget(nil, -1); err != nil {
+	if err := c.LogTarget(nil, -1); err != nil {
 		logger.Error(err)
 		return NONE
 	}
@@ -111,7 +111,7 @@ func (a *syslogServers) Update(c api.HAProxyClient) Result {
 	var r Result
 	for i, syslog := range a.data {
 		logger.Infof("adding syslog server: 'address: %s, facility: %s'", syslog.Address, syslog.Facility)
-		if err := c.SetLogTarget(syslog, i); err != nil {
+		if err := c.LogTarget(syslog, i); err != nil {
 			logger.Error(err)
 		} else {
 			r = RELOAD
@@ -123,12 +123,12 @@ func (a *syslogServers) Update(c api.HAProxyClient) Result {
 	if a.stdout {
 		if daemonMode {
 			logger.Info("Disabling Daemon mode")
-			logger.Error(c.SetDaemonMode(nil))
+			logger.Error(c.DaemonMode(nil))
 			r = RESTART
 		}
 	} else if !daemonMode {
 		logger.Info("Enabling Daemon mode")
-		logger.Error(c.SetDaemonMode(&types.Enabled{}))
+		logger.Error(c.DaemonMode(&types.Enabled{}))
 		r = RESTART
 	}
 	return r

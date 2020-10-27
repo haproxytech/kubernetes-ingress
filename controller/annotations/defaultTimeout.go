@@ -38,7 +38,7 @@ func (a *defaultTimeout) Parse(input string) error {
 func (a *defaultTimeout) Delete(c api.HAProxyClient) Result {
 	logger.Infof("Removing default timeout-%s ", a.name)
 
-	if err := c.SetDefaultTimeout(a.name, nil); err != nil {
+	if err := c.DefaultTimeout(a.name, nil); err != nil {
 		logger.Error(err)
 		return NONE
 	}
@@ -47,7 +47,7 @@ func (a *defaultTimeout) Delete(c api.HAProxyClient) Result {
 
 func (a *defaultTimeout) Update(c api.HAProxyClient) Result {
 	logger.Infof("Setting default timeout-%s to %s", a.name, a.data.Value)
-	if err := c.SetDefaultTimeout(a.name, a.data); err != nil {
+	if err := c.DefaultTimeout(a.name, a.data); err != nil {
 		logger.Error(err)
 		return NONE
 	}

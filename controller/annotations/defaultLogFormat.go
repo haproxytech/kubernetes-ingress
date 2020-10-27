@@ -29,7 +29,7 @@ func (a *defaultLogFormat) Parse(input string) error {
 
 func (a *defaultLogFormat) Delete(c api.HAProxyClient) Result {
 	logger.Infof("Removing default log-format")
-	if err := c.SetDefaultLogFormat(nil); err != nil {
+	if err := c.DefaultLogFormat(nil); err != nil {
 		logger.Error(err)
 		return NONE
 	}
@@ -42,7 +42,7 @@ func (a *defaultLogFormat) Update(c api.HAProxyClient) Result {
 		return NONE
 	}
 	logger.Infof("Setting default log-format to: %s", a.data.Value)
-	if err := c.SetDefaultLogFormat(a.data); err != nil {
+	if err := c.DefaultLogFormat(a.data); err != nil {
 		logger.Error(err)
 		return NONE
 	}

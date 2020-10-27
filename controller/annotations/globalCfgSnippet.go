@@ -33,7 +33,7 @@ func (a *globalCfgSnippet) Parse(input string) error {
 
 func (a *globalCfgSnippet) Delete(c api.HAProxyClient) Result {
 	logger.Infof("Removing global config-snippet")
-	if err := c.SetGlobalCfgSnippet(nil); err != nil {
+	if err := c.GlobalCfgSnippet(nil); err != nil {
 		logger.Error(err)
 		return NONE
 	}
@@ -46,7 +46,7 @@ func (a *globalCfgSnippet) Update(c api.HAProxyClient) Result {
 		return NONE
 	}
 	logger.Infof("Setting global config-snippet to: %s", a.data.Value)
-	if err := c.SetGlobalCfgSnippet(a.data); err != nil {
+	if err := c.GlobalCfgSnippet(a.data); err != nil {
 		logger.Error(err)
 		return NONE
 	}
