@@ -54,6 +54,7 @@ const (
 
 var (
 	HAProxyCFG        string
+	HAProxyCfgDir     string
 	HAProxyCertDir    string
 	HAProxyStateDir   string
 	HAProxyMapDir     string
@@ -73,7 +74,6 @@ type HAProxyController struct {
 	cfg            Configuration
 	osArgs         utils.OSArgs
 	Client         api.HAProxyClient
-	HAProxyCfgDir  string
 	eventChan      chan SyncDataEvent
 	serverlessPods map[string]int
 	UpdateHandlers []UpdateHandler
@@ -297,7 +297,7 @@ func (c *HAProxyController) updateHAProxy() error {
 //HAProxyInitialize runs HAProxy for the first time so native client can have access to it
 func (c *HAProxyController) haproxyInitialize() {
 	if HAProxyCFG == "" {
-		HAProxyCFG = filepath.Join(c.HAProxyCfgDir, "haproxy.cfg")
+		HAProxyCFG = filepath.Join(HAProxyCfgDir, "haproxy.cfg")
 	}
 
 	if HAProxyPIDFile == "" {
@@ -307,13 +307,13 @@ func (c *HAProxyController) haproxyInitialize() {
 		logger.Panic(err)
 	}
 	if HAProxyCertDir == "" {
-		HAProxyCertDir = filepath.Join(c.HAProxyCfgDir, "certs")
+		HAProxyCertDir = filepath.Join(HAProxyCfgDir, "certs")
 	}
 	if HAProxyMapDir == "" {
-		HAProxyMapDir = filepath.Join(c.HAProxyCfgDir, "maps")
+		HAProxyMapDir = filepath.Join(HAProxyCfgDir, "maps")
 	}
 	if HAProxyErrFileDir == "" {
-		HAProxyErrFileDir = filepath.Join(c.HAProxyCfgDir, "errors")
+		HAProxyErrFileDir = filepath.Join(HAProxyCfgDir, "errors")
 	}
 	if HAProxyStateDir == "" {
 		HAProxyStateDir = "/var/state/haproxy/"

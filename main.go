@@ -122,14 +122,13 @@ func main() {
 		cancel()
 	}()
 
-	cfgDir = "/etc/haproxy/"
+	c.HAProxyCfgDir = "/etc/haproxy/"
 	if osArgs.Test {
 		setupTestEnv()
 	}
 
 	controller := c.HAProxyController{
-		HAProxyCfgDir: cfgDir,
-		IngressClass:  osArgs.IngressClass,
+		IngressClass: osArgs.IngressClass,
 	}
 	// K8s Store
 	s := store.NewK8sStore()
