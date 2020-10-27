@@ -50,7 +50,10 @@ type HAProxyClient interface {
 	DefaultTimeout(timeout string, value *types.SimpleTimeout) error
 	GlobalCfgSnippet(snippet *types.StringSliceC) error
 	LogTarget(value *types.Log, index int) error
-	Nbthread(value *(types.Int64C)) error
+	Nbthread(value *types.Int64C) error
+	PIDFile(value *types.StringC) error
+	RuntimeSocket(value *types.Socket) error
+	ServerStateBase(value *types.StringC) error
 	SetServerAddr(backendName string, serverName string, ip string, port int) error
 	SetServerState(backendName string, serverName string, state string) error
 }

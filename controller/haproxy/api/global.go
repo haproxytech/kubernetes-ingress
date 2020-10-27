@@ -91,6 +91,18 @@ func (c *clientNative) Nbthread(value *types.Int64C) error {
 	return c.setSectionAttribute(parser.Global, "nbthread", value)
 }
 
+func (c *clientNative) PIDFile(value *types.StringC) error {
+	return c.setSectionAttribute(parser.Global, "pidfile", value)
+}
+
+func (c *clientNative) RuntimeSocket(value *types.Socket) error {
+	return c.setSectionAttribute(parser.Global, "socket", value)
+}
+
+func (c *clientNative) ServerStateBase(value *types.StringC) error {
+	return c.setSectionAttribute(parser.Global, "server-state-base", value)
+}
+
 func (c *clientNative) setSectionAttribute(section parser.Section, attribute string, value interface{}, index ...int) error {
 	// Get current Parser Instance
 	if c.activeTransaction == "" {
@@ -110,14 +122,6 @@ func (c *clientNative) setSectionAttribute(section parser.Section, attribute str
 	default:
 		return fmt.Errorf("incorrect section type '%s'", section)
 	}
-	// Delete config
-	if reflect.ValueOf(value).IsNil() {
-		err = config.Set(section, sectionName, attribute, nil)
-		if err == nil {
-			c.activeTransactionHasChanges = true
-		}
-		return err
-	}
 	// Set config value
 	switch strings.Fields(attribute)[0] {
 	case "config-snippet":
@@ -126,7 +130,7 @@ func (c *clientNative) setSectionAttribute(section parser.Section, attribute str
 		value = value.(*types.Enabled)
 	case "log":
 		value = value.(*types.Log)
-	case "log-format":
+	case "log-format", "pidfile", "server-state-base":
 		value = value.(*types.StringC)
 	case "nbthread", "maxconn":
 		value = value.(*types.Int64C)
@@ -136,10 +140,20 @@ func (c *clientNative) setSectionAttribute(section parser.Section, attribute str
 		value = value.(*types.SimpleTimeout)
 	case "errorfile":
 		value = value.(*types.ErrorFile)
+	case "socket":
+		attribute = "stats socket"
+		value = value.(*types.Socket)
 	default:
 		return fmt.Errorf("unsupported attribute '%s'", attribute)
 	}
-
+	// Delete config
+	if reflect.ValueOf(value).IsNil() {
+		err = config.Set(section, sectionName, attribute, nil)
+		if err == nil {
+			c.activeTransactionHasChanges = true
+		}
+		return err
+	}
 	if len(index) > 0 {
 		err = config.Insert(section, sectionName, attribute, value, index[0])
 	} else {

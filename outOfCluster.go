@@ -31,17 +31,23 @@ import (
 func setupHAProxyEnv(osArgs utils.OSArgs) {
 	logger := utils.GetLogger()
 	c.HAProxyCfgDir = "/tmp/haproxy-ingress/etc"
+	runtimeDir := "/tmp/haproxy-ingress/run"
 	if osArgs.CfgDir != "" {
 		c.HAProxyCfgDir = osArgs.CfgDir
+	}
+	if osArgs.RuntimeDir != "" {
+		runtimeDir = osArgs.RuntimeDir
 	}
 	if err := os.MkdirAll(c.HAProxyCfgDir, 0755); err != nil {
 		logger.Panic(err)
 	}
-	c.HAProxyStateDir = "/tmp/haproxy-ingress/state/"
-	if err := os.MkdirAll(c.HAProxyStateDir, 0755); err != nil {
+	if err := os.MkdirAll(runtimeDir, 0755); err != nil {
 		logger.Panic(err)
 	}
 	c.TransactionDir = path.Join(c.HAProxyCfgDir, "transactions")
+	c.HAProxyStateDir = runtimeDir
+	c.HAProxyRuntimeSocket = path.Join(runtimeDir, "haproxy-runtime-api.sock")
+	c.HAProxyPIDFile = path.Join(runtimeDir, "haproxy.pid")
 	time.Sleep(2 * time.Second)
 	cmd := exec.Command("pwd")
 	out, err := cmd.CombinedOutput()

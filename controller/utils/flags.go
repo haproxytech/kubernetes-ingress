@@ -70,6 +70,7 @@ type OSArgs struct {
 	NamespaceBlacklist    []string       `long:"namespace-blacklist" description:"blacklisted namespaces"`
 	PprofEnabled          bool           `short:"p" description:"enable pprof over https"`
 	CfgDir                string         `long:"config-dir" description:"path to HAProxy configuration directory NOTE: works only with OutOfCluster"`
+	RuntimeDir            string         `long:"runtime-dir" description:"path to HAProxy runtime directory NOTE: works only with OutOfCluster"`
 	OutOfCluster          bool           `short:"e" description:"use as out of cluster controller NOTE: experimental"`
 	Test                  bool           `short:"t" description:"simulate running HAProxy"`
 	Help                  []bool         `short:"h" long:"help" description:"show this help message"`

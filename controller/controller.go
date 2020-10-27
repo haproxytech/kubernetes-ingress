@@ -27,6 +27,8 @@ import (
 
 	"github.com/haproxytech/client-native/v2/configuration"
 	parser "github.com/haproxytech/config-parser/v3"
+	"github.com/haproxytech/config-parser/v3/params"
+	"github.com/haproxytech/config-parser/v3/types"
 	"github.com/haproxytech/models/v2"
 	"k8s.io/apimachinery/pkg/watch"
 
@@ -53,14 +55,15 @@ const (
 )
 
 var (
-	HAProxyCFG        string
-	HAProxyCfgDir     string
-	HAProxyCertDir    string
-	HAProxyStateDir   string
-	HAProxyMapDir     string
-	HAProxyErrFileDir string
-	HAProxyPIDFile    string
-	TransactionDir    string
+	HAProxyCFG           string
+	HAProxyCfgDir        string
+	HAProxyCertDir       string
+	HAProxyStateDir      string
+	HAProxyMapDir        string
+	HAProxyErrFileDir    string
+	HAProxyRuntimeSocket string
+	HAProxyPIDFile       string
+	TransactionDir       string
 )
 
 var logger = utils.GetLogger()
@@ -295,15 +298,19 @@ func (c *HAProxyController) updateHAProxy() error {
 
 //HAProxyInitialize runs HAProxy for the first time so native client can have access to it
 func (c *HAProxyController) haproxyInitialize() {
+	// Initialize fils and directories
+	var err error
 	if HAProxyCFG == "" {
 		HAProxyCFG = filepath.Join(HAProxyCfgDir, "haproxy.cfg")
 	}
-
+	if _, err = os.Stat(HAProxyCFG); err != nil {
+		logger.Panic(err)
+	}
 	if HAProxyPIDFile == "" {
 		HAProxyPIDFile = "/var/run/haproxy.pid"
 	}
-	if _, err := os.Stat(HAProxyCFG); err != nil {
-		logger.Panic(err)
+	if HAProxyRuntimeSocket == "" {
+		HAProxyRuntimeSocket = "/var/run/haproxy-runtime-api.sock"
 	}
 	if HAProxyCertDir == "" {
 		HAProxyCertDir = filepath.Join(HAProxyCfgDir, "certs")
@@ -318,19 +325,48 @@ func (c *HAProxyController) haproxyInitialize() {
 		HAProxyStateDir = "/var/state/haproxy/"
 	}
 	if TransactionDir != "" {
-		err := os.MkdirAll(TransactionDir, 0755)
+		err = os.MkdirAll(TransactionDir, 0755)
 		if err != nil {
 			logger.Panic(err)
 		}
 	}
 	for _, d := range []string{HAProxyCertDir, HAProxyMapDir, HAProxyErrFileDir, HAProxyStateDir} {
-		err := os.MkdirAll(d, 0755)
+		err = os.MkdirAll(d, 0755)
 		if err != nil {
 			logger.Panic(err)
 		}
 	}
-	_, err := os.Create(filepath.Join(HAProxyStateDir, "global"))
+	_, err = os.Create(filepath.Join(HAProxyStateDir, "global"))
 	logger.Err(err)
+
+	// Initialize HAProxy client API
+	c.Client, err = api.Init(TransactionDir, HAProxyCFG, "haproxy", HAProxyRuntimeSocket)
+	if err != nil {
+		logger.Panic(err)
+	}
+	if c.osArgs.OutOfCluster && !c.osArgs.Test {
+		logger.Panic(c.clientClosure(func() {
+			var errors utils.Errors
+			errors.Add(
+				// Configure runtime socket
+				c.Client.RuntimeSocket(nil),
+				c.Client.RuntimeSocket(&types.Socket{
+					Path: HAProxyRuntimeSocket,
+					Params: []params.BindOption{
+						&params.BindOptionDoubleWord{Name: "expose-fd", Value: "listeners"},
+						&params.BindOptionValue{Name: "level", Value: "admin"},
+					},
+				}),
+				// Configure pidfile
+				c.Client.PIDFile(&types.StringC{Value: HAProxyPIDFile}),
+				// Configure server-state-base
+				c.Client.ServerStateBase(&types.StringC{Value: HAProxyStateDir}),
+			)
+			if errors.Result() != nil {
+				logger.Panic(errors.Result())
+			}
+		}))
+	}
 
 	cmd := exec.Command("sh", "-c", "haproxy -v")
 	haproxyInfo, err := cmd.Output()
@@ -347,11 +383,6 @@ func (c *HAProxyController) haproxyInitialize() {
 	hostname, err := os.Hostname()
 	logger.Error(err)
 	logger.Infof("Running on %s", hostname)
-
-	c.Client, err = api.Init(TransactionDir, HAProxyCFG, "haproxy", "/var/run/haproxy-runtime-api.sock")
-	if err != nil {
-		logger.Panic(err)
-	}
 
 	c.cfg.Init(HAProxyMapDir)
 }
