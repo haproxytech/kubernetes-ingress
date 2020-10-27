@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	parser "github.com/haproxytech/config-parser/v2"
-	"github.com/haproxytech/config-parser/v2/types"
+	parser "github.com/haproxytech/config-parser/v3"
+	"github.com/haproxytech/config-parser/v3/types"
 )
 
 var typeValue interface{}

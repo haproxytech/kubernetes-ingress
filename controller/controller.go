@@ -229,6 +229,12 @@ func (c *HAProxyController) haproxyInitialize() {
 	if HAProxyStateDir == "" {
 		HAProxyStateDir = "/var/state/haproxy/"
 	}
+	if TransactionDir != "" {
+		err := os.MkdirAll(TransactionDir, 0755)
+		if err != nil {
+			c.Logger.Panic(err)
+		}
+	}
 	for _, d := range []string{HAProxyCertDir, HAProxyMapDir, HAProxyStateDir} {
 		err := os.MkdirAll(d, 0755)
 		if err != nil {
@@ -254,7 +260,7 @@ func (c *HAProxyController) haproxyInitialize() {
 	c.Logger.Error(err)
 	c.Logger.Infof("Running on %s", hostname)
 
-	c.Client, err = api.Init(HAProxyCFG, "haproxy", "/var/run/haproxy-runtime-api.sock")
+	c.Client, err = api.Init(TransactionDir, HAProxyCFG, "haproxy", "/var/run/haproxy-runtime-api.sock")
 	if err != nil {
 		c.Logger.Panic(err)
 	}

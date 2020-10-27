@@ -80,7 +80,7 @@ func (c *HAProxyController) handleBlacklisting(ingress *Ingress) {
 	httpRule := models.HTTPRequestRule{
 		Index:      utils.PtrInt64(0),
 		Type:       "deny",
-		DenyStatus: 403,
+		DenyStatus: utils.PtrInt64(403),
 		Cond:       "if",
 		CondTest:   makeACL(fmt.Sprintf(" { src -f %s }", listMapFile), mapFile),
 	}
@@ -144,7 +144,7 @@ func (c *HAProxyController) handleHTTPRedirect(ingress *Ingress) {
 	httpRule := models.HTTPRequestRule{
 		Index:      utils.PtrInt64(0),
 		Type:       "redirect",
-		RedirCode:  sslRedirectCode,
+		RedirCode:  utils.PtrInt64(sslRedirectCode),
 		RedirValue: "https",
 		RedirType:  "scheme",
 		Cond:       "if",
@@ -260,7 +260,7 @@ func (c *HAProxyController) handleRateLimiting(ingress *Ingress) {
 	httpDenyRule := models.HTTPRequestRule{
 		Index:      utils.PtrInt64(1),
 		Type:       "deny",
-		DenyStatus: 403,
+		DenyStatus: utils.PtrInt64(403),
 		Cond:       "if",
 		CondTest:   makeACL(fmt.Sprintf(" { sc0_http_req_rate(%s) gt %d }", tableName, reqsLimit), reqsMapFile),
 	}
@@ -570,7 +570,7 @@ func (c *HAProxyController) handleWhitelisting(ingress *Ingress) {
 	httpRule := models.HTTPRequestRule{
 		Index:      utils.PtrInt64(0),
 		Type:       "deny",
-		DenyStatus: 403,
+		DenyStatus: utils.PtrInt64(403),
 		Cond:       "if",
 		CondTest:   makeACL(fmt.Sprintf(" !{ src -f %s }", listMapFile), mapFile),
 	}

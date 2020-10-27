@@ -4,7 +4,7 @@ import (
 	clientnative "github.com/haproxytech/client-native/v2"
 	"github.com/haproxytech/client-native/v2/configuration"
 	"github.com/haproxytech/client-native/v2/runtime"
-	"github.com/haproxytech/config-parser/v2/types"
+	"github.com/haproxytech/config-parser/v3/types"
 	"github.com/haproxytech/models/v2"
 )
 
@@ -58,7 +58,7 @@ type clientNative struct {
 	activeTransactionHasChanges bool
 }
 
-func Init(configFile, programPath, runtimeSocket string) (client HAProxyClient, err error) {
+func Init(transactionDir, configFile, programPath, runtimeSocket string) (client HAProxyClient, err error) {
 	runtimeClient := runtime.Client{}
 	err = runtimeClient.InitWithSockets(map[int]string{
 		0: runtimeSocket,
@@ -68,12 +68,16 @@ func Init(configFile, programPath, runtimeSocket string) (client HAProxyClient, 
 	}
 
 	confClient := configuration.Client{}
-	err = confClient.Init(configuration.ClientParams{
+	confParams := configuration.ClientParams{
 		ConfigurationFile:         configFile,
 		PersistentTransactions:    false,
 		Haproxy:                   programPath,
 		ValidateConfigurationFile: true,
-	})
+	}
+	if transactionDir != "" {
+		confParams.TransactionDir = transactionDir
+	}
+	err = confClient.Init(confParams)
 	if err != nil {
 		return nil, err
 	}
