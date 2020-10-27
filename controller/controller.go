@@ -26,7 +26,7 @@ import (
 	"syscall"
 
 	"github.com/haproxytech/client-native/v2/configuration"
-	parser "github.com/haproxytech/config-parser/v2"
+	parser "github.com/haproxytech/config-parser/v3"
 	"github.com/haproxytech/models/v2"
 	"k8s.io/apimachinery/pkg/watch"
 
@@ -59,6 +59,7 @@ var (
 	HAProxyMapDir     string
 	HAProxyErrFileDir string
 	HAProxyPIDFile    string
+	TransactionDir    string
 )
 
 var logger = utils.GetLogger()
@@ -127,7 +128,11 @@ func (c *HAProxyController) Start(ctx context.Context, osArgs utils.OSArgs) {
 		var err error
 		var http, https bool
 
-		p := &parser.Parser{}
+		p := &parser.Parser{
+			Options: parser.Options{
+				UseV2HTTPCheck: true,
+			},
+		}
 		logger.Panic(p.LoadData(HAProxyCFG))
 
 		if !c.osArgs.DisableHTTP {
@@ -313,6 +318,12 @@ func (c *HAProxyController) haproxyInitialize() {
 	if HAProxyStateDir == "" {
 		HAProxyStateDir = "/var/state/haproxy/"
 	}
+	if TransactionDir != "" {
+		err := os.MkdirAll(TransactionDir, 0755)
+		if err != nil {
+			logger.Panic(err)
+		}
+	}
 	for _, d := range []string{HAProxyCertDir, HAProxyMapDir, HAProxyErrFileDir, HAProxyStateDir} {
 		err := os.MkdirAll(d, 0755)
 		if err != nil {
@@ -338,7 +349,7 @@ func (c *HAProxyController) haproxyInitialize() {
 	logger.Error(err)
 	logger.Infof("Running on %s", hostname)
 
-	c.Client, err = api.Init(HAProxyCFG, "haproxy", "/var/run/haproxy-runtime-api.sock")
+	c.Client, err = api.Init(TransactionDir, HAProxyCFG, "haproxy", "/var/run/haproxy-runtime-api.sock")
 	if err != nil {
 		logger.Panic(err)
 	}

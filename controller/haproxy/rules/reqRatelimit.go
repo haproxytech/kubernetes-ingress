@@ -29,7 +29,7 @@ func (r ReqRateLimit) Create(client api.HAProxyClient, frontend *models.Frontend
 	httpRule := models.HTTPRequestRule{
 		Index:      utils.PtrInt64(1),
 		Type:       "deny",
-		DenyStatus: r.DenyStatusCode,
+		DenyStatus: utils.PtrInt64(r.DenyStatusCode),
 		Cond:       "if",
 		CondTest:   makeACL(fmt.Sprintf(" { sc0_http_req_rate(%s) gt %d }", r.TableName, r.ReqsLimit), ingressMapFile),
 	}

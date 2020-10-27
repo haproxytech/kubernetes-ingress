@@ -1,7 +1,7 @@
 package api
 
 import (
-	"github.com/haproxytech/config-parser/v2/types"
+	"github.com/haproxytech/config-parser/v3/types"
 	"github.com/haproxytech/models/v2"
 )
 

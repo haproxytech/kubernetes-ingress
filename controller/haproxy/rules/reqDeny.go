@@ -39,7 +39,7 @@ func (r ReqDeny) Create(client api.HAProxyClient, frontend *models.Frontend) err
 	httpRule := models.HTTPRequestRule{
 		Index:      utils.PtrInt64(0),
 		Type:       "deny",
-		DenyStatus: 403,
+		DenyStatus: utils.PtrInt64(403),
 		Cond:       "if",
 		CondTest:   makeACL(fmt.Sprintf(" %s{ src -f %s }", not, ipsMapFile), ingressMapFile),
 	}

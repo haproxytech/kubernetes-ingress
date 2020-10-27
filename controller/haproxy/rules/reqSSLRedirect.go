@@ -26,7 +26,7 @@ func (r ReqSSLRedirect) Create(client api.HAProxyClient, frontend *models.Fronte
 	httpRule := models.HTTPRequestRule{
 		Index:      utils.PtrInt64(0),
 		Type:       "redirect",
-		RedirCode:  r.RedirectCode,
+		RedirCode:  utils.PtrInt64(r.RedirectCode),
 		RedirValue: "https",
 		RedirType:  "scheme",
 		Cond:       "if",

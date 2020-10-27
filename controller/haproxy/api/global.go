@@ -5,8 +5,8 @@ import (
 	"reflect"
 	"strings"
 
-	parser "github.com/haproxytech/config-parser/v2"
-	"github.com/haproxytech/config-parser/v2/types"
+	parser "github.com/haproxytech/config-parser/v3"
+	"github.com/haproxytech/config-parser/v3/types"
 )
 
 // section can be "global" or "defaults"
@@ -44,7 +44,7 @@ func (c *clientNative) GlobalWriteConfig(section string, config string) (result 
 	if p == nil {
 		return "", err
 	}
-	lines, err := p.Result()
+	lines, _, err := p.ResultAll()
 	if err != nil {
 		return "", err
 	}

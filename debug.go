@@ -41,6 +41,7 @@ func setupTestEnv() {
 	if err := os.MkdirAll(c.HAProxyStateDir, 0755); err != nil {
 		logger.Panic(err)
 	}
+	c.TransactionDir = path.Join(TestFolderPath, "transactions")
 	time.Sleep(2 * time.Second)
 	cmd := exec.Command("pwd")
 	out, err := cmd.CombinedOutput()

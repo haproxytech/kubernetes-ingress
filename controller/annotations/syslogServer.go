@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/haproxytech/config-parser/v2/types"
+	"github.com/haproxytech/config-parser/v3/types"
 
 	"github.com/haproxytech/kubernetes-ingress/controller/configsnippet"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/api"
