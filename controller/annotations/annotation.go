@@ -41,6 +41,7 @@ var Global = map[string]annotation{
 	"timeout-http-keep-alive": &defaultTimeout{name: "http-keep-alive"},
 	"log-format":              &defaultLogFormat{},
 	"config-snippet":          &globalCfgSnippet{},
+	"hard-stop-after":         &globalHardStopAfter{},
 }
 
 var logger = utils.GetLogger()

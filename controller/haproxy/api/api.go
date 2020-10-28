@@ -49,6 +49,7 @@ type HAProxyClient interface {
 	DefaultOption(option string, value *types.SimpleOption) error
 	DefaultTimeout(timeout string, value *types.SimpleTimeout) error
 	GlobalCfgSnippet(snippet *types.StringSliceC) error
+	GlobalHardStopAfter(value *types.StringC) error
 	LogTarget(value *types.Log, index int) error
 	Nbthread(value *types.Int64C) error
 	PIDFile(value *types.StringC) error

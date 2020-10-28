@@ -71,6 +71,10 @@ func (c *clientNative) GlobalMaxconn(value *types.Int64C) error {
 	return c.setSectionAttribute(parser.Global, "maxconn", value)
 }
 
+func (c *clientNative) GlobalHardStopAfter(value *types.StringC) error {
+	return c.setSectionAttribute(parser.Global, "hard-stop-after", value)
+}
+
 func (c *clientNative) DefaultOption(option string, value *types.SimpleOption) error {
 	return c.setSectionAttribute(parser.Defaults, fmt.Sprintf("option %s", option), value)
 }
@@ -130,7 +134,7 @@ func (c *clientNative) setSectionAttribute(section parser.Section, attribute str
 		value = value.(*types.Enabled)
 	case "log":
 		value = value.(*types.Log)
-	case "log-format", "pidfile", "server-state-base":
+	case "log-format", "pidfile", "server-state-base", "hard-stop-after":
 		value = value.(*types.StringC)
 	case "nbthread", "maxconn":
 		value = value.(*types.Int64C)
