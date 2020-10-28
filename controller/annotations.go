@@ -134,6 +134,7 @@ var defaultAnnotationValues = MapStringW{
 	"forwarded-for":           &StringW{Value: "true"},
 	"load-balance":            &StringW{Value: "roundrobin"},
 	"log-format":              &StringW{Value: "%ci:%cp [%tr] %ft %b/%s %TR/%Tw/%Tc/%Tr/%Ta %ST %B %CC %CS %tsc %ac/%fc/%bc/%sc/%rc %sq/%bq %hr %hs \"%HM %[var(txn.base)] %HV\""},
+	"hard-stop-after":         &StringW{Value: "1h"},
 	"rate-limit-size":         &StringW{Value: "100k"},
 	"rate-limit-period":       &StringW{Value: "1s"},
 	"ssl-redirect-code":       &StringW{Value: "302"},

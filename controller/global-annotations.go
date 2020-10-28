@@ -5,6 +5,7 @@ import (
 	goruntime "runtime"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/haproxytech/config-parser/v3/types"
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
@@ -19,6 +20,7 @@ func (c *HAProxyController) handleGlobalAnnotations() (restart bool, reload bool
 	reload = c.handleDefaultOptions() || reload
 	reload = c.handleDefaultTimeouts() || reload
 	reload = c.handleNbthread() || reload
+	reload = c.handleHardStopAfter() || reload
 
 	restart, r := c.handleSyslog()
 	reload = reload || r
@@ -265,6 +267,36 @@ func (c *HAProxyController) handleDefaultLogFormat() bool {
 	}
 	c.Logger.Infof("Changing default log format to '%s'", annLogFormat.Value)
 	err := c.Client.SetDefaulLogFormat(&annLogFormat.Value)
+	if err != nil {
+		c.Logger.Error(err)
+		return false
+	}
+	return true
+}
+
+func (c *HAProxyController) handleHardStopAfter() bool {
+	annHardStopAfter, _ := GetValueFromAnnotations("hard-stop-after", c.cfg.ConfigMap.Annotations)
+	if annHardStopAfter.Status == EMPTY {
+		return false
+	}
+	after, err := time.ParseDuration(annHardStopAfter.Value)
+	if err != nil {
+		c.Logger.Error(err)
+		return false
+	}
+	duration := after.String()
+	if strings.HasSuffix(duration, "m0s") {
+		duration = duration[:len(duration)-2]
+	}
+	if strings.HasSuffix(duration, "h0m") {
+		duration = duration[:len(duration)-2]
+	}
+	if err != nil {
+		c.Logger.Error(err)
+		return false
+	}
+	c.Logger.Infof("Changing hard-stop-after value to '%s'", duration)
+	err = c.Client.SetHardStopAfter(&duration)
 	if err != nil {
 		c.Logger.Error(err)
 		return false

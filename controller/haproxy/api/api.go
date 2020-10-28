@@ -47,6 +47,7 @@ type HAProxyClient interface {
 	SetDefaulOption(option string, enabled *bool) error
 	SetDefaulTimeout(timeout string, value *string) error
 	SetLogTarget(log *types.Log, index int) error
+	SetHardStopAfter(value *string) error
 	SetNbthread(value *int64) error
 	SetServerAddr(backendName string, serverName string, ip string, port int) error
 	SetServerState(backendName string, serverName string, state string) error

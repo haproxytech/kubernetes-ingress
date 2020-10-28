@@ -84,6 +84,14 @@ func (c *clientNative) SetNbthread(value *int64) error {
 	return c.setSectionAttribute(parser.Global, "nbthread", typeValue)
 }
 
+func (c *clientNative) SetHardStopAfter(value *string) error {
+	typeValue = nil
+	if value != nil {
+		typeValue = *value
+	}
+	return c.setSectionAttribute(parser.Global, "hard-stop-after", typeValue)
+}
+
 func (c *clientNative) setSectionAttribute(section parser.Section, attribute string, value interface{}, index ...int) error {
 	// Get current Parser Instance
 	if c.activeTransaction == "" {
@@ -121,6 +129,10 @@ func (c *clientNative) setSectionAttribute(section parser.Section, attribute str
 	case "log-format":
 		attributeValue = types.StringC{
 			Value: "'" + value.(string) + "'",
+		}
+	case "hard-stop-after":
+		attributeValue = types.StringC{
+			Value: value.(string),
 		}
 	case "nbthread", "maxconn":
 		attributeValue = types.Int64C{
