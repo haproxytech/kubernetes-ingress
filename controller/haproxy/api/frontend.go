@@ -101,15 +101,24 @@ func (c *clientNative) FrontendTCPRequestRuleCreate(frontend string, rule models
 
 func (c *clientNative) FrontendRuleDeleteAll(frontend string) {
 	c.activeTransactionHasChanges = true
-	var err error
-	for err == nil {
-		err = c.nativeAPI.Configuration.DeleteHTTPRequestRule(0, "frontend", frontend, c.activeTransaction, 0)
+
+	for {
+		err := c.nativeAPI.Configuration.DeleteHTTPRequestRule(0, "frontend", frontend, c.activeTransaction, 0)
+		if err != nil {
+			break
+		}
 	}
-	for err == nil {
-		err = c.nativeAPI.Configuration.DeleteHTTPResponseRule(0, "frontend", frontend, c.activeTransaction, 0)
+	for {
+		err := c.nativeAPI.Configuration.DeleteHTTPResponseRule(0, "frontend", frontend, c.activeTransaction, 0)
+		if err != nil {
+			break
+		}
 	}
-	for err == nil {
-		err = c.nativeAPI.Configuration.DeleteTCPRequestRule(0, "frontend", frontend, c.activeTransaction, 0)
+	for {
+		err := c.nativeAPI.Configuration.DeleteTCPRequestRule(0, "frontend", frontend, c.activeTransaction, 0)
+		if err != nil {
+			break
+		}
 	}
 	// No usage of TCPResonpeRules yet.
 }
