@@ -695,8 +695,9 @@ func (k *K8s) IsMatchingSelectedIngressClass(name string) error {
 	}
 	if k.IsNetworkingV1Beta1ApiSupported() {
 		ic, err := k.API.NetworkingV1beta1().IngressClasses().Get(context.Background(), name, metav1.GetOptions{})
-		if err != nil {
-			return fmt.Errorf("the requested IngressClass %s doesn't exist", name)
+		if err != nil && k8serror.IsNotFound(err) {
+			k.Logger.Warningf("the requested IngressClass %s doesn't exist, for upcoming releases this will be mandatory", name)
+			return nil
 		}
 		controllerName = ic.Spec.Controller
 	}
