@@ -52,6 +52,10 @@ func getIngressClass(annotations map[string]string, specValue *string) string {
 	if v, ok := annotations["kubernetes.io/ingress.class"]; ok {
 		return v
 	}
+	// HAProxy Tech Ingress Controller allows also non prefixed annotations
+	if v, ok := annotations["ingress.class"]; ok {
+		return v
+	}
 	if specValue != nil {
 		return *specValue
 	}
