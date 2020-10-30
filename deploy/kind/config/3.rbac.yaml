@@ -29,16 +29,14 @@ rules:
      - patch
      - update
  - apiGroups:
-   - "extensions"
+     - "networking.k8s.io"
    resources:
-     - ingresses
-     - ingresses/status
+     - ingressclasses
    verbs:
      - get
-     - list
-     - watch
  - apiGroups:
-   - "networking.k8s.io/v1beta1"
+   - "extensions"
+   - "networking.k8s.io"
    resources:
      - ingresses
      - ingresses/status
@@ -46,7 +44,6 @@ rules:
      - get
      - list
      - watch
-     - update
  - apiGroups:
    - ""
    resources:
