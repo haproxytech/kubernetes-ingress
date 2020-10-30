@@ -1,6 +1,7 @@
 package annotations
 
 import (
+	"io/ioutil"
 	"os"
 	"testing"
 
@@ -11,16 +12,23 @@ import (
 
 type AnnotationSuite struct {
 	suite.Suite
-	client api.HAProxyClient
+	client         api.HAProxyClient
+	transactionDir string
 }
 
 func (suite *AnnotationSuite) SetupSuite() {
 	var err error
-	transactionDir := "/tmp/haproxy"
-	logger.Panic(os.MkdirAll(transactionDir, 0755))
-	suite.client, err = api.Init(transactionDir, "../../fs/etc/haproxy/haproxy.cfg", "", "")
+	suite.transactionDir, err = ioutil.TempDir("/tmp/", "controller-tests")
+	if err != nil {
+		logger.Panic(err)
+	}
+	suite.client, err = api.Init(suite.transactionDir, "../../fs/etc/haproxy/haproxy.cfg", "", "")
 	suite.Nil(err)
 	suite.NoError(suite.client.APIStartTransaction())
+}
+
+func (suite *AnnotationSuite) TearDownSuite() {
+	os.RemoveAll(suite.transactionDir)
 }
 
 func TestSuite(t *testing.T) {
