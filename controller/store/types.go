@@ -90,7 +90,6 @@ type Ingress struct {
 	APIVersion     string
 	Namespace      string
 	Name           string
-	Class          string
 	Annotations    MapStringW
 	Rules          map[string]*IngressRule
 	DefaultBackend *IngressPath

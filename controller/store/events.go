@@ -36,7 +36,10 @@ func (k K8s) EventNamespace(ns *Namespace, data *Namespace) (updateRequired bool
 }
 
 func (k K8s) EventIngress(ns *Namespace, data *Ingress, controllerClass string) (updateRequired bool) {
-	ingressClass := data.Class
+	var ingressClass string
+	ic, _ := k.GetValueFromAnnotations("ingress.class", data.Annotations)
+	ingressClass = ic.Value
+
 	updateRequired = false
 	switch data.Status {
 	case MODIFIED:
