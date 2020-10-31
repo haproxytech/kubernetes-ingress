@@ -414,6 +414,20 @@ annotations:
     - configmap
     version_min: "1.4"
     example: ['dontlognull: "true"']
+  - title: src-ip-header
+    type: string
+    group: src-ip-header
+    dependencies: ""
+    default: "null"
+    description:
+      - Set the source IP from a header rather than the L3 connection.
+    tip: []
+    values:
+      - "any header name"
+    applies_to:
+      - configmap
+    version_min: "1.5"
+    example: ['src-ip-header: "True-Client-IP"']
   - title: forwarded-for
     type: bool
     group: x-forwarded-for
