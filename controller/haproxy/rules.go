@@ -88,7 +88,7 @@ func (r Rules) Refresh(client api.HAProxyClient) (reload bool) {
 	for feName, feRules := range r {
 		fe, err := client.FrontendGet(feName)
 		if err != nil {
-			logger.Error(fe)
+			logger.Error(err)
 			continue
 		}
 		client.FrontendRuleDeleteAll(feName)

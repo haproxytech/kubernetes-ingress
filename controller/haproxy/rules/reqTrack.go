@@ -10,9 +10,11 @@ import (
 )
 
 type ReqTrack struct {
-	Ingress   haproxy.MapID
-	TableName string
-	TrackKey  string
+	Ingress     haproxy.MapID
+	TableName   string
+	TablePeriod *int64
+	TableSize   *int64
+	TrackKey    string
 }
 
 func (r ReqTrack) GetType() haproxy.RuleType {
@@ -24,6 +26,21 @@ func (r ReqTrack) Create(client api.HAProxyClient, frontend *models.Frontend) er
 		//TODO: tcp request tracking
 		return fmt.Errorf("request Track cannot be configured in TCP mode")
 	}
+	// Create tracking table.
+	if _, err := client.BackendGet(r.TableName); err != nil {
+		err = client.BackendCreate(models.Backend{
+			Name: r.TableName,
+			StickTable: &models.BackendStickTable{
+				Type:  "ip",
+				Size:  r.TableSize,
+				Store: fmt.Sprintf("http_req_rate(%d)", *r.TablePeriod),
+			},
+		})
+		if err != nil {
+			return err
+		}
+	}
+	// Create rule
 	ingressMapFile := r.Ingress.Path()
 	httpRule := models.HTTPRequestRule{
 		Index:         utils.PtrInt64(0),

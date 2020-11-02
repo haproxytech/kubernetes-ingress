@@ -27,12 +27,7 @@ import (
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 )
 
-type rateLimitTable struct {
-	size   *int64
-	period *int64
-}
-
-var rateLimitTables map[string]rateLimitTable
+var rateLimitTables []string
 
 func (c *HAProxyController) handleIngressAnnotations(ingress *store.Ingress) {
 	logger.Error(c.handleRateLimiting(ingress))
@@ -161,20 +156,20 @@ func (c *HAProxyController) handleRateLimiting(ingress *store.Ingress) error {
 			}
 		}
 	}
-	rateLimitTables[tableName] = rateLimitTable{
-		size:   rateLimitSize,
-		period: rateLimitPeriod,
-	}
+	rateLimitTables = append(rateLimitTables, tableName)
 	reqTrack := rules.ReqTrack{
-		Ingress:   trackMatch,
-		TableName: tableName,
-		TrackKey:  "src",
+		Ingress:     trackMatch,
+		TableName:   tableName,
+		TableSize:   rateLimitSize,
+		TablePeriod: rateLimitPeriod,
+		TrackKey:    "src",
 	}
 	err = c.cfg.HAProxyRules.AddRule(reqTrack, trackMatch, FrontendHTTP, FrontendHTTPS)
 	if err != nil {
 		return err
 	}
 	reqRateLimit := rules.ReqRateLimit{
+		TableName:      tableName,
 		Ingress:        reqsMatch,
 		ReqsLimit:      reqsLimit,
 		DenyStatusCode: rateLimitCode,

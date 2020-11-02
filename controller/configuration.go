@@ -38,8 +38,6 @@ func (c *Configuration) Init(mapDir string) {
 	c.MapFiles = haproxy.NewMapFiles(mapDir)
 	logger.Panic(c.HAProxyRulesInit())
 
-	rateLimitTables = make(map[string]rateLimitTable)
-
 	c.BackendSwitchingRules = make(map[string]UseBackendRules)
 	c.BackendSwitchingModified = make(map[string]struct{})
 	for _, frontend := range []string{FrontendHTTP, FrontendHTTPS, FrontendSSL} {
@@ -52,6 +50,7 @@ func (c *Configuration) Init(mapDir string) {
 func (c *Configuration) Clean() {
 	c.MapFiles.Clean()
 	logger.Panic(c.HAProxyRulesInit())
+	rateLimitTables = []string{}
 }
 
 func (c *Configuration) HAProxyRulesInit() error {

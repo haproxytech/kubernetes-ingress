@@ -60,7 +60,7 @@ func (c *HAProxyController) refreshBackendSwitching() (reload bool) {
 	}
 	// Active backend will hold backends in use
 	activeBackends := make(map[string]struct{})
-	for rateLimitTable := range rateLimitTables {
+	for _, rateLimitTable := range rateLimitTables {
 		activeBackends[rateLimitTable] = struct{}{}
 	}
 	for _, frontend := range frontends {
