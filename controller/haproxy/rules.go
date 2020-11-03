@@ -14,7 +14,7 @@ type Rule interface {
 }
 
 // Order matters !
-// Rules will be evaluated by HAPorxy in the defined order.
+// Rules will be evaluated by HAProxy in the defined order.
 type RuleType int
 
 //nolint

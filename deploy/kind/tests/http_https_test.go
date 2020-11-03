@@ -33,7 +33,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	networkngv1beta1 "k8s.io/api/networking/v1beta1"
+	networkingv1beta1 "k8s.io/api/networking/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/haproxytech/kubernetes-ingress/deploy/kind/tests/k8s"
@@ -47,7 +47,7 @@ func Test_Https(t *testing.T) {
 	deploy := k8s.NewDeployment("podinfo", "https")
 	svc := k8s.NewService("podinfo", "https")
 	ing := k8s.NewIngress("podinfo", "https", "/")
-	ing.Spec.TLS = []networkngv1beta1.IngressTLS{
+	ing.Spec.TLS = []networkingv1beta1.IngressTLS{
 		{
 			Hosts:      []string{"podinfo-https.haproxy"},
 			SecretName: "podinfo-https",

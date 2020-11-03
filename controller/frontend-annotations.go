@@ -344,7 +344,7 @@ func (c *HAProxyController) handleResponseSetHdr(ingress *store.Ingress) error {
 			logger.Errorf("incorrect value '%s' in response-set-header annotation", param)
 			continue
 		}
-		logger.Debugf("Ingress %s/%s: Configuring reponse set '%s' header ", ingress.Namespace, ingress.Name, param)
+		logger.Debugf("Ingress %s/%s: Configuring response set '%s' header ", ingress.Namespace, ingress.Name, param)
 		match, _ := haproxy.NewMapID(fmt.Sprintf("%d-%s-%s", haproxy.RES_SET_HEADER, parts[0], parts[1]))
 		for hostname, rule := range ingress.Rules {
 			if rule.Status != DELETED {

@@ -23,7 +23,7 @@ import (
 	"github.com/haproxytech/kubernetes-ingress/controller/store"
 )
 
-// handle defaultBackned configured via cli param "default-backend-service"
+// handle defaultBackend configured via cli param "default-backend-service"
 func (c *HAProxyController) handleDefaultService() (reload bool) {
 	dsvcData, _ := c.Store.GetValueFromAnnotations("default-backend-service")
 	dsvc := strings.Split(dsvcData.Value, "/")

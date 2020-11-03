@@ -11,7 +11,7 @@ import (
 )
 
 type TCPHandler struct {
-	// TODO: move ingress handlers to seperate module.
+	// TODO: move ingress handlers to separate module.
 	handlePath func(namespace *store.Namespace, ingress *store.Ingress, rule *store.IngressRule, path *store.IngressPath) (reload bool)
 }
 

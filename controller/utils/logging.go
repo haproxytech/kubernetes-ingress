@@ -54,7 +54,7 @@ const (
 // logger.Error(err)
 // ```
 type Logger interface {
-	Print(args ...interface{}) // always print regardles of Log level
+	Print(args ...interface{}) // always print regardless of Log level
 	Trace(args ...interface{}) // used for heavy duty output everything, not recommended for production
 	Debug(args ...interface{}) // used to have detailed output of application flow
 	Info(args ...interface{})

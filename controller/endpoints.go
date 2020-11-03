@@ -115,7 +115,7 @@ func (c *HAProxyController) handleEndpoints(namespace *store.Namespace, ingress 
 			return false // not an end of world scenario, just log this
 		}
 		//TODO: currently HAProxy will only resolve server name at startup/reload
-		// This needs to be improved by using HAPorxy resolvers to have resolution at runtime
+		// This needs to be improved by using HAProxy resolvers to have resolution at runtime
 		logger.Debugf("Configuring service '%s', of type ExternalName", service.Name)
 		endpoints = &store.Endpoints{
 			Namespace: "external",
@@ -225,7 +225,7 @@ func (c *HAProxyController) processEndpointsSrvs(oldEndpoints, newEndpoints *sto
 			}
 		}
 	}
-	// Check available HAProxySrvs to add new Addreses
+	// Check available HAProxySrvs to add new Addresses
 	availableIdx := len(available) - 1
 	for newAdr := range newEndpoints.Addresses {
 		if availableIdx < 0 {

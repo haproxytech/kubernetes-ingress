@@ -120,5 +120,5 @@ func (c *clientNative) FrontendRuleDeleteAll(frontend string) {
 			break
 		}
 	}
-	// No usage of TCPResonpeRules yet.
+	// No usage of TCPResponseRules yet.
 }

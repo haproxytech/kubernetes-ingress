@@ -32,7 +32,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	networkngv1beta1 "k8s.io/api/networking/v1beta1"
+	networkingv1beta1 "k8s.io/api/networking/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/haproxytech/kubernetes-ingress/deploy/kind/tests/k8s"
@@ -50,7 +50,7 @@ func Test_Https_Ssl_Offload(t *testing.T) {
 	defer cs.CoreV1().Services(svc.Namespace).Delete(context.Background(), svc.Name, metav1.DeleteOptions{})
 
 	ing := k8s.NewIngress("simple-https-listener", "ssl", "/")
-	ing.Spec.TLS = []networkngv1beta1.IngressTLS{
+	ing.Spec.TLS = []networkingv1beta1.IngressTLS{
 		{
 			Hosts:      []string{"simple-https-listener-ssl.haproxy"},
 			SecretName: "simple-https-listener-ssl",

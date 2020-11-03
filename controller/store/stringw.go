@@ -119,7 +119,7 @@ func (a *MapStringW) Clone() MapStringW {
 	return result
 }
 
-//Equal comapres if two maps are equal
+//Equal compares if two maps are equal
 func (a *MapStringW) Equal(b MapStringW) bool {
 	if len(*a) != len(b) {
 		return false
