@@ -27,7 +27,7 @@ func (r ReqRateLimit) Create(client api.HAProxyClient, frontend *models.Frontend
 	}
 	ingressMapFile := r.Ingress.Path()
 	httpRule := models.HTTPRequestRule{
-		Index:      utils.PtrInt64(1),
+		Index:      utils.PtrInt64(0),
 		Type:       "deny",
 		DenyStatus: utils.PtrInt64(r.DenyStatusCode),
 		Cond:       "if",
