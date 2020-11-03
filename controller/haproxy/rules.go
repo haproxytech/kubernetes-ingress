@@ -40,7 +40,7 @@ type Rules map[string]*frontendRules
 
 // This structure may evolve with additional fields
 type frontendRules struct {
-	rules map[RuleType]map[MapID]Rule
+	rules map[RuleType][]Rule
 }
 
 var logger = utils.GetLogger()
@@ -49,7 +49,7 @@ func NewRules() Rules {
 	return make(map[string]*frontendRules)
 }
 
-func (r Rules) AddRule(rule Rule, id MapID, frontends ...string) error {
+func (r Rules) AddRule(rule Rule, frontends ...string) error {
 	if rule == nil || len(frontends) == 0 {
 		return fmt.Errorf("invalid params")
 	}
@@ -57,15 +57,12 @@ func (r Rules) AddRule(rule Rule, id MapID, frontends ...string) error {
 		ftRules, ok := r[frontend]
 		if !ok {
 			ftRules = &frontendRules{
-				rules: make(map[RuleType]map[MapID]Rule),
+				rules: make(map[RuleType][]Rule),
 			}
 			r[frontend] = ftRules
 		}
 		ruleType := rule.GetType()
-		if _, ok := ftRules.rules[ruleType]; !ok {
-			ftRules.rules[ruleType] = make(map[MapID]Rule)
-		}
-		ftRules.rules[ruleType][id] = rule
+		ftRules.rules[ruleType] = append(ftRules.rules[ruleType], rule)
 	}
 	return nil
 }
@@ -76,7 +73,7 @@ func (r Rules) EnableSSLPassThrough(passThroughFtd, offloadFtd string) {
 	}
 	if _, ok := r[passThroughFtd]; !ok {
 		r[passThroughFtd] = &frontendRules{
-			rules: make(map[RuleType]map[MapID]Rule),
+			rules: make(map[RuleType][]Rule),
 		}
 	}
 	for _, ruleType := range []RuleType{REQ_PROXY_PROTOCOL, REQ_DENY} {
@@ -94,10 +91,13 @@ func (r Rules) Refresh(client api.HAProxyClient) (reload bool) {
 		}
 		client.FrontendRuleDeleteAll(feName)
 		// All rules are created with Index 0,
-		// so first rule inserted will be last in the list
+		// Which means first rule inserted will be last in the list of HAProxy rules after iteration
+		// Thus iteration is done in reverse to preserve order between the defined rules in
+		// controller and the resulting order in HAProxy configuration.
 		for ruleType := RES_SET_HEADER; ruleType >= REQ_ACCEPT_CONTENT; ruleType-- {
-			for _, rule := range feRules.rules[ruleType] {
-				if err := rule.Create(client, &fe); err == nil {
+			ruleSet := feRules.rules[ruleType]
+			for i := len(ruleSet) - 1; i >= 0; i-- {
+				if err := ruleSet[i].Create(client, &fe); err == nil {
 					reload = true
 				} else {
 					logger.Error(err)

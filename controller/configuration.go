@@ -59,22 +59,22 @@ func (c *Configuration) HAProxyRulesInit() error {
 	errors.Add(
 		c.HAProxyRules.AddRule(rules.SetHdr{
 			ForwardedProto: true,
-		}, 0, FrontendHTTPS),
+		}, FrontendHTTPS),
 		c.HAProxyRules.AddRule(rules.ReqSetVar{
 			Name:       "base",
 			Scope:      "txn",
 			Expression: "base",
-		}, 1, FrontendHTTP, FrontendHTTPS),
+		}, FrontendHTTP, FrontendHTTPS),
 		c.HAProxyRules.AddRule(rules.ReqSetVar{
 			Name:       "path",
 			Scope:      "txn",
 			Expression: "path,lower",
-		}, 2, FrontendHTTP, FrontendHTTPS),
+		}, FrontendHTTP, FrontendHTTPS),
 		c.HAProxyRules.AddRule(rules.ReqSetVar{
 			Name:       "host",
 			Scope:      "txn",
 			Expression: "req.hdr(Host),field(1,:),lower",
-		}, 3, FrontendHTTP, FrontendHTTPS),
+		}, FrontendHTTP, FrontendHTTPS),
 	)
 	return errors.Result()
 }

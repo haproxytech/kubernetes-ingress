@@ -48,7 +48,7 @@ func (p ProxyProtocol) Update(k store.K8s, cfg *Configuration, api api.HAProxyCl
 		}
 	}
 	// Configure Annotation
-	logger.Debugf("Configuring ProxyProtocol annotation")
-	err = cfg.HAProxyRules.AddRule(rules.ReqProxyProtocol{SrcIPs: ips}, 0, FrontendHTTP, FrontendHTTPS)
+	logger.Debugf("Configuring ProxyProtcol annotation")
+	err = cfg.HAProxyRules.AddRule(rules.ReqProxyProtocol{SrcIPs: ips}, FrontendHTTP, FrontendHTTPS)
 	return false, err
 }

@@ -76,7 +76,7 @@ func (c *HAProxyController) handleBlacklisting(ingress *store.Ingress) error {
 		Ingress: match,
 		SrcIPs:  ips,
 	}
-	return c.cfg.HAProxyRules.AddRule(reqBlackList, match, FrontendHTTP, FrontendHTTPS)
+	return c.cfg.HAProxyRules.AddRule(reqBlackList, FrontendHTTP, FrontendHTTPS)
 }
 
 func (c *HAProxyController) handleHTTPRedirect(ingress *store.Ingress) error {
@@ -111,7 +111,7 @@ func (c *HAProxyController) handleHTTPRedirect(ingress *store.Ingress) error {
 		Ingress:      match,
 		RedirectCode: sslRedirectCode,
 	}
-	return c.cfg.HAProxyRules.AddRule(reqSSLRedirect, match, FrontendHTTP)
+	return c.cfg.HAProxyRules.AddRule(reqSSLRedirect, FrontendHTTP)
 }
 
 func (c *HAProxyController) handleRateLimiting(ingress *store.Ingress) error {
@@ -164,7 +164,7 @@ func (c *HAProxyController) handleRateLimiting(ingress *store.Ingress) error {
 		TablePeriod: rateLimitPeriod,
 		TrackKey:    "src",
 	}
-	err = c.cfg.HAProxyRules.AddRule(reqTrack, trackMatch, FrontendHTTP, FrontendHTTPS)
+	err = c.cfg.HAProxyRules.AddRule(reqTrack, FrontendHTTP, FrontendHTTPS)
 	if err != nil {
 		return err
 	}
@@ -174,7 +174,7 @@ func (c *HAProxyController) handleRateLimiting(ingress *store.Ingress) error {
 		ReqsLimit:      reqsLimit,
 		DenyStatusCode: rateLimitCode,
 	}
-	return c.cfg.HAProxyRules.AddRule(reqRateLimit, reqsMatch, FrontendHTTP, FrontendHTTPS)
+	return c.cfg.HAProxyRules.AddRule(reqRateLimit, FrontendHTTP, FrontendHTTPS)
 }
 
 func (c *HAProxyController) handleRequestCapture(ingress *store.Ingress) error {
@@ -214,7 +214,7 @@ func (c *HAProxyController) handleRequestCapture(ingress *store.Ingress) error {
 			Expression: sample,
 			CaptureLen: captureLen,
 		}
-		errors.Add(c.cfg.HAProxyRules.AddRule(reqCapture, match, FrontendHTTP, FrontendHTTPS))
+		errors.Add(c.cfg.HAProxyRules.AddRule(reqCapture, FrontendHTTP, FrontendHTTPS))
 	}
 	return errors.Result()
 }
@@ -251,7 +251,7 @@ func (c *HAProxyController) handleRequestSetHdr(ingress *store.Ingress) error {
 			HdrName:   parts[0],
 			HdrFormat: parts[1],
 		}
-		errors.Add(c.cfg.HAProxyRules.AddRule(reqSetHdr, match, FrontendHTTP, FrontendHTTPS))
+		errors.Add(c.cfg.HAProxyRules.AddRule(reqSetHdr, FrontendHTTP, FrontendHTTPS))
 	}
 	return errors.Result()
 }
@@ -281,7 +281,7 @@ func (c *HAProxyController) handleRequestSetHost(ingress *store.Ingress) error {
 		HdrName:   "Host",
 		HdrFormat: annSetHost.Value,
 	}
-	return c.cfg.HAProxyRules.AddRule(reqSetHost, match, FrontendHTTP, FrontendHTTPS)
+	return c.cfg.HAProxyRules.AddRule(reqSetHost, FrontendHTTP, FrontendHTTPS)
 }
 
 func (c *HAProxyController) handleRequestPathRewrite(ingress *store.Ingress) error {
@@ -323,7 +323,7 @@ func (c *HAProxyController) handleRequestPathRewrite(ingress *store.Ingress) err
 	default:
 		return fmt.Errorf("incorrect value '%s', path-rewrite takes 1 or 2 params ", annPathRewrite.Value)
 	}
-	return c.cfg.HAProxyRules.AddRule(pathReWrite, match, FrontendHTTP, FrontendHTTPS)
+	return c.cfg.HAProxyRules.AddRule(pathReWrite, FrontendHTTP, FrontendHTTPS)
 }
 
 func (c *HAProxyController) handleResponseSetHdr(ingress *store.Ingress) error {
@@ -359,7 +359,7 @@ func (c *HAProxyController) handleResponseSetHdr(ingress *store.Ingress) error {
 			HdrFormat: parts[1],
 			Response:  true,
 		}
-		errors.Add(c.cfg.HAProxyRules.AddRule(resSetHdr, match, FrontendHTTP, FrontendHTTPS))
+		errors.Add(c.cfg.HAProxyRules.AddRule(resSetHdr, FrontendHTTP, FrontendHTTPS))
 	}
 	return errors.Result()
 }
@@ -400,7 +400,7 @@ func (c *HAProxyController) handleWhitelisting(ingress *store.Ingress) error {
 		SrcIPs:    ips,
 		Whitelist: true,
 	}
-	return c.cfg.HAProxyRules.AddRule(reqWhitelist, match, FrontendHTTP, FrontendHTTPS)
+	return c.cfg.HAProxyRules.AddRule(reqWhitelist, FrontendHTTP, FrontendHTTPS)
 }
 
 func tlsEnabled(ingress *store.Ingress) bool {
