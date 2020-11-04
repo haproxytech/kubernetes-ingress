@@ -15,29 +15,26 @@
 package controller
 
 import (
+	"github.com/haproxytech/kubernetes-ingress/controller/haproxy"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/api"
+	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/rules"
 	"github.com/haproxytech/kubernetes-ingress/controller/store"
 )
 
-type UpdateHandler interface {
-	Update(k store.K8s, cfg *Configuration, api api.HAProxyClient) (reload bool, err error)
-}
+type SourceIPHeader struct{}
 
-func (c *HAProxyController) initHandlers() {
-	c.UpdateHandlers = []UpdateHandler{
-		SourceIPHeader{},
-		ProxyProtocol{},
-		DefaultCertificate{},
-		ErrorFile{},
-		HTTPS{
-			enabled:  !c.osArgs.DisableHTTPS,
-			certDir:  HAProxyCertDir,
-			ipv4:     !c.osArgs.DisableIPV4,
-			addrIpv4: c.osArgs.IPV4BindAddr,
-			addrIpv6: c.osArgs.IPV6BindAddr,
-			ipv6:     !c.osArgs.DisableIPV6,
-			port:     c.osArgs.HTTPSBindPort,
-		},
-		TCPHandler{handlePath: c.handlePath},
+func (p SourceIPHeader) Update(k store.K8s, cfg *Configuration, api api.HAProxyClient) (reload bool, err error) {
+	//  Get annotation status
+	srcIPHeader, _ := k.GetValueFromAnnotations("src-ip-header", k.ConfigMaps[Main].Annotations)
+	if srcIPHeader == nil {
+		return false, nil
 	}
+	if srcIPHeader.Status == DELETED || len(srcIPHeader.Value) == 0 {
+		logger.Debugf("Deleting Source IP configuration")
+		return false, nil
+	}
+	id, _ := haproxy.NewMapID(srcIPHeader.Value)
+	return true, cfg.HAProxyRules.AddRule(rules.ReqSetSrc{
+		HeaderName: srcIPHeader.Value,
+	}, id, FrontendHTTP, FrontendHTTPS)
 }
