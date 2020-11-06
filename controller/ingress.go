@@ -16,50 +16,35 @@ package controller
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/haproxytech/models/v2"
 
 	"github.com/haproxytech/kubernetes-ingress/controller/store"
 )
 
-// handle defaultBackend configured via cli param "default-backend-service"
-func (c *HAProxyController) handleDefaultService() (reload bool) {
-	dsvcData, _ := c.Store.GetValueFromAnnotations("default-backend-service")
-	dsvc := strings.Split(dsvcData.Value, "/")
-
-	if len(dsvc) != 2 {
-		logger.Errorf("default service invalid data")
-		return false
-	}
-	if dsvc[0] == "" || dsvc[1] == "" {
-		return false
-	}
-	namespace, ok := c.Store.Namespaces[dsvc[0]]
+// handlePath processes an IngressPath and make corresponding HAProxy configuration
+func (c *HAProxyController) handlePath(namespace *store.Namespace, ingress *store.Ingress, rule *store.IngressRule, path *store.IngressPath) (reload bool) {
+	// fetch Service
+	service, ok := namespace.Services[path.ServiceName]
 	if !ok {
-		logger.Errorf("default service invalid namespace " + dsvc[0])
+		logger.Errorf("service '%s' does not exist", path.ServiceName)
 		return false
 	}
-	service, ok := namespace.Services[dsvc[1]]
-	if !ok {
-		logger.Errorf("service '" + dsvc[1] + "' does not exist")
-		return false
+	// handle backend
+	backendName, newBackend, r, err := c.handleService(namespace, ingress, rule, path, service)
+	reload = reload || r
+	if err != nil {
+		logger.Error(err)
+		return reload
 	}
-	ingress := &store.Ingress{
-		Namespace:   namespace.Name,
-		Name:        "DefaultService",
-		Annotations: store.MapStringW{},
-		Rules:       map[string]*store.IngressRule{},
+	if path.Status == DELETED {
+		return reload
 	}
-	path := &store.IngressPath{
-		ServiceName:      service.Name,
-		ServicePortInt:   service.Ports[0].Port,
-		IsDefaultBackend: true,
-	}
-	return c.handlePath(namespace, ingress, &store.IngressRule{}, path)
+	// handle backend servers
+	return c.handleEndpoints(namespace, ingress, path, service, backendName, newBackend)
 }
 
-// handle service of an IngressPath and make corresponding backend configuration in HAProxy
+// handleService processes an IngressPath service and make corresponding backend configuration in HAProxy
 func (c *HAProxyController) handleService(namespace *store.Namespace, ingress *store.Ingress, rule *store.IngressRule, path *store.IngressPath, service *store.Service) (backendName string, newBackend bool, reload bool, err error) {
 
 	// Get Backend status
@@ -163,55 +148,4 @@ func (c *HAProxyController) handleService(namespace *store.Namespace, ingress *s
 	}
 
 	return backendName, newBackend, reload, nil
-}
-
-// handle IngressPath and make corresponding HAProxy configuration
-func (c *HAProxyController) handlePath(namespace *store.Namespace, ingress *store.Ingress, rule *store.IngressRule, path *store.IngressPath) (reload bool) {
-	// fetch Service
-	service, ok := namespace.Services[path.ServiceName]
-	if !ok {
-		logger.Errorf("service '%s' does not exist", path.ServiceName)
-		return false
-	}
-	// handle backend
-	backendName, newBackend, r, err := c.handleService(namespace, ingress, rule, path, service)
-	reload = reload || r
-	if err != nil {
-		logger.Error(err)
-		return reload
-	}
-	if path.Status == DELETED {
-		return reload
-	}
-	// handle backend servers
-	return c.handleEndpoints(namespace, ingress, path, service, backendName, newBackend)
-}
-
-// handle pprof backend
-func (c *HAProxyController) handlePprof() (err error) {
-	pprofBackend := "pprof"
-
-	err = c.Client.BackendCreate(models.Backend{
-		Name: pprofBackend,
-		Mode: "http",
-	})
-	if err != nil {
-		return err
-	}
-	err = c.Client.BackendServerCreate(pprofBackend, models.Server{
-		Name:    "pprof",
-		Address: "127.0.0.1:6060",
-	})
-	if err != nil {
-		return err
-	}
-	logger.Debug("pprof backend created")
-	useBackendRule := UseBackendRule{
-		Host:       "",
-		Path:       "/debug/pprof",
-		ExactMatch: false,
-		Backend:    pprofBackend,
-	}
-	c.addUseBackendRule("pprof", useBackendRule, FrontendHTTPS)
-	return nil
 }

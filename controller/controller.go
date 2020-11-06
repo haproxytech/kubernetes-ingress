@@ -15,15 +15,12 @@
 package controller
 
 import (
-	"bufio"
 	"context"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strconv"
 	"strings"
-	"syscall"
 
 	"github.com/haproxytech/client-native/v2/configuration"
 	parser "github.com/haproxytech/config-parser/v3"
@@ -83,27 +80,6 @@ type HAProxyController struct {
 	UpdateHandlers []UpdateHandler
 }
 
-// Return HAProxy master process if it exists.
-func (c *HAProxyController) HAProxyProcess() (*os.Process, error) {
-	file, err := os.Open(HAProxyPIDFile)
-	if err != nil {
-		return nil, err
-	}
-	defer file.Close()
-	scanner := bufio.NewScanner(file)
-	scanner.Scan()
-	pid, err := strconv.Atoi(scanner.Text())
-	if err != nil {
-		return nil, err
-	}
-	process, err := os.FindProcess(pid)
-	if err != nil {
-		return nil, err
-	}
-	err = process.Signal(syscall.Signal(0))
-	return process, err
-}
-
 // Wrapping a Native-Client transaction and commit it.
 // Returning an error to let panic or log it upon the scenario.
 func (c *HAProxyController) clientClosure(fn func()) (err error) {
@@ -118,7 +94,7 @@ func (c *HAProxyController) clientClosure(fn func()) (err error) {
 	return
 }
 
-// Start initialize and run HAProxyController
+// Start initializes and runs HAProxyController
 func (c *HAProxyController) Start(ctx context.Context, osArgs utils.OSArgs) {
 
 	c.osArgs = osArgs
@@ -206,7 +182,7 @@ func (c *HAProxyController) Start(ctx context.Context, osArgs utils.OSArgs) {
 	<-ctx.Done()
 }
 
-// Sync HAProxy configuration
+// updateHAProxy syncs HAProxy configuration
 func (c *HAProxyController) updateHAProxy() error {
 	logger.Trace("HAProxy config sync started")
 	reload := false
@@ -269,7 +245,7 @@ func (c *HAProxyController) updateHAProxy() error {
 		reload = reload || r
 	}
 
-	reload = c.Refresh() || reload
+	reload = c.refresh() || reload
 
 	err = c.Client.APICommitTransaction()
 	if err != nil {
@@ -297,7 +273,7 @@ func (c *HAProxyController) updateHAProxy() error {
 	return nil
 }
 
-//HAProxyInitialize runs HAProxy for the first time so native client can have access to it
+// haproxyInitialize initializes HAProxy environment and its API client.
 func (c *HAProxyController) haproxyInitialize() {
 	var err error
 	// HAProxy executable
@@ -397,6 +373,7 @@ func (c *HAProxyController) haproxyInitialize() {
 	c.cfg.Init(HAProxyMapDir)
 }
 
+// handleBind configures Frontends bind lines
 func (c *HAProxyController) handleBind(p *parser.Parser, protocol string, port int64) (reload bool, err error) {
 	var binds []models.Bind
 	if !c.osArgs.DisableIPV4 {
@@ -426,83 +403,72 @@ func (c *HAProxyController) handleBind(p *parser.Parser, protocol string, port i
 	return
 }
 
-// Handle HAProxy daemon via Master process
-func (c *HAProxyController) haproxyService(action string) (err error) {
-	if c.osArgs.Test {
-		logger.Infof("HAProxy would be %sed now", action)
-		return nil
-	}
-	var cmd *exec.Cmd
-	// if processErr is nil, process variable will automatically
-	// hold information about a running Master HAproxy process
-	process, processErr := c.HAProxyProcess()
+// handlePprof enables  pprof backend
+func (c *HAProxyController) handlePprof() (err error) {
+	pprofBackend := "pprof"
 
-	switch action {
-	case "start":
-		if processErr == nil {
-			logger.Error(fmt.Errorf("haproxy is already running"))
-			return nil
-		}
-		cmd = exec.Command(HAProxyBinary, "-W", "-f", HAProxyCFG, "-p", HAProxyPIDFile)
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-		return cmd.Start()
-	case "stop":
-		if processErr != nil {
-			logger.Error(fmt.Errorf("haproxy  already stopped"))
-			return processErr
-		}
-		return process.Signal(syscall.SIGUSR1)
-	case "reload":
-		logger.Error(c.saveServerState())
-		if processErr != nil {
-			logger.Errorf("haproxy is not running, trying to start it")
-			return c.haproxyService("start")
-		}
-		return process.Signal(syscall.SIGUSR2)
-	case "restart":
-		logger.Error(c.saveServerState())
-		if processErr != nil {
-			logger.Errorf("haproxy is not running, trying to start it")
-			return c.haproxyService("start")
-		}
-		pid := strconv.Itoa(process.Pid)
-		cmd = exec.Command(HAProxyBinary, "-W", "-f", HAProxyCFG, "-p", HAProxyPIDFile, "-sf", pid)
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-		return cmd.Start()
-	default:
-		return fmt.Errorf("unknown command '%s'", action)
-	}
-}
-
-// Saves HAProxy servers state so it is retrieved after reload.
-func (c *HAProxyController) saveServerState() error {
-	result, err := c.Client.ExecuteRaw("show servers state")
+	err = c.Client.BackendCreate(models.Backend{
+		Name: pprofBackend,
+		Mode: "http",
+	})
 	if err != nil {
 		return err
 	}
-	var f *os.File
-	if f, err = os.Create(HAProxyStateDir + "global"); err != nil {
-		logger.Error(err)
+	err = c.Client.BackendServerCreate(pprofBackend, models.Server{
+		Name:    "pprof",
+		Address: "127.0.0.1:6060",
+	})
+	if err != nil {
 		return err
 	}
-	defer f.Close()
-	if _, err = f.Write([]byte(result[0])); err != nil {
-		logger.Error(err)
-		return err
+	logger.Debug("pprof backend created")
+	useBackendRule := UseBackendRule{
+		Host:       "",
+		Path:       "/debug/pprof",
+		ExactMatch: false,
+		Backend:    pprofBackend,
 	}
-	if err = f.Sync(); err != nil {
-		logger.Error(err)
-		return err
-	}
-	if err = f.Close(); err != nil {
-		logger.Error(err)
-		return err
-	}
+	c.addUseBackendRule("pprof", useBackendRule, FrontendHTTPS)
 	return nil
 }
 
+// handleDefaultService configures HAProy default backend provided via cli param "default-backend-service"
+func (c *HAProxyController) handleDefaultService() (reload bool) {
+	dsvcData, _ := c.Store.GetValueFromAnnotations("default-backend-service")
+	dsvc := strings.Split(dsvcData.Value, "/")
+
+	if len(dsvc) != 2 {
+		logger.Errorf("default service invalid data")
+		return false
+	}
+	if dsvc[0] == "" || dsvc[1] == "" {
+		return false
+	}
+	namespace, ok := c.Store.Namespaces[dsvc[0]]
+	if !ok {
+		logger.Errorf("default service invalid namespace " + dsvc[0])
+		return false
+	}
+	service, ok := namespace.Services[dsvc[1]]
+	if !ok {
+		logger.Errorf("service '" + dsvc[1] + "' does not exist")
+		return false
+	}
+	ingress := &store.Ingress{
+		Namespace:   namespace.Name,
+		Name:        "DefaultService",
+		Annotations: store.MapStringW{},
+		Rules:       map[string]*store.IngressRule{},
+	}
+	path := &store.IngressPath{
+		ServiceName:      service.Name,
+		ServicePortInt:   service.Ports[0].Port,
+		IsDefaultBackend: true,
+	}
+	return c.handlePath(namespace, ingress, &store.IngressRule{}, path)
+}
+
+// clean controller state
 func (c *HAProxyController) clean() {
 	c.Store.Clean()
 	c.cfg.Clean()
@@ -511,7 +477,8 @@ func (c *HAProxyController) clean() {
 	}
 }
 
-func (c *HAProxyController) Refresh() (reload bool) {
+// refresh controller state
+func (c *HAProxyController) refresh() (reload bool) {
 	reload = c.cfg.HAProxyRules.Refresh(c.Client) || reload
 	reload = c.refreshBackendSwitching() || reload
 	r, err := c.cfg.MapFiles.Refresh()
