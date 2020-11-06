@@ -1199,8 +1199,7 @@ annotations:
     dependencies: ""
     default: ""
     description:
-    - Sets a list of IP addresses or CIDRs to exclude from deny rules, such as rate
-      limiting.
+    - Blocks all IP addresses except the whitelisted ones (annotation value).
     tip: []
     values:
     - Comma-separated list of IP addresses and/or CIDR ranges

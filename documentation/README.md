@@ -102,7 +102,7 @@ blacklist: "192.168.1.0/24, 192.168.2.100"
 
 ##### `whitelist`
 
-  Sets a list of IP addresses or CIDRs to exclude from deny rules, such as rate limiting.
+  Blocks all IP addresses except the whitelisted ones (annotation value).
 
   Available on:  `configmap`  `ingress`
 
