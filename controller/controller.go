@@ -213,12 +213,21 @@ func (c *HAProxyController) updateHAProxy() error {
 			}
 			// handle Default Backend
 			if ingress.DefaultBackend != nil {
-				reload = c.handlePath(namespace, ingress, &store.IngressRule{}, ingress.DefaultBackend) || reload
+				reload = c.handleRoute(&IngressRoute{
+					Namespace: namespace,
+					Ingress:   ingress,
+					Path:      ingress.DefaultBackend,
+				}) || reload
 			}
 			// handle Ingress rules
 			for _, rule := range ingress.Rules {
 				for _, path := range rule.Paths {
-					reload = c.handlePath(namespace, ingress, rule, path) || reload
+					reload = c.handleRoute(&IngressRoute{
+						Namespace: namespace,
+						Ingress:   ingress,
+						Host:      rule.Host,
+						Path:      path,
+					}) || reload
 				}
 			}
 			//handle certs
@@ -465,7 +474,11 @@ func (c *HAProxyController) handleDefaultService() (reload bool) {
 		ServicePortInt:   service.Ports[0].Port,
 		IsDefaultBackend: true,
 	}
-	return c.handlePath(namespace, ingress, &store.IngressRule{}, path)
+	return c.handleRoute(&IngressRoute{
+		Namespace: namespace,
+		Ingress:   ingress,
+		Path:      path,
+	})
 }
 
 // clean controller state

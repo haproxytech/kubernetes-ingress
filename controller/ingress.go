@@ -22,35 +22,43 @@ import (
 	"github.com/haproxytech/kubernetes-ingress/controller/store"
 )
 
-// handlePath processes an IngressPath and make corresponding HAProxy configuration
-func (c *HAProxyController) handlePath(namespace *store.Namespace, ingress *store.Ingress, rule *store.IngressRule, path *store.IngressPath) (reload bool) {
-	// fetch Service
-	service, ok := namespace.Services[path.ServiceName]
-	if !ok {
-		logger.Errorf("service '%s' does not exist", path.ServiceName)
+type IngressRoute struct {
+	Namespace   *store.Namespace
+	Path        *store.IngressPath
+	Service     *store.Service
+	Ingress     *store.Ingress
+	Host        string
+	BackendName string
+	NewBackend  bool
+}
+
+// handleRoute processes an IngressRoute and make corresponding HAProxy configuration
+// which results in the configuration of a Backend section + backend switching rules in Frontend.
+func (c *HAProxyController) handleRoute(route *IngressRoute) (reload bool) {
+	route.Service = route.Namespace.Services[route.Path.ServiceName]
+	if route.Service == nil {
+		logger.Warningf("ingress %s/%s: service '%s' not found", route.Namespace.Name, route.Ingress.Name, route.Path.ServiceName)
 		return false
 	}
-	// handle backend
-	backendName, newBackend, r, err := c.handleService(namespace, ingress, rule, path, service)
+	r, err := c.handleService(route)
 	reload = reload || r
 	if err != nil {
 		logger.Error(err)
 		return reload
 	}
-	if path.Status == DELETED {
+	if route.Path.Status == DELETED {
 		return reload
 	}
-	// handle backend servers
-	return c.handleEndpoints(namespace, ingress, path, service, backendName, newBackend)
+	return c.handleEndpoints(route)
 }
 
-// handleService processes an IngressPath service and make corresponding backend configuration in HAProxy
-func (c *HAProxyController) handleService(namespace *store.Namespace, ingress *store.Ingress, rule *store.IngressRule, path *store.IngressPath, service *store.Service) (backendName string, newBackend bool, reload bool, err error) {
+// handleService processes an IngressRoute and make corresponding backend configuration in HAProxy
+func (c *HAProxyController) handleService(route *IngressRoute) (reload bool, err error) {
 
 	// Get Backend status
-	status := service.Status
+	status := route.Service.Status
 	if status == EMPTY {
-		status = path.Status
+		status = route.Path.Status
 	}
 
 	// If status DELETED
@@ -59,79 +67,78 @@ func (c *HAProxyController) handleService(namespace *store.Namespace, ingress *s
 	// rules are left for the backend in question.
 	// This is done via c.refreshBackendSwitching
 	if status == DELETED {
-		key := fmt.Sprintf("%s-%s-%s-%s", rule.Host, path.Path, namespace.Name, ingress.Name)
+		key := fmt.Sprintf("%s-%s-%s-%s", route.Host, route.Path.Path, route.Namespace.Name, route.Ingress.Name)
 		switch {
-		case path.IsSSLPassthrough:
+		case route.Path.IsSSLPassthrough:
 			c.deleteUseBackendRule(key, FrontendSSL)
-		case path.IsDefaultBackend:
-			logger.Debugf("Removing default backend '%s/%s'", namespace.Name, service.Name)
+		case route.Path.IsDefaultBackend:
+			logger.Debugf("Removing default backend '%s/%s'", route.Namespace.Name, route.Service.Name)
 			err = c.setDefaultBackend("")
 			reload = true
 		default:
 			c.deleteUseBackendRule(key, FrontendHTTP, FrontendHTTPS)
 		}
-		return "", false, reload, err
+		return reload, err
 	}
 
 	// Set backendName
-	if path.ServicePortInt == 0 {
-		backendName = fmt.Sprintf("%s-%s-%s", namespace.Name, service.Name, path.ServicePortString)
+	if route.Path.ServicePortInt == 0 {
+		route.BackendName = fmt.Sprintf("%s-%s-%s", route.Namespace.Name, route.Service.Name, route.Path.ServicePortString)
 	} else {
-		backendName = fmt.Sprintf("%s-%s-%d", namespace.Name, service.Name, path.ServicePortInt)
+		route.BackendName = fmt.Sprintf("%s-%s-%d", route.Namespace.Name, route.Service.Name, route.Path.ServicePortInt)
 	}
 
 	// Get/Create Backend
-	newBackend = false
 	reload = false
 	var backend models.Backend
-	if backend, err = c.Client.BackendGet(backendName); err != nil {
+	if backend, err = c.Client.BackendGet(route.BackendName); err != nil {
 		mode := "http"
 		backend = models.Backend{
-			Name: backendName,
+			Name: route.BackendName,
 			Mode: mode,
 		}
-		if path.IsTCPService || path.IsSSLPassthrough {
+		if route.Path.IsTCPService || route.Path.IsSSLPassthrough {
 			backend.Mode = string(TCP)
 		}
-		logger.Debugf("Ingress '%s/%s': Creating new backend '%s'", namespace.Name, ingress.Name, backendName)
+		logger.Debugf("Ingress '%s/%s': Creating new backend '%s'", route.Namespace.Name, route.Ingress.Name, route.BackendName)
 		if err = c.Client.BackendCreate(backend); err != nil {
-			return "", true, reload, err
+			return reload, err
 		}
-		newBackend = true
+		route.NewBackend = true
 		reload = true
 	}
 
 	// handle Annotations
-	activeSSLPassthrough := c.handleSSLPassthrough(ingress, service, path, &backend, newBackend)
-	activeBackendAnn := c.handleBackendAnnotations(ingress, service, &backend, newBackend)
+	activeSSLPassthrough := c.handleSSLPassthrough(route, &backend)
+	activeBackendAnn := c.handleBackendAnnotations(route, &backend)
 	if activeBackendAnn || activeSSLPassthrough {
-		logger.Debugf("Ingress '%s/%s': Applying annotations changes to backend '%s'", namespace.Name, ingress.Name, backendName)
+		logger.Debugf("Ingress '%s/%s': Applying annotations changes to backend '%s'", route.Namespace.Name, route.Ingress.Name, route.BackendName)
 		if err = c.Client.BackendEdit(backend); err != nil {
-			return backendName, newBackend, reload, err
+			return reload, err
 		}
 		reload = true
 	}
 
 	// No need to update BackendSwitching
-	if (status == EMPTY && !activeSSLPassthrough) || path.IsTCPService {
-		return backendName, newBackend, reload, nil
+	if (status == EMPTY && !activeSSLPassthrough) || route.Path.IsTCPService {
+		return reload, nil
 	}
 
 	// Update backendSwitching
-	key := fmt.Sprintf("%s-%s-%s-%s", rule.Host, path.Path, namespace.Name, ingress.Name)
+	key := fmt.Sprintf("%s-%s-%s-%s", route.Host, route.Path.Path, route.Namespace.Name, route.Ingress.Name)
 	useBackendRule := UseBackendRule{
-		Host:       rule.Host,
-		Path:       path.Path,
-		ExactMatch: path.ExactPathMatch,
-		Backend:    backendName,
-		Namespace:  namespace.Name,
+		Host:       route.Host,
+		Path:       route.Path.Path,
+		ExactMatch: route.Path.ExactPathMatch,
+		Backend:    route.BackendName,
+		Namespace:  route.Namespace.Name,
 	}
 	switch {
-	case path.IsDefaultBackend:
-		logger.Debugf("Using service '%s/%s' as default backend", namespace.Name, service.Name)
-		err = c.setDefaultBackend(backendName)
+	case route.Path.IsDefaultBackend:
+		logger.Debugf("Using service '%s/%s' as default backend", route.Namespace.Name, route.Service.Name)
+		err = c.setDefaultBackend(route.BackendName)
 		reload = true
-	case path.IsSSLPassthrough:
+	case route.Path.IsSSLPassthrough:
 		c.addUseBackendRule(key, useBackendRule, FrontendSSL)
 		if activeSSLPassthrough {
 			c.deleteUseBackendRule(key, FrontendHTTP, FrontendHTTPS)
@@ -144,8 +151,8 @@ func (c *HAProxyController) handleService(namespace *store.Namespace, ingress *s
 	}
 
 	if err != nil {
-		return "", newBackend, reload, err
+		return reload, err
 	}
 
-	return backendName, newBackend, reload, nil
+	return reload, nil
 }

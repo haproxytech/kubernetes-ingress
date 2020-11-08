@@ -26,32 +26,31 @@ import (
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 )
 
-func (c *HAProxyController) handleSSLPassthrough(ingress *store.Ingress, service *store.Service, path *store.IngressPath, backend *models.Backend, newBackend bool) (updateBackendSwitching bool) {
-
-	if path.IsTCPService || path.IsDefaultBackend {
+func (c *HAProxyController) handleSSLPassthrough(route *IngressRoute, backend *models.Backend) (updateBackendSwitching bool) {
+	if route.Path.IsTCPService || route.Path.IsDefaultBackend {
 		return false
 	}
 	updateBackendSwitching = false
-	annSSLPassthrough, _ := c.Store.GetValueFromAnnotations("ssl-passthrough", service.Annotations, ingress.Annotations, c.Store.ConfigMaps[Main].Annotations)
+	annSSLPassthrough, _ := c.Store.GetValueFromAnnotations("ssl-passthrough", route.Service.Annotations, route.Ingress.Annotations, c.Store.ConfigMaps[Main].Annotations)
 	status := annSSLPassthrough.Status
 	if status == EMPTY {
-		status = path.Status
+		status = route.Path.Status
 	}
-	if status != EMPTY || newBackend {
+	if status != EMPTY || route.NewBackend {
 		enabled, err := utils.GetBoolValue(annSSLPassthrough.Value, "ssl-passthrough")
 		if err != nil {
 			logger.Errorf("ssl-passthrough annotation: %s", err)
 			return updateBackendSwitching
 		}
 		if enabled {
-			if !path.IsSSLPassthrough {
-				path.IsSSLPassthrough = true
+			if !route.Path.IsSSLPassthrough {
+				route.Path.IsSSLPassthrough = true
 				backend.Mode = "tcp"
 				updateBackendSwitching = true
 
 			}
-		} else if path.IsSSLPassthrough {
-			path.IsSSLPassthrough = false
+		} else if route.Path.IsSSLPassthrough {
+			route.Path.IsSSLPassthrough = false
 			backend.Mode = "http"
 			updateBackendSwitching = true
 		}
@@ -60,19 +59,19 @@ func (c *HAProxyController) handleSSLPassthrough(ingress *store.Ingress, service
 }
 
 // Update backend with annotations values.
-func (c *HAProxyController) handleBackendAnnotations(ingress *store.Ingress, service *store.Service, backendModel *models.Backend, newBackend bool) (activeAnnotations bool) {
+func (c *HAProxyController) handleBackendAnnotations(route *IngressRoute, backendModel *models.Backend) (activeAnnotations bool) {
 	activeAnnotations = false
 	backend := haproxy.Backend(*backendModel)
 	backendAnnotations := make(map[string]*store.StringW, 7)
 
-	backendAnnotations["abortonclose"], _ = c.Store.GetValueFromAnnotations("abortonclose", service.Annotations, ingress.Annotations, c.Store.ConfigMaps[Main].Annotations)
-	backendAnnotations["config-snippet"], _ = c.Store.GetValueFromAnnotations("config-snippet", ingress.Annotations, service.Annotations)
-	backendAnnotations["cookie-persistence"], _ = c.Store.GetValueFromAnnotations("cookie-persistence", service.Annotations, ingress.Annotations, c.Store.ConfigMaps[Main].Annotations)
-	backendAnnotations["load-balance"], _ = c.Store.GetValueFromAnnotations("load-balance", service.Annotations, ingress.Annotations, c.Store.ConfigMaps[Main].Annotations)
-	backendAnnotations["timeout-check"], _ = c.Store.GetValueFromAnnotations("timeout-check", service.Annotations, ingress.Annotations, c.Store.ConfigMaps[Main].Annotations)
+	backendAnnotations["abortonclose"], _ = c.Store.GetValueFromAnnotations("abortonclose", route.Service.Annotations, route.Ingress.Annotations, c.Store.ConfigMaps[Main].Annotations)
+	backendAnnotations["config-snippet"], _ = c.Store.GetValueFromAnnotations("config-snippet", route.Ingress.Annotations, route.Service.Annotations)
+	backendAnnotations["cookie-persistence"], _ = c.Store.GetValueFromAnnotations("cookie-persistence", route.Service.Annotations, route.Ingress.Annotations, c.Store.ConfigMaps[Main].Annotations)
+	backendAnnotations["load-balance"], _ = c.Store.GetValueFromAnnotations("load-balance", route.Service.Annotations, route.Ingress.Annotations, c.Store.ConfigMaps[Main].Annotations)
+	backendAnnotations["timeout-check"], _ = c.Store.GetValueFromAnnotations("timeout-check", route.Service.Annotations, route.Ingress.Annotations, c.Store.ConfigMaps[Main].Annotations)
 	if backend.Mode == "http" {
-		backendAnnotations["check-http"], _ = c.Store.GetValueFromAnnotations("check-http", service.Annotations, ingress.Annotations, c.Store.ConfigMaps[Main].Annotations)
-		backendAnnotations["forwarded-for"], _ = c.Store.GetValueFromAnnotations("forwarded-for", service.Annotations, ingress.Annotations, c.Store.ConfigMaps[Main].Annotations)
+		backendAnnotations["check-http"], _ = c.Store.GetValueFromAnnotations("check-http", route.Service.Annotations, route.Ingress.Annotations, c.Store.ConfigMaps[Main].Annotations)
+		backendAnnotations["forwarded-for"], _ = c.Store.GetValueFromAnnotations("forwarded-for", route.Service.Annotations, route.Ingress.Annotations, c.Store.ConfigMaps[Main].Annotations)
 	}
 
 	var cs string
@@ -86,7 +85,7 @@ func (c *HAProxyController) handleBackendAnnotations(ingress *store.Ingress, ser
 		if v == nil {
 			continue
 		}
-		if v.Status != EMPTY || newBackend {
+		if v.Status != EMPTY || route.NewBackend {
 			logger.Debugf("Backend '%s': Configuring '%s' annotation", backend.Name, k)
 			switch k {
 			case "abortonclose":
@@ -104,7 +103,7 @@ func (c *HAProxyController) handleBackendAnnotations(ingress *store.Ingress, ser
 					logger.Warning(err.Error())
 					continue
 				}
-				if v.Status == DELETED && !newBackend {
+				if v.Status == DELETED && !route.NewBackend {
 					backend.Httpchk = nil
 				} else if err := backend.UpdateHttpchk(v.Value); err != nil {
 					logger.Errorf("%s annotation: %s", k, err)
@@ -113,7 +112,7 @@ func (c *HAProxyController) handleBackendAnnotations(ingress *store.Ingress, ser
 				activeAnnotations = true
 			case "config-snippet":
 				var err error
-				if v.Status == DELETED && !newBackend {
+				if v.Status == DELETED && !route.NewBackend {
 					err = c.Client.BackendCfgSnippetSet(backend.Name, nil)
 				} else {
 					value := strings.SplitN(strings.Trim(v.Value, "\n"), "\n", -1)
@@ -132,10 +131,10 @@ func (c *HAProxyController) handleBackendAnnotations(ingress *store.Ingress, ser
 					logger.Warning(err.Error())
 					continue
 				}
-				if v.Status == DELETED && !newBackend {
+				if v.Status == DELETED && !route.NewBackend {
 					backend.Cookie = nil
 				} else {
-					cookie := c.handleCookieAnnotations(ingress, service)
+					cookie := c.handleCookieAnnotations(route.Ingress, route.Service)
 					if err := backend.UpdateCookie(&cookie); err != nil {
 						logger.Errorf("%s annotation: %s", k, err)
 						continue

@@ -12,7 +12,7 @@ import (
 
 type TCPHandler struct {
 	// TODO: move ingress handlers to separate module.
-	handlePath func(namespace *store.Namespace, ingress *store.Ingress, rule *store.IngressRule, path *store.IngressPath) (reload bool)
+	handleRoute func(route *IngressRoute) (reload bool)
 }
 
 func (t TCPHandler) Update(k store.K8s, cfg *Configuration, api api.HAProxyClient) (reload bool, err error) {
@@ -119,7 +119,11 @@ func (t TCPHandler) Update(k store.K8s, cfg *Configuration, api api.HAProxyClien
 			Status:         svc.Status,
 		}
 		nsmmp := k.GetNamespace(namespace)
-		reload = t.handlePath(nsmmp, ingress, nil, path) || reload
+		reload = t.handleRoute(&IngressRoute{
+			Namespace: nsmmp,
+			Ingress:   ingress,
+			Path:      path,
+		}) || reload
 	}
 	return reload, err
 }

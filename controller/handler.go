@@ -38,6 +38,6 @@ func (c *HAProxyController) initHandlers() {
 			ipv6:     !c.osArgs.DisableIPV6,
 			port:     c.osArgs.HTTPSBindPort,
 		},
-		TCPHandler{handlePath: c.handlePath},
+		TCPHandler{handleRoute: c.handleRoute},
 	}
 }

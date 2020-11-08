@@ -81,23 +81,22 @@ func (c *HAProxyController) alignHAproxySrvs(endpoints *store.PortEndpoints) (re
 
 // handleEndpoints lookups the IngressPath related endpoints and makes corresponding backend servers configuration in HAProxy
 // If only the address changes , no need to reload just generate new config
-func (c *HAProxyController) handleEndpoints(namespace *store.Namespace, ingress *store.Ingress, path *store.IngressPath, service *store.Service, backendName string, newBackend bool) (reload bool) {
-	reload = newBackend
-	endpoints := c.getEndpoints(namespace, ingress, path, service)
+func (c *HAProxyController) handleEndpoints(route *IngressRoute) (reload bool) {
+	endpoints := c.getEndpoints(route)
 	if endpoints == nil {
-		if c.Client.BackendServerDeleteAll(backendName) {
+		if c.Client.BackendServerDeleteAll(route.BackendName) {
 			reload = true
 		}
 		return reload
 	}
 	// Handle Backend servers
-	endpoints.BackendName = backendName
-	annotations, activeAnnotations := c.getServerAnnotations(ingress, service)
+	endpoints.BackendName = route.BackendName
+	annotations, activeAnnotations := c.getServerAnnotations(route.Ingress, route.Service)
 	srvsNbrChanged := c.alignHAproxySrvs(endpoints)
 	reload = reload || srvsNbrChanged || activeAnnotations
 	for srvName, srv := range endpoints.HAProxySrvs {
-		if srv.Modified || reload {
-			c.handleHAProxSrv(srvName, srv.Address, backendName, endpoints.Port, annotations)
+		if srv.Modified || route.NewBackend {
+			c.handleHAProxSrv(srvName, srv.Address, route.BackendName, endpoints.Port, annotations)
 		}
 	}
 	return reload
@@ -127,59 +126,59 @@ func (c *HAProxyController) handleHAProxSrv(srvName, srvAddr, backendName string
 	}
 }
 
-func (c *HAProxyController) handleExternalName(path *store.IngressPath, service *store.Service) *store.PortEndpoints {
+func (c *HAProxyController) handleExternalName(route *IngressRoute) *store.PortEndpoints {
 	//TODO: currently HAProxy will only resolve server name at startup/reload
 	// This needs to be improved by using HAProxy resolvers to have resolution at runtime
-	logger.Debugf("Configuring service '%s', of type ExternalName", service.Name)
+	logger.Debugf("Configuring service '%s', of type ExternalName", route.Service.Name)
 	var port int64
-	for _, sp := range service.Ports {
-		if sp.Name == path.ServicePortString || sp.Port == path.ServicePortInt {
+	for _, sp := range route.Service.Ports {
+		if sp.Name == route.Path.ServicePortString || sp.Port == route.Path.ServicePortInt {
 			port = sp.Port
 		}
 	}
 	if port == 0 {
-		ingressPort := path.ServicePortString
-		if path.ServicePortInt != 0 {
-			ingressPort = fmt.Sprintf("%d", path.ServicePortInt)
+		ingressPort := route.Path.ServicePortString
+		if route.Path.ServicePortInt != 0 {
+			ingressPort = fmt.Sprintf("%d", route.Path.ServicePortInt)
 		}
-		logger.Warningf("service '%s': service port '%s' not found", service.Name, ingressPort)
+		logger.Warningf("service '%s': service port '%s' not found", route.Service.Name, ingressPort)
 		return nil
 	}
 	return &store.PortEndpoints{
 		Port: port,
 		HAProxySrvs: map[string]*store.HAProxySrv{
 			"external-service": {
-				Address:  service.DNS,
+				Address:  route.Service.DNS,
 				Modified: true,
 			},
 		},
 	}
 }
 
-func (c *HAProxyController) getEndpoints(namespace *store.Namespace, ingress *store.Ingress, path *store.IngressPath, service *store.Service) *store.PortEndpoints {
-	endpoints, ok := namespace.Endpoints[service.Name]
+func (c *HAProxyController) getEndpoints(route *IngressRoute) *store.PortEndpoints {
+	endpoints, ok := route.Namespace.Endpoints[route.Service.Name]
 	if !ok {
-		if service.DNS == "" {
-			logger.Warningf("No Endpoints for service '%s'", service.Name)
+		if route.Service.DNS == "" {
+			logger.Warningf("ingress %s/%s: No Endpoints for service '%s'", route.Namespace.Name, route.Ingress.Name, route.Service.Name)
 			return nil
 		}
-		return c.handleExternalName(path, service)
+		return c.handleExternalName(route)
 	}
-	for _, sp := range service.Ports {
-		if sp.Name == path.ServicePortString || sp.Port == path.ServicePortInt {
+	for _, sp := range route.Service.Ports {
+		if sp.Name == route.Path.ServicePortString || sp.Port == route.Path.ServicePortInt {
 			if endpoints, ok := endpoints.Ports[sp.Name]; ok {
 				return endpoints
 			}
-			logger.Warningf("ingress %s/%s: no matching endpoints for service '%s' and port '%s'", namespace.Name, ingress.Name, service.Name, sp.Name)
+			logger.Warningf("ingress %s/%s: no matching endpoints for service '%s' and port '%s'", route.Namespace.Name, route.Ingress.Name, route.Service.Name, sp.Name)
 
 			return nil
 		}
 	}
-	ingressPort := path.ServicePortString
-	if path.ServicePortInt != 0 {
-		ingressPort = fmt.Sprintf("%d", path.ServicePortInt)
+	ingressPort := route.Path.ServicePortString
+	if route.Path.ServicePortInt != 0 {
+		ingressPort = fmt.Sprintf("%d", route.Path.ServicePortInt)
 	}
-	logger.Warningf("ingress %s/%s: service %s: no service port matching '%s'", namespace.Name, ingress.Name, service.Name, ingressPort)
+	logger.Warningf("ingress %s/%s: service %s: no service port matching '%s'", route.Namespace.Name, route.Ingress.Name, route.Service.Name, ingressPort)
 	return nil
 }
 
