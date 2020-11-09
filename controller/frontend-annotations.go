@@ -52,7 +52,7 @@ func (c *HAProxyController) handleBlacklisting(ingress *store.Ingress) error {
 		return nil
 	}
 	// Validate annotation
-	ips, _ := haproxy.NewMapID(annBlacklist.Value)
+	ips := haproxy.NewMapID(annBlacklist.Value)
 	for _, address := range strings.Split(annBlacklist.Value, ",") {
 		if ip := net.ParseIP(address); ip == nil {
 			if _, _, err := net.ParseCIDR(address); err != nil {
@@ -64,7 +64,7 @@ func (c *HAProxyController) handleBlacklisting(ingress *store.Ingress) error {
 	}
 	// Configure annotation
 	logger.Debugf("Ingress %s/%s: Configuring blacklist annotation", ingress.Namespace, ingress.Name)
-	match, _ := haproxy.NewMapID(fmt.Sprintf("%d-%s", haproxy.REQ_DENY, annBlacklist.Value))
+	match := haproxy.NewMapID(fmt.Sprintf("%d-%s", haproxy.REQ_DENY, annBlacklist.Value))
 	for hostname, rule := range ingress.Rules {
 		if rule.Status != DELETED {
 			for path := range rule.Paths {
@@ -99,7 +99,7 @@ func (c *HAProxyController) handleHTTPRedirect(ingress *store.Ingress) error {
 		return nil
 	}
 	// Configure redirection
-	match, _ := haproxy.NewMapID(fmt.Sprintf("%d-%d", haproxy.REQ_SSL_REDIRECT, sslRedirectCode))
+	match := haproxy.NewMapID(fmt.Sprintf("%d-%d", haproxy.REQ_SSL_REDIRECT, sslRedirectCode))
 	for hostname, rule := range ingress.Rules {
 		if rule.Status != DELETED {
 			for path := range rule.Paths {
@@ -145,8 +145,8 @@ func (c *HAProxyController) handleRateLimiting(ingress *store.Ingress) error {
 
 	// Configure annotation
 	logger.Debugf("Ingress %s/%s: Configuring rate-limit-requests annotation", ingress.Namespace, ingress.Name)
-	reqsMatch, _ := haproxy.NewMapID(fmt.Sprintf("%d-%d-%d", haproxy.REQ_TRACK, *rateLimitPeriod, reqsLimit))
-	trackMatch, _ := haproxy.NewMapID(fmt.Sprintf("%d-%d", haproxy.REQ_RATELIMIT, *rateLimitPeriod))
+	reqsMatch := haproxy.NewMapID(fmt.Sprintf("%d-%d-%d", haproxy.REQ_TRACK, *rateLimitPeriod, reqsLimit))
+	trackMatch := haproxy.NewMapID(fmt.Sprintf("%d-%d", haproxy.REQ_RATELIMIT, *rateLimitPeriod))
 	tableName := fmt.Sprintf("RateLimit-%d", *rateLimitPeriod)
 	for hostname, rule := range ingress.Rules {
 		if rule.Status != DELETED {
@@ -201,7 +201,7 @@ func (c *HAProxyController) handleRequestCapture(ingress *store.Ingress) error {
 		if sample == "" {
 			continue
 		}
-		match, _ := haproxy.NewMapID(fmt.Sprintf("%d-%s-%d", haproxy.REQ_CAPTURE, sample, captureLen))
+		match := haproxy.NewMapID(fmt.Sprintf("%d-%s-%d", haproxy.REQ_CAPTURE, sample, captureLen))
 		for hostname, rule := range ingress.Rules {
 			if rule.Status != DELETED {
 				for path := range rule.Paths {
@@ -238,7 +238,7 @@ func (c *HAProxyController) handleRequestSetHdr(ingress *store.Ingress) error {
 			continue
 		}
 		logger.Debugf("Ingress %s/%s: Configuring request set '%s' header ", ingress.Namespace, ingress.Name, param)
-		match, _ := haproxy.NewMapID(fmt.Sprintf("%d-%s-%s", haproxy.REQ_SET_HEADER, parts[0], parts[1]))
+		match := haproxy.NewMapID(fmt.Sprintf("%d-%s-%s", haproxy.REQ_SET_HEADER, parts[0], parts[1]))
 		for hostname, rule := range ingress.Rules {
 			if rule.Status != DELETED {
 				for path := range rule.Paths {
@@ -268,7 +268,7 @@ func (c *HAProxyController) handleRequestSetHost(ingress *store.Ingress) error {
 	}
 	// Configure annotation
 	logger.Debugf("Ingress %s/%s: Configuring request-set-host", ingress.Namespace, ingress.Name)
-	match, _ := haproxy.NewMapID(fmt.Sprintf("%d-%s", haproxy.REQ_SET_HOST, annSetHost.Value))
+	match := haproxy.NewMapID(fmt.Sprintf("%d-%s", haproxy.REQ_SET_HOST, annSetHost.Value))
 	for hostname, rule := range ingress.Rules {
 		if rule.Status != DELETED {
 			for path := range rule.Paths {
@@ -297,7 +297,7 @@ func (c *HAProxyController) handleRequestPathRewrite(ingress *store.Ingress) err
 	// Configure annotation
 	logger.Debugf("Ingress %s/%s: Configuring path-rewrite", ingress.Namespace, ingress.Name)
 	parts := strings.Fields(strings.TrimSpace(annPathRewrite.Value))
-	match, _ := haproxy.NewMapID(fmt.Sprintf("%d-%s", haproxy.REQ_PATH_REWRITE, annPathRewrite.Value))
+	match := haproxy.NewMapID(fmt.Sprintf("%d-%s", haproxy.REQ_PATH_REWRITE, annPathRewrite.Value))
 	for hostname, rule := range ingress.Rules {
 		if rule.Status != DELETED {
 			for path := range rule.Paths {
@@ -345,7 +345,7 @@ func (c *HAProxyController) handleResponseSetHdr(ingress *store.Ingress) error {
 			continue
 		}
 		logger.Debugf("Ingress %s/%s: Configuring response set '%s' header ", ingress.Namespace, ingress.Name, param)
-		match, _ := haproxy.NewMapID(fmt.Sprintf("%d-%s-%s", haproxy.RES_SET_HEADER, parts[0], parts[1]))
+		match := haproxy.NewMapID(fmt.Sprintf("%d-%s-%s", haproxy.RES_SET_HEADER, parts[0], parts[1]))
 		for hostname, rule := range ingress.Rules {
 			if rule.Status != DELETED {
 				for path := range rule.Paths {
@@ -375,7 +375,7 @@ func (c *HAProxyController) handleWhitelisting(ingress *store.Ingress) error {
 		return nil
 	}
 	// Validate annotation
-	ips, _ := haproxy.NewMapID(annWhitelist.Value)
+	ips := haproxy.NewMapID(annWhitelist.Value)
 	for _, address := range strings.Split(annWhitelist.Value, ",") {
 		if ip := net.ParseIP(address); ip == nil {
 			if _, _, err := net.ParseCIDR(address); err != nil {
@@ -387,7 +387,7 @@ func (c *HAProxyController) handleWhitelisting(ingress *store.Ingress) error {
 	}
 	// Configure annotation
 	logger.Debugf("Ingress %s/%s: Configuring whitelist annotation", ingress.Namespace, ingress.Name)
-	match, _ := haproxy.NewMapID(fmt.Sprintf("%d-%s", haproxy.REQ_DENY, annWhitelist.Value))
+	match := haproxy.NewMapID(fmt.Sprintf("%d-%s", haproxy.REQ_DENY, annWhitelist.Value))
 	for hostname, rule := range ingress.Rules {
 		if rule.Status != DELETED {
 			for path := range rule.Paths {

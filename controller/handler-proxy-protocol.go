@@ -37,7 +37,7 @@ func (p ProxyProtocol) Update(k store.K8s, cfg *Configuration, api api.HAProxyCl
 		return false, nil
 	}
 	// Validate annotation
-	ips, _ := haproxy.NewMapID(annProxyProtocol.Value)
+	ips := haproxy.NewMapID(annProxyProtocol.Value)
 	for _, address := range strings.Split(annProxyProtocol.Value, ",") {
 		if ip := net.ParseIP(address); ip == nil {
 			if _, _, err = net.ParseCIDR(address); err != nil {

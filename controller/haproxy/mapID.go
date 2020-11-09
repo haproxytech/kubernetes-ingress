@@ -23,10 +23,14 @@ import (
 
 type MapID uint64
 
-func NewMapID(s string) (id MapID, err error) {
+func hash(s string) uint64 {
 	h := fnv.New64a()
-	_, err = h.Write([]byte(strings.ToLower(s)))
-	return MapID(h.Sum64()), err
+	_, _ = h.Write([]byte(strings.ToLower(s)))
+	return h.Sum64()
+}
+
+func NewMapID(s string) MapID {
+	return MapID(hash(s))
 }
 
 func (mapID MapID) Path() string {

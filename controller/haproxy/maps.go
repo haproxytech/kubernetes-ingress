@@ -16,6 +16,7 @@ package haproxy
 
 import (
 	"fmt"
+	"hash/fnv"
 	"os"
 	"strings"
 )
@@ -25,29 +26,20 @@ type Maps map[MapID]*mapFile
 var mapDir string
 
 type mapFile struct {
-	rows   map[string]bool
-	hasNew bool
+	rows []string
+	hash uint64
 }
 
-func (mf *mapFile) getContent() string {
-	var content strings.Builder
-	for r, removed := range mf.rows {
-		if removed {
-			continue
-		}
-		content.WriteString(r)
-		content.WriteRune('\n')
+func (mf *mapFile) getContent() (string, uint64) {
+	var b strings.Builder
+	for _, r := range mf.rows {
+		b.WriteString(r)
+		b.WriteRune('\n')
 	}
-	return content.String()
-}
-
-func (mf *mapFile) isModified() bool {
-	for _, removed := range mf.rows {
-		if removed {
-			return true
-		}
-	}
-	return mf.hasNew
+	content := b.String()
+	h := fnv.New64a()
+	_, _ = h.Write([]byte(content))
+	return content, h.Sum64()
 }
 
 func NewMapFiles(path string) Maps {
@@ -61,26 +53,14 @@ func (m Maps) AppendRow(id MapID, row string) {
 		return
 	}
 	if m[id] == nil {
-		m[id] = &mapFile{
-			rows: make(map[string]bool),
-		}
+		m[id] = &mapFile{}
 	}
-	if _, ok := m[id].rows[row]; !ok {
-		m[id].hasNew = true
-	}
-	m[id].rows[row] = false
+	m[id].rows = append(m[id].rows, row)
 }
 
 func (m Maps) Clean() {
 	for _, mapFile := range m {
-		for id, removed := range mapFile.rows {
-			if removed {
-				delete(mapFile.rows, id)
-				continue
-			}
-			mapFile.rows[id] = true
-		}
-		mapFile.hasNew = false
+		mapFile.rows = []string{}
 	}
 }
 
@@ -103,25 +83,27 @@ func (m Maps) Refresh() (reload bool, err error) {
 	reload = false
 	var retErr mapRefreshError
 	for id, mapFile := range m {
-		if mapFile.isModified() {
-			content := mapFile.getContent()
-			var f *os.File
-			filename := id.Path()
-			if content == "" {
-				rErr := os.Remove(filename)
-				retErr.add(rErr)
-				delete(m, id)
-				continue
-			} else if f, err = os.Create(filename); err != nil {
-				retErr.add(err)
-				continue
-			}
-			defer f.Close()
-			if _, err = f.WriteString(content); err != nil {
-				return reload, err
-			}
-			reload = true
+		content, hash := mapFile.getContent()
+		if mapFile.hash == hash {
+			continue
 		}
+		mapFile.hash = hash
+		var f *os.File
+		filename := id.Path()
+		if content == "" {
+			rErr := os.Remove(filename)
+			retErr.add(rErr)
+			delete(m, id)
+			continue
+		} else if f, err = os.Create(filename); err != nil {
+			retErr.add(err)
+			continue
+		}
+		defer f.Close()
+		if _, err = f.WriteString(content); err != nil {
+			return reload, err
+		}
+		reload = true
 	}
 	return reload, retErr.error
 }
