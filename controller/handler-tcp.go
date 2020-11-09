@@ -6,13 +6,12 @@ import (
 	"strings"
 
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/api"
+	ingressRoute "github.com/haproxytech/kubernetes-ingress/controller/ingress"
 	"github.com/haproxytech/kubernetes-ingress/controller/store"
 	"github.com/haproxytech/models/v2"
 )
 
 type TCPHandler struct {
-	// TODO: move ingress handlers to separate module.
-	handleRoute func(route *IngressRoute) (reload bool)
 }
 
 func (t TCPHandler) Update(k store.K8s, cfg *Configuration, api api.HAProxyClient) (reload bool, err error) {
@@ -49,7 +48,6 @@ func (t TCPHandler) Update(k store.K8s, cfg *Configuration, api api.HAProxyClien
 			logger.Debugf("Deleting TCP frontend '%s'", frontendName)
 			err = api.FrontendDelete(frontendName)
 			logger.Panic(err)
-			cfg.BackendSwitchingModified["tcp-services"] = struct{}{}
 			reload = true
 			continue
 		case MODIFIED:
@@ -115,15 +113,15 @@ func (t TCPHandler) Update(k store.K8s, cfg *Configuration, api api.HAProxyClien
 		path := &store.IngressPath{
 			ServiceName:    service,
 			ServicePortInt: servicePort,
-			IsTCPService:   true,
 			Status:         svc.Status,
 		}
 		nsmmp := k.GetNamespace(namespace)
-		reload = t.handleRoute(&IngressRoute{
-			Namespace: nsmmp,
-			Ingress:   ingress,
-			Path:      path,
-		}) || reload
+		cfg.IngressRoutes.AddRoute(&ingressRoute.Route{
+			Namespace:  nsmmp,
+			Ingress:    ingress,
+			Path:       path,
+			TCPService: true,
+		})
 	}
 	return reload, err
 }

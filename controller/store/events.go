@@ -101,8 +101,6 @@ func (k K8s) EventIngress(ns *Namespace, data *Ingress, controllerClass string) 
 							newRule.Status = MODIFIED
 						}
 						// Sync internal data
-						newPath.IsTCPService = oldPath.IsTCPService
-						newPath.IsSSLPassthrough = oldPath.IsSSLPassthrough
 						newPath.IsDefaultBackend = oldPath.IsDefaultBackend
 					} else {
 						newPath.Status = ADDED

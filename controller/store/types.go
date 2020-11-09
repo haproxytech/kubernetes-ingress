@@ -76,8 +76,6 @@ type IngressPath struct {
 	ServicePortString string
 	Path              string
 	ExactPathMatch    bool
-	IsTCPService      bool
-	IsSSLPassthrough  bool
 	IsDefaultBackend  bool
 	Status            Status
 }

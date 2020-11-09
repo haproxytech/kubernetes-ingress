@@ -17,38 +17,34 @@ package controller
 import (
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/rules"
+	"github.com/haproxytech/kubernetes-ingress/controller/ingress"
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 )
 
 //Configuration represents k8s state
 
 type Configuration struct {
-	MapFiles                 haproxy.Maps
-	HAProxyRules             haproxy.Rules
-	BackendSwitchingRules    map[string]UseBackendRules
-	BackendSwitchingModified map[string]struct{}
-	HTTPS                    bool
-	SSLPassthrough           bool
-	UsedCerts                map[string]struct{}
+	MapFiles       haproxy.Maps
+	HAProxyRules   haproxy.Rules
+	IngressRoutes  ingress.Routes
+	HTTPS          bool
+	SSLPassthrough bool
+	UsedCerts      map[string]struct{}
 }
 
 //Init initialize configuration
 func (c *Configuration) Init(mapDir string) {
 
 	c.MapFiles = haproxy.NewMapFiles(mapDir)
+	c.IngressRoutes = ingress.NewRoutes()
 	logger.Panic(c.HAProxyRulesInit())
-
-	c.BackendSwitchingRules = make(map[string]UseBackendRules)
-	c.BackendSwitchingModified = make(map[string]struct{})
-	for _, frontend := range []string{FrontendHTTP, FrontendHTTPS, FrontendSSL} {
-		c.BackendSwitchingRules[frontend] = UseBackendRules{}
-	}
 }
 
 //Clean cleans all the statuses of various data that was changed
 //deletes them completely or just resets them if needed
 func (c *Configuration) Clean() {
 	c.MapFiles.Clean()
+	c.IngressRoutes = ingress.NewRoutes()
 	logger.Panic(c.HAProxyRulesInit())
 	rateLimitTables = []string{}
 }

@@ -90,15 +90,16 @@ func (h HTTPS) Update(k store.K8s, cfg *Configuration, api api.HAProxyClient) (r
 		reload = true
 	}
 	// ssl-passthrough
-	if len(cfg.BackendSwitchingRules[FrontendSSL]) > 0 {
-		if !cfg.SSLPassthrough {
+	_, errFtSSL := api.FrontendGet(FrontendSSL)
+	if cfg.SSLPassthrough {
+		if errFtSSL != nil {
 			logger.Info("Enabling ssl-passthrough")
 			logger.Panic(h.enableSSLPassthrough(cfg, api))
 			cfg.SSLPassthrough = true
 			reload = true
 		}
 		logger.Error(h.sslPassthroughRules(k, cfg))
-	} else if cfg.SSLPassthrough {
+	} else if errFtSSL == nil {
 		logger.Info("Disabling ssl-passthrough")
 		logger.Panic(h.disableSSLPassthrough(cfg, api))
 		cfg.SSLPassthrough = false
@@ -112,12 +113,11 @@ func (h HTTPS) Update(k store.K8s, cfg *Configuration, api api.HAProxyClient) (r
 
 func (h HTTPS) enableSSLPassthrough(cfg *Configuration, api api.HAProxyClient) (err error) {
 	// Create TCP frontend for ssl-passthrough
-	backendHTTPS := "https"
 	frontend := models.Frontend{
 		Name:           FrontendSSL,
 		Mode:           "tcp",
 		LogFormat:      "'%ci:%cp [%t] %ft %b/%s %Tw/%Tc/%Tt %B %ts %ac/%fc/%bc/%sc/%rc %sq/%bq %hr %hs %[var(sess.sni)]'",
-		DefaultBackend: backendHTTPS,
+		DefaultBackend: SSLDefaultBaceknd,
 	}
 	err = api.FrontendCreate(frontend)
 	if err != nil {
@@ -133,10 +133,10 @@ func (h HTTPS) enableSSLPassthrough(cfg *Configuration, api api.HAProxyClient) (
 	var errors utils.Errors
 	errors.Add(
 		api.BackendCreate(models.Backend{
-			Name: backendHTTPS,
+			Name: SSLDefaultBaceknd,
 			Mode: "tcp",
 		}),
-		api.BackendServerCreate(backendHTTPS, models.Server{
+		api.BackendServerCreate(SSLDefaultBaceknd, models.Server{
 			Name:        FrontendHTTPS,
 			Address:     "127.0.0.1",
 			Port:        utils.PtrInt64(h.port),

@@ -30,6 +30,7 @@ import (
 	"k8s.io/apimachinery/pkg/watch"
 
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/api"
+	ingressRoute "github.com/haproxytech/kubernetes-ingress/controller/ingress"
 	"github.com/haproxytech/kubernetes-ingress/controller/store"
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 )
@@ -39,10 +40,12 @@ const (
 	Main        = "main"
 	TCPServices = "tcpservices"
 	Errorfiles  = "errorfiles"
-	//frontends
-	FrontendHTTP  = "http"
-	FrontendHTTPS = "https"
-	FrontendSSL   = "ssl"
+	//sections
+	FrontendHTTP       = "http"
+	FrontendHTTPS      = "https"
+	FrontendSSL        = "ssl"
+	HTTPDefaultBackend = "default_backend"
+	SSLDefaultBaceknd  = "ssl"
 	//Status
 	ADDED    = store.ADDED
 	DELETED  = store.DELETED
@@ -131,7 +134,6 @@ func (c *HAProxyController) Start(ctx context.Context, osArgs utils.OSArgs) {
 	if c.osArgs.PprofEnabled {
 		logger.Error(c.clientClosure(func() {
 			logger.Error(c.handlePprof())
-			c.refreshBackendSwitching()
 		}))
 	}
 
@@ -198,7 +200,7 @@ func (c *HAProxyController) updateHAProxy() error {
 
 	restart, reload := c.handleGlobalAnnotations()
 
-	reload = c.handleDefaultService() || reload
+	c.handleDefaultService()
 
 	usedCerts := map[string]struct{}{}
 	c.cfg.UsedCerts = usedCerts
@@ -213,21 +215,22 @@ func (c *HAProxyController) updateHAProxy() error {
 			}
 			// handle Default Backend
 			if ingress.DefaultBackend != nil {
-				reload = c.handleRoute(&IngressRoute{
+				c.cfg.IngressRoutes.AddRoute(&ingressRoute.Route{
 					Namespace: namespace,
 					Ingress:   ingress,
 					Path:      ingress.DefaultBackend,
-				}) || reload
+				})
 			}
 			// handle Ingress rules
 			for _, rule := range ingress.Rules {
 				for _, path := range rule.Paths {
-					reload = c.handleRoute(&IngressRoute{
-						Namespace: namespace,
-						Ingress:   ingress,
-						Host:      rule.Host,
-						Path:      path,
-					}) || reload
+					c.cfg.IngressRoutes.AddRoute(&ingressRoute.Route{
+						Namespace:      namespace,
+						Ingress:        ingress,
+						Host:           rule.Host,
+						Path:           path,
+						SSLPassthrough: c.sslPassthroughEnabled(namespace, ingress, path),
+					})
 				}
 			}
 			//handle certs
@@ -431,37 +434,37 @@ func (c *HAProxyController) handlePprof() (err error) {
 		return err
 	}
 	logger.Debug("pprof backend created")
-	useBackendRule := UseBackendRule{
-		Host:       "",
-		Path:       "/debug/pprof",
-		ExactMatch: false,
-		Backend:    pprofBackend,
-	}
-	c.addUseBackendRule("pprof", useBackendRule, FrontendHTTPS)
+	c.cfg.IngressRoutes.AddRoute(&ingressRoute.Route{
+		Path: &store.IngressPath{
+			Path:           "/debug/pprof",
+			ExactPathMatch: false,
+		},
+		BackendName: pprofBackend,
+	})
 	return nil
 }
 
 // handleDefaultService configures HAProy default backend provided via cli param "default-backend-service"
-func (c *HAProxyController) handleDefaultService() (reload bool) {
+func (c *HAProxyController) handleDefaultService() {
 	dsvcData, _ := c.Store.GetValueFromAnnotations("default-backend-service")
 	dsvc := strings.Split(dsvcData.Value, "/")
 
 	if len(dsvc) != 2 {
 		logger.Errorf("default service invalid data")
-		return false
+		return
 	}
 	if dsvc[0] == "" || dsvc[1] == "" {
-		return false
+		return
 	}
 	namespace, ok := c.Store.Namespaces[dsvc[0]]
 	if !ok {
 		logger.Errorf("default service invalid namespace " + dsvc[0])
-		return false
+		return
 	}
 	service, ok := namespace.Services[dsvc[1]]
 	if !ok {
 		logger.Errorf("service '" + dsvc[1] + "' does not exist")
-		return false
+		return
 	}
 	ingress := &store.Ingress{
 		Namespace:   namespace.Name,
@@ -474,7 +477,7 @@ func (c *HAProxyController) handleDefaultService() (reload bool) {
 		ServicePortInt:   service.Ports[0].Port,
 		IsDefaultBackend: true,
 	}
-	return c.handleRoute(&IngressRoute{
+	c.cfg.IngressRoutes.AddRoute(&ingressRoute.Route{
 		Namespace: namespace,
 		Ingress:   ingress,
 		Path:      path,
@@ -488,14 +491,65 @@ func (c *HAProxyController) clean() {
 	if c.PublishService != nil {
 		c.PublishService.Status = EMPTY
 	}
+	c.cfg.SSLPassthrough = false
 }
 
 // refresh controller state
 func (c *HAProxyController) refresh() (reload bool) {
+	reload, activeBackends := c.cfg.IngressRoutes.Refresh(c.Client, c.Store)
+	reload = c.clearBackends(activeBackends) || reload
 	reload = c.cfg.HAProxyRules.Refresh(c.Client) || reload
-	reload = c.refreshBackendSwitching() || reload
 	r, err := c.cfg.MapFiles.Refresh()
 	reload = reload || r
 	logger.Error(err)
 	return reload
+}
+
+// Remove unused backends
+func (c *HAProxyController) clearBackends(activeBackends map[string]struct{}) (reload bool) {
+	// HTTP default backend
+	activeBackends[HTTPDefaultBackend] = struct{}{}
+	// SSL default backend
+	activeBackends[SSLDefaultBaceknd] = struct{}{}
+	// Ratelimting backends
+	for _, rateLimitTable := range rateLimitTables {
+		activeBackends[rateLimitTable] = struct{}{}
+	}
+	allBackends, err := c.Client.BackendsGet()
+	if err != nil {
+		return false
+	}
+	for _, backend := range allBackends {
+		if _, ok := activeBackends[backend.Name]; !ok {
+			logger.Debugf("Deleting backend '%s'", backend.Name)
+			if err := c.Client.BackendDelete(backend.Name); err != nil {
+				logger.Panic(err)
+			}
+			reload = true
+		}
+	}
+	return reload
+}
+
+func (c *HAProxyController) sslPassthroughEnabled(namespace *store.Namespace, ingress *store.Ingress, path *store.IngressPath) bool {
+	var annSSLPassthrough *store.StringW
+	service, ok := namespace.Services[path.ServiceName]
+	if ok {
+		annSSLPassthrough, _ = c.Store.GetValueFromAnnotations("ssl-passthrough", service.Annotations, ingress.Annotations, c.Store.ConfigMaps[Main].Annotations)
+	} else {
+		annSSLPassthrough, _ = c.Store.GetValueFromAnnotations("ssl-passthrough", ingress.Annotations, c.Store.ConfigMaps[Main].Annotations)
+	}
+	enabled, err := utils.GetBoolValue(annSSLPassthrough.Value, "ssl-passthrough")
+	if err != nil {
+		logger.Errorf("ssl-passthrough annotation: %s", err)
+		return false
+	}
+	if annSSLPassthrough.Status == DELETED {
+		return false
+	}
+	if enabled {
+		c.cfg.SSLPassthrough = true
+		return true
+	}
+	return false
 }
