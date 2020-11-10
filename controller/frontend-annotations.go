@@ -15,12 +15,14 @@
 package controller
 
 import (
+	"bytes"
 	"fmt"
 	"net"
 	"strconv"
 	"strings"
 
 	"github.com/haproxytech/client-native/v2/misc"
+
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/rules"
 	"github.com/haproxytech/kubernetes-ingress/controller/store"
@@ -30,6 +32,7 @@ import (
 var rateLimitTables []string
 
 func (c *HAProxyController) handleIngressAnnotations(ingress *store.Ingress) {
+	logger.Error(c.handleBasicAuth(ingress))
 	logger.Error(c.handleRateLimiting(ingress))
 	logger.Error(c.handleRequestCapture(ingress))
 	logger.Error(c.handleRequestPathRewrite(ingress))
@@ -39,6 +42,69 @@ func (c *HAProxyController) handleIngressAnnotations(ingress *store.Ingress) {
 	logger.Error(c.handleBlacklisting(ingress))
 	logger.Error(c.handleWhitelisting(ingress))
 	logger.Error(c.handleHTTPRedirect(ingress))
+}
+
+func (c *HAProxyController) handleBasicAuth(ingress *store.Ingress) (err error) {
+	groupName := fmt.Sprintf("%s-%s", ingress.Namespace, ingress.Name)
+
+	var authType, authSecret *store.StringW
+	authType, err = c.Store.GetValueFromAnnotations("auth-type", ingress.Annotations, c.Store.ConfigMaps[Main].Annotations)
+	if err != nil || authType.Status == DELETED || authType.Value != "basic-auth" {
+		logger.Debugf("Ingress %s/%s: Deleting Basic Auth authentication", ingress.Namespace, ingress.Name)
+		return c.Client.UserListDeleteByGroup(groupName)
+	}
+	authSecret, err = c.Store.GetValueFromAnnotations("auth-secret", ingress.Annotations, c.Store.ConfigMaps[Main].Annotations)
+	if err != nil || authSecret.Status == DELETED {
+		logger.Debugf("Ingress %s/%s: Missing Basic Auth secret reference, deleting", ingress.Namespace, ingress.Name)
+		return c.Client.UserListDeleteByGroup(groupName)
+	}
+
+	s, ok := c.Store.Namespaces[ingress.Namespace].Secret[authSecret.Value]
+	if !ok {
+		err = fmt.Errorf("declared Secret (%s) doesn't exist", authSecret.Value)
+		logger.Debugf("Ingress %s/%s: %s", ingress.Namespace, ingress.Name, err.Error())
+		return
+	}
+	// clearing the actual userlist for current Ingress
+	err = c.Client.UserListDeleteByGroup(groupName)
+	if err != nil {
+		logger.Debugf("Ingress %s/%s: Cannot delete userlist, %s", ingress.Namespace, ingress.Name, err.Error())
+		return
+	}
+
+	users := make(map[string][]byte)
+	for u, pwd := range s.Data {
+		p := bytes.Split(pwd, []byte("\n"))
+		if len(p) > 1 {
+			logger.Warningf("Ingress %s/%s: Password for user %s is containing multiple lines", ingress.Namespace, ingress.Name, u)
+		}
+		users[u] = p[0]
+	}
+	if err = c.Client.UserListCreateByGroup(groupName, users); err != nil {
+		logger.Debugf("Ingress %s/%s: Cannot create userlist, %s", ingress.Namespace, ingress.Name, err.Error())
+		return
+	}
+
+	// Configure ACL
+	match := haproxy.NewMapID(fmt.Sprintf("%d-%s", haproxy.REQ_SET_VAR, authSecret.Value))
+	for hostname, rule := range ingress.Rules {
+		if rule.Status != DELETED {
+			for path := range rule.Paths {
+				c.cfg.MapFiles.AppendRow(match, hostname+path)
+			}
+		}
+	}
+
+	r := rules.ReqBasicAuth{
+		Name:    fmt.Sprintf("%s-%s", ingress.Namespace, ingress.Name),
+		Ingress: match,
+	}
+	if err = c.cfg.HAProxyRules.AddRule(r, FrontendHTTP, FrontendHTTPS); err != nil {
+		logger.Debugf("Ingress %s/%s: Cannot add BasicAuth rule, %s", ingress.Namespace, ingress.Name, err.Error())
+		return
+	}
+
+	return
 }
 
 func (c *HAProxyController) handleBlacklisting(ingress *store.Ingress) error {

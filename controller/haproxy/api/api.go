@@ -57,6 +57,8 @@ type HAProxyClient interface {
 	ServerStateBase(value *types.StringC) error
 	SetServerAddr(backendName string, serverName string, ip string, port int) error
 	SetServerState(backendName string, serverName string, state string) error
+	UserListDeleteByGroup(group string) error
+	UserListCreateByGroup(group string, userPasswordMap map[string][]byte) error
 }
 
 type clientNative struct {
