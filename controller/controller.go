@@ -278,7 +278,7 @@ func (c *HAProxyController) updateHAProxy() error {
 		}
 	}
 
-	logger.Trace("HAProxy config sync terminated")
+	logger.Trace("HAProxy config sync ended")
 	return nil
 }
 
