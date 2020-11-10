@@ -221,6 +221,15 @@ func NewTlsSecret(key *rsa.PrivateKey, cert []byte, name, release string) *corev
 	}
 }
 
+func NewSecret(keyVal map[string][]byte, name, release string) (secret *corev1.Secret) {
+	return &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: fmt.Sprintf("%s-%s", name, release),
+		},
+		Data: keyVal,
+	}
+}
+
 func GetCaOrFail(t *testing.T, cs *kubernetes.Clientset) (ca *x509.Certificate) {
 	var err error
 
