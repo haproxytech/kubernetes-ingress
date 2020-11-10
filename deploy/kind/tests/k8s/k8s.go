@@ -203,7 +203,7 @@ func NewCertificateSigningRequest(name, release string, key *rsa.PrivateKey, dns
 	}
 }
 
-func NewSecret(key *rsa.PrivateKey, cert []byte, name, release string) *corev1.Secret {
+func NewTlsSecret(key *rsa.PrivateKey, cert []byte, name, release string) *corev1.Secret {
 	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: fmt.Sprintf("%s-%s", name, release),

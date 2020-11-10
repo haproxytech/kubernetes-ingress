@@ -74,7 +74,7 @@ func Test_Https(t *testing.T) {
 
 	crt := k8s.ApproveCSRAndGetCertificate(t, cs, csr)
 
-	secret := k8s.NewSecret(key, crt, "podinfo", "https")
+	secret := k8s.NewTlsSecret(key, crt, "podinfo", "https")
 	secret, err = cs.CoreV1().Secrets("default").Create(context.Background(), secret, metav1.CreateOptions{})
 	assert.Nil(t, err)
 	defer cs.CoreV1().Secrets(secret.Namespace).Delete(context.Background(), secret.Name, metav1.DeleteOptions{})
