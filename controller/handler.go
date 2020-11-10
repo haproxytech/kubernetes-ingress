@@ -39,5 +39,6 @@ func (c *HAProxyController) initHandlers() {
 			port:     c.osArgs.HTTPSBindPort,
 		},
 		TCPHandler{},
+		RefreshHandler{},
 	}
 }

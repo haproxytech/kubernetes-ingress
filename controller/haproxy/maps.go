@@ -79,7 +79,7 @@ func (m *mapRefreshError) add(nErr error) {
 	m.error = fmt.Errorf("%w\n%s", m.error, nErr)
 }
 
-func (m Maps) Refresh() (reload bool, err error) {
+func (m Maps) Refresh() (reload bool) {
 	reload = false
 	var retErr mapRefreshError
 	for id, mapFile := range m {
@@ -89,6 +89,7 @@ func (m Maps) Refresh() (reload bool, err error) {
 		}
 		mapFile.hash = hash
 		var f *os.File
+		var err error
 		filename := id.Path()
 		if content == "" {
 			rErr := os.Remove(filename)
@@ -96,14 +97,14 @@ func (m Maps) Refresh() (reload bool, err error) {
 			delete(m, id)
 			continue
 		} else if f, err = os.Create(filename); err != nil {
-			retErr.add(err)
+			logger.Error()
 			continue
 		}
 		defer f.Close()
 		if _, err = f.WriteString(content); err != nil {
-			return reload, err
+			return reload
 		}
 		reload = true
 	}
-	return reload, retErr.error
+	return reload
 }

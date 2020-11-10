@@ -257,8 +257,6 @@ func (c *HAProxyController) updateHAProxy() error {
 		reload = reload || r
 	}
 
-	reload = c.refresh() || reload
-
 	err = c.Client.APICommitTransaction()
 	if err != nil {
 		logger.Error(err)
@@ -492,43 +490,6 @@ func (c *HAProxyController) clean() {
 		c.PublishService.Status = EMPTY
 	}
 	c.cfg.SSLPassthrough = false
-}
-
-// refresh controller state
-func (c *HAProxyController) refresh() (reload bool) {
-	reload, activeBackends := c.cfg.IngressRoutes.Refresh(c.Client, c.Store)
-	reload = c.clearBackends(activeBackends) || reload
-	reload = c.cfg.HAProxyRules.Refresh(c.Client) || reload
-	r, err := c.cfg.MapFiles.Refresh()
-	reload = reload || r
-	logger.Error(err)
-	return reload
-}
-
-// Remove unused backends
-func (c *HAProxyController) clearBackends(activeBackends map[string]struct{}) (reload bool) {
-	// HTTP default backend
-	activeBackends[HTTPDefaultBackend] = struct{}{}
-	// SSL default backend
-	activeBackends[SSLDefaultBaceknd] = struct{}{}
-	// Ratelimting backends
-	for _, rateLimitTable := range rateLimitTables {
-		activeBackends[rateLimitTable] = struct{}{}
-	}
-	allBackends, err := c.Client.BackendsGet()
-	if err != nil {
-		return false
-	}
-	for _, backend := range allBackends {
-		if _, ok := activeBackends[backend.Name]; !ok {
-			logger.Debugf("Deleting backend '%s'", backend.Name)
-			if err := c.Client.BackendDelete(backend.Name); err != nil {
-				logger.Panic(err)
-			}
-			reload = true
-		}
-	}
-	return reload
 }
 
 func (c *HAProxyController) sslPassthroughEnabled(namespace *store.Namespace, ingress *store.Ingress, path *store.IngressPath) bool {
