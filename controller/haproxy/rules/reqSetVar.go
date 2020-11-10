@@ -1,10 +1,11 @@
 package rules
 
 import (
+	"github.com/haproxytech/models/v2"
+
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/api"
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
-	"github.com/haproxytech/models/v2"
 )
 
 type ReqSetVar struct {
