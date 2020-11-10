@@ -33,7 +33,6 @@ RUN mkdir -p /var/run/vars && \
     cat /var/run/vars/GIT_MODIFIED1 /var/run/vars/GIT_MODIFIED2 | tr -d '\n' > /var/run/vars/GIT_MODIFIED && \
     date '+%Y-%m-%dT%H:%M:%S' > /var/run/vars/BUILD_DATE && \
     CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
-        -gcflags "-N -l" \
         -ldflags "-X main.GitRepo=$(cat /var/run/vars/GIT_REPO) -X main.GitTag=$(cat /var/run/vars/GIT_LAST_TAG) -X main.GitCommit=$(cat /var/run/vars/GIT_HEAD_COMMIT) -X main.GitDirty=$(cat /var/run/vars/GIT_MODIFIED) -X main.BuildTime=$(cat /var/run/vars/BUILD_DATE)" \
         -o fs/haproxy-ingress-controller .
 
