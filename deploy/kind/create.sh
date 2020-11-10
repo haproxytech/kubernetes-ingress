@@ -16,13 +16,16 @@ if [ -n "${K8S_IC_STABLE}" ]; then
   docker pull haproxytech/kubernetes-ingress:latest
   kind --name=dev load docker-image haproxytech/kubernetes-ingress:latest
 else
+  echo "building image for ingress controller"
   docker build -t haproxytech/kubernetes-ingress -f build/Dockerfile .
   kind --name=dev load docker-image haproxytech/kubernetes-ingress:latest
 fi
 
+echo "building simple web server"
 docker build -t go-web-simple:1.1 https://github.com/oktalz/go-web-simple.git#v1.1.5:.
 kind --name="dev" load docker-image go-web-simple:1.1
 
+echo "creating k8s env"
 sed -e 's/#GROUP#/zagreb/g' -e 's/1 #NUMBER#/4/g' $DIR/web/web-rc.yml | kubectl apply -f -
 sed 's/#GROUP#/zagreb/g' $DIR/web/web-svc.yml | kubectl apply -f -
 
