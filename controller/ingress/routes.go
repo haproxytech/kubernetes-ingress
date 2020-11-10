@@ -16,20 +16,19 @@ package ingress
 
 import (
 	"fmt"
-	"sort"
 
-	"github.com/haproxytech/models/v2"
-
+	"github.com/haproxytech/kubernetes-ingress/controller/haproxy"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/api"
 	"github.com/haproxytech/kubernetes-ingress/controller/store"
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 )
 
 type Routes struct {
-	http           map[string]*Route
-	httpDefault    []*Route
-	sslPassthrough []*Route
+	http           []*Route
 	tcp            []*Route
+	httpDefault    []*Route
+	activeBackends map[string]struct{}
+	reload         bool
 }
 
 var logger = utils.GetLogger()
@@ -39,24 +38,16 @@ var k8sStore store.K8s
 const (
 	// Configmaps
 	Main = "main"
-	//frontends
+	// Frontends
 	FrontendHTTP  = "http"
 	FrontendHTTPS = "https"
-	FrontendSSL   = "ssl"
-	//Status
+	// Status
 	ADDED    = store.ADDED
 	DELETED  = store.DELETED
 	ERROR    = store.ERROR
 	EMPTY    = store.EMPTY
 	MODIFIED = store.MODIFIED
 )
-
-func NewRoutes() Routes {
-	routes := Routes{
-		http: make(map[string]*Route),
-	}
-	return routes
-}
 
 func (r *Routes) AddRoute(route *Route) {
 	route.service = route.Namespace.Services[route.Path.ServiceName]
@@ -70,40 +61,32 @@ func (r *Routes) AddRoute(route *Route) {
 		r.httpDefault = append([]*Route{route}, r.httpDefault...)
 	case route.TCPService:
 		r.tcp = append(r.tcp, route)
-	case route.SSLPassthrough:
-		r.sslPassthrough = append(r.sslPassthrough, route)
 	default:
-		key := fmt.Sprintf("%s-%s-%s-%s", route.Host, route.Path.Path, route.Ingress.Name, route.Namespace.Name)
-		r.http[key] = route
+		r.http = append(r.http, route)
 	}
 }
 
-func (r *Routes) Refresh(c api.HAProxyClient, k store.K8s) (reload bool, activeBackends map[string]struct{}) {
+func (r *Routes) Refresh(c api.HAProxyClient, k store.K8s, mapFiles haproxy.Maps) (reload bool, activeBackends map[string]struct{}) {
 	client = c
 	k8sStore = k
-	activeBackends = make(map[string]struct{})
-
+	r.activeBackends = make(map[string]struct{})
 	logger.Debug("Updating Backend Switching rules")
-	// Default Routes
-	reload = r.refreshTCP(activeBackends) || reload
-	reload = r.refreshHTTPDefault(activeBackends) || reload
-	// SSLPassthrough Routes
-	reload = r.refreshSSLPassthroug(activeBackends) || reload
-	// HTTP Routes
-	reload = r.refreshHTTP(activeBackends) || reload
-	return reload, activeBackends
+	r.RefreshHTTP(mapFiles)
+	r.refreshHTTPDefault()
+	r.refreshTCP()
+	return r.reload, r.activeBackends
 }
 
-func (r *Routes) refreshHTTP(activeBackends map[string]struct{}) (reload bool) {
-	sortedKeys := []string{}
-	for key, route := range r.http {
+func (r *Routes) RefreshHTTP(mapFiles haproxy.Maps) {
+	for _, route := range r.http {
+		// DELETED Route
 		if route.status == DELETED {
-			reload = true
+			r.reload = true
 			continue
 		}
-		// At this stage if backendName !="" then it was
-		// manually configured to use a local backend.
-		// For now this is only the case for Pprof
+		// Configure Route backend
+		// BackendName != "" then it is a local backend
+		// Example: Pprof
 		if route.BackendName == "" {
 			if err := route.handleService(); err != nil {
 				logger.Error(err)
@@ -111,96 +94,40 @@ func (r *Routes) refreshHTTP(activeBackends map[string]struct{}) (reload bool) {
 			}
 			route.handleEndpoints()
 		}
-		activeBackends[route.BackendName] = struct{}{}
-		sortedKeys = append(sortedKeys, key)
-		reload = route.reload || reload
-	}
-	sort.Strings(sortedKeys)
-	r.updateHTTPUseBackendRules(sortedKeys)
-	return reload
-}
-
-func (r *Routes) updateHTTPUseBackendRules(sortedKeys []string) {
-	// host/path are part of frontendRoutes keys, so sorted keys will
-	// result in sorted use_backend rules where the longest path will match first.
-	// Example:
-	// use_backend service-abc if { var(txn.host) example } { var(txn.path) -m beg /a/b/c }
-	// use_backend service-ab  if { var(txn.host) example } { var(txn.path) -m beg /a/b }
-	// use_backend service-a   if { var(txn.host) example } { var(txn.path) -m beg /a }
-	for _, frontend := range []string{FrontendHTTP, FrontendHTTPS} {
-		client.BackendSwitchingRuleDeleteAll(frontend)
-		for _, key := range sortedKeys {
-			route := r.http[key]
-			var condTest string
-			if route.Host != "" {
-				condTest = fmt.Sprintf("{ var(txn.host) %s } ", route.Host)
-			}
-			if route.Path.Path != "" {
-				if route.Path.ExactPathMatch {
-					condTest = fmt.Sprintf("%s{ var(txn.path) %s }", condTest, route.Path.Path)
-				} else {
-					condTest = fmt.Sprintf("%s{ var(txn.path) -m beg %s }", condTest, route.Path.Path)
-				}
-			}
-			if condTest == "" {
-				logger.Infof("both Host and Path are empty for frontend %s with backend %s, SKIP", frontend, route.BackendName)
-				continue
-			}
-			err := client.BackendSwitchingRuleCreate(frontend, models.BackendSwitchingRule{
-				Cond:     "if",
-				CondTest: condTest,
-				Name:     route.BackendName,
-				Index:    utils.PtrInt64(0),
-			})
-			logger.Error(err)
-		}
-	}
-}
-
-func (r *Routes) refreshSSLPassthroug(activeBackends map[string]struct{}) (reload bool) {
-	client.BackendSwitchingRuleDeleteAll(FrontendSSL)
-	for _, route := range r.sslPassthrough {
-		if route.status == DELETED {
-			reload = true
-			continue
-		}
-		if err := route.handleService(); err != nil {
-			logger.Error(err)
-			continue
-		}
-		route.handleEndpoints()
-		activeBackends[route.BackendName] = struct{}{}
-		reload = route.reload || reload
-		if route.Host == "" {
-			logger.Infof("Empty SNI for backend %s, SKIP", route.BackendName)
-			continue
-		}
-		err := client.BackendSwitchingRuleCreate(FrontendSSL, models.BackendSwitchingRule{
-			Cond:     "if",
-			CondTest: fmt.Sprintf("{ req_ssl_sni -i %s } ", route.Host),
-			Name:     route.BackendName,
-			Index:    utils.PtrInt64(0),
-		})
-		logger.Error(err)
-	}
-	return reload
-}
-
-func (r *Routes) refreshTCP(activeBackends map[string]struct{}) (reload bool) {
-	for _, route := range r.tcp {
-		err := route.handleService()
+		r.reload = route.reload || r.reload
+		err := route.addToMapFile(mapFiles)
 		if err != nil {
 			logger.Error(err)
-			continue
+		} else {
+			r.activeBackends[route.BackendName] = struct{}{}
 		}
-		route.handleEndpoints()
-		activeBackends[route.BackendName] = struct{}{}
-		reload = route.reload || reload
 	}
-	return reload
 }
 
-func (r *Routes) refreshHTTPDefault(activeBackends map[string]struct{}) (reload bool) {
+func (route *Route) addToMapFile(mapFiles haproxy.Maps) error {
+	// SSLPassthrough
+	if route.SSLPassthrough {
+		if route.Host == "" {
+			return fmt.Errorf("empty SNI for backend %s, SKIP", route.BackendName)
+		}
+		mapFiles.AppendRow(0, route.Host+"\t\t\t"+route.BackendName)
+		return nil
+	}
+	// HTTP
+	if route.Host != "" {
+		mapFiles.AppendRow(1, route.Host+"\t\t\t"+route.Host)
+	} else if route.Path.Path == "" {
+		return fmt.Errorf("neither Host nor Path are not provided for backend %v, SKIP", route.BackendName)
+	}
+	if route.Path.ExactPathMatch {
+		mapFiles.AppendRow(2, route.Host+route.Path.Path+"\t\t\t"+route.BackendName)
+	} else {
+		mapFiles.AppendRow(3, route.Host+route.Path.Path+"\t\t\t"+route.BackendName)
+	}
+	return nil
+}
+
+func (r *Routes) refreshHTTPDefault() {
 	defaultBackend := ""
 	// pick latest pushed default route
 	for _, route := range r.httpDefault {
@@ -212,15 +139,15 @@ func (r *Routes) refreshHTTPDefault(activeBackends map[string]struct{}) (reload 
 			}
 			route.handleEndpoints()
 			defaultBackend = route.BackendName
-			activeBackends[route.BackendName] = struct{}{}
+			r.activeBackends[route.BackendName] = struct{}{}
 			break
 		}
 	}
 	if frontend, err := client.FrontendGet(FrontendHTTP); err != nil {
 		logger.Error(err)
-		return false
+		return
 	} else if frontend.DefaultBackend == defaultBackend {
-		return false
+		return
 	}
 	if defaultBackend == "" {
 		logger.Info("No default backend for http/https traffic")
@@ -236,5 +163,20 @@ func (r *Routes) refreshHTTPDefault(activeBackends map[string]struct{}) (reload 
 			return
 		}
 	}
-	return true
+	r.reload = true
+}
+
+func (r *Routes) refreshTCP() {
+	for _, route := range r.tcp {
+		if route.status == DELETED {
+			continue
+		}
+		if err := route.handleService(); err != nil {
+			logger.Error(err)
+			continue
+		}
+		route.handleEndpoints()
+		r.reload = route.reload || r.reload
+		r.activeBackends[route.BackendName] = struct{}{}
+	}
 }

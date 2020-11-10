@@ -12,6 +12,7 @@ type ReqSetVar struct {
 	Name       string
 	Scope      string
 	Expression string
+	CondTest   string
 }
 
 func (r ReqSetVar) GetType() haproxy.RuleType {
@@ -36,6 +37,10 @@ func (r ReqSetVar) Create(client api.HAProxyClient, frontend *models.Frontend) e
 		VarName:  r.Name,
 		VarScope: r.Scope,
 		VarExpr:  r.Expression,
+	}
+	if r.CondTest != "" {
+		httpRule.Cond = "if"
+		httpRule.CondTest = r.CondTest
 	}
 	return client.FrontendHTTPRequestRuleCreate(frontend.Name, httpRule)
 }

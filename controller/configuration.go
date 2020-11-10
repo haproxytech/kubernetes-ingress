@@ -15,6 +15,8 @@
 package controller
 
 import (
+	"fmt"
+
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/rules"
 	"github.com/haproxytech/kubernetes-ingress/controller/ingress"
@@ -36,7 +38,7 @@ type Configuration struct {
 func (c *Configuration) Init(mapDir string) {
 
 	c.MapFiles = haproxy.NewMapFiles(mapDir)
-	c.IngressRoutes = ingress.NewRoutes()
+	c.IngressRoutes = ingress.Routes{}
 	logger.Panic(c.HAProxyRulesInit())
 }
 
@@ -44,7 +46,7 @@ func (c *Configuration) Init(mapDir string) {
 //deletes them completely or just resets them if needed
 func (c *Configuration) Clean() {
 	c.MapFiles.Clean()
-	c.IngressRoutes = ingress.NewRoutes()
+	c.IngressRoutes = ingress.Routes{}
 	logger.Panic(c.HAProxyRulesInit())
 	rateLimitTables = []string{}
 }
@@ -66,11 +68,29 @@ func (c *Configuration) HAProxyRulesInit() error {
 			Scope:      "txn",
 			Expression: "path,lower",
 		}, FrontendHTTP, FrontendHTTPS),
+	)
+	c.MapFiles.AppendRow(0, "# Ingress SNIs")
+	c.MapFiles.AppendRow(1, "# Ingress Hosts")
+	c.MapFiles.AppendRow(2, "# Ingress exact paths ")
+	c.MapFiles.AppendRow(3, "# Ingress prefix paths ")
+	errors.Add(
 		c.HAProxyRules.AddRule(rules.ReqSetVar{
 			Name:       "host",
 			Scope:      "txn",
-			Expression: "req.hdr(Host),field(1,:),lower",
+			Expression: fmt.Sprintf("req.hdr(Host),field(1,:),lower,map_end(%s,'')", haproxy.MapID(1).Path()),
+		}, FrontendHTTP, FrontendHTTPS),
+		c.HAProxyRules.AddRule(rules.ReqSetVar{
+			Name:       "match",
+			Scope:      "txn",
+			Expression: fmt.Sprintf("var(txn.host),concat(,txn.path,),map(%s)", haproxy.MapID(2).Path()),
+		}, FrontendHTTP, FrontendHTTPS),
+		c.HAProxyRules.AddRule(rules.ReqSetVar{
+			Name:       "match",
+			Scope:      "txn",
+			Expression: fmt.Sprintf("var(txn.host),concat(,txn.path,),map_beg(%s)", haproxy.MapID(3).Path()),
+			CondTest:   "!{ var(txn.match) -m found }",
 		}, FrontendHTTP, FrontendHTTPS),
 	)
+
 	return errors.Result()
 }

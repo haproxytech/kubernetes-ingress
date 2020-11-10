@@ -22,6 +22,7 @@ import (
 
 	"github.com/haproxytech/models/v2"
 
+	"github.com/haproxytech/kubernetes-ingress/controller/haproxy"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/api"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/rules"
 	"github.com/haproxytech/kubernetes-ingress/controller/store"
@@ -141,6 +142,10 @@ func (h HTTPS) enableSSLPassthrough(cfg *Configuration, api api.HAProxyClient) (
 			Address:     "127.0.0.1",
 			Port:        utils.PtrInt64(h.port),
 			SendProxyV2: "enabled",
+		}),
+		api.BackendSwitchingRuleCreate(FrontendSSL, models.BackendSwitchingRule{
+			Index: utils.PtrInt64(0),
+			Name:  fmt.Sprintf("%%[req_ssl_sni,map_end(%s)]", haproxy.MapID(0).Path()),
 		}),
 		h.toggleSSLPassthrough(true, cfg.HTTPS, api))
 	return errors.Result()
