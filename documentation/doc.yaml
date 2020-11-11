@@ -69,9 +69,9 @@ image_arguments:
       args:
           - --namespace-blacklist=foo
           - --namespace-blacklist=bar
-      helm: |-
-        helm install haproxy haproxytech/kubernetes-ingress \
-          --set-string "controller.extraArgs={--namespace-blacklist=foo}"
+    helm: |-
+      helm install haproxy haproxytech/kubernetes-ingress \
+        --set-string "controller.extraArgs={--namespace-blacklist=foo}"
   - argument: --namespace-whitelist
     description: Namespaces that the ingress controller should monitor for changes to pods and service.
     values:

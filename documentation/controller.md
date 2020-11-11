@@ -154,9 +154,6 @@ Example:
 args:
     - --namespace-blacklist=foo
     - --namespace-blacklist=bar
-helm: |-
-  helm install haproxy haproxytech/kubernetes-ingress \
-    --set-string "controller.extraArgs={--namespace-blacklist=foo}"
 ```
 
 <p align='right'><a href='#haproxy-kubernetes-ingress-controller'>:arrow_up_small: back to top</a></p>
