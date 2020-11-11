@@ -11,9 +11,16 @@ import (
 )
 
 type ReqDeny struct {
-	Ingress   haproxy.MapID
+	id        uint32
 	SrcIPs    haproxy.MapID
 	Whitelist bool
+}
+
+func (r ReqDeny) GetID() uint32 {
+	if r.id == 0 {
+		r.id = hashRule(r)
+	}
+	return r.id
 }
 
 func (r ReqDeny) GetType() haproxy.RuleType {
@@ -21,7 +28,6 @@ func (r ReqDeny) GetType() haproxy.RuleType {
 }
 
 func (r ReqDeny) Create(client api.HAProxyClient, frontend *models.Frontend) error {
-	ingressMapFile := r.Ingress.Path()
 	ipsMapFile := r.SrcIPs.Path()
 	not := ""
 	if r.Whitelist {
@@ -33,8 +39,9 @@ func (r ReqDeny) Create(client api.HAProxyClient, frontend *models.Frontend) err
 			Type:     "content",
 			Action:   "reject",
 			Cond:     "if",
-			CondTest: fmt.Sprintf("{ req_ssl_sni -f %s } %s{ src -f %s }", ingressMapFile, not, ipsMapFile),
+			CondTest: fmt.Sprintf("%s{ src -f %s }", not, ipsMapFile),
 		}
+		matchRuleID(&tcpRule, r.GetID())
 		return client.FrontendTCPRequestRuleCreate(frontend.Name, tcpRule)
 	}
 	httpRule := models.HTTPRequestRule{
@@ -42,7 +49,8 @@ func (r ReqDeny) Create(client api.HAProxyClient, frontend *models.Frontend) err
 		Type:       "deny",
 		DenyStatus: utils.PtrInt64(403),
 		Cond:       "if",
-		CondTest:   makeACL(fmt.Sprintf(" %s{ src -f %s }", not, ipsMapFile), ingressMapFile),
+		CondTest:   fmt.Sprintf("%s{ src -f %s }", not, ipsMapFile),
 	}
+	matchRuleID(&httpRule, r.GetID())
 	return client.FrontendHTTPRequestRuleCreate(frontend.Name, httpRule)
 }

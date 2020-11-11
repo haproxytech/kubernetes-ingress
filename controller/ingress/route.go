@@ -31,6 +31,7 @@ type Route struct {
 	backendAnnotations map[string]*store.StringW
 	srvAnnotations     map[string]*store.StringW
 	status             store.Status
+	HAProxyRules       []uint32
 	Host               string
 	BackendName        string
 	NewBackend         bool

@@ -1,8 +1,6 @@
 package rules
 
 import (
-	"fmt"
-
 	"github.com/haproxytech/models/v2"
 
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy"
@@ -11,9 +9,16 @@ import (
 )
 
 type ReqCapture struct {
-	Ingress    haproxy.MapID
+	id         uint32
 	Expression string
 	CaptureLen int64
+}
+
+func (r ReqCapture) GetID() uint32 {
+	if r.id == 0 {
+		r.id = hashRule(r)
+	}
+	return r.id
 }
 
 func (r ReqCapture) GetType() haproxy.RuleType {
@@ -21,26 +26,23 @@ func (r ReqCapture) GetType() haproxy.RuleType {
 }
 
 func (r ReqCapture) Create(client api.HAProxyClient, frontend *models.Frontend) error {
-	ingressMapFile := r.Ingress.Path()
-	if frontend.Mode == "http" {
+	if frontend.Mode == "tcp" {
 		tcpRule := models.TCPRequestRule{
 			Index:      utils.PtrInt64(0),
 			Type:       "content",
 			Action:     "capture",
 			CaptureLen: r.CaptureLen,
 			Expr:       r.Expression,
-			Cond:       "if",
-			CondTest:   fmt.Sprintf("{ req_ssl_sni -f %s }", ingressMapFile),
 		}
+		matchRuleID(&tcpRule, r.GetID())
 		return client.FrontendTCPRequestRuleCreate(frontend.Name, tcpRule)
 	}
 	httpRule := models.HTTPRequestRule{
 		Index:         utils.PtrInt64(0),
 		Type:          "capture",
 		CaptureSample: r.Expression,
-		Cond:          "if",
 		CaptureLen:    r.CaptureLen,
-		CondTest:      makeACL("", ingressMapFile),
 	}
+	matchRuleID(&httpRule, r.GetID())
 	return client.FrontendHTTPRequestRuleCreate(frontend.Name, httpRule)
 }

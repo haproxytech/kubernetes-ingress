@@ -11,9 +11,16 @@ import (
 )
 
 type ReqPathRewrite struct {
-	Ingress   haproxy.MapID
+	id        uint32
 	PathMatch string
 	PathFmt   string
+}
+
+func (r ReqPathRewrite) GetID() uint32 {
+	if r.id == 0 {
+		r.id = hashRule(r)
+	}
+	return r.id
 }
 
 func (r ReqPathRewrite) GetType() haproxy.RuleType {
@@ -30,5 +37,6 @@ func (r ReqPathRewrite) Create(client api.HAProxyClient, frontend *models.Fronte
 		PathMatch: r.PathMatch,
 		PathFmt:   r.PathFmt,
 	}
+	matchRuleID(&httpRule, r.GetID())
 	return client.FrontendHTTPRequestRuleCreate(frontend.Name, httpRule)
 }

@@ -9,10 +9,18 @@ import (
 )
 
 type ReqSetVar struct {
+	id         uint32
 	Name       string
 	Scope      string
 	Expression string
 	CondTest   string
+}
+
+func (r ReqSetVar) GetID() uint32 {
+	if r.id == 0 {
+		r.id = hashRule(r)
+	}
+	return r.id
 }
 
 func (r ReqSetVar) GetType() haproxy.RuleType {

@@ -11,8 +11,15 @@ import (
 )
 
 type ReqBasicAuth struct {
-	Name    string
-	Ingress haproxy.MapID
+	Name string
+	id   uint32
+}
+
+func (r ReqBasicAuth) GetID() uint32 {
+	if r.id == 0 {
+		r.id = hashRule(r)
+	}
+	return r.id
 }
 
 func (r ReqBasicAuth) GetType() haproxy.RuleType {
@@ -20,14 +27,15 @@ func (r ReqBasicAuth) GetType() haproxy.RuleType {
 }
 
 func (r ReqBasicAuth) Create(client api.HAProxyClient, frontend *models.Frontend) (err error) {
-	httpReq := models.HTTPRequestRule{
+	httpRule := models.HTTPRequestRule{
 		Type:      "auth",
 		Index:     utils.PtrInt64(0),
 		AuthRealm: r.Name,
-		Cond:      models.HTTPRequestRuleCondIf,
-		CondTest:  makeACL(fmt.Sprintf(" !{ http_auth_group(%s) authenticated-users } ", r.Name), r.Ingress.Path()),
+		Cond:      "if",
+		CondTest:  fmt.Sprintf("!{ http_auth_group(%s) authenticated-users }", r.Name),
 	}
-	if err = client.FrontendHTTPRequestRuleCreate(frontend.Name, httpReq); err != nil {
+	matchRuleID(&httpRule, r.GetID())
+	if err = client.FrontendHTTPRequestRuleCreate(frontend.Name, httpRule); err != nil {
 		return
 	}
 

@@ -11,7 +11,15 @@ import (
 )
 
 type ReqProxyProtocol struct {
+	id     uint32
 	SrcIPs haproxy.MapID
+}
+
+func (r ReqProxyProtocol) GetID() uint32 {
+	if r.id == 0 {
+		r.id = hashRule(r)
+	}
+	return r.id
 }
 
 func (r ReqProxyProtocol) GetType() haproxy.RuleType {

@@ -11,6 +11,14 @@ import (
 )
 
 type ReqAcceptContent struct {
+	id uint32
+}
+
+func (r ReqAcceptContent) GetID() uint32 {
+	if r.id == 0 {
+		r.id = hashRule(r)
+	}
+	return r.id
 }
 
 func (r ReqAcceptContent) GetType() haproxy.RuleType {

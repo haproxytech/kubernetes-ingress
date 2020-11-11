@@ -9,6 +9,7 @@ import (
 )
 
 type Rule interface {
+	GetID() uint32
 	GetType() RuleType
 	Create(client api.HAProxyClient, frontend *models.Frontend) error
 }

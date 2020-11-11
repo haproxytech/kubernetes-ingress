@@ -11,12 +11,19 @@ import (
 )
 
 type SetHdr struct {
-	Ingress        haproxy.MapID
+	id             uint32
 	Response       bool
 	ForwardedProto bool
 	HdrName        string
 	HdrFormat      string
 	Type           haproxy.RuleType
+}
+
+func (r SetHdr) GetID() uint32 {
+	if r.id == 0 {
+		r.id = hashRule(r)
+	}
+	return r.id
 }
 
 func (r SetHdr) GetType() haproxy.RuleType {
@@ -45,7 +52,6 @@ func (r SetHdr) Create(client api.HAProxyClient, frontend *models.Frontend) erro
 		}
 		return client.FrontendHTTPRequestRuleCreate(frontend.Name, httpRule)
 	}
-	ingressMapFile := r.Ingress.Path()
 	//RES_SET_HEADER
 	if r.Response {
 		httpRule := models.HTTPResponseRule{
@@ -53,9 +59,8 @@ func (r SetHdr) Create(client api.HAProxyClient, frontend *models.Frontend) erro
 			Type:      "set-header",
 			HdrName:   r.HdrName,
 			HdrFormat: r.HdrFormat,
-			Cond:      "if",
-			CondTest:  makeACL("", ingressMapFile),
 		}
+		matchRuleID(&httpRule, r.GetID())
 		return client.FrontendHTTPResponseRuleCreate(frontend.Name, httpRule)
 	}
 	//REQ_SET_HEADER
@@ -64,8 +69,7 @@ func (r SetHdr) Create(client api.HAProxyClient, frontend *models.Frontend) erro
 		Type:      "set-header",
 		HdrName:   r.HdrName,
 		HdrFormat: r.HdrFormat,
-		Cond:      "if",
-		CondTest:  makeACL("", ingressMapFile),
 	}
+	matchRuleID(&httpRule, r.GetID())
 	return client.FrontendHTTPRequestRuleCreate(frontend.Name, httpRule)
 }

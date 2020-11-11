@@ -31,32 +31,355 @@ import (
 
 var rateLimitTables []string
 
-func (c *HAProxyController) handleIngressAnnotations(ingress *store.Ingress) {
-	logger.Error(c.handleBasicAuth(ingress))
-	logger.Error(c.handleRateLimiting(ingress))
-	logger.Error(c.handleRequestCapture(ingress))
-	logger.Error(c.handleRequestPathRewrite(ingress))
-	logger.Error(c.handleRequestSetHost(ingress))
-	logger.Error(c.handleRequestSetHdr(ingress))
-	logger.Error(c.handleResponseSetHdr(ingress))
-	logger.Error(c.handleBlacklisting(ingress))
-	logger.Error(c.handleWhitelisting(ingress))
-	logger.Error(c.handleHTTPRedirect(ingress))
+func (c *HAProxyController) handleIngressAnnotations(ingress *store.Ingress) (ruleIDs []uint32) {
+	c.handleRateLimiting(ingress, &ruleIDs)
+	c.handleRequestCapture(ingress, &ruleIDs)
+	c.handleRequestPathRewrite(ingress, &ruleIDs)
+	c.handleRequestSetHost(ingress, &ruleIDs)
+	c.handleRequestSetHdr(ingress, &ruleIDs)
+	c.handleResponseSetHdr(ingress, &ruleIDs)
+	c.handleBlacklisting(ingress, &ruleIDs)
+	c.handleHTTPBasicAuth(ingress, &ruleIDs)
+	c.handleWhitelisting(ingress, &ruleIDs)
+	c.handleHTTPRedirect(ingress, &ruleIDs)
+	return
 }
 
-func (c *HAProxyController) handleBasicAuth(ingress *store.Ingress) (err error) {
+func (c *HAProxyController) handleBlacklisting(ingress *store.Ingress, ruleIDs *[]uint32) {
+	//  Get annotation status
+	annBlacklist, _ := c.Store.GetValueFromAnnotations("blacklist", ingress.Annotations, c.Store.ConfigMaps[Main].Annotations)
+	if annBlacklist == nil {
+		return
+	}
+	if ingress.Status == DELETED || annBlacklist.Status == DELETED {
+		logger.Debugf("Ingress %s/%s: Deleting blacklist configuration", ingress.Namespace, ingress.Name)
+		return
+	}
+	// Validate annotation
+	ips := haproxy.NewMapID(annBlacklist.Value)
+	for _, address := range strings.Split(annBlacklist.Value, ",") {
+		if ip := net.ParseIP(address); ip == nil {
+			if _, _, err := net.ParseCIDR(address); err != nil {
+				logger.Errorf("incorrect address '%s' in blacklist annotation in ingress '%s'", address, ingress.Name)
+				continue
+			}
+		}
+		c.cfg.MapFiles.AppendRow(ips, address)
+	}
+	// Configure annotation
+	logger.Debugf("Ingress %s/%s: Configuring blacklist annotation", ingress.Namespace, ingress.Name)
+	reqBlackList := rules.ReqDeny{
+		SrcIPs: ips,
+	}
+	if err := c.cfg.HAProxyRules.AddRule(reqBlackList, FrontendHTTP, FrontendHTTPS); err == nil {
+		*ruleIDs = append(*ruleIDs, reqBlackList.GetID())
+	} else {
+		logger.Error(err)
+	}
+}
+
+func (c *HAProxyController) handleHTTPRedirect(ingress *store.Ingress, ruleIDs *[]uint32) {
+	//  Get and validate annotations
+	toEnable := false
+	annSSLRedirect, _ := c.Store.GetValueFromAnnotations("ssl-redirect", ingress.Annotations, c.Store.ConfigMaps[Main].Annotations)
+	annRedirectCode, _ := c.Store.GetValueFromAnnotations("ssl-redirect-code", ingress.Annotations, c.Store.ConfigMaps[Main].Annotations)
+	sslRedirectCode, err := strconv.ParseInt(annRedirectCode.Value, 10, 64)
+	if err != nil {
+		logger.Error(err)
+		return
+	}
+	if annSSLRedirect != nil && annSSLRedirect.Status != DELETED {
+		if toEnable, err = utils.GetBoolValue(annSSLRedirect.Value, "ssl-redirect"); err != nil {
+			logger.Error(err)
+			return
+		}
+	} else if tlsEnabled(ingress) {
+		toEnable = true
+	}
+	if !toEnable {
+		return
+	}
+	// Configure redirection
+	reqSSLRedirect := rules.ReqSSLRedirect{
+		RedirectCode: sslRedirectCode,
+	}
+	if err := c.cfg.HAProxyRules.AddRule(reqSSLRedirect, FrontendHTTP); err == nil {
+		*ruleIDs = append(*ruleIDs, reqSSLRedirect.GetID())
+	} else {
+		logger.Error(err)
+	}
+}
+
+func (c *HAProxyController) handleRateLimiting(ingress *store.Ingress, ruleIDs *[]uint32) {
+	//  Get annotations status
+	annRateLimitReq, _ := c.Store.GetValueFromAnnotations("rate-limit-requests", ingress.Annotations, c.Store.ConfigMaps[Main].Annotations)
+	if annRateLimitReq == nil {
+		return
+	}
+	if ingress.Status == DELETED || annRateLimitReq.Status == DELETED {
+		logger.Debugf("Ingress %s/%s: Deleting rate-limit-requests configuration", ingress.Namespace, ingress.Name)
+		return
+	}
+	// Validate annotations
+	reqsLimit, err := strconv.ParseInt(annRateLimitReq.Value, 10, 64)
+	if err != nil {
+		logger.Error(err)
+		return
+	}
+	annRateLimitPeriod, _ := c.Store.GetValueFromAnnotations("rate-limit-period", ingress.Annotations, c.Store.ConfigMaps[Main].Annotations)
+	rateLimitPeriod, err := utils.ParseTime(annRateLimitPeriod.Value)
+	if err != nil {
+		logger.Error(err)
+		return
+	}
+	annRateLimitSize, _ := c.Store.GetValueFromAnnotations("rate-limit-size", ingress.Annotations, c.Store.ConfigMaps[Main].Annotations)
+	rateLimitSize := misc.ParseSize(annRateLimitSize.Value)
+
+	annRateLimitCode, _ := c.Store.GetValueFromAnnotations("rate-limit-status-code", ingress.Annotations, c.Store.ConfigMaps[Main].Annotations)
+	rateLimitCode, err := utils.ParseInt(annRateLimitCode.Value)
+	if err != nil {
+		logger.Error(err)
+		return
+	}
+
+	// Configure annotation
+	logger.Debugf("Ingress %s/%s: Configuring rate-limit-requests annotation", ingress.Namespace, ingress.Name)
+	tableName := fmt.Sprintf("RateLimit-%d", *rateLimitPeriod)
+	rateLimitTables = append(rateLimitTables, tableName)
+	reqTrack := rules.ReqTrack{
+		TableName:   tableName,
+		TableSize:   rateLimitSize,
+		TablePeriod: rateLimitPeriod,
+		TrackKey:    "src",
+	}
+	reqRateLimit := rules.ReqRateLimit{
+		TableName:      tableName,
+		ReqsLimit:      reqsLimit,
+		DenyStatusCode: rateLimitCode,
+	}
+	if err = c.cfg.HAProxyRules.AddRule(reqTrack, FrontendHTTP, FrontendHTTPS); err == nil {
+		if err = c.cfg.HAProxyRules.AddRule(reqRateLimit, FrontendHTTP, FrontendHTTPS); err == nil {
+			*ruleIDs = append(*ruleIDs, reqTrack.GetID(), reqRateLimit.GetID())
+			return
+		}
+		logger.Error(err)
+	}
+}
+
+func (c *HAProxyController) handleRequestCapture(ingress *store.Ingress, ruleIDs *[]uint32) {
+	//  Get annotation status
+	annReqCapture, _ := c.Store.GetValueFromAnnotations("request-capture", ingress.Annotations, c.Store.ConfigMaps[Main].Annotations)
+	if annReqCapture == nil {
+		return
+	}
+	if ingress.Status == DELETED || annReqCapture.Status == DELETED {
+		logger.Debugf("Ingress %s/%s: Deleting request-capture configuration", ingress.Namespace, ingress.Name)
+		return
+	}
+	//  Validate annotation
+	annCaptureLen, _ := c.Store.GetValueFromAnnotations("request-capture-len", ingress.Annotations, c.Store.ConfigMaps[Main].Annotations)
+	captureLen, err := strconv.ParseInt(annCaptureLen.Value, 10, 64)
+	if err != nil {
+		logger.Error(err)
+		return
+	}
+
+	// Configure annotation
+	for _, sample := range strings.Split(annReqCapture.Value, "\n") {
+		logger.Debugf("Ingress %s/%s: Configuring request capture for '%s'", ingress.Namespace, ingress.Name, sample)
+		if sample == "" {
+			continue
+		}
+		reqCapture := rules.ReqCapture{
+			Expression: sample,
+			CaptureLen: captureLen,
+		}
+		if err := c.cfg.HAProxyRules.AddRule(reqCapture, FrontendHTTP, FrontendHTTPS); err == nil {
+			*ruleIDs = append(*ruleIDs, reqCapture.GetID())
+		} else {
+			logger.Error(err)
+		}
+	}
+}
+
+func (c *HAProxyController) handleRequestSetHdr(ingress *store.Ingress, ruleIDs *[]uint32) {
+	//  Get annotation status
+	annReqSetHdr, _ := c.Store.GetValueFromAnnotations("request-set-header", ingress.Annotations, c.Store.ConfigMaps[Main].Annotations)
+	if annReqSetHdr == nil {
+		return
+	}
+	if ingress.Status == DELETED || annReqSetHdr.Status == DELETED {
+		logger.Debugf("Ingress %s/%s: Deleting request-set-header configuration", ingress.Namespace, ingress.Name)
+		return
+	}
+	// Configure annotation
+	for _, param := range strings.Split(annReqSetHdr.Value, "\n") {
+		parts := strings.Fields(param)
+		if len(parts) != 2 {
+			logger.Errorf("incorrect value '%s' in request-set-header annotation", param)
+			continue
+		}
+		logger.Debugf("Ingress %s/%s: Configuring request set '%s' header ", ingress.Namespace, ingress.Name, param)
+		reqSetHdr := rules.SetHdr{
+			HdrName:   parts[0],
+			HdrFormat: parts[1],
+		}
+		if err := c.cfg.HAProxyRules.AddRule(reqSetHdr, FrontendHTTP, FrontendHTTPS); err == nil {
+			*ruleIDs = append(*ruleIDs, reqSetHdr.GetID())
+		} else {
+			logger.Error(err)
+		}
+	}
+}
+
+func (c *HAProxyController) handleRequestSetHost(ingress *store.Ingress, ruleIDs *[]uint32) {
+	//  Get annotation status
+	annSetHost, _ := c.Store.GetValueFromAnnotations("set-host", ingress.Annotations, c.Store.ConfigMaps[Main].Annotations)
+	if annSetHost == nil {
+		return
+	}
+	if ingress.Status == DELETED || annSetHost.Status == DELETED {
+		logger.Debugf("Ingress %s/%s: Deleting request-set-host configuration", ingress.Namespace, ingress.Name)
+		return
+	}
+	// Configure annotation
+	logger.Debugf("Ingress %s/%s: Configuring request-set-host", ingress.Namespace, ingress.Name)
+	reqSetHost := rules.SetHdr{
+		HdrName:   "Host",
+		HdrFormat: annSetHost.Value,
+	}
+	if err := c.cfg.HAProxyRules.AddRule(reqSetHost, FrontendHTTP, FrontendHTTPS); err == nil {
+		*ruleIDs = append(*ruleIDs, reqSetHost.GetID())
+	} else {
+		logger.Error(err)
+	}
+}
+
+func (c *HAProxyController) handleRequestPathRewrite(ingress *store.Ingress, ruleIDs *[]uint32) {
+	//  Get annotation status
+	annPathRewrite, _ := c.Store.GetValueFromAnnotations("path-rewrite", ingress.Annotations, c.Store.ConfigMaps[Main].Annotations)
+	if annPathRewrite == nil {
+		return
+	}
+	if ingress.Status == DELETED || annPathRewrite.Status == DELETED {
+		logger.Debugf("Ingress %s/%s: Deleting path-rewrite configuration", ingress.Namespace, ingress.Name)
+		return
+	}
+	// Configure annotation
+	logger.Debugf("Ingress %s/%s: Configuring path-rewrite", ingress.Namespace, ingress.Name)
+	parts := strings.Fields(strings.TrimSpace(annPathRewrite.Value))
+	match := haproxy.NewMapID(fmt.Sprintf("%d-%s", haproxy.REQ_PATH_REWRITE, annPathRewrite.Value))
+	for hostname, rule := range ingress.Rules {
+		if rule.Status != DELETED {
+			for path := range rule.Paths {
+				c.cfg.MapFiles.AppendRow(match, hostname+path)
+			}
+		}
+	}
+
+	var reqPathReWrite haproxy.Rule
+	switch len(parts) {
+	case 1:
+		reqPathReWrite = rules.ReqPathRewrite{
+			PathMatch: "(.*)",
+			PathFmt:   parts[0],
+		}
+	case 2:
+		reqPathReWrite = rules.ReqPathRewrite{
+			PathMatch: parts[0],
+			PathFmt:   parts[1],
+		}
+	default:
+		logger.Errorf("incorrect value '%s', path-rewrite takes 1 or 2 params ", annPathRewrite.Value)
+		return
+	}
+	if err := c.cfg.HAProxyRules.AddRule(reqPathReWrite, FrontendHTTP, FrontendHTTPS); err == nil {
+		*ruleIDs = append(*ruleIDs, reqPathReWrite.GetID())
+	} else {
+		logger.Error(err)
+	}
+}
+
+func (c *HAProxyController) handleResponseSetHdr(ingress *store.Ingress, ruleIDs *[]uint32) {
+	//  Get annotation status
+	annResSetHdr, _ := c.Store.GetValueFromAnnotations("response-set-header", ingress.Annotations, c.Store.ConfigMaps[Main].Annotations)
+	if annResSetHdr == nil {
+		return
+	}
+	if ingress.Status == DELETED || annResSetHdr.Status == DELETED {
+		logger.Debugf("Ingress %s/%s: Deleting response-set-header configuration", ingress.Namespace, ingress.Name)
+		return
+	}
+	// Configure annotation
+	for _, param := range strings.Split(annResSetHdr.Value, "\n") {
+		parts := strings.Fields(param)
+		if len(parts) != 2 {
+			logger.Errorf("incorrect value '%s' in response-set-header annotation", param)
+			continue
+		}
+		logger.Debugf("Ingress %s/%s: Configuring response set '%s' header ", ingress.Namespace, ingress.Name, param)
+		resSetHdr := rules.SetHdr{
+			HdrName:   parts[0],
+			HdrFormat: parts[1],
+			Response:  true,
+		}
+		if err := c.cfg.HAProxyRules.AddRule(resSetHdr, FrontendHTTP, FrontendHTTPS); err == nil {
+			*ruleIDs = append(*ruleIDs, resSetHdr.GetID())
+		} else {
+			logger.Error(err)
+		}
+	}
+}
+
+func (c *HAProxyController) handleWhitelisting(ingress *store.Ingress, ruleIDs *[]uint32) {
+	//  Get annotation status
+	annWhitelist, _ := c.Store.GetValueFromAnnotations("whitelist", ingress.Annotations, c.Store.ConfigMaps[Main].Annotations)
+	if annWhitelist == nil {
+		return
+	}
+	if ingress.Status == DELETED || annWhitelist.Status == DELETED {
+		logger.Debugf("Ingress %s/%s: Deleting whitelist configuration", ingress.Namespace, ingress.Name)
+		return
+	}
+	// Validate annotation
+	ips := haproxy.NewMapID(annWhitelist.Value)
+	for _, address := range strings.Split(annWhitelist.Value, ",") {
+		if ip := net.ParseIP(address); ip == nil {
+			if _, _, err := net.ParseCIDR(address); err != nil {
+				logger.Errorf("incorrect address '%s' in whitelist annotation in ingress '%s'", address, ingress.Name)
+				continue
+			}
+		}
+		c.cfg.MapFiles.AppendRow(ips, address)
+	}
+	// Configure annotation
+	logger.Debugf("Ingress %s/%s: Configuring whitelist annotation", ingress.Namespace, ingress.Name)
+	reqWhitelist := rules.ReqDeny{
+		SrcIPs:    ips,
+		Whitelist: true,
+	}
+	if err := c.cfg.HAProxyRules.AddRule(reqWhitelist, FrontendHTTP, FrontendHTTPS); err == nil {
+		*ruleIDs = append(*ruleIDs, reqWhitelist.GetID())
+	} else {
+		logger.Error(err)
+	}
+}
+
+func (c *HAProxyController) handleHTTPBasicAuth(ingress *store.Ingress, ruleIDs *[]uint32) {
 	groupName := fmt.Sprintf("%s-%s", ingress.Namespace, ingress.Name)
 
 	var authType, authSecret *store.StringW
-	authType, err = c.Store.GetValueFromAnnotations("auth-type", ingress.Annotations, c.Store.ConfigMaps[Main].Annotations)
+	authType, err := c.Store.GetValueFromAnnotations("auth-type", ingress.Annotations, c.Store.ConfigMaps[Main].Annotations)
 	if err != nil || authType.Status == DELETED || authType.Value != "basic-auth" {
 		logger.Debugf("Ingress %s/%s: Deleting Basic Auth authentication", ingress.Namespace, ingress.Name)
-		return c.Client.UserListDeleteByGroup(groupName)
+		logger.Error(c.Client.UserListDeleteByGroup(groupName))
+		return
 	}
 	authSecret, err = c.Store.GetValueFromAnnotations("auth-secret", ingress.Annotations, c.Store.ConfigMaps[Main].Annotations)
 	if err != nil || authSecret.Status == DELETED {
 		logger.Debugf("Ingress %s/%s: Missing Basic Auth secret reference, deleting", ingress.Namespace, ingress.Name)
-		return c.Client.UserListDeleteByGroup(groupName)
+		logger.Error(c.Client.UserListDeleteByGroup(groupName))
+		return
 	}
 
 	s, ok := c.Store.Namespaces[ingress.Namespace].Secret[authSecret.Value]
@@ -85,388 +408,14 @@ func (c *HAProxyController) handleBasicAuth(ingress *store.Ingress) (err error) 
 		return
 	}
 
-	// Configure ACL
-	match := haproxy.NewMapID(fmt.Sprintf("%d-%s", haproxy.REQ_SET_VAR, authSecret.Value))
-	for hostname, rule := range ingress.Rules {
-		if rule.Status != DELETED {
-			for path := range rule.Paths {
-				c.cfg.MapFiles.AppendRow(match, hostname+path)
-			}
-		}
+	reqBasicAuth := rules.ReqBasicAuth{
+		Name: fmt.Sprintf("%s-%s", ingress.Namespace, ingress.Name),
 	}
-
-	r := rules.ReqBasicAuth{
-		Name:    fmt.Sprintf("%s-%s", ingress.Namespace, ingress.Name),
-		Ingress: match,
+	if err := c.cfg.HAProxyRules.AddRule(reqBasicAuth, FrontendHTTP, FrontendHTTPS); err == nil {
+		*ruleIDs = append(*ruleIDs, reqBasicAuth.GetID())
+	} else {
+		logger.Error(err)
 	}
-	if err = c.cfg.HAProxyRules.AddRule(r, FrontendHTTP, FrontendHTTPS); err != nil {
-		logger.Debugf("Ingress %s/%s: Cannot add BasicAuth rule, %s", ingress.Namespace, ingress.Name, err.Error())
-		return
-	}
-
-	return
-}
-
-func (c *HAProxyController) handleBlacklisting(ingress *store.Ingress) error {
-	//  Get annotation status
-	annBlacklist, _ := c.Store.GetValueFromAnnotations("blacklist", ingress.Annotations, c.Store.ConfigMaps[Main].Annotations)
-	if annBlacklist == nil {
-		return nil
-	}
-	if ingress.Status == DELETED || annBlacklist.Status == DELETED {
-		logger.Debugf("Ingress %s/%s: Deleting blacklist configuration", ingress.Namespace, ingress.Name)
-		return nil
-	}
-	// Validate annotation
-	ips := haproxy.NewMapID(annBlacklist.Value)
-	for _, address := range strings.Split(annBlacklist.Value, ",") {
-		if ip := net.ParseIP(address); ip == nil {
-			if _, _, err := net.ParseCIDR(address); err != nil {
-				logger.Errorf("incorrect address '%s' in blacklist annotation in ingress '%s'", address, ingress.Name)
-				continue
-			}
-		}
-		c.cfg.MapFiles.AppendRow(ips, address)
-	}
-	// Configure annotation
-	logger.Debugf("Ingress %s/%s: Configuring blacklist annotation", ingress.Namespace, ingress.Name)
-	match := haproxy.NewMapID(fmt.Sprintf("%d-%s", haproxy.REQ_DENY, annBlacklist.Value))
-	for hostname, rule := range ingress.Rules {
-		if rule.Status != DELETED {
-			for path := range rule.Paths {
-				c.cfg.MapFiles.AppendRow(match, hostname+path)
-			}
-		}
-	}
-	reqBlackList := rules.ReqDeny{
-		Ingress: match,
-		SrcIPs:  ips,
-	}
-	return c.cfg.HAProxyRules.AddRule(reqBlackList, FrontendHTTP, FrontendHTTPS)
-}
-
-func (c *HAProxyController) handleHTTPRedirect(ingress *store.Ingress) error {
-	//  Get and validate annotations
-	toEnable := false
-	annSSLRedirect, _ := c.Store.GetValueFromAnnotations("ssl-redirect", ingress.Annotations, c.Store.ConfigMaps[Main].Annotations)
-	annRedirectCode, _ := c.Store.GetValueFromAnnotations("ssl-redirect-code", ingress.Annotations, c.Store.ConfigMaps[Main].Annotations)
-	sslRedirectCode, err := strconv.ParseInt(annRedirectCode.Value, 10, 64)
-	if err != nil {
-		return err
-	}
-	if annSSLRedirect != nil && annSSLRedirect.Status != DELETED {
-		if toEnable, err = utils.GetBoolValue(annSSLRedirect.Value, "ssl-redirect"); err != nil {
-			return err
-		}
-	} else if tlsEnabled(ingress) {
-		toEnable = true
-	}
-	if !toEnable {
-		return nil
-	}
-	// Configure redirection
-	match := haproxy.NewMapID(fmt.Sprintf("%d-%d", haproxy.REQ_SSL_REDIRECT, sslRedirectCode))
-	for hostname, rule := range ingress.Rules {
-		if rule.Status != DELETED {
-			for path := range rule.Paths {
-				c.cfg.MapFiles.AppendRow(match, hostname+path)
-			}
-		}
-	}
-	reqSSLRedirect := rules.ReqSSLRedirect{
-		Ingress:      match,
-		RedirectCode: sslRedirectCode,
-	}
-	return c.cfg.HAProxyRules.AddRule(reqSSLRedirect, FrontendHTTP)
-}
-
-func (c *HAProxyController) handleRateLimiting(ingress *store.Ingress) error {
-	//  Get annotations status
-	annRateLimitReq, _ := c.Store.GetValueFromAnnotations("rate-limit-requests", ingress.Annotations, c.Store.ConfigMaps[Main].Annotations)
-	if annRateLimitReq == nil {
-		return nil
-	}
-	if ingress.Status == DELETED || annRateLimitReq.Status == DELETED {
-		logger.Debugf("Ingress %s/%s: Deleting rate-limit-requests configuration", ingress.Namespace, ingress.Name)
-		return nil
-	}
-	// Validate annotations
-	reqsLimit, err := strconv.ParseInt(annRateLimitReq.Value, 10, 64)
-	if err != nil {
-		return err
-	}
-	annRateLimitPeriod, _ := c.Store.GetValueFromAnnotations("rate-limit-period", ingress.Annotations, c.Store.ConfigMaps[Main].Annotations)
-	rateLimitPeriod, err := utils.ParseTime(annRateLimitPeriod.Value)
-	if err != nil {
-		return err
-	}
-	annRateLimitSize, _ := c.Store.GetValueFromAnnotations("rate-limit-size", ingress.Annotations, c.Store.ConfigMaps[Main].Annotations)
-	rateLimitSize := misc.ParseSize(annRateLimitSize.Value)
-
-	annRateLimitCode, _ := c.Store.GetValueFromAnnotations("rate-limit-status-code", ingress.Annotations, c.Store.ConfigMaps[Main].Annotations)
-	rateLimitCode, err := utils.ParseInt(annRateLimitCode.Value)
-	if err != nil {
-		return err
-	}
-
-	// Configure annotation
-	logger.Debugf("Ingress %s/%s: Configuring rate-limit-requests annotation", ingress.Namespace, ingress.Name)
-	reqsMatch := haproxy.NewMapID(fmt.Sprintf("%d-%d-%d", haproxy.REQ_TRACK, *rateLimitPeriod, reqsLimit))
-	trackMatch := haproxy.NewMapID(fmt.Sprintf("%d-%d", haproxy.REQ_RATELIMIT, *rateLimitPeriod))
-	tableName := fmt.Sprintf("RateLimit-%d", *rateLimitPeriod)
-	for hostname, rule := range ingress.Rules {
-		if rule.Status != DELETED {
-			for path := range rule.Paths {
-				c.cfg.MapFiles.AppendRow(reqsMatch, hostname+path)
-				c.cfg.MapFiles.AppendRow(trackMatch, hostname+path)
-			}
-		}
-	}
-	rateLimitTables = append(rateLimitTables, tableName)
-	reqTrack := rules.ReqTrack{
-		Ingress:     trackMatch,
-		TableName:   tableName,
-		TableSize:   rateLimitSize,
-		TablePeriod: rateLimitPeriod,
-		TrackKey:    "src",
-	}
-	err = c.cfg.HAProxyRules.AddRule(reqTrack, FrontendHTTP, FrontendHTTPS)
-	if err != nil {
-		return err
-	}
-	reqRateLimit := rules.ReqRateLimit{
-		TableName:      tableName,
-		Ingress:        reqsMatch,
-		ReqsLimit:      reqsLimit,
-		DenyStatusCode: rateLimitCode,
-	}
-	return c.cfg.HAProxyRules.AddRule(reqRateLimit, FrontendHTTP, FrontendHTTPS)
-}
-
-func (c *HAProxyController) handleRequestCapture(ingress *store.Ingress) error {
-	//  Get annotation status
-	annReqCapture, _ := c.Store.GetValueFromAnnotations("request-capture", ingress.Annotations, c.Store.ConfigMaps[Main].Annotations)
-	if annReqCapture == nil {
-		return nil
-	}
-	if ingress.Status == DELETED || annReqCapture.Status == DELETED {
-		logger.Debugf("Ingress %s/%s: Deleting request-capture configuration", ingress.Namespace, ingress.Name)
-		return nil
-	}
-	//  Validate annotation
-	annCaptureLen, _ := c.Store.GetValueFromAnnotations("request-capture-len", ingress.Annotations, c.Store.ConfigMaps[Main].Annotations)
-	captureLen, err := strconv.ParseInt(annCaptureLen.Value, 10, 64)
-	if err != nil {
-		return err
-	}
-
-	// Configure annotation
-	errors := utils.Errors{}
-	for _, sample := range strings.Split(annReqCapture.Value, "\n") {
-		logger.Debugf("Ingress %s/%s: Configuring request capture for '%s'", ingress.Namespace, ingress.Name, sample)
-		if sample == "" {
-			continue
-		}
-		match := haproxy.NewMapID(fmt.Sprintf("%d-%s-%d", haproxy.REQ_CAPTURE, sample, captureLen))
-		for hostname, rule := range ingress.Rules {
-			if rule.Status != DELETED {
-				for path := range rule.Paths {
-					c.cfg.MapFiles.AppendRow(match, hostname+path)
-				}
-			}
-		}
-		reqCapture := rules.ReqCapture{
-			Ingress:    match,
-			Expression: sample,
-			CaptureLen: captureLen,
-		}
-		errors.Add(c.cfg.HAProxyRules.AddRule(reqCapture, FrontendHTTP, FrontendHTTPS))
-	}
-	return errors.Result()
-}
-
-func (c *HAProxyController) handleRequestSetHdr(ingress *store.Ingress) error {
-	//  Get annotation status
-	annReqSetHdr, _ := c.Store.GetValueFromAnnotations("request-set-header", ingress.Annotations, c.Store.ConfigMaps[Main].Annotations)
-	if annReqSetHdr == nil {
-		return nil
-	}
-	if ingress.Status == DELETED || annReqSetHdr.Status == DELETED {
-		logger.Debugf("Ingress %s/%s: Deleting request-set-header configuration", ingress.Namespace, ingress.Name)
-		return nil
-	}
-	// Configure annotation
-	errors := utils.Errors{}
-	for _, param := range strings.Split(annReqSetHdr.Value, "\n") {
-		parts := strings.Fields(param)
-		if len(parts) != 2 {
-			logger.Errorf("incorrect value '%s' in request-set-header annotation", param)
-			continue
-		}
-		logger.Debugf("Ingress %s/%s: Configuring request set '%s' header ", ingress.Namespace, ingress.Name, param)
-		match := haproxy.NewMapID(fmt.Sprintf("%d-%s-%s", haproxy.REQ_SET_HEADER, parts[0], parts[1]))
-		for hostname, rule := range ingress.Rules {
-			if rule.Status != DELETED {
-				for path := range rule.Paths {
-					c.cfg.MapFiles.AppendRow(match, hostname+path)
-				}
-			}
-		}
-		reqSetHdr := rules.SetHdr{
-			Ingress:   match,
-			HdrName:   parts[0],
-			HdrFormat: parts[1],
-		}
-		errors.Add(c.cfg.HAProxyRules.AddRule(reqSetHdr, FrontendHTTP, FrontendHTTPS))
-	}
-	return errors.Result()
-}
-
-func (c *HAProxyController) handleRequestSetHost(ingress *store.Ingress) error {
-	//  Get annotation status
-	annSetHost, _ := c.Store.GetValueFromAnnotations("set-host", ingress.Annotations, c.Store.ConfigMaps[Main].Annotations)
-	if annSetHost == nil {
-		return nil
-	}
-	if ingress.Status == DELETED || annSetHost.Status == DELETED {
-		logger.Debugf("Ingress %s/%s: Deleting request-set-host configuration", ingress.Namespace, ingress.Name)
-		return nil
-	}
-	// Configure annotation
-	logger.Debugf("Ingress %s/%s: Configuring request-set-host", ingress.Namespace, ingress.Name)
-	match := haproxy.NewMapID(fmt.Sprintf("%d-%s", haproxy.REQ_SET_HOST, annSetHost.Value))
-	for hostname, rule := range ingress.Rules {
-		if rule.Status != DELETED {
-			for path := range rule.Paths {
-				c.cfg.MapFiles.AppendRow(match, hostname+path)
-			}
-		}
-	}
-	reqSetHost := rules.SetHdr{
-		Ingress:   match,
-		HdrName:   "Host",
-		HdrFormat: annSetHost.Value,
-	}
-	return c.cfg.HAProxyRules.AddRule(reqSetHost, FrontendHTTP, FrontendHTTPS)
-}
-
-func (c *HAProxyController) handleRequestPathRewrite(ingress *store.Ingress) error {
-	//  Get annotation status
-	annPathRewrite, _ := c.Store.GetValueFromAnnotations("path-rewrite", ingress.Annotations, c.Store.ConfigMaps[Main].Annotations)
-	if annPathRewrite == nil {
-		return nil
-	}
-	if ingress.Status == DELETED || annPathRewrite.Status == DELETED {
-		logger.Debugf("Ingress %s/%s: Deleting path-rewrite configuration", ingress.Namespace, ingress.Name)
-		return nil
-	}
-	// Configure annotation
-	logger.Debugf("Ingress %s/%s: Configuring path-rewrite", ingress.Namespace, ingress.Name)
-	parts := strings.Fields(strings.TrimSpace(annPathRewrite.Value))
-	match := haproxy.NewMapID(fmt.Sprintf("%d-%s", haproxy.REQ_PATH_REWRITE, annPathRewrite.Value))
-	for hostname, rule := range ingress.Rules {
-		if rule.Status != DELETED {
-			for path := range rule.Paths {
-				c.cfg.MapFiles.AppendRow(match, hostname+path)
-			}
-		}
-	}
-
-	var pathReWrite haproxy.Rule
-	switch len(parts) {
-	case 1:
-		pathReWrite = rules.ReqPathRewrite{
-			Ingress:   match,
-			PathMatch: "(.*)",
-			PathFmt:   parts[0],
-		}
-	case 2:
-		pathReWrite = rules.ReqPathRewrite{
-			Ingress:   match,
-			PathMatch: parts[0],
-			PathFmt:   parts[1],
-		}
-	default:
-		return fmt.Errorf("incorrect value '%s', path-rewrite takes 1 or 2 params ", annPathRewrite.Value)
-	}
-	return c.cfg.HAProxyRules.AddRule(pathReWrite, FrontendHTTP, FrontendHTTPS)
-}
-
-func (c *HAProxyController) handleResponseSetHdr(ingress *store.Ingress) error {
-	//  Get annotation status
-	annResSetHdr, _ := c.Store.GetValueFromAnnotations("response-set-header", ingress.Annotations, c.Store.ConfigMaps[Main].Annotations)
-	if annResSetHdr == nil {
-		return nil
-	}
-	if ingress.Status == DELETED || annResSetHdr.Status == DELETED {
-		logger.Debugf("Ingress %s/%s: Deleting response-set-header configuration", ingress.Namespace, ingress.Name)
-		return nil
-	}
-	// Configure annotation
-	errors := utils.Errors{}
-	for _, param := range strings.Split(annResSetHdr.Value, "\n") {
-		parts := strings.Fields(param)
-		if len(parts) != 2 {
-			logger.Errorf("incorrect value '%s' in response-set-header annotation", param)
-			continue
-		}
-		logger.Debugf("Ingress %s/%s: Configuring response set '%s' header ", ingress.Namespace, ingress.Name, param)
-		match := haproxy.NewMapID(fmt.Sprintf("%d-%s-%s", haproxy.RES_SET_HEADER, parts[0], parts[1]))
-		for hostname, rule := range ingress.Rules {
-			if rule.Status != DELETED {
-				for path := range rule.Paths {
-					c.cfg.MapFiles.AppendRow(match, hostname+path)
-				}
-			}
-		}
-		resSetHdr := rules.SetHdr{
-			Ingress:   match,
-			HdrName:   parts[0],
-			HdrFormat: parts[1],
-			Response:  true,
-		}
-		errors.Add(c.cfg.HAProxyRules.AddRule(resSetHdr, FrontendHTTP, FrontendHTTPS))
-	}
-	return errors.Result()
-}
-
-func (c *HAProxyController) handleWhitelisting(ingress *store.Ingress) error {
-	//  Get annotation status
-	annWhitelist, _ := c.Store.GetValueFromAnnotations("whitelist", ingress.Annotations, c.Store.ConfigMaps[Main].Annotations)
-	if annWhitelist == nil {
-		return nil
-	}
-	if ingress.Status == DELETED || annWhitelist.Status == DELETED {
-		logger.Debugf("Ingress %s/%s: Deleting whitelist configuration", ingress.Namespace, ingress.Name)
-		return nil
-	}
-	// Validate annotation
-	ips := haproxy.NewMapID(annWhitelist.Value)
-	for _, address := range strings.Split(annWhitelist.Value, ",") {
-		if ip := net.ParseIP(address); ip == nil {
-			if _, _, err := net.ParseCIDR(address); err != nil {
-				logger.Errorf("incorrect address '%s' in whitelist annotation in ingress '%s'", address, ingress.Name)
-				continue
-			}
-		}
-		c.cfg.MapFiles.AppendRow(ips, address)
-	}
-	// Configure annotation
-	logger.Debugf("Ingress %s/%s: Configuring whitelist annotation", ingress.Namespace, ingress.Name)
-	match := haproxy.NewMapID(fmt.Sprintf("%d-%s", haproxy.REQ_DENY, annWhitelist.Value))
-	for hostname, rule := range ingress.Rules {
-		if rule.Status != DELETED {
-			for path := range rule.Paths {
-				c.cfg.MapFiles.AppendRow(match, hostname+path)
-			}
-		}
-	}
-	reqWhitelist := rules.ReqDeny{
-		Ingress:   match,
-		SrcIPs:    ips,
-		Whitelist: true,
-	}
-	return c.cfg.HAProxyRules.AddRule(reqWhitelist, FrontendHTTP, FrontendHTTPS)
 }
 
 func tlsEnabled(ingress *store.Ingress) bool {

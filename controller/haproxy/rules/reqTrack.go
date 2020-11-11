@@ -11,11 +11,18 @@ import (
 )
 
 type ReqTrack struct {
-	Ingress     haproxy.MapID
+	id          uint32
 	TableName   string
 	TablePeriod *int64
 	TableSize   *int64
 	TrackKey    string
+}
+
+func (r ReqTrack) GetID() uint32 {
+	if r.id == 0 {
+		r.id = hashRule(r)
+	}
+	return r.id
 }
 
 func (r ReqTrack) GetType() haproxy.RuleType {
@@ -42,14 +49,12 @@ func (r ReqTrack) Create(client api.HAProxyClient, frontend *models.Frontend) er
 		}
 	}
 	// Create rule
-	ingressMapFile := r.Ingress.Path()
 	httpRule := models.HTTPRequestRule{
 		Index:         utils.PtrInt64(0),
 		Type:          "track-sc0",
 		TrackSc0Key:   r.TrackKey,
 		TrackSc0Table: r.TableName,
-		Cond:          "if",
-		CondTest:      makeACL("", ingressMapFile),
 	}
+	matchRuleID(&httpRule, r.GetID())
 	return client.FrontendHTTPRequestRuleCreate(frontend.Name, httpRule)
 }

@@ -11,11 +11,15 @@ import (
 )
 
 type ReqSetSrc struct {
+	id         uint32
 	HeaderName string
 }
 
-func (r ReqSetSrc) Frontends() []string {
-	return []string{"http", "https"}
+func (r ReqSetSrc) GetID() uint32 {
+	if r.id == 0 {
+		r.id = hashRule(r)
+	}
+	return r.id
 }
 
 func (r ReqSetSrc) GetType() haproxy.RuleType {

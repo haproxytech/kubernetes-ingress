@@ -11,7 +11,15 @@ import (
 )
 
 type ReqInspectDelay struct {
+	id      uint32
 	Timeout *int64
+}
+
+func (r ReqInspectDelay) GetID() uint32 {
+	if r.id == 0 {
+		r.id = hashRule(r)
+	}
+	return r.id
 }
 
 func (r ReqInspectDelay) GetType() haproxy.RuleType {

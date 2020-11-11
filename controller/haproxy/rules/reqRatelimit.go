@@ -11,10 +11,17 @@ import (
 )
 
 type ReqRateLimit struct {
-	Ingress        haproxy.MapID
+	id             uint32
 	TableName      string
 	ReqsLimit      int64
 	DenyStatusCode int64
+}
+
+func (r ReqRateLimit) GetID() uint32 {
+	if r.id == 0 {
+		r.id = hashRule(r)
+	}
+	return r.id
 }
 
 func (r ReqRateLimit) GetType() haproxy.RuleType {
@@ -26,13 +33,13 @@ func (r ReqRateLimit) Create(client api.HAProxyClient, frontend *models.Frontend
 		//TODO: tcp request tracking
 		return fmt.Errorf("request Track cannot be configured in TCP mode")
 	}
-	ingressMapFile := r.Ingress.Path()
 	httpRule := models.HTTPRequestRule{
 		Index:      utils.PtrInt64(0),
 		Type:       "deny",
 		DenyStatus: utils.PtrInt64(r.DenyStatusCode),
 		Cond:       "if",
-		CondTest:   makeACL(fmt.Sprintf(" { sc0_http_req_rate(%s) gt %d }", r.TableName, r.ReqsLimit), ingressMapFile),
+		CondTest:   fmt.Sprintf("{ sc0_http_req_rate(%s) gt %d }", r.TableName, r.ReqsLimit),
 	}
+	matchRuleID(&httpRule, r.GetID())
 	return client.FrontendHTTPRequestRuleCreate(frontend.Name, httpRule)
 }

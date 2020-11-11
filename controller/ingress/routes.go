@@ -16,6 +16,7 @@ package ingress
 
 import (
 	"fmt"
+	"strconv"
 
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/api"
@@ -114,15 +115,19 @@ func (route *Route) addToMapFile(mapFiles haproxy.Maps) error {
 		return nil
 	}
 	// HTTP
+	value := route.BackendName
+	for _, id := range route.HAProxyRules {
+		value += "." + strconv.Itoa(int(id))
+	}
 	if route.Host != "" {
 		mapFiles.AppendRow(1, route.Host+"\t\t\t"+route.Host)
 	} else if route.Path.Path == "" {
 		return fmt.Errorf("neither Host nor Path are not provided for backend %v, SKIP", route.BackendName)
 	}
 	if route.Path.ExactPathMatch {
-		mapFiles.AppendRow(2, route.Host+route.Path.Path+"\t\t\t"+route.BackendName)
+		mapFiles.AppendRow(2, route.Host+route.Path.Path+"\t\t\t"+value)
 	} else {
-		mapFiles.AppendRow(3, route.Host+route.Path.Path+"\t\t\t"+route.BackendName)
+		mapFiles.AppendRow(3, route.Host+route.Path.Path+"\t\t\t"+value)
 	}
 	return nil
 }

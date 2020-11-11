@@ -11,8 +11,15 @@ import (
 )
 
 type ReqSSLRedirect struct {
-	Ingress      haproxy.MapID
+	id           uint32
 	RedirectCode int64
+}
+
+func (r ReqSSLRedirect) GetID() uint32 {
+	if r.id == 0 {
+		r.id = hashRule(r)
+	}
+	return r.id
 }
 
 func (r ReqSSLRedirect) GetType() haproxy.RuleType {
@@ -23,7 +30,6 @@ func (r ReqSSLRedirect) Create(client api.HAProxyClient, frontend *models.Fronte
 	if frontend.Mode == "tcp" {
 		return fmt.Errorf("SSL redirect cannot be configured in TCP mode")
 	}
-	ingressMapFile := r.Ingress.Path()
 	httpRule := models.HTTPRequestRule{
 		Index:      utils.PtrInt64(0),
 		Type:       "redirect",
@@ -31,7 +37,8 @@ func (r ReqSSLRedirect) Create(client api.HAProxyClient, frontend *models.Fronte
 		RedirValue: "https",
 		RedirType:  "scheme",
 		Cond:       "if",
-		CondTest:   makeACL(" !{ ssl_fc }", ingressMapFile),
+		CondTest:   "!{ ssl_fc }",
 	}
+	matchRuleID(&httpRule, r.GetID())
 	return client.FrontendHTTPRequestRuleCreate(frontend.Name, httpRule)
 }

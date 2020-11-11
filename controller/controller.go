@@ -212,7 +212,7 @@ func (c *HAProxyController) updateHAProxy() error {
 			if c.PublishService != nil && ingress.Status != DELETED {
 				logger.Error(c.k8s.UpdateIngressStatus(ingress, c.PublishService))
 			}
-			// handle Default Backend
+			// Default Backend
 			if ingress.DefaultBackend != nil {
 				c.cfg.IngressRoutes.AddRoute(&ingressRoute.Route{
 					Namespace: namespace,
@@ -220,19 +220,6 @@ func (c *HAProxyController) updateHAProxy() error {
 					Path:      ingress.DefaultBackend,
 				})
 			}
-			// handle Ingress rules
-			for _, rule := range ingress.Rules {
-				for _, path := range rule.Paths {
-					c.cfg.IngressRoutes.AddRoute(&ingressRoute.Route{
-						Namespace:      namespace,
-						Ingress:        ingress,
-						Host:           rule.Host,
-						Path:           path,
-						SSLPassthrough: c.sslPassthroughEnabled(namespace, ingress, path),
-					})
-				}
-			}
-			//handle certs
 			ingressSecrets := map[string]struct{}{}
 			for _, tls := range ingress.TLS {
 				if _, ok := ingressSecrets[tls.SecretName.Value]; !ok {
@@ -240,13 +227,26 @@ func (c *HAProxyController) updateHAProxy() error {
 					reload = c.handleTLSSecret(*ingress, *tls, usedCerts) || reload
 				}
 			}
-
-			// Ingress Annotations
+			// Ingress annotations
 			if len(ingress.Rules) == 0 {
 				logger.Debugf("Ingress %s/%s: no rules defined", ingress.Namespace, ingress.Name)
 				continue
 			}
-			c.handleIngressAnnotations(ingress)
+			ruleIDs := c.handleIngressAnnotations(ingress)
+			// Ingress rules
+			for _, rule := range ingress.Rules {
+				for _, path := range rule.Paths {
+					c.cfg.IngressRoutes.AddRoute(&ingressRoute.Route{
+						Namespace:      namespace,
+						Ingress:        ingress,
+						Host:           rule.Host,
+						Path:           path,
+						HAProxyRules:   ruleIDs,
+						SSLPassthrough: c.sslPassthroughEnabled(namespace, ingress, path),
+					})
+				}
+			}
+
 		}
 	}
 
