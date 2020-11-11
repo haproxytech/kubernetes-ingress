@@ -276,6 +276,50 @@ groups:
         - ecdsa.key
         - ecdsa.crt    
 annotations:
+  - title: auth-type
+    type: string
+    group: authentication
+    dependencies: ""
+    default: ""
+    description:
+      - Enable the selected Authentication strategy, actually only Basic Auth is supported.
+    tip: []
+    values:
+      - basic-auth
+    applies_to:
+      - configmap
+      - ingress
+    version_min: "1.5"
+    example: ['auth-type: basic-auth']
+  - title: auth-secret
+    type: string
+    group: authentication
+    dependencies: auth-type
+    default: ""
+    description:
+      - |-
+        Select the Kubernetes Secret resource declaring the user list realm to apply.
+          For Basic Authentication the Secret data keys declare the username, related values the matching hashed password.
+
+          > Supported hashing functions: MD5, DES, SHA-256, SHA-512
+    tip: []
+    values:
+      - |-
+        Any Kubernetes Secret resource in the same Namespace of the Ingress.
+
+          ```bash
+          kubectl create secret generic my-userlist-realm \
+            --from-literal=bob=$(echo -n "password" | mkpasswd --stdin --method=md5) \
+            --from-literal=alice=$(echo -n "password" | mkpasswd --stdin --method=des) \
+            --from-literal=john=$(echo -n "password" | mkpasswd --stdin --method=sha-256) \
+            --from-literal=laura=$(echo -n "password" | mkpasswd --stdin --method=sha-512)
+          # secret/my-userlist-realm created
+          ```
+    applies_to:
+      - configmap
+      - ingress
+    version_min: "1.5"
+    example: ['auth-secret: my-userlist-realm']
   - title: blacklist
     type: IPs or CIDRs
     group: access-control
