@@ -25,14 +25,17 @@ import (
 )
 
 func Test_Tcp_Reach(t *testing.T) {
-	client := kindclient.NewClient(t, "haproxy.org", 32766)
+	client := kindclient.NewClient("haproxy.org", 32766)
 
 	counter := map[string]int{}
 	for i := 0; i < 4; i++ {
 		func() {
-			resp, close := client.Do("/gidc")
-			defer close()
-			counter[newReachResponse(t, resp).Name()]++
+			res, cls, err := client.Do("/gidc")
+			if err != nil {
+				return
+			}
+			defer cls()
+			counter[newReachResponse(t, res).Name()]++
 		}()
 	}
 	for _, v := range counter {

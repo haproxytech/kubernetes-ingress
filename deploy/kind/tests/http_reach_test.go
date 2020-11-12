@@ -39,14 +39,17 @@ func Test_Http_Reach(t *testing.T) {
 		"hr.haproxy": 8,
 		"fr.haproxy": 4,
 	} {
-		client := kindclient.New(t, name)
+		client := kindclient.New(name)
 
 		counter := map[string]int{}
 		for i := 0; i < retries; i++ {
 			func() {
-				resp, close := client.Do("/gidc")
-				defer close()
-				counter[newReachResponse(t, resp).Name()]++
+				res, cls, err := client.Do("/gidc")
+				if err != nil {
+					return
+				}
+				defer cls()
+				counter[newReachResponse(t, res).Name()]++
 			}()
 		}
 		for _, v := range counter {

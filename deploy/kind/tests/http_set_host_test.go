@@ -62,16 +62,22 @@ func Test_Set_Host(t *testing.T) {
 			assert.Nil(t, err)
 			defer cs.NetworkingV1beta1().Ingresses(ing.Namespace).Delete(context.Background(), ing.Name, metav1.DeleteOptions{})
 
-			client := kindclient.NewClient(t, ing.Spec.Rules[0].Host, 30080)
+			client := kindclient.NewClient(ing.Spec.Rules[0].Host, 30080)
 
 			assert.Eventually(t, func() bool {
-				r, cls := client.Do("/")
+				r, cls, err := client.Do("/")
+				if err != nil {
+					return false
+				}
 				defer cls()
 				return r.StatusCode == http.StatusOK
 			}, time.Minute, time.Second)
 
 			assert.Eventually(t, func() bool {
-				r, cls := client.Do("/")
+				r, cls, err := client.Do("/")
+				if err != nil {
+					return false
+				}
 				defer cls()
 
 				b, err := ioutil.ReadAll(r.Body)

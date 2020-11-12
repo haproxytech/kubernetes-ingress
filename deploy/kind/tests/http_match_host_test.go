@@ -67,9 +67,12 @@ func Test_Http_MatchHost(t *testing.T) {
 					Hostname string `json:"hostname"`
 				}
 
-				client := kindclient.New(t, ing.Spec.Rules[0].Host)
-				res, c := client.Do("/")
-				defer c()
+				client := kindclient.New(ing.Spec.Rules[0].Host)
+				res, cls, err := client.Do("/")
+				if err != nil {
+					return false
+				}
+				defer cls()
 
 				body, err := ioutil.ReadAll(res.Body)
 				if err != nil {

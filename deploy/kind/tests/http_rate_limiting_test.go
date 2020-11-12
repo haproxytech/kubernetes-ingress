@@ -68,10 +68,13 @@ func Test_Rate_Limiting(t *testing.T) {
 			assert.Nil(t, err)
 			defer cs.NetworkingV1beta1().Ingresses(ing.Namespace).Delete(context.Background(), ing.Name, metav1.DeleteOptions{})
 
-			client := kindclient.NewClient(t, ing.Spec.Rules[0].Host, 30080)
+			client := kindclient.NewClient(ing.Spec.Rules[0].Host, 30080)
 
 			assert.Eventually(t, func() bool {
-				r, cls := client.Do("/")
+				r, cls, err := client.Do("/")
+				if err != nil {
+					return false
+				}
 				defer cls()
 				return r.StatusCode == http.StatusOK
 			}, time.Minute, time.Second)
@@ -79,7 +82,10 @@ func Test_Rate_Limiting(t *testing.T) {
 			// first {limit} requests must be successful
 			var counter int
 			assert.Eventually(t, func() bool {
-				r, cls := client.Do("/")
+				r, cls, err := client.Do("/")
+				if err != nil {
+					return false
+				}
 				defer cls()
 				counter++
 
@@ -91,7 +97,10 @@ func Test_Rate_Limiting(t *testing.T) {
 			// next ones should fail
 			for i := 0; i < tc.limitRequests; i++ {
 				func() {
-					r, cls := client.Do("/")
+					r, cls, err := client.Do("/")
+					if err != nil {
+						return
+					}
 					defer cls()
 					assert.NotEqual(t, http.StatusOK, r.StatusCode)
 				}()
@@ -100,7 +109,10 @@ func Test_Rate_Limiting(t *testing.T) {
 			// waiting for the rate limiting period plus extra margin
 			time.Sleep(tc.limitPeriod * 2)
 
-			r, cls := client.Do("/")
+			r, cls, err := client.Do("/")
+			if err != nil {
+				t.FailNow()
+			}
 			defer cls()
 			assert.Equal(t, 200, r.StatusCode)
 		})

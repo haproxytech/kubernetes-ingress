@@ -18,43 +18,43 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-	"testing"
-
-	"github.com/stretchr/testify/assert"
 )
 
 type Client struct {
-	T    *testing.T
 	Type string
 	Host string
 	Port int
 }
 
-func New(t *testing.T, host string) *Client {
-	return NewClient(t, host, 30080)
+func New(host string) *Client {
+	return NewClient(host, 30080)
 }
 
-func NewClient(t *testing.T, host string, port int) *Client {
+func NewClient(host string, port int) *Client {
 	return &Client{
-		T:    t,
 		Type: "http",
 		Host: host,
 		Port: port,
 	}
 }
 
-func (c *Client) Do(url string) (*http.Response, func() error) {
+func (c *Client) Do(url string) (res *http.Response, close func() error, err error) {
 	kindURL := os.Getenv("KIND_URL")
 	if kindURL == "" {
 		kindURL = "127.0.0.1"
 	}
-	req, err := http.NewRequest("GET", fmt.Sprintf("%s://%s:%d%s", c.Type, kindURL, c.Port, url), nil)
-	assert.Nil(c.T, err)
-
+	var req *http.Request
+	req, err = http.NewRequest("GET", fmt.Sprintf("%s://%s:%d%s", c.Type, kindURL, c.Port, url), nil)
+	if err != nil {
+		return
+	}
 	req.Host = c.Host
 
-	resp, err := http.DefaultClient.Do(req)
-	assert.Nil(c.T, err)
+	res, err = http.DefaultClient.Do(req)
+	if err != nil {
+		return
+	}
+	close = res.Body.Close
 
-	return resp, resp.Body.Close
+	return
 }

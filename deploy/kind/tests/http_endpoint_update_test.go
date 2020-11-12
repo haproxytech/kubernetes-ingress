@@ -61,9 +61,12 @@ func Test_Endpoint_Update(t *testing.T) {
 
 	// waiting the Ingress is handled correctly
 	assert.Eventually(t, func() bool {
-		client := kindclient.New(t, ing.Spec.Rules[0].Host)
-		res, c := client.Do("/")
-		defer c()
+		client := kindclient.New(ing.Spec.Rules[0].Host)
+		res, cls, err := client.Do("/")
+		if err != nil {
+			return false
+		}
+		defer cls()
 
 		body, err := ioutil.ReadAll(res.Body)
 		if err != nil {
@@ -107,9 +110,12 @@ func Test_Endpoint_Update(t *testing.T) {
 			}
 
 			assert.Eventually(t, func() bool {
-				client := kindclient.New(t, ing.Spec.Rules[0].Host)
-				res, c := client.Do("/")
-				defer c()
+				client := kindclient.New(ing.Spec.Rules[0].Host)
+				res, cls, err := client.Do("/")
+				if err != nil {
+					return false
+				}
+				defer cls()
 
 				body, err := ioutil.ReadAll(res.Body)
 				if err != nil {
