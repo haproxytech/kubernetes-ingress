@@ -715,6 +715,7 @@ annotations:
       to 100,000
     applies_to:
     - configmap
+    - ingress
     version_min: "1.4"
     example: ['rate-limit-size: 1000000']
   - title: request-capture
