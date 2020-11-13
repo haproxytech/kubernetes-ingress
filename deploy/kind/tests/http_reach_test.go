@@ -60,7 +60,9 @@ func Test_Http_Reach(t *testing.T) {
 
 func newReachResponse(t *testing.T, response *http.Response) *reachResponse {
 	body, err := ioutil.ReadAll(response.Body)
-	assert.Nil(t, err)
+	if err != nil {
+		return nil
+	}
 
 	res := strings.Split(strings.Trim(string(body), "\n"), "-")
 	if len(res) == 3 {

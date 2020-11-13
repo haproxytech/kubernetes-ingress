@@ -21,7 +21,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"strings"
+	"net/http"
 	"testing"
 	"time"
 
@@ -44,15 +44,21 @@ func Test_Endpoint_Update(t *testing.T) {
 	ing := k8s.NewIngress("podinfo", "replica", "/")
 
 	deploy, err = cs.AppsV1().Deployments("default").Create(context.Background(), deploy, metav1.CreateOptions{})
-	assert.Nil(t, err)
+	if err != nil {
+		t.FailNow()
+	}
 	defer cs.AppsV1().Deployments(deploy.Namespace).Delete(context.Background(), deploy.Name, metav1.DeleteOptions{})
 
 	svc, err = cs.CoreV1().Services("default").Create(context.Background(), svc, metav1.CreateOptions{})
-	assert.Nil(t, err)
+	if err != nil {
+		t.FailNow()
+	}
 	defer cs.CoreV1().Services(svc.Namespace).Delete(context.Background(), svc.Name, metav1.DeleteOptions{})
 
 	ing, err = cs.NetworkingV1beta1().Ingresses("default").Create(context.Background(), ing, metav1.CreateOptions{})
-	assert.Nil(t, err)
+	if err != nil {
+		t.FailNow()
+	}
 	defer cs.NetworkingV1beta1().Ingresses(ing.Namespace).Delete(context.Background(), ing.Name, metav1.DeleteOptions{})
 
 	type podInfoResponse struct {
@@ -68,28 +74,22 @@ func Test_Endpoint_Update(t *testing.T) {
 		}
 		defer cls()
 
-		body, err := ioutil.ReadAll(res.Body)
-		if err != nil {
-			return false
-		}
-
-		response := &podInfoResponse{}
-		if err := json.Unmarshal(body, response); err != nil {
-			return false
-		}
-
-		return strings.HasPrefix(response.Hostname, ing.Name)
+		return res.StatusCode == http.StatusOK
 	}, time.Minute, time.Second)
 
 	for _, replicas := range []int32{2, 3, 4, 5, 4, 3, 2, 1} {
 		t.Run(fmt.Sprintf("%d replicas", replicas), func(t *testing.T) {
 			var s *v1.Scale
 			s, err = cs.AppsV1().Deployments(deploy.Namespace).GetScale(context.TODO(), deploy.Name, metav1.GetOptions{})
-			assert.Nil(t, err)
+			if err != nil {
+				t.FailNow()
+			}
 
 			s.Spec.Replicas = replicas
 			s, err = cs.AppsV1().Deployments(deploy.Namespace).UpdateScale(context.TODO(), deploy.Name, s, metav1.UpdateOptions{})
-			assert.Nil(t, err)
+			if err != nil {
+				t.FailNow()
+			}
 
 			var pl *corev1.PodList
 
@@ -97,7 +97,9 @@ func Test_Endpoint_Update(t *testing.T) {
 				pl, err = cs.CoreV1().Pods(deploy.Namespace).List(context.Background(), metav1.ListOptions{
 					LabelSelector: labels.SelectorFromSet(deploy.Spec.Selector.MatchLabels).String(),
 				})
-				assert.Nil(t, err)
+				if err != nil {
+					return false
+				}
 
 				return len(pl.Items) == int(replicas)
 			}, time.Minute, time.Second)

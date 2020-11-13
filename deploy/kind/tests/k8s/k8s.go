@@ -41,13 +41,19 @@ import (
 
 func New(t *testing.T) *kubernetes.Clientset {
 	home, err := os.UserHomeDir()
-	assert.Nil(t, err)
+	if err != nil {
+		t.FailNow()
+	}
 
 	config, err := clientcmd.BuildConfigFromFlags("", fmt.Sprintf("%s/.kube/config", home))
-	assert.Nil(t, err)
+	if err != nil {
+		t.FailNow()
+	}
 
 	cs, err := kubernetes.NewForConfig(config)
-	assert.Nil(t, err)
+	if err != nil {
+		t.FailNow()
+	}
 
 	return cs
 }
@@ -220,7 +226,9 @@ func GetCaOrFail(t *testing.T, cs *kubernetes.Clientset) (ca *x509.Certificate) 
 
 	var sal *corev1.SecretList
 	sal, err = cs.CoreV1().Secrets("default").List(context.Background(), metav1.ListOptions{})
-	assert.Nil(t, err)
+	if err != nil {
+		t.FailNow()
+	}
 
 	for _, sa := range sal.Items {
 		if strings.HasPrefix(sa.Name, "default-token") {

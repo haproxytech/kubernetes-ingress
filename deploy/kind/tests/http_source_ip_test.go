@@ -78,15 +78,21 @@ func Test_Set_Source_Ip(t *testing.T) {
 			ing := k8s.NewIngress("src-ip-header", strings.ToLower(tc.HeaderName), "/")
 
 			deploy, err = cs.AppsV1().Deployments("default").Create(context.Background(), deploy, metav1.CreateOptions{})
-			assert.Nil(t, err)
+			if err != nil {
+				t.FailNow()
+			}
 			defer cs.AppsV1().Deployments(deploy.Namespace).Delete(context.Background(), deploy.Name, metav1.DeleteOptions{})
 
 			svc, err = cs.CoreV1().Services("default").Create(context.Background(), svc, metav1.CreateOptions{})
-			assert.Nil(t, err)
+			if err != nil {
+				t.FailNow()
+			}
 			defer cs.CoreV1().Services(svc.Namespace).Delete(context.Background(), svc.Name, metav1.DeleteOptions{})
 
 			ing, err = cs.NetworkingV1beta1().Ingresses("default").Create(context.Background(), ing, metav1.CreateOptions{})
-			assert.Nil(t, err)
+			if err != nil {
+				t.FailNow()
+			}
 			defer cs.NetworkingV1beta1().Ingresses(ing.Namespace).Delete(context.Background(), ing.Name, metav1.DeleteOptions{})
 
 			client := &http.Client{
@@ -106,7 +112,7 @@ func Test_Set_Source_Ip(t *testing.T) {
 			}
 
 			u, err := url.ParseRequestURI(fmt.Sprintf("http://%s/", ing.Spec.Rules[0].Host))
-			if !assert.Nil(t, err) {
+			if err != nil {
 				t.FailNow()
 			}
 			req := &http.Request{

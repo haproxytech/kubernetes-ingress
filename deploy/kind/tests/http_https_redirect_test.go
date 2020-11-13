@@ -72,7 +72,9 @@ func Test_Https_Redirect(t *testing.T) {
 
 	secret := k8s.NewTlsSecret(key, crt, "podinfo", "tls-redirect")
 	secret, err = cs.CoreV1().Secrets("default").Create(context.Background(), secret, metav1.CreateOptions{})
-	assert.Nil(t, err)
+	if err != nil {
+		t.FailNow()
+	}
 	defer cs.CoreV1().Secrets(secret.Namespace).Delete(context.Background(), secret.Name, metav1.DeleteOptions{})
 
 	deploy, err = cs.AppsV1().Deployments("default").Create(context.Background(), deploy, metav1.CreateOptions{})
@@ -121,7 +123,7 @@ func Test_Https_Redirect(t *testing.T) {
 	}
 
 	u, err := url.ParseRequestURI(fmt.Sprintf("http://%s/", ing.Spec.Rules[0].Host))
-	if !assert.Nil(t, err) {
+	if err != nil {
 		t.FailNow()
 	}
 	req := &h.Request{

@@ -53,7 +53,9 @@ func Test_Https_Ssl_Offload(t *testing.T) {
 	deploy, svc := k8s.NewOffloadedSsl("simple-https-listener", "ssl")
 
 	svc, err = cs.CoreV1().Services("default").Create(context.Background(), svc, metav1.CreateOptions{})
-	assert.Nil(t, err)
+	if err != nil {
+		t.FailNow()
+	}
 	defer cs.CoreV1().Services(svc.Namespace).Delete(context.Background(), svc.Name, metav1.DeleteOptions{})
 
 	ing := k8s.NewIngress("simple-https-listener", "ssl", "/")
@@ -67,16 +69,18 @@ func Test_Https_Ssl_Offload(t *testing.T) {
 	a["haproxy.org/ssl-passthrough"] = "true"
 	ing.SetAnnotations(a)
 	ing, err = cs.NetworkingV1beta1().Ingresses("default").Create(context.Background(), ing, metav1.CreateOptions{})
-	assert.Nil(t, err)
+	if err != nil {
+		t.FailNow()
+	}
 	defer cs.NetworkingV1beta1().Ingresses(ing.Namespace).Delete(context.Background(), ing.Name, metav1.DeleteOptions{})
 
 	key, err := rsa.GenerateKey(rand.Reader, 1024)
-	if !assert.Nil(t, err) {
+	if err != nil {
 		t.FailNow()
 	}
 	csr := k8s.NewCertificateSigningRequest("simple-https-listener", "ssl", key, ing.Spec.TLS[0].Hosts...)
 	csr, err = cs.CertificatesV1beta1().CertificateSigningRequests().Create(context.Background(), csr, metav1.CreateOptions{})
-	if !assert.Nil(t, err) {
+	if err != nil {
 		t.FailNow()
 	}
 	defer cs.CertificatesV1beta1().CertificateSigningRequests().Delete(context.Background(), csr.Name, metav1.DeleteOptions{})
@@ -85,11 +89,15 @@ func Test_Https_Ssl_Offload(t *testing.T) {
 
 	secret := k8s.NewTlsSecret(key, crt, "simple-https-listener", "ssl")
 	secret, err = cs.CoreV1().Secrets("default").Create(context.Background(), secret, metav1.CreateOptions{})
-	assert.Nil(t, err)
+	if err != nil {
+		t.FailNow()
+	}
 	defer cs.CoreV1().Secrets(secret.Namespace).Delete(context.Background(), secret.Name, metav1.DeleteOptions{})
 
 	deploy, err = cs.AppsV1().Deployments("default").Create(context.Background(), deploy, metav1.CreateOptions{})
-	assert.Nil(t, err)
+	if err != nil {
+		t.FailNow()
+	}
 	defer cs.AppsV1().Deployments(deploy.Namespace).Delete(context.Background(), deploy.Name, metav1.DeleteOptions{})
 
 	caCertPool := x509.NewCertPool()
@@ -116,7 +124,7 @@ func Test_Https_Ssl_Offload(t *testing.T) {
 	}
 
 	u, err := url.ParseRequestURI(fmt.Sprintf("https://%s/", ing.Spec.Rules[0].Host))
-	if !assert.Nil(t, err) {
+	if err != nil {
 		t.FailNow()
 	}
 	req := &h.Request{
