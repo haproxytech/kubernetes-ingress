@@ -12,7 +12,7 @@ jobs:
     - uses: actions/setup-go@v2
       with:
         go-version: '^1.15.1' # The Go version to download (if necessary) and use.
-    - uses: engineerd/setup-kind@v0.4.0
+    - uses: engineerd/setup-kind@v0.5.0
       with:
           name: dev
           config: deploy/kind/kind-config.yaml
