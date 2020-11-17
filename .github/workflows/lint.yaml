@@ -9,7 +9,7 @@ jobs:
         with:
           fetch-depth: 10
       - name: Run golangci-lint
-        uses: golangci/golangci-lint-action@v2.2.0
+        uses: golangci/golangci-lint-action@v2.3.0
         with:
           version: v1.28
           args: --timeout 2m
