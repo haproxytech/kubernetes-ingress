@@ -41,7 +41,7 @@ func (c *Configuration) Init() {
 	c.MapFiles.SetPreserve(true, SNI, HOST, PATH_EXACT, PATH_PREFIX)
 	c.IngressRoutes = ingress.Routes{}
 	logger.Panic(c.HAProxyRulesInit())
-	c.Certificates = haproxy.NewCertificates(HAProxyCertDir)
+	c.Certificates = haproxy.NewCertificates(HAProxyCaCertDir, HAProxyFtCertDir, HAProxyBdCertDir)
 }
 
 //Clean cleans all the statuses of various data that was changed

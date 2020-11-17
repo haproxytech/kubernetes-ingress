@@ -270,14 +270,17 @@ func handleSrvAnnotations(serverModel *models.Server, annotations map[string]*st
 }
 
 func (route *Route) getSrvAnnotations() (activeAnnotations bool) {
-	srvAnnotations := make(map[string]*store.StringW, 7)
+	srvAnnotations := make(map[string]*store.StringW, 9)
 	srvAnnotations["cookie-persistence"], _ = k8sStore.GetValueFromAnnotations("cookie-persistence", route.service.Annotations, route.Ingress.Annotations, k8sStore.ConfigMaps[Main].Annotations)
 	srvAnnotations["check"], _ = k8sStore.GetValueFromAnnotations("check", route.service.Annotations, route.Ingress.Annotations, k8sStore.ConfigMaps[Main].Annotations)
 	srvAnnotations["check-interval"], _ = k8sStore.GetValueFromAnnotations("check-interval", route.service.Annotations, route.Ingress.Annotations, k8sStore.ConfigMaps[Main].Annotations)
-	srvAnnotations["pod-maxconn"], _ = k8sStore.GetValueFromAnnotations("pod-maxconn", route.service.Annotations)
+	srvAnnotations["pod-maxconn"], _ = k8sStore.GetValueFromAnnotations("pod-maxconn", route.service.Annotations, route.Ingress.Annotations, k8sStore.ConfigMaps[Main].Annotations)
+	srvAnnotations["server-ca"], _ = k8sStore.GetValueFromAnnotations("server-ca", route.service.Annotations, route.Ingress.Annotations, k8sStore.ConfigMaps[Main].Annotations)
+	srvAnnotations["server-crt"], _ = k8sStore.GetValueFromAnnotations("server-crt", route.service.Annotations, route.Ingress.Annotations, k8sStore.ConfigMaps[Main].Annotations)
 	srvAnnotations["server-ssl"], _ = k8sStore.GetValueFromAnnotations("server-ssl", route.service.Annotations, route.Ingress.Annotations, k8sStore.ConfigMaps[Main].Annotations)
 	srvAnnotations["server-proto"], _ = k8sStore.GetValueFromAnnotations("server-proto", route.service.Annotations, route.Ingress.Annotations, k8sStore.ConfigMaps[Main].Annotations)
 	srvAnnotations["send-proxy-protocol"], _ = k8sStore.GetValueFromAnnotations("send-proxy-protocol", route.service.Annotations)
+
 	for k, v := range srvAnnotations {
 		if v == nil {
 			delete(srvAnnotations, k)
@@ -293,6 +296,7 @@ func (route *Route) getSrvAnnotations() (activeAnnotations bool) {
 }
 
 func (route *Route) handleSrvSSLAnnotations() (sslUpdated bool) {
+	var secretStatus store.Status
 	route.sslServer = sslSettings{verify: false}
 	for name, annotation := range route.srvAnnotations {
 		if annotation == nil {
@@ -309,9 +313,28 @@ func (route *Route) handleSrvSSLAnnotations() (sslUpdated bool) {
 				logger.Error(err)
 				continue
 			}
-			route.sslServer.enabled = enabled
+			route.sslServer.enabled = route.sslServer.enabled || enabled
+		case "server-ca":
+			route.sslServer.caFile, secretStatus = haproxyCerts.HandleTLSSecret(k8sStore, haproxy.SecretCtx{
+				DefaultNS:  route.service.Namespace,
+				SecretPath: annotation.Value,
+				SecretType: haproxy.CA_CERT,
+			})
+			if route.sslServer.caFile != "" {
+				route.sslServer.enabled = true
+				route.sslServer.verify = true
+			}
+		case "server-crt":
+			route.sslServer.crtFile, secretStatus = haproxyCerts.HandleTLSSecret(k8sStore, haproxy.SecretCtx{
+				DefaultNS:  route.service.Namespace,
+				SecretPath: annotation.Value,
+				SecretType: haproxy.BD_CERT,
+			})
+			if route.sslServer.crtFile != "" {
+				route.sslServer.enabled = true
+			}
 		}
-		if annotation.Status != EMPTY {
+		if annotation.Status != EMPTY || secretStatus != EMPTY && secretStatus != ERROR {
 			sslUpdated = true
 		}
 	}

@@ -26,9 +26,10 @@ import (
 )
 
 type sslSettings struct {
-	// other filed for ssl settings
 	enabled bool
 	verify  bool
+	caFile  string
+	crtFile string
 }
 
 type Route struct {

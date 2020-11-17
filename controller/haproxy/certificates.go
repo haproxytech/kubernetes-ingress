@@ -14,6 +14,8 @@ type Certificates struct {
 	//Index is secretPath
 	// Value is true if secret is used otherwise false
 	frontend map[string]bool
+	backend  map[string]bool
+	ca       map[string]bool
 }
 
 type SecretType int
@@ -23,6 +25,8 @@ const (
 	NONE_CERT SecretType = iota
 	FT_CERT
 	FT_DEFAULT_CERT
+	BD_CERT
+	CA_CERT
 )
 
 type SecretCtx struct {
@@ -31,47 +35,77 @@ type SecretCtx struct {
 	SecretType SecretType
 }
 
-var certDir string
+var frontendCertDir string
+var backendCertDir string
+var caCertDir string
 
-func NewCertificates(dir string) *Certificates {
-	certDir = dir
+func NewCertificates(caDir, ftDir, bdDir string) *Certificates {
+	frontendCertDir = ftDir
+	backendCertDir = bdDir
+	caCertDir = caDir
 	return &Certificates{
 		frontend: make(map[string]bool),
+		backend:  make(map[string]bool),
+		ca:       make(map[string]bool),
 	}
 }
 
-func (c *Certificates) HandleTLSSecret(k8s store.K8s, secretCtx SecretCtx) (reload bool) {
+func (c *Certificates) HandleTLSSecret(k8s store.K8s, secretCtx SecretCtx) (certPath string, status store.Status) {
 	secret := fetchSecret(k8s, secretCtx.SecretPath, secretCtx.DefaultNS)
-	if secret == nil || secret.Status == store.DELETED {
-		return false
+	if secret == nil {
+		return "", store.ERROR
 	}
+	if secret.Status == store.DELETED {
+		return "", store.DELETED
+	}
+	var certs map[string]bool
 	certName := ""
+	var privateKeyNull bool
 	switch secretCtx.SecretType {
 	case FT_DEFAULT_CERT:
 		// starting filename with "0" makes it first cert to be picked by HAProxy when no SNI matches.
-		certName = path.Join(certDir, fmt.Sprintf("0_%s_%s.pem", secret.Namespace, secret.Name))
+		certName = fmt.Sprintf("0_%s_%s.pem", secret.Namespace, secret.Name)
+		certPath = path.Join(frontendCertDir, certName)
+		certs = c.frontend
 	case FT_CERT:
-		certName = path.Join(certDir, fmt.Sprintf("%s_%s.pem", secret.Namespace, secret.Name))
+		certName = fmt.Sprintf("%s_%s.pem", secret.Namespace, secret.Name)
+		certPath = path.Join(frontendCertDir, certName)
+		certs = c.frontend
+	case BD_CERT:
+		certName = fmt.Sprintf("%s_%s.pem", secret.Namespace, secret.Name)
+		certPath = path.Join(backendCertDir, certName)
+		certs = c.backend
+	case CA_CERT:
+		certName = fmt.Sprintf("%s_%s.pem", secret.Namespace, secret.Name)
+		certPath = path.Join(caCertDir, certName)
+		certs = c.ca
+		privateKeyNull = true
 	default:
 		logger.Error("unspecified context")
-		return false
+		return "", store.ERROR
 	}
-	if _, ok := c.frontend[certName]; ok {
-		c.frontend[certName] = true
-		return false
+	if _, ok := certs[certName]; ok && secret.Status == store.EMPTY {
+		certs[certName] = true
+		return certPath, store.EMPTY
 	}
-	err := writeSecret(secret, certName)
+	err := writeSecret(secret, certPath, privateKeyNull)
 	if err != nil {
 		logger.Error(err)
-		return false
+		return "", store.ERROR
 	}
-	c.frontend[certName] = true
-	return true
+	certs[certName] = true
+	return certPath, store.ADDED
 }
 
 func (c *Certificates) Clean() {
 	for i := range c.frontend {
 		c.frontend[i] = false
+	}
+	for i := range c.backend {
+		c.backend[i] = false
+	}
+	for i := range c.ca {
+		c.backend[i] = false
 	}
 }
 
@@ -87,6 +121,12 @@ func (c *Certificates) FrontendCertsEnabled() bool {
 // Refresh removes unused certs from HAProxyCertDir
 // Certificates will remain in HAProxy memory until next Reload
 func (c *Certificates) Refresh() {
+	refreshCerts(c.frontend, frontendCertDir)
+	refreshCerts(c.backend, backendCertDir)
+	refreshCerts(c.ca, caCertDir)
+}
+
+func refreshCerts(certs map[string]bool, certDir string) {
 	files, err := ioutil.ReadDir(certDir)
 	if err != nil {
 		logger.Error(err)
@@ -97,15 +137,15 @@ func (c *Certificates) Refresh() {
 			continue
 		}
 		filename := f.Name()
-		used := c.frontend[filename]
+		used := certs[filename]
 		if !used {
 			logger.Error(os.Remove(path.Join(certDir, filename)))
-			delete(c.frontend, filename)
+			delete(certs, filename)
 		}
 	}
 }
 
-func fetchSecret(k8s store.K8s, defaultNs, secretPath string) (secret *store.Secret) {
+func fetchSecret(k8s store.K8s, secretPath, defaultNs string) (secret *store.Secret) {
 	secretName := ""
 	secretNamespace := defaultNs
 	parts := strings.Split(secretPath, "/")
@@ -128,12 +168,19 @@ func fetchSecret(k8s store.K8s, defaultNs, secretPath string) (secret *store.Sec
 	return secret
 }
 
-func writeSecret(secret *store.Secret, certName string) (err error) {
+func writeSecret(secret *store.Secret, certPath string, privateKeyNull bool) (err error) {
 	for _, k := range []string{"tls", "rsa", "ecdsa"} {
 		key := secret.Data[k+".key"]
+		if key == nil {
+			if privateKeyNull {
+				key = []byte("")
+			} else {
+				return fmt.Errorf("private key missing in %s/%s", secret.Namespace, secret.Name)
+			}
+		}
 		crt := secret.Data[k+".crt"]
-		if len(key) != 0 && len(crt) != 0 {
-			return writeCert(certName, key, crt)
+		if len(crt) != 0 {
+			return writeCert(certPath, key, crt)
 		}
 	}
 	return nil

@@ -65,6 +65,9 @@ var (
 	HAProxyCFG           string
 	HAProxyCfgDir        string
 	HAProxyCertDir       string
+	HAProxyFtCertDir     string
+	HAProxyBdCertDir     string
+	HAProxyCaCertDir     string
 	HAProxyStateDir      string
 	HAProxyMapDir        string
 	HAProxyErrFileDir    string
@@ -226,11 +229,14 @@ func (c *HAProxyController) updateHAProxy() error {
 			}
 			// Ingress secrets
 			for _, tls := range ingress.TLS {
-				reload = c.cfg.Certificates.HandleTLSSecret(c.Store, haproxy.SecretCtx{
+				_, status := c.cfg.Certificates.HandleTLSSecret(c.Store, haproxy.SecretCtx{
 					DefaultNS:  ingress.Namespace,
 					SecretPath: tls.SecretName.Value,
 					SecretType: haproxy.FT_CERT,
-				}) || reload
+				})
+				if status == ADDED {
+					reload = true
+				}
 			}
 			// Ingress annotations
 			if len(ingress.Rules) == 0 {
@@ -315,6 +321,11 @@ func (c *HAProxyController) haproxyInitialize() {
 	if HAProxyCertDir == "" {
 		HAProxyCertDir = filepath.Join(HAProxyCfgDir, "certs")
 	}
+
+	HAProxyFtCertDir = filepath.Join(HAProxyCertDir, "frontend")
+	HAProxyBdCertDir = filepath.Join(HAProxyCertDir, "backend")
+	HAProxyCaCertDir = filepath.Join(HAProxyCertDir, "ca")
+
 	if HAProxyMapDir == "" {
 		HAProxyMapDir = filepath.Join(HAProxyCfgDir, "maps")
 	}
@@ -330,7 +341,7 @@ func (c *HAProxyController) haproxyInitialize() {
 			logger.Panic(err)
 		}
 	}
-	for _, d := range []string{HAProxyCertDir, HAProxyMapDir, HAProxyErrFileDir, HAProxyStateDir} {
+	for _, d := range []string{HAProxyCertDir, HAProxyFtCertDir, HAProxyBdCertDir, HAProxyCaCertDir, HAProxyMapDir, HAProxyErrFileDir, HAProxyStateDir} {
 		err = os.MkdirAll(d, 0755)
 		if err != nil {
 			logger.Panic(err)
@@ -495,10 +506,11 @@ func (c *HAProxyController) handleDefaultCert() (reload bool) {
 	if secretAnn == nil {
 		return false
 	}
-	return c.cfg.Certificates.HandleTLSSecret(c.Store, haproxy.SecretCtx{
+	_, status := c.cfg.Certificates.HandleTLSSecret(c.Store, haproxy.SecretCtx{
 		SecretPath: secretAnn.Value,
 		SecretType: haproxy.FT_CERT,
 	})
+	return status == ADDED
 }
 
 // clean controller state

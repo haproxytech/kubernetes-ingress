@@ -32,6 +32,7 @@ type Routes struct {
 var logger = utils.GetLogger()
 var client api.HAProxyClient
 var k8sStore store.K8s
+var haproxyCerts *haproxy.Certificates
 
 //nolint
 const (
@@ -70,9 +71,10 @@ func (r *Routes) AddRoute(route *Route) {
 	}
 }
 
-func (r *Routes) Refresh(c api.HAProxyClient, k store.K8s, mapFiles haproxy.Maps) (reload bool, activeBackends map[string]struct{}) {
+func (r *Routes) Refresh(c api.HAProxyClient, k store.K8s, mapFiles haproxy.Maps, certs *haproxy.Certificates) (reload bool, activeBackends map[string]struct{}) {
 	client = c
 	k8sStore = k
+	haproxyCerts = certs
 	r.activeBackends = make(map[string]struct{})
 	logger.Debug("Updating Backend Switching rules")
 	r.refreshHTTP(mapFiles)

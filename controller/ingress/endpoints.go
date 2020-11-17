@@ -102,16 +102,26 @@ func (route *Route) handleHAProxSrv(srv *store.HAProxySrv) {
 		Port:    &route.endpoints.Port,
 		Weight:  utils.PtrInt64(128),
 	}
+	// Disabled
 	if server.Address == "" {
 		server.Address = "127.0.0.1"
 		server.Maintenance = "enabled"
 	}
+	// SSL settings
 	if route.sslServer.enabled {
 		server.Ssl = "enabled"
 		server.Alpn = "h2,http/1.1"
-		server.Verify = "none"
+		server.SslCafile = route.sslServer.caFile
+		server.SslCertificate = route.sslServer.crtFile
+		if route.sslServer.verify {
+			server.Verify = "required"
+		} else {
+			server.Verify = "none"
+		}
 	}
+	// Server related annotations
 	handleSrvAnnotations(&server, route.srvAnnotations)
+	// Update server
 	errAPI := client.BackendServerEdit(route.BackendName, server)
 	if errAPI == nil {
 		logger.Debugf("Updating server '%s/%s'", route.BackendName, server.Name)
