@@ -38,14 +38,12 @@ func (c *clientNative) BackendHTTPRequestRuleCreate(backend string, rule models.
 }
 
 func (c *clientNative) BackendServerDeleteAll(backendName string) bool {
-	change := false
 	_, servers, _ := c.nativeAPI.Configuration.GetServers(backendName, c.activeTransaction)
 	for _, srv := range servers {
+		c.activeTransactionHasChanges = true
 		_ = c.BackendServerDelete(backendName, srv.Name)
-		change = true
 	}
-	c.activeTransactionHasChanges = change
-	return change
+	return c.activeTransactionHasChanges
 }
 
 func (c *clientNative) BackendHTTPRequestRuleDeleteAll(backend string) {

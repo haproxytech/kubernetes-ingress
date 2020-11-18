@@ -205,7 +205,7 @@ func (c *HAProxyController) eventIngress(ns *Namespace, data *Ingress) (updateRe
 	return updateRequired
 }
 
-func (c *HAProxyController) eventEndpoints(ns *Namespace, data *Endpoints, updateHAproxySrvs func(oldEndpoints, newEndpoints *Endpoints)) (updateRequired bool) {
+func (c *HAProxyController) eventEndpoints(ns *Namespace, data *Endpoints, updateHAproxySrvs func(oldEndpoints, newEndpoints *PortEndpoints)) (updateRequired bool) {
 	switch data.Status {
 	case MODIFIED:
 		newEndpoints := data
@@ -217,7 +217,11 @@ func (c *HAProxyController) eventEndpoints(ns *Namespace, data *Endpoints, updat
 		if oldEndpoints.Equal(newEndpoints) {
 			return false
 		}
-		updateHAproxySrvs(oldEndpoints, newEndpoints)
+		for portName, oldPortEdpts := range oldEndpoints.Ports {
+			if newPortEdpts, ok := newEndpoints.Ports[portName]; ok {
+				updateHAproxySrvs(oldPortEdpts, newPortEdpts)
+			}
+		}
 		ns.Endpoints[data.Service.Value] = newEndpoints
 		return true
 	case ADDED:

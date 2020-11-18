@@ -199,8 +199,10 @@ func (c *Configuration) Clean() {
 				delete(namespace.Endpoints, data.Service.Value)
 			default:
 				data.Status = EMPTY
-				for _, srv := range data.HAProxySrvs {
-					srv.Modified = false
+				for _, endpoints := range data.Ports {
+					for _, srv := range endpoints.HAProxySrvs {
+						srv.Modified = false
+					}
 				}
 			}
 		}
