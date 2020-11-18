@@ -19,6 +19,7 @@ type HAProxyClient interface {
 	BackendDelete(backendName string) error
 	BackendHTTPRequestRuleCreate(backend string, rule models.HTTPRequestRule) error
 	BackendHTTPRequestRuleDeleteAll(backend string)
+	BackendServerDeleteAll(backendName string) (deleteServers bool)
 	BackendServerCreate(backendName string, data models.Server) error
 	BackendServerEdit(backendName string, data models.Server) error
 	BackendServerDelete(backendName string, serverName string) error

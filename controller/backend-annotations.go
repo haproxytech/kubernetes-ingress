@@ -126,66 +126,50 @@ func (c *HAProxyController) handleBackendAnnotations(ingress *Ingress, service *
 }
 
 // Update server with annotations values.
-func (c *HAProxyController) handleServerAnnotations(ingress *Ingress, service *Service, serverModel *models.Server, serverStatus Status) (activeAnnotations bool) {
-	activeAnnotations = false
+func (c *HAProxyController) handleServerAnnotations(serverModel *models.Server, annotations map[string]*StringW) {
 	server := haproxy.Server(*serverModel)
-
-	serverAnnotations := make(map[string]*StringW, 5)
-	serverAnnotations["cookie-persistence"], _ = GetValueFromAnnotations("cookie-persistence", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
-	serverAnnotations["check"], _ = GetValueFromAnnotations("check", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
-	serverAnnotations["check-interval"], _ = GetValueFromAnnotations("check-interval", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
-	serverAnnotations["pod-maxconn"], _ = GetValueFromAnnotations("pod-maxconn", service.Annotations)
-	serverAnnotations["server-ssl"], _ = GetValueFromAnnotations("server-ssl", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
 
 	// The DELETED status of an annotation is handled explicitly
 	// only when there is no default annotation value.
-	for k, v := range serverAnnotations {
+	for k, v := range annotations {
 		if v == nil {
 			continue
 		}
-		if v.Status != EMPTY || serverStatus != EMPTY {
-			c.Logger.Tracef("Server '%s': Configuring '%s' annotation", server.Name, k)
-			switch k {
-			case "cookie-persistence":
-				if v.Status == DELETED {
-					server.Cookie = ""
-				} else {
-					server.Cookie = server.Name
-				}
-				activeAnnotations = true
-			case "check":
-				if err := server.UpdateCheck(v.Value); err != nil {
-					c.Logger.Errorf("%s annotation: %s", k, err)
-					continue
-				}
-				activeAnnotations = true
-			case "check-interval":
-				if v.Status == DELETED {
-					server.Inter = nil
-				} else if err := server.UpdateInter(v.Value); err != nil {
-					c.Logger.Errorf("%s annotation: %s", k, err)
-					continue
-				}
-				activeAnnotations = true
-			case "pod-maxconn":
-				if v.Status == DELETED {
-					server.Maxconn = nil
-				} else if err := server.UpdateMaxconn(v.Value); err != nil {
-					c.Logger.Errorf("%s annotation: %s", k, err)
-					continue
-				}
-				activeAnnotations = true
-			case "server-ssl":
-				if err := server.UpdateServerSsl(v.Value); err != nil {
-					c.Logger.Errorf("%s annotation: %s", k, err)
-					continue
-				}
-				activeAnnotations = true
+		c.Logger.Tracef("Server '%s': Configuring '%s' annotation", server.Name, k)
+		switch k {
+		case "cookie-persistence":
+			if v.Status == DELETED {
+				server.Cookie = ""
+			} else {
+				server.Cookie = server.Name
+			}
+		case "check":
+			if err := server.UpdateCheck(v.Value); err != nil {
+				c.Logger.Errorf("%s annotation: %s", k, err)
+				continue
+			}
+		case "check-interval":
+			if v.Status == DELETED {
+				server.Inter = nil
+			} else if err := server.UpdateInter(v.Value); err != nil {
+				c.Logger.Errorf("%s annotation: %s", k, err)
+				continue
+			}
+		case "pod-maxconn":
+			if v.Status == DELETED {
+				server.Maxconn = nil
+			} else if err := server.UpdateMaxconn(v.Value); err != nil {
+				c.Logger.Errorf("%s annotation: %s", k, err)
+				continue
+			}
+		case "server-ssl":
+			if err := server.UpdateServerSsl(v.Value); err != nil {
+				c.Logger.Errorf("%s annotation: %s", k, err)
+				continue
 			}
 		}
 	}
 	*serverModel = models.Server(server)
-	return activeAnnotations
 }
 
 func (c *HAProxyController) handleCookieAnnotations(ingress *Ingress, service *Service) models.Cookie {
@@ -258,4 +242,25 @@ func (c *HAProxyController) handleCookieAnnotations(ingress *Ingress, service *S
 		}
 	}
 	return cookie
+}
+
+func (c *HAProxyController) getServerAnnotations(ingress *Ingress, service *Service) (srvAnnotations map[string]*StringW, activeAnnotations bool) {
+	srvAnnotations = make(map[string]*StringW, 5)
+	srvAnnotations["cookie-persistence"], _ = GetValueFromAnnotations("cookie-persistence", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
+	srvAnnotations["check"], _ = GetValueFromAnnotations("check", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
+	srvAnnotations["check-interval"], _ = GetValueFromAnnotations("check-interval", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
+	srvAnnotations["pod-maxconn"], _ = GetValueFromAnnotations("pod-maxconn", service.Annotations)
+	srvAnnotations["server-ssl"], _ = GetValueFromAnnotations("server-ssl", service.Annotations, ingress.Annotations, c.cfg.ConfigMap.Annotations)
+	srvAnnotations["send-proxy-protocol"], _ = GetValueFromAnnotations("send-proxy-protocol", service.Annotations)
+	for k, v := range srvAnnotations {
+		if v == nil {
+			delete(srvAnnotations, k)
+			continue
+		}
+		if v.Status != EMPTY {
+			activeAnnotations = true
+			break
+		}
+	}
+	return srvAnnotations, activeAnnotations
 }

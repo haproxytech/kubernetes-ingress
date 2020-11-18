@@ -234,36 +234,20 @@ func (k *K8s) convertToEndpoints(obj interface{}, status Status) (*Endpoints, er
 		status = DELETED
 	}
 	item := &Endpoints{
-		Namespace: data.GetNamespace(),
-		Service:   StringW{Value: data.GetName()},
-		Ports:     EndpointPorts{},
-		Addresses: EndpointIPs{},
-		Status:    status,
+		Namespace:   data.GetNamespace(),
+		Service:     StringW{Value: data.GetName()},
+		Ports:       make(map[string]int64),
+		AddrRemain:  make(map[string]struct{}),
+		AddrsUsed:   make(map[string]struct{}),
+		HAProxySrvs: make(map[string]*HAProxySrv),
+		Status:      status,
 	}
 	for _, subset := range data.Subsets {
 		for _, address := range subset.Addresses {
-			eip := &EndpointIP{
-				IP:          address.IP,
-				HAProxyName: "",
-				Disabled:    false,
-				Status:      status,
-			}
-			var key string
-			if address.TargetRef != nil {
-				eip.Name = address.TargetRef.Name
-				key = string(address.TargetRef.UID)
-			} else {
-				key = fmt.Sprintf("%s%s%v", address.IP, address.Hostname, address.NodeName)
-			}
-			item.Addresses[key] = eip
+			item.AddrRemain[address.IP] = struct{}{}
 		}
 		for _, port := range subset.Ports {
-			item.Ports = append(item.Ports, &EndpointPort{
-				Name:     port.Name,
-				Protocol: string(port.Protocol),
-				Port:     int64(port.Port),
-				Status:   status,
-			})
+			item.Ports[port.Name] = int64(port.Port)
 		}
 	}
 	return item, nil

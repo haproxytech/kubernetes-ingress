@@ -41,31 +41,21 @@ type ServicePort struct {
 	Status   Status
 }
 
-type EndpointIP struct {
-	IP          string
-	Name        string
-	HAProxyName string
-	Disabled    bool
-	Status      Status
+type HAProxySrv struct {
+	// Srv disabled is srv with address ""
+	Address  string
+	Modified bool
 }
 
-type EndpointPort struct {
-	Name     string
-	Protocol string
-	Port     int64
-	Status   Status
-}
-
-type EndpointIPs map[string]*EndpointIP
-type EndpointPorts []*EndpointPort
-
-//Endpoints is usefull data from k8s structures about Endpoints
+//Endpoints is useful data from k8s structures about Endpoints
 type Endpoints struct {
 	Namespace   string
 	Service     StringW
 	BackendName string
-	Ports       EndpointPorts
-	Addresses   EndpointIPs
+	Ports       map[string]int64
+	AddrsUsed   map[string]struct{}
+	AddrRemain  map[string]struct{}
+	HAProxySrvs map[string]*HAProxySrv
 	Status      Status
 }
 
