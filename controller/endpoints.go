@@ -24,81 +24,57 @@ import (
 	"github.com/haproxytech/models/v2"
 )
 
-// alignSrvSlots adds or removes server slots in maint mode (disabled) to match servers-slots param
-func (c *HAProxyController) alignSrvSlots(endpoints *store.Endpoints) (reload bool) {
-	// Get server slots param
-	// "servers-increment" is legacy annotation
+// alignHAproxySrvs adds or removes servers to match server-slots param
+func (c *HAProxyController) alignHAproxySrvs(endpoints *store.Endpoints) (reload bool) {
+	haproxySrvs := endpoints.HAProxySrvs
+	// Get server-slots annotation
+	// "servers-increment" is a legacy annotation
 	annServerSlots, _ := c.Store.GetValueFromAnnotations("servers-increment", c.Store.ConfigMaps[Main].Annotations)
 	if annServerSlots == nil {
-		annServerSlots, _ = c.Store.GetValueFromAnnotations("servers-slots", c.Store.ConfigMaps[Main].Annotations)
+		annServerSlots, _ = c.Store.GetValueFromAnnotations("server-slots", c.Store.ConfigMaps[Main].Annotations)
 
 	}
-	serverSlots := int(42)
+	requiredSrvNbr := int(42)
 	if value, err := strconv.Atoi(annServerSlots.Value); err == nil {
-		serverSlots = value
+		requiredSrvNbr = value
+	} else {
+		logger.Error(err)
 	}
-	// Add disabled HAProxySrvs to match serverSlots param
-	srvName := ""
-	for serverSlots-len(endpoints.HAProxySrvs) > 0 {
-		srvName = fmt.Sprintf("SRV_%s", utils.RandomString(5))
-		endpoints.HAProxySrvs[srvName] = &store.HAProxySrv{
-			IP:       "127.0.0.1",
-			Disabled: true,
-			Modified: true,
-		}
-	}
-	if srvName != "" {
-		return true
-	}
-	// Remove disabled HAProxySlots if any to match serverSlots param
-	var disabledSrv []string
-	for srvName, slot := range endpoints.HAProxySrvs {
-		if slot.Disabled {
-			disabledSrv = append(disabledSrv, srvName)
-		}
-	}
-	if disabledSrv == nil {
-		return false
-	}
-	i := 0
-	srvName = ""
-	for serverSlots < len(endpoints.HAProxySrvs) && len(disabledSrv[i:]) > 0 {
-		srvName = disabledSrv[i]
-		logger.Debugf("Deleting server '%s/%s'", endpoints.BackendName, srvName)
-		errAPI := c.Client.BackendServerDelete(endpoints.BackendName, srvName)
-		if errAPI != nil {
-			logger.Error(errAPI)
-			return
-		}
-		delete(endpoints.HAProxySrvs, srvName)
-		i++
-	}
-	return srvName != ""
-}
-
-// createSrvSlots add server slots for new Addresses with no available slots.
-func (c *HAProxyController) createSrvSlots(endpoints *store.Endpoints) (reload bool) {
-	// Get a list of addresses with no servers slots
-	addresses := make(map[string]struct{}, len(endpoints.Addresses))
-	for k, v := range endpoints.Addresses {
-		addresses[k] = v
-	}
-	for _, slot := range endpoints.HAProxySrvs {
-		delete(addresses, slot.IP)
-	}
-	// Create servers slots
-	adr := ""
-	for adr = range addresses {
-		reload = true
+	// Add disabled HAProxySrvs to match required serverSlots
+	for len(haproxySrvs) < requiredSrvNbr {
 		srvName := fmt.Sprintf("SRV_%s", utils.RandomString(5))
-		endpoints.HAProxySrvs[srvName] = &store.HAProxySrv{
-			IP:       adr,
-			Disabled: false,
+		haproxySrvs[srvName] = &store.HAProxySrv{
+			Address:  "",
 			Modified: true,
 		}
-	}
-	if adr != "" {
 		reload = true
+	}
+	// Remove HAProxySrvs to match required serverSlots
+	for len(haproxySrvs) > requiredSrvNbr {
+		// pick random server
+		for srvName, srv := range haproxySrvs {
+			srvAddr := srv.Address
+			if _, ok := endpoints.AddrsUsed[srvAddr]; ok {
+				delete(endpoints.AddrsUsed, srvAddr)
+				endpoints.AddrRemain[srvAddr] = struct{}{}
+			}
+			delete(haproxySrvs, srvName)
+			logger.Error(c.Client.BackendServerDelete(endpoints.BackendName, srvName))
+			reload = true
+			continue
+		}
+	}
+	// Configure remaining addresses in available HAProxySrvs
+	for _, srv := range haproxySrvs {
+		if srv.Address == "" {
+			for addr := range endpoints.AddrRemain {
+				srv.Address = addr
+				srv.Modified = true
+				endpoints.AddrsUsed[addr] = struct{}{}
+				delete(endpoints.AddrRemain, addr)
+				break
+			}
+		}
 	}
 	return reload
 }
@@ -120,16 +96,14 @@ func (c *HAProxyController) handleEndpoints(namespace *store.Namespace, ingress 
 		endpoints = &store.Endpoints{
 			Namespace: "external",
 			HAProxySrvs: map[string]*store.HAProxySrv{
-				"external-service": &store.HAProxySrv{
-					IP:       service.DNS,
-					Disabled: false,
+				"external-service": {
+					Address:  service.DNS,
 					Modified: true,
 				},
 			},
 		}
 		namespace.Endpoints[service.Name] = endpoints
 	}
-	endpoints.BackendName = backendName
 	// resolve TargetPort
 	portUpdated, err := c.setTargetPort(path, service, endpoints)
 	reload = reload || portUpdated
@@ -138,45 +112,39 @@ func (c *HAProxyController) handleEndpoints(namespace *store.Namespace, ingress 
 		return false
 	}
 	// Handle Backend servers
-	if len(endpoints.HAProxySrvs) < len(endpoints.Addresses) {
-		reload = c.createSrvSlots(endpoints) || reload
-	}
-	reload = c.alignSrvSlots(endpoints) || reload
+	endpoints.BackendName = backendName
 	annotations, activeAnnotations := c.getServerAnnotations(ingress, service)
-	reload = reload || activeAnnotations
+	srvsNbrChanged := c.alignHAproxySrvs(endpoints)
+	reload = reload || srvsNbrChanged || activeAnnotations
 	for srvName, srv := range endpoints.HAProxySrvs {
-		if !srv.Modified && !reload {
-			continue
+		if srv.Modified || activeAnnotations {
+			c.handleHAProxSrv(srvName, srv.Address, backendName, path.TargetPort, annotations)
 		}
-		c.handleHAProxSrv(endpoints, srvName, path.TargetPort, annotations)
 	}
 	return reload
 }
 
 // handleHAProxSrv creates/updates corresponding HAProxy backend server
-func (c *HAProxyController) handleHAProxSrv(endpoints *store.Endpoints, srvName string, port int64, annotations map[string]*store.StringW) {
-	srv, ok := endpoints.HAProxySrvs[srvName]
-	if !ok {
-		return
-	}
+func (c *HAProxyController) handleHAProxSrv(srvName, srvAddr, backendName string, port int64, annotations map[string]*store.StringW) {
 	server := models.Server{
 		Name:    srvName,
-		Address: srv.IP,
+		Address: srvAddr,
 		Port:    &port,
 		Weight:  utils.PtrInt64(128),
 	}
-	if srv.Disabled {
+	if server.Address == "" {
+		server.Address = "127.0.0.1"
 		server.Maintenance = "enabled"
 	}
 	c.handleServerAnnotations(&server, annotations)
-	errAPI := c.Client.BackendServerEdit(endpoints.BackendName, server)
+	errAPI := c.Client.BackendServerEdit(backendName, server)
 	if errAPI == nil {
-		logger.Debugf("Updating server '%s/%s'", endpoints.BackendName, server.Name)
+		logger.Debugf("Updating server '%s/%s'", backendName, server.Name)
 		return
 	}
 	if strings.Contains(errAPI.Error(), "does not exist") {
-		logger.Debugf("Creating server '%s/%s'", endpoints.BackendName, server.Name)
-		logger.Error(c.Client.BackendServerCreate(endpoints.BackendName, server))
+		logger.Debugf("Creating server '%s/%s'", backendName, server.Name)
+		logger.Error(c.Client.BackendServerCreate(backendName, server))
 	}
 }
 
@@ -209,51 +177,58 @@ func (c *HAProxyController) setTargetPort(path *store.IngressPath, service *stor
 	return update, fmt.Errorf("ingress servicePort(Str: %s, Int: %d) not found for backend '%s'", path.ServicePortString, path.ServicePortInt, endpoints.BackendName)
 }
 
-// processEndpointsSrvs dynamically update (via runtime socket) HAProxy backend servers with modified Addresses
-func (c *HAProxyController) processEndpointsSrvs(oldEndpoints, newEndpoints *store.Endpoints) {
-	// Compare new Endpoints with old Endpoints Addresses and sync HAProxySrvs
-	// Also by the end we will have a temporary array holding available HAProxysrv slots
-	available := []*store.HAProxySrv{}
+// updateHAProxySrvs dynamically update (via runtime socket) HAProxy backend servers with modified Addresses
+func (c *HAProxyController) updateHAProxySrvs(oldEndpoints, newEndpoints *store.Endpoints) {
+	if oldEndpoints.BackendName == "" {
+		logger.Errorf("No backend available for endpoints of service `%s`", oldEndpoints.Service.Value)
+		return
+	}
 	newEndpoints.HAProxySrvs = oldEndpoints.HAProxySrvs
-	for _, srv := range newEndpoints.HAProxySrvs {
-		if _, ok := newEndpoints.Addresses[srv.IP]; !ok {
-			available = append(available, srv)
-			if !srv.Disabled {
-				srv.IP = "127.0.0.1"
-				srv.Disabled = true
-				srv.Modified = true
-			}
+	newEndpoints.BackendName = oldEndpoints.BackendName
+	haproxySrvs := newEndpoints.HAProxySrvs
+	newAddresses := newEndpoints.AddrRemain
+	usedAddresses := newEndpoints.AddrsUsed
+	// Disable stale entries from HAProxySrvs
+	// and provide list of Disabled Srvs
+	disabledSrvs := make(map[string]struct{})
+	for srvName, srv := range haproxySrvs {
+		if _, ok := newAddresses[srv.Address]; ok {
+			usedAddresses[srv.Address] = struct{}{}
+			delete(newAddresses, srv.Address)
+		} else {
+			haproxySrvs[srvName].Address = ""
+			haproxySrvs[srvName].Modified = true
+			disabledSrvs[srvName] = struct{}{}
 		}
 	}
-	// Check available HAProxySrvs to add new Addresses
-	availableIdx := len(available) - 1
-	for newAdr := range newEndpoints.Addresses {
-		if availableIdx < 0 {
+	// Configure new Addresses in available HAProxySrvs
+	for newAddr := range newAddresses {
+		if len(disabledSrvs) == 0 {
 			break
 		}
-		if _, ok := oldEndpoints.Addresses[newAdr]; !ok {
-			srv := available[availableIdx]
-			srv.IP = newAdr
-			srv.Disabled = false
-			srv.Modified = true
-			available = available[:availableIdx]
-			availableIdx--
+		// Pick a rondom available srv
+		for srvName := range disabledSrvs {
+			haproxySrvs[srvName].Address = newAddr
+			haproxySrvs[srvName].Modified = true
+			usedAddresses[newAddr] = struct{}{}
+			delete(disabledSrvs, srvName)
+			delete(newAddresses, newAddr)
+			break
 		}
 	}
 	// Dynamically updates HAProxy backend servers  with HAProxySrvs content
-	for srvName, srv := range newEndpoints.HAProxySrvs {
-		if srv.Modified {
-			if newEndpoints.BackendName == "" {
-				logger.Errorf("No backend Name for endpoints of service `%s` ", newEndpoints.Service.Value)
-				break
-			}
-			logger.Error(c.Client.SetServerAddr(newEndpoints.BackendName, srvName, srv.IP, 0))
-			status := "ready"
-			if srv.Disabled {
-				status = "maint"
-			}
-			logger.Debugf("server '%s/%s' changed status to %v", newEndpoints.BackendName, srvName, status)
-			logger.Error(c.Client.SetServerState(newEndpoints.BackendName, srvName, status))
+	for srvName, srv := range haproxySrvs {
+		if !srv.Modified {
+			continue
+		}
+		if srv.Address == "" {
+			logger.Debugf("server '%s/%s' changed status to %v", newEndpoints.BackendName, srvName, "maint")
+			logger.Error(c.Client.SetServerAddr(newEndpoints.BackendName, srvName, "127.0.0.1", 0))
+			logger.Error(c.Client.SetServerState(newEndpoints.BackendName, srvName, "maint"))
+		} else {
+			logger.Debugf("server '%s/%s' changed status to %v", newEndpoints.BackendName, srvName, "ready")
+			logger.Error(c.Client.SetServerAddr(newEndpoints.BackendName, srvName, srv.Address, 0))
+			logger.Error(c.Client.SetServerState(newEndpoints.BackendName, srvName, "ready"))
 		}
 	}
 }

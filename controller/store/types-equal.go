@@ -195,11 +195,22 @@ func (a *Endpoints) Equal(b *Endpoints) bool {
 			return false
 		}
 	}
-	if len(a.Addresses) != len(b.Addresses) {
+	if len(a.AddrRemain)+len(a.AddrsUsed) != len(b.AddrRemain)+len(b.AddrsUsed) {
 		return false
 	}
-	for adr := range a.Addresses {
-		if _, ok := b.Addresses[adr]; !ok {
+	for adr := range a.AddrRemain {
+		if _, ok := b.AddrRemain[adr]; ok {
+			continue
+		}
+		if _, ok := b.AddrsUsed[adr]; !ok {
+			return false
+		}
+	}
+	for adr := range a.AddrsUsed {
+		if _, ok := b.AddrsUsed[adr]; ok {
+			continue
+		}
+		if _, ok := b.AddrRemain[adr]; !ok {
 			return false
 		}
 	}

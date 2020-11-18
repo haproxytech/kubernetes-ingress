@@ -23,8 +23,8 @@ type ServicePort struct {
 }
 
 type HAProxySrv struct {
-	IP       string
-	Disabled bool
+	// Srv disabled is srv with address ""
+	Address  string
 	Modified bool
 }
 
@@ -34,7 +34,8 @@ type Endpoints struct {
 	Service     StringW
 	BackendName string
 	Ports       map[string]int64
-	Addresses   map[string]struct{}
+	AddrsUsed   map[string]struct{}
+	AddrRemain  map[string]struct{}
 	HAProxySrvs map[string]*HAProxySrv
 	Status      Status
 }

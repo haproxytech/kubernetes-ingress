@@ -225,7 +225,7 @@ func (c *HAProxyController) SyncData(chConfigMapReceivedAndProcessed chan bool) 
 		case INGRESS:
 			change = c.Store.EventIngress(ns, job.Data.(*store.Ingress), c.IngressClass)
 		case ENDPOINTS:
-			change = c.Store.EventEndpoints(ns, job.Data.(*store.Endpoints), c.processEndpointsSrvs)
+			change = c.Store.EventEndpoints(ns, job.Data.(*store.Endpoints), c.updateHAProxySrvs)
 		case SERVICE:
 			change = c.Store.EventService(ns, job.Data.(*store.Service))
 		case CONFIGMAP:
