@@ -173,7 +173,7 @@ func (a *Secret) Equal(b *Secret) bool {
 	return true
 }
 
-//Equal checks if pods are equal
+//Equal checks if two services have same endpoints
 func (a *Endpoints) Equal(b *Endpoints) bool {
 	if a == nil || b == nil {
 		return false
@@ -187,13 +187,22 @@ func (a *Endpoints) Equal(b *Endpoints) bool {
 	if len(a.Ports) != len(b.Ports) {
 		return false
 	}
-	for port := range a.Ports {
-		if _, ok := b.Ports[port]; !ok {
+	for portName, aPortValue := range a.Ports {
+		bPortValue, ok := b.Ports[portName]
+		if !ok || !aPortValue.Equal(bPortValue) {
 			return false
 		}
-		if a.Ports[port] != b.Ports[port] {
-			return false
-		}
+	}
+	return true
+}
+
+//Equal checks if two service ports have same endpoints
+func (a *PortEndpoints) Equal(b *PortEndpoints) bool {
+	if a == nil || b == nil {
+		return false
+	}
+	if a.Port != b.Port {
+		return false
 	}
 	if len(a.AddrRemain)+len(a.AddrsUsed) != len(b.AddrRemain)+len(b.AddrsUsed) {
 		return false
@@ -214,6 +223,5 @@ func (a *Endpoints) Equal(b *Endpoints) bool {
 			return false
 		}
 	}
-
 	return true
 }

@@ -25,7 +25,7 @@ import (
 )
 
 // alignHAproxySrvs adds or removes servers to match server-slots param
-func (c *HAProxyController) alignHAproxySrvs(endpoints *store.Endpoints) (reload bool) {
+func (c *HAProxyController) alignHAproxySrvs(endpoints *store.PortEndpoints) (reload bool) {
 	haproxySrvs := endpoints.HAProxySrvs
 	// Get server-slots annotation
 	// "servers-increment" is a legacy annotation
@@ -83,33 +83,12 @@ func (c *HAProxyController) alignHAproxySrvs(endpoints *store.Endpoints) (reload
 // If only the address changes , no need to reload just generate new config
 func (c *HAProxyController) handleEndpoints(namespace *store.Namespace, ingress *store.Ingress, path *store.IngressPath, service *store.Service, backendName string, newBackend bool) (reload bool) {
 	reload = newBackend
-	// fetch Endpoints
-	endpoints, ok := namespace.Endpoints[service.Name]
-	if !ok {
-		if service.DNS == "" {
-			logger.Warningf("No Endpoints for service '%s'", service.Name)
-			return false // not an end of world scenario, just log this
+	endpoints := c.getEndpoints(namespace, ingress, path, service)
+	if endpoints == nil {
+		if c.Client.BackendServerDeleteAll(backendName) {
+			reload = true
 		}
-		//TODO: currently HAProxy will only resolve server name at startup/reload
-		// This needs to be improved by using HAProxy resolvers to have resolution at runtime
-		logger.Debugf("Configuring service '%s', of type ExternalName", service.Name)
-		endpoints = &store.Endpoints{
-			Namespace: "external",
-			HAProxySrvs: map[string]*store.HAProxySrv{
-				"external-service": {
-					Address:  service.DNS,
-					Modified: true,
-				},
-			},
-		}
-		namespace.Endpoints[service.Name] = endpoints
-	}
-	// resolve TargetPort
-	portUpdated, err := c.setTargetPort(path, service, endpoints)
-	reload = reload || portUpdated
-	if err != nil {
-		logger.Error(err)
-		return false
+		return reload
 	}
 	// Handle Backend servers
 	endpoints.BackendName = backendName
@@ -117,8 +96,8 @@ func (c *HAProxyController) handleEndpoints(namespace *store.Namespace, ingress 
 	srvsNbrChanged := c.alignHAproxySrvs(endpoints)
 	reload = reload || srvsNbrChanged || activeAnnotations
 	for srvName, srv := range endpoints.HAProxySrvs {
-		if srv.Modified || activeAnnotations {
-			c.handleHAProxSrv(srvName, srv.Address, backendName, path.TargetPort, annotations)
+		if srv.Modified || reload {
+			c.handleHAProxSrv(srvName, srv.Address, backendName, endpoints.Port, annotations)
 		}
 	}
 	return reload
@@ -148,39 +127,65 @@ func (c *HAProxyController) handleHAProxSrv(srvName, srvAddr, backendName string
 	}
 }
 
-// setTargetPort looks for the targetPort (Endpoint port) corresponding to the servicePort of the IngressPath
-func (c *HAProxyController) setTargetPort(path *store.IngressPath, service *store.Service, endpoints *store.Endpoints) (update bool, err error) {
-	//ExternalName
-	if path.ServicePortInt != 0 && endpoints.Namespace == "external" {
-		if path.TargetPort != path.ServicePortInt {
-			path.TargetPort = path.ServicePortInt
-			update = true
-		}
-		return update, nil
-	}
-	// Ingress.ServicePort lookup: Ingress.ServicePort --> Service.Port
+func (c *HAProxyController) handleExternalName(path *store.IngressPath, service *store.Service) *store.PortEndpoints {
+	//TODO: currently HAProxy will only resolve server name at startup/reload
+	// This needs to be improved by using HAProxy resolvers to have resolution at runtime
+	logger.Debugf("Configuring service '%s', of type ExternalName", service.Name)
+	var port int64
 	for _, sp := range service.Ports {
 		if sp.Name == path.ServicePortString || sp.Port == path.ServicePortInt {
-			if endpoints != nil {
-				// Service.Port lookup: Service.Port --> Endpoints.Port
-				if targetPort, ok := endpoints.Ports[sp.Name]; ok {
-					if path.TargetPort != targetPort {
-						path.TargetPort = targetPort
-						update = true
-					}
-					return update, nil
-				}
-			}
-			return update, fmt.Errorf("could not find '%s' Targetport for service '%s'", sp.Name, service.Name)
+			port = sp.Port
 		}
 	}
-	return update, fmt.Errorf("ingress servicePort(Str: %s, Int: %d) not found for backend '%s'", path.ServicePortString, path.ServicePortInt, endpoints.BackendName)
+	if port == 0 {
+		ingressPort := path.ServicePortString
+		if path.ServicePortInt != 0 {
+			ingressPort = string(path.ServicePortInt)
+		}
+		logger.Warningf("service '%s': service port '%s' not found", service.Name, ingressPort)
+		return nil
+	}
+	return &store.PortEndpoints{
+		Port: port,
+		HAProxySrvs: map[string]*store.HAProxySrv{
+			"external-service": {
+				Address:  service.DNS,
+				Modified: true,
+			},
+		},
+	}
 }
 
-// updateHAProxySrvs dynamically update (via runtime socket) HAProxy backend servers with modified Addresses
-func (c *HAProxyController) updateHAProxySrvs(oldEndpoints, newEndpoints *store.Endpoints) {
+func (c *HAProxyController) getEndpoints(namespace *store.Namespace, ingress *store.Ingress, path *store.IngressPath, service *store.Service) *store.PortEndpoints {
+	endpoints, ok := namespace.Endpoints[service.Name]
+	if !ok {
+		if service.DNS == "" {
+			logger.Warningf("No Endpoints for service '%s'", service.Name)
+			return nil
+		}
+		return c.handleExternalName(path, service)
+	}
+	for _, sp := range service.Ports {
+		if sp.Name == path.ServicePortString || sp.Port == path.ServicePortInt {
+			if endpoints, ok := endpoints.Ports[sp.Name]; ok {
+				return endpoints
+			}
+			logger.Warningf("ingress %s/%s: no matching endpoints for service '%s' and port '%s'", namespace.Name, ingress.Name, service.Name, sp.Name)
+
+			return nil
+		}
+	}
+	ingressPort := path.ServicePortString
+	if path.ServicePortInt != 0 {
+		ingressPort = string(path.ServicePortInt)
+	}
+	logger.Warningf("ingress %s/%s: service %s: no service port matching '%s'", namespace.Name, ingress.Name, service.Name, ingressPort)
+	return nil
+}
+
+// updateHAProxySrvs dynamically update (via runtime socket) HAProxy backend servers with modifged Addresses
+func (c *HAProxyController) updateHAProxySrvs(oldEndpoints, newEndpoints *store.PortEndpoints) {
 	if oldEndpoints.BackendName == "" {
-		logger.Errorf("No backend available for endpoints of service `%s`", oldEndpoints.Service.Value)
 		return
 	}
 	newEndpoints.HAProxySrvs = oldEndpoints.HAProxySrvs
