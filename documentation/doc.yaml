@@ -502,7 +502,7 @@ annotations:
     - An integer with a unit of time (1 second = 1s, 1 minute = 1m, 1h = 1 hour)
     applies_to:
     - configmap
-    version_min: "1.5"
+    version_min: "1.4"
     example: ['hard-stop-after: 30s']
   - title: http-keep-alive
     type: bool
