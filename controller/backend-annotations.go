@@ -212,6 +212,12 @@ func (c *HAProxyController) handleServerAnnotations(serverModel *models.Server, 
 				logger.Errorf("%s annotation: %s", k, err)
 				continue
 			}
+
+		case "enable-grpc":
+        	 if err := server.UpdateGrpc(v.Value); err != nil {
+        	     logger.Errorf("%s annotation: %s", k, err)
+        		 continue
+        	 }
 		case "send-proxy-protocol":
 			if v.Status == DELETED || len(v.Value) == 0 {
 				server.ResetSendProxy()
@@ -305,6 +311,7 @@ func (c *HAProxyController) getServerAnnotations(ingress *store.Ingress, service
 	srvAnnotations["check-interval"], _ = c.Store.GetValueFromAnnotations("check-interval", service.Annotations, ingress.Annotations, c.Store.ConfigMaps[Main].Annotations)
 	srvAnnotations["pod-maxconn"], _ = c.Store.GetValueFromAnnotations("pod-maxconn", service.Annotations)
 	srvAnnotations["server-ssl"], _ = c.Store.GetValueFromAnnotations("server-ssl", service.Annotations, ingress.Annotations, c.Store.ConfigMaps[Main].Annotations)
+	srvAnnotations["enable-grpc"], _ = c.Store.GetValueFromAnnotations("enable-grpc", service.Annotations, ingress.Annotations, c.Store.ConfigMaps[Main].Annotations)
 	srvAnnotations["send-proxy-protocol"], _ = c.Store.GetValueFromAnnotations("send-proxy-protocol", service.Annotations)
 	for k, v := range srvAnnotations {
 		if v == nil {

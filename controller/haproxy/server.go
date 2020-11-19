@@ -91,3 +91,20 @@ func (s *Server) UpdateServerSsl(value string) error {
 	}
 	return nil
 }
+
+func (s *Server) UpdateGrpc(value string) error {
+	enabled, err := utils.GetBoolValue(value, "enable-grpc")
+	if err != nil {
+		return err
+	}
+	if enabled {
+		s.Ssl = ""
+		s.Verify = "none"
+		s.Proto = "h2"
+	} else {
+		s.Ssl = ""
+		s.Verify = ""
+		s.Alpn = ""
+	}
+	return nil
+}

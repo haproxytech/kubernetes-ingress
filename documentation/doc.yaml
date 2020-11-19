@@ -920,6 +920,25 @@ annotations:
     - service
     version_min: "1.4"
     example: ['server-ssl: "true"']
+  - title: enable-grpc
+    type: bool
+    group: enable-grpc
+    dependencies: ""
+    default: "false"
+    description:
+      - Enables GRPC to pods.
+    tip:
+      - Enable HTTP/2 support for backend severs.
+      - Enable GRPC proto
+    values:
+      - "true"
+      - "false"
+    applies_to:
+      - configmap
+      - ingress
+      - service
+    version_min: "1.4"
+    example: ['enable-grpc: "true"']
   - title: set-host
     type: string
     group: set-host
@@ -1254,3 +1273,4 @@ annotations:
     version_min: "1.4"
     example: ['whitelist: "192.168.1.0/24, 192.168.2.100"']
 
+    
