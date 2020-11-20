@@ -95,7 +95,7 @@ func (c *HAProxyController) monitorChanges() {
 		// https://github.com/kubernetes/enhancements/issues/1453
 		var ii cache.SharedIndexInformer
 		if c.k8s.IsNetworkingV1Beta1ApiSupported() {
-			logger.Warningf("Running on Kubernetes < 1.22: using ingresses.networking.k8s.io/v1beta1 for the Ingress/v1beta1 resources")
+			//logger.Warningf("Running on Kubernetes < 1.22: using ingresses.networking.k8s.io/v1beta1 for the Ingress/v1beta1 resources")
 			ii = factory.Networking().V1beta1().Ingresses().Informer()
 		} else {
 			logger.Warningf("Running on Kubernetes < 1.14: using ingresses.extensions/v1beta1 for the Ingress shared informer, networking.k8s.io API group is not available")

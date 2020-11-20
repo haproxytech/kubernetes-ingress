@@ -40,7 +40,7 @@ func (a *globalMaxconn) Update(c api.HAProxyClient) Result {
 		logger.Error("unable to update default maxconn: nil value")
 		return NONE
 	}
-	logger.Infof("Setting default maxconn to: '%d'", a.data.Value)
+	logger.Infof("Setting default maxconn to %d", a.data.Value)
 	if err := c.GlobalMaxconn(a.data); err != nil {
 		logger.Error(err)
 		return NONE

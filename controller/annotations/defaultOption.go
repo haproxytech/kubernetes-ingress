@@ -27,7 +27,7 @@ func (a *defaultOption) Parse(input string) error {
 }
 
 func (a *defaultOption) Delete(c api.HAProxyClient) Result {
-	logger.Infof("Removing '%s' option", a.name)
+	logger.Infof("Removing option %s", a.name)
 	if err := c.DefaultOption(a.name, nil); err != nil {
 		logger.Error(err)
 		return NONE

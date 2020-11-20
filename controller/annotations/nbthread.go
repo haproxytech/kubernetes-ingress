@@ -45,7 +45,7 @@ func (a *nbthread) Update(c api.HAProxyClient) Result {
 		logger.Error("unable to update nbthread: nil value")
 		return NONE
 	}
-	logger.Infof("Setting nbThread to: '%d'", a.data.Value)
+	logger.Infof("Setting nbThread to: %d", a.data.Value)
 	if err := c.Nbthread(a.data); err != nil {
 		logger.Error(err)
 		return NONE

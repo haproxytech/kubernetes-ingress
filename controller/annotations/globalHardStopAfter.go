@@ -55,5 +55,6 @@ func (ghsa *globalHardStopAfter) Update(c api.HAProxyClient) Result {
 		logger.Error(err)
 		return NONE
 	}
+	logger.Infof("Setting hard-stop-after to %s", ghsa.data.Value)
 	return RELOAD
 }
