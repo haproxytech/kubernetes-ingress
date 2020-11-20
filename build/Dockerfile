@@ -46,7 +46,12 @@ RUN apk --no-cache add socat openssl util-linux openrc htop tzdata && \
     rm -f /usr/local/bin/dataplaneapi /usr/bin/dataplaneapi && \
     rm -f /usr/local/etc/haproxy/haproxy.cfg && \
     echo "$DUMB_INIT_SHA256  /dumb-init" | sha256sum -c - && \
-    chmod +x /dumb-init
+    chmod +x /dumb-init &&\
+    chown -R haproxy:haproxy /etc/haproxy && \
+    mkdir -p /var/state/haproxy && \
+    chown -R haproxy:haproxy /run /var/state/haproxy
+
+USER haproxy
 
 COPY --from=builder /src/fs/haproxy-ingress-controller .
 COPY /fs /
