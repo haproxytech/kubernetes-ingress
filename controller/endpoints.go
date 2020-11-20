@@ -92,8 +92,10 @@ func (c *HAProxyController) handleEndpoints(namespace *Namespace, ingress *Ingre
 	// Handle Backend servers
 	endpoints.BackendName = backendName
 	annotations, activeAnnotations := c.getServerAnnotations(ingress, service)
-	srvsNbrChanged := c.alignHAproxySrvs(endpoints)
-	reload = reload || srvsNbrChanged || activeAnnotations
+	if service.DNS == "" {
+		reload = c.alignHAproxySrvs(endpoints) || reload
+	}
+	reload = reload || activeAnnotations
 	for srvName, srv := range endpoints.HAProxySrvs {
 		if srv.Modified || reload {
 			c.handleHAProxSrv(srvName, srv.Address, backendName, endpoints.Port, annotations)
