@@ -120,7 +120,7 @@ func (c *HAProxyController) handleSyslog() (restart, reload bool) {
 					continue
 				}
 			}
-			c.Logger.Infof("Adding log target: '%s'", logData)
+			c.Logger.Infof("Adding log target: '%s'", syslogSrv)
 			errParser = c.Client.SetLogTarget(logData, index)
 			if errParser == nil {
 				reload = true
@@ -295,7 +295,7 @@ func (c *HAProxyController) handleHardStopAfter() bool {
 		c.Logger.Error(err)
 		return false
 	}
-	c.Logger.Infof("Changing hard-stop-after value to '%s'", duration)
+	c.Logger.Infof("Changing hard-stop-after value to %s", duration)
 	err = c.Client.SetHardStopAfter(&duration)
 	if err != nil {
 		c.Logger.Error(err)

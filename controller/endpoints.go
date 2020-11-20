@@ -139,7 +139,7 @@ func (c *HAProxyController) handleExternalName(path *IngressPath, service *Servi
 	if port == 0 {
 		ingressPort := path.ServicePortString
 		if path.ServicePortInt != 0 {
-			ingressPort = string(path.ServicePortInt)
+			ingressPort = fmt.Sprintf("%d", path.ServicePortInt)
 		}
 		c.Logger.Warningf("service '%s': service port '%s' not found", service.Name, ingressPort)
 		return nil
@@ -176,7 +176,7 @@ func (c *HAProxyController) getEndpoints(namespace *Namespace, ingress *Ingress,
 	}
 	ingressPort := path.ServicePortString
 	if path.ServicePortInt != 0 {
-		ingressPort = string(path.ServicePortInt)
+		ingressPort = fmt.Sprintf("%d", path.ServicePortInt)
 	}
 	c.Logger.Warningf("ingress %s/%s: service %s: no service port matching '%s'", namespace.Name, ingress.Name, service.Name, ingressPort)
 	return nil
