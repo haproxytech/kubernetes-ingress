@@ -44,7 +44,7 @@ func Test_Set_Host(t *testing.T) {
 			k8s.EditPodImage(deploy, "ealen/echo-server:latest")
 			k8s.EditPodCommand(deploy)
 			k8s.EditPodExposedPort(deploy, 80)
-			deploy, err = cs.AppsV1().Deployments("default").Create(context.Background(), deploy, metav1.CreateOptions{})
+			deploy, err = cs.AppsV1().Deployments(k8s.Namespace).Create(context.Background(), deploy, metav1.CreateOptions{})
 			if err != nil {
 				t.FailNow()
 			}
@@ -52,7 +52,7 @@ func Test_Set_Host(t *testing.T) {
 
 			svc := k8s.NewService("http-echo", name)
 			k8s.EditServicePort(svc, 80)
-			svc, err = cs.CoreV1().Services("default").Create(context.Background(), svc, metav1.CreateOptions{})
+			svc, err = cs.CoreV1().Services(k8s.Namespace).Create(context.Background(), svc, metav1.CreateOptions{})
 			if err != nil {
 				t.FailNow()
 			}
@@ -62,7 +62,7 @@ func Test_Set_Host(t *testing.T) {
 			k8s.AddAnnotations(ing, map[string]string{
 				"set-host": host,
 			})
-			ing, err = cs.NetworkingV1beta1().Ingresses("default").Create(context.Background(), ing, metav1.CreateOptions{})
+			ing, err = cs.NetworkingV1beta1().Ingresses(k8s.Namespace).Create(context.Background(), ing, metav1.CreateOptions{})
 			if err != nil {
 				t.FailNow()
 			}

@@ -52,7 +52,7 @@ func Test_Https_Ssl_Offload(t *testing.T) {
 
 	deploy, svc := k8s.NewOffloadedSsl("simple-https-listener", "ssl")
 
-	svc, err = cs.CoreV1().Services("default").Create(context.Background(), svc, metav1.CreateOptions{})
+	svc, err = cs.CoreV1().Services(k8s.Namespace).Create(context.Background(), svc, metav1.CreateOptions{})
 	if err != nil {
 		t.FailNow()
 	}
@@ -68,7 +68,7 @@ func Test_Https_Ssl_Offload(t *testing.T) {
 	a := ing.GetAnnotations()
 	a["haproxy.org/ssl-passthrough"] = "true"
 	ing.SetAnnotations(a)
-	ing, err = cs.NetworkingV1beta1().Ingresses("default").Create(context.Background(), ing, metav1.CreateOptions{})
+	ing, err = cs.NetworkingV1beta1().Ingresses(k8s.Namespace).Create(context.Background(), ing, metav1.CreateOptions{})
 	if err != nil {
 		t.FailNow()
 	}
@@ -88,13 +88,13 @@ func Test_Https_Ssl_Offload(t *testing.T) {
 	crt := k8s.ApproveCSRAndGetCertificate(t, cs, csr)
 
 	secret := k8s.NewTlsSecret(key, crt, "simple-https-listener", "ssl")
-	secret, err = cs.CoreV1().Secrets("default").Create(context.Background(), secret, metav1.CreateOptions{})
+	secret, err = cs.CoreV1().Secrets(k8s.Namespace).Create(context.Background(), secret, metav1.CreateOptions{})
 	if err != nil {
 		t.FailNow()
 	}
 	defer cs.CoreV1().Secrets(secret.Namespace).Delete(context.Background(), secret.Name, metav1.DeleteOptions{})
 
-	deploy, err = cs.AppsV1().Deployments("default").Create(context.Background(), deploy, metav1.CreateOptions{})
+	deploy, err = cs.AppsV1().Deployments(k8s.Namespace).Create(context.Background(), deploy, metav1.CreateOptions{})
 	if err != nil {
 		t.FailNow()
 	}

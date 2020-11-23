@@ -39,6 +39,8 @@ import (
 	"k8s.io/utils/pointer"
 )
 
+var Namespace = "testing"
+
 func New(t *testing.T) *kubernetes.Clientset {
 	home, err := os.UserHomeDir()
 	if err != nil {
@@ -55,6 +57,11 @@ func New(t *testing.T) *kubernetes.Clientset {
 		t.FailNow()
 	}
 
+	nsSpec := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: Namespace}}
+	_, err = cs.CoreV1().Namespaces().Create(context.Background(), nsSpec, metav1.CreateOptions{})
+	if err != nil {
+		t.FailNow()
+	}
 	return cs
 }
 
