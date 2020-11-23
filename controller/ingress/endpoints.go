@@ -24,8 +24,8 @@ import (
 	"github.com/haproxytech/models/v2"
 )
 
-// alignHAproxySrvs adds or removes servers to match server-slots param
-func (route *Route) alignHAproxySrvs() {
+// alignHAProxySrvs adds or removes servers to match server-slots param
+func (route *Route) alignHAProxySrvs() {
 	haproxySrvs := route.endpoints.HAProxySrvs
 	// Get server-slots annotation
 	// "servers-increment" is a legacy annotation
@@ -90,7 +90,8 @@ func (route *Route) handleEndpoints() {
 		}
 		return
 	}
-	route.alignHAproxySrvs()
+	route.endpoints.BackendName = route.BackendName
+	route.alignHAProxySrvs()
 	activeAnnotations := route.getServerAnnotations()
 	for srvName, srv := range route.endpoints.HAProxySrvs {
 		if srv.Modified || route.NewBackend || activeAnnotations {
