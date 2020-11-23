@@ -57,10 +57,11 @@ func New(t *testing.T) *kubernetes.Clientset {
 		t.FailNow()
 	}
 
-	nsSpec := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: Namespace}}
-	_, err = cs.CoreV1().Namespaces().Create(context.Background(), nsSpec, metav1.CreateOptions{})
-	if err != nil {
-		t.FailNow()
+	if _, err = cs.CoreV1().Namespaces().Get(context.Background(), Namespace, metav1.GetOptions{}); err != nil {
+		nsSpec := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: Namespace}}
+		if _, err = cs.CoreV1().Namespaces().Create(context.Background(), nsSpec, metav1.CreateOptions{}); err != nil {
+			t.FailNow()
+		}
 	}
 	return cs
 }
