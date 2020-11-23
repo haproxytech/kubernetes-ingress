@@ -147,12 +147,11 @@ func (h HTTPS) enableSSLPassthrough(cfg *Configuration, api api.HAProxyClient) (
 }
 
 func (h HTTPS) disableSSLPassthrough(cfg *Configuration, api api.HAProxyClient) (err error) {
-	backendHTTPS := "https"
 	err = api.FrontendDelete(FrontendSSL)
 	if err != nil {
 		return err
 	}
-	err = api.BackendDelete(backendHTTPS)
+	err = api.BackendDelete(SSLDefaultBaceknd)
 	if err != nil {
 		return err
 	}
