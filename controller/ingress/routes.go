@@ -40,9 +40,10 @@ const (
 	// Configmaps
 	Main = "main"
 	//frontends
-	FrontendHTTP  = "http"
-	FrontendHTTPS = "https"
-	FrontendSSL   = "ssl"
+	FrontendHTTP       = "http"
+	FrontendHTTPS      = "https"
+	FrontendSSL        = "ssl"
+	HTTPDefaultBackend = "http_default"
 	//Status
 	ADDED    = store.ADDED
 	DELETED  = store.DELETED
@@ -205,26 +206,25 @@ func (r *Routes) refreshHTTPDefault(activeBackends map[string]struct{}) (reload 
 		return false
 	}
 	route := r.httpDefault
-	activeBackends[route.BackendName] = struct{}{}
+	defaultBackend := HTTPDefaultBackend
 	if route.status != DELETED {
-		logger.Debugf("Using service '%s/%s' as default backend", route.Namespace.Name, route.service.Name)
 		err := route.handleService()
 		if err != nil {
 			logger.Error(err)
 			return false
 		}
 		route.handleEndpoints()
-	} else {
-		logger.Debugf("Removing default backend '%s/%s'", route.Namespace.Name, route.service.Name)
-		route.BackendName = ""
+		defaultBackend = route.BackendName
+		activeBackends[route.BackendName] = struct{}{}
 	}
 	if route.status == EMPTY {
 		return false
 	}
+	logger.Infof("Setting http/https default_backend to '%s'", defaultBackend)
 	for _, frontendName := range []string{FrontendHTTP, FrontendHTTPS} {
 		frontend, err := client.FrontendGet(frontendName)
 		if err == nil {
-			frontend.DefaultBackend = route.BackendName
+			frontend.DefaultBackend = defaultBackend
 			err = client.FrontendEdit(frontend)
 		}
 		if err != nil {

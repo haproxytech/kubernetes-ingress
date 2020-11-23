@@ -44,7 +44,7 @@ const (
 	FrontendHTTP       = "http"
 	FrontendHTTPS      = "https"
 	FrontendSSL        = "ssl"
-	HTTPDefaultBackend = "default_backend"
+	HTTPDefaultBackend = "http_default"
 	SSLDefaultBaceknd  = "ssl"
 	//Status
 	ADDED    = store.ADDED
