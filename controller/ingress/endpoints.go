@@ -63,7 +63,7 @@ func (route *Route) alignHAProxySrvs() {
 			delete(haproxySrvs, srvName)
 			logger.Error(client.BackendServerDelete(route.endpoints.BackendName, srvName))
 			route.reload = true
-			continue
+			break
 		}
 	}
 	// Configure remaining addresses in available HAProxySrvs
