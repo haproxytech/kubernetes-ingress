@@ -35,7 +35,7 @@ func (r SetHdr) Create(client api.HAProxyClient, frontend *models.Frontend) erro
 	}
 	//REQ_FORWARDED_PROTO
 	if r.ForwardedProto {
-		httpRule := models.HTTPResponseRule{
+		httpRule := models.HTTPRequestRule{
 			Index:     utils.PtrInt64(0),
 			Type:      "set-header",
 			HdrName:   "X-Forwarded-Proto",
@@ -43,7 +43,7 @@ func (r SetHdr) Create(client api.HAProxyClient, frontend *models.Frontend) erro
 			Cond:      "if",
 			CondTest:  "{ ssl_fc }",
 		}
-		return client.FrontendHTTPResponseRuleCreate(frontend.Name, httpRule)
+		return client.FrontendHTTPRequestRuleCreate(frontend.Name, httpRule)
 	}
 	ingressMapFile := r.Ingress.Path()
 	//RES_SET_HEADER
