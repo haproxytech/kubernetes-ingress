@@ -109,9 +109,12 @@ func (c *clientNative) APIStartTransaction() error {
 		version = 1
 	}
 	transaction, err := c.nativeAPI.Configuration.StartTransaction(version)
+	if err != nil {
+		return err
+	}
 	c.activeTransaction = transaction.ID
 	c.activeTransactionHasChanges = false
-	return err
+	return nil
 }
 
 func (c *clientNative) APICommitTransaction() error {
