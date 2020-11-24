@@ -23,18 +23,18 @@ type RefreshHandler struct{}
 
 func (h RefreshHandler) Update(k store.K8s, cfg *Configuration, api api.HAProxyClient) (reload bool, err error) {
 	reload, activeBackends := cfg.IngressRoutes.Refresh(api, k)
-	reload = h.clearBackends(api, activeBackends) || reload
+	reload = h.clearBackends(api, cfg, activeBackends) || reload
 	reload = cfg.HAProxyRules.Refresh(api) || reload
 	reload = cfg.MapFiles.Refresh() || reload
 	return reload, nil
 }
 
 // Remove unused backends
-func (h RefreshHandler) clearBackends(api api.HAProxyClient, activeBackends map[string]struct{}) (reload bool) {
-	// HTTP default backend
-	activeBackends[HTTPDefaultBackend] = struct{}{}
-	// SSL default backend
-	activeBackends[SSLDefaultBaceknd] = struct{}{}
+func (h RefreshHandler) clearBackends(api api.HAProxyClient, cfg *Configuration, activeBackends map[string]struct{}) (reload bool) {
+	if cfg.SSLPassthrough {
+		// SSL default backend
+		activeBackends[SSLDefaultBaceknd] = struct{}{}
+	}
 	// Ratelimting backends
 	for _, rateLimitTable := range rateLimitTables {
 		activeBackends[rateLimitTable] = struct{}{}

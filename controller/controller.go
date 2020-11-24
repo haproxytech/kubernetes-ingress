@@ -41,11 +41,10 @@ const (
 	TCPServices = "tcpservices"
 	Errorfiles  = "errorfiles"
 	//sections
-	FrontendHTTP       = "http"
-	FrontendHTTPS      = "https"
-	FrontendSSL        = "ssl"
-	HTTPDefaultBackend = "http_default"
-	SSLDefaultBaceknd  = "ssl"
+	FrontendHTTP      = "http"
+	FrontendHTTPS     = "https"
+	FrontendSSL       = "ssl"
+	SSLDefaultBaceknd = "ssl"
 	//Status
 	ADDED    = store.ADDED
 	DELETED  = store.DELETED

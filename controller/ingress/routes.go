@@ -27,7 +27,7 @@ import (
 
 type Routes struct {
 	http           map[string]*Route
-	httpDefault    *Route
+	httpDefault    []*Route
 	sslPassthrough []*Route
 	tcp            []*Route
 }
@@ -40,10 +40,9 @@ const (
 	// Configmaps
 	Main = "main"
 	//frontends
-	FrontendHTTP       = "http"
-	FrontendHTTPS      = "https"
-	FrontendSSL        = "ssl"
-	HTTPDefaultBackend = "http_default"
+	FrontendHTTP  = "http"
+	FrontendHTTPS = "https"
+	FrontendSSL   = "ssl"
 	//Status
 	ADDED    = store.ADDED
 	DELETED  = store.DELETED
@@ -68,7 +67,7 @@ func (r *Routes) AddRoute(route *Route) {
 	route.setStatus()
 	switch {
 	case route.Path.IsDefaultBackend:
-		r.httpDefault = route
+		r.httpDefault = append([]*Route{route}, r.httpDefault...)
 	case route.TCPService:
 		r.tcp = append(r.tcp, route)
 	case route.SSLPassthrough:
@@ -202,36 +201,40 @@ func (r *Routes) refreshTCP(activeBackends map[string]struct{}) (reload bool) {
 }
 
 func (r *Routes) refreshHTTPDefault(activeBackends map[string]struct{}) (reload bool) {
-	if r.httpDefault == nil {
-		return false
-	}
-	route := r.httpDefault
-	defaultBackend := HTTPDefaultBackend
-	if route.status != DELETED {
-		err := route.handleService()
-		if err != nil {
-			logger.Error(err)
-			return false
+	defaultBackend := ""
+	// pick latest pushed default route
+	for _, route := range r.httpDefault {
+		if route.status != DELETED {
+			err := route.handleService()
+			if err != nil {
+				logger.Error(err)
+				continue
+			}
+			route.handleEndpoints()
+			defaultBackend = route.BackendName
+			activeBackends[route.BackendName] = struct{}{}
+			break
 		}
-		route.handleEndpoints()
-		defaultBackend = route.BackendName
-		activeBackends[route.BackendName] = struct{}{}
 	}
-	if route.status == EMPTY {
+	if frontend, err := client.FrontendGet(FrontendHTTP); err != nil {
+		logger.Error(err)
+		return false
+	} else if frontend.DefaultBackend == defaultBackend {
 		return false
 	}
-	logger.Infof("Setting http/https default_backend to '%s'", defaultBackend)
+	if defaultBackend == "" {
+		logger.Info("No default backend for http/https traffic")
+	} else {
+		logger.Infof("Setting http/https default backend to '%s'", defaultBackend)
+	}
 	for _, frontendName := range []string{FrontendHTTP, FrontendHTTPS} {
-		frontend, err := client.FrontendGet(frontendName)
-		if err == nil {
-			frontend.DefaultBackend = defaultBackend
-			err = client.FrontendEdit(frontend)
-		}
+		frontend, _ := client.FrontendGet(frontendName)
+		frontend.DefaultBackend = defaultBackend
+		err := client.FrontendEdit(frontend)
 		if err != nil {
 			logger.Error(err)
-		} else {
-			reload = true
+			return
 		}
 	}
-	return reload
+	return true
 }
