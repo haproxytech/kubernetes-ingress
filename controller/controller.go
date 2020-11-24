@@ -336,7 +336,7 @@ func (c *HAProxyController) haproxyInitialize() {
 	logger.Err(err)
 
 	// Initialize HAProxy client API
-	c.Client, err = api.Init(TransactionDir, HAProxyCFG, "haproxy", HAProxyRuntimeSocket)
+	c.Client, err = api.Init(TransactionDir, HAProxyCFG, HAProxyBinary, HAProxyRuntimeSocket)
 	if err != nil {
 		logger.Panic(err)
 	}
@@ -364,7 +364,7 @@ func (c *HAProxyController) haproxyInitialize() {
 		}))
 	}
 
-	cmd := exec.Command("sh", "-c", "haproxy -v")
+	cmd := exec.Command(HAProxyBinary, "-v")
 	haproxyInfo, err := cmd.Output()
 	if err == nil {
 		haproxyInfo := strings.Split(string(haproxyInfo), "\n")
