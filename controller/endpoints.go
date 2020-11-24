@@ -60,7 +60,7 @@ func (c *HAProxyController) alignHAproxySrvs(endpoints *PortEndpoints) (reload b
 			delete(haproxySrvs, srvName)
 			c.Logger.Error(c.Client.BackendServerDelete(endpoints.BackendName, srvName))
 			reload = true
-			continue
+			break
 		}
 	}
 	// Configure remaining addresses in available HAProxySrvs
