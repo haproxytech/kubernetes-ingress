@@ -46,8 +46,10 @@ type frontendRules struct {
 }
 
 var logger = utils.GetLogger()
+var ruleIDs map[uint32]struct{}
 
 func NewRules() Rules {
+	ruleIDs = make(map[uint32]struct{})
 	return make(map[string]*frontendRules)
 }
 
@@ -55,6 +57,10 @@ func (r Rules) AddRule(rule Rule, frontends ...string) error {
 	if rule == nil || len(frontends) == 0 {
 		return fmt.Errorf("invalid params")
 	}
+	if _, ok := ruleIDs[rule.GetID()]; ok {
+		return nil
+	}
+	ruleIDs[rule.GetID()] = struct{}{}
 	for _, frontend := range frontends {
 		ftRules, ok := r[frontend]
 		if !ok {
