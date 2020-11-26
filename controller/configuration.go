@@ -66,7 +66,7 @@ func (c *Configuration) HAProxyRulesInit() error {
 		c.HAProxyRules.AddRule(rules.ReqSetVar{
 			Name:       "path",
 			Scope:      "txn",
-			Expression: "path,lower",
+			Expression: "path",
 		}, FrontendHTTP, FrontendHTTPS),
 	)
 	c.MapFiles.AppendRow(0, "# Ingress SNIs")
