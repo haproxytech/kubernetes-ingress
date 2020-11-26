@@ -154,7 +154,7 @@ func (c *HAProxyController) FrontendHTTPReqsRefresh() (reload bool) {
 			Type:     "set-var",
 			VarName:  "path",
 			VarScope: "txn",
-			VarExpr:  "path,lower",
+			VarExpr:  "path",
 		}
 		c.Logger.Error(c.Client.FrontendHTTPRequestRuleCreate(frontend, setVarRule))
 		// STATIC: SET_VARIABLE txn.host (to use in http rules)
