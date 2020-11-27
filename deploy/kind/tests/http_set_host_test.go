@@ -57,7 +57,7 @@ func Test_Set_Host(t *testing.T) {
 			}
 			defer cs.CoreV1().Services(svc.Namespace).Delete(context.Background(), svc.Name, metav1.DeleteOptions{})
 
-			ing := k8s.NewIngress(resourceName, "/")
+			ing := k8s.NewIngress(resourceName, []k8s.IngressRule{{Host: resourceName, Path: "/", Service: resourceName}})
 			k8s.AddAnnotations(ing, map[string]string{
 				"set-host": host,
 			})

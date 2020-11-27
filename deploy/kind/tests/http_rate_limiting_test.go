@@ -49,7 +49,7 @@ func Test_Rate_Limiting(t *testing.T) {
 
 			deploy := k8s.NewDeployment(resourceName)
 			svc := k8s.NewService(resourceName)
-			ing := k8s.NewIngress(resourceName, "/")
+			ing := k8s.NewIngress(resourceName, []k8s.IngressRule{{Host: resourceName, Path: "/", Service: resourceName}})
 			k8s.AddAnnotations(ing, map[string]string{
 				"rate-limit-period":      tc.limitPeriod.String(),
 				"rate-limit-requests":    fmt.Sprintf("%d", tc.limitRequests),

@@ -51,7 +51,7 @@ func Test_BasicAuth(t *testing.T) {
 		"sha-256": []byte("$5$6If.AXwtflzSAt.v$akOQ2JHGivXo5T44bKfNEQdl.X43sGicKw5fvR4ZjN2"),
 		"sha-512": []byte("$6$l39Jw4XfZOFzEJ9f$PduN9WJLBZbZz88H.M4DuT/yC2yXcXCIFor8vHafMlqkXJ0PVPW4TtZHhAMAtyexLKCwDb.o9XEzxYyljYaOS1"),
 	}, resourceName)
-	ing := k8s.NewIngress(resourceName, "/")
+	ing := k8s.NewIngress(resourceName, []k8s.IngressRule{{Host: resourceName, Path: "/", Service: resourceName}})
 	k8s.AddAnnotations(ing, map[string]string{
 		"auth-type":   "basic-auth",
 		"auth-secret": secret.Name,

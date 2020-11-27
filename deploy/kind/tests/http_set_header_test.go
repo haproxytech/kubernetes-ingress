@@ -66,7 +66,7 @@ func Test_Request_Set_Header(t *testing.T) {
 			}
 			defer cs.CoreV1().Services(svc.Namespace).Delete(context.Background(), svc.Name, metav1.DeleteOptions{})
 
-			ing := k8s.NewIngress(resourceName, "/")
+			ing := k8s.NewIngress(resourceName, []k8s.IngressRule{{Host: resourceName, Path: "/", Service: resourceName}})
 			k8s.AddAnnotations(ing, map[string]string{
 				"request-set-header": fmt.Sprintf("%s %q", tc.name, tc.value),
 			})
@@ -139,7 +139,7 @@ func Test_Response_Set_Header(t *testing.T) {
 
 			deploy := k8s.NewDeployment(resourceName)
 			svc := k8s.NewService(resourceName)
-			ing := k8s.NewIngress(resourceName, "/")
+			ing := k8s.NewIngress(resourceName, []k8s.IngressRule{{Host: resourceName, Path: "/", Service: resourceName}})
 			k8s.AddAnnotations(ing, map[string]string{
 				"response-set-header": fmt.Sprintf("%s %q", strings.ToLower(tc.name), tc.value),
 			})

@@ -51,7 +51,7 @@ func Test_HTTPS_Passthrough(t *testing.T) {
 	resourceName := "https-passthrough"
 
 	deploy, svc := k8s.NewSSLDeployment(resourceName)
-	ing := k8s.NewIngress(resourceName, "/")
+	ing := k8s.NewIngress(resourceName, []k8s.IngressRule{{Host: resourceName, Path: "/", Service: resourceName}})
 	a := ing.GetAnnotations()
 	a["haproxy.org/ssl-passthrough"] = "true"
 	ing.SetAnnotations(a)

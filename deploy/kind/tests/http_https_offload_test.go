@@ -54,7 +54,7 @@ func Test_HTTPS_Offload(t *testing.T) {
 
 	deploy := k8s.NewDeployment(resourceName)
 	svc := k8s.NewService(resourceName)
-	ing := k8s.NewIngress(resourceName, "/")
+	ing := k8s.NewIngress(resourceName, []k8s.IngressRule{{Host: resourceName, Path: "/", Service: resourceName}})
 	ing.Spec.TLS = []networkingv1beta1.IngressTLS{
 		{
 			Hosts:      []string{resourceName + ".haproxy"},

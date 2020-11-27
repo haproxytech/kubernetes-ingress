@@ -41,6 +41,12 @@ import (
 
 var Namespace = "testing"
 
+type IngressRule struct {
+	Host    string
+	Path    string
+	Service string
+}
+
 func New(t *testing.T) *kubernetes.Clientset {
 	home, err := os.UserHomeDir()
 	if err != nil {
@@ -74,35 +80,35 @@ func AddAnnotations(ing metav1.Object, additionals map[string]string) {
 	ing.SetAnnotations(a)
 }
 
-func NewIngress(name, path string) *networkingv1beta1.Ingress {
-	return &networkingv1beta1.Ingress{
+func NewIngress(name string, rules []IngressRule) *networkingv1beta1.Ingress {
+	ing := networkingv1beta1.Ingress{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
 			Annotations: map[string]string{
 				"ingress.class": "haproxy",
 			},
 		},
-		Spec: networkingv1beta1.IngressSpec{
-			Rules: []networkingv1beta1.IngressRule{
-				{
-					Host: name,
-					IngressRuleValue: networkingv1beta1.IngressRuleValue{
-						HTTP: &networkingv1beta1.HTTPIngressRuleValue{
-							Paths: []networkingv1beta1.HTTPIngressPath{
-								{
-									Path: path,
-									Backend: networkingv1beta1.IngressBackend{
-										ServiceName: name,
-										ServicePort: intstr.FromString("http"),
-									},
-								},
+		Spec: networkingv1beta1.IngressSpec{},
+	}
+	for _, rule := range rules {
+		ing.Spec.Rules = append(ing.Spec.Rules, networkingv1beta1.IngressRule{
+			Host: rule.Host,
+			IngressRuleValue: networkingv1beta1.IngressRuleValue{
+				HTTP: &networkingv1beta1.HTTPIngressRuleValue{
+					Paths: []networkingv1beta1.HTTPIngressPath{
+						{
+							Path: rule.Path,
+							Backend: networkingv1beta1.IngressBackend{
+								ServiceName: rule.Service,
+								ServicePort: intstr.FromString("http"),
 							},
 						},
 					},
 				},
 			},
-		},
+		})
 	}
+	return &ing
 }
 
 func EditServicePort(service *corev1.Service, port int32) {

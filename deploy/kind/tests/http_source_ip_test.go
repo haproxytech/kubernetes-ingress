@@ -76,7 +76,7 @@ func Test_Set_Source_Ip(t *testing.T) {
 
 			deploy := k8s.NewDeployment(resourceName)
 			svc := k8s.NewService(resourceName)
-			ing := k8s.NewIngress(resourceName, "/")
+			ing := k8s.NewIngress(resourceName, []k8s.IngressRule{{Host: resourceName, Path: "/", Service: resourceName}})
 
 			deploy, err = cs.AppsV1().Deployments(k8s.Namespace).Create(context.Background(), deploy, metav1.CreateOptions{})
 			if err != nil {

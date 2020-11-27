@@ -40,7 +40,7 @@ func Test_MatchHost(t *testing.T) {
 			var err error
 			deploy := k8s.NewDeployment(resourceName)
 			svc := k8s.NewService(resourceName)
-			ing := k8s.NewIngress(resourceName, "/")
+			ing := k8s.NewIngress(resourceName, []k8s.IngressRule{{Host: resourceName, Path: "/", Service: resourceName}})
 
 			deploy, err = cs.AppsV1().Deployments(k8s.Namespace).Create(context.Background(), deploy, metav1.CreateOptions{})
 			if err != nil {
