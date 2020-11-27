@@ -383,9 +383,10 @@ func (c *HAProxyController) eventSecret(ns *Namespace, data *Secret) (updateRequ
 		ns.Secret[data.Name] = data
 		updateRequired = true
 	case DELETED:
-		_, ok := ns.Secret[data.Name]
+		old, ok := ns.Secret[data.Name]
 		if ok {
 			updateRequired = true
+			old.Status = DELETED
 		} else {
 			c.Logger.Warningf("Secret '%s' not registered with controller, cannot delete !", data.Name)
 		}
