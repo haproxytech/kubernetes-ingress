@@ -31,7 +31,7 @@ import (
 	"github.com/haproxytech/kubernetes-ingress/deploy/kind/tests/k8s"
 )
 
-func Test_Http_MatchHost(t *testing.T) {
+func Test_MatchHost(t *testing.T) {
 	type ts struct {
 		name    string
 		release string

@@ -32,7 +32,7 @@ import (
 	"github.com/haproxytech/kubernetes-ingress/deploy/kind/tests/k8s"
 )
 
-func Test_Http_MatchPath(t *testing.T) {
+func Test_MatchPath(t *testing.T) {
 	type ts struct {
 		name    string
 		release string

@@ -29,7 +29,7 @@ import (
 	"github.com/haproxytech/kubernetes-ingress/deploy/kind/tests/k8s"
 )
 
-func Test_Http_Send_Proxy(t *testing.T) {
+func Test_Send_Proxy(t *testing.T) {
 	var err error
 
 	cs := k8s.New(t)

@@ -33,13 +33,12 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	networkingv1beta1 "k8s.io/api/networking/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/haproxytech/kubernetes-ingress/deploy/kind/tests/k8s"
 )
 
-func Test_Https_Ssl_Offload(t *testing.T) {
+func Test_HTTPS_Passthrough(t *testing.T) {
 
 	kindURL := os.Getenv("KIND_URL")
 	if kindURL == "" {
@@ -50,44 +49,24 @@ func Test_Https_Ssl_Offload(t *testing.T) {
 
 	cs := k8s.New(t)
 
-	deploy, svc := k8s.NewOffloadedSsl("simple-https-listener", "ssl")
-
-	svc, err = cs.CoreV1().Services(k8s.Namespace).Create(context.Background(), svc, metav1.CreateOptions{})
-	if err != nil {
-		t.FailNow()
-	}
-	defer cs.CoreV1().Services(svc.Namespace).Delete(context.Background(), svc.Name, metav1.DeleteOptions{})
-
-	ing := k8s.NewIngress("simple-https-listener", "ssl", "/")
-	ing.Spec.TLS = []networkingv1beta1.IngressTLS{
-		{
-			Hosts:      []string{"simple-https-listener-ssl.haproxy"},
-			SecretName: "simple-https-listener-ssl",
-		},
-	}
+	deploy, svc := k8s.NewSSLDeployment("https", "ssl-passthrough")
+	ing := k8s.NewIngress("https", "ssl-passthrough", "/")
 	a := ing.GetAnnotations()
 	a["haproxy.org/ssl-passthrough"] = "true"
 	ing.SetAnnotations(a)
-	ing, err = cs.NetworkingV1beta1().Ingresses(k8s.Namespace).Create(context.Background(), ing, metav1.CreateOptions{})
-	if err != nil {
-		t.FailNow()
-	}
-	defer cs.NetworkingV1beta1().Ingresses(ing.Namespace).Delete(context.Background(), ing.Name, metav1.DeleteOptions{})
 
 	key, err := rsa.GenerateKey(rand.Reader, 1024)
 	if err != nil {
 		t.FailNow()
 	}
-	csr := k8s.NewCertificateSigningRequest("simple-https-listener", "ssl", key, ing.Spec.TLS[0].Hosts...)
+	csr := k8s.NewCertificateSigningRequest("https", "ssl-passthrough", key, ing.Spec.Rules[0].Host)
 	csr, err = cs.CertificatesV1beta1().CertificateSigningRequests().Create(context.Background(), csr, metav1.CreateOptions{})
 	if err != nil {
 		t.FailNow()
 	}
 	defer cs.CertificatesV1beta1().CertificateSigningRequests().Delete(context.Background(), csr.Name, metav1.DeleteOptions{})
-
 	crt := k8s.ApproveCSRAndGetCertificate(t, cs, csr)
-
-	secret := k8s.NewTlsSecret(key, crt, "simple-https-listener", "ssl")
+	secret := k8s.NewTLSSecret(key, crt, "https", "ssl-passthrough")
 	secret, err = cs.CoreV1().Secrets(k8s.Namespace).Create(context.Background(), secret, metav1.CreateOptions{})
 	if err != nil {
 		t.FailNow()
@@ -99,6 +78,18 @@ func Test_Https_Ssl_Offload(t *testing.T) {
 		t.FailNow()
 	}
 	defer cs.AppsV1().Deployments(deploy.Namespace).Delete(context.Background(), deploy.Name, metav1.DeleteOptions{})
+
+	svc, err = cs.CoreV1().Services(k8s.Namespace).Create(context.Background(), svc, metav1.CreateOptions{})
+	if err != nil {
+		t.FailNow()
+	}
+	defer cs.CoreV1().Services(svc.Namespace).Delete(context.Background(), svc.Name, metav1.DeleteOptions{})
+
+	ing, err = cs.NetworkingV1beta1().Ingresses(k8s.Namespace).Create(context.Background(), ing, metav1.CreateOptions{})
+	if err != nil {
+		t.FailNow()
+	}
+	defer cs.NetworkingV1beta1().Ingresses(ing.Namespace).Delete(context.Background(), ing.Name, metav1.DeleteOptions{})
 
 	caCertPool := x509.NewCertPool()
 	ca := k8s.GetCaOrFail(t, cs)

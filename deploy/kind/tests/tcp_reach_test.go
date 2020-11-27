@@ -24,7 +24,7 @@ import (
 	kindclient "github.com/haproxytech/kubernetes-ingress/deploy/kind/tests/client"
 )
 
-func Test_Tcp_Reach(t *testing.T) {
+func Test_TCP_Reach(t *testing.T) {
 	client := kindclient.NewClient("haproxy.org", 32766)
 
 	counter := map[string]int{}

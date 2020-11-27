@@ -217,7 +217,7 @@ func NewCertificateSigningRequest(name, release string, key *rsa.PrivateKey, dns
 	}
 }
 
-func NewTlsSecret(key *rsa.PrivateKey, cert []byte, name, release string) *corev1.Secret {
+func NewTLSSecret(key *rsa.PrivateKey, cert []byte, name, release string) *corev1.Secret {
 	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: fmt.Sprintf("%s-%s", name, release),
@@ -350,7 +350,7 @@ func NewProxyProtocol(name, release string) (deployment *appsv1.Deployment, svc 
 	return
 }
 
-func NewOffloadedSsl(name, release string) (deployment *appsv1.Deployment, svc *corev1.Service) {
+func NewSSLDeployment(name, release string) (deployment *appsv1.Deployment, svc *corev1.Service) {
 	deployment = &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: fmt.Sprintf("%s-%s", name, release),

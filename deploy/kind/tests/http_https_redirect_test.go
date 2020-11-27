@@ -37,7 +37,7 @@ import (
 	"github.com/haproxytech/kubernetes-ingress/deploy/kind/tests/k8s"
 )
 
-func Test_Https_Redirect(t *testing.T) {
+func Test_HTTPS_Redirect(t *testing.T) {
 	var err error
 
 	kindURL := os.Getenv("KIND_URL")
@@ -70,7 +70,7 @@ func Test_Https_Redirect(t *testing.T) {
 
 	crt := k8s.ApproveCSRAndGetCertificate(t, cs, csr)
 
-	secret := k8s.NewTlsSecret(key, crt, "podinfo", "tls-redirect")
+	secret := k8s.NewTLSSecret(key, crt, "podinfo", "tls-redirect")
 	secret, err = cs.CoreV1().Secrets(k8s.Namespace).Create(context.Background(), secret, metav1.CreateOptions{})
 	if err != nil {
 		t.FailNow()

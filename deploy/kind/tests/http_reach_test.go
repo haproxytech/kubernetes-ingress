@@ -34,7 +34,7 @@ type reachResponse struct {
 	Num     string
 }
 
-func Test_Http_Reach(t *testing.T) {
+func Test_HTTP_Reach(t *testing.T) {
 	for name, retries := range map[string]int{
 		"hr.haproxy": 8,
 		"fr.haproxy": 4,

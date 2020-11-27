@@ -32,7 +32,7 @@ import (
 	"github.com/haproxytech/kubernetes-ingress/deploy/kind/tests/k8s"
 )
 
-func Test_BasicAuth_Http(t *testing.T) {
+func Test_BasicAuth(t *testing.T) {
 	kindURL := os.Getenv("KIND_URL")
 	if kindURL == "" {
 		kindURL = "127.0.0.1"
