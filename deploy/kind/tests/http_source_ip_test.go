@@ -52,6 +52,7 @@ func Test_Set_Source_Ip(t *testing.T) {
 			var err error
 
 			cs := k8s.New(t)
+			resourceName := "src-ip-header-" + strings.ToLower(tc.HeaderName)
 
 			cm, err := cs.CoreV1().ConfigMaps("haproxy-controller").Get(context.Background(), "haproxy-configmap", metav1.GetOptions{})
 			if err != nil {
@@ -73,9 +74,9 @@ func Test_Set_Source_Ip(t *testing.T) {
 				}
 			}()
 
-			deploy := k8s.NewDeployment("src-ip-header", strings.ToLower(tc.HeaderName))
-			svc := k8s.NewService("src-ip-header", strings.ToLower(tc.HeaderName))
-			ing := k8s.NewIngress("src-ip-header", strings.ToLower(tc.HeaderName), "/")
+			deploy := k8s.NewDeployment(resourceName)
+			svc := k8s.NewService(resourceName)
+			ing := k8s.NewIngress(resourceName, "/")
 
 			deploy, err = cs.AppsV1().Deployments(k8s.Namespace).Create(context.Background(), deploy, metav1.CreateOptions{})
 			if err != nil {

@@ -36,20 +36,20 @@ func Test_Rate_Limiting(t *testing.T) {
 		limitRequests    int
 		customStatusCode int
 	}
-
-	for name, tc := range map[string]tc{
+	for testName, tc := range map[string]tc{
 		"5s-5":        {5 * time.Second, 5, http.StatusForbidden},
 		"10s-100":     {10 * time.Second, 100, http.StatusForbidden},
 		"custom-code": {5 * time.Second, 1, http.StatusTooManyRequests},
 	} {
-		t.Run(name, func(t *testing.T) {
+		t.Run(testName, func(t *testing.T) {
 			var err error
 
 			cs := k8s.New(t)
+			resourceName := "rate-limit-" + testName
 
-			deploy := k8s.NewDeployment("podinfo", name)
-			svc := k8s.NewService("podinfo", name)
-			ing := k8s.NewIngress("podinfo", name, "/")
+			deploy := k8s.NewDeployment(resourceName)
+			svc := k8s.NewService(resourceName)
+			ing := k8s.NewIngress(resourceName, "/")
 			k8s.AddAnnotations(ing, map[string]string{
 				"rate-limit-period":      tc.limitPeriod.String(),
 				"rate-limit-requests":    fmt.Sprintf("%d", tc.limitRequests),

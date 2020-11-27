@@ -33,12 +33,13 @@ func Test_Send_Proxy(t *testing.T) {
 	var err error
 
 	cs := k8s.New(t)
+	resourceName := "send-proxy"
 
-	deploy, svc := k8s.NewProxyProtocol("proxy", "v1")
+	deploy, svc := k8s.NewProxyProtocol(resourceName)
 	svc.SetAnnotations(map[string]string{
 		"send-proxy-protocol": "proxy-v1",
 	})
-	ing := k8s.NewIngress("proxy", "v1", "/")
+	ing := k8s.NewIngress(resourceName, "/")
 
 	deploy, err = cs.AppsV1().Deployments(k8s.Namespace).Create(context.Background(), deploy, metav1.CreateOptions{})
 	if err != nil {

@@ -21,7 +21,6 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"net/http"
-	"strings"
 	"testing"
 	"time"
 
@@ -33,14 +32,14 @@ import (
 )
 
 func Test_Set_Host(t *testing.T) {
-	for _, host := range []string{"host.haproxy", "foo.haproxy", "bar.tld"} {
+	for _, host := range []string{"host", "foo", "bar"} {
 		t.Run(host, func(t *testing.T) {
-			name := strings.Replace(host, ".", "-", -1)
 			var err error
 
 			cs := k8s.New(t)
+			resourceName := "http-set-host-" + host
 
-			deploy := k8s.NewDeployment("http-echo", name)
+			deploy := k8s.NewDeployment(resourceName)
 			k8s.EditPodImage(deploy, "ealen/echo-server:latest")
 			k8s.EditPodCommand(deploy)
 			k8s.EditPodExposedPort(deploy, 80)
@@ -50,7 +49,7 @@ func Test_Set_Host(t *testing.T) {
 			}
 			defer cs.AppsV1().Deployments(deploy.Namespace).Delete(context.Background(), deploy.Name, metav1.DeleteOptions{})
 
-			svc := k8s.NewService("http-echo", name)
+			svc := k8s.NewService(resourceName)
 			k8s.EditServicePort(svc, 80)
 			svc, err = cs.CoreV1().Services(k8s.Namespace).Create(context.Background(), svc, metav1.CreateOptions{})
 			if err != nil {
@@ -58,7 +57,7 @@ func Test_Set_Host(t *testing.T) {
 			}
 			defer cs.CoreV1().Services(svc.Namespace).Delete(context.Background(), svc.Name, metav1.DeleteOptions{})
 
-			ing := k8s.NewIngress("http-echo", name, "/")
+			ing := k8s.NewIngress(resourceName, "/")
 			k8s.AddAnnotations(ing, map[string]string{
 				"set-host": host,
 			})

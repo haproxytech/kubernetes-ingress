@@ -46,14 +46,15 @@ func Test_HTTPS_Redirect(t *testing.T) {
 	}
 
 	cs := k8s.New(t)
+	resourceName := "https-redirect"
 
-	deploy := k8s.NewDeployment("podinfo", "tls-redirect")
-	svc := k8s.NewService("podinfo", "tls-redirect")
-	ing := k8s.NewIngress("podinfo", "tls-redirect", "/")
+	deploy := k8s.NewDeployment(resourceName)
+	svc := k8s.NewService(resourceName)
+	ing := k8s.NewIngress(resourceName, "/")
 	ing.Spec.TLS = []networkngv1beta1.IngressTLS{
 		{
-			Hosts:      []string{"podinfo-https.haproxy"},
-			SecretName: "podinfo-https",
+			Hosts:      []string{resourceName + ".haproxy"},
+			SecretName: resourceName,
 		},
 	}
 
@@ -61,7 +62,7 @@ func Test_HTTPS_Redirect(t *testing.T) {
 	if err != nil {
 		t.FailNow()
 	}
-	csr := k8s.NewCertificateSigningRequest("podinfo", "tls-redirect", key, ing.Spec.TLS[0].Hosts...)
+	csr := k8s.NewCertificateSigningRequest(resourceName, key, ing.Spec.TLS[0].Hosts...)
 	csr, err = cs.CertificatesV1beta1().CertificateSigningRequests().Create(context.TODO(), csr, metav1.CreateOptions{})
 	if err != nil {
 		t.FailNow()
@@ -70,7 +71,7 @@ func Test_HTTPS_Redirect(t *testing.T) {
 
 	crt := k8s.ApproveCSRAndGetCertificate(t, cs, csr)
 
-	secret := k8s.NewTLSSecret(key, crt, "podinfo", "tls-redirect")
+	secret := k8s.NewTLSSecret(key, crt, resourceName)
 	secret, err = cs.CoreV1().Secrets(k8s.Namespace).Create(context.Background(), secret, metav1.CreateOptions{})
 	if err != nil {
 		t.FailNow()

@@ -39,18 +39,19 @@ func Test_BasicAuth(t *testing.T) {
 	}
 
 	cs := k8s.New(t)
+	resourceName := "basic-auth"
 
 	var err error
-	deploy := k8s.NewDeployment("basic-auth", "http")
-	svc := k8s.NewService("basic-auth", "http")
+	deploy := k8s.NewDeployment(resourceName)
+	svc := k8s.NewService(resourceName)
 	secret := k8s.NewSecret(map[string][]byte{
 		// password is `password`, hashed according to method
 		"md5":     []byte("$1$oGq7nTAf$rS1vV2Gu8dEGKhTvRKRoC/"),
 		"des":     []byte("mskYxuygva2Ys"),
 		"sha-256": []byte("$5$6If.AXwtflzSAt.v$akOQ2JHGivXo5T44bKfNEQdl.X43sGicKw5fvR4ZjN2"),
 		"sha-512": []byte("$6$l39Jw4XfZOFzEJ9f$PduN9WJLBZbZz88H.M4DuT/yC2yXcXCIFor8vHafMlqkXJ0PVPW4TtZHhAMAtyexLKCwDb.o9XEzxYyljYaOS1"),
-	}, "basic-auth", "http")
-	ing := k8s.NewIngress("basic-auth", "http", "/")
+	}, resourceName)
+	ing := k8s.NewIngress(resourceName, "/")
 	k8s.AddAnnotations(ing, map[string]string{
 		"auth-type":   "basic-auth",
 		"auth-secret": secret.Name,

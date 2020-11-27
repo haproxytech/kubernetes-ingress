@@ -38,17 +38,17 @@ func Test_Request_Set_Header(t *testing.T) {
 		name  string
 		value string
 	}
-
-	for name, tc := range map[string]tc{
-		`Cache-Control "no-store,no-cache,private"`:    {"Cache-Control", "no-store,no-cache,private"},
-		`X-Custom-Header "haproxy-ingress-controller"`: {"X-Custom-Header", "haproxy-ingress-controller"},
+	for header, tc := range map[string]tc{
+		"cache-control":   {"Cache-Control", "no-store,no-cache,private"},
+		"x-custom-header": {"X-Custom-Header", "haproxy-ingress-controller"},
 	} {
-		t.Run(name, func(t *testing.T) {
+		t.Run(header, func(t *testing.T) {
 			var err error
 
 			cs := k8s.New(t)
+			resourceName := "http-req-set-header-" + header
 
-			deploy := k8s.NewDeployment("http-echo", strings.ToLower(tc.name))
+			deploy := k8s.NewDeployment(resourceName)
 			k8s.EditPodImage(deploy, "ealen/echo-server:latest")
 			k8s.EditPodCommand(deploy)
 			k8s.EditPodExposedPort(deploy, 80)
@@ -58,7 +58,7 @@ func Test_Request_Set_Header(t *testing.T) {
 			}
 			defer cs.AppsV1().Deployments(deploy.Namespace).Delete(context.Background(), deploy.Name, metav1.DeleteOptions{})
 
-			svc := k8s.NewService("http-echo", strings.ToLower(tc.name))
+			svc := k8s.NewService(resourceName)
 			k8s.EditServicePort(svc, 80)
 			svc, err = cs.CoreV1().Services(k8s.Namespace).Create(context.Background(), svc, metav1.CreateOptions{})
 			if err != nil {
@@ -66,9 +66,9 @@ func Test_Request_Set_Header(t *testing.T) {
 			}
 			defer cs.CoreV1().Services(svc.Namespace).Delete(context.Background(), svc.Name, metav1.DeleteOptions{})
 
-			ing := k8s.NewIngress("http-echo", strings.ToLower(tc.name), "/")
+			ing := k8s.NewIngress(resourceName, "/")
 			k8s.AddAnnotations(ing, map[string]string{
-				"request-set-header": fmt.Sprintf("%s %q", strings.ToLower(tc.name), tc.value),
+				"request-set-header": fmt.Sprintf("%s %q", tc.name, tc.value),
 			})
 			ing, err = cs.NetworkingV1beta1().Ingresses(k8s.Namespace).Create(context.Background(), ing, metav1.CreateOptions{})
 			if err != nil {
@@ -128,22 +128,21 @@ func Test_Response_Set_Header(t *testing.T) {
 		name  string
 		value string
 	}
-
-	for name, tc := range map[string]tc{
-		`Cache-Control "no-store,no-cache,private"`:    {"Cache-Control", "no-store,no-cache,private"},
-		`X-Custom-Header "haproxy-ingress-controller"`: {"X-Custom-Header", "haproxy-ingress-controller"},
+	for header, tc := range map[string]tc{
+		"cache-control":   {"Cache-Control", "no-store,no-cache,private"},
+		"x-custom-header": {"X-Custom-Header", "haproxy-ingress-controller"},
 	} {
-		t.Run(name, func(t *testing.T) {
+		t.Run(header, func(t *testing.T) {
 			var err error
+			cs := k8s.New(t)
+			resourceName := "http-res-set-header" + header
 
-			deploy := k8s.NewDeployment("podinfo", strings.ToLower(tc.name))
-			svc := k8s.NewService("podinfo", strings.ToLower(tc.name))
-			ing := k8s.NewIngress("podinfo", strings.ToLower(tc.name), "/")
+			deploy := k8s.NewDeployment(resourceName)
+			svc := k8s.NewService(resourceName)
+			ing := k8s.NewIngress(resourceName, "/")
 			k8s.AddAnnotations(ing, map[string]string{
 				"response-set-header": fmt.Sprintf("%s %q", strings.ToLower(tc.name), tc.value),
 			})
-
-			cs := k8s.New(t)
 
 			deploy, err = cs.AppsV1().Deployments(k8s.Namespace).Create(context.Background(), deploy, metav1.CreateOptions{})
 			if err != nil {

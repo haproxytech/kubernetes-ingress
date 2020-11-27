@@ -50,14 +50,15 @@ func Test_HTTPS_Offload(t *testing.T) {
 	var err error
 
 	cs := k8s.New(t)
+	resourceName := "https-offload"
 
-	deploy := k8s.NewDeployment("podinfo", "https")
-	svc := k8s.NewService("podinfo", "https")
-	ing := k8s.NewIngress("podinfo", "https", "/")
+	deploy := k8s.NewDeployment(resourceName)
+	svc := k8s.NewService(resourceName)
+	ing := k8s.NewIngress(resourceName, "/")
 	ing.Spec.TLS = []networkingv1beta1.IngressTLS{
 		{
-			Hosts:      []string{"podinfo-https.haproxy"},
-			SecretName: "podinfo-https",
+			Hosts:      []string{resourceName + ".haproxy"},
+			SecretName: resourceName,
 		},
 	}
 
@@ -65,7 +66,7 @@ func Test_HTTPS_Offload(t *testing.T) {
 	if err != nil {
 		t.FailNow()
 	}
-	csr := k8s.NewCertificateSigningRequest("podinfo", "https", key, ing.Spec.TLS[0].Hosts...)
+	csr := k8s.NewCertificateSigningRequest(resourceName, key, ing.Spec.Rules[0].Host)
 	csr, err = cs.CertificatesV1beta1().CertificateSigningRequests().Create(context.TODO(), csr, metav1.CreateOptions{})
 	if err != nil {
 		t.FailNow()
@@ -74,7 +75,7 @@ func Test_HTTPS_Offload(t *testing.T) {
 
 	crt := k8s.ApproveCSRAndGetCertificate(t, cs, csr)
 
-	secret := k8s.NewTLSSecret(key, crt, "podinfo", "https")
+	secret := k8s.NewTLSSecret(key, crt, resourceName)
 	secret, err = cs.CoreV1().Secrets(k8s.Namespace).Create(context.Background(), secret, metav1.CreateOptions{})
 	if err != nil {
 		t.FailNow()

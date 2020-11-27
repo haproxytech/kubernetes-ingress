@@ -48,9 +48,10 @@ func Test_HTTPS_Passthrough(t *testing.T) {
 	var err error
 
 	cs := k8s.New(t)
+	resourceName := "https-passthrough"
 
-	deploy, svc := k8s.NewSSLDeployment("https", "ssl-passthrough")
-	ing := k8s.NewIngress("https", "ssl-passthrough", "/")
+	deploy, svc := k8s.NewSSLDeployment(resourceName)
+	ing := k8s.NewIngress(resourceName, "/")
 	a := ing.GetAnnotations()
 	a["haproxy.org/ssl-passthrough"] = "true"
 	ing.SetAnnotations(a)
@@ -59,14 +60,14 @@ func Test_HTTPS_Passthrough(t *testing.T) {
 	if err != nil {
 		t.FailNow()
 	}
-	csr := k8s.NewCertificateSigningRequest("https", "ssl-passthrough", key, ing.Spec.Rules[0].Host)
+	csr := k8s.NewCertificateSigningRequest(resourceName, key, ing.Spec.Rules[0].Host)
 	csr, err = cs.CertificatesV1beta1().CertificateSigningRequests().Create(context.Background(), csr, metav1.CreateOptions{})
 	if err != nil {
 		t.FailNow()
 	}
 	defer cs.CertificatesV1beta1().CertificateSigningRequests().Delete(context.Background(), csr.Name, metav1.DeleteOptions{})
 	crt := k8s.ApproveCSRAndGetCertificate(t, cs, csr)
-	secret := k8s.NewTLSSecret(key, crt, "https", "ssl-passthrough")
+	secret := k8s.NewTLSSecret(key, crt, resourceName)
 	secret, err = cs.CoreV1().Secrets(k8s.Namespace).Create(context.Background(), secret, metav1.CreateOptions{})
 	if err != nil {
 		t.FailNow()

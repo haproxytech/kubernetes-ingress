@@ -74,10 +74,10 @@ func AddAnnotations(ing metav1.Object, additionals map[string]string) {
 	ing.SetAnnotations(a)
 }
 
-func NewIngress(name, release, path string) *networkingv1beta1.Ingress {
+func NewIngress(name, path string) *networkingv1beta1.Ingress {
 	return &networkingv1beta1.Ingress{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: fmt.Sprintf("%s-%s", name, release),
+			Name: name,
 			Annotations: map[string]string{
 				"ingress.class": "haproxy",
 			},
@@ -85,14 +85,14 @@ func NewIngress(name, release, path string) *networkingv1beta1.Ingress {
 		Spec: networkingv1beta1.IngressSpec{
 			Rules: []networkingv1beta1.IngressRule{
 				{
-					Host: fmt.Sprintf("%s-%s.haproxy", name, release),
+					Host: name,
 					IngressRuleValue: networkingv1beta1.IngressRuleValue{
 						HTTP: &networkingv1beta1.HTTPIngressRuleValue{
 							Paths: []networkingv1beta1.HTTPIngressPath{
 								{
 									Path: path,
 									Backend: networkingv1beta1.IngressBackend{
-										ServiceName: fmt.Sprintf("%s-%s", name, release),
+										ServiceName: name,
 										ServicePort: intstr.FromString("http"),
 									},
 								},
@@ -109,10 +109,10 @@ func EditServicePort(service *corev1.Service, port int32) {
 	service.Spec.Ports[0].Port = port
 }
 
-func NewService(name, release string) *corev1.Service {
+func NewService(name string) *corev1.Service {
 	return &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: fmt.Sprintf("%s-%s", name, release),
+			Name: name,
 		},
 		Spec: corev1.ServiceSpec{
 			Ports: []corev1.ServicePort{
@@ -124,29 +124,29 @@ func NewService(name, release string) *corev1.Service {
 				},
 			},
 			Selector: map[string]string{
-				"app": fmt.Sprintf("%s-%s", name, release),
+				"app": name,
 			},
 			Type: corev1.ServiceTypeClusterIP,
 		},
 	}
 }
 
-func NewDeployment(name, release string) *appsv1.Deployment {
+func NewDeployment(name string) *appsv1.Deployment {
 	return &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: fmt.Sprintf("%s-%s", name, release),
+			Name: name,
 		},
 		Spec: appsv1.DeploymentSpec{
 			Replicas: pointer.Int32Ptr(1),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
-					"app": fmt.Sprintf("%s-%s", name, release),
+					"app": name,
 				},
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: map[string]string{
-						"app": fmt.Sprintf("%s-%s", name, release),
+						"app": name,
 					},
 				},
 				Spec: corev1.PodSpec{
@@ -188,7 +188,7 @@ func EditPodExposedPort(deployment *appsv1.Deployment, port int32) {
 	deployment.Spec.Template.Spec.Containers[0].Ports[0].ContainerPort = port
 }
 
-func NewCertificateSigningRequest(name, release string, key *rsa.PrivateKey, dnsNames ...string) *certificatesv1beta1.CertificateSigningRequest {
+func NewCertificateSigningRequest(name string, key *rsa.PrivateKey, dnsNames ...string) *certificatesv1beta1.CertificateSigningRequest {
 	tpl := x509.CertificateRequest{
 		Subject: pkix.Name{
 			CommonName: dnsNames[0],
@@ -203,7 +203,7 @@ func NewCertificateSigningRequest(name, release string, key *rsa.PrivateKey, dns
 	certificateRequestBytes := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE REQUEST", Bytes: csrBytes})
 	return &certificatesv1beta1.CertificateSigningRequest{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: fmt.Sprintf("%s-%s", name, release),
+			Name: name,
 		},
 		Spec: certificatesv1beta1.CertificateSigningRequestSpec{
 			Groups:  []string{"system:authenticated"},
@@ -217,10 +217,10 @@ func NewCertificateSigningRequest(name, release string, key *rsa.PrivateKey, dns
 	}
 }
 
-func NewTLSSecret(key *rsa.PrivateKey, cert []byte, name, release string) *corev1.Secret {
+func NewTLSSecret(key *rsa.PrivateKey, cert []byte, name string) *corev1.Secret {
 	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: fmt.Sprintf("%s-%s", name, release),
+			Name: name,
 		},
 		Data: map[string][]byte{
 			"tls.crt": cert,
@@ -229,10 +229,10 @@ func NewTLSSecret(key *rsa.PrivateKey, cert []byte, name, release string) *corev
 	}
 }
 
-func NewSecret(keyVal map[string][]byte, name, release string) (secret *corev1.Secret) {
+func NewSecret(keyVal map[string][]byte, name string) (secret *corev1.Secret) {
 	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: fmt.Sprintf("%s-%s", name, release),
+			Name: name,
 		},
 		Data: keyVal,
 	}
@@ -292,22 +292,22 @@ func ApproveCSRAndGetCertificate(t *testing.T, clientset *kubernetes.Clientset, 
 // quay.io/prometherion/proxy-protocol-app:latest is available here:
 // https://github.com/prometherion/test-app
 // TODO: evaluate to host the sample apps source-code in the HAProxy GitHub org
-func NewProxyProtocol(name, release string) (deployment *appsv1.Deployment, svc *corev1.Service) {
+func NewProxyProtocol(name string) (deployment *appsv1.Deployment, svc *corev1.Service) {
 	deployment = &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: fmt.Sprintf("%s-%s", name, release),
+			Name: name,
 		},
 		Spec: appsv1.DeploymentSpec{
 			Replicas: pointer.Int32Ptr(1),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
-					"app": fmt.Sprintf("%s-%s", name, release),
+					"app": name,
 				},
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: map[string]string{
-						"app": fmt.Sprintf("%s-%s", name, release),
+						"app": name,
 					},
 				},
 				Spec: corev1.PodSpec{
@@ -330,7 +330,7 @@ func NewProxyProtocol(name, release string) (deployment *appsv1.Deployment, svc 
 	}
 	svc = &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: fmt.Sprintf("%s-%s", name, release),
+			Name: name,
 		},
 		Spec: corev1.ServiceSpec{
 			Ports: []corev1.ServicePort{
@@ -342,7 +342,7 @@ func NewProxyProtocol(name, release string) (deployment *appsv1.Deployment, svc 
 				},
 			},
 			Selector: map[string]string{
-				"app": fmt.Sprintf("%s-%s", name, release),
+				"app": name,
 			},
 			Type: corev1.ServiceTypeClusterIP,
 		},
@@ -350,22 +350,22 @@ func NewProxyProtocol(name, release string) (deployment *appsv1.Deployment, svc 
 	return
 }
 
-func NewSSLDeployment(name, release string) (deployment *appsv1.Deployment, svc *corev1.Service) {
+func NewSSLDeployment(name string) (deployment *appsv1.Deployment, svc *corev1.Service) {
 	deployment = &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: fmt.Sprintf("%s-%s", name, release),
+			Name: name,
 		},
 		Spec: appsv1.DeploymentSpec{
 			Replicas: pointer.Int32Ptr(1),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
-					"app": fmt.Sprintf("%s-%s", name, release),
+					"app": name,
 				},
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: map[string]string{
-						"app": fmt.Sprintf("%s-%s", name, release),
+						"app": name,
 					},
 				},
 				Spec: corev1.PodSpec{
@@ -396,7 +396,7 @@ func NewSSLDeployment(name, release string) (deployment *appsv1.Deployment, svc 
 							Name: "certs",
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
-									SecretName: fmt.Sprintf("%s-%s", name, release),
+									SecretName: name,
 								},
 							},
 						},
@@ -407,7 +407,7 @@ func NewSSLDeployment(name, release string) (deployment *appsv1.Deployment, svc 
 	}
 	svc = &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: fmt.Sprintf("%s-%s", name, release),
+			Name: name,
 		},
 		Spec: corev1.ServiceSpec{
 			Ports: []corev1.ServicePort{
@@ -419,7 +419,7 @@ func NewSSLDeployment(name, release string) (deployment *appsv1.Deployment, svc 
 				},
 			},
 			Selector: map[string]string{
-				"app": fmt.Sprintf("%s-%s", name, release),
+				"app": name,
 			},
 			Type: corev1.ServiceTypeClusterIP,
 		},

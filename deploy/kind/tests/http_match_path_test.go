@@ -32,24 +32,21 @@ import (
 	"github.com/haproxytech/kubernetes-ingress/deploy/kind/tests/k8s"
 )
 
-func Test_MatchPath(t *testing.T) {
-	type ts struct {
-		name    string
-		release string
-	}
-	for path, ts := range map[string]ts{
-		"/api/v1/apps/uuid": {name: "api", release: "uuid"},
-		"/api/v1/apps":      {name: "api", release: "apps"},
-		"/api/v1":           {name: "api", release: "v1"},
-		"/api":              {name: "api", release: "api"},
+func Test_Http_MatchPath(t *testing.T) {
+	for path, app := range map[string]string{
+		"/api/v1/apps/uuid": "uuid",
+		"/api/v1/apps":      "apps",
+		"/api/v1":           "v1",
+		"/api":              "api",
 	} {
-		t.Run(path, func(t *testing.T) {
+		t.Run(app, func(t *testing.T) {
 			cs := k8s.New(t)
+			resourceName := "ingress-match-path-" + app
 
 			var err error
-			deploy := k8s.NewDeployment(ts.name, ts.release)
-			svc := k8s.NewService(ts.name, ts.release)
-			ing := k8s.NewIngress(ts.name, ts.release, path)
+			deploy := k8s.NewDeployment(resourceName)
+			svc := k8s.NewService(resourceName)
+			ing := k8s.NewIngress(resourceName, path)
 			ing.Annotations["path-rewrite"] = fmt.Sprintf(`%s /\1`, path)
 
 			deploy, err = cs.AppsV1().Deployments(k8s.Namespace).Create(context.Background(), deploy, metav1.CreateOptions{})

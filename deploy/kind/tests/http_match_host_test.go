@@ -32,23 +32,15 @@ import (
 )
 
 func Test_MatchHost(t *testing.T) {
-	type ts struct {
-		name    string
-		release string
-	}
-	for name, ts := range map[string]ts{
-		"foo":  {name: "podinfo", release: "foo"},
-		"bar":  {name: "podinfo", release: "bar"},
-		"bizz": {name: "podinfo", release: "bizz"},
-		"buzz": {name: "podinfo", release: "buzz"},
-	} {
-		t.Run(name, func(t *testing.T) {
+	for _, host := range []string{"foo", "bar", "bizz", "buzz"} {
+		t.Run(host, func(t *testing.T) {
 			cs := k8s.New(t)
+			resourceName := "ingress-match-host-" + host
 
 			var err error
-			deploy := k8s.NewDeployment(ts.name, ts.release)
-			svc := k8s.NewService(ts.name, ts.release)
-			ing := k8s.NewIngress(ts.name, ts.release, "/")
+			deploy := k8s.NewDeployment(resourceName)
+			svc := k8s.NewService(resourceName)
+			ing := k8s.NewIngress(resourceName, "/")
 
 			deploy, err = cs.AppsV1().Deployments(k8s.Namespace).Create(context.Background(), deploy, metav1.CreateOptions{})
 			if err != nil {
