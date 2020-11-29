@@ -102,8 +102,10 @@ func Test_HTTPS_Offload(t *testing.T) {
 
 	ca := k8s.GetCaOrFail(t, cs)
 
-	type podInfoResponse struct {
-		Hostname string `json:"hostname"`
+	type echoServerResponse struct {
+		OS struct {
+			Hostname string `json:"hostname"`
+		} `json:"os"`
 	}
 
 	caCertPool := x509.NewCertPool()
@@ -149,12 +151,12 @@ func Test_HTTPS_Offload(t *testing.T) {
 			return false
 		}
 
-		response := &podInfoResponse{}
+		response := &echoServerResponse{}
 		err = json.Unmarshal(body, response)
 		if err != nil {
 			return false
 		}
 
-		return strings.HasPrefix(response.Hostname, ing.Name)
+		return strings.HasPrefix(response.OS.Hostname, ing.Name)
 	}, time.Minute, time.Second)
 }

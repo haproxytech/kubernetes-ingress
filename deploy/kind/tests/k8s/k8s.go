@@ -42,9 +42,10 @@ import (
 var Namespace = "testing"
 
 type IngressRule struct {
-	Host    string
-	Path    string
-	Service string
+	Host        string
+	Path        string
+	Service     string
+	ServicePort string
 }
 
 func New(t *testing.T) *kubernetes.Clientset {
@@ -91,6 +92,10 @@ func NewIngress(name string, rules []IngressRule) *networkingv1beta1.Ingress {
 		Spec: networkingv1beta1.IngressSpec{},
 	}
 	for _, rule := range rules {
+		servicePort := "http"
+		if rule.ServicePort == "https" {
+			servicePort = "https"
+		}
 		ing.Spec.Rules = append(ing.Spec.Rules, networkingv1beta1.IngressRule{
 			Host: rule.Host,
 			IngressRuleValue: networkingv1beta1.IngressRuleValue{
@@ -100,7 +105,7 @@ func NewIngress(name string, rules []IngressRule) *networkingv1beta1.Ingress {
 							Path: rule.Path,
 							Backend: networkingv1beta1.IngressBackend{
 								ServiceName: rule.Service,
-								ServicePort: intstr.FromString("http"),
+								ServicePort: intstr.FromString(servicePort),
 							},
 						},
 					},
@@ -123,10 +128,16 @@ func NewService(name string) *corev1.Service {
 		Spec: corev1.ServiceSpec{
 			Ports: []corev1.ServicePort{
 				{
-					Port:       9898,
+					Port:       80,
 					TargetPort: intstr.FromString("http"),
 					Protocol:   corev1.ProtocolTCP,
 					Name:       "http",
+				},
+				{
+					Port:       443,
+					TargetPort: intstr.FromString("https"),
+					Protocol:   corev1.ProtocolTCP,
+					Name:       "https",
 				},
 			},
 			Selector: map[string]string{
@@ -159,18 +170,16 @@ func NewDeployment(name string) *appsv1.Deployment {
 					Containers: []corev1.Container{
 						{
 							Name:  name,
-							Image: "ghcr.io/stefanprodan/podinfo:5.0.1",
-							Command: []string{
-								"./podinfo",
-								"--port=9898",
-								"--level=info",
-								"--random-delay=false",
-								"--random-error=false",
-							},
+							Image: "mo3m3n/http-echo:latest",
 							Ports: []corev1.ContainerPort{
 								{
 									Name:          "http",
-									ContainerPort: 9898,
+									ContainerPort: 80,
+									Protocol:      corev1.ProtocolTCP,
+								},
+								{
+									Name:          "https",
+									ContainerPort: 443,
 									Protocol:      corev1.ProtocolTCP,
 								},
 							},
@@ -180,18 +189,6 @@ func NewDeployment(name string) *appsv1.Deployment {
 			},
 		},
 	}
-}
-
-func EditPodImage(deployment *appsv1.Deployment, image string) {
-	deployment.Spec.Template.Spec.Containers[0].Image = image
-}
-
-func EditPodCommand(deployment *appsv1.Deployment, command ...string) {
-	deployment.Spec.Template.Spec.Containers[0].Command = command
-}
-
-func EditPodExposedPort(deployment *appsv1.Deployment, port int32) {
-	deployment.Spec.Template.Spec.Containers[0].Ports[0].ContainerPort = port
 }
 
 func NewCertificateSigningRequest(name string, key *rsa.PrivateKey, dnsNames ...string) *certificatesv1beta1.CertificateSigningRequest {
@@ -342,83 +339,6 @@ func NewProxyProtocol(name string) (deployment *appsv1.Deployment, svc *corev1.S
 			Ports: []corev1.ServicePort{
 				{
 					Port:       8080,
-					TargetPort: intstr.FromString("http"),
-					Protocol:   corev1.ProtocolTCP,
-					Name:       "http",
-				},
-			},
-			Selector: map[string]string{
-				"app": name,
-			},
-			Type: corev1.ServiceTypeClusterIP,
-		},
-	}
-	return
-}
-
-func NewSSLDeployment(name string) (deployment *appsv1.Deployment, svc *corev1.Service) {
-	deployment = &appsv1.Deployment{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: name,
-		},
-		Spec: appsv1.DeploymentSpec{
-			Replicas: pointer.Int32Ptr(1),
-			Selector: &metav1.LabelSelector{
-				MatchLabels: map[string]string{
-					"app": name,
-				},
-			},
-			Template: corev1.PodTemplateSpec{
-				ObjectMeta: metav1.ObjectMeta{
-					Labels: map[string]string{
-						"app": name,
-					},
-				},
-				Spec: corev1.PodSpec{
-					Containers: []corev1.Container{
-						{
-							Name:  name,
-							Image: "quay.io/prometherion/simple-https-listener:latest",
-							Args: []string{
-								"--listening-port=8443",
-							},
-							Ports: []corev1.ContainerPort{
-								{
-									Name:          "http",
-									ContainerPort: 8443,
-									Protocol:      corev1.ProtocolTCP,
-								},
-							},
-							VolumeMounts: []corev1.VolumeMount{
-								{
-									Name:      "certs",
-									MountPath: "/opt/simple-https-listener",
-								},
-							},
-						},
-					},
-					Volumes: []corev1.Volume{
-						{
-							Name: "certs",
-							VolumeSource: corev1.VolumeSource{
-								Secret: &corev1.SecretVolumeSource{
-									SecretName: name,
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-	}
-	svc = &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: name,
-		},
-		Spec: corev1.ServiceSpec{
-			Ports: []corev1.ServicePort{
-				{
-					Port:       8443,
 					TargetPort: intstr.FromString("http"),
 					Protocol:   corev1.ProtocolTCP,
 					Name:       "http",

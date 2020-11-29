@@ -61,8 +61,10 @@ func Test_MatchHost(t *testing.T) {
 			defer cs.NetworkingV1beta1().Ingresses(ing.Namespace).Delete(context.Background(), ing.Name, metav1.DeleteOptions{})
 
 			assert.Eventually(t, func() bool {
-				type podInfoResponse struct {
-					Hostname string `json:"hostname"`
+				type echoServerResponse struct {
+					OS struct {
+						Hostname string `json:"hostname"`
+					} `json:"os"`
 				}
 
 				client := kindclient.New(ing.Spec.Rules[0].Host)
@@ -77,12 +79,12 @@ func Test_MatchHost(t *testing.T) {
 					return false
 				}
 
-				response := &podInfoResponse{}
+				response := &echoServerResponse{}
 				if err := json.Unmarshal(body, response); err != nil {
 					return false
 				}
 
-				return strings.HasPrefix(response.Hostname, ing.Name)
+				return strings.HasPrefix(response.OS.Hostname, ing.Name)
 			}, time.Minute, time.Second)
 		})
 	}

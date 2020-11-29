@@ -40,9 +40,6 @@ func Test_Set_Host(t *testing.T) {
 			resourceName := "http-set-host-" + host
 
 			deploy := k8s.NewDeployment(resourceName)
-			k8s.EditPodImage(deploy, "ealen/echo-server:latest")
-			k8s.EditPodCommand(deploy)
-			k8s.EditPodExposedPort(deploy, 80)
 			deploy, err = cs.AppsV1().Deployments(k8s.Namespace).Create(context.Background(), deploy, metav1.CreateOptions{})
 			if err != nil {
 				t.FailNow()
@@ -90,26 +87,21 @@ func Test_Set_Host(t *testing.T) {
 					return false
 				}
 
-				type echo struct {
-					Request struct {
-						Headers map[string]string `json:"headers"`
-					} `json:"request"`
+				type echoServerResponse struct {
+					HTTP struct {
+						Host string `json:"host"`
+					} `json:"http"`
 				}
 
-				e := &echo{}
+				e := &echoServerResponse{}
 
 				if err := json.Unmarshal(b, e); err != nil {
 					return false
 				}
 
-				v, ok := e.Request.Headers["host"]
-
-				if !ok {
-					return false
-				}
-
-				return v == host
+				return e.HTTP.Host == host
 			}, time.Minute, time.Second)
 		})
+		break
 	}
 }

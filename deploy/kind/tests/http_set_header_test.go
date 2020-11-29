@@ -49,9 +49,6 @@ func Test_Request_Set_Header(t *testing.T) {
 			resourceName := "http-req-set-header-" + header
 
 			deploy := k8s.NewDeployment(resourceName)
-			k8s.EditPodImage(deploy, "ealen/echo-server:latest")
-			k8s.EditPodCommand(deploy)
-			k8s.EditPodExposedPort(deploy, 80)
 			deploy, err = cs.AppsV1().Deployments(k8s.Namespace).Create(context.Background(), deploy, metav1.CreateOptions{})
 			if err != nil {
 				t.FailNow()
@@ -100,9 +97,9 @@ func Test_Request_Set_Header(t *testing.T) {
 				}
 
 				type echo struct {
-					Request struct {
+					HTTP struct {
 						Headers map[string]string `json:"headers"`
-					} `json:"request"`
+					} `json:"http"`
 				}
 
 				e := &echo{}
@@ -111,7 +108,7 @@ func Test_Request_Set_Header(t *testing.T) {
 					return false
 				}
 
-				v, ok := e.Request.Headers[strings.ToLower(tc.name)]
+				v, ok := e.HTTP.Headers[tc.name]
 
 				if !ok {
 					return false

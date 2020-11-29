@@ -19,7 +19,6 @@ package tests
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"strings"
 	"testing"
@@ -47,7 +46,6 @@ func Test_Http_MatchPath(t *testing.T) {
 			deploy := k8s.NewDeployment(resourceName)
 			svc := k8s.NewService(resourceName)
 			ing := k8s.NewIngress(resourceName, []k8s.IngressRule{{Host: resourceName, Path: "/", Service: resourceName}})
-			ing.Annotations["path-rewrite"] = fmt.Sprintf(`%s /\1`, path)
 
 			deploy, err = cs.AppsV1().Deployments(k8s.Namespace).Create(context.Background(), deploy, metav1.CreateOptions{})
 			if err != nil {
@@ -68,8 +66,10 @@ func Test_Http_MatchPath(t *testing.T) {
 			defer cs.NetworkingV1beta1().Ingresses(ing.Namespace).Delete(context.Background(), ing.Name, metav1.DeleteOptions{})
 
 			assert.Eventually(t, func() bool {
-				type podInfoResponse struct {
-					Hostname string `json:"hostname"`
+				type echoServerResponse struct {
+					OS struct {
+						Hostname string `json:"hostname"`
+					} `json:"os"`
 				}
 
 				client := kindclient.New(ing.Spec.Rules[0].Host)
@@ -84,12 +84,12 @@ func Test_Http_MatchPath(t *testing.T) {
 					return false
 				}
 
-				response := &podInfoResponse{}
+				response := &echoServerResponse{}
 				if err := json.Unmarshal(body, response); err != nil {
 					return false
 				}
 
-				return strings.HasPrefix(response.Hostname, ing.Name)
+				return strings.HasPrefix(response.OS.Hostname, ing.Name)
 			}, time.Minute, time.Second)
 		})
 	}

@@ -62,8 +62,10 @@ func Test_Endpoint_Update(t *testing.T) {
 	}
 	defer cs.NetworkingV1beta1().Ingresses(ing.Namespace).Delete(context.Background(), ing.Name, metav1.DeleteOptions{})
 
-	type podInfoResponse struct {
-		Hostname string `json:"hostname"`
+	type echoServerResponse struct {
+		OS struct {
+			Hostname string `json:"hostname"`
+		} `json:"os"`
 	}
 
 	// waiting the Ingress is handled correctly
@@ -125,15 +127,15 @@ func Test_Endpoint_Update(t *testing.T) {
 					return false
 				}
 
-				response := &podInfoResponse{}
+				response := &echoServerResponse{}
 				if err := json.Unmarshal(body, response); err != nil {
 					return false
 				}
 
-				h, ok := registry[response.Hostname]
+				h, ok := registry[response.OS.Hostname]
 				if ok && h == false {
 					counter++
-					registry[response.Hostname] = true
+					registry[response.OS.Hostname] = true
 				}
 				if !ok {
 					t.Fatal("load-balancing to wrong pod")

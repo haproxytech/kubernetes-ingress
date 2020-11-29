@@ -18,17 +18,14 @@ package tests
 
 import (
 	"context"
-	"crypto/rand"
-	"crypto/rsa"
 	"crypto/tls"
-	"crypto/x509"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net"
 	h "net/http"
 	"net/url"
 	"os"
-	"strings"
 	"testing"
 	"time"
 
@@ -50,29 +47,17 @@ func Test_HTTPS_Passthrough(t *testing.T) {
 	cs := k8s.New(t)
 	resourceName := "https-passthrough"
 
-	deploy, svc := k8s.NewSSLDeployment(resourceName)
-	ing := k8s.NewIngress(resourceName, []k8s.IngressRule{{Host: resourceName, Path: "/", Service: resourceName}})
+	deploy := k8s.NewDeployment(resourceName)
+	svc := k8s.NewService(resourceName)
+	ing := k8s.NewIngress(resourceName, []k8s.IngressRule{{
+		Host:        resourceName,
+		Path:        "/",
+		Service:     resourceName,
+		ServicePort: "https",
+	}})
 	a := ing.GetAnnotations()
 	a["haproxy.org/ssl-passthrough"] = "true"
 	ing.SetAnnotations(a)
-
-	key, err := rsa.GenerateKey(rand.Reader, 1024)
-	if err != nil {
-		t.FailNow()
-	}
-	csr := k8s.NewCertificateSigningRequest(resourceName, key, ing.Spec.Rules[0].Host)
-	csr, err = cs.CertificatesV1beta1().CertificateSigningRequests().Create(context.Background(), csr, metav1.CreateOptions{})
-	if err != nil {
-		t.FailNow()
-	}
-	defer cs.CertificatesV1beta1().CertificateSigningRequests().Delete(context.Background(), csr.Name, metav1.DeleteOptions{})
-	crt := k8s.ApproveCSRAndGetCertificate(t, cs, csr)
-	secret := k8s.NewTLSSecret(key, crt, resourceName)
-	secret, err = cs.CoreV1().Secrets(k8s.Namespace).Create(context.Background(), secret, metav1.CreateOptions{})
-	if err != nil {
-		t.FailNow()
-	}
-	defer cs.CoreV1().Secrets(secret.Namespace).Delete(context.Background(), secret.Name, metav1.DeleteOptions{})
 
 	deploy, err = cs.AppsV1().Deployments(k8s.Namespace).Create(context.Background(), deploy, metav1.CreateOptions{})
 	if err != nil {
@@ -92,14 +77,10 @@ func Test_HTTPS_Passthrough(t *testing.T) {
 	}
 	defer cs.NetworkingV1beta1().Ingresses(ing.Namespace).Delete(context.Background(), ing.Name, metav1.DeleteOptions{})
 
-	caCertPool := x509.NewCertPool()
-	ca := k8s.GetCaOrFail(t, cs)
-	caCertPool.AddCert(ca)
-
 	client := &h.Client{
 		Transport: &h.Transport{
 			TLSClientConfig: &tls.Config{
-				RootCAs: caCertPool,
+				InsecureSkipVerify: true,
 			},
 			DialContext: func(ctx context.Context, network, addr string) (conn net.Conn, e error) {
 				dialer := &net.Dialer{
@@ -136,6 +117,17 @@ func Test_HTTPS_Passthrough(t *testing.T) {
 			return false
 		}
 
-		return strings.HasPrefix(string(body), ing.Name)
+		type echoServerResponse struct {
+			TLS struct {
+				SNI string `json:"sni"`
+			} `json:"tls"`
+		}
+
+		response := &echoServerResponse{}
+		if err := json.Unmarshal(body, response); err != nil {
+			return false
+		}
+
+		return response.TLS.SNI == ing.Name
 	}, time.Minute, time.Second)
 }
