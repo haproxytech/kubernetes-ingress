@@ -32,6 +32,14 @@ spec:
        - --configmap-tcp-services=$(POD_NAMESPACE)/haproxy-configmap-tcp
        - --ingress.class=haproxy
        - --sync-period=1s
+       securityContext:
+         runAsUser:  1000
+         runAsGroup: 1000
+         capabilities:
+           drop:
+             - ALL
+           add:
+             - NET_BIND_SERVICE
        ports:
        - name: http
          containerPort: 80
