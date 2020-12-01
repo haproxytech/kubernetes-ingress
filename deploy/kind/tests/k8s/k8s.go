@@ -44,6 +44,7 @@ var Namespace = "testing"
 type IngressRule struct {
 	Host        string
 	Path        string
+	PathType    string
 	Service     string
 	ServicePort string
 }
@@ -96,13 +97,23 @@ func NewIngress(name string, rules []IngressRule) *networkingv1beta1.Ingress {
 		if rule.ServicePort == "https" {
 			servicePort = "https"
 		}
+		var pathType networkingv1beta1.PathType
+		switch rule.PathType {
+		case "Exact":
+			pathType = networkingv1beta1.PathTypeExact
+		case "Prefix":
+			pathType = networkingv1beta1.PathTypePrefix
+		default:
+			pathType = networkingv1beta1.PathTypeImplementationSpecific
+		}
 		ing.Spec.Rules = append(ing.Spec.Rules, networkingv1beta1.IngressRule{
 			Host: rule.Host,
 			IngressRuleValue: networkingv1beta1.IngressRuleValue{
 				HTTP: &networkingv1beta1.HTTPIngressRuleValue{
 					Paths: []networkingv1beta1.HTTPIngressPath{
 						{
-							Path: rule.Path,
+							Path:     rule.Path,
+							PathType: &pathType,
 							Backend: networkingv1beta1.IngressBackend{
 								ServiceName: rule.Service,
 								ServicePort: intstr.FromString(servicePort),

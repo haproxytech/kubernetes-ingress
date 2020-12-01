@@ -34,12 +34,38 @@ import (
 func Test_Ingress_Match(t *testing.T) {
 	resourceName := "http-ingress-match-"
 	rules := []k8s.IngressRule{
-		{Host: "app.haproxy", Path: "/a", Service: resourceName + "app-a"},
-		{Host: "app.haproxy", Path: "/a/b", Service: resourceName + "app-b"},
-		{Host: "app.haproxy", Path: "/a/b/c", Service: resourceName + "app-c"},
-		{Host: "app-d.haproxy", Service: resourceName + "app-d"},
-		{Path: "/e", Service: resourceName + "app-e"},
+		{Host: "app.haproxy", Path: "/", Service: resourceName + "app-0"},
+		{Host: "app.haproxy", Path: "/a", Service: resourceName + "app-1"},
+		{Host: "app.haproxy", Path: "/a/b", Service: resourceName + "app-2"},
+		{Host: "app.haproxy", Path: "/exact", PathType: "Exact", Service: resourceName + "app-3"},
+		{Host: "app.haproxy", Path: "/exactslash/", PathType: "Exact", Service: resourceName + "app-4"},
+		{Host: "app.haproxy", Path: "/prefix", PathType: "Prefix", Service: resourceName + "app-5"},
+		{Host: "app.haproxy", Path: "/prefixslash/", PathType: "Prefix", Service: resourceName + "app-6"},
+		{Host: "sub.app.haproxy", Service: resourceName + "app-7"},
+		{Host: "*.haproxy", Service: resourceName + "app-8"},
+		{Path: "/test", Service: resourceName + "app-9"},
 	}
+	type test struct {
+		target string
+		host   string
+		paths  []string
+	}
+	// For each test, requests made to "paths" should be
+	// answered by the ingressRule.Service of that same test.
+	// Ref: https://kubernetes.io/docs/concepts/services-networking/ingress/#path-types
+	tests := []test{
+		{target: "app-0", host: "app.haproxy", paths: []string{"/", "/test", "/exact/", "/exactslash", "/exactslash/foo", "/prefixxx"}},
+		{target: "app-1", host: "app.haproxy", paths: []string{"/a"}},
+		{target: "app-2", host: "app.haproxy", paths: []string{"/a/b"}},
+		{target: "app-3", host: "app.haproxy", paths: []string{"/exact"}},
+		{target: "app-4", host: "app.haproxy", paths: []string{"/exactslash/"}},
+		{target: "app-5", host: "app.haproxy", paths: []string{"/prefix", "/prefix/", "/prefix/foo"}},
+		{target: "app-6", host: "app.haproxy", paths: []string{"/prefixslash", "/prefixslash/", "/prefixslash/foo/bar"}},
+		{target: "app-7", host: "sub.app.haproxy", paths: []string{"/test"}},
+		{target: "app-8", host: "test.haproxy", paths: []string{"/test"}},
+		{target: "app-9", host: "foo.bar", paths: []string{"/test"}},
+	}
+
 	cs := k8s.New(t)
 	ing := k8s.NewIngress("http-ingress-match", rules)
 	ing, err := cs.NetworkingV1beta1().Ingresses(k8s.Namespace).Create(context.Background(), ing, metav1.CreateOptions{})
@@ -61,35 +87,38 @@ func Test_Ingress_Match(t *testing.T) {
 		}
 		defer cs.CoreV1().Services(svc.Namespace).Delete(context.Background(), svc.Name, metav1.DeleteOptions{})
 	}
-	for _, rule := range rules {
-		t.Run(rule.Path, func(t *testing.T) {
+	for _, test := range tests {
+		for _, path := range test.paths {
+			t.Run(test.host+path, func(t *testing.T) {
 
-			assert.Eventually(t, func() bool {
-				type echoServerResponse struct {
-					OS struct {
-						Hostname string `json:"hostname"`
-					} `json:"os"`
-				}
+				assert.Eventually(t, func() bool {
+					type echoServerResponse struct {
+						OS struct {
+							Hostname string `json:"hostname"`
+						} `json:"os"`
+					}
 
-				client := kindclient.New(rule.Host)
-				res, cls, err := client.Do(rule.Path)
-				if err != nil {
-					return false
-				}
-				defer cls()
+					client := kindclient.New(test.host)
+					res, cls, err := client.Do(path)
+					if err != nil {
+						return false
+					}
+					defer cls()
 
-				body, err := ioutil.ReadAll(res.Body)
-				if err != nil {
-					return false
-				}
+					body, err := ioutil.ReadAll(res.Body)
+					if err != nil {
+						return false
+					}
 
-				response := &echoServerResponse{}
-				if err := json.Unmarshal(body, response); err != nil {
-					return false
-				}
+					response := &echoServerResponse{}
+					if err := json.Unmarshal(body, response); err != nil {
+						return false
+					}
 
-				return strings.HasPrefix(response.OS.Hostname, rule.Service)
-			}, time.Minute, time.Second)
-		})
+					//t.Logf("%s --> %s", path, response.OS.Hostname)
+					return strings.HasPrefix(response.OS.Hostname, resourceName+test.target)
+				}, time.Minute, time.Second)
+			})
+		}
 	}
 }
