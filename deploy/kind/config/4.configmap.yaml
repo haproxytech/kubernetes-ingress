@@ -4,6 +4,8 @@ metadata:
  name: haproxy-configmap
  namespace: haproxy-controller
 data:
+  syslog-server: |
+    address: stdout, format: raw, facility:daemon
   placeholder-1: ""
   placeholder-2: ""
   check: "true"

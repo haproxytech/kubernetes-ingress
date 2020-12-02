@@ -32,7 +32,6 @@ spec:
        - --configmap-tcp-services=$(POD_NAMESPACE)/haproxy-configmap-tcp
        - --ingress.class=haproxy
        - --sync-period=1s
-       - --log=trace
        ports:
        - name: http
          containerPort: 80
