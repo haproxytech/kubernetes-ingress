@@ -15,7 +15,6 @@
 package haproxy
 
 import (
-	"fmt"
 	"hash/fnv"
 	"os"
 	"strings"
@@ -64,24 +63,8 @@ func (m Maps) Clean() {
 	}
 }
 
-type mapRefreshError struct {
-	error
-}
-
-func (m *mapRefreshError) add(nErr error) {
-	if nErr == nil {
-		return
-	}
-	if m.error == nil {
-		m.error = nErr
-		return
-	}
-	m.error = fmt.Errorf("%w\n%s", m.error, nErr)
-}
-
 func (m Maps) Refresh() (reload bool) {
 	reload = false
-	var retErr mapRefreshError
 	for id, mapFile := range m {
 		content, hash := mapFile.getContent()
 		if mapFile.hash == hash {
@@ -92,12 +75,11 @@ func (m Maps) Refresh() (reload bool) {
 		var err error
 		filename := id.Path()
 		if content == "" {
-			rErr := os.Remove(filename)
-			retErr.add(rErr)
+			logger.Error(os.Remove(filename))
 			delete(m, id)
 			continue
 		} else if f, err = os.Create(filename); err != nil {
-			logger.Error()
+			logger.Error(err)
 			continue
 		}
 		defer f.Close()
