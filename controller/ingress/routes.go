@@ -106,6 +106,10 @@ func (r *Routes) RefreshHTTP(mapFiles haproxy.Maps) {
 }
 
 func (route *Route) addToMapFile(mapFiles haproxy.Maps) error {
+	// Wildcard host
+	if route.Host != "" && route.Host[0] == '*' {
+		route.Host = route.Host[1:]
+	}
 	// SSLPassthrough
 	if route.SSLPassthrough {
 		if route.Host == "" {

@@ -77,7 +77,13 @@ func (c *Configuration) HAProxyRulesInit() error {
 		c.HAProxyRules.AddRule(rules.ReqSetVar{
 			Name:       "host",
 			Scope:      "txn",
-			Expression: fmt.Sprintf("req.hdr(Host),field(1,:),lower,map_end(%s,'')", haproxy.MapID(1).Path()),
+			Expression: fmt.Sprintf("req.hdr(Host),field(1,:),lower,map(%s)", haproxy.MapID(1).Path()),
+		}, FrontendHTTP, FrontendHTTPS),
+		c.HAProxyRules.AddRule(rules.ReqSetVar{
+			Name:       "host",
+			Scope:      "txn",
+			Expression: fmt.Sprintf("req.hdr(Host),field(1,:),regsub(^[^.]*,,),lower,map(%s,'')", haproxy.MapID(1).Path()),
+			CondTest:   "!{ var(txn.host) -m found }",
 		}, FrontendHTTP, FrontendHTTPS),
 		c.HAProxyRules.AddRule(rules.ReqSetVar{
 			Name:       "match",
