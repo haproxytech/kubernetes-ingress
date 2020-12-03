@@ -47,8 +47,6 @@ func (r SetHdr) Create(client api.HAProxyClient, frontend *models.Frontend) erro
 			Type:      "set-header",
 			HdrName:   "X-Forwarded-Proto",
 			HdrFormat: "https",
-			Cond:      "if",
-			CondTest:  "{ ssl_fc }",
 		}
 		return client.FrontendHTTPRequestRuleCreate(frontend.Name, httpRule)
 	}
