@@ -17,6 +17,7 @@ package ingress
 import (
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/api"
@@ -126,12 +127,24 @@ func (route *Route) addToMapFile(mapFiles haproxy.Maps) error {
 	if route.Host != "" {
 		mapFiles.AppendRow(1, route.Host+"\t\t\t"+route.Host)
 	} else if route.Path.Path == "" {
-		return fmt.Errorf("neither Host nor Path are not provided for backend %v, SKIP", route.BackendName)
+		return fmt.Errorf("neither Host nor Path are provided for backend %v, SKIP", route.BackendName)
 	}
+	// if PathTypeExact is not set, PathTypePrefix will be applied
+	path := route.Path.Path
 	if route.Path.ExactPathMatch {
-		mapFiles.AppendRow(2, route.Host+route.Path.Path+"\t\t\t"+value)
+		// haproxy exact match
+		mapFiles.AppendRow(2, route.Host+path+"\t\t\t"+value)
+
+	} else if path == "" || path == "/" {
+		// haproxy beg match
+		mapFiles.AppendRow(3, route.Host+"/"+"\t\t\t"+value)
 	} else {
-		mapFiles.AppendRow(3, route.Host+route.Path.Path+"\t\t\t"+value)
+		path = strings.TrimSuffix(path, "/")
+		// haproxy exact match
+		mapFiles.AppendRow(2, route.Host+path+"\t\t\t"+value)
+		// haproxy beg match
+		mapFiles.AppendRow(3, route.Host+path+"/"+"\t\t\t"+value)
+
 	}
 	return nil
 }
