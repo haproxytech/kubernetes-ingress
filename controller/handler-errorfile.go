@@ -56,7 +56,7 @@ func (e ErrorFile) Update(k store.K8s, cfg *Configuration, api api.HAProxyClient
 				}
 			}
 			if c != code {
-				logger.Error("HTTP error code '%s' not supported", code)
+				logger.Errorf("HTTP error code '%s' not supported", code)
 				continue
 			}
 			e.httpErrorCodes = append(e.httpErrorCodes, code)

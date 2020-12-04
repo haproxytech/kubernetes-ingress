@@ -131,14 +131,14 @@ func (route *Route) addToMapFile(mapFiles haproxy.Maps) error {
 	}
 	// if PathTypeExact is not set, PathTypePrefix will be applied
 	path := route.Path.Path
-	if route.Path.ExactPathMatch {
+	switch {
+	case route.Path.ExactPathMatch:
 		// haproxy exact match
 		mapFiles.AppendRow(2, route.Host+path+"\t\t\t"+value)
-
-	} else if path == "" || path == "/" {
+	case path == "" || path == "/":
 		// haproxy beg match
 		mapFiles.AppendRow(3, route.Host+"/"+"\t\t\t"+value)
-	} else {
+	default:
 		path = strings.TrimSuffix(path, "/")
 		// haproxy exact match
 		mapFiles.AppendRow(2, route.Host+path+"\t\t\t"+value)

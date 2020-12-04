@@ -19,7 +19,7 @@ func (a *globalCfgSnippet) Overridden(configSnippet string) error {
 
 func (a *globalCfgSnippet) Parse(input string) error {
 	var cfgLines []string
-	for _, line := range strings.SplitN(strings.Trim(input, "\n"), "\n", -1) {
+	for _, line := range strings.Split(strings.Trim(input, "\n"), "\n") {
 		if line = strings.TrimSpace(line); line != "" {
 			cfgLines = append(cfgLines, line)
 		}

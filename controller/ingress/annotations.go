@@ -83,7 +83,7 @@ func (route *Route) handleBackendAnnotations(backendModel *models.Backend) (acti
 				if v.Status == DELETED && !route.NewBackend {
 					err = client.BackendCfgSnippetSet(backend.Name, nil)
 				} else {
-					value := strings.SplitN(strings.Trim(v.Value, "\n"), "\n", -1)
+					value := strings.Split(strings.Trim(v.Value, "\n"), "\n")
 					if len(value) == 0 {
 						continue
 					}
