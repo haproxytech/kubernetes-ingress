@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/json"
 	"io/ioutil"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -67,6 +68,12 @@ func Test_Ingress_Match(t *testing.T) {
 	}
 
 	cs := k8s.New(t)
+	version, _ := cs.DiscoveryClient.ServerVersion()
+	major, _ := strconv.Atoi(version.Major)
+	minor, _ := strconv.Atoi(version.Minor)
+	if major == 1 && minor < 18 {
+		tests[0] = test{target: "app-0", host: "app.haproxy", paths: []string{"/", "/test", "/prefixxx"}}
+	}
 	ing := k8s.NewIngress("http-ingress-match", rules)
 	ing, err := cs.NetworkingV1beta1().Ingresses(k8s.Namespace).Create(context.Background(), ing, metav1.CreateOptions{})
 	if err != nil {
