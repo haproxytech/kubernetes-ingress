@@ -52,7 +52,11 @@ func (c *Configuration) Clean() {
 }
 
 func (c *Configuration) HAProxyRulesInit() error {
-	c.HAProxyRules = haproxy.NewRules()
+	if c.HAProxyRules == nil {
+		c.HAProxyRules = haproxy.NewRules()
+	} else {
+		c.HAProxyRules.Clean(FrontendHTTP, FrontendHTTPS, FrontendSSL)
+	}
 	var errors utils.Errors
 	errors.Add(
 		c.HAProxyRules.AddRule(rules.SetHdr{

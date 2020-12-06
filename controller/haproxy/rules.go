@@ -38,18 +38,25 @@ const (
 	RES_SET_HEADER
 )
 
+type RuleStatus int
+
+//nolint
+const (
+	TO_DELETE RuleStatus = iota
+	TO_CREATE
+	CREATED
+)
+
 type Rules map[string]*frontendRules
 
-// This structure may evolve with additional fields
 type frontendRules struct {
-	rules map[RuleType][]Rule
+	rules  map[RuleType][]Rule
+	status map[uint32]RuleStatus
 }
 
 var logger = utils.GetLogger()
-var ruleIDs map[uint32]struct{}
 
 func NewRules() Rules {
-	ruleIDs = make(map[uint32]struct{})
 	return make(map[string]*frontendRules)
 }
 
@@ -57,20 +64,23 @@ func (r Rules) AddRule(rule Rule, frontends ...string) error {
 	if rule == nil || len(frontends) == 0 {
 		return fmt.Errorf("invalid params")
 	}
-	if _, ok := ruleIDs[rule.GetID()]; ok {
-		return nil
-	}
-	ruleIDs[rule.GetID()] = struct{}{}
+	ruleID := rule.GetID()
+	ruleType := rule.GetType()
 	for _, frontend := range frontends {
 		ftRules, ok := r[frontend]
 		if !ok {
 			ftRules = &frontendRules{
-				rules: make(map[RuleType][]Rule),
+				rules:  make(map[RuleType][]Rule),
+				status: make(map[uint32]RuleStatus),
 			}
 			r[frontend] = ftRules
 		}
-		ruleType := rule.GetType()
-		ftRules.rules[ruleType] = append(ftRules.rules[ruleType], rule)
+		if _, ok := ftRules.status[ruleID]; ok {
+			ftRules.status[ruleID] = CREATED
+		} else {
+			ftRules.rules[ruleType] = append(ftRules.rules[ruleType], rule)
+			ftRules.status[ruleID] = TO_CREATE
+		}
 	}
 	return nil
 }
@@ -81,17 +91,33 @@ func (r Rules) EnableSSLPassThrough(passThroughFtd, offloadFtd string) {
 	}
 	if _, ok := r[passThroughFtd]; !ok {
 		r[passThroughFtd] = &frontendRules{
-			rules: make(map[RuleType][]Rule),
+			rules:  make(map[RuleType][]Rule),
+			status: make(map[uint32]RuleStatus),
 		}
 	}
+	// Move some layer 4 rules from sslOffloading Frontend to sslPassthrough Frontend
 	for _, ruleType := range []RuleType{REQ_PROXY_PROTOCOL, REQ_DENY} {
 		r[passThroughFtd].rules[ruleType] = r[offloadFtd].rules[ruleType]
-		delete(r[offloadFtd].rules, ruleType)
+		for _, rule := range r[passThroughFtd].rules[ruleType] {
+			ruleID := rule.GetID()
+			delete(r[offloadFtd].status, ruleID)
+			r[passThroughFtd].status[ruleID] = CREATED
+		}
+	}
+}
+
+func (r Rules) Clean(frontends ...string) {
+	for _, frontend := range frontends {
+		if ftRules, ok := r[frontend]; ok {
+			for id := range ftRules.status {
+				ftRules.status[id] = TO_DELETE
+			}
+		}
 	}
 }
 
 func (r Rules) Refresh(client api.HAProxyClient) (reload bool) {
-	for feName, feRules := range r {
+	for feName, ftRules := range r {
 		fe, err := client.FrontendGet(feName)
 		if err != nil {
 			logger.Error(err)
@@ -103,12 +129,18 @@ func (r Rules) Refresh(client api.HAProxyClient) (reload bool) {
 		// Thus iteration is done in reverse to preserve order between the defined rules in
 		// controller and the resulting order in HAProxy configuration.
 		for ruleType := RES_SET_HEADER; ruleType >= REQ_ACCEPT_CONTENT; ruleType-- {
-			ruleSet := feRules.rules[ruleType]
+			ruleSet := ftRules.rules[ruleType]
 			for i := len(ruleSet) - 1; i >= 0; i-- {
-				if err := ruleSet[i].Create(client, &fe); err == nil {
+				ruleID := ruleSet[i].GetID()
+				if ftRules.status[ruleID] == TO_DELETE {
+					delete(ftRules.status, ruleID)
+					ftRules.rules[ruleType] = append(ruleSet[:i], ruleSet[i+1:]...)
+					continue
+				}
+				err := ruleSet[i].Create(client, &fe)
+				logger.Error(err)
+				if err == nil && ftRules.status[ruleID] == TO_CREATE {
 					reload = true
-				} else {
-					logger.Error(err)
 				}
 			}
 		}
