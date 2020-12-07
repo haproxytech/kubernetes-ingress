@@ -19,6 +19,8 @@ import (
 	"os"
 	"path"
 	"strings"
+
+	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/api"
 )
 
 type Maps map[string]*mapFile
@@ -66,8 +68,7 @@ func (m Maps) Clean() {
 	}
 }
 
-func (m Maps) Refresh() (reload bool) {
-	reload = false
+func (m Maps) Refresh(client api.HAProxyClient) (reload bool) {
 	for name, mapFile := range m {
 		content, hash := mapFile.getContent()
 		if mapFile.hash == hash {
@@ -87,9 +88,14 @@ func (m Maps) Refresh() (reload bool) {
 		}
 		defer f.Close()
 		if _, err = f.WriteString(content); err != nil {
-			return reload
+			logger.Error(err)
 		}
-		reload = true
+		if _, err = client.GetMap(name); err == nil {
+			logger.Error(client.SetMapContent(name, "<<\n"+content+"\n"))
+		} else {
+			logger.Debugf("creating Map file %s", name)
+			reload = true
+		}
 	}
 	return reload
 }

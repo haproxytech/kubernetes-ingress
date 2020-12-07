@@ -25,7 +25,7 @@ func (h RefreshHandler) Update(k store.K8s, cfg *Configuration, api api.HAProxyC
 	reload, activeBackends := cfg.IngressRoutes.Refresh(api, k, cfg.MapFiles)
 	h.clearBackends(api, cfg, activeBackends)
 	reload = cfg.HAProxyRules.Refresh(api) || reload
-	reload = cfg.MapFiles.Refresh() || reload
+	reload = cfg.MapFiles.Refresh(api) || reload
 	return reload, nil
 }
 

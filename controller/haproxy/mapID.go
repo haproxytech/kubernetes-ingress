@@ -34,5 +34,5 @@ func NewMapID(s string) MapID {
 }
 
 func (mapID MapID) Path() string {
-	return path.Join(mapDir, strconv.FormatUint(uint64(mapID), 10)) + ".lst"
+	return path.Join(mapDir, strconv.FormatUint(uint64(mapID), 10)) + ".map"
 }

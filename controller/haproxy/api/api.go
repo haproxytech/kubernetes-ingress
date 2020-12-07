@@ -55,6 +55,8 @@ type HAProxyClient interface {
 	Nbthread(value *types.Int64C) error
 	PIDFile(value *types.StringC) error
 	RuntimeSocket(value *types.Socket) error
+	GetMap(mapFile string) (*models.Map, error)
+	SetMapContent(mapFile string, payload string) error
 	ServerStateBase(value *types.StringC) error
 	SetServerAddr(backendName string, serverName string, ip string, port int) error
 	SetServerState(backendName string, serverName string, state string) error
