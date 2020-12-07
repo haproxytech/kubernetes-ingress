@@ -75,19 +75,10 @@ func (s *Server) UpdateMaxconn(value string) error {
 	return nil
 }
 
-func (s *Server) UpdateServerSsl(value string) error {
-	enabled, err := utils.GetBoolValue(value, "server-ssl")
-	if err != nil {
-		return err
+func (s *Server) UpdateProto(value string) error {
+	if value == "h2" {
+		s.Proto = "h2"
+		return nil
 	}
-	if enabled {
-		s.Ssl = "enabled"
-		s.Verify = "none"
-		s.Alpn = "h2,http/1.1"
-	} else {
-		s.Ssl = ""
-		s.Verify = ""
-		s.Alpn = ""
-	}
-	return nil
+	return fmt.Errorf("unkown proto %s", value)
 }

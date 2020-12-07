@@ -25,6 +25,12 @@ import (
 	"github.com/haproxytech/kubernetes-ingress/controller/store"
 )
 
+type sslSettings struct {
+	// other filed for ssl settings
+	enabled bool
+	verify  bool
+}
+
 type Route struct {
 	Namespace          *store.Namespace
 	Ingress            *store.Ingress
@@ -34,6 +40,7 @@ type Route struct {
 	backendAnnotations map[string]*store.StringW
 	srvAnnotations     map[string]*store.StringW
 	status             store.Status
+	sslServer          sslSettings
 	HAProxyRules       []uint32
 	Host               string
 	BackendName        string

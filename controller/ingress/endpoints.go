@@ -83,9 +83,12 @@ func (route *Route) handleEndpoints() {
 	if route.service.DNS == "" {
 		route.scaleHAProxySrvs()
 	}
-	activeAnnotations := route.getServerAnnotations()
+	backendUpdated := route.NewBackend
+	backendUpdated = route.getSrvAnnotations() || backendUpdated
+	backendUpdated = route.handleSrvSSLAnnotations() || backendUpdated
+	route.reload = route.reload || backendUpdated
 	for _, srv := range route.endpoints.HAProxySrvs {
-		if srv.Modified || route.NewBackend || activeAnnotations {
+		if srv.Modified || backendUpdated {
 			route.handleHAProxSrv(srv)
 		}
 	}
@@ -103,7 +106,12 @@ func (route *Route) handleHAProxSrv(srv *store.HAProxySrv) {
 		server.Address = "127.0.0.1"
 		server.Maintenance = "enabled"
 	}
-	handleServerAnnotations(&server, route.srvAnnotations)
+	if route.sslServer.enabled {
+		server.Ssl = "enabled"
+		server.Alpn = "h2,http/1.1"
+		server.Verify = "none"
+	}
+	handleSrvAnnotations(&server, route.srvAnnotations)
 	errAPI := client.BackendServerEdit(route.BackendName, server)
 	if errAPI == nil {
 		logger.Debugf("Updating server '%s/%s'", route.BackendName, server.Name)

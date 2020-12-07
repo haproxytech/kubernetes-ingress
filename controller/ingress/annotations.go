@@ -211,7 +211,7 @@ func handleCookieAnnotations(ingress *store.Ingress, service *store.Service) mod
 }
 
 // Update server with annotations values.
-func handleServerAnnotations(serverModel *models.Server, annotations map[string]*store.StringW) {
+func handleSrvAnnotations(serverModel *models.Server, annotations map[string]*store.StringW) {
 	server := haproxy.Server(*serverModel)
 
 	// The DELETED status of an annotation is handled explicitly
@@ -247,11 +247,6 @@ func handleServerAnnotations(serverModel *models.Server, annotations map[string]
 				logger.Errorf("%s annotation: %s", k, err)
 				continue
 			}
-		case "server-ssl":
-			if err := server.UpdateServerSsl(v.Value); err != nil {
-				logger.Errorf("%s annotation: %s", k, err)
-				continue
-			}
 		case "send-proxy-protocol":
 			if v.Status == DELETED || len(v.Value) == 0 {
 				server.ResetSendProxy()
@@ -261,18 +256,27 @@ func handleServerAnnotations(serverModel *models.Server, annotations map[string]
 				logger.Errorf("%s annotation: %s", k, err)
 				continue
 			}
+		case "server-proto":
+			if server.Alpn != "" {
+				continue
+			}
+			if err := server.UpdateProto(v.Value); err != nil {
+				logger.Errorf("%s annotation: %s", k, err)
+				continue
+			}
 		}
 	}
 	*serverModel = models.Server(server)
 }
 
-func (route *Route) getServerAnnotations() (activeAnnotations bool) {
-	srvAnnotations := make(map[string]*store.StringW, 5)
+func (route *Route) getSrvAnnotations() (activeAnnotations bool) {
+	srvAnnotations := make(map[string]*store.StringW, 7)
 	srvAnnotations["cookie-persistence"], _ = k8sStore.GetValueFromAnnotations("cookie-persistence", route.service.Annotations, route.Ingress.Annotations, k8sStore.ConfigMaps[Main].Annotations)
 	srvAnnotations["check"], _ = k8sStore.GetValueFromAnnotations("check", route.service.Annotations, route.Ingress.Annotations, k8sStore.ConfigMaps[Main].Annotations)
 	srvAnnotations["check-interval"], _ = k8sStore.GetValueFromAnnotations("check-interval", route.service.Annotations, route.Ingress.Annotations, k8sStore.ConfigMaps[Main].Annotations)
 	srvAnnotations["pod-maxconn"], _ = k8sStore.GetValueFromAnnotations("pod-maxconn", route.service.Annotations)
 	srvAnnotations["server-ssl"], _ = k8sStore.GetValueFromAnnotations("server-ssl", route.service.Annotations, route.Ingress.Annotations, k8sStore.ConfigMaps[Main].Annotations)
+	srvAnnotations["server-proto"], _ = k8sStore.GetValueFromAnnotations("server-proto", route.service.Annotations, route.Ingress.Annotations, k8sStore.ConfigMaps[Main].Annotations)
 	srvAnnotations["send-proxy-protocol"], _ = k8sStore.GetValueFromAnnotations("send-proxy-protocol", route.service.Annotations)
 	for k, v := range srvAnnotations {
 		if v == nil {
@@ -285,6 +289,31 @@ func (route *Route) getServerAnnotations() (activeAnnotations bool) {
 		}
 	}
 	route.srvAnnotations = srvAnnotations
-	route.reload = route.reload || activeAnnotations
 	return activeAnnotations
+}
+
+func (route *Route) handleSrvSSLAnnotations() (sslUpdated bool) {
+	route.sslServer = sslSettings{verify: false}
+	for name, annotation := range route.srvAnnotations {
+		if annotation == nil {
+			continue
+		}
+		if annotation.Status == DELETED {
+			sslUpdated = true
+			continue
+		}
+		switch name {
+		case "server-ssl":
+			enabled, err := utils.GetBoolValue(annotation.Value, "server-ssl")
+			if err != nil {
+				logger.Error(err)
+				continue
+			}
+			route.sslServer.enabled = enabled
+		}
+		if annotation.Status != EMPTY {
+			sslUpdated = true
+		}
+	}
+	return sslUpdated
 }
