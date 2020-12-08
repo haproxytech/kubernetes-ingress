@@ -25,8 +25,9 @@ type Maps map[MapID]*mapFile
 var mapDir string
 
 type mapFile struct {
-	rows []string
-	hash uint64
+	rows     []string
+	hash     uint64
+	preserve bool
 }
 
 func (mf *mapFile) getContent() (string, uint64) {
@@ -47,6 +48,7 @@ func NewMapFiles(path string) Maps {
 	return maps
 }
 
+// AppendRow appends row mapFile
 func (m Maps) AppendRow(id MapID, row string) {
 	if row == "" {
 		return
@@ -74,7 +76,7 @@ func (m Maps) Refresh() (reload bool) {
 		var f *os.File
 		var err error
 		filename := id.Path()
-		if content == "" {
+		if content == "" && !mapFile.preserve {
 			logger.Error(os.Remove(filename))
 			delete(m, id)
 			continue
@@ -89,4 +91,14 @@ func (m Maps) Refresh() (reload bool) {
 		reload = true
 	}
 	return reload
+}
+
+// SetPreserve sets the preserve flag on a mapFile
+func (m Maps) SetPreserve(preserve bool, ids ...MapID) {
+	for _, id := range ids {
+		if m[id] == nil {
+			m[id] = &mapFile{}
+		}
+		m[id].preserve = preserve
+	}
 }

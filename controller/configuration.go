@@ -38,6 +38,7 @@ type Configuration struct {
 func (c *Configuration) Init(mapDir string) {
 
 	c.MapFiles = haproxy.NewMapFiles(mapDir)
+	c.MapFiles.SetPreserve(true, 0, 1, 2, 3)
 	c.IngressRoutes = ingress.Routes{}
 	logger.Panic(c.HAProxyRulesInit())
 }
@@ -72,12 +73,6 @@ func (c *Configuration) HAProxyRulesInit() error {
 			Scope:      "txn",
 			Expression: "path",
 		}, FrontendHTTP, FrontendHTTPS),
-	)
-	c.MapFiles.AppendRow(0, "# Ingress SNIs")
-	c.MapFiles.AppendRow(1, "# Ingress Hosts")
-	c.MapFiles.AppendRow(2, "# Ingress exact paths ")
-	c.MapFiles.AppendRow(3, "# Ingress prefix paths ")
-	errors.Add(
 		c.HAProxyRules.AddRule(rules.ReqSetVar{
 			Name:       "host",
 			Scope:      "txn",
