@@ -145,11 +145,11 @@ func (h HTTPS) enableSSLPassthrough(cfg *Configuration, api api.HAProxyClient) (
 		}),
 		api.BackendSwitchingRuleCreate(FrontendSSL, models.BackendSwitchingRule{
 			Index: utils.PtrInt64(0),
-			Name:  fmt.Sprintf("%%[req_ssl_sni,map(%s)]", haproxy.MapID(0).Path()),
+			Name:  fmt.Sprintf("%%[req_ssl_sni,map(%s)]", haproxy.GetMapPath(SNI)),
 		}),
 		api.BackendSwitchingRuleCreate(FrontendSSL, models.BackendSwitchingRule{
 			Index: utils.PtrInt64(1),
-			Name:  fmt.Sprintf("%%[req_ssl_sni,regsub(^[^.]*,,),map(%s)]", haproxy.MapID(0).Path()),
+			Name:  fmt.Sprintf("%%[req_ssl_sni,regsub(^[^.]*,,),map(%s)]", haproxy.GetMapPath(SNI)),
 		}),
 		h.toggleSSLPassthrough(true, cfg.HTTPS, api))
 	return errors.Result()

@@ -17,10 +17,11 @@ package haproxy
 import (
 	"hash/fnv"
 	"os"
+	"path"
 	"strings"
 )
 
-type Maps map[MapID]*mapFile
+type Maps map[string]*mapFile
 
 var mapDir string
 
@@ -44,19 +45,19 @@ func (mf *mapFile) getContent() (string, uint64) {
 
 func NewMapFiles(path string) Maps {
 	mapDir = path
-	var maps Maps = make(map[MapID]*mapFile)
+	var maps Maps = make(map[string]*mapFile)
 	return maps
 }
 
-// AppendRow appends row mapFile
-func (m Maps) AppendRow(id MapID, row string) {
+// AppendRow appends row to mapFile
+func (m Maps) AppendRow(name string, row string) {
 	if row == "" {
 		return
 	}
-	if m[id] == nil {
-		m[id] = &mapFile{}
+	if m[name] == nil {
+		m[name] = &mapFile{}
 	}
-	m[id].rows = append(m[id].rows, row)
+	m[name].rows = append(m[name].rows, row)
 }
 
 func (m Maps) Clean() {
@@ -67,7 +68,7 @@ func (m Maps) Clean() {
 
 func (m Maps) Refresh() (reload bool) {
 	reload = false
-	for id, mapFile := range m {
+	for name, mapFile := range m {
 		content, hash := mapFile.getContent()
 		if mapFile.hash == hash {
 			continue
@@ -75,10 +76,10 @@ func (m Maps) Refresh() (reload bool) {
 		mapFile.hash = hash
 		var f *os.File
 		var err error
-		filename := id.Path()
+		filename := GetMapPath(name)
 		if content == "" && !mapFile.preserve {
 			logger.Error(os.Remove(filename))
-			delete(m, id)
+			delete(m, name)
 			continue
 		} else if f, err = os.Create(filename); err != nil {
 			logger.Error(err)
@@ -94,11 +95,15 @@ func (m Maps) Refresh() (reload bool) {
 }
 
 // SetPreserve sets the preserve flag on a mapFile
-func (m Maps) SetPreserve(preserve bool, ids ...MapID) {
-	for _, id := range ids {
-		if m[id] == nil {
-			m[id] = &mapFile{}
+func (m Maps) SetPreserve(preserve bool, maps ...string) {
+	for _, name := range maps {
+		if m[name] == nil {
+			m[name] = &mapFile{}
 		}
-		m[id].preserve = preserve
+		m[name].preserve = preserve
 	}
+}
+
+func GetMapPath(name string) string {
+	return path.Join(mapDir, name) + ".map"
 }

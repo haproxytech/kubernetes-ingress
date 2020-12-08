@@ -56,20 +56,21 @@ func (c *HAProxyController) handleBlacklisting(ingress *store.Ingress, ruleIDs *
 		return
 	}
 	// Validate annotation
-	ips := haproxy.NewMapID(annBlacklist.Value)
+	mapName := "blacklist-" + strconv.Itoa(int(utils.Hash([]byte(annBlacklist.Value))))
 	for _, address := range strings.Split(annBlacklist.Value, ",") {
+		address = strings.TrimSpace(address)
 		if ip := net.ParseIP(address); ip == nil {
 			if _, _, err := net.ParseCIDR(address); err != nil {
 				logger.Errorf("incorrect address '%s' in blacklist annotation in ingress '%s'", address, ingress.Name)
 				continue
 			}
 		}
-		c.cfg.MapFiles.AppendRow(ips, address)
+		c.cfg.MapFiles.AppendRow(mapName, address)
 	}
 	// Configure annotation
 	logger.Debugf("Ingress %s/%s: Configuring blacklist annotation", ingress.Namespace, ingress.Name)
 	reqBlackList := rules.ReqDeny{
-		SrcIPs: ips,
+		SrcIPsMap: mapName,
 	}
 	if err := c.cfg.HAProxyRules.AddRule(reqBlackList, FrontendHTTP, FrontendHTTPS); err == nil {
 		*ruleIDs = append(*ruleIDs, reqBlackList.GetID())
@@ -268,14 +269,6 @@ func (c *HAProxyController) handleRequestPathRewrite(ingress *store.Ingress, rul
 	// Configure annotation
 	logger.Debugf("Ingress %s/%s: Configuring path-rewrite", ingress.Namespace, ingress.Name)
 	parts := strings.Fields(strings.TrimSpace(annPathRewrite.Value))
-	match := haproxy.NewMapID(fmt.Sprintf("%d-%s", haproxy.REQ_PATH_REWRITE, annPathRewrite.Value))
-	for hostname, rule := range ingress.Rules {
-		if rule.Status != DELETED {
-			for path := range rule.Paths {
-				c.cfg.MapFiles.AppendRow(match, hostname+path)
-			}
-		}
-	}
 
 	var reqPathReWrite haproxy.Rule
 	switch len(parts) {
@@ -342,20 +335,21 @@ func (c *HAProxyController) handleWhitelisting(ingress *store.Ingress, ruleIDs *
 		return
 	}
 	// Validate annotation
-	ips := haproxy.NewMapID(annWhitelist.Value)
+	mapName := "whitelist-" + strconv.Itoa(int(utils.Hash([]byte(annWhitelist.Value))))
 	for _, address := range strings.Split(annWhitelist.Value, ",") {
+		address = strings.TrimSpace(address)
 		if ip := net.ParseIP(address); ip == nil {
 			if _, _, err := net.ParseCIDR(address); err != nil {
 				logger.Errorf("incorrect address '%s' in whitelist annotation in ingress '%s'", address, ingress.Name)
 				continue
 			}
 		}
-		c.cfg.MapFiles.AppendRow(ips, address)
+		c.cfg.MapFiles.AppendRow(mapName, address)
 	}
 	// Configure annotation
 	logger.Debugf("Ingress %s/%s: Configuring whitelist annotation", ingress.Namespace, ingress.Name)
 	reqWhitelist := rules.ReqDeny{
-		SrcIPs:    ips,
+		SrcIPsMap: mapName,
 		Whitelist: true,
 	}
 	if err := c.cfg.HAProxyRules.AddRule(reqWhitelist, FrontendHTTP, FrontendHTTPS); err == nil {

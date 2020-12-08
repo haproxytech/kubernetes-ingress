@@ -38,7 +38,7 @@ type Configuration struct {
 func (c *Configuration) Init(mapDir string) {
 
 	c.MapFiles = haproxy.NewMapFiles(mapDir)
-	c.MapFiles.SetPreserve(true, 0, 1, 2, 3)
+	c.MapFiles.SetPreserve(true, SNI, HOST, PATH_EXACT, PATH_PREFIX)
 	c.IngressRoutes = ingress.Routes{}
 	logger.Panic(c.HAProxyRulesInit())
 }
@@ -60,14 +60,17 @@ func (c *Configuration) HAProxyRulesInit() error {
 	}
 	var errors utils.Errors
 	errors.Add(
+		// ForwardedProto rule
 		c.HAProxyRules.AddRule(rules.SetHdr{
 			ForwardedProto: true,
 		}, FrontendHTTPS),
+		// txn.base var used for logging
 		c.HAProxyRules.AddRule(rules.ReqSetVar{
 			Name:       "base",
 			Scope:      "txn",
 			Expression: "base",
 		}, FrontendHTTP, FrontendHTTPS),
+		// Backend switching rules.
 		c.HAProxyRules.AddRule(rules.ReqSetVar{
 			Name:       "path",
 			Scope:      "txn",
@@ -76,23 +79,23 @@ func (c *Configuration) HAProxyRulesInit() error {
 		c.HAProxyRules.AddRule(rules.ReqSetVar{
 			Name:       "host",
 			Scope:      "txn",
-			Expression: fmt.Sprintf("req.hdr(Host),field(1,:),lower,map(%s)", haproxy.MapID(1).Path()),
+			Expression: fmt.Sprintf("req.hdr(Host),field(1,:),lower,map(%s)", haproxy.GetMapPath(HOST)),
 		}, FrontendHTTP, FrontendHTTPS),
 		c.HAProxyRules.AddRule(rules.ReqSetVar{
 			Name:       "host",
 			Scope:      "txn",
-			Expression: fmt.Sprintf("req.hdr(Host),field(1,:),regsub(^[^.]*,,),lower,map(%s,'')", haproxy.MapID(1).Path()),
+			Expression: fmt.Sprintf("req.hdr(Host),field(1,:),regsub(^[^.]*,,),lower,map(%s,'')", haproxy.GetMapPath(HOST)),
 			CondTest:   "!{ var(txn.host) -m found }",
 		}, FrontendHTTP, FrontendHTTPS),
 		c.HAProxyRules.AddRule(rules.ReqSetVar{
 			Name:       "match",
 			Scope:      "txn",
-			Expression: fmt.Sprintf("var(txn.host),concat(,txn.path,),map(%s)", haproxy.MapID(2).Path()),
+			Expression: fmt.Sprintf("var(txn.host),concat(,txn.path,),map(%s)", haproxy.GetMapPath(PATH_EXACT)),
 		}, FrontendHTTP, FrontendHTTPS),
 		c.HAProxyRules.AddRule(rules.ReqSetVar{
 			Name:       "match",
 			Scope:      "txn",
-			Expression: fmt.Sprintf("var(txn.host),concat(,txn.path,),map_beg(%s)", haproxy.MapID(3).Path()),
+			Expression: fmt.Sprintf("var(txn.host),concat(,txn.path,),map_beg(%s)", haproxy.GetMapPath(PATH_PREFIX)),
 			CondTest:   "!{ var(txn.match) -m found }",
 		}, FrontendHTTP, FrontendHTTPS),
 	)

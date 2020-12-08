@@ -16,9 +16,12 @@ package ingress
 
 import (
 	"fmt"
+	"strconv"
+	"strings"
 
 	"github.com/haproxytech/models/v2"
 
+	"github.com/haproxytech/kubernetes-ingress/controller/haproxy"
 	"github.com/haproxytech/kubernetes-ingress/controller/store"
 )
 
@@ -38,6 +41,46 @@ type Route struct {
 	SSLPassthrough     bool
 	TCPService         bool
 	reload             bool
+}
+
+// addToMapFile adds ingress route to haproxy Map files used for backend switching.
+func (route *Route) addToMapFile(mapFiles haproxy.Maps) error {
+	// Wildcard host
+	if route.Host != "" && route.Host[0] == '*' {
+		route.Host = route.Host[1:]
+	}
+	// SSLPassthrough
+	if route.SSLPassthrough {
+		if route.Host == "" {
+			return fmt.Errorf("empty SNI for backend %s, SKIP", route.BackendName)
+		}
+		mapFiles.AppendRow(SNI, route.Host+"\t\t\t"+route.BackendName)
+		return nil
+	}
+	// HTTP
+	value := route.BackendName
+	for _, id := range route.HAProxyRules {
+		value += "." + strconv.Itoa(int(id))
+	}
+	if route.Host != "" {
+		mapFiles.AppendRow(HOST, route.Host+"\t\t\t"+route.Host)
+	} else if route.Path.Path == "" {
+		return fmt.Errorf("neither Host nor Path are provided for backend %v, SKIP", route.BackendName)
+	}
+	// if PathTypeExact is not set, PathTypePrefix will be applied
+	path := route.Path.Path
+	switch {
+	case route.Path.ExactPathMatch:
+		mapFiles.AppendRow(PATH_EXACT, route.Host+path+"\t\t\t"+value)
+	case path == "" || path == "/":
+		mapFiles.AppendRow(PATH_PREFIX, route.Host+"/"+"\t\t\t"+value)
+	default:
+		path = strings.TrimSuffix(path, "/")
+		mapFiles.AppendRow(PATH_EXACT, route.Host+path+"\t\t\t"+value)
+		mapFiles.AppendRow(PATH_PREFIX, route.Host+path+"/"+"\t\t\t"+value)
+
+	}
+	return nil
 }
 
 // handleService processes an Ingress Route and make corresponding backend configuration in HAProxy

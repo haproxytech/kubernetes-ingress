@@ -16,12 +16,13 @@ package controller
 
 import (
 	"net"
+	"strconv"
 	"strings"
 
-	"github.com/haproxytech/kubernetes-ingress/controller/haproxy"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/api"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/rules"
 	"github.com/haproxytech/kubernetes-ingress/controller/store"
+	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 )
 
 type ProxyProtocol struct{}
@@ -37,18 +38,19 @@ func (p ProxyProtocol) Update(k store.K8s, cfg *Configuration, api api.HAProxyCl
 		return false, nil
 	}
 	// Validate annotation
-	ips := haproxy.NewMapID(annProxyProtocol.Value)
+	mapName := "proxy-protocol-" + strconv.Itoa(int(utils.Hash([]byte(annProxyProtocol.Value))))
 	for _, address := range strings.Split(annProxyProtocol.Value, ",") {
+		address = strings.TrimSpace(address)
 		if ip := net.ParseIP(address); ip == nil {
 			if _, _, err = net.ParseCIDR(address); err != nil {
 				logger.Errorf("incorrect address '%s' in proxy-protocol annotation", address)
 				continue
 			}
-			cfg.MapFiles.AppendRow(ips, address)
+			cfg.MapFiles.AppendRow(mapName, address)
 		}
 	}
 	// Configure Annotation
 	logger.Debugf("Configuring ProxyProtcol annotation")
-	err = cfg.HAProxyRules.AddRule(rules.ReqProxyProtocol{SrcIPs: ips}, FrontendHTTP, FrontendHTTPS)
+	err = cfg.HAProxyRules.AddRule(rules.ReqProxyProtocol{SrcIPsMap: mapName}, FrontendHTTP, FrontendHTTPS)
 	return false, err
 }

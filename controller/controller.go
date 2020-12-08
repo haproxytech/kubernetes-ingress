@@ -35,6 +35,7 @@ import (
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 )
 
+// nolint
 const (
 	// Configmaps
 	Main        = "main"
@@ -51,6 +52,11 @@ const (
 	ERROR    = store.ERROR
 	EMPTY    = store.EMPTY
 	MODIFIED = store.MODIFIED
+	// MapFiles
+	SNI         = "sni"
+	HOST        = "host"
+	PATH_EXACT  = "path-exact"
+	PATH_PREFIX = "path-prefix"
 )
 
 var (

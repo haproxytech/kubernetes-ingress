@@ -11,8 +11,8 @@ import (
 )
 
 type ReqProxyProtocol struct {
-	id     uint32
-	SrcIPs haproxy.MapID
+	id        uint32
+	SrcIPsMap string
 }
 
 func (r ReqProxyProtocol) GetID() uint32 {
@@ -32,7 +32,7 @@ func (r ReqProxyProtocol) Create(client api.HAProxyClient, frontend *models.Fron
 		Type:     "connection",
 		Action:   "expect-proxy layer4",
 		Cond:     "if",
-		CondTest: fmt.Sprintf("{ src %s }", r.SrcIPs.Path()),
+		CondTest: fmt.Sprintf("{ src %s }", haproxy.GetMapPath(r.SrcIPsMap)),
 	}
 	return client.FrontendTCPRequestRuleCreate(frontend.Name, tcpRule)
 }

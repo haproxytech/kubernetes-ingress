@@ -15,10 +15,6 @@
 package ingress
 
 import (
-	"fmt"
-	"strconv"
-	"strings"
-
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/api"
 	"github.com/haproxytech/kubernetes-ingress/controller/store"
@@ -37,6 +33,7 @@ var logger = utils.GetLogger()
 var client api.HAProxyClient
 var k8sStore store.K8s
 
+//nolint
 const (
 	// Configmaps
 	Main = "main"
@@ -49,6 +46,11 @@ const (
 	ERROR    = store.ERROR
 	EMPTY    = store.EMPTY
 	MODIFIED = store.MODIFIED
+	// MapFiles
+	SNI         = "sni"
+	HOST        = "host"
+	PATH_EXACT  = "path-exact"
+	PATH_PREFIX = "path-prefix"
 )
 
 func (r *Routes) AddRoute(route *Route) {
@@ -73,13 +75,13 @@ func (r *Routes) Refresh(c api.HAProxyClient, k store.K8s, mapFiles haproxy.Maps
 	k8sStore = k
 	r.activeBackends = make(map[string]struct{})
 	logger.Debug("Updating Backend Switching rules")
-	r.RefreshHTTP(mapFiles)
+	r.refreshHTTP(mapFiles)
 	r.refreshHTTPDefault()
 	r.refreshTCP()
 	return r.reload, r.activeBackends
 }
 
-func (r *Routes) RefreshHTTP(mapFiles haproxy.Maps) {
+func (r *Routes) refreshHTTP(mapFiles haproxy.Maps) {
 	for _, route := range r.http {
 		// DELETED Route
 		if route.status == DELETED {
@@ -104,49 +106,6 @@ func (r *Routes) RefreshHTTP(mapFiles haproxy.Maps) {
 			r.activeBackends[route.BackendName] = struct{}{}
 		}
 	}
-}
-
-func (route *Route) addToMapFile(mapFiles haproxy.Maps) error {
-	// Wildcard host
-	if route.Host != "" && route.Host[0] == '*' {
-		route.Host = route.Host[1:]
-	}
-	// SSLPassthrough
-	if route.SSLPassthrough {
-		if route.Host == "" {
-			return fmt.Errorf("empty SNI for backend %s, SKIP", route.BackendName)
-		}
-		mapFiles.AppendRow(0, route.Host+"\t\t\t"+route.BackendName)
-		return nil
-	}
-	// HTTP
-	value := route.BackendName
-	for _, id := range route.HAProxyRules {
-		value += "." + strconv.Itoa(int(id))
-	}
-	if route.Host != "" {
-		mapFiles.AppendRow(1, route.Host+"\t\t\t"+route.Host)
-	} else if route.Path.Path == "" {
-		return fmt.Errorf("neither Host nor Path are provided for backend %v, SKIP", route.BackendName)
-	}
-	// if PathTypeExact is not set, PathTypePrefix will be applied
-	path := route.Path.Path
-	switch {
-	case route.Path.ExactPathMatch:
-		// haproxy exact match
-		mapFiles.AppendRow(2, route.Host+path+"\t\t\t"+value)
-	case path == "" || path == "/":
-		// haproxy beg match
-		mapFiles.AppendRow(3, route.Host+"/"+"\t\t\t"+value)
-	default:
-		path = strings.TrimSuffix(path, "/")
-		// haproxy exact match
-		mapFiles.AppendRow(2, route.Host+path+"\t\t\t"+value)
-		// haproxy beg match
-		mapFiles.AppendRow(3, route.Host+path+"/"+"\t\t\t"+value)
-
-	}
-	return nil
 }
 
 func (r *Routes) refreshHTTPDefault() {

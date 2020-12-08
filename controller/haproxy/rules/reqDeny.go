@@ -12,7 +12,7 @@ import (
 
 type ReqDeny struct {
 	id        uint32
-	SrcIPs    haproxy.MapID
+	SrcIPsMap string
 	Whitelist bool
 }
 
@@ -28,7 +28,7 @@ func (r ReqDeny) GetType() haproxy.RuleType {
 }
 
 func (r ReqDeny) Create(client api.HAProxyClient, frontend *models.Frontend) error {
-	ipsMapFile := r.SrcIPs.Path()
+	srcIpsMap := haproxy.GetMapPath(r.SrcIPsMap)
 	not := ""
 	if r.Whitelist {
 		not = "!"
@@ -39,7 +39,7 @@ func (r ReqDeny) Create(client api.HAProxyClient, frontend *models.Frontend) err
 			Type:     "content",
 			Action:   "reject",
 			Cond:     "if",
-			CondTest: fmt.Sprintf("%s{ src -f %s }", not, ipsMapFile),
+			CondTest: fmt.Sprintf("%s{ src -f %s }", not, srcIpsMap),
 		}
 		matchRuleID(&tcpRule, r.GetID())
 		return client.FrontendTCPRequestRuleCreate(frontend.Name, tcpRule)
@@ -49,7 +49,7 @@ func (r ReqDeny) Create(client api.HAProxyClient, frontend *models.Frontend) err
 		Type:       "deny",
 		DenyStatus: utils.PtrInt64(403),
 		Cond:       "if",
-		CondTest:   fmt.Sprintf("%s{ src -f %s }", not, ipsMapFile),
+		CondTest:   fmt.Sprintf("%s{ src -f %s }", not, srcIpsMap),
 	}
 	matchRuleID(&httpRule, r.GetID())
 	return client.FrontendHTTPRequestRuleCreate(frontend.Name, httpRule)

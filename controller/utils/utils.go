@@ -15,6 +15,7 @@
 package utils
 
 import (
+	"hash/fnv"
 	"math/rand"
 	"os"
 	"strconv"
@@ -38,6 +39,12 @@ func RandomString(n int) string {
 		b[i] = chars[rand.Intn(size)]
 	}
 	return string(b)
+}
+
+func Hash(input []byte) uint32 {
+	h := fnv.New32a()
+	_, _ = h.Write(input)
+	return h.Sum32()
 }
 
 func PtrInt64(value int64) *int64 {
