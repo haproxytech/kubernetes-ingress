@@ -72,7 +72,7 @@ func (route *Route) handleBackendAnnotations(backendModel *models.Backend) (acti
 					continue
 				}
 				if v.Status == DELETED && !route.NewBackend {
-					backend.Httpchk = nil
+					backend.AdvCheck = ""
 				} else if err := backend.UpdateHttpchk(v.Value); err != nil {
 					logger.Errorf("%s annotation: %s", k, err)
 					continue

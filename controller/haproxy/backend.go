@@ -78,22 +78,22 @@ func (b *Backend) UpdateForwardfor(value string) error {
 }
 
 func (b *Backend) UpdateHttpchk(value string) error {
-	var val *models.Httpchk
+	var val *models.HttpchkParams
 	httpCheckParams := strings.Fields(strings.TrimSpace(value))
 	switch len(httpCheckParams) {
 	case 0:
 		return fmt.Errorf("httpchk option: incorrect number of params")
 	case 1:
-		val = &models.Httpchk{
+		val = &models.HttpchkParams{
 			URI: httpCheckParams[0],
 		}
 	case 2:
-		val = &models.Httpchk{
+		val = &models.HttpchkParams{
 			Method: httpCheckParams[0],
 			URI:    httpCheckParams[1],
 		}
 	default:
-		val = &models.Httpchk{
+		val = &models.HttpchkParams{
 			Method:  httpCheckParams[0],
 			URI:     httpCheckParams[1],
 			Version: strings.Join(httpCheckParams[2:], " "),
@@ -102,6 +102,7 @@ func (b *Backend) UpdateHttpchk(value string) error {
 	if err := val.Validate(nil); err != nil {
 		return fmt.Errorf("httpchk option: %s", err)
 	}
-	b.Httpchk = val
+	b.AdvCheck = "httpchk"
+	b.HttpchkParams = val
 	return nil
 }
