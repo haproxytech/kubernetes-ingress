@@ -15,13 +15,13 @@
 package main
 
 import (
-	"fmt"
+	"io/ioutil"
 	"os"
-	"os/exec"
 	"path"
 	"path/filepath"
 	"time"
 
+	"github.com/google/renameio"
 	c "github.com/haproxytech/kubernetes-ingress/controller"
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 )
@@ -49,27 +49,27 @@ func setupHAProxyEnv(osArgs utils.OSArgs) {
 	c.HAProxyRuntimeSocket = path.Join(runtimeDir, "haproxy-runtime-api.sock")
 	c.HAProxyPIDFile = path.Join(runtimeDir, "haproxy.pid")
 	time.Sleep(2 * time.Second)
-	cmd := exec.Command("pwd")
-	out, err := cmd.CombinedOutput()
+
+	pwd, err := os.Getwd()
 	if err != nil {
-		logger.Panicf("cmd.Run() failed with %s\n", err.Error())
+		logger.Panicf("Couldn't get current directory %s\n", err.Error())
 	}
 	dir, err := filepath.Abs(filepath.Dir(os.Args[0]))
 	if err != nil {
 		logger.Panic(err)
 	}
 	logger.Debug(dir)
-	if err = copyFile(path.Join(dir, "fs/etc/haproxy/haproxy.cfg"), c.HAProxyCfgDir); err != nil {
+	if err = copyFile(path.Join(dir, "fs/etc/haproxy/haproxy.cfg"), path.Join(c.HAProxyCfgDir, "haproxy.cfg")); err != nil {
 		logger.Panic(err)
 	}
-	logger.Debug(string(out))
+	logger.Debug(pwd)
+
 }
 
 func copyFile(src, dst string) (err error) {
-	logger := utils.GetLogger()
-	cmd := fmt.Sprintf("cp %s %s", src, dst)
-	logger.Debug(cmd)
-	result := exec.Command("bash", "-c", cmd)
-	_, err = result.CombinedOutput()
-	return
+	content, err := ioutil.ReadFile(src)
+	if err != nil {
+		return
+	}
+	return renameio.WriteFile(dst, content, 0640)
 }
