@@ -285,6 +285,6 @@ func (route *Route) getServerAnnotations() (activeAnnotations bool) {
 		}
 	}
 	route.srvAnnotations = srvAnnotations
-	route.reload = activeAnnotations
+	route.reload = route.reload || activeAnnotations
 	return activeAnnotations
 }
