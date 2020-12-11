@@ -120,6 +120,9 @@ func (k K8s) GetValueFromAnnotations(annotationName string, annotations ...MapSt
 }
 
 func (k K8s) SetDefaultAnnotation(annotation, value string) {
+	if value == "" {
+		return
+	}
 	defaultAnnotationValues[annotation] = &StringW{
 		Value:  value,
 		Status: ADDED,

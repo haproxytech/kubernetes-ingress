@@ -28,25 +28,27 @@ import (
 type Configuration struct {
 	MapFiles       haproxy.Maps
 	HAProxyRules   haproxy.Rules
+	Certificates   *haproxy.Certificates
 	IngressRoutes  ingress.Routes
 	HTTPS          bool
 	SSLPassthrough bool
-	UsedCerts      map[string]struct{}
 }
 
 //Init initialize configuration
-func (c *Configuration) Init(mapDir string) {
+func (c *Configuration) Init() {
 
-	c.MapFiles = haproxy.NewMapFiles(mapDir)
+	c.MapFiles = haproxy.NewMapFiles(HAProxyMapDir)
 	c.MapFiles.SetPreserve(true, SNI, HOST, PATH_EXACT, PATH_PREFIX)
 	c.IngressRoutes = ingress.Routes{}
 	logger.Panic(c.HAProxyRulesInit())
+	c.Certificates = haproxy.NewCertificates(HAProxyCertDir)
 }
 
 //Clean cleans all the statuses of various data that was changed
 //deletes them completely or just resets them if needed
 func (c *Configuration) Clean() {
 	c.MapFiles.Clean()
+	c.Certificates.Clean()
 	c.IngressRoutes = ingress.Routes{}
 	logger.Panic(c.HAProxyRulesInit())
 	rateLimitTables = []string{}

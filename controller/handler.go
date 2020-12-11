@@ -27,7 +27,6 @@ func (c *HAProxyController) initHandlers() {
 	c.UpdateHandlers = []UpdateHandler{
 		SourceIPHeader{},
 		ProxyProtocol{},
-		DefaultCertificate{},
 		ErrorFile{},
 		HTTPS{
 			enabled:  !c.osArgs.DisableHTTPS,

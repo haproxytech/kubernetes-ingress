@@ -26,6 +26,7 @@ func (h RefreshHandler) Update(k store.K8s, cfg *Configuration, api api.HAProxyC
 	h.clearBackends(api, cfg, activeBackends)
 	reload = cfg.HAProxyRules.Refresh(api) || reload
 	reload = cfg.MapFiles.Refresh(api) || reload
+	cfg.Certificates.Refresh()
 	return reload, nil
 }
 

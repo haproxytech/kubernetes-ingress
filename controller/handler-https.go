@@ -16,9 +16,6 @@ package controller
 
 import (
 	"fmt"
-	"io/ioutil"
-	"os"
-	"path"
 
 	"github.com/haproxytech/models/v2"
 
@@ -78,7 +75,7 @@ func (h HTTPS) Update(k store.K8s, cfg *Configuration, api api.HAProxyClient) (r
 		return false, nil
 	}
 	// ssl-offload
-	if len(cfg.UsedCerts) > 0 {
+	if cfg.Certificates.FrontendCertsEnabled() {
 		if !cfg.HTTPS {
 			logger.Panic(api.FrontendEnableSSLOffload(FrontendHTTPS, h.certDir, true))
 			cfg.HTTPS = true
@@ -106,8 +103,6 @@ func (h HTTPS) Update(k store.K8s, cfg *Configuration, api api.HAProxyClient) (r
 		cfg.SSLPassthrough = false
 		reload = true
 	}
-	//remove certs that are not needed
-	logger.Error(h.CleanCertDir(cfg.UsedCerts))
 
 	return reload, nil
 }
@@ -178,25 +173,6 @@ func (h HTTPS) toggleSSLPassthrough(passthrough, offload bool, api api.HAProxyCl
 	}
 	if offload {
 		logger.Panic(api.FrontendEnableSSLOffload(FrontendHTTPS, h.certDir, true))
-	}
-	return nil
-}
-
-func (h HTTPS) CleanCertDir(usedCerts map[string]struct{}) error {
-	files, err := ioutil.ReadDir(HAProxyCertDir)
-	if err != nil {
-		return err
-	}
-
-	for _, f := range files {
-		if f.IsDir() {
-			continue
-		}
-		filename := path.Join(HAProxyCertDir, f.Name())
-		_, isOK := usedCerts[filename]
-		if !isOK {
-			os.Remove(filename)
-		}
 	}
 	return nil
 }

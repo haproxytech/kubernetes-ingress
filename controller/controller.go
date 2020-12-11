@@ -29,6 +29,7 @@ import (
 	"github.com/haproxytech/models/v2"
 	"k8s.io/apimachinery/pkg/watch"
 
+	"github.com/haproxytech/kubernetes-ingress/controller/haproxy"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/api"
 	ingressRoute "github.com/haproxytech/kubernetes-ingress/controller/ingress"
 	"github.com/haproxytech/kubernetes-ingress/controller/store"
@@ -204,11 +205,8 @@ func (c *HAProxyController) updateHAProxy() error {
 	}()
 
 	restart, reload := c.handleGlobalAnnotations()
-
+	reload = c.handleDefaultCert() || reload
 	c.handleDefaultService()
-
-	usedCerts := map[string]struct{}{}
-	c.cfg.UsedCerts = usedCerts
 
 	for _, namespace := range c.Store.Namespaces {
 		if !namespace.Relevant {
@@ -226,12 +224,13 @@ func (c *HAProxyController) updateHAProxy() error {
 					Path:      ingress.DefaultBackend,
 				})
 			}
-			ingressSecrets := map[string]struct{}{}
+			// Ingress secrets
 			for _, tls := range ingress.TLS {
-				if _, ok := ingressSecrets[tls.SecretName.Value]; !ok {
-					ingressSecrets[tls.SecretName.Value] = struct{}{}
-					reload = c.handleTLSSecret(*ingress, *tls, usedCerts) || reload
-				}
+				reload = c.cfg.Certificates.HandleTLSSecret(c.Store, haproxy.SecretCtx{
+					DefaultNS:  ingress.Namespace,
+					SecretPath: tls.SecretName.Value,
+					SecretType: haproxy.FT_CERT,
+				}) || reload
 			}
 			// Ingress annotations
 			if len(ingress.Rules) == 0 {
@@ -385,7 +384,7 @@ func (c *HAProxyController) haproxyInitialize() {
 	logger.Error(err)
 	logger.Printf("Running on %s", hostname)
 
-	c.cfg.Init(HAProxyMapDir)
+	c.cfg.Init()
 }
 
 // handleBind configures Frontends bind lines
@@ -450,6 +449,9 @@ func (c *HAProxyController) handlePprof() (err error) {
 // handleDefaultService configures HAProy default backend provided via cli param "default-backend-service"
 func (c *HAProxyController) handleDefaultService() {
 	dsvcData, _ := c.Store.GetValueFromAnnotations("default-backend-service")
+	if dsvcData == nil {
+		return
+	}
 	dsvc := strings.Split(dsvcData.Value, "/")
 
 	if len(dsvc) != 2 {
@@ -484,6 +486,18 @@ func (c *HAProxyController) handleDefaultService() {
 		Namespace: namespace,
 		Ingress:   ingress,
 		Path:      path,
+	})
+}
+
+// handleDefaultCert configures default/fallback HAProxy certificate to use for client HTTPS requests.
+func (c *HAProxyController) handleDefaultCert() (reload bool) {
+	secretAnn, _ := c.Store.GetValueFromAnnotations("ssl-certificate", c.Store.ConfigMaps[Main].Annotations)
+	if secretAnn == nil {
+		return false
+	}
+	return c.cfg.Certificates.HandleTLSSecret(c.Store, haproxy.SecretCtx{
+		SecretPath: secretAnn.Value,
+		SecretType: haproxy.FT_CERT,
 	})
 }
 
