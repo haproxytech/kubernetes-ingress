@@ -42,6 +42,7 @@ func (c *HAProxyController) handleIngressAnnotations(ingress *store.Ingress) {
 	c.handleRequestSetHost(ingress)
 	c.handleRequestSetHdr(ingress)
 	c.handleResponseSetHdr(ingress)
+	c.handleResponseCors(ingress)
 }
 
 func (c *HAProxyController) handleBlacklisting(ingress *store.Ingress) {
@@ -397,20 +398,206 @@ func (c *HAProxyController) handleResponseSetHdr(ingress *store.Ingress) {
 	}
 	// Configure annotation
 	for _, param := range strings.Split(annResSetHdr.Value, "\n") {
-		parts := strings.Fields(param)
-		if len(parts) != 2 {
+		if param == "" {
+			continue
+		}
+		indexSpace := strings.IndexByte(param, ' ')
+		if indexSpace == -1 {
 			logger.Errorf("incorrect value '%s' in response-set-header annotation", param)
 			continue
 		}
 		logger.Debugf("Ingress %s/%s: Configuring response set '%s' header ", ingress.Namespace, ingress.Name, param)
 		resSetHdr := rules.SetHdr{
-			HdrName:   parts[0],
-			HdrFormat: parts[1],
+			HdrName:   param[:indexSpace],
+			HdrFormat: param[indexSpace+1:],
 			Response:  true,
 		}
 		logger.Error(c.cfg.HAProxyRules.AddRule(resSetHdr, &ingress.Name, FrontendHTTP, FrontendHTTPS))
 
 	}
+}
+
+func (c *HAProxyController) handleResponseCors(ingress *store.Ingress) {
+	annotation, _ := c.Store.GetValueFromAnnotations("cors-enable", ingress.Annotations, c.Store.ConfigMaps[Main].Annotations)
+	if annotation == nil {
+		return
+	}
+	if annotation.Status == DELETED {
+		logger.Debugf("Ingress %s/%s: Disabling Cors configuration", ingress.Namespace, ingress.Name)
+		return
+	}
+	enabled, err := utils.GetBoolValue(annotation.Value, "cors-enable")
+	if err != nil {
+		logger.Error(err)
+		return
+	}
+	if !enabled {
+		logger.Debugf("Ingress %s/%s: Disabling Cors configuration", ingress.Namespace, ingress.Name)
+		return
+	}
+	logger.Debugf("Ingress %s/%s: Enabling Cors configuration", ingress.Namespace, ingress.Name)
+	acl, err := c.handleResponseCorsOrigin(ingress)
+	if err != nil {
+		logger.Error(err)
+		return
+	}
+	c.handleResponseCorsMethod(ingress, acl)
+	c.handleResponseCorsCredential(ingress, acl)
+	c.handleResponseCorsHeaders(ingress, acl)
+	c.handleResponseCorsMaxAge(ingress, acl)
+
+}
+
+func (c *HAProxyController) handleResponseCorsOrigin(ingress *store.Ingress) (acl string, err error) {
+	annOrigin, _ := c.Store.GetValueFromAnnotations("cors-allow-origin", ingress.Annotations, c.Store.ConfigMaps[Main].Annotations)
+	if annOrigin == nil || annOrigin.Value == "" {
+		return acl, fmt.Errorf("cors-allow-origin not defined")
+	}
+	logger.Debug("Cors acl processing")
+	if annOrigin.Status == DELETED {
+		logger.Debugf("Ingress %s/%s: Disabling Cors configuration", ingress.Namespace, ingress.Name)
+		return acl, fmt.Errorf("cors-allow-origin not defined")
+	}
+	logger.Debugf("Ingress %s/%s: Configuring cors-allow-origin", ingress.Namespace, ingress.Name)
+
+	// SetVar rule to capture Origin header
+	originVar := fmt.Sprintf("origin.%d", utils.Hash([]byte(annOrigin.Value)))
+	err = c.cfg.HAProxyRules.AddRule(rules.ReqSetVar{
+		Name:       originVar,
+		Scope:      "txn",
+		Expression: "req.hdr(origin)",
+	}, &ingress.Name, FrontendHTTP, FrontendHTTPS)
+	if err != nil {
+		return acl, err
+	}
+	// SetHdr rule to set Access-Control-Allow-Origin
+	// Access-Control-Allow-Origin = *
+	acl = fmt.Sprintf("{ var(txn.%s) -m found }", originVar)
+	resSetHdr := rules.SetHdr{
+		HdrName:   "Access-Control-Allow-Origin",
+		HdrFormat: "*",
+		Response:  true,
+		CondTest:  acl,
+	}
+	// Access-Control-Allow-Origin = <origin>
+	if annOrigin.Value != "*" {
+		acl = fmt.Sprintf("{ var(txn.%s) -m reg %s }", originVar, annOrigin.Value)
+		resSetHdr.HdrFormat = "%[var(txn." + originVar + ")]"
+		resSetHdr.CondTest = acl
+	}
+	err = c.cfg.HAProxyRules.AddRule(resSetHdr, &ingress.Name, FrontendHTTP, FrontendHTTPS)
+	if err != nil {
+		return acl, err
+	}
+	return acl, nil
+}
+
+func (c *HAProxyController) handleResponseCorsMethod(ingress *store.Ingress, acl string) {
+	annotation, _ := c.Store.GetValueFromAnnotations("cors-allow-methods", ingress.Annotations, c.Store.ConfigMaps[Main].Annotations)
+	if annotation == nil {
+		return
+	}
+	if annotation.Status == DELETED {
+		logger.Debugf("Ingress %s/%s: Deleting cors-allow-methods configuration", ingress.Namespace, ingress.Name)
+		return
+	}
+	logger.Debugf("Ingress %s/%s: Configuring cors-allow-methods", ingress.Namespace, ingress.Name)
+	existingHTTPMethods := map[string]struct{}{"GET": {}, "POST": {}, "PUT": {}, "DELETE": {}, "HEAD": {}, "CONNECT": {}, "OPTIONS": {}, "TRACE": {}, "PATCH": {}}
+	value := annotation.Value
+	if value != "*" {
+		value = strings.Join(strings.Fields(value), "") //strip spaces
+		methods := strings.Split(value, ",")
+		for i, method := range methods {
+			methods[i] = strings.ToUpper(method)
+			if _, ok := existingHTTPMethods[methods[i]]; !ok {
+				logger.Errorf("Ingress %s/%s: Incorrect HTTP method '%s' in cors-allow-methods configuration", ingress.Namespace, ingress.Name, methods[i])
+				continue
+			}
+		}
+		value = "\"" + strings.Join(methods, ", ") + "\""
+	}
+	resSetHdr := rules.SetHdr{
+		HdrName:   "Access-Control-Allow-Methods",
+		HdrFormat: value,
+		Response:  true,
+		CondTest:  acl,
+	}
+	logger.Error(c.cfg.HAProxyRules.AddRule(resSetHdr, &ingress.Name, FrontendHTTP, FrontendHTTPS))
+}
+
+func (c *HAProxyController) handleResponseCorsCredential(ingress *store.Ingress, acl string) {
+	annotation, _ := c.Store.GetValueFromAnnotations("cors-allow-credentials", ingress.Annotations, c.Store.ConfigMaps[Main].Annotations)
+	if annotation == nil {
+		return
+	}
+	enabled, err := utils.GetBoolValue(annotation.Value, "cors-allow-credentials")
+	if err != nil {
+		logger.Error(err)
+		return
+	}
+	if annotation.Status == DELETED || !enabled {
+		logger.Debugf("Ingress %s/%s: Deleting cors-allow-credentials configuration", ingress.Namespace, ingress.Name)
+		return
+	}
+	logger.Debugf("Ingress %s/%s: Configuring cors-allow-credentials", ingress.Namespace, ingress.Name)
+	resSetHdr := rules.SetHdr{
+		HdrName:   "Access-Control-Allow-Credentials",
+		HdrFormat: "\"true\"",
+		Response:  true,
+		CondTest:  acl,
+	}
+	logger.Error(c.cfg.HAProxyRules.AddRule(resSetHdr, &ingress.Name, FrontendHTTP, FrontendHTTPS))
+}
+
+func (c *HAProxyController) handleResponseCorsHeaders(ingress *store.Ingress, acl string) {
+	annotation, _ := c.Store.GetValueFromAnnotations("cors-allow-headers", ingress.Annotations, c.Store.ConfigMaps[Main].Annotations)
+	if annotation == nil || annotation.Value == "" {
+		return
+	}
+	if annotation.Status == DELETED {
+		logger.Debugf("Ingress %s/%s: Deleting cors-allow-headers configuration", ingress.Namespace, ingress.Name)
+		return
+	}
+	logger.Debugf("Ingress %s/%s: Configuring cors-allow-headers", ingress.Namespace, ingress.Name)
+	value := strings.Join(strings.Fields(annotation.Value), "") //strip spaces
+	resSetHdr := rules.SetHdr{
+		HdrName:   "Access-Control-Allow-Headers",
+		HdrFormat: "\"" + value + "\"",
+		Response:  true,
+		CondTest:  acl,
+	}
+	logger.Error(c.cfg.HAProxyRules.AddRule(resSetHdr, &ingress.Name, FrontendHTTP, FrontendHTTPS))
+}
+
+func (c *HAProxyController) handleResponseCorsMaxAge(ingress *store.Ingress, acl string) {
+	logger.Debug("Cors max age processing")
+	annotation, _ := c.Store.GetValueFromAnnotations("cors-max-age", ingress.Annotations, c.Store.ConfigMaps[Main].Annotations)
+	if annotation == nil {
+		return
+	}
+	if annotation.Status == DELETED {
+		logger.Debugf("Ingress %s/%s: Deleting cors max age configuration", ingress.Namespace, ingress.Name)
+		return
+	}
+	r, err := utils.ParseTime(annotation.Value)
+	if err != nil {
+		logger.Error(err)
+		return
+	}
+	maxage := *r / 1000
+	if maxage < -1 {
+		logger.Errorf("Ingress %s/%s: Invalid cors-max-age value %d", ingress.Namespace, ingress.Name, maxage)
+		return
+	}
+	logger.Debugf("Ingress %s/%s: Configuring cors-max-age", ingress.Namespace, ingress.Name)
+	resSetHdr := rules.SetHdr{
+		HdrName:   "Access-Control-Max-Age",
+		HdrFormat: fmt.Sprintf("\"%d\"", maxage),
+		Response:  true,
+		CondTest:  acl,
+	}
+	logger.Error(c.cfg.HAProxyRules.AddRule(resSetHdr, &ingress.Name, FrontendHTTP, FrontendHTTPS))
+
 }
 
 func tlsEnabled(ingress *store.Ingress) bool {

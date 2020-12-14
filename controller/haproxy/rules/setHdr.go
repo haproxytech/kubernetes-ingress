@@ -16,6 +16,7 @@ type SetHdr struct {
 	HdrName        string
 	HdrFormat      string
 	Type           haproxy.RuleType
+	CondTest       string
 }
 
 func (r SetHdr) GetType() haproxy.RuleType {
@@ -49,6 +50,7 @@ func (r SetHdr) Create(client api.HAProxyClient, frontend *models.Frontend, ingr
 			Type:      "set-header",
 			HdrName:   r.HdrName,
 			HdrFormat: r.HdrFormat,
+			CondTest:  r.CondTest,
 		}
 		return client.FrontendHTTPResponseRuleCreate(frontend.Name, httpRule, ingressACL)
 	}

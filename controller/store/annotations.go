@@ -132,6 +132,10 @@ func (k K8s) SetDefaultAnnotation(annotation, value string) {
 var defaultAnnotationValues = MapStringW{
 	"auth-realm":              &StringW{Value: "Protected Content"},
 	"check":                   &StringW{Value: "true"},
+	"cors-allow-origin":       &StringW{Value: "*"},
+	"cors-allow-methods":      &StringW{Value: "*"},
+	"cors-allow-headers":      &StringW{Value: "*"},
+	"cors-max-age":            &StringW{Value: "5s"},
 	"cookie-indirect":         &StringW{Value: "true"},
 	"cookie-nocache":          &StringW{Value: "true"},
 	"cookie-type":             &StringW{Value: "insert"},
