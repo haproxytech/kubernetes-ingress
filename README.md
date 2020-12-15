@@ -6,8 +6,9 @@
 
 An ingress controller is a Kubernetes resource that routes traffic from outside your cluster to services within the cluster.
 
-Detailed documentation can be found within the [Official Documentation](https://www.haproxy.com/documentation/hapee/1-9r1/traffic-management/kubernetes-ingress-controller/)
+Detailed documentation can be found within the [Official Documentation](https://www.haproxy.com/documentation/kubernetes/latest/).
 
+You can also find in this repository a list of all available [Ingress annotations](https://github.com/haproxytech/kubernetes-ingress/blob/master/documentation/README.md).
 ### Usage
 
 Docker image is available on Docker Hub: [haproxytech/kubernetes-ingress](https://hub.docker.com/r/haproxytech/kubernetes-ingress)
