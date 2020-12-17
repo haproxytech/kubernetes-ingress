@@ -221,9 +221,12 @@ func (k K8s) EventEndpoints(ns *Namespace, data *Endpoints, updateHAproxySrvs fu
 			return false
 		}
 		for portName, oldPortEdpts := range oldEndpoints.Ports {
-			if newPortEdpts, ok := newEndpoints.Ports[portName]; ok {
-				updateHAproxySrvs(oldPortEdpts, newPortEdpts)
+			newPortEdpts, ok := newEndpoints.Ports[portName]
+			if !ok {
+				newPortEdpts = &PortEndpoints{Port: oldPortEdpts.Port}
+				newEndpoints.Ports[portName] = newPortEdpts
 			}
+			updateHAproxySrvs(oldPortEdpts, newPortEdpts)
 		}
 		ns.Endpoints[data.Service.Value] = newEndpoints
 		return true

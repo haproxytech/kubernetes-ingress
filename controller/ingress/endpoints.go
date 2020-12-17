@@ -85,9 +85,6 @@ func (route *Route) alignHAProxySrvs() {
 func (route *Route) handleEndpoints() {
 	route.getEndpoints()
 	if route.endpoints == nil {
-		if client.BackendServerDeleteAll(route.BackendName) {
-			route.reload = true
-		}
 		return
 	}
 	route.endpoints.BackendName = route.BackendName
