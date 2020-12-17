@@ -24,54 +24,49 @@ import (
 	"github.com/haproxytech/models/v2"
 )
 
-// alignHAProxySrvs adds or removes servers to match server-slots param
-func (route *Route) alignHAProxySrvs() {
+// scaleHAproxySrvs adds servers to match available addresses
+func (route *Route) scaleHAProxySrvs() {
+	var srvSlots int
 	haproxySrvs := route.endpoints.HAProxySrvs
-	// Get server-slots annotation
-	// "servers-increment" is a legacy annotation
-	annServerSlots, _ := k8sStore.GetValueFromAnnotations("servers-increment", k8sStore.ConfigMaps[Main].Annotations)
-	if annServerSlots == nil {
-		annServerSlots, _ = k8sStore.GetValueFromAnnotations("server-slots", k8sStore.ConfigMaps[Main].Annotations)
-
+	disabled := []string{}
+	// "servers-increment", "server-slots" are legacy annotations
+	for _, annotation := range []string{"servers-increment", "server-slots", "scale-server-slots"} {
+		annServerSlots, _ := k8sStore.GetValueFromAnnotations(annotation, k8sStore.ConfigMaps[Main].Annotations)
+		if annServerSlots != nil {
+			if value, err := strconv.Atoi(annServerSlots.Value); err == nil {
+				srvSlots = value
+				break
+			} else {
+				logger.Error(err)
+			}
+		}
 	}
-	requiredSrvNbr := int(42)
-	if value, err := strconv.Atoi(annServerSlots.Value); err == nil {
-		requiredSrvNbr = value
-	} else {
-		logger.Error(err)
-	}
-	// Add disabled HAProxySrvs to match required serverSlots
-	for len(haproxySrvs) < requiredSrvNbr {
+	// Add disabled HAProxySrvs to match scale-server-slots
+	for len(haproxySrvs) < srvSlots {
 		srvName := fmt.Sprintf("SRV_%s", utils.RandomString(5))
 		haproxySrvs[srvName] = &store.HAProxySrv{
 			Address:  "",
 			Modified: true,
 		}
+		disabled = append(disabled, srvName)
 		route.reload = true
 	}
-	// Remove HAProxySrvs to match required serverSlots
-	remainAddrs := route.endpoints.AddrRemain
-	for len(haproxySrvs) > requiredSrvNbr {
-		// pick random server
-		for srvName, srv := range haproxySrvs {
-			srvAddr := srv.Address
-			remainAddrs[srvAddr] = struct{}{}
-			delete(haproxySrvs, srvName)
-			logger.Error(client.BackendServerDelete(route.endpoints.BackendName, srvName))
-			route.reload = true
-			break
-		}
-	}
 	// Configure remaining addresses in available HAProxySrvs
-	for _, srv := range haproxySrvs {
-		if srv.Address == "" {
-			for addr := range route.endpoints.AddrRemain {
-				srv.Address = addr
-				srv.Modified = true
-				delete(remainAddrs, addr)
-				break
+	for addr := range route.endpoints.AddrRemain {
+		if len(disabled) != 0 {
+			srv := haproxySrvs[disabled[0]]
+			srv.Address = addr
+			srv.Modified = true
+			disabled = disabled[1:]
+		} else {
+			srvName := fmt.Sprintf("SRV_%s", utils.RandomString(5))
+			haproxySrvs[srvName] = &store.HAProxySrv{
+				Address:  addr,
+				Modified: true,
 			}
+			route.reload = true
 		}
+		delete(route.endpoints.AddrRemain, addr)
 	}
 }
 
@@ -84,7 +79,7 @@ func (route *Route) handleEndpoints() {
 	}
 	route.endpoints.BackendName = route.BackendName
 	if route.service.DNS == "" {
-		route.alignHAProxySrvs()
+		route.scaleHAProxySrvs()
 	}
 	activeAnnotations := route.getServerAnnotations()
 	for srvName, srv := range route.endpoints.HAProxySrvs {
