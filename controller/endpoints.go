@@ -84,9 +84,6 @@ func (c *HAProxyController) handleEndpoints(namespace *Namespace, ingress *Ingre
 	reload = newBackend
 	endpoints := c.getEndpoints(namespace, ingress, path, service)
 	if endpoints == nil {
-		if c.Client.BackendServerDeleteAll(backendName) {
-			reload = true
-		}
 		return reload
 	}
 	// Handle Backend servers
