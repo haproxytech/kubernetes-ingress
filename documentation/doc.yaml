@@ -935,20 +935,22 @@ annotations:
     - ingress
     version_min: "1.4"
     example: ['set-host: "example.local"']
-  - title: server-slots
+  - title: scale-server-slots
     type: number
-    group: server-slots
+    group: backend-scaling
     dependencies: ""
     default: "42"
     description:
-    - Sets the number of servers slots that should be provisioned on a backend.
+    - Sets the number of server slots to provision in order for HAProxy to scale 
+      dynamically with no reload.
       If this number is greater than available endpoints/addresses, the remaining 
-      slots will be disabled (put on stand by), ready to be used dynamically (no reload).
-      if this number is lower then the remaining endpoints/addresses won't be used.
+      slots will be disabled (put on stand by) and ready to be used.
+      if this number is lower, the remaining endpoints/addresses will be added after
+      scaling HAProxy backend with a reload.
     tip:
-      - This deprecates `servers-increment` annotation.
+      - Equivalent old annotations are "servers-increment" and "server-slots"
     values:
-    - Integer value indicating the number of disabled servers to add. Defaults to 42.
+    - Integer value indicating the number of backend servers to provision. Defaults to 42.
     applies_to:
     - configmap
     version_min: "1.4"
