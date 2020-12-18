@@ -83,6 +83,7 @@ func (c *HAProxyController) handleHTTPRedirect(ingress *store.Ingress, ruleIDs *
 	//  Get and validate annotations
 	toEnable := false
 	annSSLRedirect, _ := c.Store.GetValueFromAnnotations("ssl-redirect", ingress.Annotations, c.Store.ConfigMaps[Main].Annotations)
+	annSSLRedirectPort, _ := c.Store.GetValueFromAnnotations("ssl-redirect-port", ingress.Annotations, c.Store.ConfigMaps[Main].Annotations)
 	annRedirectCode, _ := c.Store.GetValueFromAnnotations("ssl-redirect-code", ingress.Annotations, c.Store.ConfigMaps[Main].Annotations)
 	sslRedirectCode, err := strconv.ParseInt(annRedirectCode.Value, 10, 64)
 	if err != nil {
@@ -100,9 +101,15 @@ func (c *HAProxyController) handleHTTPRedirect(ingress *store.Ingress, ruleIDs *
 	if !toEnable {
 		return
 	}
+	sslRedirectPort, err := strconv.Atoi(annSSLRedirectPort.Value)
+	if err != nil {
+		logger.Error(err)
+		return
+	}
 	// Configure redirection
 	reqSSLRedirect := rules.ReqSSLRedirect{
 		RedirectCode: sslRedirectCode,
+		RedirectPort: sslRedirectPort,
 	}
 	if err := c.cfg.HAProxyRules.AddRule(reqSSLRedirect, FrontendHTTP); err == nil {
 		*ruleIDs = append(*ruleIDs, reqSSLRedirect.GetID())

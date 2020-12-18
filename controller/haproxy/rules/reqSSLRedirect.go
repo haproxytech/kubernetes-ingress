@@ -13,6 +13,7 @@ import (
 type ReqSSLRedirect struct {
 	id           uint32
 	RedirectCode int64
+	RedirectPort int
 }
 
 func (r ReqSSLRedirect) GetID() uint32 {
@@ -34,10 +35,8 @@ func (r ReqSSLRedirect) Create(client api.HAProxyClient, frontend *models.Fronte
 		Index:      utils.PtrInt64(0),
 		Type:       "redirect",
 		RedirCode:  utils.PtrInt64(r.RedirectCode),
-		RedirValue: "https",
-		RedirType:  "scheme",
-		Cond:       "if",
-		CondTest:   "!{ ssl_fc }",
+		RedirValue: fmt.Sprintf("https://%%[hdr(host),field(1,:)]:%d%%[capture.req.uri]", r.RedirectPort),
+		RedirType:  "location",
 	}
 	matchRuleID(&httpRule, r.GetID())
 	return client.FrontendHTTPRequestRuleCreate(frontend.Name, httpRule)
