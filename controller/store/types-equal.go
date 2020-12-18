@@ -196,30 +196,30 @@ func (a *Endpoints) Equal(b *Endpoints) bool {
 	return true
 }
 
-//Equal checks if two service ports have same endpoints
-func (a *PortEndpoints) Equal(b *PortEndpoints) bool {
-	if a == nil || b == nil {
+// Equal checks if old PortEndpoints equals to a new PortEndpoints
+// Some Addresses of old PortEndpoints are in configured HAProxySrvs
+// and the rest are in AddrRemain.
+// All Addresses of new PortEndpoints are in AddrRemain.
+func (oldE *PortEndpoints) Equal(newE *PortEndpoints) bool {
+	if oldE == nil || newE == nil {
 		return false
 	}
-	if a.Port != b.Port {
+	if oldE.Port != newE.Port {
 		return false
 	}
-	if len(a.AddrRemain)+len(a.AddrsUsed) != len(b.AddrRemain)+len(b.AddrsUsed) {
+	if oldE.AddrCount != newE.AddrCount {
 		return false
 	}
-	for adr := range a.AddrRemain {
-		if _, ok := b.AddrRemain[adr]; ok {
+	for _, srv := range oldE.HAProxySrvs {
+		if srv.Address == "" {
 			continue
 		}
-		if _, ok := b.AddrsUsed[adr]; !ok {
+		if _, ok := newE.AddrRemain[srv.Address]; !ok {
 			return false
 		}
 	}
-	for adr := range a.AddrsUsed {
-		if _, ok := b.AddrsUsed[adr]; ok {
-			continue
-		}
-		if _, ok := b.AddrRemain[adr]; !ok {
+	for addr := range oldE.AddrRemain {
+		if _, ok := newE.AddrRemain[addr]; !ok {
 			return false
 		}
 	}

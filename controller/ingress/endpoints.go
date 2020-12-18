@@ -50,16 +50,12 @@ func (route *Route) alignHAProxySrvs() {
 		route.reload = true
 	}
 	// Remove HAProxySrvs to match required serverSlots
-	usedAddrs := route.endpoints.AddrsUsed
 	remainAddrs := route.endpoints.AddrRemain
 	for len(haproxySrvs) > requiredSrvNbr {
 		// pick random server
 		for srvName, srv := range haproxySrvs {
 			srvAddr := srv.Address
-			if _, ok := usedAddrs[srvAddr]; ok {
-				delete(usedAddrs, srvAddr)
-				remainAddrs[srvAddr] = struct{}{}
-			}
+			remainAddrs[srvAddr] = struct{}{}
 			delete(haproxySrvs, srvName)
 			logger.Error(client.BackendServerDelete(route.endpoints.BackendName, srvName))
 			route.reload = true
@@ -72,7 +68,6 @@ func (route *Route) alignHAProxySrvs() {
 			for addr := range route.endpoints.AddrRemain {
 				srv.Address = addr
 				srv.Modified = true
-				usedAddrs[addr] = struct{}{}
 				delete(remainAddrs, addr)
 				break
 			}

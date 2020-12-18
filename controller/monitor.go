@@ -249,13 +249,11 @@ func (c *HAProxyController) updateHAProxySrvs(oldEndpoints, newEndpoints *store.
 	newEndpoints.BackendName = oldEndpoints.BackendName
 	haproxySrvs := newEndpoints.HAProxySrvs
 	newAddresses := newEndpoints.AddrRemain
-	usedAddresses := newEndpoints.AddrsUsed
 	// Disable stale entries from HAProxySrvs
 	// and provide list of Disabled Srvs
 	disabledSrvs := make(map[string]struct{})
 	for srvName, srv := range haproxySrvs {
 		if _, ok := newAddresses[srv.Address]; ok {
-			usedAddresses[srv.Address] = struct{}{}
 			delete(newAddresses, srv.Address)
 		} else {
 			haproxySrvs[srvName].Address = ""
@@ -272,7 +270,6 @@ func (c *HAProxyController) updateHAProxySrvs(oldEndpoints, newEndpoints *store.
 		for srvName := range disabledSrvs {
 			haproxySrvs[srvName].Address = newAddr
 			haproxySrvs[srvName].Modified = true
-			usedAddresses[newAddr] = struct{}{}
 			delete(disabledSrvs, srvName)
 			delete(newAddresses, newAddr)
 			break
