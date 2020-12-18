@@ -23,42 +23,25 @@ import (
 	"github.com/haproxytech/models/v2"
 )
 
-func (c *HAProxyController) getSrvSlotsAnn() (min, max int) {
-	// "servers-increment", "server-slots" are legacy annotations
-	for _, annotation := range []string{"servers-increment", "server-slots", "min-server-slots"} {
-		annMinServerSlots, _ := GetValueFromAnnotations(annotation, c.cfg.ConfigMap.Annotations)
-		if annMinServerSlots == nil {
-			continue
-		}
-		if value, err := strconv.Atoi(annMinServerSlots.Value); err == nil {
-			min = value
-			break
-		} else {
-			c.Logger.Error(err)
-		}
-	}
-	annMaxServerSlots, _ := GetValueFromAnnotations("max-server-slots", c.cfg.ConfigMap.Annotations)
-	if annMaxServerSlots != nil {
-		if value, err := strconv.Atoi(annMaxServerSlots.Value); err == nil {
-			max = value
-		} else {
-			c.Logger.Error(err)
-		}
-	}
-	if max != 0 && max < min {
-		c.Logger.Errorf("max-server-slots value %d is less than min-server-slots value %d", max, min)
-		return min, 0
-	}
-	return min, max
-}
-
-// alignHAproxySrvs adds or removes servers to match server-slots param
-func (c *HAProxyController) alignHAproxySrvs(endpoints *PortEndpoints) (reload bool) {
+// scaleHAproxySrvs adds servers to match available addresses
+func (c *HAProxyController) scaleHAproxySrvs(endpoints *PortEndpoints) (reload bool) {
+	var srvSlots int
 	haproxySrvs := endpoints.HAProxySrvs
-	minSrvNbr, maxSrvNbr := c.getSrvSlotsAnn()
 	disabled := []string{}
-	// Add disabled HAProxySrvs to match min-server-slots
-	for len(haproxySrvs) < minSrvNbr {
+	// "servers-increment", "server-slots" are legacy annotations
+	for _, annotation := range []string{"servers-increment", "server-slots", "scale-server-slots"} {
+		annServerSlots, _ := GetValueFromAnnotations(annotation, c.cfg.ConfigMap.Annotations)
+		if annServerSlots == nil {
+			if value, err := strconv.Atoi(annServerSlots.Value); err == nil {
+				srvSlots = value
+				break
+			} else {
+				c.Logger.Error(err)
+			}
+		}
+	}
+	// Add disabled HAProxySrvs to match scale-server-slots
+	for len(haproxySrvs) < srvSlots {
 		srvName := fmt.Sprintf("SRV_%s", utils.RandomString(5))
 		haproxySrvs[srvName] = &HAProxySrv{
 			Address:  "",
@@ -67,37 +50,20 @@ func (c *HAProxyController) alignHAproxySrvs(endpoints *PortEndpoints) (reload b
 		disabled = append(disabled, srvName)
 		reload = true
 	}
-	// When max-server-slots enabled (> 0):
-	// Remove HAProxySrvs to match maximum serverSlots
-	for srvName, srv := range haproxySrvs {
-		if maxSrvNbr == 0 || maxSrvNbr >= len(haproxySrvs) {
-			break
-		}
-		endpoints.AddrRemain[srv.Address] = struct{}{}
-		delete(haproxySrvs, srvName)
-		c.Logger.Error(c.Client.BackendServerDelete(endpoints.BackendName, srvName))
-		reload = true
-	}
 	// Configure remaining addresses in available HAProxySrvs
-	// when max-server-slots enabled (>0)
 	for addr := range endpoints.AddrRemain {
-		switch {
-		case len(disabled) != 0:
+		if len(disabled) != 0 {
 			srv := haproxySrvs[disabled[0]]
 			srv.Address = addr
 			srv.Modified = true
 			disabled = disabled[1:]
-			delete(endpoints.AddrRemain, addr)
-		case maxSrvNbr == 0 || maxSrvNbr > len(haproxySrvs):
+		} else {
 			srvName := fmt.Sprintf("SRV_%s", utils.RandomString(5))
 			haproxySrvs[srvName] = &HAProxySrv{
 				Address:  addr,
 				Modified: true,
 			}
 			delete(endpoints.AddrRemain, addr)
-			reload = true
-		default:
-			break
 		}
 	}
 	return reload
@@ -115,7 +81,7 @@ func (c *HAProxyController) handleEndpoints(namespace *Namespace, ingress *Ingre
 	endpoints.BackendName = backendName
 	annotations, activeAnnotations := c.getServerAnnotations(ingress, service)
 	if service.DNS == "" {
-		reload = c.alignHAproxySrvs(endpoints) || reload
+		reload = c.scaleHAproxySrvs(endpoints) || reload
 	}
 	reload = reload || activeAnnotations
 	for srvName, srv := range endpoints.HAProxySrvs {
