@@ -38,8 +38,10 @@ RUN mkdir -p /var/run/vars && \
 
 FROM haproxytech/haproxy-alpine:2.3
 
-COPY --from=builder /src/fs/haproxy-ingress-controller .
+ENV GODEBUG=madvdontneed=1
+
 COPY /fs /
+COPY --from=builder /src/fs/haproxy-ingress-controller .
 
 ARG DUMB_INIT_SHA256=37f2c1f0372a45554f1b89924fbb134fc24c3756efaedf11e07f599494e0eff9
 
