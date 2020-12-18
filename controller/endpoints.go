@@ -31,7 +31,7 @@ func (c *HAProxyController) scaleHAproxySrvs(endpoints *PortEndpoints) (reload b
 	// "servers-increment", "server-slots" are legacy annotations
 	for _, annotation := range []string{"servers-increment", "server-slots", "scale-server-slots"} {
 		annServerSlots, _ := GetValueFromAnnotations(annotation, c.cfg.ConfigMap.Annotations)
-		if annServerSlots == nil {
+		if annServerSlots != nil {
 			if value, err := strconv.Atoi(annServerSlots.Value); err == nil {
 				srvSlots = value
 				break
