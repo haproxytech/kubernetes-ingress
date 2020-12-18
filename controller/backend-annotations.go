@@ -141,7 +141,7 @@ func (c *HAProxyController) handleServerAnnotations(serverModel *models.Server, 
 			if v.Status == DELETED {
 				server.Cookie = ""
 			} else {
-				server.Cookie = v.Value
+				server.Cookie = server.Name
 			}
 		case "check":
 			if err := server.UpdateCheck(v.Value); err != nil {
