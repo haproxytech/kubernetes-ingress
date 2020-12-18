@@ -230,11 +230,11 @@ func (k *K8s) convertToEndpoints(obj interface{}, status store.Status) (*store.E
 		Status:    status,
 	}
 	for _, subset := range data.Subsets {
-		addresses := make(map[string]struct{})
-		for _, address := range subset.Addresses {
-			addresses[address.IP] = struct{}{}
-		}
 		for _, port := range subset.Ports {
+			addresses := make(map[string]struct{})
+			for _, address := range subset.Addresses {
+				addresses[address.IP] = struct{}{}
+			}
 			item.Ports[port.Name] = &store.PortEndpoints{
 				Port:        int64(port.Port),
 				AddrRemain:  addresses,
