@@ -53,10 +53,7 @@ func (c *HAProxyController) alignHAproxySrvs(endpoints *PortEndpoints) (reload b
 		// pick random server
 		for srvName, srv := range haproxySrvs {
 			srvAddr := srv.Address
-			if _, ok := endpoints.AddrsUsed[srvAddr]; ok {
-				delete(endpoints.AddrsUsed, srvAddr)
-				endpoints.AddrRemain[srvAddr] = struct{}{}
-			}
+			endpoints.AddrRemain[srvAddr] = struct{}{}
 			delete(haproxySrvs, srvName)
 			c.Logger.Error(c.Client.BackendServerDelete(endpoints.BackendName, srvName))
 			reload = true
@@ -69,7 +66,6 @@ func (c *HAProxyController) alignHAproxySrvs(endpoints *PortEndpoints) (reload b
 			for addr := range endpoints.AddrRemain {
 				srv.Address = addr
 				srv.Modified = true
-				endpoints.AddrsUsed[addr] = struct{}{}
 				delete(endpoints.AddrRemain, addr)
 				break
 			}
@@ -190,13 +186,11 @@ func (c *HAProxyController) updateHAProxySrvs(oldEndpoints, newEndpoints *PortEn
 	newEndpoints.BackendName = oldEndpoints.BackendName
 	haproxySrvs := newEndpoints.HAProxySrvs
 	newAddresses := newEndpoints.AddrRemain
-	usedAddresses := newEndpoints.AddrsUsed
 	// Disable stale entries from HAProxySrvs
 	// and provide list of Disabled Srvs
 	disabledSrvs := make(map[string]struct{})
 	for srvName, srv := range haproxySrvs {
 		if _, ok := newAddresses[srv.Address]; ok {
-			usedAddresses[srv.Address] = struct{}{}
 			delete(newAddresses, srv.Address)
 		} else {
 			haproxySrvs[srvName].Address = ""
@@ -213,7 +207,6 @@ func (c *HAProxyController) updateHAProxySrvs(oldEndpoints, newEndpoints *PortEn
 		for srvName := range disabledSrvs {
 			haproxySrvs[srvName].Address = newAddr
 			haproxySrvs[srvName].Modified = true
-			usedAddresses[newAddr] = struct{}{}
 			delete(disabledSrvs, srvName)
 			delete(newAddresses, newAddr)
 			break

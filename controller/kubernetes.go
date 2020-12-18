@@ -247,8 +247,8 @@ func (k *K8s) convertToEndpoints(obj interface{}, status Status) (*Endpoints, er
 		for _, port := range subset.Ports {
 			item.Ports[port.Name] = &PortEndpoints{
 				Port:        int64(port.Port),
+				AddrCount:   len(addresses),
 				AddrRemain:  addresses,
-				AddrsUsed:   make(map[string]struct{}),
 				HAProxySrvs: make(map[string]*HAProxySrv),
 			}
 		}

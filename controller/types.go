@@ -52,7 +52,7 @@ type HAProxySrv struct {
 type PortEndpoints struct {
 	Port        int64
 	BackendName string
-	AddrsUsed   map[string]struct{}
+	AddrCount   int
 	AddrRemain  map[string]struct{}
 	HAProxySrvs map[string]*HAProxySrv
 }
