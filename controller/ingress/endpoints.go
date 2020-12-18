@@ -91,7 +91,9 @@ func (route *Route) handleEndpoints() {
 		return
 	}
 	route.endpoints.BackendName = route.BackendName
-	route.alignHAProxySrvs()
+	if route.service.DNS == "" {
+		route.alignHAProxySrvs()
+	}
 	activeAnnotations := route.getServerAnnotations()
 	for srvName, srv := range route.endpoints.HAProxySrvs {
 		if srv.Modified || route.NewBackend || activeAnnotations {
