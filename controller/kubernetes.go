@@ -238,8 +238,8 @@ func (k *K8s) convertToEndpoints(obj interface{}, status store.Status) (*store.E
 			item.Ports[port.Name] = &store.PortEndpoints{
 				Port:        int64(port.Port),
 				AddrCount:   len(addresses),
-				AddrRemain:  addresses,
-				HAProxySrvs: make(map[string]*store.HAProxySrv),
+				AddrNew:     addresses,
+				HAProxySrvs: make([]*store.HAProxySrv, 0, len(addresses)),
 			}
 		}
 	}

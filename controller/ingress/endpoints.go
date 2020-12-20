@@ -27,8 +27,8 @@ import (
 // scaleHAproxySrvs adds servers to match available addresses
 func (route *Route) scaleHAProxySrvs() {
 	var srvSlots int
+	var disabled []*store.HAProxySrv
 	haproxySrvs := route.endpoints.HAProxySrvs
-	disabled := []string{}
 	// "servers-increment", "server-slots" are legacy annotations
 	for _, annotation := range []string{"servers-increment", "server-slots", "scale-server-slots"} {
 		annServerSlots, _ := k8sStore.GetValueFromAnnotations(annotation, k8sStore.ConfigMaps[Main].Annotations)
@@ -43,31 +43,33 @@ func (route *Route) scaleHAProxySrvs() {
 	}
 	// Add disabled HAProxySrvs to match scale-server-slots
 	for len(haproxySrvs) < srvSlots {
-		srvName := fmt.Sprintf("SRV_%s", utils.RandomString(5))
-		haproxySrvs[srvName] = &store.HAProxySrv{
+		srv := &store.HAProxySrv{
+			Name:     fmt.Sprintf("SRV_%s", utils.RandomString(5)),
 			Address:  "",
 			Modified: true,
 		}
-		disabled = append(disabled, srvName)
+		haproxySrvs = append(haproxySrvs, srv)
+		disabled = append(disabled, srv)
 		route.reload = true
 	}
 	// Configure remaining addresses in available HAProxySrvs
-	for addr := range route.endpoints.AddrRemain {
+	for addr := range route.endpoints.AddrNew {
 		if len(disabled) != 0 {
-			srv := haproxySrvs[disabled[0]]
-			srv.Address = addr
-			srv.Modified = true
+			disabled[0].Address = addr
+			disabled[0].Modified = true
 			disabled = disabled[1:]
 		} else {
-			srvName := fmt.Sprintf("SRV_%s", utils.RandomString(5))
-			haproxySrvs[srvName] = &store.HAProxySrv{
+			srv := &store.HAProxySrv{
+				Name:     fmt.Sprintf("SRV_%s", utils.RandomString(5)),
 				Address:  addr,
 				Modified: true,
 			}
+			haproxySrvs = append(haproxySrvs, srv)
 			route.reload = true
 		}
-		delete(route.endpoints.AddrRemain, addr)
+		delete(route.endpoints.AddrNew, addr)
 	}
+	route.endpoints.HAProxySrvs = haproxySrvs
 }
 
 // handleEndpoints lookups the IngressPath related endpoints and makes corresponding backend servers configuration in HAProxy
@@ -82,18 +84,18 @@ func (route *Route) handleEndpoints() {
 		route.scaleHAProxySrvs()
 	}
 	activeAnnotations := route.getServerAnnotations()
-	for srvName, srv := range route.endpoints.HAProxySrvs {
+	for _, srv := range route.endpoints.HAProxySrvs {
 		if srv.Modified || route.NewBackend || activeAnnotations {
-			route.handleHAProxSrv(srvName, srv.Address)
+			route.handleHAProxSrv(srv)
 		}
 	}
 }
 
 // handleHAProxSrv creates/updates corresponding HAProxy backend server
-func (route *Route) handleHAProxSrv(srvName, srvAddr string) {
+func (route *Route) handleHAProxSrv(srv *store.HAProxySrv) {
 	server := models.Server{
-		Name:    srvName,
-		Address: srvAddr,
+		Name:    srv.Name,
+		Address: srv.Address,
 		Port:    &route.endpoints.Port,
 		Weight:  utils.PtrInt64(128),
 	}
@@ -133,8 +135,9 @@ func (route *Route) handleExternalName() {
 	}
 	route.endpoints = &store.PortEndpoints{
 		Port: port,
-		HAProxySrvs: map[string]*store.HAProxySrv{
-			"external-service": {
+		HAProxySrvs: []*store.HAProxySrv{
+			{
+				Name:     "SRV_1",
 				Address:  route.service.DNS,
 				Modified: true,
 			},
