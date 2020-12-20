@@ -63,8 +63,9 @@ func (c *HAProxyController) scaleHAproxySrvs(endpoints *PortEndpoints) (reload b
 				Address:  addr,
 				Modified: true,
 			}
-			delete(endpoints.AddrRemain, addr)
+			reload = true
 		}
+		delete(endpoints.AddrRemain, addr)
 	}
 	return reload
 }
