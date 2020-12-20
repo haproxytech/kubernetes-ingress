@@ -44,7 +44,7 @@ func (route *Route) scaleHAProxySrvs() {
 	// Add disabled HAProxySrvs to match scale-server-slots
 	for len(haproxySrvs) < srvSlots {
 		srv := &store.HAProxySrv{
-			Name:     fmt.Sprintf("SRV_%s", utils.RandomString(5)),
+			Name:     fmt.Sprintf("SRV_%d", len(haproxySrvs)+1),
 			Address:  "",
 			Modified: true,
 		}
@@ -60,7 +60,7 @@ func (route *Route) scaleHAProxySrvs() {
 			disabled = disabled[1:]
 		} else {
 			srv := &store.HAProxySrv{
-				Name:     fmt.Sprintf("SRV_%s", utils.RandomString(5)),
+				Name:     fmt.Sprintf("SRV_%d", len(haproxySrvs)+1),
 				Address:  addr,
 				Modified: true,
 			}
