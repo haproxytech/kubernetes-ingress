@@ -901,6 +901,66 @@ annotations:
     - service
     version_min: "1.5"
     example: ['send-proxy-protocol: proxy-v2']
+  - title: server-ca
+    type: string
+    group: server-ca
+    dependencies: ""
+    default: ""
+    description:
+    - value is the path of a secret containing a CA certificate (certificate authority)
+      enabling HAProxy to verify backends certificate via *ca-file* directive.
+      When CA certificate is properly configured this will also sets *verify*
+      directive to *required*.
+    tip:
+      - The secret must use 'tls.crt' key.
+    values:
+    - Secret path following namespace/secretname format.
+    applies_to:
+    - service  
+    - configmap
+    - ingress
+    version_min: "1.5"
+    example: ['server-ca: "ns1/ca"']
+  - title: server-crt
+    type: string
+    group: server-crt
+    dependencies: ""
+    default: ""
+    description:
+    - value is the path of a secret containing a client
+      certificate that haproxy can provide during a SSL communication with
+      backend servers via *crt* directive. 
+    tip:
+       - The secret must use 'tls.key' and 'tls.crt' keys.
+    values:
+    - Secret path following namespace/secretname format.
+    applies_to:
+    - service  
+    - configmap
+    - ingress
+    version_min: "1.5"
+    example: ['server-crt: "ns1/client"']
+  - title: server-proto
+    type: '["h2"]'
+    group: server-proto
+    dependencies: ""
+    default: ""
+    description:
+    - HTTP/1.1 is the default protocol for backend servers communication.
+      Currently server-proto annotation supports only "h2" value (supporting
+      fcgi is also planned) which forces the HTTP/2 on clear for backend
+      servers.
+    - When SSL is enabled on the backend, server-proto is ignored and both
+      http/1.1 and http/2 are advertised via ALPN.
+    tip: []
+    values:
+    - "h2"
+    applies_to:
+    - service
+    - configmap
+    - ingress
+    version_min: "1.5"
+    example: ['server-proto: "h2"']           
   - title: server-ssl
     type: bool
     group: server-ssl
