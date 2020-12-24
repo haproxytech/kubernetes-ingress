@@ -273,18 +273,24 @@ func (c *HAProxyController) updateHAProxySrvs(oldEndpoints, newEndpoints *store.
 		delete(newAddresses, newAddr)
 	}
 	// Dynamically updates HAProxy backend servers  with HAProxySrvs content
+	var addrErr, stateErr error
 	for _, srv := range haproxySrvs {
 		if !srv.Modified {
 			continue
 		}
 		if srv.Address == "" {
 			logger.Debugf("server '%s/%s' changed status to %v", newEndpoints.BackendName, srv.Name, "maint")
-			logger.Error(c.Client.SetServerAddr(newEndpoints.BackendName, srv.Name, "127.0.0.1", 0))
-			logger.Error(c.Client.SetServerState(newEndpoints.BackendName, srv.Name, "maint"))
+			addrErr = c.Client.SetServerAddr(newEndpoints.BackendName, srv.Name, "127.0.0.1", 0)
+			stateErr = c.Client.SetServerState(newEndpoints.BackendName, srv.Name, "maint")
 		} else {
 			logger.Debugf("server '%s/%s' changed status to %v", newEndpoints.BackendName, srv.Name, "ready")
-			logger.Error(c.Client.SetServerAddr(newEndpoints.BackendName, srv.Name, srv.Address, 0))
-			logger.Error(c.Client.SetServerState(newEndpoints.BackendName, srv.Name, "ready"))
+			addrErr = c.Client.SetServerAddr(newEndpoints.BackendName, srv.Name, srv.Address, 0)
+			stateErr = c.Client.SetServerState(newEndpoints.BackendName, srv.Name, "ready")
+		}
+		if addrErr != nil || stateErr != nil {
+			newEndpoints.DynUpdateFailed = true
+			logger.Error(addrErr)
+			logger.Error(stateErr)
 		}
 	}
 }
