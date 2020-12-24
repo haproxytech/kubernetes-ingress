@@ -51,11 +51,12 @@ type HAProxySrv struct {
 
 //PortEndpoints describes endpionts of a service port
 type PortEndpoints struct {
-	Port        int64
-	BackendName string
-	AddrCount   int
-	AddrNew     map[string]struct{}
-	HAProxySrvs []*HAProxySrv
+	Port            int64
+	BackendName     string
+	AddrCount       int
+	AddrNew         map[string]struct{}
+	HAProxySrvs     []*HAProxySrv
+	DynUpdateFailed bool
 }
 
 //Endpoints describes endpoints of a service
