@@ -29,6 +29,13 @@ func (n NamespaceValue) MarshalFlag() (string, error) {
 	return fmt.Sprintf("%s/%s", n.Namespace, n.Name), nil
 }
 
+func (n NamespaceValue) String() string {
+	if n.Namespace == "" || n.Name == "" {
+		return ""
+	}
+	return fmt.Sprintf("%s/%s", n.Namespace, n.Name)
+}
+
 //LogLevel used to automatically distinct namespace/name string
 type LogLevelValue struct {
 	LogLevel LogLevel

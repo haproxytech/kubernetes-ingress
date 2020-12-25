@@ -173,7 +173,7 @@ func (c *HAProxyController) Start(ctx context.Context, osArgs utils.OSArgs) {
 	if k8sVersion, err := x.ServerVersion(); err != nil {
 		logger.Panicf("Unable to get Kubernetes version: %v\n", err)
 	} else {
-		logger.Infof("Running on Kubernetes version: %s %s", k8sVersion.String(), k8sVersion.Platform)
+		logger.Printf("Running on Kubernetes version: %s %s", k8sVersion.String(), k8sVersion.Platform)
 	}
 
 	// Starting from Kubernetes 1.19 a valid IngressClass resource must be used:
@@ -378,12 +378,12 @@ func (c *HAProxyController) haproxyInitialize() {
 		logger.Error(err)
 	}
 
-	logger.Infof("Starting HAProxy with %s", HAProxyCFG)
+	logger.Printf("Starting HAProxy with %s", HAProxyCFG)
 	logger.Panic(c.haproxyService("start"))
 
 	hostname, err := os.Hostname()
 	logger.Error(err)
-	logger.Infof("Running on %s", hostname)
+	logger.Printf("Running on %s", hostname)
 
 	c.cfg.Init(HAProxyMapDir)
 }

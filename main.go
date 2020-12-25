@@ -48,16 +48,16 @@ func main() {
 	logger := utils.GetLogger()
 	logger.SetLevel(osArgs.LogLevel.LogLevel)
 
-	defaultBackendSvc := fmt.Sprintf("%s/%s", osArgs.DefaultBackendService.Namespace, osArgs.DefaultBackendService.Name)
-	defaultCertificate := fmt.Sprintf("%s/%s", osArgs.DefaultCertificate.Namespace, osArgs.DefaultCertificate.Name)
+	defaultBackendSvc := fmt.Sprint(osArgs.DefaultBackendService)
+	defaultCertificate := fmt.Sprint(osArgs.DefaultCertificate)
 
 	if len(osArgs.Version) > 0 {
-		fmt.Printf("HAProxy Ingress Controller %s %s%s\n\n", GitTag, GitCommit, GitDirty)
-		fmt.Printf("Build from: %s\n", GitRepo)
-		fmt.Printf("Build date: %s\n\n", BuildTime)
+		fmt.Printf("HAProxy Ingress Controller %s %s%s", GitTag, GitCommit, GitDirty)
+		fmt.Printf("Build from: %s", GitRepo)
+		fmt.Printf("Build date: %s\n", BuildTime)
 		if len(osArgs.Version) > 1 {
-			fmt.Printf("ConfigMap: %s/%s\n", osArgs.ConfigMap.Namespace, osArgs.ConfigMap.Name)
-			fmt.Printf("Ingress class: %s\n", osArgs.IngressClass)
+			fmt.Printf("ConfigMap: %s", osArgs.ConfigMap)
+			fmt.Printf("Ingress class: %s", osArgs.IngressClass)
 		}
 		return
 	}
@@ -69,7 +69,7 @@ func main() {
 
 	logger.FileName = false
 	logger.Print(IngressControllerInfo)
-	logger.Printf("HAProxy Ingress Controller %s %s%s\n", GitTag, GitCommit, GitDirty)
+	logger.Printf("HAProxy Ingress Controller %s %s%s", GitTag, GitCommit, GitDirty)
 	logger.Printf("Build from: %s", GitRepo)
 	logger.Printf("Build date: %s\n", BuildTime)
 	if osArgs.PprofEnabled {
@@ -78,13 +78,11 @@ func main() {
 			logger.Error(http.ListenAndServe("127.0.0.1:6060", nil))
 		}()
 	}
-	logger.Printf("ConfigMap: %s/%s", osArgs.ConfigMap.Namespace, osArgs.ConfigMap.Name)
+	logger.Printf("ConfigMap: %s", osArgs.ConfigMap)
 	logger.Printf("Ingress class: %s", osArgs.IngressClass)
 	logger.Printf("Publish service: %s", osArgs.PublishService)
 	logger.Printf("Default backend service: %s", defaultBackendSvc)
 	logger.Printf("Default ssl certificate: %s", defaultCertificate)
-	logger.Printf("Controller sync period: %s", osArgs.SyncPeriod.String())
-	logger.Debugf("Kubernetes Informers resync period: %s", osArgs.CacheResyncPeriod.String())
 	if !osArgs.DisableHTTP {
 		logger.Printf("Frontend HTTP listening on: %s:%d", osArgs.IPV4BindAddr, osArgs.HTTPBindPort)
 	}
@@ -103,13 +101,14 @@ func main() {
 	if osArgs.DisableIPV6 {
 		logger.Printf("Disabling IPv6 support")
 	}
-
 	if osArgs.ConfigMapTCPServices.Name != "" {
-		logger.Printf("TCP Services defined in %s/%s", osArgs.ConfigMapTCPServices.Namespace, osArgs.ConfigMapTCPServices.Name)
+		logger.Printf("TCP Services defined in %s", osArgs.ConfigMapTCPServices)
 	}
 	if osArgs.ConfigMapErrorfiles.Name != "" {
-		logger.Printf("Errofile pages defined in %s/%s", osArgs.ConfigMapErrorfiles.Namespace, osArgs.ConfigMapErrorfiles.Name)
+		logger.Printf("Errofile pages defined in %s", osArgs.ConfigMapErrorfiles)
 	}
+	logger.Debugf("Kubernetes Informers resync period: %s", osArgs.CacheResyncPeriod.String())
+	logger.Printf("Controller sync period: %s\n", osArgs.SyncPeriod.String())
 
 	ctx, cancel := context.WithCancel(context.Background())
 	signalC := make(chan os.Signal, 1)
@@ -121,7 +120,6 @@ func main() {
 
 	c.HAProxyCfgDir = "/etc/haproxy/"
 	if osArgs.OutOfCluster {
-		logger.Print("Running Controller out of K8s cluster")
 		setupHAProxyEnv(osArgs)
 	}
 

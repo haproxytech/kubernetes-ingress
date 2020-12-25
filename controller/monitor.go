@@ -149,7 +149,7 @@ func (c *HAProxyController) monitorChanges() {
 			eventsEndpoints = []SyncDataEvent{}
 			eventsServices = []SyncDataEvent{}
 			configMapOk = true
-			logger.Info("Configmap processed")
+			logger.Printf("Configmap processed\n")
 			time.Sleep(1 * time.Millisecond)
 		case item := <-cfgChan:
 			c.eventChan <- SyncDataEvent{SyncType: CONFIGMAP, Namespace: item.Namespace, Data: item}

@@ -30,6 +30,8 @@ import (
 // environment (out of Kubernetes)
 func setupHAProxyEnv(osArgs utils.OSArgs) {
 	logger := utils.GetLogger()
+	logger.Print("Running Controller out of K8s cluster")
+	logger.FileName = true
 	c.HAProxyCfgDir = "/tmp/haproxy-ingress/etc"
 	runtimeDir := "/tmp/haproxy-ingress/run"
 	if osArgs.CfgDir != "" {
