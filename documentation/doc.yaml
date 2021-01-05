@@ -1096,6 +1096,24 @@ annotations:
     - 'ssl-redirect: "true"'
     - 'ssl-certificate: "default/tls-secret"'
     - 'ssl-redirect-code: "301"'
+  - title: ssl-redirect-port
+    type: number
+    group: https
+    dependencies: tls-secret
+    default: "443"
+    description:
+    - Sets the HTTPS port in redirection URL in case of HTTP to HTTPS traffic redirection.
+    tip:
+    - When setting the HTTPS port value, keep in mind this is the HTTPS port as seen by the client, not as set on the Ingress Controller. The reason of this distinction lies in the fact there will probably be some middleware with its own ports mapping between the client and the Ingress Controller. As a consequence, it must be set with a distinct consideration of how the HTTPS port is set on Ingress Controller with the https-bind-port command line option. 
+    values:
+    - Integer HTTPS port number
+    applies_to:
+    - configmap
+    - ingress
+    version_min: "1.5"
+    example:
+    - 'ssl-redirect: "true"'
+    - 'ssl-redirect-port: 8443'
   - title: syslog-server
     type: '[syslog](#syslog-fields)'
     group: logging
