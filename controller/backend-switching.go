@@ -47,9 +47,6 @@ func (c *HAProxyController) deleteUseBackendRule(key string, frontends ...string
 
 //  Recreate use_backend rules
 func (c *HAProxyController) refreshBackendSwitching() (reload bool) {
-	if len(c.cfg.BackendSwitchingStatus) == 0 {
-		return false
-	}
 	c.Logger.Debug("Updating Backend Switching rules")
 	frontends, err := c.Client.FrontendsGet()
 	if err != nil {
@@ -69,6 +66,11 @@ func (c *HAProxyController) refreshBackendSwitching() (reload bool) {
 		}
 		sortedKeys := []string{}
 		for key, rule := range useBackendRules {
+			if _, ok := c.cfg.Namespace[rule.Namespace]; !ok {
+				// Namespace was removed
+				c.deleteUseBackendRule(key, frontend.Name)
+				continue
+			}
 			activeBackends[rule.Backend] = struct{}{}
 			sortedKeys = append(sortedKeys, key)
 		}
