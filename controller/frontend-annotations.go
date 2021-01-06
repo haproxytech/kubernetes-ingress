@@ -91,8 +91,8 @@ func (c *HAProxyController) handleBlacklisting(ingress *Ingress) {
 		Cond:     "if",
 		CondTest: fmt.Sprintf("{ req_ssl_sni -f %s } { src -f %s }", mapFile, listMapFile),
 	}
-	c.cfg.FrontendHTTPReqRules[BLACKLIST][key] = httpRule
-	c.cfg.FrontendTCPRules[BLACKLIST][key] = tcpRule
+	c.cfg.FrontendHTTPReqRules[BLACKLIST].Add(key, httpRule)
+	c.cfg.FrontendTCPRules[BLACKLIST].Add(key, tcpRule)
 }
 
 func (c *HAProxyController) handleHTTPRedirect(ingress *Ingress) {
@@ -150,7 +150,7 @@ func (c *HAProxyController) handleHTTPRedirect(ingress *Ingress) {
 		Cond:       "if",
 		CondTest:   makeACL(" !{ ssl_fc }", mapFile),
 	}
-	c.cfg.FrontendHTTPReqRules[SSL_REDIRECT][key] = httpRule
+	c.cfg.FrontendHTTPReqRules[SSL_REDIRECT].Add(key, httpRule)
 }
 
 func (c *HAProxyController) handleProxyProtocol() {
@@ -191,7 +191,7 @@ func (c *HAProxyController) handleProxyProtocol() {
 		Cond:     "if",
 		CondTest: fmt.Sprintf("{ src %s }", value),
 	}
-	c.cfg.FrontendTCPRules[PROXY_PROTOCOL][0] = tcpRule
+	c.cfg.FrontendTCPRules[PROXY_PROTOCOL].Add(0, tcpRule)
 }
 
 func (c *HAProxyController) handleRateLimiting(ingress *Ingress) {
@@ -264,8 +264,8 @@ func (c *HAProxyController) handleRateLimiting(ingress *Ingress) {
 		Cond:       "if",
 		CondTest:   makeACL(fmt.Sprintf(" { sc0_http_req_rate(%s) gt %d }", tableName, reqsLimit), reqsMapFile),
 	}
-	c.cfg.FrontendHTTPReqRules[RATE_LIMIT][trackKey] = httpTrackRule
-	c.cfg.FrontendHTTPReqRules[RATE_LIMIT][reqsKey] = httpDenyRule
+	c.cfg.FrontendHTTPReqRules[RATE_LIMIT].Add(trackKey, httpTrackRule)
+	c.cfg.FrontendHTTPReqRules[RATE_LIMIT].Add(reqsKey, httpDenyRule)
 }
 
 func (c *HAProxyController) handleRequestCapture(ingress *Ingress) {
@@ -333,8 +333,8 @@ func (c *HAProxyController) handleRequestCapture(ingress *Ingress) {
 			Cond:       "if",
 			CondTest:   fmt.Sprintf("{ req_ssl_sni -f %s }", mapFile),
 		}
-		c.cfg.FrontendHTTPReqRules[REQUEST_CAPTURE][key] = httpRule
-		c.cfg.FrontendTCPRules[REQUEST_CAPTURE][key] = tcpRule
+		c.cfg.FrontendHTTPReqRules[REQUEST_CAPTURE].Add(key, httpRule)
+		c.cfg.FrontendTCPRules[REQUEST_CAPTURE].Add(key, tcpRule)
 	}
 
 }
@@ -381,7 +381,7 @@ func (c *HAProxyController) handleRequestSetHdr(ingress *Ingress) {
 			Cond:      "if",
 			CondTest:  makeACL("", mapFile),
 		}
-		c.cfg.FrontendHTTPReqRules[REQUEST_SET_HEADER][key] = httpRule
+		c.cfg.FrontendHTTPReqRules[REQUEST_SET_HEADER].Add(key, httpRule)
 	}
 
 }
@@ -422,7 +422,7 @@ func (c *HAProxyController) handleRequestSetHost(ingress *Ingress) {
 		Cond:      "if",
 		CondTest:  makeACL("", mapFile),
 	}
-	c.cfg.FrontendHTTPReqRules[REQUEST_SET_HOST][key] = httpRule
+	c.cfg.FrontendHTTPReqRules[REQUEST_SET_HOST].Add(key, httpRule)
 
 }
 
@@ -479,7 +479,7 @@ func (c *HAProxyController) handleRequestPathRewrite(ingress *Ingress) {
 		c.Logger.Errorf("incorrect param '%s' in path-rewrite annotation", annPathRewrite.Value)
 	}
 
-	c.cfg.FrontendHTTPReqRules[REQUEST_PATH_REWRITE][key] = httpRule
+	c.cfg.FrontendHTTPReqRules[REQUEST_PATH_REWRITE].Add(key, httpRule)
 }
 
 func (c *HAProxyController) handleResponseSetHdr(ingress *Ingress) {
@@ -581,8 +581,8 @@ func (c *HAProxyController) handleWhitelisting(ingress *Ingress) {
 		Cond:     "if",
 		CondTest: fmt.Sprintf("{ req_ssl_sni -f %s } !{ src -f %s }", mapFile, listMapFile),
 	}
-	c.cfg.FrontendHTTPReqRules[WHITELIST][key] = httpRule
-	c.cfg.FrontendTCPRules[WHITELIST][key] = tcpRule
+	c.cfg.FrontendHTTPReqRules[WHITELIST].Add(key, httpRule)
+	c.cfg.FrontendTCPRules[WHITELIST].Add(key, tcpRule)
 }
 
 func hashStrToUint(s string) uint64 {

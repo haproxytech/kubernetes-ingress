@@ -21,9 +21,16 @@ import (
 	"github.com/haproxytech/models/v2"
 )
 
-type FrontendHTTPReqs map[uint64]models.HTTPRequestRule
+type FrontendHTTPReqs struct {
+	Store    []models.HTTPRequestRule
+	Presence map[uint64]struct{}
+}
 type FrontendHTTPRsps map[uint64]models.HTTPResponseRule
-type FrontendTCPReqs map[uint64]models.TCPRequestRule
+
+type FrontendTCPReqs struct {
+	Store    []models.TCPRequestRule
+	Presence map[uint64]struct{}
+}
 
 type Rule string
 
@@ -54,6 +61,38 @@ const (
 	//nolint
 	WHITELIST Rule = "whitelist"
 )
+
+func NewFrontendTCPReqs() *FrontendTCPReqs {
+	return &FrontendTCPReqs{
+		Store:    make([]models.TCPRequestRule, 0),
+		Presence: make(map[uint64]struct{}),
+	}
+}
+
+func (frontendTCPReqs *FrontendTCPReqs) Add(key uint64, rule models.TCPRequestRule) {
+	if _, ok := frontendTCPReqs.Presence[key]; ok {
+		return
+	}
+	frontendTCPReqs.Presence[key] = struct{}{}
+	frontendTCPReqs.Store = append([]models.TCPRequestRule{rule}, frontendTCPReqs.Store...)
+
+}
+
+func NewFrontendHTTPReqs() *FrontendHTTPReqs {
+	return &FrontendHTTPReqs{
+		Store:    make([]models.HTTPRequestRule, 0),
+		Presence: make(map[uint64]struct{}),
+	}
+}
+
+func (frontendHTTPReqs *FrontendHTTPReqs) Add(key uint64, rule models.HTTPRequestRule) {
+	if _, ok := frontendHTTPReqs.Presence[key]; ok {
+		return
+	}
+	frontendHTTPReqs.Presence[key] = struct{}{}
+	frontendHTTPReqs.Store = append([]models.HTTPRequestRule{rule}, frontendHTTPReqs.Store...)
+
+}
 
 func (c *HAProxyController) FrontendHTTPRspsRefresh() (reload bool) {
 	if c.cfg.FrontendRulesStatus[HTTP] == EMPTY {
@@ -93,24 +132,24 @@ func (c *HAProxyController) FrontendHTTPReqsRefresh() (reload bool) {
 	}
 	c.Logger.Error(c.Client.FrontendHTTPRequestRuleCreate(FrontendHTTPS, xforwardedprotoRule))
 	// SSL_REDIRECT
-	for _, httpRule := range c.cfg.FrontendHTTPReqRules[SSL_REDIRECT] {
+	for _, httpRule := range c.cfg.FrontendHTTPReqRules[SSL_REDIRECT].Store {
 		c.Logger.Error(c.Client.FrontendHTTPRequestRuleCreate(FrontendHTTP, httpRule))
 	}
 	for _, frontend := range []string{FrontendHTTP, FrontendHTTPS} {
 		// REQUEST_SET_HEADER
-		for _, httpRule := range c.cfg.FrontendHTTPReqRules[REQUEST_SET_HEADER] {
+		for _, httpRule := range c.cfg.FrontendHTTPReqRules[REQUEST_SET_HEADER].Store {
 			c.Logger.Error(c.Client.FrontendHTTPRequestRuleCreate(frontend, httpRule))
 		}
 		// REQUEST_CAPTURE
-		for _, httpRule := range c.cfg.FrontendHTTPReqRules[REQUEST_CAPTURE] {
+		for _, httpRule := range c.cfg.FrontendHTTPReqRules[REQUEST_CAPTURE].Store {
 			c.Logger.Error(c.Client.FrontendHTTPRequestRuleCreate(frontend, httpRule))
 		}
 		// REQUEST_PATH_REWRITE
-		for _, httpRule := range c.cfg.FrontendHTTPReqRules[REQUEST_PATH_REWRITE] {
+		for _, httpRule := range c.cfg.FrontendHTTPReqRules[REQUEST_PATH_REWRITE].Store {
 			c.Logger.Error(c.Client.FrontendHTTPRequestRuleCreate(frontend, httpRule))
 		}
 		// REQUEST_SET_HOST
-		for _, httpRule := range c.cfg.FrontendHTTPReqRules[REQUEST_SET_HOST] {
+		for _, httpRule := range c.cfg.FrontendHTTPReqRules[REQUEST_SET_HOST].Store {
 			c.Logger.Error(c.Client.FrontendHTTPRequestRuleCreate(frontend, httpRule))
 		}
 		// RATE_LIMIT
@@ -128,15 +167,15 @@ func (c *HAProxyController) FrontendHTTPReqsRefresh() (reload bool) {
 				c.Logger.Error(err)
 			}
 		}
-		for _, httpRule := range c.cfg.FrontendHTTPReqRules[RATE_LIMIT] {
+		for _, httpRule := range c.cfg.FrontendHTTPReqRules[RATE_LIMIT].Store {
 			c.Logger.Error(c.Client.FrontendHTTPRequestRuleCreate(frontend, httpRule))
 		}
 		// BLACKLIST
-		for _, httpRule := range c.cfg.FrontendHTTPReqRules[BLACKLIST] {
+		for _, httpRule := range c.cfg.FrontendHTTPReqRules[BLACKLIST].Store {
 			c.Logger.Error(c.Client.FrontendHTTPRequestRuleCreate(frontend, httpRule))
 		}
 		// WHITELIST
-		for _, httpRule := range c.cfg.FrontendHTTPReqRules[WHITELIST] {
+		for _, httpRule := range c.cfg.FrontendHTTPReqRules[WHITELIST].Store {
 			c.Logger.Error(c.Client.FrontendHTTPRequestRuleCreate(frontend, httpRule))
 		}
 		// STATIC: SET_VARIABLE txn.base (for logging purpose)
@@ -181,10 +220,10 @@ func (c *HAProxyController) FrontendTCPreqsRefresh() (reload bool) {
 		c.Client.FrontendTCPRequestRuleDeleteAll(frontend)
 	}
 	// PROXY_PROTCOL
-	if len(c.cfg.FrontendTCPRules[PROXY_PROTOCOL]) > 0 {
-		c.Logger.Error(c.Client.FrontendTCPRequestRuleCreate(FrontendHTTP, c.cfg.FrontendTCPRules[PROXY_PROTOCOL][0]))
+	if len(c.cfg.FrontendTCPRules[PROXY_PROTOCOL].Store) > 0 {
+		c.Logger.Error(c.Client.FrontendTCPRequestRuleCreate(FrontendHTTP, c.cfg.FrontendTCPRules[PROXY_PROTOCOL].Store[0]))
 		if !c.cfg.SSLPassthrough {
-			c.Logger.Error(c.Client.FrontendTCPRequestRuleCreate(FrontendHTTPS, c.cfg.FrontendTCPRules[PROXY_PROTOCOL][0]))
+			c.Logger.Error(c.Client.FrontendTCPRequestRuleCreate(FrontendHTTPS, c.cfg.FrontendTCPRules[PROXY_PROTOCOL].Store[0]))
 		}
 	}
 	if !c.cfg.SSLPassthrough {
@@ -203,7 +242,7 @@ func (c *HAProxyController) FrontendTCPreqsRefresh() (reload bool) {
 	})
 	c.Logger.Error(err)
 	// REQUEST_CAPTURE
-	for _, tcpRule := range c.cfg.FrontendTCPRules[REQUEST_CAPTURE] {
+	for _, tcpRule := range c.cfg.FrontendTCPRules[REQUEST_CAPTURE].Store {
 		c.Logger.Error(c.Client.FrontendTCPRequestRuleCreate(FrontendSSL, tcpRule))
 	}
 	// STATIC: Set-var rule used to log SNI
@@ -233,16 +272,16 @@ func (c *HAProxyController) FrontendTCPreqsRefresh() (reload bool) {
 	})
 	c.Logger.Error(err)
 	// BLACKLIST
-	for _, tcpRule := range c.cfg.FrontendTCPRules[BLACKLIST] {
+	for _, tcpRule := range c.cfg.FrontendTCPRules[BLACKLIST].Store {
 		c.Logger.Error(c.Client.FrontendTCPRequestRuleCreate(FrontendSSL, tcpRule))
 	}
 	// WHITELIST
-	for _, tcpRule := range c.cfg.FrontendTCPRules[WHITELIST] {
+	for _, tcpRule := range c.cfg.FrontendTCPRules[WHITELIST].Store {
 		c.Logger.Error(c.Client.FrontendTCPRequestRuleCreate(FrontendSSL, tcpRule))
 	}
 	// PROXY_PROTCOL
-	if len(c.cfg.FrontendTCPRules[PROXY_PROTOCOL]) > 0 {
-		c.Logger.Error(c.Client.FrontendTCPRequestRuleCreate(FrontendSSL, c.cfg.FrontendTCPRules[PROXY_PROTOCOL][0]))
+	if len(c.cfg.FrontendTCPRules[PROXY_PROTOCOL].Store) > 0 {
+		c.Logger.Error(c.Client.FrontendTCPRequestRuleCreate(FrontendSSL, c.cfg.FrontendTCPRules[PROXY_PROTOCOL].Store[0]))
 	}
 	return true
 }
