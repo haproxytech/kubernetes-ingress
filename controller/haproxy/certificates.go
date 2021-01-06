@@ -1,6 +1,7 @@
 package haproxy
 
 import (
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -35,6 +36,7 @@ type SecretCtx struct {
 	SecretType SecretType
 }
 
+var ErrCertNotFound = errors.New("notFound")
 var frontendCertDir string
 var backendCertDir string
 var caCertDir string
@@ -50,13 +52,13 @@ func NewCertificates(caDir, ftDir, bdDir string) *Certificates {
 	}
 }
 
-func (c *Certificates) HandleTLSSecret(k8s store.K8s, secretCtx SecretCtx) (certPath string, status store.Status) {
+func (c *Certificates) HandleTLSSecret(k8s store.K8s, secretCtx SecretCtx) (certPath string, updated bool, err error) {
 	secret := fetchSecret(k8s, secretCtx.SecretPath, secretCtx.DefaultNS)
 	if secret == nil {
-		return "", store.ERROR
+		return "", false, ErrCertNotFound
 	}
 	if secret.Status == store.DELETED {
-		return "", store.DELETED
+		return "", true, nil
 	}
 	var certs map[string]bool
 	certName := ""
@@ -81,20 +83,18 @@ func (c *Certificates) HandleTLSSecret(k8s store.K8s, secretCtx SecretCtx) (cert
 		certs = c.ca
 		privateKeyNull = true
 	default:
-		logger.Error("unspecified context")
-		return "", store.ERROR
+		return "", false, errors.New("unspecified context")
 	}
 	if _, ok := certs[certName]; ok && secret.Status == store.EMPTY {
 		certs[certName] = true
-		return certPath, store.EMPTY
+		return certPath, false, nil
 	}
-	err := writeSecret(secret, certPath, privateKeyNull)
+	err = writeSecret(secret, certPath, privateKeyNull)
 	if err != nil {
-		logger.Error(err)
-		return "", store.ERROR
+		return "", false, err
 	}
 	certs[certName] = true
-	return certPath, store.ADDED
+	return certPath, true, nil
 }
 
 func (c *Certificates) Clean() {

@@ -296,7 +296,7 @@ func (route *Route) getSrvAnnotations() (activeAnnotations bool) {
 }
 
 func (route *Route) handleSrvSSLAnnotations() (sslUpdated bool) {
-	var secretStatus store.Status
+	var secretUpdated bool
 	route.sslServer = sslSettings{verify: false}
 	for name, annotation := range route.srvAnnotations {
 		if annotation == nil {
@@ -315,7 +315,7 @@ func (route *Route) handleSrvSSLAnnotations() (sslUpdated bool) {
 			}
 			route.sslServer.enabled = route.sslServer.enabled || enabled
 		case "server-ca":
-			route.sslServer.caFile, secretStatus = haproxyCerts.HandleTLSSecret(k8sStore, haproxy.SecretCtx{
+			route.sslServer.caFile, secretUpdated, _ = haproxyCerts.HandleTLSSecret(k8sStore, haproxy.SecretCtx{
 				DefaultNS:  route.service.Namespace,
 				SecretPath: annotation.Value,
 				SecretType: haproxy.CA_CERT,
@@ -325,7 +325,7 @@ func (route *Route) handleSrvSSLAnnotations() (sslUpdated bool) {
 				route.sslServer.verify = true
 			}
 		case "server-crt":
-			route.sslServer.crtFile, secretStatus = haproxyCerts.HandleTLSSecret(k8sStore, haproxy.SecretCtx{
+			route.sslServer.crtFile, secretUpdated, _ = haproxyCerts.HandleTLSSecret(k8sStore, haproxy.SecretCtx{
 				DefaultNS:  route.service.Namespace,
 				SecretPath: annotation.Value,
 				SecretType: haproxy.BD_CERT,
@@ -334,7 +334,7 @@ func (route *Route) handleSrvSSLAnnotations() (sslUpdated bool) {
 				route.sslServer.enabled = true
 			}
 		}
-		if annotation.Status != EMPTY || secretStatus != EMPTY && secretStatus != ERROR {
+		if annotation.Status != EMPTY || secretUpdated {
 			sslUpdated = true
 		}
 	}

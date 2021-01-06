@@ -229,12 +229,12 @@ func (c *HAProxyController) updateHAProxy() error {
 			}
 			// Ingress secrets
 			for _, tls := range ingress.TLS {
-				_, status := c.cfg.Certificates.HandleTLSSecret(c.Store, haproxy.SecretCtx{
+				crt, updated, _ := c.cfg.Certificates.HandleTLSSecret(c.Store, haproxy.SecretCtx{
 					DefaultNS:  ingress.Namespace,
 					SecretPath: tls.SecretName.Value,
 					SecretType: haproxy.FT_CERT,
 				})
-				if status == ADDED {
+				if crt != "" && updated {
 					reload = true
 				}
 			}
@@ -506,11 +506,11 @@ func (c *HAProxyController) handleDefaultCert() (reload bool) {
 	if secretAnn == nil {
 		return false
 	}
-	_, status := c.cfg.Certificates.HandleTLSSecret(c.Store, haproxy.SecretCtx{
+	crt, updated, _ := c.cfg.Certificates.HandleTLSSecret(c.Store, haproxy.SecretCtx{
 		SecretPath: secretAnn.Value,
 		SecretType: haproxy.FT_CERT,
 	})
-	return status == ADDED
+	return crt != "" && updated
 }
 
 // clean controller state
