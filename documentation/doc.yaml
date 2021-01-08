@@ -244,10 +244,10 @@ groups:
         - `cookie-preserve <"true","false">`
         - `cookie-secure <"true","false">`
         - `cookie-type <"rewrite", "insert", "prefix">`
-      - Using `config-snippet` [annotation](#config-snippet):
+      - Using `backend-config-snippet` [annotation](#config-snippet):
         
         ```yaml
-        config-snippet: |
+        backend-config-snippet: |
             cookie SRV insert indirect nocache              
         ```
 
@@ -391,16 +391,32 @@ annotations:
     example:
     - 'check: "true"'
     - 'check-interval: "1m"'
-  - title: config-snippet
+  - title: global-config-snippet
     type: string
     group: config-snippet
     dependencies: ""
     default: ""
     description:
-    - Defines a group of configuration directives to add directly to the HAProxy configuration.
-      When used in a ConfigMap, directives are added to the `global` section.
-      When used in an Ingress or Service, directives are added to the specific `backend`
-      section.
+    - Defines a group of configuration directives to add directly to the HAProxy global section.
+    tip: []
+    values:
+    - One or more valid HAProxy directives
+    applies_to:
+    - configmap 
+    version_min: "1.5"
+    example_configmap: |-
+      global-config-snippet: |
+        ssl-default-bind-options no-sslv3 no-tlsv10 no-tlsv11
+        ssl-default-bind-ciphers TLS13-AES-256-GCM-SHA384:TLS13-AES-128-GCM-SHA256:TLS13-CHACHA20-POLY1305-SHA256:EECDH+AESGCM:EECDH+CHACHA20
+        tune.ssl.default-dh-param 2048
+        tune.bufsize 32768
+  - title: backend-config-snippet
+    type: string
+    group: config-snippet
+    dependencies: ""
+    default: ""
+    description:
+    - Defines a group of configuration directives to add directly to a HAProxy backend section.
     tip: []
     values:
     - One or more valid HAProxy directives
@@ -409,19 +425,8 @@ annotations:
     - ingress
     - service
     version_min: "1.5"
-    example_configmap: |-
-      config-snippet: |
-        ssl-default-bind-options no-sslv3 no-tlsv10 no-tlsv11
-        ssl-default-bind-ciphers TLS13-AES-256-GCM-SHA384:TLS13-AES-128-GCM-SHA256:TLS13-CHACHA20-POLY1305-SHA256:EECDH+AESGCM:EECDH+CHACHA20
-        tune.ssl.default-dh-param 2048
-        tune.bufsize 32768
-    example_ingress: |-
-      config-snippet: |
-        http-send-name-header x-dst-server
-        stick-table type string len 32 size 100k expire 30m
-        stick on req.cook(sessionid)
     example_service: |- 
-      config-snippet: |
+      backend-config-snippet: |
         http-send-name-header x-dst-server
         stick-table type string len 32 size 100k expire 30m
         stick on req.cook(sessionid)
