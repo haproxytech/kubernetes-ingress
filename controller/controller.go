@@ -29,6 +29,7 @@ import (
 	"github.com/haproxytech/models/v2"
 	"k8s.io/apimachinery/pkg/watch"
 
+	"github.com/haproxytech/kubernetes-ingress/controller/annotations"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/api"
 	ingressRoute "github.com/haproxytech/kubernetes-ingress/controller/ingress"
@@ -207,7 +208,12 @@ func (c *HAProxyController) updateHAProxy() error {
 		c.Client.APIDisposeTransaction()
 	}()
 
-	restart, reload := c.handleGlobalAnnotations()
+	restart, reload := annotations.HandleGlobalAnnotations(
+		c.Store,
+		c.Client,
+		false,
+		c.Store.ConfigMaps[Main].Annotations,
+	)
 	reload = c.handleDefaultCert() || reload
 	c.handleDefaultService()
 

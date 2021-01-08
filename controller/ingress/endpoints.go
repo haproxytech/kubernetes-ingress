@@ -19,6 +19,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/haproxytech/kubernetes-ingress/controller/annotations"
 	"github.com/haproxytech/kubernetes-ingress/controller/store"
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 	"github.com/haproxytech/models/v2"
@@ -83,9 +84,16 @@ func (route *Route) handleEndpoints() {
 	if route.service.DNS == "" {
 		route.scaleHAProxySrvs()
 	}
-	backendUpdated := route.NewBackend
-	backendUpdated = route.getSrvAnnotations() || backendUpdated
-	backendUpdated = route.handleSrvSSLAnnotations() || backendUpdated
+	backendUpdated := annotations.HandleServerAnnotations(
+		k8sStore,
+		client,
+		haproxyCerts,
+		&models.Server{Namespace: route.Namespace.Name},
+		false,
+		route.service.Annotations,
+		route.Ingress.Annotations,
+		k8sStore.ConfigMaps[Main].Annotations,
+	) || route.NewBackend
 	route.reload = route.reload || backendUpdated
 	for _, srv := range route.endpoints.HAProxySrvs {
 		if srv.Modified || backendUpdated {
@@ -107,20 +115,17 @@ func (route *Route) handleHAProxSrv(srv *store.HAProxySrv) {
 		server.Address = "127.0.0.1"
 		server.Maintenance = "enabled"
 	}
-	// SSL settings
-	if route.sslServer.enabled {
-		server.Ssl = "enabled"
-		server.Alpn = "h2,http/1.1"
-		server.SslCafile = route.sslServer.caFile
-		server.SslCertificate = route.sslServer.crtFile
-		if route.sslServer.verify {
-			server.Verify = "required"
-		} else {
-			server.Verify = "none"
-		}
-	}
 	// Server related annotations
-	handleSrvAnnotations(&server, route.srvAnnotations)
+	annotations.HandleServerAnnotations(
+		k8sStore,
+		client,
+		haproxyCerts,
+		&server,
+		true,
+		route.service.Annotations,
+		route.Ingress.Annotations,
+		k8sStore.ConfigMaps[Main].Annotations,
+	)
 	// Update server
 	errAPI := client.BackendServerEdit(route.BackendName, server)
 	if errAPI == nil {

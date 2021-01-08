@@ -6,21 +6,32 @@ import (
 
 	"github.com/haproxytech/config-parser/v3/types"
 
-	"github.com/haproxytech/kubernetes-ingress/controller/configsnippet"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/api"
+	"github.com/haproxytech/kubernetes-ingress/controller/store"
 )
 
-type defaultTimeout struct {
-	name string
-	data *types.SimpleTimeout
+type DefaultTimeout struct {
+	name   string
+	data   *types.SimpleTimeout
+	client api.HAProxyClient
 }
 
-func (a *defaultTimeout) Overridden(configSnippet string) error {
-	return configsnippet.NewGenericAttribute("timeout " + a.name).Overridden(configSnippet)
+func NewDefaultTimeout(n string, c api.HAProxyClient) *DefaultTimeout {
+	return &DefaultTimeout{name: n, client: c}
 }
 
-func (a *defaultTimeout) Parse(input string) error {
-	timeout, err := time.ParseDuration(input)
+func (a *DefaultTimeout) GetName() string {
+	return a.name
+}
+
+func (a *DefaultTimeout) Parse(input store.StringW, forceParse bool) error {
+	if input.Status == store.EMPTY && !forceParse {
+		return ErrEmptyStatus
+	}
+	if input.Status == store.DELETED {
+		return nil
+	}
+	timeout, err := time.ParseDuration(input.Value)
 	if err != nil {
 		return err
 	}
@@ -35,21 +46,12 @@ func (a *defaultTimeout) Parse(input string) error {
 	return nil
 }
 
-func (a *defaultTimeout) Delete(c api.HAProxyClient) Result {
-	logger.Infof("Removing default timeout-%s ", a.name)
-
-	if err := c.DefaultTimeout(a.name, nil); err != nil {
-		logger.Error(err)
-		return NONE
+func (a *DefaultTimeout) Update() error {
+	timeout := strings.TrimPrefix(a.name, "timeout-")
+	if a.data == nil {
+		logger.Infof("Removing default timeout-%s ", timeout)
+		return a.client.DefaultTimeout(timeout, nil)
 	}
-	return RELOAD
-}
-
-func (a *defaultTimeout) Update(c api.HAProxyClient) Result {
-	logger.Infof("Setting default timeout-%s to %s", a.name, a.data.Value)
-	if err := c.DefaultTimeout(a.name, a.data); err != nil {
-		logger.Error(err)
-		return NONE
-	}
-	return RELOAD
+	logger.Infof("Setting default timeout-%s to %s", timeout, a.data.Value)
+	return a.client.DefaultTimeout(timeout, a.data)
 }

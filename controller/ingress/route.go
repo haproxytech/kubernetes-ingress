@@ -21,34 +21,25 @@ import (
 
 	"github.com/haproxytech/models/v2"
 
+	"github.com/haproxytech/kubernetes-ingress/controller/annotations"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy"
 	"github.com/haproxytech/kubernetes-ingress/controller/store"
 )
 
-type sslSettings struct {
-	enabled bool
-	verify  bool
-	caFile  string
-	crtFile string
-}
-
 type Route struct {
-	Namespace          *store.Namespace
-	Ingress            *store.Ingress
-	Path               *store.IngressPath
-	service            *store.Service
-	endpoints          *store.PortEndpoints
-	backendAnnotations map[string]*store.StringW
-	srvAnnotations     map[string]*store.StringW
-	status             store.Status
-	sslServer          sslSettings
-	HAProxyRules       []uint32
-	Host               string
-	BackendName        string
-	NewBackend         bool
-	SSLPassthrough     bool
-	TCPService         bool
-	reload             bool
+	Namespace      *store.Namespace
+	Ingress        *store.Ingress
+	Path           *store.IngressPath
+	service        *store.Service
+	endpoints      *store.PortEndpoints
+	status         store.Status
+	HAProxyRules   []uint32
+	Host           string
+	BackendName    string
+	NewBackend     bool
+	SSLPassthrough bool
+	TCPService     bool
+	reload         bool
 }
 
 // addToMapFile adds ingress route to haproxy Map files used for backend switching.
@@ -127,7 +118,16 @@ func (route *Route) handleService() (err error) {
 		backend.Mode = "http"
 		switchMode = true
 	}
-	if route.handleBackendAnnotations(&backend) || switchMode {
+	backendUpdated := annotations.HandleBackendAnnotations(
+		k8sStore,
+		client,
+		&backend,
+		route.NewBackend,
+		route.service.Annotations,
+		route.Ingress.Annotations,
+		k8sStore.ConfigMaps[Main].Annotations,
+	) || switchMode
+	if backendUpdated {
 		logger.Debugf("Ingress '%s/%s': Updating backend '%s'", route.Namespace.Name, route.Ingress.Name, route.BackendName)
 		if err = client.BackendEdit(backend); err != nil {
 			return err

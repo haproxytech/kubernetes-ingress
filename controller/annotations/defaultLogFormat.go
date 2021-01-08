@@ -6,45 +6,44 @@ import (
 
 	"github.com/haproxytech/config-parser/v3/types"
 
-	"github.com/haproxytech/kubernetes-ingress/controller/configsnippet"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/api"
+	"github.com/haproxytech/kubernetes-ingress/controller/store"
 )
 
-type defaultLogFormat struct {
-	data *types.StringC
+type DefaultLogFormat struct {
+	name   string
+	data   *types.StringC
+	client api.HAProxyClient
 }
 
-func (a *defaultLogFormat) Overridden(configSnippet string) error {
-	return configsnippet.NewGenericAttribute("log-format").Overridden(configSnippet)
+func NewDefaultLogFormat(n string, c api.HAProxyClient) *DefaultLogFormat {
+	return &DefaultLogFormat{name: n, client: c}
 }
 
-func (a *defaultLogFormat) Parse(input string) error {
-	input = strings.TrimSpace(input)
-	if input == "" {
+func (a *DefaultLogFormat) GetName() string {
+	return a.name
+}
+
+func (a *DefaultLogFormat) Parse(input store.StringW, forceParse bool) error {
+	if input.Status == store.EMPTY && !forceParse {
+		return ErrEmptyStatus
+	}
+	if input.Status == store.DELETED {
+		return nil
+	}
+	v := strings.TrimSpace(input.Value)
+	if v == "" {
 		return errors.New("unable to parse log-format: empty input")
 	}
-	a.data = &types.StringC{Value: "'" + input + "'"}
+	a.data = &types.StringC{Value: "'" + v + "'"}
 	return nil
 }
 
-func (a *defaultLogFormat) Delete(c api.HAProxyClient) Result {
-	logger.Infof("Removing default log-format")
-	if err := c.DefaultLogFormat(nil); err != nil {
-		logger.Error(err)
-		return NONE
-	}
-	return RELOAD
-}
-
-func (a *defaultLogFormat) Update(c api.HAProxyClient) Result {
+func (a *DefaultLogFormat) Update() error {
 	if a.data == nil {
-		logger.Error("unable to update default log-format: nil value")
-		return NONE
+		logger.Infof("Removing default log-format")
+		return a.client.DefaultLogFormat(nil)
 	}
 	logger.Infof("Setting default log-format to: %s", a.data.Value)
-	if err := c.DefaultLogFormat(a.data); err != nil {
-		logger.Error(err)
-		return NONE
-	}
-	return RELOAD
+	return a.client.DefaultLogFormat(a.data)
 }

@@ -7,17 +7,24 @@ import (
 
 	"github.com/haproxytech/config-parser/v3/types"
 
-	"github.com/haproxytech/kubernetes-ingress/controller/configsnippet"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/api"
+	"github.com/haproxytech/kubernetes-ingress/controller/store"
 )
 
-type syslogServers struct {
-	data   []*types.Log
-	stdout bool
+type GlobalSyslogServers struct {
+	name    string
+	data    []*types.Log
+	client  api.HAProxyClient
+	stdout  bool
+	restart bool
 }
 
-func (a *syslogServers) Overridden(configSnippet string) error {
-	return configsnippet.NewGenericAttribute("log").Overridden(configSnippet)
+func NewGlobalSyslogServers(n string, c api.HAProxyClient) *GlobalSyslogServers {
+	return &GlobalSyslogServers{name: n, client: c}
+}
+
+func (a *GlobalSyslogServers) GetName() string {
+	return a.name
 }
 
 // Input is multiple syslog lines
@@ -26,10 +33,16 @@ func (a *syslogServers) Overridden(configSnippet string) error {
 //  syslog-server: |
 //    address:127.0.0.1, port:514, facility:local0
 //    address:192.168.1.1, port:514, facility:local1
-func (a *syslogServers) Parse(input string) error {
+func (a *GlobalSyslogServers) Parse(input store.StringW, forceParse bool) error {
+	if input.Status == store.EMPTY && !forceParse {
+		return ErrEmptyStatus
+	}
+	if input.Status == store.DELETED {
+		return nil
+	}
 	a.data = nil
 	a.stdout = false
-	for _, syslogLine := range strings.Split(input, "\n") {
+	for _, syslogLine := range strings.Split(input.Value, "\n") {
 		if syslogLine == "" {
 			continue
 		}
@@ -93,43 +106,43 @@ func (a *syslogServers) Parse(input string) error {
 	return nil
 }
 
-func (a *syslogServers) Delete(c api.HAProxyClient) Result {
-	logger.Infof("Removing log targets ")
-	if err := c.LogTarget(nil, -1); err != nil {
-		logger.Error(err)
-		return NONE
+func (a *GlobalSyslogServers) Update() error {
+	err := a.client.LogTarget(nil, -1)
+	if err != nil {
+		return err
 	}
-	return RELOAD
-}
-
-func (a *syslogServers) Update(c api.HAProxyClient) Result {
 	if len(a.data) == 0 {
-		logger.Error("unable to update syslogServer: nil value")
-		return NONE
+		logger.Infof("log targets removed")
 	}
-	a.Delete(c)
-	var r Result
 	for i, syslog := range a.data {
 		logger.Infof("adding syslog server: 'address: %s, facility: %s'", syslog.Address, syslog.Facility)
-		if err := c.LogTarget(syslog, i); err != nil {
-			logger.Error(err)
-		} else {
-			r = RELOAD
+		if err = a.client.LogTarget(syslog, i); err != nil {
+			return err
 		}
 	}
 	// stdout logging won't work with daemon mode
-	daemonMode, err := c.GlobalConfigEnabled("global", "daemon")
-	logger.Error(err)
+	daemonMode, err := a.client.GlobalConfigEnabled("global", "daemon")
+	if err != nil {
+		return err
+	}
 	if a.stdout {
 		if daemonMode {
 			logger.Info("Disabling Daemon mode")
-			logger.Error(c.DaemonMode(nil))
-			r = RESTART
+			if err = a.client.DaemonMode(nil); err != nil {
+				return err
+			}
+			a.restart = true
 		}
 	} else if !daemonMode {
 		logger.Info("Enabling Daemon mode")
-		logger.Error(c.DaemonMode(&types.Enabled{}))
-		r = RESTART
+		if err = a.client.DaemonMode(&types.Enabled{}); err != nil {
+			return err
+		}
+		a.restart = true
 	}
-	return r
+	return nil
+}
+
+func (a *GlobalSyslogServers) Restart() bool {
+	return a.restart
 }

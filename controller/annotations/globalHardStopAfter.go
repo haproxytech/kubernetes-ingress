@@ -5,20 +5,33 @@ import (
 	"time"
 
 	"github.com/haproxytech/config-parser/v3/types"
-	"github.com/haproxytech/kubernetes-ingress/controller/configsnippet"
+
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/api"
+	"github.com/haproxytech/kubernetes-ingress/controller/store"
 )
 
-type globalHardStopAfter struct {
-	data *types.StringC
+type GlobalHardStopAfter struct {
+	name   string
+	data   *types.StringC
+	client api.HAProxyClient
 }
 
-func (ghsa *globalHardStopAfter) Overridden(configSnippet string) error {
-	return configsnippet.NewGenericAttribute("hard-stop-after").Overridden(configSnippet)
+func NewGlobalHardStopAfter(n string, c api.HAProxyClient) *GlobalHardStopAfter {
+	return &GlobalHardStopAfter{name: n, client: c}
 }
 
-func (ghsa *globalHardStopAfter) Parse(input string) error {
-	after, err := time.ParseDuration(input)
+func (a *GlobalHardStopAfter) GetName() string {
+	return a.name
+}
+
+func (a *GlobalHardStopAfter) Parse(input store.StringW, forceParse bool) error {
+	if input.Status == store.EMPTY && !forceParse {
+		return ErrEmptyStatus
+	}
+	if input.Status == store.DELETED {
+		return nil
+	}
+	after, err := time.ParseDuration(input.Value)
 	if err != nil {
 		return err
 	}
@@ -34,27 +47,19 @@ func (ghsa *globalHardStopAfter) Parse(input string) error {
 		return err
 	}
 
-	ghsa.data = &types.StringC{Value: duration}
+	a.data = &types.StringC{Value: duration}
 	return nil
 }
 
-func (ghsa *globalHardStopAfter) Delete(c api.HAProxyClient) Result {
-	if err := c.GlobalHardStopAfter(nil); err != nil {
-		logger.Error(err)
-		return NONE
-	}
-	return RELOAD
+func (a *GlobalHardStopAfter) Delete() error {
+	return a.client.GlobalHardStopAfter(nil)
 }
 
-func (ghsa *globalHardStopAfter) Update(c api.HAProxyClient) Result {
-	if ghsa.data == nil {
-		logger.Error("unable to update default hard-stop-after: nil value")
-		return NONE
+func (a *GlobalHardStopAfter) Update() error {
+	if a.data == nil {
+		logger.Infof("Removing hard-stop-after timeout")
+		return a.client.GlobalHardStopAfter(nil)
 	}
-	if err := c.GlobalHardStopAfter(ghsa.data); err != nil {
-		logger.Error(err)
-		return NONE
-	}
-	logger.Infof("Setting hard-stop-after to %s", ghsa.data.Value)
-	return RELOAD
+	logger.Infof("Setting hard-stop-after to %s", a.data.Value)
+	return a.client.GlobalHardStopAfter(a.data)
 }

@@ -1,21 +1,26 @@
 package annotations
 
+import (
+	"github.com/haproxytech/kubernetes-ingress/controller/store"
+)
+
 func (suite *AnnotationSuite) TestGlobalCfgSnippetUpdate() {
 	tests := []struct {
-		input    string
+		input    store.StringW
 		expected string
 	}{
-		{"ssl-default-bind-ciphers EECDH+AESGCM:EECDH+CHACHA20",
+		{store.StringW{Value: "ssl-default-bind-ciphers EECDH+AESGCM:EECDH+CHACHA20"},
 			"###_config-snippet_### BEGIN\n  ssl-default-bind-ciphers EECDH+AESGCM:EECDH+CHACHA20\n  ###_config-snippet_### END"},
-		{`tune.ssl.default-dh-param 2048
+		{store.StringW{Value: `tune.ssl.default-dh-param 2048
       tune.bufsize 32768`,
+		},
 			"###_config-snippet_### BEGIN\n  tune.ssl.default-dh-param 2048\n  tune.bufsize 32768\n  ###_config-snippet_### END"},
 	}
 	for _, test := range tests {
 		suite.T().Log(test.input)
-		a := &globalCfgSnippet{}
-		if suite.NoError(a.Parse(test.input)) {
-			suite.Equal(RELOAD, a.Update(suite.client))
+		a := NewGlobalCfgSnippet("", suite.client)
+		if suite.NoError(a.Parse(test.input, true)) {
+			suite.NoError(a.Update())
 			result, _ := suite.client.GlobalWriteConfig("global", "config-snippet")
 			suite.Equal(test.expected, result)
 		}
@@ -23,22 +28,9 @@ func (suite *AnnotationSuite) TestGlobalCfgSnippetUpdate() {
 }
 
 func (suite *AnnotationSuite) TestGlobalCfgSnippetFail() {
-	test := "  "
-	a := &globalCfgSnippet{}
-	err := a.Parse(test)
+	test := store.StringW{Value: "   "}
+	a := NewGlobalCfgSnippet("", suite.client)
+	err := a.Parse(test, true)
 	suite.T().Log(err)
 	suite.Error(err)
-}
-
-func (suite *AnnotationSuite) TestGlobalCfgSnippetOverriddenOk() {
-	suite.Run("empty", func() {
-		err := (&globalCfgSnippet{}).Overridden("")
-		suite.T().Log(err)
-		suite.NoError(err)
-	})
-	suite.Run("data", func() {
-		err := (&globalCfgSnippet{}).Overridden("random-data")
-		suite.T().Log(err)
-		suite.NoError(err)
-	})
 }

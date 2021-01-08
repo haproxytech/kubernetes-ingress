@@ -4,27 +4,28 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/haproxytech/config-parser/v3/types"
+	"github.com/haproxytech/models/v2"
+
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/api"
 	"github.com/haproxytech/kubernetes-ingress/controller/store"
 )
 
-type GlobalCfgSnippet struct {
-	name string
-	//data   *types.StringSliceC
-	data   []string
-	client api.HAProxyClient
+type BackendCfgSnippet struct {
+	name    string
+	data    []string
+	client  api.HAProxyClient
+	backend *models.Backend
 }
 
-func NewGlobalCfgSnippet(n string, c api.HAProxyClient) *GlobalCfgSnippet {
-	return &GlobalCfgSnippet{name: n, client: c}
+func NewBackendCfgSnippet(n string, c api.HAProxyClient, b *models.Backend) *BackendCfgSnippet {
+	return &BackendCfgSnippet{name: n, client: c, backend: b}
 }
 
-func (a *GlobalCfgSnippet) GetName() string {
+func (a *BackendCfgSnippet) GetName() string {
 	return a.name
 }
 
-func (a *GlobalCfgSnippet) Parse(input store.StringW, forceParse bool) error {
+func (a *BackendCfgSnippet) Parse(input store.StringW, forceParse bool) error {
 	if input.Status == store.EMPTY && !forceParse {
 		return ErrEmptyStatus
 	}
@@ -42,11 +43,11 @@ func (a *GlobalCfgSnippet) Parse(input store.StringW, forceParse bool) error {
 	return nil
 }
 
-func (a *GlobalCfgSnippet) Update() error {
+func (a *BackendCfgSnippet) Update() error {
 	if len(a.data) == 0 {
 		logger.Infof("Removing global config-snippet")
-		return a.client.GlobalCfgSnippet(nil)
+		return a.client.BackendCfgSnippetSet(a.backend.Name, nil)
 	}
 	logger.Infof("Setting global config-snippet to: %s", a.data)
-	return a.client.GlobalCfgSnippet(&types.StringSliceC{Value: a.data})
+	return a.client.BackendCfgSnippetSet(a.backend.Name, &a.data)
 }
