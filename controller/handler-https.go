@@ -191,15 +191,15 @@ func (h HTTPS) sslPassthroughRules(k store.K8s, cfg *Configuration) error {
 	cfg.HAProxyRules.EnableSSLPassThrough(FrontendSSL, FrontendHTTPS)
 	errors := utils.Errors{}
 	errors.Add(
-		cfg.HAProxyRules.AddRule(rules.ReqAcceptContent{}, FrontendSSL),
+		cfg.HAProxyRules.AddRule(rules.ReqAcceptContent{}, nil, FrontendSSL),
 		cfg.HAProxyRules.AddRule(rules.ReqSetVar{
 			Name:       "sni",
 			Scope:      "sess",
 			Expression: "req_ssl_sni",
-		}, FrontendSSL),
+		}, nil, FrontendSSL),
 		cfg.HAProxyRules.AddRule(rules.ReqInspectDelay{
 			Timeout: inspectTimeout,
-		}, FrontendSSL),
+		}, nil, FrontendSSL),
 	)
 	return errors.Result()
 }

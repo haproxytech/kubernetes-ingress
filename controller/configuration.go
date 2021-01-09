@@ -27,7 +27,7 @@ import (
 
 type Configuration struct {
 	MapFiles       haproxy.Maps
-	HAProxyRules   haproxy.Rules
+	HAProxyRules   *haproxy.Rules
 	Certificates   *haproxy.Certificates
 	IngressRoutes  ingress.Routes
 	HTTPS          bool
@@ -65,41 +65,41 @@ func (c *Configuration) HAProxyRulesInit() error {
 		// ForwardedProto rule
 		c.HAProxyRules.AddRule(rules.SetHdr{
 			ForwardedProto: true,
-		}, FrontendHTTPS),
+		}, nil, FrontendHTTPS),
 		// txn.base var used for logging
 		c.HAProxyRules.AddRule(rules.ReqSetVar{
 			Name:       "base",
 			Scope:      "txn",
 			Expression: "base",
-		}, FrontendHTTP, FrontendHTTPS),
+		}, nil, FrontendHTTP, FrontendHTTPS),
 		// Backend switching rules.
 		c.HAProxyRules.AddRule(rules.ReqSetVar{
 			Name:       "path",
 			Scope:      "txn",
 			Expression: "path",
-		}, FrontendHTTP, FrontendHTTPS),
+		}, nil, FrontendHTTP, FrontendHTTPS),
 		c.HAProxyRules.AddRule(rules.ReqSetVar{
 			Name:       "host",
 			Scope:      "txn",
 			Expression: fmt.Sprintf("req.hdr(Host),field(1,:),lower,map(%s)", haproxy.GetMapPath(HOST)),
-		}, FrontendHTTP, FrontendHTTPS),
+		}, nil, FrontendHTTP, FrontendHTTPS),
 		c.HAProxyRules.AddRule(rules.ReqSetVar{
 			Name:       "host",
 			Scope:      "txn",
 			Expression: fmt.Sprintf("req.hdr(Host),field(1,:),regsub(^[^.]*,,),lower,map(%s,'')", haproxy.GetMapPath(HOST)),
 			CondTest:   "!{ var(txn.host) -m found }",
-		}, FrontendHTTP, FrontendHTTPS),
+		}, nil, FrontendHTTP, FrontendHTTPS),
 		c.HAProxyRules.AddRule(rules.ReqSetVar{
 			Name:       "match",
 			Scope:      "txn",
 			Expression: fmt.Sprintf("var(txn.host),concat(,txn.path,),map(%s)", haproxy.GetMapPath(PATH_EXACT)),
-		}, FrontendHTTP, FrontendHTTPS),
+		}, nil, FrontendHTTP, FrontendHTTPS),
 		c.HAProxyRules.AddRule(rules.ReqSetVar{
 			Name:       "match",
 			Scope:      "txn",
 			Expression: fmt.Sprintf("var(txn.host),concat(,txn.path,),map_beg(%s)", haproxy.GetMapPath(PATH_PREFIX)),
 			CondTest:   "!{ var(txn.match) -m found }",
-		}, FrontendHTTP, FrontendHTTPS),
+		}, nil, FrontendHTTP, FrontendHTTPS),
 	)
 
 	return errors.Result()

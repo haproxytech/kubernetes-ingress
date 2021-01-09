@@ -34,5 +34,5 @@ func (p SourceIPHeader) Update(k store.K8s, cfg *Configuration, api api.HAProxyC
 	}
 	return true, cfg.HAProxyRules.AddRule(rules.ReqSetSrc{
 		HeaderName: srcIPHeader.Value,
-	}, FrontendHTTP, FrontendHTTPS)
+	}, nil, FrontendHTTP, FrontendHTTPS)
 }

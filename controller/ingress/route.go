@@ -33,7 +33,7 @@ type Route struct {
 	service        *store.Service
 	endpoints      *store.PortEndpoints
 	status         store.Status
-	HAProxyRules   []uint32
+	HAProxyRules   []haproxy.RuleID
 	Host           string
 	BackendName    string
 	NewBackend     bool

@@ -249,7 +249,7 @@ func (c *HAProxyController) updateHAProxy() error {
 				logger.Debugf("Ingress %s/%s: no rules defined", ingress.Namespace, ingress.Name)
 				continue
 			}
-			ruleIDs := c.handleIngressAnnotations(ingress)
+			c.handleIngressAnnotations(ingress)
 			// Ingress rules
 			for _, rule := range ingress.Rules {
 				for _, path := range rule.Paths {
@@ -258,7 +258,7 @@ func (c *HAProxyController) updateHAProxy() error {
 						Ingress:        ingress,
 						Host:           rule.Host,
 						Path:           path,
-						HAProxyRules:   ruleIDs,
+						HAProxyRules:   c.cfg.HAProxyRules.PopIngressRuleIDs(ingress.Name),
 						SSLPassthrough: c.sslPassthroughEnabled(namespace, ingress, path),
 					})
 				}

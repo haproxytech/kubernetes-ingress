@@ -31,21 +31,20 @@ import (
 
 var rateLimitTables []string
 
-func (c *HAProxyController) handleIngressAnnotations(ingress *store.Ingress) (ruleIDs []uint32) {
-	c.handleRateLimiting(ingress, &ruleIDs)
-	c.handleRequestCapture(ingress, &ruleIDs)
-	c.handleRequestPathRewrite(ingress, &ruleIDs)
-	c.handleRequestSetHost(ingress, &ruleIDs)
-	c.handleRequestSetHdr(ingress, &ruleIDs)
-	c.handleResponseSetHdr(ingress, &ruleIDs)
-	c.handleBlacklisting(ingress, &ruleIDs)
-	c.handleHTTPBasicAuth(ingress, &ruleIDs)
-	c.handleWhitelisting(ingress, &ruleIDs)
-	c.handleHTTPRedirect(ingress, &ruleIDs)
-	return
+func (c *HAProxyController) handleIngressAnnotations(ingress *store.Ingress) {
+	c.handleRateLimiting(ingress)
+	c.handleRequestCapture(ingress)
+	c.handleRequestPathRewrite(ingress)
+	c.handleRequestSetHost(ingress)
+	c.handleRequestSetHdr(ingress)
+	c.handleResponseSetHdr(ingress)
+	c.handleBlacklisting(ingress)
+	c.handleHTTPBasicAuth(ingress)
+	c.handleWhitelisting(ingress)
+	c.handleHTTPRedirect(ingress)
 }
 
-func (c *HAProxyController) handleBlacklisting(ingress *store.Ingress, ruleIDs *[]uint32) {
+func (c *HAProxyController) handleBlacklisting(ingress *store.Ingress) {
 	//  Get annotation status
 	annBlacklist, _ := c.Store.GetValueFromAnnotations("blacklist", ingress.Annotations, c.Store.ConfigMaps[Main].Annotations)
 	if annBlacklist == nil {
@@ -72,14 +71,10 @@ func (c *HAProxyController) handleBlacklisting(ingress *store.Ingress, ruleIDs *
 	reqBlackList := rules.ReqDeny{
 		SrcIPsMap: mapName,
 	}
-	if err := c.cfg.HAProxyRules.AddRule(reqBlackList, FrontendHTTP, FrontendHTTPS); err == nil {
-		*ruleIDs = append(*ruleIDs, reqBlackList.GetID())
-	} else {
-		logger.Error(err)
-	}
+	logger.Error(c.cfg.HAProxyRules.AddRule(reqBlackList, &ingress.Name, FrontendHTTP, FrontendHTTPS))
 }
 
-func (c *HAProxyController) handleHTTPRedirect(ingress *store.Ingress, ruleIDs *[]uint32) {
+func (c *HAProxyController) handleHTTPRedirect(ingress *store.Ingress) {
 	//  Get and validate annotations
 	toEnable := false
 	annSSLRedirect, _ := c.Store.GetValueFromAnnotations("ssl-redirect", ingress.Annotations, c.Store.ConfigMaps[Main].Annotations)
@@ -111,14 +106,10 @@ func (c *HAProxyController) handleHTTPRedirect(ingress *store.Ingress, ruleIDs *
 		RedirectCode: sslRedirectCode,
 		RedirectPort: sslRedirectPort,
 	}
-	if err := c.cfg.HAProxyRules.AddRule(reqSSLRedirect, FrontendHTTP); err == nil {
-		*ruleIDs = append(*ruleIDs, reqSSLRedirect.GetID())
-	} else {
-		logger.Error(err)
-	}
+	logger.Error(c.cfg.HAProxyRules.AddRule(reqSSLRedirect, &ingress.Name, FrontendHTTP))
 }
 
-func (c *HAProxyController) handleRateLimiting(ingress *store.Ingress, ruleIDs *[]uint32) {
+func (c *HAProxyController) handleRateLimiting(ingress *store.Ingress) {
 	//  Get annotations status
 	annRateLimitReq, _ := c.Store.GetValueFromAnnotations("rate-limit-requests", ingress.Annotations, c.Store.ConfigMaps[Main].Annotations)
 	if annRateLimitReq == nil {
@@ -165,16 +156,11 @@ func (c *HAProxyController) handleRateLimiting(ingress *store.Ingress, ruleIDs *
 		ReqsLimit:      reqsLimit,
 		DenyStatusCode: rateLimitCode,
 	}
-	if err = c.cfg.HAProxyRules.AddRule(reqTrack, FrontendHTTP, FrontendHTTPS); err == nil {
-		if err = c.cfg.HAProxyRules.AddRule(reqRateLimit, FrontendHTTP, FrontendHTTPS); err == nil {
-			*ruleIDs = append(*ruleIDs, reqTrack.GetID(), reqRateLimit.GetID())
-			return
-		}
-		logger.Error(err)
-	}
+	logger.Error(c.cfg.HAProxyRules.AddRule(reqTrack, &ingress.Name, FrontendHTTP, FrontendHTTPS))
+	logger.Error(c.cfg.HAProxyRules.AddRule(reqRateLimit, &ingress.Name, FrontendHTTP, FrontendHTTPS))
 }
 
-func (c *HAProxyController) handleRequestCapture(ingress *store.Ingress, ruleIDs *[]uint32) {
+func (c *HAProxyController) handleRequestCapture(ingress *store.Ingress) {
 	//  Get annotation status
 	annReqCapture, _ := c.Store.GetValueFromAnnotations("request-capture", ingress.Annotations, c.Store.ConfigMaps[Main].Annotations)
 	if annReqCapture == nil {
@@ -202,15 +188,11 @@ func (c *HAProxyController) handleRequestCapture(ingress *store.Ingress, ruleIDs
 			Expression: sample,
 			CaptureLen: captureLen,
 		}
-		if err := c.cfg.HAProxyRules.AddRule(reqCapture, FrontendHTTP, FrontendHTTPS); err == nil {
-			*ruleIDs = append(*ruleIDs, reqCapture.GetID())
-		} else {
-			logger.Error(err)
-		}
+		logger.Error(c.cfg.HAProxyRules.AddRule(reqCapture, &ingress.Name, FrontendHTTP, FrontendHTTPS))
 	}
 }
 
-func (c *HAProxyController) handleRequestSetHdr(ingress *store.Ingress, ruleIDs *[]uint32) {
+func (c *HAProxyController) handleRequestSetHdr(ingress *store.Ingress) {
 	//  Get annotation status
 	annReqSetHdr, _ := c.Store.GetValueFromAnnotations("request-set-header", ingress.Annotations, c.Store.ConfigMaps[Main].Annotations)
 	if annReqSetHdr == nil {
@@ -232,15 +214,11 @@ func (c *HAProxyController) handleRequestSetHdr(ingress *store.Ingress, ruleIDs 
 			HdrName:   parts[0],
 			HdrFormat: parts[1],
 		}
-		if err := c.cfg.HAProxyRules.AddRule(reqSetHdr, FrontendHTTP, FrontendHTTPS); err == nil {
-			*ruleIDs = append(*ruleIDs, reqSetHdr.GetID())
-		} else {
-			logger.Error(err)
-		}
+		logger.Error(c.cfg.HAProxyRules.AddRule(reqSetHdr, &ingress.Name, FrontendHTTP, FrontendHTTPS))
 	}
 }
 
-func (c *HAProxyController) handleRequestSetHost(ingress *store.Ingress, ruleIDs *[]uint32) {
+func (c *HAProxyController) handleRequestSetHost(ingress *store.Ingress) {
 	//  Get annotation status
 	annSetHost, _ := c.Store.GetValueFromAnnotations("set-host", ingress.Annotations, c.Store.ConfigMaps[Main].Annotations)
 	if annSetHost == nil {
@@ -256,14 +234,10 @@ func (c *HAProxyController) handleRequestSetHost(ingress *store.Ingress, ruleIDs
 		HdrName:   "Host",
 		HdrFormat: annSetHost.Value,
 	}
-	if err := c.cfg.HAProxyRules.AddRule(reqSetHost, FrontendHTTP, FrontendHTTPS); err == nil {
-		*ruleIDs = append(*ruleIDs, reqSetHost.GetID())
-	} else {
-		logger.Error(err)
-	}
+	logger.Error(c.cfg.HAProxyRules.AddRule(reqSetHost, &ingress.Name, FrontendHTTP, FrontendHTTPS))
 }
 
-func (c *HAProxyController) handleRequestPathRewrite(ingress *store.Ingress, ruleIDs *[]uint32) {
+func (c *HAProxyController) handleRequestPathRewrite(ingress *store.Ingress) {
 	//  Get annotation status
 	annPathRewrite, _ := c.Store.GetValueFromAnnotations("path-rewrite", ingress.Annotations, c.Store.ConfigMaps[Main].Annotations)
 	if annPathRewrite == nil {
@@ -293,14 +267,10 @@ func (c *HAProxyController) handleRequestPathRewrite(ingress *store.Ingress, rul
 		logger.Errorf("incorrect value '%s', path-rewrite takes 1 or 2 params ", annPathRewrite.Value)
 		return
 	}
-	if err := c.cfg.HAProxyRules.AddRule(reqPathReWrite, FrontendHTTP, FrontendHTTPS); err == nil {
-		*ruleIDs = append(*ruleIDs, reqPathReWrite.GetID())
-	} else {
-		logger.Error(err)
-	}
+	logger.Error(c.cfg.HAProxyRules.AddRule(reqPathReWrite, &ingress.Name, FrontendHTTP, FrontendHTTPS))
 }
 
-func (c *HAProxyController) handleResponseSetHdr(ingress *store.Ingress, ruleIDs *[]uint32) {
+func (c *HAProxyController) handleResponseSetHdr(ingress *store.Ingress) {
 	//  Get annotation status
 	annResSetHdr, _ := c.Store.GetValueFromAnnotations("response-set-header", ingress.Annotations, c.Store.ConfigMaps[Main].Annotations)
 	if annResSetHdr == nil {
@@ -323,15 +293,12 @@ func (c *HAProxyController) handleResponseSetHdr(ingress *store.Ingress, ruleIDs
 			HdrFormat: parts[1],
 			Response:  true,
 		}
-		if err := c.cfg.HAProxyRules.AddRule(resSetHdr, FrontendHTTP, FrontendHTTPS); err == nil {
-			*ruleIDs = append(*ruleIDs, resSetHdr.GetID())
-		} else {
-			logger.Error(err)
-		}
+		logger.Error(c.cfg.HAProxyRules.AddRule(resSetHdr, &ingress.Name, FrontendHTTP, FrontendHTTPS))
+
 	}
 }
 
-func (c *HAProxyController) handleWhitelisting(ingress *store.Ingress, ruleIDs *[]uint32) {
+func (c *HAProxyController) handleWhitelisting(ingress *store.Ingress) {
 	//  Get annotation status
 	annWhitelist, _ := c.Store.GetValueFromAnnotations("whitelist", ingress.Annotations, c.Store.ConfigMaps[Main].Annotations)
 	if annWhitelist == nil {
@@ -359,14 +326,10 @@ func (c *HAProxyController) handleWhitelisting(ingress *store.Ingress, ruleIDs *
 		SrcIPsMap: mapName,
 		Whitelist: true,
 	}
-	if err := c.cfg.HAProxyRules.AddRule(reqWhitelist, FrontendHTTP, FrontendHTTPS); err == nil {
-		*ruleIDs = append(*ruleIDs, reqWhitelist.GetID())
-	} else {
-		logger.Error(err)
-	}
+	logger.Error(c.cfg.HAProxyRules.AddRule(reqWhitelist, &ingress.Name, FrontendHTTP, FrontendHTTPS))
 }
 
-func (c *HAProxyController) handleHTTPBasicAuth(ingress *store.Ingress, ruleIDs *[]uint32) {
+func (c *HAProxyController) handleHTTPBasicAuth(ingress *store.Ingress) {
 	groupName := fmt.Sprintf("%s-%s", ingress.Namespace, ingress.Name)
 
 	var authType, authSecret *store.StringW
@@ -412,11 +375,7 @@ func (c *HAProxyController) handleHTTPBasicAuth(ingress *store.Ingress, ruleIDs 
 	reqBasicAuth := rules.ReqBasicAuth{
 		Name: fmt.Sprintf("%s-%s", ingress.Namespace, ingress.Name),
 	}
-	if err := c.cfg.HAProxyRules.AddRule(reqBasicAuth, FrontendHTTP, FrontendHTTPS); err == nil {
-		*ruleIDs = append(*ruleIDs, reqBasicAuth.GetID())
-	} else {
-		logger.Error(err)
-	}
+	logger.Error(c.cfg.HAProxyRules.AddRule(reqBasicAuth, &ingress.Name, FrontendHTTP, FrontendHTTPS))
 }
 
 func tlsEnabled(ingress *store.Ingress) bool {
