@@ -85,24 +85,25 @@ func (c *HAProxyController) monitorChanges() {
 		informersSynced = append(informersSynced, nsi.HasSynced)
 		c.k8s.EventsNamespaces(nsChan, stop, nsi)
 
-		if c.k8s.IsNetworkingV1ApiSupported() {
-			// Enabling networking.k8s.io/v1 Ingress support only to >= 1.19
-			ii := factory.Networking().V1().Ingresses().Informer()
-			informersSynced = append(informersSynced, ii.HasSynced)
-			c.k8s.EventsIngresses(ingChan, stop, ii)
-		}
-		// Handling deprecated Ingress resources:
-		// https://github.com/kubernetes/enhancements/issues/1453
 		var ii cache.SharedIndexInformer
-		if c.k8s.IsNetworkingV1Beta1ApiSupported() {
-			//logger.Warningf("Running on Kubernetes < 1.22: using ingresses.networking.k8s.io/v1beta1 for the Ingress/v1beta1 resources")
-			ii = factory.Networking().V1beta1().Ingresses().Informer()
-		} else {
-			logger.Warningf("Running on Kubernetes < 1.14: using ingresses.extensions/v1beta1 for the Ingress shared informer, networking.k8s.io API group is not available")
-			ii = factory.Extensions().V1beta1().Ingresses().Informer()
+		for i, apiGroup := range []string{"networking.k8s.io/v1", "networking.k8s.io/v1beta1", "extensions/v1beta1"} {
+			resources, _ := c.k8s.API.ServerResourcesForGroupVersion(apiGroup)
+			for _, rs := range resources.APIResources {
+				if rs.Kind == "Ingress" {
+					switch i {
+					case 0:
+						ii = factory.Networking().V1().Ingresses().Informer()
+					case 1:
+						ii = factory.Networking().V1beta1().Ingresses().Informer()
+					case 2:
+						ii = factory.Extensions().V1beta1().Ingresses().Informer()
+					}
+					informersSynced = append(informersSynced, ii.HasSynced)
+					c.k8s.EventsIngresses(ingChan, stop, ii)
+					break
+				}
+			}
 		}
-		informersSynced = append(informersSynced, ii.HasSynced)
-		c.k8s.EventsIngresses(ingChan, stop, ii)
 
 		ci := factory.Core().V1().ConfigMaps().Informer()
 		informersSynced = append(informersSynced, ci.HasSynced)
