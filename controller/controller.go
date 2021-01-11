@@ -39,6 +39,7 @@ import (
 
 // nolint
 const (
+	CONTROLLER_CLASS = "haproxy.org/ingress-controller"
 	// Configmaps
 	Main        = "main"
 	TCPServices = "tcpservices"
@@ -181,13 +182,6 @@ func (c *HAProxyController) Start(ctx context.Context, osArgs utils.OSArgs) {
 		logger.Printf("Running on Kubernetes version: %s %s", k8sVersion.String(), k8sVersion.Platform)
 	}
 
-	// Starting from Kubernetes 1.19 a valid IngressClass resource must be used:
-	// checking if the provided one is correctly registered with the current
-	// HAProxy Ingress Controller instance.
-	if len(c.IngressClass) > 0 {
-		logger.Panic(c.k8s.IsMatchingSelectedIngressClass(c.IngressClass))
-	}
-
 	c.serverlessPods = map[string]int{}
 	c.eventChan = make(chan SyncDataEvent, watch.DefaultChanSize*6)
 	go c.monitorChanges()
@@ -222,6 +216,10 @@ func (c *HAProxyController) updateHAProxy() error {
 			continue
 		}
 		for _, ingress := range namespace.Ingresses {
+			if !c.igClassIsSupported(ingress) {
+				logger.Debugf("ingress '%s/%s' ignored: no matching IngressClass", ingress.Namespace, ingress.Name)
+				continue
+			}
 			if c.PublishService != nil && ingress.Status != DELETED {
 				logger.Error(c.k8s.UpdateIngressStatus(ingress, c.PublishService))
 			}
@@ -547,6 +545,35 @@ func (c *HAProxyController) sslPassthroughEnabled(namespace *store.Namespace, in
 	}
 	if enabled {
 		c.cfg.SSLPassthrough = true
+		return true
+	}
+	return false
+}
+
+// igClassIsSupported verifies if the IngressClass matches the ControllerClass
+// and in such case returns true otherwise false
+//
+// According to https://github.com/kubernetes/api/blob/master/networking/v1/types.go#L257
+// ingress.class annotation should have precedence over the IngressClass mechansim implemented
+// in "networking.k8s.io".
+func (c *HAProxyController) igClassIsSupported(ingress *store.Ingress) bool {
+	var igClassAnn string
+	var igClass *store.IngressClass
+	if ann, _ := c.Store.GetValueFromAnnotations("ingress.class", ingress.Annotations); ann != nil {
+		igClassAnn = ann.Value
+	}
+	if igClassAnn == "" || igClassAnn != c.IngressClass {
+		igClass = c.Store.IngressClasses[ingress.Class]
+		if igClass != nil && igClass.Status != DELETED && igClass.Controller == CONTROLLER_CLASS {
+			// Corresponding IngresClass was updated so Ingress resource should be re-processed
+			// This is particularly important if the Ingress was skipped due to mismatching ingrssClass
+			if igClass.Status != EMPTY {
+				ingress.Status = MODIFIED
+			}
+			return true
+		}
+	}
+	if igClassAnn == c.IngressClass {
 		return true
 	}
 	return false

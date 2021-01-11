@@ -18,14 +18,16 @@ package controller
 type SyncType string
 
 //SyncType values
+//nolint
 const (
-	COMMAND   SyncType = "COMMAND"
-	CONFIGMAP SyncType = "CONFIGMAP"
-	ENDPOINTS SyncType = "ENDPOINTS"
-	INGRESS   SyncType = "INGRESS"
-	NAMESPACE SyncType = "NAMESPACE"
-	SERVICE   SyncType = "SERVICE"
-	SECRET    SyncType = "SECRET"
+	COMMAND       SyncType = "COMMAND"
+	CONFIGMAP     SyncType = "CONFIGMAP"
+	ENDPOINTS     SyncType = "ENDPOINTS"
+	INGRESS       SyncType = "INGRESS"
+	INGRESS_CLASS SyncType = "INGRESS_CLASS"
+	NAMESPACE     SyncType = "NAMESPACE"
+	SERVICE       SyncType = "SERVICE"
+	SECRET        SyncType = "SECRET"
 )
 
 //SyncDataEvent represents converted k8s received message

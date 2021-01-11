@@ -26,14 +26,26 @@ import (
 
 // ConvertToIngress detects the interface{} provided by the SharedInformer and select
 // the proper strategy to convert and return the resource as a store.Ingress struct
-func ConvertToIngress(resource interface{}) (f *Ingress, err error) {
+func ConvertToIngress(resource interface{}) (ingress *Ingress, err error) {
 	switch t := resource.(type) {
 	case *networkingv1beta1.Ingress:
-		f = ingressNetworkingV1Beta1Strategy{obj: resource.(*networkingv1beta1.Ingress)}.Convert()
+		ingress = ingressNetworkingV1Beta1Strategy{ig: resource.(*networkingv1beta1.Ingress)}.ConvertIngress()
 	case *extensionsv1beta1.Ingress:
-		f = ingressExtensionsStrategy{obj: resource.(*extensionsv1beta1.Ingress)}.Convert()
+		ingress = ingressExtensionsStrategy{ig: resource.(*extensionsv1beta1.Ingress)}.ConvertIngress()
 	case *networkingv1.Ingress:
-		f = ingressNetworkingV1Strategy{obj: resource.(*networkingv1.Ingress)}.Convert()
+		ingress = ingressNetworkingV1Strategy{ig: resource.(*networkingv1.Ingress)}.ConvertIngress()
+	default:
+		err = fmt.Errorf("unrecognized type for: %T", t)
+	}
+	return
+}
+
+func ConvertToIngressClass(resource interface{}) (ingress *IngressClass, err error) {
+	switch t := resource.(type) {
+	case *networkingv1beta1.IngressClass:
+		ingress = ingressNetworkingV1Beta1Strategy{class: resource.(*networkingv1beta1.IngressClass)}.ConvertClass()
+	case *networkingv1.IngressClass:
+		ingress = ingressNetworkingV1Strategy{class: resource.(*networkingv1.IngressClass)}.ConvertClass()
 	default:
 		err = fmt.Errorf("unrecognized type for: %T", t)
 	}
@@ -43,15 +55,17 @@ func ConvertToIngress(resource interface{}) (f *Ingress, err error) {
 // ingressNetworkingV1Beta1Strategy is the Strategy implementation for converting an
 // ingresses.networking.k8s.io/v1beta1 object into a store.Ingress resource.
 type ingressNetworkingV1Beta1Strategy struct {
-	obj *networkingv1beta1.Ingress
+	ig    *networkingv1beta1.Ingress
+	class *networkingv1beta1.IngressClass
 }
 
-func (n ingressNetworkingV1Beta1Strategy) Convert() *Ingress {
+func (n ingressNetworkingV1Beta1Strategy) ConvertIngress() *Ingress {
 	return &Ingress{
 		APIVersion:  "networking.k8s.io/v1beta1",
-		Namespace:   n.obj.GetNamespace(),
-		Name:        n.obj.GetName(),
-		Annotations: ConvertToMapStringW(n.obj.GetAnnotations()),
+		Namespace:   n.ig.GetNamespace(),
+		Name:        n.ig.GetName(),
+		Class:       getIgClass(n.ig.Spec.IngressClassName),
+		Annotations: ConvertToMapStringW(n.ig.GetAnnotations()),
 		Rules: func(ingressRules []networkingv1beta1.IngressRule) map[string]*IngressRule {
 			rules := make(map[string]*IngressRule)
 			for _, k8sRule := range ingressRules {
@@ -84,7 +98,7 @@ func (n ingressNetworkingV1Beta1Strategy) Convert() *Ingress {
 				}
 			}
 			return rules
-		}(n.obj.Spec.Rules),
+		}(n.ig.Spec.Rules),
 		DefaultBackend: func(ingressBackend *networkingv1beta1.IngressBackend) *IngressPath {
 			if ingressBackend == nil {
 				return nil
@@ -96,7 +110,7 @@ func (n ingressNetworkingV1Beta1Strategy) Convert() *Ingress {
 				IsDefaultBackend:  true,
 				Status:            "",
 			}
-		}(n.obj.Spec.Backend),
+		}(n.ig.Spec.Backend),
 		TLS: func(ingressTLS []networkingv1beta1.IngressTLS) map[string]*IngressTLS {
 			tls := make(map[string]*IngressTLS)
 			for _, k8sTLS := range ingressTLS {
@@ -111,9 +125,23 @@ func (n ingressNetworkingV1Beta1Strategy) Convert() *Ingress {
 				}
 			}
 			return tls
-		}(n.obj.Spec.TLS),
+		}(n.ig.Spec.TLS),
 		Status: func() Status {
-			if n.obj.ObjectMeta.GetDeletionTimestamp() != nil {
+			if n.ig.ObjectMeta.GetDeletionTimestamp() != nil {
+				return DELETED
+			}
+			return ADDED
+		}(),
+	}
+}
+
+func (n ingressNetworkingV1Beta1Strategy) ConvertClass() *IngressClass {
+	return &IngressClass{
+		APIVersion: "networking.k8s.io/v1beta1",
+		Name:       n.class.GetName(),
+		Controller: n.class.Spec.Controller,
+		Status: func() Status {
+			if n.class.ObjectMeta.GetDeletionTimestamp() != nil {
 				return DELETED
 			}
 			return ADDED
@@ -124,15 +152,15 @@ func (n ingressNetworkingV1Beta1Strategy) Convert() *Ingress {
 // ingressExtensionsStrategy is the Strategy implementation for converting an
 // ingresses.extensions/v1beta1 object into a store.Ingress resource.
 type ingressExtensionsStrategy struct {
-	obj *extensionsv1beta1.Ingress
+	ig *extensionsv1beta1.Ingress
 }
 
-func (e ingressExtensionsStrategy) Convert() *Ingress {
+func (e ingressExtensionsStrategy) ConvertIngress() *Ingress {
 	return &Ingress{
 		APIVersion:  "extensions/v1beta1",
-		Namespace:   e.obj.GetNamespace(),
-		Name:        e.obj.GetName(),
-		Annotations: ConvertToMapStringW(e.obj.GetAnnotations()),
+		Namespace:   e.ig.GetNamespace(),
+		Name:        e.ig.GetName(),
+		Annotations: ConvertToMapStringW(e.ig.GetAnnotations()),
 		Rules: func(ingressRules []extensionsv1beta1.IngressRule) map[string]*IngressRule {
 			rules := make(map[string]*IngressRule)
 			for _, k8sRule := range ingressRules {
@@ -165,7 +193,7 @@ func (e ingressExtensionsStrategy) Convert() *Ingress {
 				}
 			}
 			return rules
-		}(e.obj.Spec.Rules),
+		}(e.ig.Spec.Rules),
 		DefaultBackend: func(ingressBackend *extensionsv1beta1.IngressBackend) *IngressPath {
 			if ingressBackend == nil {
 				return nil
@@ -177,7 +205,7 @@ func (e ingressExtensionsStrategy) Convert() *Ingress {
 				IsDefaultBackend:  true,
 				Status:            "",
 			}
-		}(e.obj.Spec.Backend),
+		}(e.ig.Spec.Backend),
 		TLS: func(ingressTLS []extensionsv1beta1.IngressTLS) map[string]*IngressTLS {
 			tls := make(map[string]*IngressTLS)
 			for _, k8sTLS := range ingressTLS {
@@ -192,9 +220,9 @@ func (e ingressExtensionsStrategy) Convert() *Ingress {
 				}
 			}
 			return tls
-		}(e.obj.Spec.TLS),
+		}(e.ig.Spec.TLS),
 		Status: func() Status {
-			if e.obj.ObjectMeta.GetDeletionTimestamp() != nil {
+			if e.ig.ObjectMeta.GetDeletionTimestamp() != nil {
 				return DELETED
 			}
 			return ADDED
@@ -205,15 +233,17 @@ func (e ingressExtensionsStrategy) Convert() *Ingress {
 // ingressNetworkingV1Strategy is the Strategy implementation for converting an
 // ingresses.networking.k8s.io/v1 object into a store.Ingress resource.
 type ingressNetworkingV1Strategy struct {
-	obj *networkingv1.Ingress
+	ig    *networkingv1.Ingress
+	class *networkingv1.IngressClass
 }
 
-func (n ingressNetworkingV1Strategy) Convert() *Ingress {
+func (n ingressNetworkingV1Strategy) ConvertIngress() *Ingress {
 	return &Ingress{
 		APIVersion:  "networking.k8s.io/v1",
-		Namespace:   n.obj.GetNamespace(),
-		Name:        n.obj.GetName(),
-		Annotations: ConvertToMapStringW(n.obj.GetAnnotations()),
+		Namespace:   n.ig.GetNamespace(),
+		Name:        n.ig.GetName(),
+		Class:       getIgClass(n.ig.Spec.IngressClassName),
+		Annotations: ConvertToMapStringW(n.ig.GetAnnotations()),
 		Rules: func(ingressRules []networkingv1.IngressRule) map[string]*IngressRule {
 			rules := make(map[string]*IngressRule)
 			for _, k8sRule := range ingressRules {
@@ -246,7 +276,7 @@ func (n ingressNetworkingV1Strategy) Convert() *Ingress {
 				}
 			}
 			return rules
-		}(n.obj.Spec.Rules),
+		}(n.ig.Spec.Rules),
 		DefaultBackend: func(ingressBackend *networkingv1.IngressBackend) *IngressPath {
 			if ingressBackend == nil {
 				return nil
@@ -258,7 +288,7 @@ func (n ingressNetworkingV1Strategy) Convert() *Ingress {
 				IsDefaultBackend:  true,
 				Status:            "",
 			}
-		}(n.obj.Spec.DefaultBackend),
+		}(n.ig.Spec.DefaultBackend),
 		TLS: func(ingressTLS []networkingv1.IngressTLS) map[string]*IngressTLS {
 			tls := make(map[string]*IngressTLS)
 			for _, k8sTLS := range ingressTLS {
@@ -273,12 +303,33 @@ func (n ingressNetworkingV1Strategy) Convert() *Ingress {
 				}
 			}
 			return tls
-		}(n.obj.Spec.TLS),
+		}(n.ig.Spec.TLS),
 		Status: func() Status {
-			if n.obj.ObjectMeta.GetDeletionTimestamp() != nil {
+			if n.ig.ObjectMeta.GetDeletionTimestamp() != nil {
 				return DELETED
 			}
 			return ADDED
 		}(),
 	}
+}
+
+func (n ingressNetworkingV1Strategy) ConvertClass() *IngressClass {
+	return &IngressClass{
+		APIVersion: "networking.k8s.io/v1",
+		Name:       n.class.GetName(),
+		Controller: n.class.Spec.Controller,
+		Status: func() Status {
+			if n.class.ObjectMeta.GetDeletionTimestamp() != nil {
+				return DELETED
+			}
+			return ADDED
+		}(),
+	}
+}
+
+func getIgClass(className *string) string {
+	if className == nil {
+		return ""
+	}
+	return *className
 }

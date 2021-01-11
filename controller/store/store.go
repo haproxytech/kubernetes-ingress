@@ -21,6 +21,7 @@ import (
 type K8s struct {
 	Namespaces       map[string]*Namespace
 	ConfigMaps       map[string]*ConfigMap
+	IngressClasses   map[string]*IngressClass
 	NamespacesAccess NamespacesWatch
 }
 
@@ -33,8 +34,9 @@ var logger = utils.GetLogger()
 
 func NewK8sStore() K8s {
 	return K8s{
-		Namespaces: make(map[string]*Namespace),
-		ConfigMaps: make(map[string]*ConfigMap),
+		Namespaces:     make(map[string]*Namespace),
+		ConfigMaps:     make(map[string]*ConfigMap),
+		IngressClasses: make(map[string]*IngressClass),
 		NamespacesAccess: NamespacesWatch{
 			Whitelist: map[string]struct{}{},
 			Blacklist: map[string]struct{}{
@@ -122,6 +124,14 @@ func (k K8s) Clean() {
 		default:
 			cm.Status = EMPTY
 			cm.Annotations.Clean()
+		}
+	}
+	for _, igClass := range k.IngressClasses {
+		switch igClass.Status {
+		case DELETED:
+			delete(k.IngressClasses, igClass.Name)
+		default:
+			igClass.Status = EMPTY
 		}
 	}
 	defaultAnnotationValues.Clean()

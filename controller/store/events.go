@@ -35,11 +35,46 @@ func (k K8s) EventNamespace(ns *Namespace, data *Namespace) (updateRequired bool
 	return updateRequired
 }
 
-func (k K8s) EventIngress(ns *Namespace, data *Ingress, controllerClass string) (updateRequired bool) {
-	var ingressClass string
-	if ic, _ := k.GetValueFromAnnotations("ingress.class", data.Annotations); ic != nil {
-		ingressClass = ic.Value
+func (k K8s) EventIngressClass(data *IngressClass) (updateRequired bool) {
+	switch data.Status {
+	case MODIFIED:
+		newIgClass := data
+		oldIgClass, ok := k.IngressClasses[data.Name]
+		if !ok {
+			logger.Warningf("IngressClass '%s' not registered with controller !", data.Name)
+			return false
+		}
+		if oldIgClass.Equal(oldIgClass) {
+			return false
+		}
+		k.IngressClasses[data.Name] = newIgClass
+		updateRequired = true
+	case ADDED:
+		if old, ok := k.IngressClasses[data.Name]; ok {
+			if old.Status == DELETED {
+				k.IngressClasses[data.Name].Status = ADDED
+			}
+			if !old.Equal(data) {
+				data.Status = MODIFIED
+				return k.EventIngressClass(data)
+			}
+			return false
+		}
+		k.IngressClasses[data.Name] = data
+		updateRequired = true
+	case DELETED:
+		igClass, ok := k.IngressClasses[data.Name]
+		if ok {
+			igClass.Status = DELETED
+			updateRequired = true
+		} else {
+			logger.Warningf("IngressClass '%s' not registered with controller, cannot delete !", data.Name)
+		}
 	}
+	return updateRequired
+}
+
+func (k K8s) EventIngress(ns *Namespace, data *Ingress, controllerClass string) (updateRequired bool) {
 
 	updateRequired = false
 	switch data.Status {
@@ -48,11 +83,7 @@ func (k K8s) EventIngress(ns *Namespace, data *Ingress, controllerClass string) 
 		oldIngress, ok := ns.Ingresses[data.Name]
 		if !ok {
 			newIngress.Status = ADDED
-			return k.EventIngress(ns, newIngress, ingressClass)
-		}
-		if ingressClass != controllerClass {
-			newIngress.Status = DELETED
-			return k.EventIngress(ns, newIngress, ingressClass)
+			return k.EventIngress(ns, newIngress, controllerClass)
 		}
 		if oldIngress.Equal(data) {
 			return false
@@ -152,9 +183,6 @@ func (k K8s) EventIngress(ns *Namespace, data *Ingress, controllerClass string) 
 		//logger.Tracef("Ingress modified %s %s", data.Name, diffStr)
 		updateRequired = true
 	case ADDED:
-		if ingressClass != controllerClass {
-			return false
-		}
 		if old, ok := ns.Ingresses[data.Name]; ok {
 			if old.Status == DELETED {
 				ns.Ingresses[data.Name].Status = ADDED
@@ -162,7 +190,7 @@ func (k K8s) EventIngress(ns *Namespace, data *Ingress, controllerClass string) 
 			data.Status = old.Status
 			if !old.Equal(data) {
 				data.Status = MODIFIED
-				return k.EventIngress(ns, data, ingressClass)
+				return k.EventIngress(ns, data, controllerClass)
 			}
 			return updateRequired
 		}

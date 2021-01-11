@@ -47,6 +47,7 @@ func (c *HAProxyController) monitorChanges() {
 	svcChan := make(chan *store.Service, 100)
 	nsChan := make(chan *store.Namespace, 10)
 	ingChan := make(chan *store.Ingress, 10)
+	ingClassChan := make(chan *store.IngressClass, 10)
 	cfgChan := make(chan *store.ConfigMap, 10)
 	secretChan := make(chan *store.Secret, 10)
 
@@ -85,11 +86,11 @@ func (c *HAProxyController) monitorChanges() {
 		informersSynced = append(informersSynced, nsi.HasSynced)
 		c.k8s.EventsNamespaces(nsChan, stop, nsi)
 
-		var ii cache.SharedIndexInformer
 		for i, apiGroup := range []string{"networking.k8s.io/v1", "networking.k8s.io/v1beta1", "extensions/v1beta1"} {
+			var ii, ici cache.SharedIndexInformer
 			resources, _ := c.k8s.API.ServerResourcesForGroupVersion(apiGroup)
 			for _, rs := range resources.APIResources {
-				if rs.Kind == "Ingress" {
+				if rs.Name == "ingresses" {
 					switch i {
 					case 0:
 						ii = factory.Networking().V1().Ingresses().Informer()
@@ -100,7 +101,16 @@ func (c *HAProxyController) monitorChanges() {
 					}
 					informersSynced = append(informersSynced, ii.HasSynced)
 					c.k8s.EventsIngresses(ingChan, stop, ii)
-					break
+				}
+				if rs.Name == "ingressclasses" {
+					switch i {
+					case 0:
+						ici = factory.Networking().V1().IngressClasses().Informer()
+					case 1:
+						ici = factory.Networking().V1beta1().IngressClasses().Informer()
+					}
+					informersSynced = append(informersSynced, ici.HasSynced)
+					c.k8s.EventsIngressClass(ingClassChan, stop, ici)
 				}
 			}
 		}
@@ -178,6 +188,13 @@ func (c *HAProxyController) monitorChanges() {
 			} else {
 				eventsIngress = append(eventsIngress, event)
 			}
+		case item := <-ingClassChan:
+			event := SyncDataEvent{SyncType: INGRESS_CLASS, Data: item}
+			if configMapOk {
+				c.eventChan <- event
+			} else {
+				eventsIngress = append(eventsIngress, event)
+			}
 		case item := <-secretChan:
 			event := SyncDataEvent{SyncType: SECRET, Namespace: item.Namespace, Data: item}
 			c.eventChan <- event
@@ -225,6 +242,8 @@ func (c *HAProxyController) SyncData(chConfigMapReceivedAndProcessed chan bool) 
 			change = c.Store.EventNamespace(ns, job.Data.(*store.Namespace))
 		case INGRESS:
 			change = c.Store.EventIngress(ns, job.Data.(*store.Ingress), c.IngressClass)
+		case INGRESS_CLASS:
+			change = c.Store.EventIngressClass(job.Data.(*store.IngressClass))
 		case ENDPOINTS:
 			change = c.Store.EventEndpoints(ns, job.Data.(*store.Endpoints), c.updateHAProxySrvs)
 		case SERVICE:

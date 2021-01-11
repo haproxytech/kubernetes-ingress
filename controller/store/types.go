@@ -71,6 +71,13 @@ type Namespace struct {
 	Status    Status
 }
 
+type IngressClass struct {
+	APIVersion string
+	Name       string
+	Controller string
+	Status     Status
+}
+
 //IngressPath is useful data from k8s structures about ingress path
 type IngressPath struct {
 	ServiceName       string
@@ -95,6 +102,7 @@ type Ingress struct {
 	APIVersion     string
 	Namespace      string
 	Name           string
+	Class          string
 	Annotations    MapStringW
 	Rules          map[string]*IngressRule
 	DefaultBackend *IngressPath

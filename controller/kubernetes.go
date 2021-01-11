@@ -38,8 +38,7 @@ import (
 //TRACE_API outputs all k8s events received from k8s API
 //nolint golint
 const (
-	TRACE_API       = false
-	CONTROLLER_NAME = "haproxy.org/ingress-controller"
+	TRACE_API = false
 )
 
 var ErrIgnored = errors.New("Ignored resource") //nolint golint
@@ -244,6 +243,54 @@ func (k *K8s) convertToEndpoints(obj interface{}, status store.Status) (*store.E
 		}
 	}
 	return item, nil
+}
+
+func (k *K8s) EventsIngressClass(channel chan *store.IngressClass, stop chan struct{}, informer cache.SharedIndexInformer) {
+	informer.AddEventHandler(
+		cache.ResourceEventHandlerFuncs{
+			AddFunc: func(obj interface{}) {
+				item, err := store.ConvertToIngressClass(obj)
+				if err != nil {
+					k.Logger.Errorf("%s: Invalid data from k8s api, %s", INGRESS_CLASS, obj)
+					return
+				}
+				k.Logger.Tracef("%s %s: %s", INGRESS_CLASS, item.Status, item.Name)
+				channel <- item
+			},
+			DeleteFunc: func(obj interface{}) {
+				item, err := store.ConvertToIngressClass(obj)
+				if err != nil {
+					k.Logger.Errorf("%s: Invalid data from k8s api, %s", INGRESS_CLASS, obj)
+					return
+				}
+				item.Status = DELETED
+				k.Logger.Tracef("%s %s: %s", INGRESS_CLASS, item.Status, item.Name)
+				channel <- item
+			},
+			UpdateFunc: func(oldObj, newObj interface{}) {
+				item1, err := store.ConvertToIngressClass(oldObj)
+				if err != nil {
+					k.Logger.Errorf("%s: Invalid data from k8s api, %s", INGRESS_CLASS, oldObj)
+					return
+				}
+				item1.Status = MODIFIED
+
+				item2, err := store.ConvertToIngressClass(newObj)
+				if err != nil {
+					k.Logger.Errorf("%s: Invalid data from k8s api, %s", INGRESS, oldObj)
+					return
+				}
+				item1.Status = MODIFIED
+
+				if item2.Equal(item1) {
+					return
+				}
+				k.Logger.Tracef("%s %s: %s", INGRESS_CLASS, item2.Status, item2.Name)
+				channel <- item2
+			},
+		},
+	)
+	go informer.Run(stop)
 }
 
 func (k *K8s) EventsIngresses(channel chan *store.Ingress, stop chan struct{}, informer cache.SharedIndexInformer) {
@@ -685,33 +732,4 @@ func (k *K8s) IsNetworkingV1ApiSupported() bool {
 	minor, _ := utils.ParseInt(vi.Minor)
 
 	return major == 1 && minor >= 19
-}
-
-func (k *K8s) IsMatchingSelectedIngressClass(name string) error {
-	var controllerName string
-
-	if k.IsNetworkingV1ApiSupported() {
-		ic, err := k.API.NetworkingV1().IngressClasses().Get(context.Background(), name, metav1.GetOptions{})
-		if err != nil {
-			return fmt.Errorf("the requested IngressClass %s doesn't exist", name)
-		}
-		controllerName = ic.Spec.Controller
-	}
-	if k.IsNetworkingV1Beta1ApiSupported() {
-		ic, err := k.API.NetworkingV1beta1().IngressClasses().Get(context.Background(), name, metav1.GetOptions{})
-		if err != nil && k8serror.IsNotFound(err) {
-			k.Logger.Warningf("the requested IngressClass %s doesn't exist, for upcoming releases this will be mandatory", name)
-			return nil
-		}
-		controllerName = ic.Spec.Controller
-	}
-	if len(controllerName) == 0 {
-		k.Logger.Warning("Running on Kubernetes < 1.14, IngressClass resource is not implemented, ignoring")
-		return nil
-	}
-
-	if controllerName != CONTROLLER_NAME {
-		return fmt.Errorf("the selected IngressClass doesn't match the HAProxy Ingress Controller name, expected %v", CONTROLLER_NAME)
-	}
-	return nil
 }

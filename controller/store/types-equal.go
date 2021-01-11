@@ -23,6 +23,20 @@ func (a *ServicePort) Equal(b *ServicePort) bool {
 	return true
 }
 
+//Equal checks if IngressClasses are equal
+func (a *IngressClass) Equal(b *IngressClass) bool {
+	if a == nil || b == nil {
+		return false
+	}
+	if a.Name != b.Name {
+		return false
+	}
+	if a.Controller != b.Controller {
+		return false
+	}
+	return true
+}
+
 //Equal checks if Ingress Paths are equal
 func (a *IngressPath) Equal(b *IngressPath) bool {
 	if a == nil || b == nil {
@@ -84,6 +98,9 @@ func (a *Ingress) Equal(b *Ingress) bool {
 		return false
 	}
 	if a.Name != b.Name {
+		return false
+	}
+	if a.Class != b.Class {
 		return false
 	}
 	if len(a.Rules) != len(b.Rules) {
