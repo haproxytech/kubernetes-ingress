@@ -29,30 +29,22 @@ rules:
      - patch
      - update
  - apiGroups:
-     - "networking.k8s.io"
-   resources:
-     - ingressclasses
-   verbs:
-     - get
- - apiGroups:
    - "extensions"
    - "networking.k8s.io"
    resources:
      - ingresses
      - ingresses/status
+     - ingressclasses
    verbs:
      - get
      - list
      - watch
  - apiGroups:
-   - ""
+   - "extensions"
+   - "networking.k8s.io"
    resources:
-     - ingresses
      - ingresses/status
    verbs:
-     - get
-     - list
-     - watch
      - update
  - apiGroups:
      - ""
