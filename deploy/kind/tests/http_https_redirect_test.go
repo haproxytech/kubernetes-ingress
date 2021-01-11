@@ -28,7 +28,6 @@ import (
 	"net/url"
 	"os"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 	networkngv1beta1 "k8s.io/api/networking/v1beta1"
@@ -110,10 +109,7 @@ func Test_HTTPS_Redirect(t *testing.T) {
 				RootCAs: caCertPool,
 			},
 			DialContext: func(ctx context.Context, network, addr string) (conn net.Conn, e error) {
-				dialer := &net.Dialer{
-					Timeout:   30 * time.Second,
-					KeepAlive: 30 * time.Second,
-				}
+				dialer := &net.Dialer{}
 
 				if addr == ing.Spec.Rules[0].Host+":80" {
 					addr = kindURL + ":30080"
@@ -159,7 +155,7 @@ func Test_HTTPS_Redirect(t *testing.T) {
 			defer res.Body.Close()
 
 			return res.StatusCode == 302
-		}, time.Minute, time.Second)
+		}, waitDuration, tickDuration)
 	})
 	t.Run("disabled", func(t *testing.T) {
 		e := copyAnnotations(a)
@@ -177,7 +173,7 @@ func Test_HTTPS_Redirect(t *testing.T) {
 			defer res.Body.Close()
 
 			return res.StatusCode < 300
-		}, time.Minute, time.Second)
+		}, waitDuration, tickDuration)
 	})
 	t.Run("enabled with custom code", func(t *testing.T) {
 		e := copyAnnotations(a)
@@ -196,6 +192,6 @@ func Test_HTTPS_Redirect(t *testing.T) {
 			defer res.Body.Close()
 
 			return res.StatusCode == 301
-		}, time.Minute, time.Second)
+		}, waitDuration, tickDuration)
 	})
 }

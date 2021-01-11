@@ -24,7 +24,6 @@ import (
 	"net/url"
 	"os"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -84,10 +83,7 @@ func Test_BasicAuth(t *testing.T) {
 	client := &http.Client{
 		Transport: &http.Transport{
 			DialContext: func(ctx context.Context, network, addr string) (conn net.Conn, e error) {
-				dialer := &net.Dialer{
-					Timeout:   30 * time.Second,
-					KeepAlive: 30 * time.Second,
-				}
+				dialer := &net.Dialer{}
 
 				if addr == ing.Spec.Rules[0].Host+":80" {
 					addr = kindURL + ":30080"
@@ -119,7 +115,7 @@ func Test_BasicAuth(t *testing.T) {
 		defer res.Body.Close()
 
 		return res.StatusCode == http.StatusUnauthorized
-	}, time.Minute, time.Second)
+	}, waitDuration, tickDuration)
 
 	for u, _ := range secret.Data {
 		assert.Eventually(t, func() bool {
@@ -132,6 +128,6 @@ func Test_BasicAuth(t *testing.T) {
 			defer res.Body.Close()
 
 			return res.StatusCode == http.StatusOK
-		}, time.Minute, time.Second)
+		}, waitDuration, tickDuration)
 	}
 }

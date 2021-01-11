@@ -31,7 +31,6 @@ import (
 	"os"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 	networkingv1beta1 "k8s.io/api/networking/v1beta1"
@@ -117,10 +116,7 @@ func Test_HTTPS_Offload(t *testing.T) {
 				RootCAs: caCertPool,
 			},
 			DialContext: func(ctx context.Context, network, addr string) (conn net.Conn, e error) {
-				dialer := &net.Dialer{
-					Timeout:   30 * time.Second,
-					KeepAlive: 30 * time.Second,
-				}
+				dialer := &net.Dialer{}
 
 				if addr == ing.Spec.Rules[0].Host+":443" {
 					addr = kindURL + ":30443"
@@ -158,5 +154,5 @@ func Test_HTTPS_Offload(t *testing.T) {
 		}
 
 		return strings.HasPrefix(response.OS.Hostname, ing.Name)
-	}, time.Minute, time.Second)
+	}, waitDuration, tickDuration)
 }

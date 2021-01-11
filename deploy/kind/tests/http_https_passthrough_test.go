@@ -27,7 +27,6 @@ import (
 	"net/url"
 	"os"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -83,10 +82,7 @@ func Test_HTTPS_Passthrough(t *testing.T) {
 				InsecureSkipVerify: true,
 			},
 			DialContext: func(ctx context.Context, network, addr string) (conn net.Conn, e error) {
-				dialer := &net.Dialer{
-					Timeout:   30 * time.Second,
-					KeepAlive: 30 * time.Second,
-				}
+				dialer := &net.Dialer{}
 
 				if addr == ing.Spec.Rules[0].Host+":443" {
 					addr = kindURL + ":30443"
@@ -129,5 +125,5 @@ func Test_HTTPS_Passthrough(t *testing.T) {
 		}
 
 		return response.TLS.SNI == ing.Name
-	}, time.Minute, time.Second)
+	}, waitDuration, tickDuration)
 }

@@ -23,7 +23,6 @@ import (
 	"strconv"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -124,7 +123,7 @@ func Test_Ingress_Match(t *testing.T) {
 
 					//t.Logf("%s --> %s", path, response.OS.Hostname)
 					return strings.HasPrefix(response.OS.Hostname, resourceName+test.target)
-				}, time.Minute, time.Second)
+				}, waitDuration, tickDuration)
 			})
 		}
 	}

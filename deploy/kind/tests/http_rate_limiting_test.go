@@ -83,7 +83,7 @@ func Test_Rate_Limiting(t *testing.T) {
 				}
 				defer cls()
 				return r.StatusCode == http.StatusOK
-			}, time.Minute, time.Second)
+			}, waitDuration, tickDuration)
 
 			// first {limit} requests must be successful
 			var counter int

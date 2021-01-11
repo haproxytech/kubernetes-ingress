@@ -20,7 +20,6 @@ import (
 	"context"
 	"io/ioutil"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -74,5 +73,5 @@ func Test_Send_Proxy(t *testing.T) {
 		}
 
 		return string(body) == "hello!"
-	}, time.Minute, time.Second)
+	}, waitDuration, tickDuration)
 }

@@ -22,7 +22,6 @@ import (
 	"io/ioutil"
 	"net/http"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -73,7 +72,7 @@ func Test_Set_Host(t *testing.T) {
 				}
 				defer cls()
 				return r.StatusCode == http.StatusOK
-			}, time.Minute, time.Second)
+			}, waitDuration, tickDuration)
 
 			assert.Eventually(t, func() bool {
 				r, cls, err := client.Do("/")
@@ -100,7 +99,7 @@ func Test_Set_Host(t *testing.T) {
 				}
 
 				return e.HTTP.Host == host
-			}, time.Minute, time.Second)
+			}, waitDuration, tickDuration)
 		})
 		break
 	}

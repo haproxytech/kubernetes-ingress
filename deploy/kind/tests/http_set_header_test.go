@@ -24,7 +24,6 @@ import (
 	"net/http"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -82,7 +81,7 @@ func Test_Request_Set_Header(t *testing.T) {
 				}
 				defer cls()
 				return r.StatusCode == http.StatusOK
-			}, time.Minute, time.Second)
+			}, waitDuration, tickDuration)
 
 			assert.Eventually(t, func() bool {
 				r, cls, err := client.Do("/")
@@ -115,7 +114,7 @@ func Test_Request_Set_Header(t *testing.T) {
 				}
 
 				return v == tc.value
-			}, time.Minute, time.Second)
+			}, waitDuration, tickDuration)
 		})
 	}
 }
@@ -168,7 +167,7 @@ func Test_Response_Set_Header(t *testing.T) {
 				}
 				defer cls()
 				return r.StatusCode == http.StatusOK
-			}, time.Minute, time.Second)
+			}, waitDuration, tickDuration)
 
 			assert.Eventually(t, func() bool {
 				r, cls, err := client.Do("/")
@@ -178,7 +177,7 @@ func Test_Response_Set_Header(t *testing.T) {
 				defer cls()
 
 				return r.Header.Get(tc.name) == tc.value
-			}, time.Minute, time.Second)
+			}, waitDuration, tickDuration)
 		})
 	}
 }

@@ -23,7 +23,6 @@ import (
 	"io/ioutil"
 	"net/http"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 	v1 "k8s.io/api/autoscaling/v1"
@@ -78,7 +77,7 @@ func Test_Endpoint_Update(t *testing.T) {
 		defer cls()
 
 		return res.StatusCode == http.StatusOK
-	}, time.Minute, time.Second)
+	}, waitDuration, tickDuration)
 
 	for _, replicas := range []int32{2, 3, 4, 5, 4, 3, 2, 1} {
 		t.Run(fmt.Sprintf("%d replicas", replicas), func(t *testing.T) {
@@ -105,7 +104,7 @@ func Test_Endpoint_Update(t *testing.T) {
 				}
 
 				return len(pl.Items) == int(replicas)
-			}, time.Minute, time.Second)
+			}, waitDuration, tickDuration)
 
 			var counter int32
 
@@ -142,7 +141,7 @@ func Test_Endpoint_Update(t *testing.T) {
 				}
 
 				return counter == replicas
-			}, time.Minute, time.Second)
+			}, waitDuration, tickDuration)
 		})
 	}
 
