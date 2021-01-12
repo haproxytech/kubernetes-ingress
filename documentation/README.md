@@ -350,6 +350,8 @@ Possible values:
 
   Available on:  `configmap`  `ingress`  `service`
 
+  :information_source: This will insert the following cookie configuration in the corresponding backend `cookie <cookie-name> insert indirect nocache` with `<cookie-name>` the value of this annotation.
+
 Possible values:
 
 - A name for the cookie
@@ -361,23 +363,14 @@ cookie-persistence: "mycookie"
 ```
 
 Configuring the cookie can be done in two different ways: 
-- Using cookies annotations:
-  - `cookie-domain <string>`
-  - `cookie-dynamic <"true","false">`
-  - `cookie-httponly <"true","false">`
-  - `cookie-indirect <"true","false">`
-  - `cookie-maxidle <int>`
-  - `cookie-maxlife <int>`
-  - `cookie-nocache <"true","false">`
-  - `cookie-postonly <"true","false">`
-  - `cookie-preserve <"true","false">`
-  - `cookie-secure <"true","false">`
-  - `cookie-type <"rewrite", "insert", "prefix">`
-- Using `backend-config-snippet` [annotation](#config-snippet):
+- Using `cookie-persistence` annotation.</br>
+  However, currently, this **does not work** when deploying more than one ingress controller pod. For such case (multiple IC pods) the following `dynamic` cookie configuration via `backend-config-snippet` annotation an be used.
+- Using [`backend-config-snippet`](#config-snippet) annotation for more cookie options.
   
   ```yaml
   backend-config-snippet: |
-      cookie SRV insert indirect nocache              
+      dynamic-cookie-key ahgh5kiM
+      cookie SRV insert indirect nocache dynamic
   ```
 
 More information can be found in the official HAProxy [documentation](https://cbonte.github.io/haproxy-dconv/2.0/configuration.html#4-cookie)
