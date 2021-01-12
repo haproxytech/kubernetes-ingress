@@ -42,6 +42,7 @@ func (c *HAProxyController) handleIngressAnnotations(ingress *store.Ingress) {
 	c.handleHTTPBasicAuth(ingress)
 	c.handleWhitelisting(ingress)
 	c.handleHTTPRedirect(ingress)
+	c.handleDomainRedirect(ingress)
 }
 
 func (c *HAProxyController) handleBlacklisting(ingress *store.Ingress) {
@@ -74,6 +75,28 @@ func (c *HAProxyController) handleBlacklisting(ingress *store.Ingress) {
 	logger.Error(c.cfg.HAProxyRules.AddRule(reqBlackList, &ingress.Name, FrontendHTTP, FrontendHTTPS))
 }
 
+func (c *HAProxyController) handleDomainRedirect(ingress *store.Ingress) {
+	//  Get and validate annotations
+	annDomainRedirect, _ := c.Store.GetValueFromAnnotations("request-redirect", ingress.Annotations, c.Store.ConfigMaps[Main].Annotations)
+	annDomainRedirectCode, _ := c.Store.GetValueFromAnnotations("request-redirect-code", ingress.Annotations, c.Store.ConfigMaps[Main].Annotations)
+	domainRedirectCode, err := strconv.ParseInt(annDomainRedirectCode.Value, 10, 64)
+	if err != nil {
+		logger.Error(err)
+		return
+	}
+	if annDomainRedirect == nil || annDomainRedirect.Status == DELETED {
+		return
+	}
+	// Configure redirection
+	reqDomainRedirect := rules.RequestRedirect{
+		RedirectCode: domainRedirectCode,
+		Host:         annDomainRedirect.Value,
+	}
+	logger.Error(c.cfg.HAProxyRules.AddRule(reqDomainRedirect, &ingress.Name, FrontendHTTP))
+	reqDomainRedirect.SSLRequest = true
+	logger.Error(c.cfg.HAProxyRules.AddRule(reqDomainRedirect, &ingress.Name, FrontendHTTPS))
+
+}
 func (c *HAProxyController) handleHTTPRedirect(ingress *store.Ingress) {
 	//  Get and validate annotations
 	toEnable := false
@@ -102,9 +125,10 @@ func (c *HAProxyController) handleHTTPRedirect(ingress *store.Ingress) {
 		return
 	}
 	// Configure redirection
-	reqSSLRedirect := rules.ReqSSLRedirect{
+	reqSSLRedirect := rules.RequestRedirect{
 		RedirectCode: sslRedirectCode,
 		RedirectPort: sslRedirectPort,
+		SSLRedirect:  true,
 	}
 	logger.Error(c.cfg.HAProxyRules.AddRule(reqSSLRedirect, &ingress.Name, FrontendHTTP))
 }

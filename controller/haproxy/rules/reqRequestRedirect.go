@@ -10,32 +10,46 @@ import (
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 )
 
-type ReqSSLRedirect struct {
+type RequestRedirect struct {
 	id           uint32
 	RedirectCode int64
 	RedirectPort int
+	Host         string
+	SSLRequest   bool
+	SSLRedirect  bool
 }
 
-func (r ReqSSLRedirect) GetID() uint32 {
+func (r RequestRedirect) GetID() uint32 {
 	if r.id == 0 {
 		r.id = hashRule(r)
 	}
 	return r.id
 }
 
-func (r ReqSSLRedirect) GetType() haproxy.RuleType {
-	return haproxy.REQ_SSL_REDIRECT
+func (r RequestRedirect) GetType() haproxy.RuleType {
+	return haproxy.REQ_REQUEST_REDIRECT
 }
 
-func (r ReqSSLRedirect) Create(client api.HAProxyClient, frontend *models.Frontend) error {
+func (r RequestRedirect) Create(client api.HAProxyClient, frontend *models.Frontend) error {
 	if frontend.Mode == "tcp" {
-		return fmt.Errorf("SSL redirect cannot be configured in TCP mode")
+		return fmt.Errorf("request redirection cannot be configured in TCP mode")
+	}
+	var rule string
+	if r.SSLRedirect {
+		rule = fmt.Sprintf("https://%%[hdr(host),field(1,:)]:%d%%[capture.req.uri]", r.RedirectPort)
+	} else {
+		scheme := "http"
+		if r.SSLRequest {
+			scheme = "https"
+		}
+		rule = fmt.Sprintf(scheme+"://%s%%[capture.req.uri]", r.Host)
+
 	}
 	httpRule := models.HTTPRequestRule{
 		Index:      utils.PtrInt64(0),
 		Type:       "redirect",
 		RedirCode:  utils.PtrInt64(r.RedirectCode),
-		RedirValue: fmt.Sprintf("https://%%[hdr(host),field(1,:)]:%d%%[capture.req.uri]", r.RedirectPort),
+		RedirValue: rule,
 		RedirType:  "location",
 	}
 	matchRuleID(&httpRule, r.GetID())

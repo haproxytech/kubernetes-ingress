@@ -142,6 +142,7 @@ var defaultAnnotationValues = MapStringW{
 	"rate-limit-status-code":  &StringW{Value: "403"},
 	"request-capture-len":     &StringW{Value: "128"},
 	"ssl-redirect-code":       &StringW{Value: "302"},
+	"request-redirect-code":   &StringW{Value: "302"},
 	"ssl-redirect-port":       &StringW{Value: "443"},
 	"ssl-passthrough":         &StringW{Value: "false"},
 	"server-ssl":              &StringW{Value: "false"},
