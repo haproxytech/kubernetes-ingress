@@ -50,7 +50,7 @@ func (c *HAProxyController) handleBlacklisting(ingress *store.Ingress) {
 	if annBlacklist == nil {
 		return
 	}
-	if ingress.Status == DELETED || annBlacklist.Status == DELETED {
+	if annBlacklist.Status == DELETED {
 		logger.Debugf("Ingress %s/%s: Deleting blacklist configuration", ingress.Namespace, ingress.Name)
 		return
 	}
@@ -115,7 +115,7 @@ func (c *HAProxyController) handleRateLimiting(ingress *store.Ingress) {
 	if annRateLimitReq == nil {
 		return
 	}
-	if ingress.Status == DELETED || annRateLimitReq.Status == DELETED {
+	if annRateLimitReq.Status == DELETED {
 		logger.Debugf("Ingress %s/%s: Deleting rate-limit-requests configuration", ingress.Namespace, ingress.Name)
 		return
 	}
@@ -166,7 +166,7 @@ func (c *HAProxyController) handleRequestCapture(ingress *store.Ingress) {
 	if annReqCapture == nil {
 		return
 	}
-	if ingress.Status == DELETED || annReqCapture.Status == DELETED {
+	if annReqCapture.Status == DELETED {
 		logger.Debugf("Ingress %s/%s: Deleting request-capture configuration", ingress.Namespace, ingress.Name)
 		return
 	}
@@ -198,7 +198,7 @@ func (c *HAProxyController) handleRequestSetHdr(ingress *store.Ingress) {
 	if annReqSetHdr == nil {
 		return
 	}
-	if ingress.Status == DELETED || annReqSetHdr.Status == DELETED {
+	if annReqSetHdr.Status == DELETED {
 		logger.Debugf("Ingress %s/%s: Deleting request-set-header configuration", ingress.Namespace, ingress.Name)
 		return
 	}
@@ -224,7 +224,7 @@ func (c *HAProxyController) handleRequestSetHost(ingress *store.Ingress) {
 	if annSetHost == nil {
 		return
 	}
-	if ingress.Status == DELETED || annSetHost.Status == DELETED {
+	if annSetHost.Status == DELETED {
 		logger.Debugf("Ingress %s/%s: Deleting request-set-host configuration", ingress.Namespace, ingress.Name)
 		return
 	}
@@ -243,7 +243,7 @@ func (c *HAProxyController) handleRequestPathRewrite(ingress *store.Ingress) {
 	if annPathRewrite == nil {
 		return
 	}
-	if ingress.Status == DELETED || annPathRewrite.Status == DELETED {
+	if annPathRewrite.Status == DELETED {
 		logger.Debugf("Ingress %s/%s: Deleting path-rewrite configuration", ingress.Namespace, ingress.Name)
 		return
 	}
@@ -276,7 +276,7 @@ func (c *HAProxyController) handleResponseSetHdr(ingress *store.Ingress) {
 	if annResSetHdr == nil {
 		return
 	}
-	if ingress.Status == DELETED || annResSetHdr.Status == DELETED {
+	if annResSetHdr.Status == DELETED {
 		logger.Debugf("Ingress %s/%s: Deleting response-set-header configuration", ingress.Namespace, ingress.Name)
 		return
 	}
@@ -304,7 +304,7 @@ func (c *HAProxyController) handleWhitelisting(ingress *store.Ingress) {
 	if annWhitelist == nil {
 		return
 	}
-	if ingress.Status == DELETED || annWhitelist.Status == DELETED {
+	if annWhitelist.Status == DELETED {
 		logger.Debugf("Ingress %s/%s: Deleting whitelist configuration", ingress.Namespace, ingress.Name)
 		return
 	}
