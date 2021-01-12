@@ -45,9 +45,7 @@ func (a *BackendCfgSnippet) Parse(input store.StringW, forceParse bool) error {
 
 func (a *BackendCfgSnippet) Update() error {
 	if len(a.data) == 0 {
-		logger.Infof("Removing global config-snippet")
 		return a.client.BackendCfgSnippetSet(a.backend.Name, nil)
 	}
-	logger.Infof("Setting global config-snippet to: %s", a.data)
 	return a.client.BackendCfgSnippetSet(a.backend.Name, &a.data)
 }

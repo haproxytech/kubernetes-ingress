@@ -24,6 +24,7 @@ func GetBackendAnnotations(client api.HAProxyClient, b *models.Backend) []Annota
 		NewBackendAbortOnClose("abortonclose", b),
 		NewBackendTimeoutCheck("check-timeout", b),
 		NewBackendLoadBalance("load-balance", b),
+		NewBackendCookie("cookie-persistence", b),
 	}
 	if b.Mode == "http" {
 		annotations = append(annotations,
