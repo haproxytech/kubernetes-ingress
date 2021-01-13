@@ -12,6 +12,7 @@ import (
 
 type ReqBasicAuth struct {
 	Name string
+	Data map[string][]byte
 	id   uint32
 }
 

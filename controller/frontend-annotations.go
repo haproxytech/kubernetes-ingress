@@ -374,6 +374,7 @@ func (c *HAProxyController) handleHTTPBasicAuth(ingress *store.Ingress) {
 
 	reqBasicAuth := rules.ReqBasicAuth{
 		Name: fmt.Sprintf("%s-%s", ingress.Namespace, ingress.Name),
+		Data: users,
 	}
 	logger.Error(c.cfg.HAProxyRules.AddRule(reqBasicAuth, &ingress.Name, FrontendHTTP, FrontendHTTPS))
 }
