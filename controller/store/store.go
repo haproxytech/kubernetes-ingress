@@ -15,6 +15,9 @@
 package store
 
 import (
+	"fmt"
+	"strings"
+
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 )
 
@@ -154,6 +157,29 @@ func (k K8s) GetNamespace(name string) *Namespace {
 	}
 	k.Namespaces[name] = newNamespace
 	return newNamespace
+}
+
+// FetchSecret fetches secret with secretPath format "namespace/secretName"
+// if format is just "secretName" defaultNs param will be used.
+func (k K8s) FetchSecret(secretPath, defaultNs string) (*Secret, error) {
+	secretName := ""
+	secretNamespace := defaultNs
+	parts := strings.Split(secretPath, "/")
+	if len(parts) > 1 {
+		secretNamespace = parts[0]
+		secretName = parts[1]
+	} else {
+		secretName = parts[0] // only secretname is here
+	}
+	ns, namespaceOK := k.Namespaces[secretNamespace]
+	if !namespaceOK {
+		return nil, fmt.Errorf("namespace '%s' does not exist", secretNamespace)
+	}
+	secret, secretOK := ns.Secret[secretName]
+	if !secretOK {
+		return nil, fmt.Errorf("secret '%s/%s' does not exist", secretNamespace, secretName)
+	}
+	return secret, nil
 }
 
 func (k K8s) isRelevantNamespace(namespace string) bool {

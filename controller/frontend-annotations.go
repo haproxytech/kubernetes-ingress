@@ -330,51 +330,58 @@ func (c *HAProxyController) handleWhitelisting(ingress *store.Ingress) {
 }
 
 func (c *HAProxyController) handleHTTPBasicAuth(ingress *store.Ingress) {
-	groupName := fmt.Sprintf("%s-%s", ingress.Namespace, ingress.Name)
-
-	var authType, authSecret *store.StringW
-	authType, err := c.Store.GetValueFromAnnotations("auth-type", ingress.Annotations, c.Store.ConfigMaps[Main].Annotations)
-	if err != nil || authType.Status == DELETED || authType.Value != "basic-auth" {
-		logger.Debugf("Ingress %s/%s: Deleting Basic Auth authentication", ingress.Namespace, ingress.Name)
-		logger.Error(c.Client.UserListDeleteByGroup(groupName))
+	userListName := fmt.Sprintf("%s-%s", ingress.Namespace, ingress.Name)
+	authType, _ := c.Store.GetValueFromAnnotations("auth-type", ingress.Annotations, c.Store.ConfigMaps[Main].Annotations)
+	authSecret, _ := c.Store.GetValueFromAnnotations("auth-secret", ingress.Annotations, c.Store.ConfigMaps[Main].Annotations)
+	switch {
+	case authType == nil || authSecret == nil:
 		return
-	}
-	authSecret, err = c.Store.GetValueFromAnnotations("auth-secret", ingress.Annotations, c.Store.ConfigMaps[Main].Annotations)
-	if err != nil || authSecret.Status == DELETED {
-		logger.Debugf("Ingress %s/%s: Missing Basic Auth secret reference, deleting", ingress.Namespace, ingress.Name)
-		logger.Error(c.Client.UserListDeleteByGroup(groupName))
+	case authType.Value != "basic-auth":
+		logger.Errorf("Ingress %s/%s: incorrect auth-type value '%s'. Only 'basic-auth' value is currently supported", ingress.Namespace, ingress.Name, authType.Value)
+	case authType.Status == DELETED:
+		logger.Debugf("Ingress %s/%s: Deleting HTTP Basic Authentication", ingress.Namespace, ingress.Name)
+		logger.Error(c.Client.UserListDeleteByGroup(userListName))
 		return
-	}
-
-	s, ok := c.Store.Namespaces[ingress.Namespace].Secret[authSecret.Value]
-	if !ok {
-		err = fmt.Errorf("declared Secret (%s) doesn't exist", authSecret.Value)
-		logger.Debugf("Ingress %s/%s: %s", ingress.Namespace, ingress.Name, err.Error())
-		return
-	}
-	// clearing the actual userlist for current Ingress
-	err = c.Client.UserListDeleteByGroup(groupName)
-	if err != nil {
-		logger.Debugf("Ingress %s/%s: Cannot delete userlist, %s", ingress.Namespace, ingress.Name, err.Error())
+	case authSecret.Status == DELETED:
+		logger.Warningf("Ingress %s/%s: Deleting auth-secret annotation but auth-type annotation still active", ingress.Namespace, ingress.Name)
 		return
 	}
 
-	users := make(map[string][]byte)
-	for u, pwd := range s.Data {
-		p := bytes.Split(pwd, []byte("\n"))
-		if len(p) > 1 {
-			logger.Warningf("Ingress %s/%s: Password for user %s is containing multiple lines", ingress.Namespace, ingress.Name, u)
+	// Parsing secret
+	credentials := make(map[string][]byte)
+	secret, err := c.Store.FetchSecret(authSecret.Value, ingress.Namespace)
+	if secret == nil {
+		logger.Warningf("Ingress %s/%s: %s", ingress.Namespace, ingress.Name, err)
+	} else {
+		if secret.Status == DELETED {
+			logger.Warningf("Ingress %s/%s: Secret %s deleted but auth-type annotaiton still active", ingress.Namespace, ingress.Name, secret.Name)
 		}
-		users[u] = p[0]
+		for u, pwd := range secret.Data {
+			p := bytes.Split(pwd, []byte("\n"))
+			if len(p) > 1 {
+				logger.Errorf("Ingress %s/%s: Password for user %s is containing multiple lines, skipped.", ingress.Namespace, ingress.Name, u)
+				continue
+			}
+			credentials[u] = p[0]
+		}
 	}
-	if err = c.Client.UserListCreateByGroup(groupName, users); err != nil {
-		logger.Debugf("Ingress %s/%s: Cannot create userlist, %s", ingress.Namespace, ingress.Name, err.Error())
-		return
+	// Configuring annotation
+	if authSecret.Status != EMPTY || secret.Status != EMPTY {
+		var errors utils.Errors
+		errors.Add(
+			c.Client.UserListDeleteByGroup(userListName),
+			c.Client.UserListCreateByGroup(userListName, credentials))
+		if err = errors.Result(); err != nil {
+			logger.Errorf("Ingress %s/%s: Cannot create userlist for basic-auth, %s", ingress.Namespace, ingress.Name, err)
+			return
+		}
 	}
 
+	// Adding HAProxy Rule
+	logger.Debugf("Ingress %s/%s: Configuring basic-auth annotation", ingress.Namespace, ingress.Name)
 	reqBasicAuth := rules.ReqBasicAuth{
-		Name: fmt.Sprintf("%s-%s", ingress.Namespace, ingress.Name),
-		Data: users,
+		Data:      credentials,
+		AuthGroup: userListName,
 	}
 	logger.Error(c.cfg.HAProxyRules.AddRule(reqBasicAuth, &ingress.Name, FrontendHTTP, FrontendHTTPS))
 }

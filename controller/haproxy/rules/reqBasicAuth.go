@@ -11,9 +11,9 @@ import (
 )
 
 type ReqBasicAuth struct {
-	Name string
-	Data map[string][]byte
-	id   uint32
+	AuthGroup string
+	Data      map[string][]byte
+	id        uint32
 }
 
 func (r ReqBasicAuth) GetID() uint32 {
@@ -29,11 +29,10 @@ func (r ReqBasicAuth) GetType() haproxy.RuleType {
 
 func (r ReqBasicAuth) Create(client api.HAProxyClient, frontend *models.Frontend) (err error) {
 	httpRule := models.HTTPRequestRule{
-		Type:      "auth",
-		Index:     utils.PtrInt64(0),
-		AuthRealm: r.Name,
-		Cond:      "if",
-		CondTest:  fmt.Sprintf("!{ http_auth_group(%s) authenticated-users }", r.Name),
+		Type:     "auth",
+		Index:    utils.PtrInt64(0),
+		Cond:     "if",
+		CondTest: fmt.Sprintf("!{ http_auth_group(%s) authenticated-users }", r.AuthGroup),
 	}
 	matchRuleID(&httpRule, r.GetID())
 	if err = client.FrontendHTTPRequestRuleCreate(frontend.Name, httpRule); err != nil {

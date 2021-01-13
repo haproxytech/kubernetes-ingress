@@ -6,7 +6,6 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
-	"strings"
 
 	"github.com/haproxytech/kubernetes-ingress/controller/store"
 )
@@ -53,8 +52,9 @@ func NewCertificates(caDir, ftDir, bdDir string) *Certificates {
 }
 
 func (c *Certificates) HandleTLSSecret(k8s store.K8s, secretCtx SecretCtx) (certPath string, updated bool, err error) {
-	secret := fetchSecret(k8s, secretCtx.SecretPath, secretCtx.DefaultNS)
+	secret, err := k8s.FetchSecret(secretCtx.SecretPath, secretCtx.DefaultNS)
 	if secret == nil {
+		logger.Warning(err)
 		return "", false, ErrCertNotFound
 	}
 	if secret.Status == store.DELETED {
@@ -143,29 +143,6 @@ func refreshCerts(certs map[string]bool, certDir string) {
 			delete(certs, filename)
 		}
 	}
-}
-
-func fetchSecret(k8s store.K8s, secretPath, defaultNs string) (secret *store.Secret) {
-	secretName := ""
-	secretNamespace := defaultNs
-	parts := strings.Split(secretPath, "/")
-	if len(parts) > 1 {
-		secretNamespace = parts[0]
-		secretName = parts[1]
-	} else {
-		secretName = parts[0] // only secretname is here
-	}
-	ns, namespaceOK := k8s.Namespaces[secretNamespace]
-	if !namespaceOK {
-		logger.Warningf("namespace [%s] does not exist, ignoring.", secretNamespace)
-		return nil
-	}
-	secret, secretOK := ns.Secret[secretName]
-	if !secretOK {
-		logger.Warningf("secret [%s/%s] does not exist, ignoring.", secretNamespace, secretName)
-		return nil
-	}
-	return secret
 }
 
 func writeSecret(secret *store.Secret, certPath string, privateKeyNull bool) (err error) {
