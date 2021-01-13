@@ -854,6 +854,39 @@ annotations:
       haproxy.org/request-set-header: |
         Ingress-ID abcd123
         Another-Header 12345
+  - title: request-redirect
+    type: string
+    group: request-redirect
+    dependencies: ""
+    default: ""
+    description:
+    - Enables HTTP request redirection based on host and port substitution in original request.
+    tip:
+    - HTTP redirection code is settable with request-redirect-code annotation.
+    - Port alone is not allowed.
+    values:
+    - host
+    - host:port
+    applies_to:
+    - configmap
+    - ingress
+    version_min: "1.5"
+    example: ["request-redirect: example.com","request-redirect: example.com:8888"]
+  - title: request-redirect-code
+    type: number
+    group: request-redirect
+    dependencies: "request-redirect"
+    default: "302"
+    description:
+    - Defines the HTTP redirection code used in redirection set with request-redirect.
+    tip: []
+    values:
+    - Integer value.
+    applies_to:
+    - configmap
+    - ingress
+    version_min: "1.5"
+    example: ['request-redirect-code: "303"']     
   - title: response-set-header
     type: string
     group: response-set-header
