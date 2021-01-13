@@ -133,7 +133,7 @@ whitelist: "192.168.1.0/24, 192.168.2.100"
 
   > :construction: this is only available from next version, currently available in dev build
 
-  Enable the selected Authentication strategy, actually only Basic Auth is supported.
+  Enable the selected authentication strategy, currently only *basic-auth* value is supported.
 
   Available on:  `configmap`  `ingress`
 
@@ -152,30 +152,34 @@ auth-type: basic-auth
 
   > :construction: this is only available from next version, currently available in dev build
 
-  Select the Kubernetes Secret resource declaring the user list realm to apply.
-  For Basic Authentication the Secret data keys declare the username, related values the matching hashed password.
+  Select the Kubernetes Secret where authentication data can be found.</br>
+  The annotaiton format is a secret path '*namespace/secretName*', if the namespace is ommited (path is only '*secretName*') then the ingress namespace will be used.</br>
+  For Basic Authentication the Secret data should contain user credentials in the form of '*username: encrypted and base-64 encoded passowrd*'.
 
-  > Supported hashing functions: MD5, DES, SHA-256, SHA-512
+> Example
+> bob: JDEkYWJjJEJYQnFwYjlCWmNaaFhMZ2JlZS4wcy8=
 
   Available on:  `configmap`  `ingress`
 
+  :information_source: Encrypted passwords are evaluated using the crypt(3) function, so depending on the system's capabilities, different algorithms are supported.
+
+  :information_source: Unencrypted passwords (used with HAProxy [insecure-password](https://cbonte.github.io/haproxy-dconv/2.0/configuration.html#3.4-user) ) **are not accepted**.
+
 Possible values:
 
-- Any Kubernetes Secret resource in the same Namespace of the Ingress.
+- Any Kubernetes generic Secret resource that can be created in the following way,
 
   ```bash
-  kubectl create secret generic my-userlist-realm \
-    --from-literal=bob=$(echo -n "password" | mkpasswd --stdin --method=md5) \
-    --from-literal=alice=$(echo -n "password" | mkpasswd --stdin --method=des) \
-    --from-literal=john=$(echo -n "password" | mkpasswd --stdin --method=sha-256) \
-    --from-literal=laura=$(echo -n "password" | mkpasswd --stdin --method=sha-512)
-  # secret/my-userlist-realm created
+  kubectl create secret generic haproxy-credentials \
+    --from-literal=bob=$(openssl passwd -1 bobPassword) \
+    --from-literal=alice=$(openssl passwd -1 alicePassword) \
+  # secret/haproxy-credentials created
   ```
 
 Example:
 
 ```yaml
-auth-secret: my-userlist-realm
+auth-secret: default/haproxy-credentials
 ```
 
 <p align='right'><a href='#available-annotations'>:arrow_up_small: back to top</a></p>
