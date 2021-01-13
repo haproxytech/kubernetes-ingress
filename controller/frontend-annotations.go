@@ -390,15 +390,13 @@ func (c *HAProxyController) handleHTTPBasicAuth(ingress *store.Ingress) {
 		}
 	}
 	// Configuring annotation
-	if authSecret.Status != EMPTY || secret.Status != EMPTY {
-		var errors utils.Errors
-		errors.Add(
-			c.Client.UserListDeleteByGroup(userListName),
-			c.Client.UserListCreateByGroup(userListName, credentials))
-		if err = errors.Result(); err != nil {
-			logger.Errorf("Ingress %s/%s: Cannot create userlist for basic-auth, %s", ingress.Namespace, ingress.Name, err)
-			return
-		}
+	var errors utils.Errors
+	errors.Add(
+		c.Client.UserListDeleteByGroup(userListName),
+		c.Client.UserListCreateByGroup(userListName, credentials))
+	if err = errors.Result(); err != nil {
+		logger.Errorf("Ingress %s/%s: Cannot create userlist for basic-auth, %s", ingress.Namespace, ingress.Name, err)
+		return
 	}
 
 	// Adding HAProxy Rule
