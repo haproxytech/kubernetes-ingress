@@ -254,6 +254,10 @@ image_arguments:
       helm install haproxy haproxytech/kubernetes-ingress \
         --set controller.logging.level=debug
 groups:
+  config-snippet:
+    header: |-
+      - Insert raw HAProxy configuration in specific HAProxy config sections.</br>
+      - There is **no data validation** done by Ingress Controller. If input is incorret, HAProxy will fail the reload.
   cookie-persistence:
     header: |-
       - Configure sticky session via cookie-based persistence.
@@ -320,7 +324,7 @@ annotations:
       - |-
         For Basic Authentication the Secret data should contain user credentials in the form of '*username: encrypted and base-64 encoded passowrd*'.
 
-        > Example
+        Example:
         > bob: JDEkYWJjJEJYQnFwYjlCWmNaaFhMZ2JlZS4wcy8=
 
     tip:

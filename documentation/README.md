@@ -158,7 +158,7 @@ auth-type: basic-auth
   The annotaiton format is a secret path '*namespace/secretName*', if the namespace is ommited (path is only '*secretName*') then the ingress namespace will be used.</br>
   For Basic Authentication the Secret data should contain user credentials in the form of '*username: encrypted and base-64 encoded passowrd*'.
 
-> Example
+Example:
 > bob: JDEkYWJjJEJYQnFwYjlCWmNaaFhMZ2JlZS4wcy8=
 
   Available on:  `configmap`  `ingress`
@@ -305,6 +305,9 @@ load-balance: "leastconn"
 ***
 
 #### Config Snippet
+
+- Insert raw HAProxy configuration in specific HAProxy config sections.</br>
+- There is **no data validation** done by Ingress Controller. If input is incorret, HAProxy will fail the reload.
 
 ##### `global-config-snippet`
 
