@@ -11,6 +11,7 @@ Image can be run with arguments:
 | - |:-:|
 | [`--configmap`](#--configmap) | `default/haproxy-configmap` |
 | [`--configmap-tcp-services`](#--configmap-tcp-services) |  |
+| [`--configmap-errorfile`](#--configmap-errorfile) :construction:(dev) |  |
 | [`--default-backend-service`](#--default-backend-service) |  |
 | [`--default-ssl-certificate`](#--default-ssl-certificate) |  |
 | [`--ingress.class`](#--ingressclass) |  |
@@ -77,6 +78,46 @@ Example:
 ```yaml
 args:
   - --configmap-tcp-services=default/my-tcpservices-configmap
+```
+
+<p align='right'><a href='#haproxy-kubernetes-ingress-controller'>:arrow_up_small: back to top</a></p>
+
+***
+
+### `--configmap-errorfile`
+
+
+  > :construction: this is only available from next version, currently available in dev build
+
+  Sets the ConfigMap object that defines contents to serve instead of HAProxy errors.</br>
+As explained in the [haproxy documentation](https://cbonte.github.io/haproxy-dconv/2.0/configuration.html#4.2-errorfile) it is important to understand that errorfile content is not meant to rewrite errors returned by the server, but rather errors detected and returned by HAProxy.</br>
+In the following example, instead of HAProxy returning 503 error it will return the coressponding content in the configmap:
+  <pre>apiVersion: v1
+  kind: ConfigMap
+  metadata:
+    name: errorfile
+    namespace: default
+  data:
+    503: |-
+      HTTP/1.0 503 Service Unavailable
+      Cache-Control: no-cache
+      Connection: close
+      Content-Type: text/html
+  
+      &lt;html\&gt;&lt;body\&gt;&lt;h1\&gt;Oops, that's embarassing!&lt/h1&gt
+      There are no servers available to handle your request.
+      &lt/body&gt&lt/html&gt
+   </pre>
+
+Possible values:
+
+- The name of the ConfigMap containing errorfile content
+
+Example:
+
+```yaml
+args:
+  - --configmap-errorfile=default/errorfile-cm
 ```
 
 <p align='right'><a href='#haproxy-kubernetes-ingress-controller'>:arrow_up_small: back to top</a></p>
