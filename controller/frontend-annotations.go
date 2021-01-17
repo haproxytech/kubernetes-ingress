@@ -356,6 +356,7 @@ func (c *HAProxyController) handleHTTPBasicAuth(ingress *store.Ingress) {
 	userListName := fmt.Sprintf("%s-%s", ingress.Namespace, ingress.Name)
 	authType, _ := c.Store.GetValueFromAnnotations("auth-type", ingress.Annotations, c.Store.ConfigMaps[Main].Annotations)
 	authSecret, _ := c.Store.GetValueFromAnnotations("auth-secret", ingress.Annotations, c.Store.ConfigMaps[Main].Annotations)
+	authRealm, _ := c.Store.GetValueFromAnnotations("auth-realm", ingress.Annotations, c.Store.ConfigMaps[Main].Annotations)
 	switch {
 	case authType == nil:
 		return
@@ -397,10 +398,15 @@ func (c *HAProxyController) handleHTTPBasicAuth(ingress *store.Ingress) {
 		return
 	}
 
+	realm := "\"Protected Content\""
+	if authRealm != nil {
+		realm = "\"" + authRealm.Value + "\""
+	}
 	// Adding HAProxy Rule
 	logger.Debugf("Ingress %s/%s: Configuring basic-auth annotation", ingress.Namespace, ingress.Name)
 	reqBasicAuth := rules.ReqBasicAuth{
 		Data:      credentials,
+		AuthRealm: realm,
 		AuthGroup: userListName,
 	}
 	logger.Error(c.cfg.HAProxyRules.AddRule(reqBasicAuth, &ingress.Name, FrontendHTTP, FrontendHTTPS))
