@@ -345,6 +345,21 @@ annotations:
       - ingress
     version_min: "1.5"
     example: ['auth-secret: default/haproxy-credentials']
+  - title: auth-realm
+    type: string
+    group: authentication
+    dependencies: "auth-type, auth-secret"
+    default: "Protected Content"
+    description:
+      - Provides the HTTP Authentication Realm
+    tip: []
+    values:
+      - Realm name
+    applies_to:
+      - configmap
+      - ingress
+    version_min: "1.5"
+    example: ['auth-realm: Admin Area']
   - title: blacklist
     type: IPs or CIDRs
     group: access-control
