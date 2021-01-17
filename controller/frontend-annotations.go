@@ -15,7 +15,6 @@
 package controller
 
 import (
-	"bytes"
 	"fmt"
 	"net"
 	"strconv"
@@ -380,12 +379,11 @@ func (c *HAProxyController) handleHTTPBasicAuth(ingress *store.Ingress) {
 				logger.Warningf("Ingress %s/%s: Secret %s deleted but auth-type annotaiton still active", ingress.Namespace, ingress.Name, secret.Name)
 			}
 			for u, pwd := range secret.Data {
-				p := bytes.Split(pwd, []byte("\n"))
-				if len(p) > 1 {
-					logger.Errorf("Ingress %s/%s: Password for user %s is containing multiple lines, skipped.", ingress.Namespace, ingress.Name, u)
-					continue
+				if pwd[len(pwd)-1] == '\n' {
+					logger.Warningf("Ingress %s/%s: basic-auth: password for user %s ends with '\\n'. Ignoring last character.", ingress.Namespace, ingress.Name, u)
+					pwd = pwd[:len(pwd)-1]
 				}
-				credentials[u] = p[0]
+				credentials[u] = pwd
 			}
 		}
 	}
