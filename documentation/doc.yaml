@@ -50,7 +50,8 @@ image_arguments:
             Connection: close
             Content-Type: text/html
         
-            &lt;html\&gt;&lt;body\&gt;&lt;h1\&gt;Oops, that's embarassing!&lt/h1&gt
+            &lt;html&gt;&lt;body&gt;
+            &lt;h1&gt;Oops, something wrong happened !&lt/h1&gt
             There are no servers available to handle your request.
             &lt/body&gt&lt/html&gt
          </pre>
@@ -59,7 +60,7 @@ image_arguments:
     version_min: "1.5"
     example: |-
       args:
-        - --configmap-errorfile=default/errorfile-cm
+        - --configmap-errorfile=default/errorfile
   - argument: --default-backend-service
     description: The name of the Kubernetes service to send requests to when no Ingress rules match.
     values:
