@@ -108,8 +108,9 @@ data:
     Connection: close
     Content-Type: text/html
 
-    &lt;html\&gt;&lt;body\&gt;&lt;h1\&gt;Oops, that's embarassing!&lt/h1&gt
-    There are no servers available to handle your request.
+    &lt;html&gt;&lt;body&gt;
+      &lt;h1&gt;Oops, something wrong happened !&lt/h1&gt
+      There are no servers available to handle your request.
     &lt/body&gt&lt/html&gt
 ```
 
@@ -121,7 +122,7 @@ Example:
 
 ```yaml
 args:
-  - --configmap-errorfile=default/errorfile-cm
+  - --configmap-errorfile=default/errorfile
 ```
 
 <p align='right'><a href='#haproxy-kubernetes-ingress-controller'>:arrow_up_small: back to top</a></p>

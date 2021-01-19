@@ -1,6 +1,8 @@
 package api
 
 import (
+	"fmt"
+
 	"github.com/haproxytech/models/v2"
 )
 
@@ -84,18 +86,30 @@ func (c *clientNative) FrontendBindEdit(frontend string, bind models.Bind) error
 	return c.nativeAPI.Configuration.EditBind(bind.Name, frontend, &bind, c.activeTransaction, 0)
 }
 
-func (c *clientNative) FrontendHTTPRequestRuleCreate(frontend string, rule models.HTTPRequestRule) error {
+func (c *clientNative) FrontendHTTPRequestRuleCreate(frontend string, rule models.HTTPRequestRule, ingressACL string) error {
 	c.activeTransactionHasChanges = true
+	if ingressACL != "" {
+		rule.Cond = "if"
+		rule.CondTest = fmt.Sprintf("%s %s", ingressACL, rule.CondTest)
+	}
 	return c.nativeAPI.Configuration.CreateHTTPRequestRule("frontend", frontend, &rule, c.activeTransaction, 0)
 }
 
-func (c *clientNative) FrontendHTTPResponseRuleCreate(frontend string, rule models.HTTPResponseRule) error {
+func (c *clientNative) FrontendHTTPResponseRuleCreate(frontend string, rule models.HTTPResponseRule, ingressACL string) error {
 	c.activeTransactionHasChanges = true
+	if ingressACL != "" {
+		rule.Cond = "if"
+		rule.CondTest = fmt.Sprintf("%s %s", ingressACL, rule.CondTest)
+	}
 	return c.nativeAPI.Configuration.CreateHTTPResponseRule("frontend", frontend, &rule, c.activeTransaction, 0)
 }
 
-func (c *clientNative) FrontendTCPRequestRuleCreate(frontend string, rule models.TCPRequestRule) error {
+func (c *clientNative) FrontendTCPRequestRuleCreate(frontend string, rule models.TCPRequestRule, ingressACL string) error {
 	c.activeTransactionHasChanges = true
+	if ingressACL != "" {
+		rule.Cond = "if"
+		rule.CondTest = fmt.Sprintf("%s %s", ingressACL, rule.CondTest)
+	}
 	return c.nativeAPI.Configuration.CreateTCPRequestRule("frontend", frontend, &rule, c.activeTransaction, 0)
 }
 

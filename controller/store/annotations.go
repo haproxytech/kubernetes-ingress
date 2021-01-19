@@ -130,6 +130,7 @@ func (k K8s) SetDefaultAnnotation(annotation, value string) {
 }
 
 var defaultAnnotationValues = MapStringW{
+	"auth-realm":              &StringW{Value: "Protected Content"},
 	"check":                   &StringW{Value: "true"},
 	"cookie-indirect":         &StringW{Value: "true"},
 	"cookie-nocache":          &StringW{Value: "true"},

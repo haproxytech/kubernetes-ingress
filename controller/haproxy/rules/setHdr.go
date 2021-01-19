@@ -11,19 +11,11 @@ import (
 )
 
 type SetHdr struct {
-	id             uint32
 	Response       bool
 	ForwardedProto bool
 	HdrName        string
 	HdrFormat      string
 	Type           haproxy.RuleType
-}
-
-func (r SetHdr) GetID() uint32 {
-	if r.id == 0 {
-		r.id = hashRule(r)
-	}
-	return r.id
 }
 
 func (r SetHdr) GetType() haproxy.RuleType {
@@ -36,7 +28,7 @@ func (r SetHdr) GetType() haproxy.RuleType {
 	return haproxy.REQ_SET_HEADER
 }
 
-func (r SetHdr) Create(client api.HAProxyClient, frontend *models.Frontend) error {
+func (r SetHdr) Create(client api.HAProxyClient, frontend *models.Frontend, ingressACL string) error {
 	if frontend.Mode == "tcp" {
 		return fmt.Errorf("HTTP headers cannot be set in TCP mode")
 	}
@@ -48,7 +40,7 @@ func (r SetHdr) Create(client api.HAProxyClient, frontend *models.Frontend) erro
 			HdrName:   "X-Forwarded-Proto",
 			HdrFormat: "https",
 		}
-		return client.FrontendHTTPRequestRuleCreate(frontend.Name, httpRule)
+		return client.FrontendHTTPRequestRuleCreate(frontend.Name, httpRule, ingressACL)
 	}
 	//RES_SET_HEADER
 	if r.Response {
@@ -58,8 +50,7 @@ func (r SetHdr) Create(client api.HAProxyClient, frontend *models.Frontend) erro
 			HdrName:   r.HdrName,
 			HdrFormat: r.HdrFormat,
 		}
-		matchRuleID(&httpRule, r.GetID())
-		return client.FrontendHTTPResponseRuleCreate(frontend.Name, httpRule)
+		return client.FrontendHTTPResponseRuleCreate(frontend.Name, httpRule, ingressACL)
 	}
 	//REQ_SET_HEADER
 	httpRule := models.HTTPRequestRule{
@@ -68,6 +59,5 @@ func (r SetHdr) Create(client api.HAProxyClient, frontend *models.Frontend) erro
 		HdrName:   r.HdrName,
 		HdrFormat: r.HdrFormat,
 	}
-	matchRuleID(&httpRule, r.GetID())
-	return client.FrontendHTTPRequestRuleCreate(frontend.Name, httpRule)
+	return client.FrontendHTTPRequestRuleCreate(frontend.Name, httpRule, ingressACL)
 }

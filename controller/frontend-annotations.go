@@ -15,7 +15,6 @@
 package controller
 
 import (
-	"bytes"
 	"fmt"
 	"net"
 	"strconv"
@@ -357,8 +356,9 @@ func (c *HAProxyController) handleHTTPBasicAuth(ingress *store.Ingress) {
 	userListName := fmt.Sprintf("%s-%s", ingress.Namespace, ingress.Name)
 	authType, _ := c.Store.GetValueFromAnnotations("auth-type", ingress.Annotations, c.Store.ConfigMaps[Main].Annotations)
 	authSecret, _ := c.Store.GetValueFromAnnotations("auth-secret", ingress.Annotations, c.Store.ConfigMaps[Main].Annotations)
+	authRealm, _ := c.Store.GetValueFromAnnotations("auth-realm", ingress.Annotations, c.Store.ConfigMaps[Main].Annotations)
 	switch {
-	case authType == nil || authSecret == nil:
+	case authType == nil:
 		return
 	case authType.Value != "basic-auth":
 		logger.Errorf("Ingress %s/%s: incorrect auth-type value '%s'. Only 'basic-auth' value is currently supported", ingress.Namespace, ingress.Name, authType.Value)
@@ -366,27 +366,26 @@ func (c *HAProxyController) handleHTTPBasicAuth(ingress *store.Ingress) {
 		logger.Debugf("Ingress %s/%s: Deleting HTTP Basic Authentication", ingress.Namespace, ingress.Name)
 		logger.Error(c.Client.UserListDeleteByGroup(userListName))
 		return
-	case authSecret.Status == DELETED:
-		logger.Warningf("Ingress %s/%s: Deleting auth-secret annotation but auth-type annotation still active", ingress.Namespace, ingress.Name)
-		return
+	case authSecret == nil || authSecret.Status == DELETED:
+		logger.Warningf("Ingress %s/%s: auth-type annotation active but no auth-secret provided. Service won't be accessible", ingress.Namespace, ingress.Name)
 	}
 
 	// Parsing secret
 	credentials := make(map[string][]byte)
-	secret, err := c.Store.FetchSecret(authSecret.Value, ingress.Namespace)
-	if secret == nil {
-		logger.Warningf("Ingress %s/%s: %s", ingress.Namespace, ingress.Name, err)
-	} else {
-		if secret.Status == DELETED {
-			logger.Warningf("Ingress %s/%s: Secret %s deleted but auth-type annotaiton still active", ingress.Namespace, ingress.Name, secret.Name)
-		}
-		for u, pwd := range secret.Data {
-			p := bytes.Split(pwd, []byte("\n"))
-			if len(p) > 1 {
-				logger.Errorf("Ingress %s/%s: Password for user %s is containing multiple lines, skipped.", ingress.Namespace, ingress.Name, u)
-				continue
+	if authSecret != nil {
+		if secret, err := c.Store.FetchSecret(authSecret.Value, ingress.Namespace); secret == nil {
+			logger.Warningf("Ingress %s/%s: %s", ingress.Namespace, ingress.Name, err)
+		} else {
+			if secret.Status == DELETED {
+				logger.Warningf("Ingress %s/%s: Secret %s deleted but auth-type annotaiton still active", ingress.Namespace, ingress.Name, secret.Name)
 			}
-			credentials[u] = p[0]
+			for u, pwd := range secret.Data {
+				if pwd[len(pwd)-1] == '\n' {
+					logger.Warningf("Ingress %s/%s: basic-auth: password for user %s ends with '\\n'. Ignoring last character.", ingress.Namespace, ingress.Name, u)
+					pwd = pwd[:len(pwd)-1]
+				}
+				credentials[u] = pwd
+			}
 		}
 	}
 	// Configuring annotation
@@ -394,15 +393,20 @@ func (c *HAProxyController) handleHTTPBasicAuth(ingress *store.Ingress) {
 	errors.Add(
 		c.Client.UserListDeleteByGroup(userListName),
 		c.Client.UserListCreateByGroup(userListName, credentials))
-	if err = errors.Result(); err != nil {
-		logger.Errorf("Ingress %s/%s: Cannot create userlist for basic-auth, %s", ingress.Namespace, ingress.Name, err)
+	if errors.Result() != nil {
+		logger.Errorf("Ingress %s/%s: Cannot create userlist for basic-auth, %s", ingress.Namespace, ingress.Name, errors.Result())
 		return
 	}
 
+	realm := "\"Protected Content\""
+	if authRealm != nil {
+		realm = "\"" + authRealm.Value + "\""
+	}
 	// Adding HAProxy Rule
 	logger.Debugf("Ingress %s/%s: Configuring basic-auth annotation", ingress.Namespace, ingress.Name)
 	reqBasicAuth := rules.ReqBasicAuth{
 		Data:      credentials,
+		AuthRealm: realm,
 		AuthGroup: userListName,
 	}
 	logger.Error(c.cfg.HAProxyRules.AddRule(reqBasicAuth, &ingress.Name, FrontendHTTP, FrontendHTTPS))

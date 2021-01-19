@@ -54,8 +54,9 @@ image_arguments:
           Connection: close
           Content-Type: text/html
       
-          &lt;html\&gt;&lt;body\&gt;&lt;h1\&gt;Oops, that's embarassing!&lt/h1&gt
-          There are no servers available to handle your request.
+          &lt;html&gt;&lt;body&gt;
+            &lt;h1&gt;Oops, something wrong happened !&lt/h1&gt
+            There are no servers available to handle your request.
           &lt/body&gt&lt/html&gt
       ```
     values: 
@@ -63,7 +64,7 @@ image_arguments:
     version_min: "1.5"
     example: |-
       args:
-        - --configmap-errorfile=default/errorfile-cm
+        - --configmap-errorfile=default/errorfile
   - argument: --default-backend-service
     description: The name of the Kubernetes service to send requests to when no Ingress rules match.
     values:
@@ -334,19 +335,19 @@ annotations:
         The annotaiton format is a secret path *namespace/secretName*. If the namespace is ommited (path is only *secretName*) then the ingress namespace will be used. 
         For Basic Authentication, the Secret data should contain user credentials in the form of `username: encrypted and base-64 encoded passowrd`. For example: 
       
-        ```
-        bob: JDEkYWJjJEJYQnFwYjlCWmNaaFhMZ2JlZS4wcy8=
-        ```
+          ```
+          bob: JDEkYWJjJEJYQnFwYjlCWmNaaFhMZ2JlZS4wcy8=
+          ```
       
-        Create the Kubernetes Secret resource in the following way:
+          Create the Kubernetes Secret resource in the following way:
 
-        ```bash
-        kubectl create secret generic haproxy-credentials \
-          --from-literal=bob=$(openssl passwd -1 bobPassword) \
-          --from-literal=alice=$(openssl passwd -1 alicePassword)
+          ```bash
+          kubectl create secret generic haproxy-credentials \
+            --from-literal=bob=$(openssl passwd -1 bobPassword) \
+            --from-literal=alice=$(openssl passwd -1 alicePassword)
         
-          # secret/haproxy-credentials created
-        ```
+            # secret/haproxy-credentials created
+          ```
     applies_to:
       - configmap
       - ingress
@@ -354,6 +355,21 @@ annotations:
     example:
       - 'auth-type: basic-auth'
       - 'auth-secret: default/haproxy-credentials'
+  - title: auth-realm
+    type: string
+    group: authentication
+    dependencies: "auth-type, auth-secret"
+    default: "Protected Content"
+    description:
+      - Provides the HTTP Authentication Realm
+    tip: []
+    values:
+      - Realm name
+    applies_to:
+      - configmap
+      - ingress
+    version_min: "1.5"
+    example: ['auth-realm: Admin Area']
   - title: blacklist
     type: IPs or CIDRs
     group: access-control

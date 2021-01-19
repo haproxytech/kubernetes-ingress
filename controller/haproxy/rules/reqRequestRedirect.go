@@ -11,7 +11,6 @@ import (
 )
 
 type RequestRedirect struct {
-	id           uint32
 	RedirectCode int64
 	RedirectPort int
 	Host         string
@@ -19,18 +18,11 @@ type RequestRedirect struct {
 	SSLRedirect  bool
 }
 
-func (r RequestRedirect) GetID() uint32 {
-	if r.id == 0 {
-		r.id = hashRule(r)
-	}
-	return r.id
-}
-
 func (r RequestRedirect) GetType() haproxy.RuleType {
 	return haproxy.REQ_REQUEST_REDIRECT
 }
 
-func (r RequestRedirect) Create(client api.HAProxyClient, frontend *models.Frontend) error {
+func (r RequestRedirect) Create(client api.HAProxyClient, frontend *models.Frontend, ingressACL string) error {
 	if frontend.Mode == "tcp" {
 		return fmt.Errorf("request redirection cannot be configured in TCP mode")
 	}
@@ -52,6 +44,5 @@ func (r RequestRedirect) Create(client api.HAProxyClient, frontend *models.Front
 		RedirValue: rule,
 		RedirType:  "location",
 	}
-	matchRuleID(&httpRule, r.GetID())
-	return client.FrontendHTTPRequestRuleCreate(frontend.Name, httpRule)
+	return client.FrontendHTTPRequestRuleCreate(frontend.Name, httpRule, ingressACL)
 }

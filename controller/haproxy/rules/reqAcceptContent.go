@@ -11,21 +11,13 @@ import (
 )
 
 type ReqAcceptContent struct {
-	id uint32
-}
-
-func (r ReqAcceptContent) GetID() uint32 {
-	if r.id == 0 {
-		r.id = hashRule(r)
-	}
-	return r.id
 }
 
 func (r ReqAcceptContent) GetType() haproxy.RuleType {
 	return haproxy.REQ_ACCEPT_CONTENT
 }
 
-func (r ReqAcceptContent) Create(client api.HAProxyClient, frontend *models.Frontend) error {
+func (r ReqAcceptContent) Create(client api.HAProxyClient, frontend *models.Frontend, ingressACL string) error {
 	if frontend.Mode == "http" {
 		return fmt.Errorf("tcp accept-content rule is only available in TCP frontends")
 	}
@@ -36,5 +28,5 @@ func (r ReqAcceptContent) Create(client api.HAProxyClient, frontend *models.Fron
 		Cond:     "if",
 		CondTest: "{ req_ssl_hello_type 1 }",
 	}
-	return client.FrontendTCPRequestRuleCreate(frontend.Name, tcpRule)
+	return client.FrontendTCPRequestRuleCreate(frontend.Name, tcpRule, ingressACL)
 }

@@ -11,24 +11,16 @@ import (
 )
 
 type ReqRateLimit struct {
-	id             uint32
 	TableName      string
 	ReqsLimit      int64
 	DenyStatusCode int64
-}
-
-func (r ReqRateLimit) GetID() uint32 {
-	if r.id == 0 {
-		r.id = hashRule(r)
-	}
-	return r.id
 }
 
 func (r ReqRateLimit) GetType() haproxy.RuleType {
 	return haproxy.REQ_RATELIMIT
 }
 
-func (r ReqRateLimit) Create(client api.HAProxyClient, frontend *models.Frontend) error {
+func (r ReqRateLimit) Create(client api.HAProxyClient, frontend *models.Frontend, ingressACL string) error {
 	if frontend.Mode == "tcp" {
 		//TODO: tcp request tracking
 		return fmt.Errorf("request Track cannot be configured in TCP mode")
@@ -40,6 +32,5 @@ func (r ReqRateLimit) Create(client api.HAProxyClient, frontend *models.Frontend
 		Cond:       "if",
 		CondTest:   fmt.Sprintf("{ sc0_http_req_rate(%s) gt %d }", r.TableName, r.ReqsLimit),
 	}
-	matchRuleID(&httpRule, r.GetID())
-	return client.FrontendHTTPRequestRuleCreate(frontend.Name, httpRule)
+	return client.FrontendHTTPRequestRuleCreate(frontend.Name, httpRule, ingressACL)
 }

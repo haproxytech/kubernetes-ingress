@@ -256,7 +256,7 @@ func (c *HAProxyController) updateHAProxy() error {
 						Ingress:        ingress,
 						Host:           rule.Host,
 						Path:           path,
-						HAProxyRules:   c.cfg.HAProxyRules.PopIngressRuleIDs(ingress.Name),
+						HAProxyRules:   c.cfg.HAProxyRules.GetIngressRuleIDs(ingress.Name),
 						SSLPassthrough: c.sslPassthroughEnabled(namespace, ingress, path),
 					})
 				}
