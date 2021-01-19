@@ -9,4 +9,4 @@ jobs:
         with:
           fetch-depth: 10
       - name: check-commit
-        uses: docker://haproxytech/check-commit:v1.1.1
+        uses: docker://haproxytech/check-commit:1.1.3
