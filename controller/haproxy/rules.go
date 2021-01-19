@@ -143,9 +143,8 @@ func (r Rules) Clean(frontends ...string) {
 	}
 }
 
-func (r Rules) PopIngressRuleIDs(ingress string) (ruleIDs []RuleID) {
+func (r Rules) GetIngressRuleIDs(ingress string) (ruleIDs []RuleID) {
 	ids := r.ingressRuleIDs[ingress]
-	r.ingressRuleIDs[ingress] = r.ingressRuleIDs[ingress][:0]
 	return ids
 }
 
