@@ -238,10 +238,7 @@ func (c *HAProxyController) SyncData(chConfigMapReceivedAndProcessed chan bool) 
 		switch job.SyncType {
 		case COMMAND:
 			if hadChanges {
-				if err := c.updateHAProxy(); err != nil {
-					logger.Error(err)
-					continue
-				}
+				c.updateHAProxy()
 				hadChanges = false
 				continue
 			}

@@ -189,14 +189,14 @@ func (c *HAProxyController) Start(ctx context.Context, osArgs utils.OSArgs) {
 }
 
 // updateHAProxy syncs HAProxy configuration
-func (c *HAProxyController) updateHAProxy() error {
+func (c *HAProxyController) updateHAProxy() {
 	logger.Trace("HAProxy config sync started")
 	reload := false
 
 	err := c.Client.APIStartTransaction()
 	if err != nil {
 		logger.Error(err)
-		return err
+		return
 	}
 	defer func() {
 		c.Client.APIDisposeTransaction()
@@ -273,17 +273,19 @@ func (c *HAProxyController) updateHAProxy() error {
 
 	err = c.Client.APICommitTransaction()
 	if err != nil {
+		logger.Error("unable to Sync HAProxy configuration !!")
 		logger.Error(err)
-		return err
+		c.clean(true)
+		return
 	}
-	c.clean()
+	c.clean(false)
 	if restart {
 		if err := c.haproxyService("restart"); err != nil {
 			logger.Error(err)
 		} else {
 			logger.Info("HAProxy restarted")
 		}
-		return nil
+		return
 	}
 	if reload {
 		if err := c.haproxyService("reload"); err != nil {
@@ -294,7 +296,6 @@ func (c *HAProxyController) updateHAProxy() error {
 	}
 
 	logger.Trace("HAProxy config sync ended")
-	return nil
 }
 
 // haproxyInitialize initializes HAProxy environment and its API client.
@@ -518,13 +519,16 @@ func (c *HAProxyController) handleDefaultCert() (reload bool) {
 }
 
 // clean controller state
-func (c *HAProxyController) clean() {
-	c.Store.Clean()
+func (c *HAProxyController) clean(failedSync bool) {
 	c.cfg.Clean()
 	if c.PublishService != nil {
 		c.PublishService.Status = EMPTY
 	}
 	c.cfg.SSLPassthrough = false
+	if failedSync {
+		return
+	}
+	c.Store.Clean()
 }
 
 func (c *HAProxyController) sslPassthroughEnabled(namespace *store.Namespace, ingress *store.Ingress, path *store.IngressPath) bool {
