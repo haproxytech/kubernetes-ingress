@@ -329,24 +329,24 @@ annotations:
     tip:
       - Encrypted passwords are evaluated using the crypt(3) function, so depending on the system's capabilities, different algorithms are supported.
       - Unencrypted passwords (used with HAProxy [insecure-password](https://cbonte.github.io/haproxy-dconv/2.0/configuration.html#3.4-user) ) **are not accepted**.
-    values: |-
-      The annotaiton format is a secret path '*namespace/secretName*'. If the namespace is ommited (path is only '*secretName*') then the ingress namespace will be used. 
-      For Basic Authentication, the Secret data should contain user credentials in the form of `username: encrypted and base-64 encoded passowrd`.
-      For example: 
+    values:
+      - |- 
+        The annotaiton format is a secret path *namespace/secretName*. If the namespace is ommited (path is only *secretName*) then the ingress namespace will be used. 
+        For Basic Authentication, the Secret data should contain user credentials in the form of `username: encrypted and base-64 encoded passowrd`. For example: 
       
-      ```
-      bob: JDEkYWJjJEJYQnFwYjlCWmNaaFhMZ2JlZS4wcy8=
-      ```
+        ```
+        bob: JDEkYWJjJEJYQnFwYjlCWmNaaFhMZ2JlZS4wcy8=
+        ```
       
-      Create the Kubernetes Secret resource in the following way:
+        Create the Kubernetes Secret resource in the following way:
 
-      ```bash
-      kubectl create secret generic haproxy-credentials \
-        --from-literal=bob=$(openssl passwd -1 bobPassword) \
-        --from-literal=alice=$(openssl passwd -1 alicePassword)
+        ```bash
+        kubectl create secret generic haproxy-credentials \
+          --from-literal=bob=$(openssl passwd -1 bobPassword) \
+          --from-literal=alice=$(openssl passwd -1 alicePassword)
         
-        # secret/haproxy-credentials created
-      ```
+          # secret/haproxy-credentials created
+        ```
     applies_to:
       - configmap
       - ingress
