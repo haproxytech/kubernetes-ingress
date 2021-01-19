@@ -11,22 +11,14 @@ import (
 )
 
 type ReqSetSrc struct {
-	id         uint32
 	HeaderName string
-}
-
-func (r ReqSetSrc) GetID() uint32 {
-	if r.id == 0 {
-		r.id = hashRule(r)
-	}
-	return r.id
 }
 
 func (r ReqSetSrc) GetType() haproxy.RuleType {
 	return haproxy.REQ_SET_SRC
 }
 
-func (r ReqSetSrc) Create(client api.HAProxyClient, frontend *models.Frontend) error {
+func (r ReqSetSrc) Create(client api.HAProxyClient, frontend *models.Frontend, ingressACL string) error {
 	if len(r.HeaderName) == 0 {
 		return nil
 	}
@@ -36,12 +28,12 @@ func (r ReqSetSrc) Create(client api.HAProxyClient, frontend *models.Frontend) e
 			Type:  "set-src",
 			Expr:  fmt.Sprintf("hdr(%s)", r.HeaderName),
 		}
-		return client.FrontendTCPRequestRuleCreate(frontend.Name, tcpRule)
+		return client.FrontendTCPRequestRuleCreate(frontend.Name, tcpRule, ingressACL)
 	}
 	httpRule := models.HTTPRequestRule{
 		Index: utils.PtrInt64(0),
 		Type:  "set-src",
 		Expr:  fmt.Sprintf("hdr(%s)", r.HeaderName),
 	}
-	return client.FrontendHTTPRequestRuleCreate(frontend.Name, httpRule)
+	return client.FrontendHTTPRequestRuleCreate(frontend.Name, httpRule, ingressACL)
 }

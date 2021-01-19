@@ -1,18 +1,23 @@
 package haproxy
 
 import (
+	"encoding/json"
 	"fmt"
+
+	"github.com/haproxytech/models/v2"
 
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/api"
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
-	"github.com/haproxytech/models/v2"
 )
 
 type Rule interface {
-	GetID() uint32
+	Create(client api.HAProxyClient, frontend *models.Frontend, ingressACL string) error
 	GetType() RuleType
-	Create(client api.HAProxyClient, frontend *models.Frontend) error
 }
+
+// IngressACLVar is the HAProxy variable
+// to be matched against the ruleID
+var IngressACLVar = "txn.match"
 
 // Order matters !
 // Rules will be evaluated by HAProxy in the defined order.
@@ -46,9 +51,12 @@ type RuleID uint32
 
 //nolint
 const (
-	TO_DELETE RuleStatus = iota
-	TO_CREATE
-	CREATED
+	// exclusive states
+	CREATED   RuleStatus = 0
+	TO_CREATE RuleStatus = 1
+	TO_DELETE RuleStatus = 2
+	// non exclusive states
+	INGRESS RuleStatus = 4
 )
 
 type Rules struct {
@@ -81,7 +89,7 @@ func (r Rules) AddRule(rule Rule, ingressName *string, frontends ...string) erro
 	if rule == nil || len(frontends) == 0 {
 		return fmt.Errorf("invalid params")
 	}
-	id := RuleID(rule.GetID())
+	id := getID(rule)
 	ruleType := rule.GetType()
 	for _, frontend := range frontends {
 		ftRules, ok := r.frontendRules[frontend]
@@ -102,9 +110,12 @@ func (r Rules) AddRule(rule Rule, ingressName *string, frontends ...string) erro
 			ftRules.rules[ruleType] = append(ftRules.rules[ruleType], rule)
 			ftRules.status[id] = TO_CREATE
 		}
-		if ingressName != nil {
-			r.ingressRuleIDs[*ingressName] = append(r.ingressRuleIDs[*ingressName], id)
+	}
+	if ingressName != nil {
+		for _, frontend := range frontends {
+			r.frontendRules[frontend].status[id] |= INGRESS
 		}
+		r.ingressRuleIDs[*ingressName] = append(r.ingressRuleIDs[*ingressName], id)
 	}
 	return nil
 }
@@ -123,9 +134,14 @@ func (r Rules) EnableSSLPassThrough(passThroughFtd, offloadFtd string) {
 	for _, ruleType := range []RuleType{REQ_PROXY_PROTOCOL, REQ_DENY} {
 		r.frontendRules[passThroughFtd].rules[ruleType] = r.frontendRules[offloadFtd].rules[ruleType]
 		for _, rule := range r.frontendRules[passThroughFtd].rules[ruleType] {
-			id := RuleID(rule.GetID())
+			id := getID(rule)
+			status := r.frontendRules[passThroughFtd].status[id]
+			_, ok := r.frontendRules[offloadFtd].status[id]
+			if ok && status&TO_CREATE != 0 {
+				status |= CREATED
+			}
+			r.frontendRules[offloadFtd].status[id] = status
 			delete(r.frontendRules[offloadFtd].status, id)
-			r.frontendRules[passThroughFtd].status[id] = CREATED
 		}
 	}
 }
@@ -163,19 +179,29 @@ func (r Rules) Refresh(client api.HAProxyClient) (reload bool) {
 		for ruleType := RES_SET_HEADER; ruleType >= REQ_ACCEPT_CONTENT; ruleType-- {
 			ruleSet := ftRules.rules[ruleType]
 			for i := len(ruleSet) - 1; i >= 0; i-- {
-				id := RuleID(ruleSet[i].GetID())
+				ingressACL := ""
+				id := getID(ruleSet[i])
 				if ftRules.status[id] == TO_DELETE {
 					delete(ftRules.status, id)
 					ftRules.rules[ruleType] = append(ruleSet[:i], ruleSet[i+1:]...)
 					continue
 				}
-				err := ruleSet[i].Create(client, &fe)
+				if ftRules.status[id]&INGRESS != 0 {
+					ingressACL = fmt.Sprintf("{ var(%s) -m dom %d }", IngressACLVar, id)
+				}
+				err := ruleSet[i].Create(client, &fe, ingressACL)
 				logger.Error(err)
-				if err == nil && ftRules.status[id] == TO_CREATE {
+				if err == nil && ftRules.status[id]&TO_CREATE != 0 {
 					reload = true
 				}
 			}
 		}
 	}
 	return reload
+}
+
+func getID(rule Rule) RuleID {
+	b, _ := json.Marshal(rule)
+	b = append(b, byte(rule.GetType()))
+	return RuleID(utils.Hash(b))
 }

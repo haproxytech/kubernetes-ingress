@@ -11,23 +11,15 @@ import (
 )
 
 type ReqPathRewrite struct {
-	id        uint32
 	PathMatch string
 	PathFmt   string
-}
-
-func (r ReqPathRewrite) GetID() uint32 {
-	if r.id == 0 {
-		r.id = hashRule(r)
-	}
-	return r.id
 }
 
 func (r ReqPathRewrite) GetType() haproxy.RuleType {
 	return haproxy.REQ_PATH_REWRITE
 }
 
-func (r ReqPathRewrite) Create(client api.HAProxyClient, frontend *models.Frontend) error {
+func (r ReqPathRewrite) Create(client api.HAProxyClient, frontend *models.Frontend, ingressACL string) error {
 	if frontend.Mode == "tcp" {
 		return fmt.Errorf("SSL redirect cannot be configured in TCP mode")
 	}
@@ -37,6 +29,5 @@ func (r ReqPathRewrite) Create(client api.HAProxyClient, frontend *models.Fronte
 		PathMatch: r.PathMatch,
 		PathFmt:   r.PathFmt,
 	}
-	matchRuleID(&httpRule, r.GetID())
-	return client.FrontendHTTPRequestRuleCreate(frontend.Name, httpRule)
+	return client.FrontendHTTPRequestRuleCreate(frontend.Name, httpRule, ingressACL)
 }

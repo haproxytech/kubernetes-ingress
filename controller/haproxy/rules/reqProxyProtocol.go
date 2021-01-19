@@ -11,22 +11,14 @@ import (
 )
 
 type ReqProxyProtocol struct {
-	id        uint32
 	SrcIPsMap string
-}
-
-func (r ReqProxyProtocol) GetID() uint32 {
-	if r.id == 0 {
-		r.id = hashRule(r)
-	}
-	return r.id
 }
 
 func (r ReqProxyProtocol) GetType() haproxy.RuleType {
 	return haproxy.REQ_PROXY_PROTOCOL
 }
 
-func (r ReqProxyProtocol) Create(client api.HAProxyClient, frontend *models.Frontend) error {
+func (r ReqProxyProtocol) Create(client api.HAProxyClient, frontend *models.Frontend, ingressACL string) error {
 	tcpRule := models.TCPRequestRule{
 		Index:    utils.PtrInt64(0),
 		Type:     "connection",
@@ -34,5 +26,5 @@ func (r ReqProxyProtocol) Create(client api.HAProxyClient, frontend *models.Fron
 		Cond:     "if",
 		CondTest: fmt.Sprintf("{ src %s }", haproxy.GetMapPath(r.SrcIPsMap)),
 	}
-	return client.FrontendTCPRequestRuleCreate(frontend.Name, tcpRule)
+	return client.FrontendTCPRequestRuleCreate(frontend.Name, tcpRule, ingressACL)
 }

@@ -11,25 +11,17 @@ import (
 )
 
 type ReqTrack struct {
-	id          uint32
 	TableName   string
 	TablePeriod *int64
 	TableSize   *int64
 	TrackKey    string
 }
 
-func (r ReqTrack) GetID() uint32 {
-	if r.id == 0 {
-		r.id = hashRule(r)
-	}
-	return r.id
-}
-
 func (r ReqTrack) GetType() haproxy.RuleType {
 	return haproxy.REQ_TRACK
 }
 
-func (r ReqTrack) Create(client api.HAProxyClient, frontend *models.Frontend) error {
+func (r ReqTrack) Create(client api.HAProxyClient, frontend *models.Frontend, ingressACL string) error {
 	if frontend.Mode == "tcp" {
 		//TODO: tcp request tracking
 		return fmt.Errorf("request Track cannot be configured in TCP mode")
@@ -55,6 +47,5 @@ func (r ReqTrack) Create(client api.HAProxyClient, frontend *models.Frontend) er
 		TrackSc0Key:   r.TrackKey,
 		TrackSc0Table: r.TableName,
 	}
-	matchRuleID(&httpRule, r.GetID())
-	return client.FrontendHTTPRequestRuleCreate(frontend.Name, httpRule)
+	return client.FrontendHTTPRequestRuleCreate(frontend.Name, httpRule, ingressACL)
 }

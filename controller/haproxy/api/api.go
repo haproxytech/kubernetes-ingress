@@ -37,9 +37,9 @@ type HAProxyClient interface {
 	FrontendBindsGet(frontend string) (models.Binds, error)
 	FrontendBindCreate(frontend string, bind models.Bind) error
 	FrontendBindEdit(frontend string, bind models.Bind) error
-	FrontendHTTPRequestRuleCreate(frontend string, rule models.HTTPRequestRule) error
-	FrontendHTTPResponseRuleCreate(frontend string, rule models.HTTPResponseRule) error
-	FrontendTCPRequestRuleCreate(frontend string, rule models.TCPRequestRule) error
+	FrontendHTTPRequestRuleCreate(frontend string, rule models.HTTPRequestRule, ingressACL string) error
+	FrontendHTTPResponseRuleCreate(frontend string, rule models.HTTPResponseRule, ingressACL string) error
+	FrontendTCPRequestRuleCreate(frontend string, rule models.TCPRequestRule, ingressACL string) error
 	FrontendRuleDeleteAll(frontend string)
 	GlobalConfigEnabled(section string, config string) (enabled bool, err error)
 	GlobalWriteConfig(section string, config string) (result string, err error)
