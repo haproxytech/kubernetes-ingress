@@ -136,7 +136,7 @@ whitelist: "192.168.1.0/24, 192.168.2.100"
 
   > :construction: this is only available from next version, currently available in dev build
 
-  Enable the selected authentication strategy, currently only *basic-auth* value is supported.
+  Enables the selected authentication strategy.
 
   Available on:  `configmap`  `ingress`
 
@@ -148,6 +148,7 @@ Example:
 
 ```yaml
 auth-type: basic-auth
+auth-secret: default/haproxy-credentials
 ```
 
 ##### `auth-secret`
@@ -155,12 +156,7 @@ auth-type: basic-auth
 
   > :construction: this is only available from next version, currently available in dev build
 
-  Select the Kubernetes Secret where authentication data can be found.</br>
-  The annotaiton format is a secret path '*namespace/secretName*', if the namespace is ommited (path is only '*secretName*') then the ingress namespace will be used.</br>
-  For Basic Authentication the Secret data should contain user credentials in the form of '*username: encrypted and base-64 encoded passowrd*'.
-
-Example:
-> bob: JDEkYWJjJEJYQnFwYjlCWmNaaFhMZ2JlZS4wcy8=
+  Selects the Kubernetes Secret where authentication data can be found.
 
   Available on:  `configmap`  `ingress`
 
@@ -170,18 +166,27 @@ Example:
 
 Possible values:
 
-- Any Kubernetes generic Secret resource that can be created in the following way,
+- The annotaiton format is a secret path *namespace/secretName*. If the namespace is ommited (path is only *secretName*) then the ingress namespace will be used. 
+For Basic Authentication, the Secret data should contain user credentials in the form of `username: encrypted and base-64 encoded passowrd`. For example: 
 
-  ```bash
-  kubectl create secret generic haproxy-credentials \
-    --from-literal=bob=$(openssl passwd -1 bobPassword) \
-    --from-literal=alice=$(openssl passwd -1 alicePassword) \
+```
+bob: JDEkYWJjJEJYQnFwYjlCWmNaaFhMZ2JlZS4wcy8=
+```
+
+Create the Kubernetes Secret resource in the following way:
+
+```bash
+kubectl create secret generic haproxy-credentials \
+  --from-literal=bob=$(openssl passwd -1 bobPassword) \
+  --from-literal=alice=$(openssl passwd -1 alicePassword)
+
   # secret/haproxy-credentials created
-  ```
+```
 
 Example:
 
 ```yaml
+auth-type: basic-auth
 auth-secret: default/haproxy-credentials
 ```
 
@@ -271,11 +276,11 @@ check-interval: "1m"
 
 ##### `scale-server-slots`
 
-  Sets the number of server slots to provision in order for HAProxy to scale dynamically with no reload. If this number is greater than available endpoints/addresses, the remaining slots will be disabled (put on stand by) and ready to be used. if this number is lower, the remaining endpoints/addresses will be added after scaling HAProxy backend with a reload.
+  Sets the number of server slots to provision in order for HAProxy to scale dynamically with no reload. If this number is greater than the available endpoints/addresses, the remaining slots will be disabled (put on stand-by) and ready to be used. If this number is lower, the remaining endpoints/addresses will be added after scaling the HAProxy backend with a reload.
 
   Available on:  `configmap`
 
-  :information_source: Equivalent old annotations are "servers-increment" and "server-slots"
+  :information_source: Equivalent old annotations are `servers-increment` and `server-slots`
 
 Possible values:
 
@@ -326,7 +331,7 @@ load-balance: "leastconn"
 
 #### Config Snippet
 
-- Insert raw HAProxy configuration in specific HAProxy config sections.</br>
+- Insert raw HAProxy configuration in specific HAProxy config sections.
 - There is **no data validation** done by Ingress Controller. If input is incorret, HAProxy will fail the reload.
 
 ##### `global-config-snippet`
@@ -392,7 +397,7 @@ cookie-persistence: "mycookie"
 ```
 
 Configuring the cookie can be done in two different ways: 
-- Using `cookie-persistence` annotation.</br>
+- Using `cookie-persistence` annotation.
   However, currently, this **does not work** when deploying more than one ingress controller pod. For such case (multiple IC pods) the following `dynamic` cookie configuration via `backend-config-snippet` annotation an be used.
 - Using [`backend-config-snippet`](#config-snippet) annotation for more cookie options.
   
@@ -541,11 +546,11 @@ ssl-redirect-code: "301"
 
   > :construction: this is only available from next version, currently available in dev build
 
-  Sets the HTTPS port in redirection URL in case of HTTP to HTTPS traffic redirection.
+  Sets the HTTPS port to redirect to when HTTP to HTTPS traffic redirection is enabled  when `ssl-redirect` is true.
 
   Available on:  `configmap`  `ingress`
 
-  :information_source: When setting the HTTPS port value, keep in mind this is the HTTPS port as seen by the client, not as set on the Ingress Controller. The reason of this distinction lies in the fact there will probably be some middleware with its own ports mapping between the client and the Ingress Controller. As a consequence, it must be set with a distinct consideration of how the HTTPS port is set on Ingress Controller with the https-bind-port command line option.
+  :information_source: When setting the HTTPS port value, keep in mind that this is the HTTPS port as seen by the client, not as set on the Ingress Controller. The reason for this distinction lies in the fact that there will probably be some middleware with its own ports mapping between the client and the Ingress Controller. As a consequence, it must be set with a distinct consideration of how the HTTPS port is set on Ingress Controller with the `https-bind-port` command line option.
 
 Possible values:
 
@@ -826,13 +831,13 @@ rate-limit-period: "1m"
 
   > :construction: this is only available from next version, currently available in dev build
 
-  Sets the status code to return upon rate limiting has been triggered.
+  Sets the status code to return when rate limiting has been triggered.
 
   Available on:  `configmap`  `ingress`
 
 Possible values:
 
-- HTTP status codes; Defaults to 403
+- HTTP status codes; Defaults to 403.
 
 Example:
 
@@ -843,11 +848,12 @@ rate-limit-status-code: "429"
 ##### `rate-limit-requests`
 
   Sets the maximum number of requests that will be accepted from a source IP address during the `rate-limit-period`.
-  To track the http requests rate, a stick-table named "Ratelimit-<period-in-ms>" will be created. Example, If the rate-limit-period is set to 2s the name of the table will be "Ratelimit-2000".
 
   Available on:  `configmap`  `ingress`
 
-  :information_source: If this number is exceeded, HAProxy will deny requests with 403 status code
+  :information_source: If this number is exceeded, HAProxy will deny requests with 403 status code.
+
+  :information_source: To track the http requests rate, a stick-table named "Ratelimit-<period-in-ms>" will be created. For example, if the `rate-limit-period` is set to *2s*, the name of the table will be *Ratelimit-2000*.
 
 Possible values:
 
@@ -955,7 +961,7 @@ request-capture-len: 350
 
   Available on:  `configmap`  `ingress`
 
-  :information_source: HTTP redirection code is settable with request-redirect-code annotation.
+  :information_source: HTTP redirection code is settable with `request-redirect-code` annotation.
 
   :information_source: Port alone is not allowed.
 
@@ -1113,7 +1119,7 @@ haproxy.org/send-proxy-protocol: proxy-v2
 
   > :construction: this is only available from next version, currently available in dev build
 
-  value is the path of a secret containing a CA certificate (certificate authority) enabling HAProxy to verify backends certificate via *ca-file* directive. When CA certificate is properly configured this will also sets *verify* directive to *required*.
+  Specifies the path of a secret containing a CA certificate (certificate authority) enabling HAProxy to verify a backend's certificate via the `ca-file` directive. When the CA certificate is properly configured this also sets the HAProxy *verify* directive to *required*.
 
   Available on:  `service`  `configmap`  `ingress`
 
@@ -1140,7 +1146,7 @@ server-ca: "ns1/ca"
 
   > :construction: this is only available from next version, currently available in dev build
 
-  value is the path of a secret containing a client certificate that haproxy can provide during a SSL communication with backend servers via *crt* directive.
+  Specifies the path of a secret containing a client certificate that HAProxy can provide during SSL communication with the backend servers via the HAProxy `crt` directive.
 
   Available on:  `service`  `configmap`  `ingress`
 
@@ -1167,8 +1173,8 @@ server-crt: "ns1/client"
 
   > :construction: this is only available from next version, currently available in dev build
 
-  HTTP/1.1 is the default protocol for backend servers communication. Currently server-proto annotation supports only "h2" value (supporting fcgi is also planned) which forces the HTTP/2 on clear for backend servers.
-  When SSL is enabled on the backend, server-proto is ignored and both http/1.1 and http/2 are advertised via ALPN.
+  HTTP/1.1 is the default protocol for backend servers communication. Currently, the `server-proto` annotation supports only "h2" as a value (supporting fcgi is also planned) which transmits HTTP/2 messages in the clear to the backend servers.
+  However, when SSL is enabled on the backend, `server-proto` is ignored and both HTTP/1.1 and HTTP/2 are advertised via ALPN and transmitted as encrypted messages.
 
   Available on:  `service`  `configmap`  `ingress`
 
