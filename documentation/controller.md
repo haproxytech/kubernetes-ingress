@@ -53,21 +53,23 @@ args:
 ### `--configmap-tcp-services`
 
   Sets the ConfigMap that contains mappings for TCP services to proxy through the ingress controller. This ConfigMap contains mappings like this:
-  <pre>apiVersion: v1
-  kind: ConfigMap
-  metadata:
-    name: tcp
-    namespace: default
-  data:
-    3306:              # Port where the frontend is going to listen to.
-      tcp/mysql:3306   # Kubernetes service to use for the backend.
-    389:
-      tcp/ldap:389:ssl # ssl option will enable ssl offloading for target service.
-    6379:
-      tcp/redis:6379
-  </pre>
 
-  :information_source: Ports of TCP services should be exposed on the controller's kubernetes service
+```yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: tcp
+  namespace: default
+data:
+  3306:              # Port where the frontend is going to listen to.
+    tcp/mysql:3306   # Kubernetes service to use for the backend.
+  389:
+    tcp/ldap:389:ssl # ssl option will enable ssl offloading for target service.
+  6379:
+    tcp/redis:6379
+```
+
+  :information_source: Ports of TCP services should be exposed on the controller's Kubernetes service
 
 Possible values:
 
@@ -89,26 +91,27 @@ args:
 
   > :construction: this is only available from next version, currently available in dev build
 
-  Sets the ConfigMap object that defines contents to serve instead of HAProxy errors.</br>
-As explained in the [haproxy documentation](https://cbonte.github.io/haproxy-dconv/2.0/configuration.html#4.2-errorfile) it is important to understand that errorfile content is not meant to rewrite errors returned by the server, but rather errors detected and returned by HAProxy.</br>
-In the following example, instead of HAProxy returning 503 error it will return the coressponding content in the configmap:
-  <pre>apiVersion: v1
-  kind: ConfigMap
-  metadata:
-    name: errorfile
-    namespace: default
-  data:
-    503: |-
-      HTTP/1.0 503 Service Unavailable
-      Cache-Control: no-cache
-      Connection: close
-      Content-Type: text/html
-  
-      &lt;html&gt;&lt;body&gt;
-      &lt;h1&gt;Oops, something wrong happened !&lt/h1&gt
-      There are no servers available to handle your request.
-      &lt/body&gt&lt/html&gt
-   </pre>
+  Sets the ConfigMap object that defines contents to serve instead of HAProxy errors.
+As explained in the [haproxy documentation](https://cbonte.github.io/haproxy-dconv/2.0/configuration.html#4.2-errorfile) it is important to understand that errorfile content is not meant to rewrite errors returned by the server, but rather errors detected and returned by HAProxy.
+In the following example, instead of HAProxy returning a 503 error, it will return the coressponding content in the ConfigMap:
+
+```yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: errorfile
+  namespace: default
+data:
+  503: |-
+    HTTP/1.0 503 Service Unavailable
+    Cache-Control: no-cache
+    Connection: close
+    Content-Type: text/html
+
+    <html><body><h1>Oops, that's embarassing!</h1>
+    There are no servers available to handle your request.
+    </body></html>
+```
 
 Possible values:
 
