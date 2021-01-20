@@ -108,10 +108,10 @@ data:
     Connection: close
     Content-Type: text/html
 
-    &lt;html&gt;&lt;body&gt;
-      &lt;h1&gt;Oops, something wrong happened !&lt/h1&gt
+    <html><body>
+      <h1>Oops, something wrong happened!</h1>
       There are no servers available to handle your request.
-    &lt/body&gt&lt/html&gt
+    </body></html>
 ```
 
 Possible values:
