@@ -35,7 +35,7 @@ import (
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 )
 
-//TRACE_API outputs all k8s events received from k8s API
+// TRACE_API outputs all k8s events received from k8s API
 //nolint golint
 const (
 	TRACE_API = false
@@ -43,13 +43,13 @@ const (
 
 var ErrIgnored = errors.New("Ignored resource") //nolint golint
 
-//K8s is structure with all data required to synchronize with k8s
+// K8s is structure with all data required to synchronize with k8s
 type K8s struct {
 	API    *kubernetes.Clientset
 	Logger utils.Logger
 }
 
-//GetKubernetesClient returns new client that communicates with k8s
+// GetKubernetesClient returns new client that communicates with k8s
 func GetKubernetesClient() (*K8s, error) {
 	logger = utils.GetK8sAPILogger()
 	if !TRACE_API {
@@ -70,7 +70,7 @@ func GetKubernetesClient() (*K8s, error) {
 	}, nil
 }
 
-//GetRemoteKubernetesClient returns new client that communicates with k8s
+// GetRemoteKubernetesClient returns new client that communicates with k8s
 func GetRemoteKubernetesClient(kubeconfig string) (*K8s, error) {
 	logger = utils.GetK8sAPILogger()
 	if !TRACE_API {
@@ -106,7 +106,7 @@ func (k *K8s) EventsNamespaces(channel chan *store.Namespace, stop chan struct{}
 				}
 				var status = ADDED
 				if data.ObjectMeta.GetDeletionTimestamp() != nil {
-					//detect services that are in terminating state
+					// detect services that are in terminating state
 					status = DELETED
 				}
 				item := &store.Namespace{
@@ -196,7 +196,7 @@ func (k *K8s) EventsEndpoints(channel chan *store.Endpoints, stop chan struct{},
 			if item2.Equal(item1) {
 				return
 			}
-			//fix modified state for ones that are deleted,new,same
+			// fix modified state for ones that are deleted,new,same
 			k.Logger.Tracef("%s %s: %s", ENDPOINTS, item2.Status, item2.Service)
 			channel <- item2
 		},
@@ -219,7 +219,7 @@ func (k *K8s) convertToEndpoints(obj interface{}, status store.Status) (*store.E
 		}
 	}
 	if data.ObjectMeta.GetDeletionTimestamp() != nil {
-		//detect endpoints that are in terminating state
+		// detect endpoints that are in terminating state
 		status = DELETED
 	}
 	item := &store.Endpoints{
@@ -351,7 +351,7 @@ func (k *K8s) EventsServices(channel chan *store.Service, stop chan struct{}, in
 			}
 			var status = ADDED
 			if data.ObjectMeta.GetDeletionTimestamp() != nil {
-				//detect services that are in terminating state
+				// detect services that are in terminating state
 				status = DELETED
 			}
 			item := &store.Service{
@@ -471,7 +471,7 @@ func (k *K8s) EventsConfigfMaps(channel chan *store.ConfigMap, stop chan struct{
 				}
 				var status = ADDED
 				if data.ObjectMeta.GetDeletionTimestamp() != nil {
-					//detect services that are in terminating state
+					// detect services that are in terminating state
 					status = DELETED
 				}
 				item := &store.ConfigMap{
@@ -545,7 +545,7 @@ func (k *K8s) EventsSecrets(channel chan *store.Secret, stop chan struct{}, info
 				}
 				var status = ADDED
 				if data.ObjectMeta.GetDeletionTimestamp() != nil {
-					//detect services that are in terminating state
+					// detect services that are in terminating state
 					status = DELETED
 				}
 				item := &store.Secret{

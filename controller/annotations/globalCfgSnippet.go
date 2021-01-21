@@ -11,7 +11,7 @@ import (
 
 type GlobalCfgSnippet struct {
 	name string
-	//data   *types.StringSliceC
+	// data   *types.StringSliceC
 	data   []string
 	client api.HAProxyClient
 }

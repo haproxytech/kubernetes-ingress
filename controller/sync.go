@@ -14,10 +14,10 @@
 
 package controller
 
-//SyncType represents type of k8s received message
+// SyncType represents type of k8s received message
 type SyncType string
 
-//SyncType values
+// SyncType values
 //nolint
 const (
 	COMMAND       SyncType = "COMMAND"
@@ -30,7 +30,7 @@ const (
 	SECRET        SyncType = "SECRET"
 )
 
-//SyncDataEvent represents converted k8s received message
+// SyncDataEvent represents converted k8s received message
 type SyncDataEvent struct {
 	_ [0]int
 	SyncType

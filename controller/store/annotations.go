@@ -18,7 +18,7 @@ import (
 	"strings"
 )
 
-//ConvertToMapStringW removes prefixes in annotation
+// ConvertToMapStringW removes prefixes in annotation
 func ConvertToMapStringW(annotations map[string]string) MapStringW {
 	newAnnotations := make(MapStringW, len(annotations))
 	for name, value := range annotations {
@@ -35,7 +35,7 @@ func convertAnnotationName(annotation string) string {
 	return split[len(split)-1]
 }
 
-//GetValueFromAnnotations returns value by checking in multiple annotations.
+// GetValueFromAnnotations returns value by checking in multiple annotations.
 // moves through list until it finds value
 // if value is new or deleted, we check for next state to correctly set watch & value
 func (k K8s) GetValueFromAnnotations(annotationName string, annotations ...MapStringW) (data *StringW, err error) {
@@ -97,7 +97,7 @@ func (k K8s) GetValueFromAnnotations(annotationName string, annotations ...MapSt
 	if !deleted {
 		return data, err
 	}
-	//we only have deleted annotation, so we have to see if default exists
+	// we only have deleted annotation, so we have to see if default exists
 	if err != nil {
 		data = &StringW{
 			Value:    oldValue,

@@ -140,7 +140,7 @@ func (k K8s) Clean() {
 	defaultAnnotationValues.Clean()
 }
 
-//GetNamespace returns Namespace. Creates one if not existing
+// GetNamespace returns Namespace. Creates one if not existing
 func (k K8s) GetNamespace(name string) *Namespace {
 	namespace, ok := k.Namespaces[name]
 	if ok {

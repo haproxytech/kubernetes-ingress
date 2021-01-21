@@ -23,7 +23,7 @@ func (a *ServicePort) Equal(b *ServicePort) bool {
 	return true
 }
 
-//Equal checks if IngressClasses are equal
+// Equal checks if IngressClasses are equal
 func (a *IngressClass) Equal(b *IngressClass) bool {
 	if a == nil || b == nil {
 		return false
@@ -37,7 +37,7 @@ func (a *IngressClass) Equal(b *IngressClass) bool {
 	return true
 }
 
-//Equal checks if Ingress Paths are equal
+// Equal checks if Ingress Paths are equal
 func (a *IngressPath) Equal(b *IngressPath) bool {
 	if a == nil || b == nil {
 		return false
@@ -57,7 +57,7 @@ func (a *IngressPath) Equal(b *IngressPath) bool {
 	return true
 }
 
-//Equal checks if Ingress Rules are equal
+// Equal checks if Ingress Rules are equal
 func (a *IngressRule) Equal(b *IngressRule) bool {
 	if a == nil || b == nil {
 		return false
@@ -78,7 +78,7 @@ func (a *IngressRule) Equal(b *IngressRule) bool {
 	return true
 }
 
-//Equal checks if Ingress secrets are equal
+// Equal checks if Ingress secrets are equal
 func (a *IngressTLS) Equal(b *IngressTLS) bool {
 	if a == nil || b == nil {
 		return false
@@ -92,7 +92,7 @@ func (a *IngressTLS) Equal(b *IngressTLS) bool {
 	return true
 }
 
-//Equal compares two Ingresses, ignores
+// Equal compares two Ingresses, ignores
 func (a *Ingress) Equal(b *Ingress) bool {
 	if a == nil || b == nil {
 		return false
@@ -127,7 +127,7 @@ func (a *Ingress) Equal(b *Ingress) bool {
 	return a.Annotations.Equal(b.Annotations)
 }
 
-//Equal compares two services, ignores statuses and old values
+// Equal compares two services, ignores statuses and old values
 func (a *Service) Equal(b *Service) bool {
 	if a == nil || b == nil {
 		return false
@@ -153,7 +153,7 @@ func (a *Service) Equal(b *Service) bool {
 	return true
 }
 
-//Equal compares two config maps, ignores statuses and old values
+// Equal compares two config maps, ignores statuses and old values
 func (a *ConfigMap) Equal(b *ConfigMap) bool {
 	if a == nil || b == nil {
 		return false
@@ -167,7 +167,7 @@ func (a *ConfigMap) Equal(b *ConfigMap) bool {
 	return true
 }
 
-//Equal compares two secrets, ignores statuses and old values
+// Equal compares two secrets, ignores statuses and old values
 func (a *Secret) Equal(b *Secret) bool {
 	if a == nil || b == nil {
 		return false
@@ -190,7 +190,7 @@ func (a *Secret) Equal(b *Secret) bool {
 	return true
 }
 
-//Equal checks if two services have same endpoints
+// Equal checks if two services have same endpoints
 func (a *Endpoints) Equal(b *Endpoints) bool {
 	if a == nil || b == nil {
 		return false

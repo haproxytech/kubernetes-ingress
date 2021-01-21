@@ -38,7 +38,7 @@ const (
 	Trace   LogLevel = 6
 )
 
-//Logger provides functions to writing log messages
+// Logger provides functions to writing log messages
 // level can be defined only as `trace`, `debug`, `info`, `warning`, `error`
 // error and panic are always printed, panic also exits application.
 //
@@ -134,7 +134,7 @@ func (l *logger) log(logType string, data ...interface{}) {
 		} else {
 			file1 = fmt.Sprintf("%s/%s", f[len(f)-2], f[len(f)-1])
 		}
-		//file1 := strings.Replace(file, "/src/", "", 1)
+		// file1 := strings.Replace(file, "/src/", "", 1)
 		for _, d := range data {
 			if d == nil {
 				continue
@@ -165,7 +165,7 @@ func (l *logger) logf(logType string, format string, data ...interface{}) {
 		} else {
 			file1 = fmt.Sprintf("%s/%s", f[len(f)-2], f[len(f)-1])
 		}
-		//file1 := strings.Replace(file, "/src/", "", 1)
+		// file1 := strings.Replace(file, "/src/", "", 1)
 		if logType == "" {
 			log.Printf("%s:%d %s\n", file1, no, line)
 		} else {

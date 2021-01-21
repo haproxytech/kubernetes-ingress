@@ -140,7 +140,7 @@ func (c *HAProxyController) monitorChanges() {
 	var configMapOk bool
 	if c.osArgs.ConfigMap.Name == "" {
 		configMapOk = true
-		//since we don't have configmap and everywhere in code we expect one we need to create empty one
+		// since we don't have configmap and everywhere in code we expect one we need to create empty one
 		c.Store.ConfigMaps[Main] = &store.ConfigMap{
 			Annotations: store.MapStringW{},
 		}
@@ -213,8 +213,8 @@ func (c *HAProxyController) monitorChanges() {
 	}
 }
 
-//SyncData gets all kubernetes changes, aggregates them and apply to HAProxy.
-//All the changes must come through this function
+// SyncData gets all kubernetes changes, aggregates them and apply to HAProxy.
+// All the changes must come through this function
 func (c *HAProxyController) SyncData(chConfigMapReceivedAndProcessed chan bool) {
 	hadChanges := false
 	var cm string

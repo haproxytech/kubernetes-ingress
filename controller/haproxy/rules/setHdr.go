@@ -33,7 +33,7 @@ func (r SetHdr) Create(client api.HAProxyClient, frontend *models.Frontend, ingr
 	if frontend.Mode == "tcp" {
 		return fmt.Errorf("HTTP headers cannot be set in TCP mode")
 	}
-	//REQ_FORWARDED_PROTO
+	// REQ_FORWARDED_PROTO
 	if r.ForwardedProto {
 		httpRule := models.HTTPRequestRule{
 			Index:     utils.PtrInt64(0),
@@ -43,7 +43,7 @@ func (r SetHdr) Create(client api.HAProxyClient, frontend *models.Frontend, ingr
 		}
 		return client.FrontendHTTPRequestRuleCreate(frontend.Name, httpRule, ingressACL)
 	}
-	//RES_SET_HEADER
+	// RES_SET_HEADER
 	if r.Response {
 		httpRule := models.HTTPResponseRule{
 			Index:     utils.PtrInt64(0),
@@ -54,7 +54,7 @@ func (r SetHdr) Create(client api.HAProxyClient, frontend *models.Frontend, ingr
 		}
 		return client.FrontendHTTPResponseRuleCreate(frontend.Name, httpRule, ingressACL)
 	}
-	//REQ_SET_HEADER
+	// REQ_SET_HEADER
 	httpRule := models.HTTPRequestRule{
 		Index:     utils.PtrInt64(0),
 		Type:      "set-header",

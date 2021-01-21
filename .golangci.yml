@@ -24,7 +24,6 @@ linters:
     - gochecknoglobals
     - gocognit
     - goconst
-    - gocritic
     - gocyclo
     - godot
     - godox

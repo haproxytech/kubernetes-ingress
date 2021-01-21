@@ -19,22 +19,22 @@ import (
 	"strings"
 )
 
-//StringW string value that has modified flag
+// StringW string value that has modified flag
 type StringW struct {
 	Value    string
 	OldValue string
 	Status   Status
 }
 
-//Equal compares only Value, rest is not relevant
+// Equal compares only Value, rest is not relevant
 func (a *StringW) Equal(b *StringW) bool {
 	return a.Value == b.Value
 }
 
-//MapStringW stores values and enables
+// MapStringW stores values and enables
 type MapStringW map[string]*StringW
 
-//Get checks if name exists and if not, returns default value if defined
+// Get checks if name exists and if not, returns default value if defined
 func (a *MapStringW) Get(name string) (data *StringW, err error) {
 	var ok bool
 	if data, ok = (*a)[name]; !ok {
@@ -43,7 +43,7 @@ func (a *MapStringW) Get(name string) (data *StringW, err error) {
 	return data, nil
 }
 
-//Get checks if name exists and if not, returns default value if defined
+// Get checks if name exists and if not, returns default value if defined
 func (a *MapStringW) String() string {
 	var s strings.Builder
 	first := true
@@ -60,7 +60,7 @@ func (a *MapStringW) String() string {
 	return s.String()
 }
 
-//SetStatus sets Status state for all items in map
+// SetStatus sets Status state for all items in map
 func (a *MapStringW) SetStatus(old MapStringW) (different bool) {
 	different = false
 	for name, currentValue := range *a {
@@ -88,7 +88,7 @@ func (a *MapStringW) SetStatus(old MapStringW) (different bool) {
 	return different
 }
 
-//SetStatusState sets all watches to desired state
+// SetStatusState sets all watches to desired state
 func (a *MapStringW) SetStatusState(state Status) {
 	for _, currentValue := range *a {
 		currentValue.Status = state
@@ -96,7 +96,7 @@ func (a *MapStringW) SetStatusState(state Status) {
 	}
 }
 
-//Clean removes all with status
+// Clean removes all with status
 func (a *MapStringW) Clean() {
 	for name, currentValue := range *a {
 		if currentValue.Status == DELETED {
@@ -106,7 +106,7 @@ func (a *MapStringW) Clean() {
 	a.SetStatusState("")
 }
 
-//Clone removes all with status
+// Clone removes all with status
 func (a *MapStringW) Clone() MapStringW {
 	result := MapStringW{}
 	for name, currentValue := range *a {
@@ -119,7 +119,7 @@ func (a *MapStringW) Clone() MapStringW {
 	return result
 }
 
-//Equal compares if two maps are equal
+// Equal compares if two maps are equal
 func (a *MapStringW) Equal(b MapStringW) bool {
 	if len(*a) != len(b) {
 		return false

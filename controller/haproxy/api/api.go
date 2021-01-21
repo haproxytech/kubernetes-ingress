@@ -107,7 +107,7 @@ func Init(transactionDir, configFile, programPath, runtimeSocket string) (client
 func (c *clientNative) APIStartTransaction() error {
 	version, errVersion := c.nativeAPI.Configuration.GetVersion("")
 	if errVersion != nil || version < 1 {
-		//silently fallback to 1
+		// silently fallback to 1
 		version = 1
 	}
 	transaction, err := c.nativeAPI.Configuration.StartTransaction(version)

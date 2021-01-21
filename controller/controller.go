@@ -44,12 +44,12 @@ const (
 	Main        = "main"
 	TCPServices = "tcpservices"
 	Errorfiles  = "errorfiles"
-	//sections
+	// sections
 	FrontendHTTP      = "http"
 	FrontendHTTPS     = "https"
 	FrontendSSL       = "ssl"
 	SSLDefaultBaceknd = "ssl"
-	//Status
+	// Status
 	ADDED    = store.ADDED
 	DELETED  = store.DELETED
 	ERROR    = store.ERROR

@@ -31,7 +31,7 @@ func HomeDir() string {
 
 var chars = []rune("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
 
-//RandomString returns random string of size n
+// RandomString returns random string of size n
 func RandomString(n int) string {
 	b := make([]rune, n)
 	size := len(chars)

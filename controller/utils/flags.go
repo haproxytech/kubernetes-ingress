@@ -7,12 +7,12 @@ import (
 	"time"
 )
 
-//NamespaceValue used to automatically distinct namespace/name string
+// NamespaceValue used to automatically distinct namespace/name string
 type NamespaceValue struct {
 	Namespace, Name string
 }
 
-//UnmarshalFlag Unmarshal flag
+// UnmarshalFlag Unmarshal flag
 func (n *NamespaceValue) UnmarshalFlag(value string) error {
 	parts := strings.Split(value, "/")
 
@@ -24,7 +24,7 @@ func (n *NamespaceValue) UnmarshalFlag(value string) error {
 	return nil
 }
 
-//MarshalFlag Marshals flag
+// MarshalFlag Marshals flag
 func (n NamespaceValue) MarshalFlag() (string, error) {
 	return fmt.Sprintf("%s/%s", n.Namespace, n.Name), nil
 }
@@ -36,12 +36,12 @@ func (n NamespaceValue) String() string {
 	return fmt.Sprintf("%s/%s", n.Namespace, n.Name)
 }
 
-//LogLevel used to automatically distinct namespace/name string
+// LogLevel used to automatically distinct namespace/name string
 type LogLevelValue struct {
 	LogLevel LogLevel
 }
 
-//UnmarshalFlag Unmarshal flag
+// UnmarshalFlag Unmarshal flag
 func (n *LogLevelValue) UnmarshalFlag(value string) error {
 	switch value {
 	case "trace":
@@ -64,7 +64,7 @@ func (n *LogLevelValue) UnmarshalFlag(value string) error {
 	return fmt.Errorf("value %s not permitted", value)
 }
 
-//OSArgs contains arguments that can be sent to controller
+// OSArgs contains arguments that can be sent to controller
 type OSArgs struct {
 	Version               []bool         `short:"v" long:"version" description:"version"`
 	DefaultBackendService NamespaceValue `long:"default-backend-service" default:"" description:"default service to serve 404 page. If not specified HAProxy serves http 400"`

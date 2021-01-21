@@ -111,20 +111,20 @@ func (k K8s) EventIngress(ns *Namespace, data *Ingress, controllerClass string) 
 			}
 		}
 
-		//so see what exactly has changed in there
-		//DefaultBackend
+		// so see what exactly has changed in there
+		// DefaultBackend
 		newDtBd := newIngress.DefaultBackend
 		oldDtBd := oldIngress.DefaultBackend
 		if newDtBd != nil && !oldDtBd.Equal(newDtBd) {
 			newDtBd.Status = MODIFIED
 		}
-		//Rules
+		// Rules
 		for _, newRule := range newIngress.Rules {
 			if oldRule, ok := oldIngress.Rules[newRule.Host]; ok {
-				//so we need to compare if anything is different
+				// so we need to compare if anything is different
 				for _, newPath := range newRule.Paths {
 					if oldPath, ok := oldRule.Paths[newPath.Path]; ok {
-						//compare path for differences
+						// compare path for differences
 						if newPath.ServiceName != oldPath.ServiceName ||
 							newPath.ServicePortInt != oldPath.ServicePortInt ||
 							newPath.ServicePortString != oldPath.ServicePortString {
@@ -179,8 +179,8 @@ func (k K8s) EventIngress(ns *Namespace, data *Ingress, controllerClass string) 
 			}
 		}
 		ns.Ingresses[data.Name] = newIngress
-		//diffStr := cmp.Diff(oldIngress, newIngress)
-		//logger.Tracef("Ingress modified %s %s", data.Name, diffStr)
+		// diffStr := cmp.Diff(oldIngress, newIngress)
+		// logger.Tracef("Ingress modified %s %s", data.Name, diffStr)
 		updateRequired = true
 	case ADDED:
 		if old, ok := ns.Ingresses[data.Name]; ok {
@@ -289,7 +289,7 @@ func (k K8s) EventService(ns *Namespace, data *Service) (updateRequired bool) {
 		newService := data
 		oldService, ok := ns.Services[data.Name]
 		if !ok {
-			//intentionally do not add it. TODO see if our idea of only watching is ok
+			// intentionally do not add it. TODO see if our idea of only watching is ok
 			logger.Warningf("Service '%s' not registered with controller !", data.Name)
 		}
 		if oldService.Equal(newService) {
@@ -366,7 +366,7 @@ func (k K8s) EventSecret(ns *Namespace, data *Secret) (updateRequired bool) {
 		newSecret := data
 		oldSecret, ok := ns.Secret[data.Name]
 		if !ok {
-			//intentionally do not add it. TODO see if our idea of only watching is ok
+			// intentionally do not add it. TODO see if our idea of only watching is ok
 			logger.Warningf("Secret '%s' not registered with controller !", data.Name)
 			return updateRequired
 		}

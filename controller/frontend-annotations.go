@@ -505,7 +505,7 @@ func (c *HAProxyController) handleResponseCorsMethod(ingress *store.Ingress, acl
 	existingHTTPMethods := map[string]struct{}{"GET": {}, "POST": {}, "PUT": {}, "DELETE": {}, "HEAD": {}, "CONNECT": {}, "OPTIONS": {}, "TRACE": {}, "PATCH": {}}
 	value := annotation.Value
 	if value != "*" {
-		value = strings.Join(strings.Fields(value), "") //strip spaces
+		value = strings.Join(strings.Fields(value), "") // strip spaces
 		methods := strings.Split(value, ",")
 		for i, method := range methods {
 			methods[i] = strings.ToUpper(method)
@@ -559,7 +559,7 @@ func (c *HAProxyController) handleResponseCorsHeaders(ingress *store.Ingress, ac
 		return
 	}
 	logger.Debugf("Ingress %s/%s: Configuring cors-allow-headers", ingress.Namespace, ingress.Name)
-	value := strings.Join(strings.Fields(annotation.Value), "") //strip spaces
+	value := strings.Join(strings.Fields(annotation.Value), "") // strip spaces
 	resSetHdr := rules.SetHdr{
 		HdrName:   "Access-Control-Allow-Headers",
 		HdrFormat: "\"" + value + "\"",

@@ -9,7 +9,7 @@ const (
 	TCP  Mode = "tcp"
 )
 
-//UnmarshalFlag Unmarshal flag
+// UnmarshalFlag Unmarshal flag
 func (n *Mode) UnmarshalFlag(value string) error {
 	switch value {
 	case string(HTTP), string(TCP):
@@ -20,7 +20,7 @@ func (n *Mode) UnmarshalFlag(value string) error {
 	return nil
 }
 
-//MarshalFlag Marshals flag
+// MarshalFlag Marshals flag
 func (n Mode) MarshalFlag() (string, error) {
 	return string(n), nil
 }

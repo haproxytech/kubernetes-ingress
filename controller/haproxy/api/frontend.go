@@ -21,7 +21,7 @@ func (c *clientNative) FrontendsGet() (models.Frontends, error) {
 	return frontends, err
 }
 
-//TODO return pointer instead
+//TODO: return pointer instead
 func (c *clientNative) FrontendGet(frontendName string) (models.Frontend, error) {
 	_, frontend, err := c.nativeAPI.Configuration.GetFrontend(frontendName, c.activeTransaction)
 	if err != nil {

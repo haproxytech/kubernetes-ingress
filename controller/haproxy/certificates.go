@@ -11,7 +11,7 @@ import (
 )
 
 type Certificates struct {
-	//Index is secretPath
+	// Index is secretPath
 	// Value is true if secret is used otherwise false
 	frontend map[string]bool
 	backend  map[string]bool
@@ -175,7 +175,7 @@ func writeCert(filename string, key, crt []byte) error {
 		logger.Error(err)
 		return err
 	}
-	//Force writing a newline so that parsing does not barf
+	// Force writing a newline so that parsing does not barf
 	if len(key) > 0 && key[len(key)-1] != byte('\n') {
 		logger.Warningf("secret key in %s does not end with \\n, appending it to avoid mangling key and certificate", filename)
 		if _, err = f.WriteString("\n"); err != nil {

@@ -14,7 +14,7 @@
 
 package store
 
-//ServicePort describes port of a service
+// ServicePort describes port of a service
 type ServicePort struct {
 	Name     string
 	Protocol string
@@ -29,7 +29,7 @@ type HAProxySrv struct {
 	Modified bool
 }
 
-//PortEndpoints describes endpionts of a service port
+// PortEndpoints describes endpionts of a service port
 type PortEndpoints struct {
 	Port            int64
 	BackendName     string
@@ -39,7 +39,7 @@ type PortEndpoints struct {
 	HAProxySrvs     []*HAProxySrv
 }
 
-//Endpoints describes endpoints of a service
+// Endpoints describes endpoints of a service
 type Endpoints struct {
 	Namespace string
 	Service   StringW
@@ -47,19 +47,19 @@ type Endpoints struct {
 	Status    Status
 }
 
-//Service is useful data from k8s structures about service
+// Service is useful data from k8s structures about service
 type Service struct {
 	Namespace   string
 	Name        string
 	Ports       []ServicePort
-	Addresses   []string //Used only for publish-service
+	Addresses   []string // Used only for publish-service
 	DNS         string
 	Annotations MapStringW
 	Selector    MapStringW
 	Status      Status
 }
 
-//Namespace is useful data from k8s structures about namespace
+// Namespace is useful data from k8s structures about namespace
 type Namespace struct {
 	_         [0]int
 	Name      string
@@ -78,7 +78,7 @@ type IngressClass struct {
 	Status     Status
 }
 
-//IngressPath is useful data from k8s structures about ingress path
+// IngressPath is useful data from k8s structures about ingress path
 type IngressPath struct {
 	ServiceName       string
 	ServicePortInt    int64
@@ -89,14 +89,14 @@ type IngressPath struct {
 	Status            Status
 }
 
-//IngressRule is useful data from k8s structures about ingress rule
+// IngressRule is useful data from k8s structures about ingress rule
 type IngressRule struct {
 	Host   string
 	Paths  map[string]*IngressPath
 	Status Status
 }
 
-//Ingress is useful data from k8s structures about ingress
+// Ingress is useful data from k8s structures about ingress
 type Ingress struct {
 	// Required for K8s.UpdateIngressStatus to select proper versioned Client Set
 	APIVersion     string
@@ -117,7 +117,7 @@ type IngressTLS struct {
 	Status     Status
 }
 
-//ConfigMap is useful data from k8s structures about configmap
+// ConfigMap is useful data from k8s structures about configmap
 type ConfigMap struct {
 	Namespace   string
 	Name        string
@@ -125,7 +125,7 @@ type ConfigMap struct {
 	Status      Status
 }
 
-//Secret is useful data from k8s structures about secret
+// Secret is useful data from k8s structures about secret
 type Secret struct {
 	Namespace string
 	Name      string

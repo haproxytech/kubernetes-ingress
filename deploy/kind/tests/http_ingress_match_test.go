@@ -121,7 +121,7 @@ func Test_Ingress_Match(t *testing.T) {
 						return false
 					}
 
-					//t.Logf("%s --> %s", path, response.OS.Hostname)
+					// t.Logf("%s --> %s", path, response.OS.Hostname)
 					return strings.HasPrefix(response.OS.Hostname, resourceName+test.target)
 				}, waitDuration, tickDuration)
 			})

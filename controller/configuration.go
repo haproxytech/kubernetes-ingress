@@ -23,7 +23,7 @@ import (
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 )
 
-//Configuration represents k8s state
+// Configuration represents k8s state
 
 type Configuration struct {
 	MapFiles       haproxy.Maps
@@ -34,7 +34,7 @@ type Configuration struct {
 	SSLPassthrough bool
 }
 
-//Init initialize configuration
+// Init initialize configuration
 func (c *Configuration) Init() {
 
 	c.MapFiles = haproxy.NewMapFiles(HAProxyMapDir)
@@ -44,8 +44,8 @@ func (c *Configuration) Init() {
 	c.Certificates = haproxy.NewCertificates(HAProxyCaCertDir, HAProxyFtCertDir, HAProxyBdCertDir)
 }
 
-//Clean cleans all the statuses of various data that was changed
-//deletes them completely or just resets them if needed
+// Clean cleans all the statuses of various data that was changed
+// deletes them completely or just resets them if needed
 func (c *Configuration) Clean() {
 	c.MapFiles.Clean()
 	c.Certificates.Clean()
