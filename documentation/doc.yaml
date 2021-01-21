@@ -278,6 +278,9 @@ groups:
         ```
 
       More information can be found in the official HAProxy [documentation](https://cbonte.github.io/haproxy-dconv/2.0/configuration.html#4-cookie)
+  CORS:
+    header: |-
+      - *Cross-Origin Resource Sharing (CORS) is an HTTP-header based mechanism that allows a server to indicate any other origins (domain, scheme, or port) than its own from which a browser should permit loading of resources.* -  [Mozilla Docs](https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS)
   https:
     header: |-
       - SSL offloading/decryption will be automatically enabled if valid SSL certificates are provided.
@@ -440,6 +443,114 @@ annotations:
     example:
     - 'check: "true"'
     - 'check-interval: "1m"'
+  - title: cors-enable
+    type: bool
+    group: CORS
+    dependencies: ""
+    default: "false"
+    description:
+    - Enables CORS rules for corresponding Ingress traffic.
+    tip: []
+    values:
+    - "true"
+    - "false"
+    applies_to:
+    - configmap
+    - ingress
+    version_min: "1.5"
+    example:
+    - 'cors-enable: "true"'
+  - title: cors-allow-origin
+    type: string
+    group: CORS
+    dependencies: cors-enable
+    default: "*"
+    description:
+    - Sets the `Access-Control-Allow-Origin` response header to tell browsers which origin is allowed to access the requested resource.
+    tip:
+    - With "regex" value, it is possible to allow a list of origins. If one of them matches the request Origin header it will be returned to the client.
+    values:
+    - Wildcard `*`, allow access form any origin.
+    - Regex, regex should match an origin (request Origin header) in the format `<scheme> "://" <hostname> [ ":" <port> ]` if the origin is matched then it will be the value of `Access-Control-Allow-Origin`.
+    applies_to:
+    - configmap
+    - ingress
+    version_min: "1.5"
+    example:
+    - 'cors-allow-origin: "*"'
+    - 'cors-allow-origin: "https://example.com"'
+    - 'cors-allow-origin: "^https://(.+\.)?(example-1\.com|example-2\.com)(:\d{1,5})?$"'
+  - title: cors-allow-methods
+    type: string
+    group: CORS
+    dependencies: cors-enable
+    default: "*"
+    description:
+    - Sets the `Access-Control-Allow-Methods` response header to tell browsers the HTTP methods allowed when accessing the request resource.
+    tip: []
+    values:
+    - Wildcard `*`, allow access for all HTTP methods.
+    - A comma seperated list of HTTP methods
+    applies_to:
+    - configmap
+    - ingress
+    version_min: "1.5"
+    example:
+    - 'cors-allow-methods: "*"'
+    - 'cors-allow-methods: "GET"'
+    - 'cors-allow-methods: "GET, POST"'
+  - title: cors-allow-credentials
+    type: bool
+    group: CORS
+    dependencies: cors-enable
+    default: "false"
+    description:
+    - Sets the `Access-Control-Allow-Credentials` response header to tell browsers if credentials can be used to access the requested resource.
+    tip: []
+    values:
+    - "true"
+    - "false"
+    applies_to:
+    - configmap
+    - ingress
+    version_min: "1.5"
+    example:
+    - 'cors-allow-credentials: "true"'
+  - title: cors-allow-headers
+    type: string
+    group: CORS
+    dependencies: cors-enable
+    default: "*"
+    description:
+    - Sets the `Access-Control-Allow-Headers` response header to tell browsers which HTTP headers can be used when accessing the request resource.
+    tip: []
+    values:
+    - Wildcard `*`, allow access for all HTTP headers.
+    - A comma seperated list of HTTP headers
+    applies_to:
+    - configmap
+    - ingress
+    version_min: "1.5"
+    example:
+    - 'cors-allow-headers: "*"'
+    - 'cors-allow-headers: "X-Custom-Header"'
+    - 'cors-allow-headers: "X-Custom-Header, Upgrade-Insecure-Requests"'
+  - title: cors-max-age
+    type: '[time](#time)'
+    group: CORS
+    dependencies: cors-enable
+    default: "5s"
+    description:
+    - Sets the `Access-Control-Allow-Age` response header to tell browsers how long the result of a preflight request can be cached.
+    tip: []
+    values:
+    - A [time](#time) duration
+    applies_to:
+    - configmap
+    - ingress
+    version_min: "1.5"
+    example:
+    - 'cors-max-age: "1m"'
   - title: global-config-snippet
     type: string
     group: config-snippet
