@@ -156,6 +156,16 @@ func (route *Route) handleExternalName() {
 		logger.Warningf("service '%s': service port '%s' not found", route.service.Name, ingressPort)
 		return
 	}
+	backend, err := client.BackendGet(route.BackendName)
+	if err != nil {
+		logger.Error(err)
+		return
+	}
+	backend.DefaultServer = &models.DefaultServer{InitAddr: "last,libc,none"}
+	if err = client.BackendEdit(backend); err != nil {
+		logger.Error(err)
+		return
+	}
 	route.endpoints = &store.PortEndpoints{
 		Port: port,
 		HAProxySrvs: []*store.HAProxySrv{
