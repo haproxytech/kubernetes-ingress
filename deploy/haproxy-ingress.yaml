@@ -38,7 +38,7 @@ rules:
   resources:
   - ingresses
   - ingresses/status
-  - ingressClasses
+  - ingressclasses
   verbs:
   - get
   - list
