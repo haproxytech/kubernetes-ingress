@@ -1,4 +1,4 @@
-active_version: 1.4  
+active_version: 1.5
 image_arguments:
   - argument: --configmap
     description: Sets the ConfigMap object that defines global settings for the ingress controller. An empty ConfigMap is deployed by default and you can see its name by calling <code>kubectl get configmaps</code>. You can either override the default ConfigMap with your own object that uses the same name, or you can set this argument to point to a different ConfigMap. See the ConfigMap Options to learn which values you can store in the ConfigMap.

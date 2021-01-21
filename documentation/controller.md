@@ -11,23 +11,23 @@ Image can be run with arguments:
 | - |:-:|
 | [`--configmap`](#--configmap) | `default/haproxy-configmap` |
 | [`--configmap-tcp-services`](#--configmap-tcp-services) |  |
-| [`--configmap-errorfile`](#--configmap-errorfile) :construction:(dev) |  |
+| [`--configmap-errorfile`](#--configmap-errorfile) |  |
 | [`--default-backend-service`](#--default-backend-service) |  |
 | [`--default-ssl-certificate`](#--default-ssl-certificate) |  |
 | [`--ingress.class`](#--ingressclass) |  |
 | [`--namespace-blacklist`](#--namespace-blacklist) |  |
 | [`--namespace-whitelist`](#--namespace-whitelist) |  |
 | [`--publish-service`](#--publish-service) |  |
-| [`--disable-ipv4`](#--disable-ipv4) :construction:(dev) | `false` |
-| [`--disable-ipv6`](#--disable-ipv6) :construction:(dev) | `false` |
-| [`--ipv4-bind-address`](#--ipv4-bind-address) :construction:(dev) | `0.0.0.0` |
-| [`--ipv6-bind-address`](#--ipv6-bind-address) :construction:(dev) | `::` |
-| [`--http-bind-port`](#--http-bind-port) :construction:(dev) | `80` |
-| [`--https-bind-port`](#--https-bind-port) :construction:(dev) | `443` |
-| [`--disable-http`](#--disable-http) :construction:(dev) | `false` |
-| [`--disable-https`](#--disable-https) :construction:(dev) | `false` |
+| [`--disable-ipv4`](#--disable-ipv4) | `false` |
+| [`--disable-ipv6`](#--disable-ipv6) | `false` |
+| [`--ipv4-bind-address`](#--ipv4-bind-address) | `0.0.0.0` |
+| [`--ipv6-bind-address`](#--ipv6-bind-address) | `::` |
+| [`--http-bind-port`](#--http-bind-port) | `80` |
+| [`--https-bind-port`](#--https-bind-port) | `443` |
+| [`--disable-http`](#--disable-http) | `false` |
+| [`--disable-https`](#--disable-https) | `false` |
 | [`--sync-period`](#--sync-period) | `5s` |
-| [`--cache-resync-period`](#--cache-resync-period) :construction:(dev) | `10m` |
+| [`--cache-resync-period`](#--cache-resync-period) | `10m` |
 | [`--log`](#--log) | `info` |
 
 
@@ -87,9 +87,6 @@ args:
 ***
 
 ### `--configmap-errorfile`
-
-
-  > :construction: this is only available from next version, currently available in dev build
 
   Sets the ConfigMap object that defines contents to serve instead of HAProxy errors.
 As explained in the [haproxy documentation](https://cbonte.github.io/haproxy-dconv/2.0/configuration.html#4.2-errorfile) it is important to understand that errorfile content is not meant to rewrite errors returned by the server, but rather errors detected and returned by HAProxy.
@@ -246,9 +243,6 @@ args:
 
 ### `--disable-ipv4`
 
-
-  > :construction: this is only available from next version, currently available in dev build
-
   Disabling the IPv4 bind support.
 
 Possible values:
@@ -267,9 +261,6 @@ args:
 ***
 
 ### `--disable-ipv6`
-
-
-  > :construction: this is only available from next version, currently available in dev build
 
   Disabling the IPv6 bind support.
 
@@ -290,9 +281,6 @@ args:
 
 ### `--ipv4-bind-address`
 
-
-  > :construction: this is only available from next version, currently available in dev build
-
   Customize the IPv4 binding address.
 
 Possible values:
@@ -311,9 +299,6 @@ args:
 ***
 
 ### `--ipv6-bind-address`
-
-
-  > :construction: this is only available from next version, currently available in dev build
 
   Customize the IPv6 binding address.
 
@@ -334,9 +319,6 @@ args:
 
 ### `--http-bind-port`
 
-
-  > :construction: this is only available from next version, currently available in dev build
-
   Customize the HTTP frontend binding port.
 
 Possible values:
@@ -355,9 +337,6 @@ args:
 ***
 
 ### `--https-bind-port`
-
-
-  > :construction: this is only available from next version, currently available in dev build
 
   Customize the HTTPS frontend binding port.
 
@@ -378,9 +357,6 @@ args:
 
 ### `--disable-http`
 
-
-  > :construction: this is only available from next version, currently available in dev build
-
   Disabling the HTTP frontend.
 
 Possible values:
@@ -399,9 +375,6 @@ args:
 ***
 
 ### `--disable-https`
-
-
-  > :construction: this is only available from next version, currently available in dev build
 
   Disabling the HTTPS frontend.
 
@@ -440,9 +413,6 @@ args:
 ***
 
 ### `--cache-resync-period`
-
-
-  > :construction: this is only available from next version, currently available in dev build
 
   Sets the default re-synchronization period at which the controller will re-apply the desired state.
 
