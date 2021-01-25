@@ -556,7 +556,7 @@ func (c *HAProxyController) sslPassthroughEnabled(namespace *store.Namespace, in
 // and in such case returns true otherwise false
 //
 // According to https://github.com/kubernetes/api/blob/master/networking/v1/types.go#L257
-// ingress.class annotation should have precedence over the IngressClass mechansim implemented
+// ingress.class annotation should have precedence over the IngressClass mechanism implemented
 // in "networking.k8s.io".
 func (c *HAProxyController) igClassIsSupported(ingress *store.Ingress) bool {
 	var igClassAnn string

@@ -94,7 +94,7 @@ func (a *GlobalSyslogServers) Parse(input store.StringW, forceParse bool) error 
 			case "minlevel":
 				logData.Level = v
 			default:
-				logger.Errorf("unkown syslog param: '%s' in '%s' ", k, syslogLine)
+				logger.Errorf("unknown syslog param: '%s' in '%s' ", k, syslogLine)
 				continue
 			}
 		}

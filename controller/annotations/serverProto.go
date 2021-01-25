@@ -30,7 +30,7 @@ func (a *ServerProto) Parse(input store.StringW, forceParse bool) error {
 		return ErrEmptyStatus
 	}
 	if input.Value != "h2" {
-		return fmt.Errorf("unkown proto %s", input.Value)
+		return fmt.Errorf("unknown proto %s", input.Value)
 	}
 	a.proto = "h2"
 	return nil

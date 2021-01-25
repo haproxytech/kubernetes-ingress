@@ -33,7 +33,6 @@ linters:
     - gosec
     - lll
     - maligned
-    - misspell
     - nakedret
     - nestif
     - nlreturn
