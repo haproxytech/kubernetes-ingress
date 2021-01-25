@@ -16,7 +16,6 @@ linters-settings:
 linters:
   disable:
     - dupl
-    - errorlint
     - exhaustive
     - exhaustivestruct
     - funlen

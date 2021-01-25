@@ -36,7 +36,7 @@ func (a *BackendForwardedFor) Parse(input store.StringW, forceParse bool) error 
 			Enabled: utils.PtrString("enabled"),
 		}
 		if err = params.Validate(nil); err != nil {
-			return fmt.Errorf("forwarded-for: %s", err)
+			return fmt.Errorf("forwarded-for: %w", err)
 		}
 		a.params = params
 	}

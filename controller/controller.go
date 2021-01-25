@@ -421,7 +421,7 @@ func (c *HAProxyController) handleBind(p *parser.Parser, protocol string, port i
 	}
 	for i, b := range binds {
 		if err = p.Insert(parser.Frontends, protocol, "bind", configuration.SerializeBind(b), i+1); err != nil {
-			return false, fmt.Errorf("cannot create bind %s for protocol %s: %s", b.Name, protocol, err.Error())
+			return false, fmt.Errorf("cannot create bind %s for protocol %s: %w", b.Name, protocol, err)
 		}
 	}
 	reload = len(binds) > 0

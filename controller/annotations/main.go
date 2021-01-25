@@ -19,7 +19,7 @@ var logger = utils.GetLogger()
 func HandleAnnotation(a Annotation, value store.StringW, forceParse bool) (updated bool) {
 	err := a.Parse(value, forceParse)
 	if err != nil {
-		if err != ErrEmptyStatus {
+		if !errors.Is(err, ErrEmptyStatus) {
 			logger.Error(err)
 		}
 		return false

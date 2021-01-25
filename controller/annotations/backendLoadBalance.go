@@ -33,7 +33,7 @@ func (a *BackendLoadBalance) Parse(input store.StringW, forceParse bool) error {
 		Algorithm: &input.Value,
 	}
 	if err := params.Validate(nil); err != nil {
-		return fmt.Errorf("load-balance: %s", err)
+		return fmt.Errorf("load-balance: %w", err)
 	}
 	a.params = params
 	return nil

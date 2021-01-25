@@ -173,7 +173,7 @@ func (k *K8s) EventsEndpoints(channel chan *store.Endpoints, stop chan struct{},
 	informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			item, err := k.convertToEndpoints(obj, ADDED)
-			if err == ErrIgnored {
+			if errors.Is(err, ErrIgnored) {
 				return
 			}
 			k.Logger.Tracef("%s %s: %s", ENDPOINTS, item.Status, item.Service)
@@ -181,7 +181,7 @@ func (k *K8s) EventsEndpoints(channel chan *store.Endpoints, stop chan struct{},
 		},
 		DeleteFunc: func(obj interface{}) {
 			item, err := k.convertToEndpoints(obj, DELETED)
-			if err == ErrIgnored {
+			if errors.Is(err, ErrIgnored) {
 				return
 			}
 			k.Logger.Tracef("%s %s: %s", ENDPOINTS, item.Status, item.Service)
@@ -189,7 +189,7 @@ func (k *K8s) EventsEndpoints(channel chan *store.Endpoints, stop chan struct{},
 		},
 		UpdateFunc: func(oldObj, newObj interface{}) {
 			item1, err := k.convertToEndpoints(oldObj, EMPTY)
-			if err == ErrIgnored {
+			if errors.Is(err, ErrIgnored) {
 				return
 			}
 			item2, _ := k.convertToEndpoints(newObj, MODIFIED)
@@ -664,10 +664,10 @@ func (k *K8s) UpdateIngressStatus(ingress *store.Ingress, publishSvc *store.Serv
 	}
 
 	if k8serror.IsNotFound(err) {
-		return fmt.Errorf("update ingress status: failed to get ingress %s/%s: %v", ingress.Namespace, ingress.Name, err)
+		return fmt.Errorf("update ingress status: failed to get ingress %s/%s: %w", ingress.Namespace, ingress.Name, err)
 	}
 	if err != nil {
-		return fmt.Errorf("failed to update LoadBalancer status of ingress %s/%s: %v", ingress.Namespace, ingress.Name, err)
+		return fmt.Errorf("failed to update LoadBalancer status of ingress %s/%s: %w", ingress.Namespace, ingress.Name, err)
 	}
 	k.Logger.Debugf("Successful update of LoadBalancer status in ingress %s/%s", ingress.Namespace, ingress.Name)
 

@@ -1,6 +1,8 @@
 package annotations
 
 import (
+	"errors"
+
 	"github.com/haproxytech/models/v2"
 
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy"
@@ -37,7 +39,7 @@ func (a *ServerCrt) Parse(input store.StringW, forceParse bool) error {
 		SecretPath: input.Value,
 		SecretType: haproxy.BD_CERT,
 	})
-	if err != nil && err != haproxy.ErrCertNotFound {
+	if err != nil && !errors.Is(err, haproxy.ErrCertNotFound) {
 		return err
 	}
 	if input.Status == store.EMPTY && !updated && !forceParse {

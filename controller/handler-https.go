@@ -121,7 +121,7 @@ func (h HTTPS) enableSSLPassthrough(cfg *Configuration, api api.HAProxyClient) (
 	}
 	for _, b := range h.bindList(false) {
 		if err = api.FrontendBindCreate(FrontendSSL, b); err != nil {
-			return fmt.Errorf("cannot create bind for SSL Passthrough: %s", err.Error())
+			return fmt.Errorf("cannot create bind for SSL Passthrough: %w", err)
 		}
 	}
 	// Create backend for proxy chaining (chaining
