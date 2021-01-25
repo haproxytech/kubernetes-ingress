@@ -1,6 +1,7 @@
-package annotations
+package annotations_test
 
 import (
+	"github.com/haproxytech/kubernetes-ingress/controller/annotations"
 	"github.com/haproxytech/kubernetes-ingress/controller/store"
 )
 
@@ -22,7 +23,7 @@ func (suite *AnnotationSuite) TestDefaultTimeoutUpdate() {
 	}
 	for _, test := range tests {
 		suite.T().Log(test.timeoutName + ": " + test.input.Value)
-		a := NewDefaultTimeout("timeout-"+test.timeoutName, suite.client)
+		a := annotations.NewDefaultTimeout("timeout-"+test.timeoutName, suite.client)
 		if suite.NoError(a.Parse(test.input, true)) {
 			suite.NoError(a.Update())
 			result, _ := suite.client.GlobalWriteConfig("defaults", "timeout "+test.timeoutName)
@@ -33,7 +34,7 @@ func (suite *AnnotationSuite) TestDefaultTimeoutUpdate() {
 
 func (suite *AnnotationSuite) TestDefaultTimeoutFail() {
 	test := store.StringW{Value: "garbage"}
-	a := NewDefaultTimeout("timeout-http-request", suite.client)
+	a := annotations.NewDefaultTimeout("timeout-http-request", suite.client)
 	err := a.Parse(test, true)
 	suite.T().Log(err)
 	suite.Error(err)

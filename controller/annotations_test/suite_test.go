@@ -1,4 +1,4 @@
-package annotations
+package annotations_test
 
 import (
 	"io/ioutil"
@@ -20,7 +20,7 @@ func (suite *AnnotationSuite) SetupSuite() {
 	var err error
 	suite.transactionDir, err = ioutil.TempDir("/tmp/", "controller-tests")
 	if err != nil {
-		logger.Panic(err)
+		panic(err)
 	}
 	suite.client, err = api.Init(suite.transactionDir, "../../fs/etc/haproxy/haproxy.cfg", "", "")
 	suite.Nil(err)

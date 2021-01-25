@@ -1,6 +1,7 @@
-package annotations
+package annotations_test
 
 import (
+	"github.com/haproxytech/kubernetes-ingress/controller/annotations"
 	"github.com/haproxytech/kubernetes-ingress/controller/store"
 )
 
@@ -18,7 +19,7 @@ func (suite *AnnotationSuite) TestGlobalCfgSnippetUpdate() {
 	}
 	for _, test := range tests {
 		suite.T().Log(test.input)
-		a := NewGlobalCfgSnippet("", suite.client)
+		a := annotations.NewGlobalCfgSnippet("", suite.client)
 		if suite.NoError(a.Parse(test.input, true)) {
 			suite.NoError(a.Update())
 			result, _ := suite.client.GlobalWriteConfig("global", "config-snippet")
@@ -29,7 +30,7 @@ func (suite *AnnotationSuite) TestGlobalCfgSnippetUpdate() {
 
 func (suite *AnnotationSuite) TestGlobalCfgSnippetFail() {
 	test := store.StringW{Value: "   "}
-	a := NewGlobalCfgSnippet("", suite.client)
+	a := annotations.NewGlobalCfgSnippet("", suite.client)
 	err := a.Parse(test, true)
 	suite.T().Log(err)
 	suite.Error(err)

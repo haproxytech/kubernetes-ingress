@@ -1,6 +1,7 @@
-package annotations
+package annotations_test
 
 import (
+	"github.com/haproxytech/kubernetes-ingress/controller/annotations"
 	"github.com/haproxytech/kubernetes-ingress/controller/store"
 )
 
@@ -18,7 +19,7 @@ func (suite *AnnotationSuite) TestDefaultOptionUpdate() {
 	}
 	for _, test := range tests {
 		suite.T().Log(test.optionName + ": " + test.input.Value)
-		a := NewDefaultOption(test.optionName, suite.client)
+		a := annotations.NewDefaultOption(test.optionName, suite.client)
 		if suite.NoError(a.Parse(test.input, true)) {
 			suite.NoError(a.Update())
 			result, _ := suite.client.GlobalWriteConfig("defaults", "option "+test.optionName)
@@ -29,7 +30,7 @@ func (suite *AnnotationSuite) TestDefaultOptionUpdate() {
 
 func (suite *AnnotationSuite) TestDefaultOptionFail() {
 	test := store.StringW{Value: "garbage"}
-	a := NewDefaultOption("http-server-close", suite.client)
+	a := annotations.NewDefaultOption("http-server-close", suite.client)
 	err := a.Parse(test, true)
 	suite.T().Log(err)
 	suite.Error(err)

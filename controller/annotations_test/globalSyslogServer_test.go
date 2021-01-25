@@ -1,6 +1,7 @@
-package annotations
+package annotations_test
 
 import (
+	"github.com/haproxytech/kubernetes-ingress/controller/annotations"
 	"github.com/haproxytech/kubernetes-ingress/controller/store"
 )
 
@@ -23,7 +24,7 @@ func (suite *AnnotationSuite) TestSyslogServerUpdate() {
 	}
 	for _, test := range tests {
 		suite.T().Log(test.input)
-		a := NewGlobalSyslogServers("", suite.client)
+		a := annotations.NewGlobalSyslogServers("", suite.client)
 		if suite.NoError(a.Parse(test.input, true)) {
 			suite.NoError(a.Update())
 			suite.Equal(!test.daemon, a.Restart())
@@ -37,7 +38,7 @@ func (suite *AnnotationSuite) TestSyslogServerUpdate() {
 
 func (suite *AnnotationSuite) TestSyslogServerFail() {
 	test := store.StringW{Value: "garbage"}
-	a := NewGlobalSyslogServers("", suite.client)
+	a := annotations.NewGlobalSyslogServers("", suite.client)
 	err := a.Parse(test, true)
 	suite.T().Log(err)
 	suite.Error(err)

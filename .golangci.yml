@@ -37,9 +37,7 @@ linters:
     - nestif
     - nlreturn
     - nolintlint
-    - paralleltest
     - prealloc
-    - testpackage
     - wrapcheck
     - wsl
 
