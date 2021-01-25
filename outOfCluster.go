@@ -65,7 +65,6 @@ func setupHAProxyEnv(osArgs utils.OSArgs) {
 		logger.Panic(err)
 	}
 	logger.Debug(pwd)
-
 }
 
 func copyFile(src, dst string) (err error) {

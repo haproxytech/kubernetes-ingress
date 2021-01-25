@@ -77,7 +77,6 @@ func (route *Route) addToMapFile(mapFiles haproxy.Maps) error {
 		path = strings.TrimSuffix(path, "/")
 		mapFiles.AppendRow(PATH_EXACT, route.Host+path+"\t\t\t"+value)
 		mapFiles.AppendRow(PATH_PREFIX, route.Host+path+"/"+"\t\t\t"+value)
-
 	}
 	return nil
 }

@@ -35,7 +35,6 @@ func (r RequestRedirect) Create(client api.HAProxyClient, frontend *models.Front
 			scheme = "https"
 		}
 		rule = fmt.Sprintf(scheme+"://%s%%[capture.req.uri]", r.Host)
-
 	}
 	httpRule := models.HTTPRequestRule{
 		Index:      utils.PtrInt64(0),

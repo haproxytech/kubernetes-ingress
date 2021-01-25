@@ -32,7 +32,6 @@ import (
 )
 
 func main() {
-
 	var osArgs utils.OSArgs
 	var parser = flags.NewParser(&osArgs, flags.IgnoreUnknown)
 	_, err := parser.Parse()

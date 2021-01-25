@@ -36,7 +36,6 @@ type Configuration struct {
 
 // Init initialize configuration
 func (c *Configuration) Init() {
-
 	c.MapFiles = haproxy.NewMapFiles(HAProxyMapDir)
 	c.MapFiles.SetPreserve(true, SNI, HOST, PATH_EXACT, PATH_PREFIX)
 	c.IngressRoutes = ingress.Routes{}

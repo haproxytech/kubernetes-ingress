@@ -75,7 +75,6 @@ func (k K8s) EventIngressClass(data *IngressClass) (updateRequired bool) {
 }
 
 func (k K8s) EventIngress(ns *Namespace, data *Ingress, controllerClass string) (updateRequired bool) {
-
 	updateRequired = false
 	switch data.Status {
 	case MODIFIED:

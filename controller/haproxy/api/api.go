@@ -101,7 +101,6 @@ func Init(transactionDir, configFile, programPath, runtimeSocket string) (client
 		},
 	}
 	return &cn, nil
-
 }
 
 func (c *clientNative) APIStartTransaction() error {

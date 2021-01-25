@@ -73,7 +73,6 @@ func (a *IngressRule) Equal(b *IngressRule) bool {
 		if !ok || !value.Equal(value2) {
 			return false
 		}
-
 	}
 	return true
 }

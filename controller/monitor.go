@@ -35,7 +35,6 @@ func (c *HAProxyController) timeFromAnnotation(name string) (duration time.Durat
 }
 
 func (c *HAProxyController) monitorChanges() {
-
 	configMapReceivedAndProcessed := make(chan bool)
 	syncPeriod := c.timeFromAnnotation("sync-period")
 	logger.Debugf("Executing syncPeriod every %s", syncPeriod.String())

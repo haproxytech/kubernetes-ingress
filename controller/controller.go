@@ -110,7 +110,6 @@ func (c *HAProxyController) clientClosure(fn func()) (err error) {
 
 // Start initializes and runs HAProxyController
 func (c *HAProxyController) Start(ctx context.Context, osArgs utils.OSArgs) {
-
 	c.osArgs = osArgs
 
 	logger.SetLevel(osArgs.LogLevel.LogLevel)
@@ -261,7 +260,6 @@ func (c *HAProxyController) updateHAProxy() {
 					})
 				}
 			}
-
 		}
 	}
 

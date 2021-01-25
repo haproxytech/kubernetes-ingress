@@ -41,7 +41,6 @@ linters:
     - paralleltest
     - prealloc
     - testpackage
-    - whitespace
     - wrapcheck
     - wsl
 

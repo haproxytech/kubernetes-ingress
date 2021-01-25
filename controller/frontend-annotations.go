@@ -237,7 +237,6 @@ func (c *HAProxyController) handleRequestHostRedirect(ingress *store.Ingress) {
 	logger.Error(c.cfg.HAProxyRules.AddRule(reqDomainRedirect, &ingress.Name, FrontendHTTP))
 	reqDomainRedirect.SSLRequest = true
 	logger.Error(c.cfg.HAProxyRules.AddRule(reqDomainRedirect, &ingress.Name, FrontendHTTPS))
-
 }
 
 func (c *HAProxyController) handleRequestHTTPSRedirect(ingress *store.Ingress) {
@@ -413,7 +412,6 @@ func (c *HAProxyController) handleResponseSetHdr(ingress *store.Ingress) {
 			Response:  true,
 		}
 		logger.Error(c.cfg.HAProxyRules.AddRule(resSetHdr, &ingress.Name, FrontendHTTP, FrontendHTTPS))
-
 	}
 }
 
@@ -445,7 +443,6 @@ func (c *HAProxyController) handleResponseCors(ingress *store.Ingress) {
 	c.handleResponseCorsCredential(ingress, acl)
 	c.handleResponseCorsHeaders(ingress, acl)
 	c.handleResponseCorsMaxAge(ingress, acl)
-
 }
 
 func (c *HAProxyController) handleResponseCorsOrigin(ingress *store.Ingress) (acl string, err error) {
@@ -597,7 +594,6 @@ func (c *HAProxyController) handleResponseCorsMaxAge(ingress *store.Ingress, acl
 		CondTest:  acl,
 	}
 	logger.Error(c.cfg.HAProxyRules.AddRule(resSetHdr, &ingress.Name, FrontendHTTP, FrontendHTTPS))
-
 }
 
 func tlsEnabled(ingress *store.Ingress) bool {

@@ -147,7 +147,6 @@ func (l *logger) log(logType string, data ...interface{}) {
 			}
 		}
 	}
-
 }
 
 func (l *logger) logf(logType string, format string, data ...interface{}) {
@@ -172,7 +171,6 @@ func (l *logger) logf(logType string, format string, data ...interface{}) {
 			log.Printf("%s%s:%d %s\n", logType, file1, no, line)
 		}
 	}
-
 }
 
 func (l *logger) Print(args ...interface{}) {
