@@ -15,6 +15,7 @@
 package controller
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/haproxytech/models/v2"
@@ -69,6 +70,56 @@ func (h HTTPS) bindList(passhthrough bool) (binds []models.Bind) {
 	return binds
 }
 
+func (h HTTPS) handleClientTLSAuth(k store.K8s, cfg *Configuration, api api.HAProxyClient) (reload bool, err error) {
+	annTLSAuth, _ := k.GetValueFromAnnotations("client-ca", k.ConfigMaps[Main].Annotations)
+	if annTLSAuth == nil {
+		return false, nil
+	}
+	binds, err := api.FrontendBindsGet(FrontendHTTPS)
+	if err != nil {
+		return false, err
+	}
+	caFile, secretUpdated, secretErr := cfg.Certificates.HandleTLSSecret(k, haproxy.SecretCtx{
+		DefaultNS:  "",
+		SecretPath: annTLSAuth.Value,
+		SecretType: haproxy.CA_CERT,
+	})
+	// Annotation or secret DELETED
+	if annTLSAuth.Status == DELETED || (secretUpdated && caFile == "") {
+		logger.Infof("removing client TLS authentication")
+		for i := range binds {
+			binds[i].SslCafile = ""
+			binds[i].Verify = ""
+			if err = api.FrontendBindEdit(FrontendHTTPS, *binds[i]); err != nil {
+				return false, err
+			}
+		}
+		return true, nil
+	}
+	// Handle secret errors
+	if secretErr != nil {
+		if errors.Is(secretErr, haproxy.ErrCertNotFound) {
+			logger.Warning("unable to configure TLS authentication secret '%s' not found", annTLSAuth.Value)
+			return false, nil
+		}
+		return false, secretErr
+	}
+	// No changes
+	if annTLSAuth.Status == EMPTY && !secretUpdated {
+		return false, nil
+	}
+	// Configure TLS Authentication
+	logger.Infof("enabling client TLS authentication")
+	for i := range binds {
+		binds[i].SslCafile = caFile
+		binds[i].Verify = "required"
+		if err = api.FrontendBindEdit(FrontendHTTPS, *binds[i]); err != nil {
+			return false, err
+		}
+	}
+	return true, nil
+}
+
 func (h HTTPS) Update(k store.K8s, cfg *Configuration, api api.HAProxyClient) (reload bool, err error) {
 	if !h.enabled {
 		logger.Debugf("Cannot proceed with SSL Passthrough update, HTTPS is disabled")
@@ -81,6 +132,11 @@ func (h HTTPS) Update(k store.K8s, cfg *Configuration, api api.HAProxyClient) (r
 			cfg.HTTPS = true
 			reload = true
 		}
+		r, err := h.handleClientTLSAuth(k, cfg, api)
+		if err != nil {
+			return r, err
+		}
+		reload = reload || r
 	} else if cfg.HTTPS {
 		logger.Info("Disabling ssl offload")
 		logger.Panic(api.FrontendDisableSSLOffload(FrontendHTTPS))

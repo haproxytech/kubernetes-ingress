@@ -61,6 +61,8 @@ func (c *clientNative) FrontendDisableSSLOffload(frontendName string) (err error
 	}
 	for _, bind := range binds {
 		bind.Ssl = false
+		bind.SslCafile = ""
+		bind.Verify = ""
 		bind.SslCertificate = ""
 		bind.Alpn = ""
 		err = c.FrontendBindEdit(frontendName, *bind)
