@@ -24,7 +24,7 @@ func (r ReqProxyProtocol) Create(client api.HAProxyClient, frontend *models.Fron
 		Type:     "connection",
 		Action:   "expect-proxy layer4",
 		Cond:     "if",
-		CondTest: fmt.Sprintf("{ src %s }", haproxy.GetMapPath(r.SrcIPsMap)),
+		CondTest: fmt.Sprintf("{ src -f %s }", haproxy.GetMapPath(r.SrcIPsMap)),
 	}
 	return client.FrontendTCPRequestRuleCreate(frontend.Name, tcpRule, ingressACL)
 }
