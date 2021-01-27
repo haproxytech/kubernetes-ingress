@@ -34,7 +34,7 @@ var client api.HAProxyClient
 var k8sStore store.K8s
 var haproxyCerts *haproxy.Certificates
 
-//nolint
+//nolint:golint,stylecheck
 const (
 	// Configmaps
 	Main = "main"

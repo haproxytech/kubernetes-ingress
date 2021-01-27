@@ -41,7 +41,7 @@ const (
 	TRACE_API = false
 )
 
-var ErrIgnored = errors.New("Ignored resource") //nolint golint
+var ErrIgnored = errors.New("ignored resource")
 
 // K8s is structure with all data required to synchronize with k8s
 type K8s struct {

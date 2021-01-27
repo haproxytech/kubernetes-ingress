@@ -6,7 +6,6 @@ import (
 
 type Errors []error
 
-//nolint
 func (e *Errors) Add(errors ...error) {
 	for _, err := range errors {
 		if err != nil {

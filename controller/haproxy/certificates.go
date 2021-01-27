@@ -20,7 +20,7 @@ type Certificates struct {
 
 type SecretType int
 
-//nolint
+//nolint:golint,stylecheck
 const (
 	NONE_CERT SecretType = iota
 	FT_CERT

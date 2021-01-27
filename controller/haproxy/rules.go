@@ -23,7 +23,7 @@ var IngressACLVar = "txn.match"
 // Rules will be evaluated by HAProxy in the defined order.
 type RuleType int
 
-//nolint
+//nolint: golint,stylecheck
 const (
 	REQ_ACCEPT_CONTENT RuleType = iota
 	REQ_INSPECT_DELAY
@@ -49,7 +49,7 @@ type RuleStatus int
 // RuleID uniquely identify a HAProxy Rule
 type RuleID uint32
 
-//nolint
+//nolint: golint,stylecheck
 const (
 	// exclusive states
 	CREATED   RuleStatus = 0

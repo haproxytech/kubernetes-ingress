@@ -86,7 +86,8 @@ var doOnce sync.Once
 var k8sAPILogSingelton *logger
 var dok8sAPIOnce sync.Once
 
-func GetLogger() *logger { //nolint - 'exported func GetLogger returns unexported type , which can be annoying to use' - this is deliberate here
+//nolint:golint // 'exported func GetLogger returns unexported type , which can be annoying to use' - this is deliberate here
+func GetLogger() *logger {
 	doOnce.Do(func() {
 		logSingelton = &logger{
 			Level:    Warning,
@@ -97,7 +98,8 @@ func GetLogger() *logger { //nolint - 'exported func GetLogger returns unexporte
 	return logSingelton
 }
 
-func GetK8sAPILogger() *logger { //nolint - 'exported func GetLogger returns unexported type , which can be annoying to use' - this is deliberate here
+//nolint:golint // 'exported func GetLogger returns unexported type , which can be annoying to use' - this is deliberate here
+func GetK8sAPILogger() *logger {
 	dok8sAPIOnce.Do(func() {
 		k8sAPILogSingelton = &logger{
 			Level:    Trace,

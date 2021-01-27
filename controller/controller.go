@@ -37,7 +37,7 @@ import (
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 )
 
-// nolint
+//nolint:golint,stylecheck
 const (
 	CONTROLLER_CLASS = "haproxy.org/ingress-controller"
 	// Configmaps
