@@ -105,7 +105,7 @@ func (c *Certificates) Clean() {
 		c.backend[i] = false
 	}
 	for i := range c.ca {
-		c.backend[i] = false
+		c.ca[i] = false
 	}
 }
 
@@ -120,17 +120,18 @@ func (c *Certificates) FrontendCertsEnabled() bool {
 
 // Refresh removes unused certs from HAProxyCertDir
 // Certificates will remain in HAProxy memory until next Reload
-func (c *Certificates) Refresh() {
-	refreshCerts(c.frontend, frontendCertDir)
-	refreshCerts(c.backend, backendCertDir)
-	refreshCerts(c.ca, caCertDir)
+func (c *Certificates) Refresh() (reload bool) {
+	reload = refreshCerts(c.frontend, frontendCertDir)
+	reload = refreshCerts(c.backend, backendCertDir) || reload
+	reload = refreshCerts(c.ca, caCertDir) || reload
+	return
 }
 
-func refreshCerts(certs map[string]bool, certDir string) {
+func refreshCerts(certs map[string]bool, certDir string) (reload bool) {
 	files, err := ioutil.ReadDir(certDir)
 	if err != nil {
 		logger.Error(err)
-		return
+		return false
 	}
 	for _, f := range files {
 		if f.IsDir() {
@@ -141,8 +142,10 @@ func refreshCerts(certs map[string]bool, certDir string) {
 		if !used {
 			logger.Error(os.Remove(path.Join(certDir, filename)))
 			delete(certs, filename)
+			reload = true
 		}
 	}
+	return
 }
 
 func writeSecret(secret *store.Secret, certPath string, privateKeyNull bool) (err error) {

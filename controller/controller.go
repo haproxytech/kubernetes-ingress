@@ -217,6 +217,9 @@ func (c *HAProxyController) updateHAProxy() {
 			}
 			// Ingress secrets
 			for _, tls := range ingress.TLS {
+				if tls.Status == store.DELETED {
+					continue
+				}
 				crt, updated, _ := c.cfg.Certificates.HandleTLSSecret(c.Store, haproxy.SecretCtx{
 					DefaultNS:  ingress.Namespace,
 					SecretPath: tls.SecretName.Value,
