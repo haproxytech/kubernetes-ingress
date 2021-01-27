@@ -22,6 +22,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	//nolint:gosec
 	_ "net/http/pprof"
 
 	c "github.com/haproxytech/kubernetes-ingress/controller"

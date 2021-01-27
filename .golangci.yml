@@ -29,7 +29,6 @@ linters:
     - goerr113
     - gofumpt
     - gomnd
-    - gosec
     - lll
     - maligned
     - nakedret

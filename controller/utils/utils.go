@@ -16,7 +16,6 @@ package utils
 
 import (
 	"hash/fnv"
-	"math/rand"
 	"os"
 	"strconv"
 	"strings"
@@ -27,18 +26,6 @@ func HomeDir() string {
 		return h
 	}
 	return os.Getenv("USERPROFILE") // windows
-}
-
-var chars = []rune("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
-
-// RandomString returns random string of size n
-func RandomString(n int) string {
-	b := make([]rune, n)
-	size := len(chars)
-	for i := range b {
-		b[i] = chars[rand.Intn(size)]
-	}
-	return string(b)
 }
 
 func Hash(input []byte) uint32 {
