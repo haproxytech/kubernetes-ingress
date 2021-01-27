@@ -373,7 +373,7 @@ annotations:
       - Unencrypted passwords (used with HAProxy [insecure-password](https://cbonte.github.io/haproxy-dconv/2.0/configuration.html#3.4-user) ) **are not accepted**.
     values:
       - |- 
-        The annotaiton format is a secret path *namespace/secretName*. If the namespace is ommited (path is only *secretName*) then the ingress namespace will be used. 
+        The annotation format is a secret path *namespace/secretName*. If the namespace is ommited (path is only *secretName*) then the ingress namespace will be used. 
         For Basic Authentication, the Secret data should contain user credentials in the form of `username: encrypted and base-64 encoded passowrd`. For example: 
       
         ```
@@ -482,6 +482,22 @@ annotations:
     example:
     - 'check: "true"'
     - 'check-interval: "1m"'
+  - title: client-ca
+    type: string
+    group: client-ca
+    dependencies: ""
+    default: ""
+    description:
+    - Sets the certificate authority for client certificate checking on HTTPS frontend.
+    tip:
+    - You must set TLS ingress counterpart to activate the client certificate authority configuration.
+    values:
+    - secret path in "namespace/name" format.
+    applies_to:
+    - configmap
+    version_min: "1.6"
+    example:
+    - 'client-ca: exp/ca.crt'
   - title: cors-enable
     type: bool
     group: CORS
