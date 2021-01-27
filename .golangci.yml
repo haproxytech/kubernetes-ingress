@@ -34,7 +34,6 @@ linters:
     - nakedret
     - nestif
     - nlreturn
-    - prealloc
     - wrapcheck
     - wsl
 

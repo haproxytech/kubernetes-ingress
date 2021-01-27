@@ -28,7 +28,7 @@ func (c *clientNative) UserListCreateByGroup(group string, userPasswordMap map[s
 		return
 	}
 
-	var names []string
+	names := make([]string, 0, len(userPasswordMap))
 	for name, password := range userPasswordMap {
 		user := &types.User{
 			Name:     name,

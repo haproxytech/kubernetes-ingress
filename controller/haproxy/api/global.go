@@ -48,7 +48,7 @@ func (c *clientNative) GlobalWriteConfig(section string, config string) (result 
 	if err != nil {
 		return "", err
 	}
-	var buf []string
+	buf := make([]string, 0, len(lines))
 	for _, line := range lines {
 		buf = append(buf, line.Data)
 	}
