@@ -28,11 +28,11 @@ import (
 
 type HTTPS struct {
 	enabled  bool
-	addrIpv4 string
 	ipv4     bool
-	addrIpv6 string
 	ipv6     bool
 	port     int64
+	addrIpv4 string
+	addrIpv6 string
 	certDir  string
 }
 

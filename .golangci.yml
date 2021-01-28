@@ -30,7 +30,6 @@ linters:
     - gofumpt
     - gomnd
     - lll
-    - maligned
     - nakedret
     - nestif
     - nlreturn
