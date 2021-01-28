@@ -14,23 +14,38 @@ linters-settings:
     min-occurrences: 2
 
 linters:
-  enable:
-    - golint
-    - gocritic
-    - stylecheck
-    - goimports
-    - gosec
-    - unconvert
   disable:
-    - maligned
-    - prealloc
+    - dupl
+    - errorlint
+    - exhaustive
+    - exhaustivestruct
+    - funlen
+    - gci
     - gochecknoglobals
+    - gocognit
+    - goconst
+    - gocritic
+    - gocyclo
+    - godot
+    - godox
+    - goerr113
+    - gofumpt
+    - gomnd
+    - gosec
+    - lll
+    - maligned
+    - misspell
+    - nakedret
+    - nestif
+    - nlreturn
+    - nolintlint
+    - paralleltest
+    - prealloc
+    - testpackage
+    - whitespace
+    - wrapcheck
+    - wsl
 
 run:
   skip-dirs:
     - test
-
-# golangci.com configuration
-# https://github.com/golangci/golangci/wiki/Configuration
-service:
-  golangci-lint-version: 1.17.x # use the fixed version to not introduce new linters unexpectedly

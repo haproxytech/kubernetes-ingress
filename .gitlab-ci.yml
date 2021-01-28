@@ -11,12 +11,12 @@ variables:
 golangci_lint:
   stage: lint
   image:
-    name: golangci/golangci-lint:v1.24.0
+    name: $CI_REGISTRY_GO/lint:1.33
     entrypoint: [""]
   tags:
     - go
   script:
-    - golangci-lint run --timeout=2m -v
+    - golangci-lint run --enable-all --timeout=2m -v
 lint-commit-msg:
   stage: lint
   image:
