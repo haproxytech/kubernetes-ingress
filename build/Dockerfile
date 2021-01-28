@@ -43,10 +43,10 @@ ENV GODEBUG=madvdontneed=1
 COPY /fs /
 COPY --from=builder /src/fs/haproxy-ingress-controller .
 
-ARG DUMB_INIT_SHA256=37f2c1f0372a45554f1b89924fbb134fc24c3756efaedf11e07f599494e0eff9
+ARG DUMB_INIT_SHA256=cd7ab5513d20f4b985012d264fbdee60ccd2ea528b94b4b9308c6c6d26f8ba90
 
 RUN apk --no-cache add socat openssl util-linux htop tzdata && \
-    wget --no-check-certificate -O /dumb-init https://github.com/Yelp/dumb-init/releases/download/v1.2.2/dumb-init_1.2.2_amd64 && \
+    wget --no-check-certificate -O /dumb-init https://github.com/Yelp/dumb-init/releases/download/v1.2.4/dumb-init_1.2.4_x86_64 && \
     rm -f /usr/local/bin/dataplaneapi /usr/bin/dataplaneapi && \
     rm -f /usr/local/etc/haproxy/haproxy.cfg && \
     echo "$DUMB_INIT_SHA256  /dumb-init" | sha256sum -c - && \
