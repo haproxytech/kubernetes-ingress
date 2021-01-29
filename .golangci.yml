@@ -30,7 +30,6 @@ linters:
     - gofumpt
     - gomnd
     - lll
-    - nakedret
     - nestif
     - nlreturn
     - wrapcheck

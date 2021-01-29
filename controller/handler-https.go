@@ -66,7 +66,7 @@ func (h HTTPS) bindList(passhthrough bool) (binds []models.Bind) {
 			V4v6:        true,
 		})
 	}
-	return
+	return binds
 }
 
 func (h HTTPS) Update(k store.K8s, cfg *Configuration, api api.HAProxyClient) (reload bool, err error) {
