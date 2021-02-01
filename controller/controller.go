@@ -83,6 +83,7 @@ type HAProxyController struct {
 	Store          store.K8s
 	PublishService *store.Service
 	IngressClass   string
+	ready          bool
 	cfg            Configuration
 	osArgs         utils.OSArgs
 	Client         api.HAProxyClient
@@ -256,16 +257,26 @@ func (c *HAProxyController) updateHAProxy() {
 		return
 	}
 	c.clean(false)
-	if restart {
-		if err := c.haproxyService("restart"); err != nil {
+	if !c.ready {
+		logger.Panic(c.clientAPIClosure(func() error {
+			return c.Client.FrontendBindEdit("healthz",
+				models.Bind{
+					Name:    "v4",
+					Address: "*:1042",
+				})
+		}))
+		logger.Debugf("healthz frontend exposed for readiness probe")
+		c.ready = true
+	}
+	switch {
+	case restart:
+		if err = c.haproxyService("restart"); err != nil {
 			logger.Error(err)
 		} else {
 			logger.Info("HAProxy restarted")
 		}
-		return
-	}
-	if reload {
-		if err := c.haproxyService("reload"); err != nil {
+	case reload:
+		if err = c.haproxyService("reload"); err != nil {
 			logger.Error(err)
 		} else {
 			logger.Info("HAProxy reloaded")
