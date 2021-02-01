@@ -47,7 +47,7 @@ func (h HTTPS) bindList(passhthrough bool) (binds []models.Bind) {
 				return
 			}(),
 			Port:        utils.PtrInt64(h.port),
-			Name:        "bind_1",
+			Name:        "v4",
 			AcceptProxy: passhthrough,
 		})
 	}
@@ -62,7 +62,7 @@ func (h HTTPS) bindList(passhthrough bool) (binds []models.Bind) {
 			}(),
 			Port:        utils.PtrInt64(h.port),
 			AcceptProxy: passhthrough,
-			Name:        "bind_2",
+			Name:        "v6",
 			V4v6:        true,
 		})
 	}
