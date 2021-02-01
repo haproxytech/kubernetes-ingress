@@ -16,14 +16,11 @@ package controller
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 
-	"github.com/haproxytech/client-native/v2/configuration"
-	parser "github.com/haproxytech/config-parser/v3"
 	"github.com/haproxytech/config-parser/v3/params"
 	"github.com/haproxytech/config-parser/v3/types"
 	"github.com/haproxytech/models/v2"
@@ -96,56 +93,36 @@ type HAProxyController struct {
 
 // Wrapping a Native-Client transaction and commit it.
 // Returning an error to let panic or log it upon the scenario.
-func (c *HAProxyController) clientClosure(fn func()) (err error) {
+func (c *HAProxyController) clientAPIClosure(fn func() error) (err error) {
 	if err = c.Client.APIStartTransaction(); err != nil {
-		return
+		return err
 	}
-	fn()
+	defer func() {
+		c.Client.APIDisposeTransaction()
+	}()
+	if err = fn(); err != nil {
+		return err
+	}
 	if err = c.Client.APICommitTransaction(); err != nil {
-		return
+		return err
 	}
-	c.Client.APIDisposeTransaction()
-	return
+	return nil
 }
 
 // Start initializes and runs HAProxyController
 func (c *HAProxyController) Start(ctx context.Context, osArgs utils.OSArgs) {
 	c.osArgs = osArgs
-
 	logger.SetLevel(osArgs.LogLevel.LogLevel)
 	c.haproxyInitialize()
 	c.initHandlers()
 
-	// handling dynamic frontend binding
-	{
-		var err error
-		var http, https bool
-
-		p := &parser.Parser{
-			Options: parser.Options{
-				UseV2HTTPCheck: true,
-			},
-		}
-		logger.Panic(p.LoadData(HAProxyCFG))
-
-		if !c.osArgs.DisableHTTP {
-			http, err = c.handleBind(p, "http", c.osArgs.HTTPBindPort)
-		}
-		if !c.osArgs.DisableHTTPS {
-			https, err = c.handleBind(p, "https", c.osArgs.HTTPSBindPort)
-		}
-
-		if err == nil && (http || https) {
-			err = p.Save(HAProxyCFG)
-		}
-
-		logger.Panic(err)
-	}
-	if c.osArgs.PprofEnabled {
-		logger.Error(c.clientClosure(func() {
+	logger.Panic(c.clientAPIClosure(func() error {
+		logger.Error(c.handleBinds())
+		if osArgs.PprofEnabled {
 			logger.Error(c.handlePprof())
-		}))
-	}
+		}
+		return nil
+	}))
 
 	parts := strings.Split(osArgs.PublishService, "/")
 	if len(parts) == 2 {
@@ -359,7 +336,7 @@ func (c *HAProxyController) haproxyInitialize() {
 		logger.Panic(err)
 	}
 	if c.osArgs.OutOfCluster && !c.osArgs.Test {
-		logger.Panic(c.clientClosure(func() {
+		logger.Panic(c.clientAPIClosure(func() error {
 			var errors utils.Errors
 			errors.Add(
 				// Configure runtime socket
@@ -376,9 +353,7 @@ func (c *HAProxyController) haproxyInitialize() {
 				// Configure server-state-base
 				c.Client.ServerStateBase(&types.StringC{Value: HAProxyStateDir}),
 			)
-			if errors.Result() != nil {
-				logger.Panic(errors.Result())
-			}
+			return errors.Result()
 		}))
 	}
 
@@ -402,33 +377,35 @@ func (c *HAProxyController) haproxyInitialize() {
 }
 
 // handleBind configures Frontends bind lines
-func (c *HAProxyController) handleBind(p *parser.Parser, protocol string, port int64) (reload bool, err error) {
-	var binds []models.Bind
+func (c *HAProxyController) handleBinds() (err error) {
+	var errors utils.Errors
+	frontends := make(map[string]int64, 2)
+	protos := make(map[string]string, 2)
+	if !c.osArgs.DisableHTTP {
+		frontends[FrontendHTTP] = c.osArgs.HTTPBindPort
+	}
+	if !c.osArgs.DisableHTTPS {
+		frontends[FrontendHTTPS] = c.osArgs.HTTPSBindPort
+	}
 	if !c.osArgs.DisableIPV4 {
-		binds = append(binds, models.Bind{
-			Name:    "bind_1",
-			Address: c.osArgs.IPV4BindAddr,
-			Port:    utils.PtrInt64(port),
-		})
+		protos["v4"] = c.osArgs.IPV4BindAddr
 	}
 	if !c.osArgs.DisableIPV6 {
-		binds = append(binds, models.Bind{
-			Name:    "bind_2",
-			Address: c.osArgs.IPV6BindAddr,
-			Port:    utils.PtrInt64(port),
-			V4v6:    true,
-		})
+		protos["v6"] = c.osArgs.IPV6BindAddr
 	}
-	for i, b := range binds {
-		if err = p.Insert(parser.Frontends, protocol, "bind", configuration.SerializeBind(b), i+1); err != nil {
-			return false, fmt.Errorf("cannot create bind %s for protocol %s: %w", b.Name, protocol, err)
+	for ftName, ftPort := range frontends {
+		for proto, addr := range protos {
+			bind := models.Bind{
+				Name:    proto,
+				Address: addr,
+				Port:    utils.PtrInt64(ftPort),
+			}
+			if err = c.Client.FrontendBindEdit(ftName, bind); err != nil {
+				errors.Add(c.Client.FrontendBindCreate(ftName, bind))
+			}
 		}
 	}
-	reload = len(binds) > 0
-	if reload {
-		err = p.Delete(parser.Frontends, protocol, "bind", 0)
-	}
-	return
+	return errors.Result()
 }
 
 // handlePprof enables  pprof backend

@@ -82,12 +82,12 @@ func (t TCPHandler) Update(k store.K8s, cfg *Configuration, api api.HAProxyClien
 			}
 			err = api.FrontendBindCreate(frontendName, models.Bind{
 				Address: "0.0.0.0:" + port,
-				Name:    "bind_1",
+				Name:    "v4",
 			})
 			logger.Panic(err)
 			err = api.FrontendBindCreate(frontendName, models.Bind{
 				Address: ":::" + port,
-				Name:    "bind_2",
+				Name:    "v6",
 				V4v6:    true,
 			})
 			if err != nil {
