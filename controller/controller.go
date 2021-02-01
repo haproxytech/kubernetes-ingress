@@ -15,7 +15,6 @@
 package controller
 
 import (
-	"context"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -111,8 +110,7 @@ func (c *HAProxyController) clientAPIClosure(fn func() error) (err error) {
 }
 
 // Start initializes and runs HAProxyController
-func (c *HAProxyController) Start(ctx context.Context, osArgs utils.OSArgs) {
-
+func (c *HAProxyController) Start(osArgs utils.OSArgs) {
 	c.osArgs = osArgs
 	logger.SetLevel(osArgs.LogLevel.LogLevel)
 	c.haproxyInitialize()
@@ -163,7 +161,12 @@ func (c *HAProxyController) Start(ctx context.Context, osArgs utils.OSArgs) {
 	c.serverlessPods = map[string]int{}
 	c.eventChan = make(chan SyncDataEvent, watch.DefaultChanSize*6)
 	go c.monitorChanges()
-	<-ctx.Done()
+}
+
+// Stop handles shutting down HAProxyController
+func (c *HAProxyController) Stop() {
+	logger.Infof("Stopping Ingress Controller")
+	logger.Error(c.haproxyService("stop"))
 }
 
 // updateHAProxy syncs HAProxy configuration

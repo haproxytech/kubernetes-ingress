@@ -15,7 +15,6 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"net/http"
 	"os"
@@ -110,14 +109,6 @@ func main() {
 	logger.Debugf("Kubernetes Informers resync period: %s", osArgs.CacheResyncPeriod.String())
 	logger.Printf("Controller sync period: %s\n", osArgs.SyncPeriod.String())
 
-	ctx, cancel := context.WithCancel(context.Background())
-	signalC := make(chan os.Signal, 1)
-	signal.Notify(signalC, os.Interrupt, syscall.SIGTERM, syscall.SIGUSR1)
-	go func() {
-		<-signalC
-		cancel()
-	}()
-
 	c.HAProxyCfgDir = "/etc/haproxy/"
 	if osArgs.OutOfCluster {
 		setupHAProxyEnv(osArgs)
@@ -140,6 +131,9 @@ func main() {
 		s.NamespacesAccess.Blacklist[namespace] = struct{}{}
 	}
 	controller.Store = s
-	// Start
-	controller.Start(ctx, osArgs)
+	controller.Start(osArgs)
+	signalC := make(chan os.Signal, 1)
+	signal.Notify(signalC, os.Interrupt, syscall.SIGTERM, syscall.SIGUSR1)
+	<-signalC
+	controller.Stop()
 }
