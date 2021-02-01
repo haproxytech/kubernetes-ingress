@@ -49,7 +49,11 @@ func (c *HAProxyController) haproxyService(action string) (err error) {
 			logger.Error(fmt.Errorf("haproxy  already stopped"))
 			return processErr
 		}
-		return process.Signal(syscall.SIGUSR1)
+		if err = process.Signal(syscall.SIGUSR1); err != nil {
+			return err
+		}
+		_, err = process.Wait()
+		return err
 	case "reload":
 		logger.Error(c.saveServerState())
 		if processErr != nil {
