@@ -90,10 +90,12 @@ func (m Maps) Refresh(client api.HAProxyClient) (reload bool) {
 		if _, err = f.WriteString(content); err != nil {
 			logger.Error(err)
 		}
-		if _, err = client.GetMap(name); err == nil {
-			logger.Error(client.SetMapContent(name, content))
-		} else {
-			logger.Debugf("creating Map file %s", name)
+		if err = client.SetMapContent(name, content); err != nil {
+			if strings.HasPrefix(err.Error(), "maps dir doesn't exists") {
+				logger.Debugf("creating Map file %s", name)
+			} else {
+				logger.Warning("dynamic update of '%s' Map file failed: %s", name, err.Error()[:200])
+			}
 			reload = true
 		}
 	}
