@@ -197,11 +197,14 @@ func (c *HAProxyController) updateHAProxy() {
 			continue
 		}
 		for _, ingress := range namespace.Ingresses {
+			if ingress.Status == DELETED {
+				continue
+			}
 			if !c.igClassIsSupported(ingress) {
 				logger.Debugf("ingress '%s/%s' ignored: no matching IngressClass", ingress.Namespace, ingress.Name)
 				continue
 			}
-			if c.PublishService != nil && ingress.Status != DELETED {
+			if c.PublishService != nil {
 				logger.Error(c.k8s.UpdateIngressStatus(ingress, c.PublishService))
 			}
 			// Default Backend
