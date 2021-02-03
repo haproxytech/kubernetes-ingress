@@ -91,7 +91,7 @@ func (m Maps) Refresh(client api.HAProxyClient) (reload bool) {
 			logger.Error(err)
 		}
 		if _, err = client.GetMap(name); err == nil {
-			logger.Error(client.SetMapContent(name, "<<\n"+content+"\n"))
+			logger.Error(client.SetMapContent(name, content))
 		} else {
 			logger.Debugf("creating Map file %s", name)
 			reload = true

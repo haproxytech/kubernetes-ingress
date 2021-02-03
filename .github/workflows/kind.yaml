@@ -8,6 +8,8 @@ jobs:
           k8s-version: ['v1.17.5', 'v1.18.6','v1.19.3']
     runs-on: ubuntu-latest
     steps:
+    - name: Install haproxy
+      run: sudo apt-get install haproxy
     - uses: actions/checkout@master
     - uses: actions/setup-go@v2
       with:

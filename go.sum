@@ -208,10 +208,16 @@ github.com/googleapis/gnostic v0.4.1/go.mod h1:LRhVm6pbyptWbWbuZ38d1eyptfvIytN3i
 github.com/gregjones/httpcache v0.0.0-20180305231024-9cad4c3443a7/go.mod h1:FecbI9+v66THATjSRHfNgh1IVFe/9kFxbXtjV0ctIMA=
 github.com/haproxytech/client-native/v2 v2.1.1-0.20201208120455-eaee3b5dd5cb h1:Cjnzvm1pdR9k1kbks2/xrkAVBlNj6Wl0j7y8m1xJoM8=
 github.com/haproxytech/client-native/v2 v2.1.1-0.20201208120455-eaee3b5dd5cb/go.mod h1:gwAqer8zPVotSiAMTwuY321vbdSnXDRNHMW3njX96xA=
+github.com/haproxytech/client-native/v2 v2.2.1-0.20210202111144-7c1e53d92758 h1:0mgmRsHKSiXLmVJ/yMCihoqSvj2EF/Y9DhPnbhwUXFE=
+github.com/haproxytech/client-native/v2 v2.2.1-0.20210202111144-7c1e53d92758/go.mod h1:PwZEyFw1UlwUp+OPETx/0hpUhNPYmgdLJ/+ss/FVv2w=
 github.com/haproxytech/config-parser/v3 v3.0.0-rc1.0.20201208104025-93bb7f1e7ff4 h1:EmggWnnsqYlO+id5KBLwRf+Far4j33Aee2ISA0fHXi0=
 github.com/haproxytech/config-parser/v3 v3.0.0-rc1.0.20201208104025-93bb7f1e7ff4/go.mod h1:68k+xwy1wGoufI/VKOOilrx/65M85eeQP6Atg+a29Ds=
+github.com/haproxytech/config-parser/v3 v3.0.0-rc1.0.20201218192213-cf1331eaac44 h1:lWMn14Si9rseZ3UfTI2w7nqKRjjTIUkyJc7PCHI9928=
+github.com/haproxytech/config-parser/v3 v3.0.0-rc1.0.20201218192213-cf1331eaac44/go.mod h1:68k+xwy1wGoufI/VKOOilrx/65M85eeQP6Atg+a29Ds=
 github.com/haproxytech/models/v2 v2.1.1-0.20201208104308-ea0dd4a520f9 h1:6zFI61Rd2yYsx0QTbiaonI782vfWaltukYiajYW/Uxg=
 github.com/haproxytech/models/v2 v2.1.1-0.20201208104308-ea0dd4a520f9/go.mod h1:HjM8x+j1/j4nHUA5lqh159OPZ3zQ5iGz13vHo9xeEk0=
+github.com/haproxytech/models/v2 v2.2.0-rc1.0.20210112080933-32de531b38f2 h1:cJfX3CNxOcZ7FW3pB88IxJfczdHBEG/dZ25A8JrQr78=
+github.com/haproxytech/models/v2 v2.2.0-rc1.0.20210112080933-32de531b38f2/go.mod h1:HjM8x+j1/j4nHUA5lqh159OPZ3zQ5iGz13vHo9xeEk0=
 github.com/hashicorp/golang-lru v0.5.0/go.mod h1:/m3WP610KZHVQ1SGc6re/UDhFvYD7pJ4Ao+sR/qLZy8=
 github.com/hashicorp/golang-lru v0.5.1 h1:0hERBMJE1eitiLkihrMvRVBYAkpHzc/J3QdDN+dAcgU=
 github.com/hashicorp/golang-lru v0.5.1/go.mod h1:/m3WP610KZHVQ1SGc6re/UDhFvYD7pJ4Ao+sR/qLZy8=
