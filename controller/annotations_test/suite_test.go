@@ -22,7 +22,7 @@ func (suite *AnnotationSuite) SetupSuite() {
 	if err != nil {
 		panic(err)
 	}
-	suite.client, err = api.Init(suite.transactionDir, "../../fs/etc/haproxy/haproxy.cfg", "", "")
+	suite.client, err = api.Init(suite.transactionDir, "../../fs/etc/haproxy/haproxy.cfg", "haproxy", "")
 	suite.Nil(err)
 	suite.NoError(suite.client.APIStartTransaction())
 }
