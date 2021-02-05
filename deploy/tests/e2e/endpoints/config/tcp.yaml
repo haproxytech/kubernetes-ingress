@@ -1,8 +1,8 @@
+---
 apiVersion: v1
 kind: ConfigMap
 metadata:
  name: haproxy-configmap-tcp
  namespace: haproxy-controller
 data:
-  32766: "default/web-waltham:8181"
-  32767: "default/web-waltham:8181"
+  32766: "e2e-tests-endpoints/http-echo:443"
