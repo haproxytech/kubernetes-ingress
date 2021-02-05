@@ -6,16 +6,7 @@ metadata:
 data:
   syslog-server: |
     address: stdout, format: raw, facility:daemon
-  placeholder-1: ""
-  placeholder-2: ""
-  check: "true"
-  rate-limit: "true"
-  rate-limit-expire: 30m
-  rate-limit-interval: 10s
-  rate-limit-size: 100k
-  ssl-redirect: "false"
-  ssl-redirect-code: "302"
-  ssl-passthrough: "false"
+  server-slots: "4"
   timeout-client: 50s
   timeout-connect: 5s
   timeout-http-keep-alive: 1m

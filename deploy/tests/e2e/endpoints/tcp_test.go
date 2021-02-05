@@ -14,31 +14,19 @@
 
 // +build integration
 
-package e2e
+package endpoints
 
-import (
-	"testing"
-
-	"github.com/stretchr/testify/assert"
-
-	kindclient "github.com/haproxytech/kubernetes-ingress/deploy/tests/e2e/client"
-)
-
-func Test_TCP_Reach(t *testing.T) {
-	client := kindclient.NewClient("haproxy.org", 32766)
-
+func (suite *EndpointsSuite) Test_TCP_Reach() {
 	counter := map[string]int{}
 	for i := 0; i < 4; i++ {
 		func() {
-			res, cls, err := client.Do("/gidc")
-			if err != nil {
-				return
-			}
+			res, cls, err := suite.client.Do()
+			suite.NoError(err)
 			defer cls()
-			counter[newReachResponse(t, res).Name()]++
+			counter[newReachResponse(suite.T(), res)]++
 		}()
 	}
 	for _, v := range counter {
-		assert.Equal(t, 4, v)
+		suite.Equal(4, v)
 	}
 }

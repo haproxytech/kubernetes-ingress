@@ -18,7 +18,7 @@ spec:
      serviceAccountName: haproxy-ingress-service-account
      containers:
      - name: haproxy-ingress
-       image: TAG/IMAGE
+       image: haproxytech/kubernetes-ingress:latest
        imagePullPolicy: Never
        resources:
          limits:
