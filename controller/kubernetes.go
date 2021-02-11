@@ -62,7 +62,7 @@ func GetKubernetesClient() (*K8s, error) {
 	clientset, err := kubernetes.NewForConfig(config)
 	logger.Trace(config)
 	if err != nil {
-		panic(err.Error())
+		logger.Panic(err)
 	}
 	return &K8s{
 		API:    clientset,
@@ -80,14 +80,14 @@ func GetRemoteKubernetesClient(kubeconfig string) (*K8s, error) {
 	// use the current context in kubeconfig
 	config, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
 	if err != nil {
-		panic(err.Error())
+		logger.Panic(err)
 	}
 
 	// create the clientset
 	clientset, err := kubernetes.NewForConfig(config)
 
 	if err != nil {
-		panic(err.Error())
+		logger.Panic(err)
 	}
 	return &K8s{
 		API:    clientset,
