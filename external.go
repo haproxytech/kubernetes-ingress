@@ -19,7 +19,6 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"time"
 
 	"github.com/google/renameio"
 	c "github.com/haproxytech/kubernetes-ingress/controller"
@@ -50,21 +49,24 @@ func setupHAProxyEnv(osArgs utils.OSArgs) {
 	c.HAProxyStateDir = runtimeDir
 	c.HAProxyRuntimeSocket = path.Join(runtimeDir, "haproxy-runtime-api.sock")
 	c.HAProxyPIDFile = path.Join(runtimeDir, "haproxy.pid")
-	time.Sleep(2 * time.Second)
 
-	pwd, err := os.Getwd()
-	if err != nil {
-		logger.Panicf("Couldn't get current directory %s\n", err.Error())
-	}
+	// Try to copy original file if current directory is project directory
+	// Otherwise check if haproxy.cfg is already in config-dir
 	dir, err := filepath.Abs(filepath.Dir(os.Args[0]))
 	if err != nil {
 		logger.Panic(err)
 	}
 	logger.Debug(dir)
-	if err = copyFile(path.Join(dir, "fs/etc/haproxy/haproxy.cfg"), path.Join(c.HAProxyCfgDir, "haproxy.cfg")); err != nil {
+	cfgFile := path.Join(c.HAProxyCfgDir, "haproxy.cfg")
+	origin := path.Join(dir, "fs/etc/haproxy/haproxy.cfg")
+	_, err = os.Stat(origin)
+	if err != nil {
+		if _, err = os.Stat(cfgFile); err != nil {
+			logger.Panicf("%s not found", cfgFile)
+		}
+	} else if err = copyFile(origin, cfgFile); err != nil {
 		logger.Panic(err)
 	}
-	logger.Debug(pwd)
 }
 
 func copyFile(src, dst string) (err error) {
