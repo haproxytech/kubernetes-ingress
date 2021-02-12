@@ -20,7 +20,7 @@ golangci_lint:
 lint-commit-msg:
   stage: lint
   image:
-    name: haproxytech/check-commit:latest
+    name: $CI_REGISTRY_GO/check-commit:latest
     entrypoint: [""]
   tags:
     - go
@@ -29,7 +29,7 @@ lint-commit-msg:
 test:
   stage: test
   image:
-    name: golang:1.15
+    name: $CI_REGISTRY_GO/golang:1.15
     entrypoint: [""]
   tags:
     - go
@@ -39,7 +39,7 @@ test:
 .kind_deployment:
   image: docker:stable
   services:
-    - name: docker:18.09.7-dind
+    - name: $CI_REGISTRY_GO/docker:18.09.7-dind
       alias: docker
   tags:
     - go
