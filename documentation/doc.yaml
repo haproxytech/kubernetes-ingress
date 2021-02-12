@@ -257,6 +257,45 @@ image_arguments:
     helm: |-
       helm install haproxy haproxytech/kubernetes-ingress \
         --set controller.logging.level=debug
+  - argument: --external
+    description: Run as external Ingress Controller (out of kubernetes cluster).
+    values:
+      - Boolean value.
+    default: false
+    version_min: "1.5"
+    example: |-
+      args:
+        - --external
+  - argument: --program
+    description: Path to HAProxy binary to use when running controller in [external mode](#--external).
+    values:
+      - Path to HAProxy binary
+    default: haproxy in PATH location
+    version_min: "1.5"
+    example: |-
+      args:
+        - --external
+        - --program=/usr/bin/haproxy
+  - argument: --config-dir
+    description: Path to HAProxy configuration directory when running controller in [external mode](#--external). Configuration directory is where resources like configuration file, certificates, haproxy map files, are located.
+    values:
+      - Path to configuration directory
+    default: "/tmp/haproxy-ingress/etc"
+    version_min: "1.5"
+    example: |-
+      args:
+        - --external
+        - --config-dir=/haproxy-ingress/etc
+  - argument: --runtime-dir
+    description: Path to HAProxy runtime directory when running controller in [external mode](#--external). Runtime directory is where resources like PID file, runtime socket, etc are located.
+    values:
+      - Path to runtime directory
+    default: "/tmp/haproxy-ingress/run"
+    version_min: "1.5"
+    example: |-
+      args:
+        - --external
+        - --runtime-dir=/haproxy-ingress/run
 groups:
   config-snippet:
     header: |-

@@ -29,6 +29,10 @@ Image can be run with arguments:
 | [`--sync-period`](#--sync-period) | `5s` |
 | [`--cache-resync-period`](#--cache-resync-period) | `10m` |
 | [`--log`](#--log) | `info` |
+| [`--external`](#--external) | `false` |
+| [`--program`](#--program) | `haproxy in PATH location` |
+| [`--config-dir`](#--config-dir) | `/tmp/haproxy-ingress/etc` |
+| [`--runtime-dir`](#--runtime-dir) | `/tmp/haproxy-ingress/run` |
 
 
 ### `--configmap`
@@ -448,6 +452,85 @@ Example:
 ```yaml
 args:
   - --log=debug
+```
+
+<p align='right'><a href='#haproxy-kubernetes-ingress-controller'>:arrow_up_small: back to top</a></p>
+
+***
+
+### `--external`
+
+  Run as external Ingress Controller (out of kubernetes cluster).
+
+Possible values:
+
+- Boolean value.
+
+Example:
+
+```yaml
+args:
+  - --external
+```
+
+<p align='right'><a href='#haproxy-kubernetes-ingress-controller'>:arrow_up_small: back to top</a></p>
+
+***
+
+### `--program`
+
+  Path to HAProxy binary to use when running controller in [external mode](#--external).
+
+Possible values:
+
+- Path to HAProxy binary
+
+Example:
+
+```yaml
+args:
+  - --external
+  - --program=/usr/bin/haproxy
+```
+
+<p align='right'><a href='#haproxy-kubernetes-ingress-controller'>:arrow_up_small: back to top</a></p>
+
+***
+
+### `--config-dir`
+
+  Path to HAProxy configuration directory when running controller in [external mode](#--external). Configuration directory is where resources like configuration file, certificates, haproxy map files, are located.
+
+Possible values:
+
+- Path to configuration directory
+
+Example:
+
+```yaml
+args:
+  - --external
+  - --config-dir=/haproxy-ingress/etc
+```
+
+<p align='right'><a href='#haproxy-kubernetes-ingress-controller'>:arrow_up_small: back to top</a></p>
+
+***
+
+### `--runtime-dir`
+
+  Path to HAProxy runtime directory when running controller in [external mode](#--external). Runtime directory is where resources like PID file, runtime socket, etc are located.
+
+Possible values:
+
+- Path to runtime directory
+
+Example:
+
+```yaml
+args:
+  - --external
+  - --runtime-dir=/haproxy-ingress/run
 ```
 
 <p align='right'><a href='#haproxy-kubernetes-ingress-controller'>:arrow_up_small: back to top</a></p>
