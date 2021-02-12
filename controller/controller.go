@@ -137,7 +137,7 @@ func (c *HAProxyController) Start(osArgs utils.OSArgs) {
 	var k8s *K8s
 	var err error
 
-	if osArgs.OutOfCluster {
+	if osArgs.External {
 		kubeconfig := filepath.Join(utils.HomeDir(), ".kube", "config")
 		if osArgs.KubeConfig != "" {
 			kubeconfig = osArgs.KubeConfig
@@ -357,7 +357,7 @@ func (c *HAProxyController) haproxyInitialize() {
 	if err != nil {
 		logger.Panic(err)
 	}
-	if c.osArgs.OutOfCluster && !c.osArgs.Test {
+	if c.osArgs.External && !c.osArgs.Test {
 		logger.Panic(c.clientAPIClosure(func() error {
 			var errors utils.Errors
 			errors.Add(

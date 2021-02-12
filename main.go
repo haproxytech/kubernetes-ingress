@@ -110,7 +110,7 @@ func main() {
 	logger.Printf("Controller sync period: %s\n", osArgs.SyncPeriod.String())
 
 	c.HAProxyCfgDir = "/etc/haproxy/"
-	if osArgs.OutOfCluster {
+	if osArgs.External {
 		setupHAProxyEnv(osArgs)
 	}
 
