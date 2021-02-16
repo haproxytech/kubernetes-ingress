@@ -116,6 +116,9 @@ func (c *HAProxyController) monitorChanges() {
 					c.k8s.EventsIngressClass(ingClassChan, stop, ici)
 				}
 			}
+			if ii != nil {
+				break
+			}
 		}
 		if ii == nil {
 			logger.Panic("ingress resources not supported in this cluster")
