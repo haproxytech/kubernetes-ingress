@@ -51,9 +51,9 @@ type K8s struct {
 
 //GetKubernetesClient returns new client that communicates with k8s
 func GetKubernetesClient() (*K8s, error) {
-	logger = utils.GetK8sAPILogger()
+	k8sLogger := utils.GetK8sAPILogger()
 	if !TRACE_API {
-		logger.SetLevel(utils.Info)
+		k8sLogger.SetLevel(utils.Info)
 	}
 	config, err := rest.InClusterConfig()
 	if err != nil {
@@ -66,15 +66,15 @@ func GetKubernetesClient() (*K8s, error) {
 	}
 	return &K8s{
 		API:    clientset,
-		Logger: logger,
+		Logger: k8sLogger,
 	}, nil
 }
 
 //GetRemoteKubernetesClient returns new client that communicates with k8s
 func GetRemoteKubernetesClient(kubeconfig string) (*K8s, error) {
-	logger = utils.GetK8sAPILogger()
+	k8sLogger := utils.GetK8sAPILogger()
 	if !TRACE_API {
-		logger.SetLevel(utils.Info)
+		k8sLogger.SetLevel(utils.Info)
 	}
 
 	// use the current context in kubeconfig
@@ -91,7 +91,7 @@ func GetRemoteKubernetesClient(kubeconfig string) (*K8s, error) {
 	}
 	return &K8s{
 		API:    clientset,
-		Logger: logger,
+		Logger: k8sLogger,
 	}, nil
 }
 
