@@ -183,7 +183,7 @@ func (r Rules) Refresh(client api.HAProxyClient) (reload bool) {
 				id := getID(ruleSet[i])
 				if ftRules.status[id] == TO_DELETE {
 					delete(ftRules.status, id)
-					ftRules.rules[ruleType] = append(ruleSet[:i], ruleSet[i+1:]...)
+					ruleSet = append(ruleSet[:i], ruleSet[i+1:]...)
 					continue
 				}
 				if ftRules.status[id]&INGRESS != 0 {
@@ -195,6 +195,7 @@ func (r Rules) Refresh(client api.HAProxyClient) (reload bool) {
 					reload = true
 				}
 			}
+			ftRules.rules[ruleType] = ruleSet
 		}
 	}
 	return reload
