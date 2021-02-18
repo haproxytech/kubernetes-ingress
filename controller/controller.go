@@ -216,6 +216,7 @@ func (c *HAProxyController) updateHAProxy() {
 				})
 			}
 			// Ingress secrets
+			logger.Tracef("ingress '%s/%s': processing secrets...", ingress.Namespace, ingress.Name)
 			for _, tls := range ingress.TLS {
 				if tls.Status == store.DELETED {
 					continue
@@ -230,12 +231,14 @@ func (c *HAProxyController) updateHAProxy() {
 				}
 			}
 			// Ingress annotations
+			logger.Tracef("ingress '%s/%s': processing annotations...", ingress.Namespace, ingress.Name)
 			if len(ingress.Rules) == 0 {
 				logger.Debugf("Ingress %s/%s: no rules defined", ingress.Namespace, ingress.Name)
 				continue
 			}
 			c.handleIngressAnnotations(ingress)
 			// Ingress rules
+			logger.Tracef("ingress '%s/%s': processing rules...", ingress.Namespace, ingress.Name)
 			for _, rule := range ingress.Rules {
 				for _, path := range rule.Paths {
 					c.cfg.IngressRoutes.AddRoute(&ingressRoute.Route{
