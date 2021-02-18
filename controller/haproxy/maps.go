@@ -90,6 +90,7 @@ func (m Maps) Refresh(client api.HAProxyClient) (reload bool) {
 		if _, err = f.WriteString(content); err != nil {
 			logger.Error(err)
 		}
+		logger.Error(f.Sync())
 		if err = client.SetMapContent(name, content); err != nil {
 			if strings.HasPrefix(err.Error(), "maps dir doesn't exists") {
 				logger.Debugf("creating Map file %s", name)
