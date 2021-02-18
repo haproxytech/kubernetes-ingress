@@ -89,16 +89,18 @@ func (m Maps) Refresh(client api.HAProxyClient) (reload bool) {
 		defer f.Close()
 		if _, err = f.WriteString(content); err != nil {
 			logger.Error(err)
+			continue
 		}
 		logger.Error(f.Sync())
-		if err = client.SetMapContent(name, content); err != nil {
-			if strings.HasPrefix(err.Error(), "maps dir doesn't exists") {
-				logger.Debugf("creating Map file %s", name)
-			} else {
-				logger.Warningf("dynamic update of '%s' Map file failed: %s", name, err.Error()[:200])
-			}
-			reload = true
-		}
+		reload = true
+		// if err = client.SetMapContent(name, content); err != nil {
+		// 	if strings.HasPrefix(err.Error(), "maps dir doesn't exists") {
+		// 		logger.Debugf("creating Map file %s", name)
+		// 	} else {
+		// 		logger.Warningf("dynamic update of '%s' Map file failed: %s", name, err.Error()[:200])
+		// 	}
+		// 	reload = true
+		// }
 	}
 	return reload
 }
