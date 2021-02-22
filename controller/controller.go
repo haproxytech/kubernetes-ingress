@@ -274,9 +274,21 @@ func (c *HAProxyController) updateHAProxy() {
 			return c.Client.FrontendBindEdit("healthz",
 				models.Bind{
 					Name:    "v4",
-					Address: "*:1042",
+					Address: "0.0.0.0:1042",
 				})
 		}))
+
+		if !c.osArgs.DisableIPV6 {
+			logger.Panic(c.clientAPIClosure(func() error {
+				return c.Client.FrontendBindCreate("healthz",
+					models.Bind{
+						Name:    "v6",
+						Address: ":::1042",
+						V4v6:    true,
+					})
+			}))
+		}
+
 		logger.Debugf("healthz frontend exposed for readiness probe")
 		c.ready = true
 	}
