@@ -94,7 +94,7 @@ func (m Maps) Refresh(client api.HAProxyClient) (reload bool) {
 			if strings.HasPrefix(err.Error(), "maps dir doesn't exists") {
 				logger.Debugf("creating Map file %s", name)
 			} else {
-				logger.Warning("dynamic update of '%s' Map file failed: %s", name, err.Error()[:200])
+				logger.Warningf("dynamic update of '%s' Map file failed: %s", name, err.Error()[:200])
 			}
 			reload = true
 		}
