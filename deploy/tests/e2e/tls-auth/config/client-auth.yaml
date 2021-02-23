@@ -1,0 +1,19 @@
+---
+kind: ConfigMap
+apiVersion: v1
+metadata:
+ name: haproxy-configmap
+ namespace: haproxy-controller
+data:
+  ssl-certificate: e2e-tests-tls-auth/default-cert
+  client-ca: e2e-tests-tls-auth/client-ca
+  syslog-server: |
+    address: stdout, format: raw, facility:daemon
+  server-slots: "4"
+  timeout-client: 50s
+  timeout-connect: 5s
+  timeout-http-keep-alive: 1m
+  timeout-http-request: 5s
+  timeout-queue: 5s
+  timeout-server: 50s
+  timeout-tunnel: 1h
