@@ -413,6 +413,14 @@ func (c *HAProxyController) handleBinds() (err error) {
 	}
 	if !c.osArgs.DisableIPV6 {
 		protos["v6"] = c.osArgs.IPV6BindAddr
+
+		// IPv6 not disabled, so add v6 listening to stats frontend
+		errors.Add(c.Client.FrontendBindCreate("stats",
+			models.Bind{
+				Name:    "v6",
+				Address: ":::1024",
+				V4v6:    false,
+			}))
 	}
 	for ftName, ftPort := range frontends {
 		for proto, addr := range protos {
