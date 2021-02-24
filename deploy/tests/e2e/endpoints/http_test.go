@@ -18,15 +18,18 @@ package endpoints
 
 import (
 	"fmt"
+	"net/http"
 
 	"github.com/haproxytech/kubernetes-ingress/deploy/tests/e2e"
 )
 
+// For each test we send two times mores requests than replicas available.
+// In the end the counter should be 2 for each returned pod-name in request answer.
 func (suite *EndpointsSuite) Test_HTTP_Reach() {
-	for _, replicas := range []int{2, 4} {
+	for _, replicas := range []int{4, 8, 2, 0, 3} {
 		suite.Run(fmt.Sprintf("%d-replicas", replicas), func() {
 			suite.tmplData.Replicas = replicas
-			suite.test.DeployYamlTemplate("config/endpoints.yaml.tmpl", suite.test.GetNS(), suite.tmplData)
+			suite.NoError(suite.test.DeployYamlTemplate("config/endpoints.yaml.tmpl", suite.test.GetNS(), suite.tmplData))
 			suite.Eventually(func() bool {
 				counter := map[string]int{}
 				for i := 0; i < replicas*2; i++ {
@@ -34,8 +37,13 @@ func (suite *EndpointsSuite) Test_HTTP_Reach() {
 						res, cls, err := suite.client.Do()
 						suite.NoError(err)
 						defer cls()
-						counter[newReachResponse(suite.T(), res)]++
+						if res.StatusCode == http.StatusOK {
+							counter[newReachResponse(suite.T(), res)]++
+						}
 					}()
+				}
+				if replicas == 0 && len(counter) > 0 {
+					return false
 				}
 				for _, v := range counter {
 					if v != 2 {
