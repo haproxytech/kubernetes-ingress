@@ -188,19 +188,12 @@ func (route *Route) getEndpoints() {
 		}
 		return
 	}
-	for _, sp := range route.service.Ports {
-		if sp.Name == route.Path.ServicePortString || sp.Port == route.Path.ServicePortInt {
-			if endpoints, ok := endpoints.Ports[sp.Name]; ok {
-				route.endpoints = endpoints
-				return
-			}
-			logger.Warningf("ingress %s/%s: no matching endpoints for service '%s' and port '%s'", route.Namespace.Name, route.Ingress.Name, route.service.Name, sp.Name)
+	if route.Path.ResolvedSvcPort != "" {
+		portName := route.Path.ResolvedSvcPort
+		if endpoints, ok := endpoints.Ports[portName]; ok {
+			route.endpoints = endpoints
 			return
 		}
 	}
-	ingressPort := route.Path.ServicePortString
-	if route.Path.ServicePortInt != 0 {
-		ingressPort = fmt.Sprintf("%d", route.Path.ServicePortInt)
-	}
-	logger.Warningf("ingress %s/%s: service %s: no service port matching '%s'", route.Namespace.Name, route.Ingress.Name, route.service.Name, ingressPort)
+	logger.Warningf("ingress %s/%s: no matching endpoints for service '%s' and port '%d:%s'", route.Namespace.Name, route.Ingress.Name, route.service.Name, route.Path.ServicePortInt, route.Path.ServicePortString)
 }

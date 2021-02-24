@@ -32,7 +32,7 @@ type HAProxySrv struct {
 // PortEndpoints describes endpionts of a service port
 type PortEndpoints struct {
 	Port            int64
-	BackendName     string
+	BackendName     string // For runtime operations
 	DynUpdateFailed bool
 	AddrCount       int
 	AddrNew         map[string]struct{}
@@ -83,6 +83,7 @@ type IngressPath struct {
 	ServiceName       string
 	ServicePortInt    int64
 	ServicePortString string
+	ResolvedSvcPort   string
 	Path              string
 	ExactPathMatch    bool
 	IsDefaultBackend  bool
