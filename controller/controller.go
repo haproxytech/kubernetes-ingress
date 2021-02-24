@@ -209,11 +209,11 @@ func (c *HAProxyController) updateHAProxy() {
 			}
 			// Default Backend
 			if ingress.DefaultBackend != nil {
-				c.cfg.IngressRoutes.AddRoute(&ingressRoute.Route{
+				logger.Error(c.cfg.IngressRoutes.AddRoute(&ingressRoute.Route{
 					Namespace: namespace,
 					Ingress:   ingress,
 					Path:      ingress.DefaultBackend,
-				})
+				}))
 			}
 			// Ingress secrets
 			logger.Tracef("ingress '%s/%s': processing secrets...", ingress.Namespace, ingress.Name)
@@ -241,14 +241,14 @@ func (c *HAProxyController) updateHAProxy() {
 			logger.Tracef("ingress '%s/%s': processing rules...", ingress.Namespace, ingress.Name)
 			for _, rule := range ingress.Rules {
 				for _, path := range rule.Paths {
-					c.cfg.IngressRoutes.AddRoute(&ingressRoute.Route{
+					logger.Error(c.cfg.IngressRoutes.AddRoute(&ingressRoute.Route{
 						Namespace:      namespace,
 						Ingress:        ingress,
 						Host:           rule.Host,
 						Path:           path,
 						HAProxyRules:   c.cfg.HAProxyRules.GetIngressRuleIDs(ingress.Name),
 						SSLPassthrough: c.sslPassthroughEnabled(namespace, ingress, path),
-					})
+					}))
 				}
 			}
 
@@ -452,13 +452,14 @@ func (c *HAProxyController) handlePprof() (err error) {
 		return err
 	}
 	logger.Debug("pprof backend created")
-	c.cfg.IngressRoutes.AddRoute(&ingressRoute.Route{
+	logger.Error(c.cfg.IngressRoutes.AddRoute(&ingressRoute.Route{
 		Path: &store.IngressPath{
 			Path:           "/debug/pprof",
 			ExactPathMatch: false,
 		},
-		BackendName: pprofBackend,
-	})
+		BackendName:  pprofBackend,
+		LocalBackend: true,
+	}))
 	return nil
 }
 
@@ -498,11 +499,11 @@ func (c *HAProxyController) handleDefaultService() {
 		ServicePortInt:   service.Ports[0].Port,
 		IsDefaultBackend: true,
 	}
-	c.cfg.IngressRoutes.AddRoute(&ingressRoute.Route{
+	logger.Error(c.cfg.IngressRoutes.AddRoute(&ingressRoute.Route{
 		Namespace: namespace,
 		Ingress:   ingress,
 		Path:      path,
-	})
+	}))
 }
 
 // handleDefaultCert configures default/fallback HAProxy certificate to use for client HTTPS requests.

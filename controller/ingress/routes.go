@@ -54,11 +54,12 @@ const (
 	PATH_PREFIX = "path-prefix"
 )
 
-func (r *Routes) AddRoute(route *Route) {
-	route.service = route.Namespace.Services[route.Path.ServiceName]
-	if route.service == nil {
-		logger.Warningf("ingress %s/%s: service '%s' not found", route.Namespace.Name, route.Ingress.Name, route.Path.ServiceName)
-		return
+func (r *Routes) AddRoute(route *Route) (err error) {
+	if route.BackendName == "" {
+		err = route.SetBackendName()
+		if err != nil {
+			return err
+		}
 	}
 	route.setStatus()
 	switch {
@@ -69,6 +70,7 @@ func (r *Routes) AddRoute(route *Route) {
 	default:
 		r.http = append(r.http, route)
 	}
+	return nil
 }
 
 func (r *Routes) Refresh(c api.HAProxyClient, k store.K8s, mapFiles haproxy.Maps, certs *haproxy.Certificates) (reload bool, activeBackends map[string]struct{}) {
@@ -90,11 +92,8 @@ func (r *Routes) refreshHTTP(mapFiles haproxy.Maps) {
 			r.reload = true
 			continue
 		}
-		// Configure Route backend
-		// BackendName != "" then it is a local backend
-		// Example: Pprof
-		if route.BackendName == "" {
-			if err := route.handleService(); err != nil {
+		if !route.LocalBackend {
+			if err := route.handleBackend(); err != nil {
 				logger.Error(err)
 				continue
 			}
@@ -115,7 +114,7 @@ func (r *Routes) refreshHTTPDefault() {
 	// pick latest pushed default route
 	for _, route := range r.httpDefault {
 		if route.status != DELETED {
-			err := route.handleService()
+			err := route.handleBackend()
 			if err != nil {
 				logger.Error(err)
 				continue
@@ -154,7 +153,7 @@ func (r *Routes) refreshTCP() {
 		if route.status == DELETED {
 			continue
 		}
-		if err := route.handleService(); err != nil {
+		if err := route.handleBackend(); err != nil {
 			logger.Error(err)
 			continue
 		}

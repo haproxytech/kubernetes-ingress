@@ -116,12 +116,12 @@ func (t TCPHandler) Update(k store.K8s, cfg *Configuration, api api.HAProxyClien
 			Status:         svc.Status,
 		}
 		nsmmp := k.GetNamespace(namespace)
-		cfg.IngressRoutes.AddRoute(&ingressRoute.Route{
+		logger.Error(cfg.IngressRoutes.AddRoute(&ingressRoute.Route{
 			Namespace:  nsmmp,
 			Ingress:    ingress,
 			Path:       path,
 			TCPService: true,
-		})
+		}))
 	}
 	return reload, err
 }

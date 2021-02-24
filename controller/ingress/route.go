@@ -37,6 +37,7 @@ type Route struct {
 	Host           string
 	BackendName    string
 	NewBackend     bool
+	LocalBackend   bool
 	SSLPassthrough bool
 	TCPService     bool
 	reload         bool
@@ -82,15 +83,8 @@ func (route *Route) addToMapFile(mapFiles haproxy.Maps) error {
 	return nil
 }
 
-// handleService processes an Ingress Route and make corresponding backend configuration in HAProxy
-func (route *Route) handleService() (err error) {
-	// Set backendName
-	if route.Path.ServicePortInt == 0 {
-		route.BackendName = fmt.Sprintf("%s-%s-%s", route.Namespace.Name, route.service.Name, route.Path.ServicePortString)
-	} else {
-		route.BackendName = fmt.Sprintf("%s-%s-%d", route.Namespace.Name, route.service.Name, route.Path.ServicePortInt)
-	}
-
+// handleBackend processes an Ingress Route and makes corresponding backend configuration in HAProxy
+func (route *Route) handleBackend() (err error) {
 	// Get/Create Backend
 	var backend models.Backend
 	if backend, err = client.BackendGet(route.BackendName); err != nil {
@@ -106,7 +100,6 @@ func (route *Route) handleService() (err error) {
 		route.NewBackend = true
 		route.reload = true
 	}
-
 	// Update Backend
 	var switchMode bool
 	if backend.Mode == "http" {
@@ -135,6 +128,29 @@ func (route *Route) handleService() (err error) {
 		route.reload = true
 	}
 
+	return nil
+}
+
+// SetBackendName checks if Ingress ServiceName and ServicePort exists and construct corresponding backend name
+func (route *Route) SetBackendName() (err error) {
+	route.service = route.Namespace.Services[route.Path.ServiceName]
+	if route.service == nil {
+		return fmt.Errorf("ingress %s/%s: service '%s' not found", route.Namespace.Name, route.Ingress.Name, route.Path.ServiceName)
+	}
+	route.Path.ResolvedSvcPort = ""
+	for _, sp := range route.service.Ports {
+		if sp.Name == route.Path.ServicePortString || sp.Port == route.Path.ServicePortInt {
+			route.Path.ResolvedSvcPort = sp.Name
+			break
+		}
+	}
+	if route.Path.ResolvedSvcPort == "" {
+		if route.Path.ServicePortInt != 0 {
+			return fmt.Errorf("ingress %s/%s: service %s: no service port matching '%d'", route.Namespace.Name, route.Ingress.Name, route.service.Name, route.Path.ServicePortInt)
+		}
+		return fmt.Errorf("ingress %s/%s: service %s: no service port matching '%s'", route.Namespace.Name, route.Ingress.Name, route.service.Name, route.Path.ServicePortString)
+	}
+	route.BackendName = fmt.Sprintf("%s-%s-%s", route.service.Namespace, route.service.Name, route.Path.ResolvedSvcPort)
 	return nil
 }
 
