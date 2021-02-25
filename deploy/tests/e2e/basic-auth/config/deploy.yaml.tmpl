@@ -1,0 +1,72 @@
+kind: Secret
+apiVersion: v1
+metadata:
+  name: basic-auth
+data:
+  des: bXNrWXh1eWd2YTJZcw==
+  md5: JDEkb0dxN25UQWYkclMxdlYyR3U4ZEVHS2hUdlJLUm9DLw==
+  sha-256: >-
+    JDUkNklmLkFYd3RmbHpTQXQudiRha09RMkpIR2l2WG81VDQ0YktmTkVRZGwuWDQzc0dpY0t3NWZ2UjRaak4y
+  sha-512: >-
+    JDYkbDM5Snc0WGZaT0Z6RUo5ZiRQZHVOOVdKTEJaYlp6ODhILk00RHVUL3lDMnlYY1hDSUZvcjh2SGFmTWxxa1hKMFBWUFc0VHRaSGhBTUF0eWV4TEtDd0RiLm85WEV6eFl5bGpZYU9TMQ==
+type: Opaque
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: http-echo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: http-echo
+  template:
+    metadata:
+      labels:
+        app: http-echo
+    spec:
+      containers:
+        - name: http-echo
+          image: 'mo3m3n/http-echo:latest'
+          ports:
+            - name: http
+              containerPort: 80
+              protocol: TCP
+            - name: https
+              containerPort: 443
+              protocol: TCP
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: http-echo
+spec:
+  ports:
+    - name: http
+      protocol: TCP
+      port: 80
+      targetPort: http
+    - name: https
+      protocol: TCP
+      port: 443
+      targetPort: https
+  selector:
+    app: http-echo
+---
+kind: Ingress
+apiVersion: networking.k8s.io/v1beta1
+metadata:
+  name: http-echo
+  annotations:
+    auth-secret: basic-auth
+    auth-type: basic-auth
+    ingress.class: haproxy
+spec:
+  rules:
+    - host: {{ .Host }}
+      http:
+        paths:
+          - path: /
+            backend:
+              serviceName: http-echo
+              servicePort: http    
