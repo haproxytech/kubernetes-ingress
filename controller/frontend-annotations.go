@@ -31,6 +31,7 @@ import (
 var rateLimitTables []string
 
 func (c *HAProxyController) handleIngressAnnotations(ingress *store.Ingress) {
+	c.handleSourceIPHeader(ingress)
 	c.handleBlacklisting(ingress)
 	c.handleWhitelisting(ingress)
 	c.handleRequestRateLimiting(ingress)
@@ -43,6 +44,23 @@ func (c *HAProxyController) handleIngressAnnotations(ingress *store.Ingress) {
 	c.handleRequestSetHdr(ingress)
 	c.handleResponseSetHdr(ingress)
 	c.handleResponseCors(ingress)
+}
+
+func (c *HAProxyController) handleSourceIPHeader(ingress *store.Ingress) {
+	srcIPHeader, _ := c.Store.GetValueFromAnnotations("src-ip-header", ingress.Annotations, c.Store.ConfigMaps[Main].Annotations)
+
+	if srcIPHeader == nil {
+		return
+	}
+	if srcIPHeader.Status == DELETED || len(srcIPHeader.Value) == 0 {
+		logger.Debugf("Ingress %s/%s: Deleting Source IP configuration", ingress.Namespace, ingress.Name)
+		return
+	}
+	logger.Debugf("Ingress %s/%s: Configuring Source IP annotation", ingress.Namespace, ingress.Name)
+	reqSetSrc := rules.ReqSetSrc{
+		HeaderName: srcIPHeader.Value,
+	}
+	logger.Error(c.cfg.HAProxyRules.AddRule(reqSetSrc, &ingress.Name, FrontendHTTP, FrontendHTTPS))
 }
 
 func (c *HAProxyController) handleBlacklisting(ingress *store.Ingress) {
