@@ -675,6 +675,7 @@ annotations:
       - "any header name"
     applies_to:
       - configmap
+      - ingress
     version_min: "1.5"
     example: ['src-ip-header: "True-Client-IP"']
   - title: forwarded-for
