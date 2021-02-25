@@ -8,9 +8,13 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"text/template"
 	"time"
+
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/tools/clientcmd"
 )
 
 var WaitDuration = 60 * time.Second
@@ -101,6 +105,26 @@ func (t *Test) TearDown() error {
 
 func (t *Test) AddTearDown(teardown TearDownFunc) {
 	t.tearDownFuncs = append(t.tearDownFuncs, teardown)
+}
+
+func (t *Test) GetK8sVersion() (major, minor int, err error) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return 0, 0, err
+	}
+	config, err := clientcmd.BuildConfigFromFlags("", fmt.Sprintf("%s/.kube/config", home))
+	if err != nil {
+		return 0, 0, err
+	}
+	cs, err := kubernetes.NewForConfig(config)
+	if err != nil {
+		return 0, 0, err
+	}
+	version, _ := cs.DiscoveryClient.ServerVersion()
+	major, _ = strconv.Atoi(version.Major)
+	minor, _ = strconv.Atoi(version.Minor)
+	return major, minor, nil
+
 }
 
 func (t *Test) execute(entry, command string, args ...string) (string, error) {

@@ -1,0 +1,47 @@
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: http-echo
+spec:
+  selector:
+    matchLabels:
+      app: http-echo
+  template:
+    metadata:
+      labels:
+        app: http-echo
+    spec:
+      containers:
+        - name: http-echo
+          image: 'mo3m3n/http-echo:latest'
+          ports:
+            - name: http
+              containerPort: 80
+              protocol: TCP
+            - name: https
+              containerPort: 443
+              protocol: TCP
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: http-echo
+spec:
+  ports:
+    - name: http
+      protocol: TCP
+      port: 80
+      targetPort: http
+    - name: https
+      protocol: TCP
+      port: 443
+      targetPort: https
+  selector:
+    app: http-echo
+---
+apiVersion: networking.k8s.io/v1beta1
+kind: IngressClass
+metadata:
+  name: haproxy
+spec:
+  controller: haproxy.org/ingress-controller
