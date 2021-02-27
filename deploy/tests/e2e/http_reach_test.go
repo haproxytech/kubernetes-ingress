@@ -14,7 +14,7 @@
 
 // +build integration
 
-package tests
+package e2e
 
 import (
 	"fmt"
@@ -25,7 +25,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	kindclient "github.com/haproxytech/kubernetes-ingress/deploy/kind/tests/client"
+	kindclient "github.com/haproxytech/kubernetes-ingress/deploy/tests/e2e/client"
 )
 
 type reachResponse struct {

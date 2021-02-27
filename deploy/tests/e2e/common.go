@@ -14,7 +14,7 @@
 
 // +build integration
 
-package tests
+package e2e
 
 import (
 	"time"

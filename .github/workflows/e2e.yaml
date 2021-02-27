@@ -17,10 +17,10 @@ jobs:
     - uses: engineerd/setup-kind@v0.5.0
       with:
           name: dev
-          config: deploy/kind/kind-config.yaml
+          config: deploy/tests/kind-config.yaml
           image: kindest/node:${{ matrix.k8s-version }}
           version: v0.8.1
     - name: Setup
-      run: deploy/kind/ci.sh
+      run: deploy/tests/ci.sh
     - name: Test
       run: go test ./... --tags=integration
