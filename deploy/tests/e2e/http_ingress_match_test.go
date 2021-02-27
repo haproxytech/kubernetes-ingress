@@ -14,7 +14,7 @@
 
 // +build integration
 
-package tests
+package e2e
 
 import (
 	"context"
@@ -27,8 +27,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	kindclient "github.com/haproxytech/kubernetes-ingress/deploy/kind/tests/client"
-	"github.com/haproxytech/kubernetes-ingress/deploy/kind/tests/k8s"
+	kindclient "github.com/haproxytech/kubernetes-ingress/deploy/tests/e2e/client"
+	"github.com/haproxytech/kubernetes-ingress/deploy/tests/e2e/k8s"
 )
 
 func Test_Ingress_Match(t *testing.T) {

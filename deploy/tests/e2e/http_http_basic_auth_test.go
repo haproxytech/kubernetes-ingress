@@ -14,7 +14,7 @@
 
 // +build integration
 
-package tests
+package e2e
 
 import (
 	"context"
@@ -28,7 +28,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/haproxytech/kubernetes-ingress/deploy/kind/tests/k8s"
+	"github.com/haproxytech/kubernetes-ingress/deploy/tests/e2e/k8s"
 )
 
 func Test_BasicAuth(t *testing.T) {

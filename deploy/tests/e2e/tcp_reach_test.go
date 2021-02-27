@@ -14,14 +14,14 @@
 
 // +build integration
 
-package tests
+package e2e
 
 import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 
-	kindclient "github.com/haproxytech/kubernetes-ingress/deploy/kind/tests/client"
+	kindclient "github.com/haproxytech/kubernetes-ingress/deploy/tests/e2e/client"
 )
 
 func Test_TCP_Reach(t *testing.T) {

@@ -14,7 +14,7 @@
 
 // +build integration
 
-package tests
+package e2e
 
 import (
 	"context"
@@ -22,39 +22,35 @@ import (
 	"crypto/rsa"
 	"crypto/tls"
 	"crypto/x509"
-	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net"
 	h "net/http"
 	"net/url"
 	"os"
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	networkingv1beta1 "k8s.io/api/networking/v1beta1"
+	networkngv1beta1 "k8s.io/api/networking/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/haproxytech/kubernetes-ingress/deploy/kind/tests/k8s"
+	"github.com/haproxytech/kubernetes-ingress/deploy/tests/e2e/k8s"
 )
 
-func Test_HTTPS_Offload(t *testing.T) {
+func Test_HTTPS_Redirect(t *testing.T) {
+	var err error
 
 	kindURL := os.Getenv("KIND_URL")
 	if kindURL == "" {
 		kindURL = "127.0.0.1"
 	}
 
-	var err error
-
 	cs := k8s.New(t)
-	resourceName := "https-offload"
+	resourceName := "https-redirect"
 
 	deploy := k8s.NewDeployment(resourceName)
 	svc := k8s.NewService(resourceName)
 	ing := k8s.NewIngress(resourceName, []k8s.IngressRule{{Host: resourceName, Path: "/", Service: resourceName}})
-	ing.Spec.TLS = []networkingv1beta1.IngressTLS{
+	ing.Spec.TLS = []networkngv1beta1.IngressTLS{
 		{
 			Hosts:      []string{resourceName + ".haproxy"},
 			SecretName: resourceName,
@@ -65,7 +61,7 @@ func Test_HTTPS_Offload(t *testing.T) {
 	if err != nil {
 		t.FailNow()
 	}
-	csr := k8s.NewCertificateSigningRequest(resourceName, key, ing.Spec.Rules[0].Host)
+	csr := k8s.NewCertificateSigningRequest(resourceName, key, ing.Spec.TLS[0].Hosts...)
 	csr, err = cs.CertificatesV1beta1().CertificateSigningRequests().Create(context.TODO(), csr, metav1.CreateOptions{})
 	if err != nil {
 		t.FailNow()
@@ -101,16 +97,13 @@ func Test_HTTPS_Offload(t *testing.T) {
 
 	ca := k8s.GetCaOrFail(t, cs)
 
-	type echoServerResponse struct {
-		OS struct {
-			Hostname string `json:"hostname"`
-		} `json:"os"`
-	}
-
 	caCertPool := x509.NewCertPool()
 	caCertPool.AddCert(ca)
 
 	client := &h.Client{
+		CheckRedirect: func(req *h.Request, via []*h.Request) error {
+			return h.ErrUseLastResponse
+		},
 		Transport: &h.Transport{
 			TLSClientConfig: &tls.Config{
 				RootCAs: caCertPool,
@@ -118,15 +111,15 @@ func Test_HTTPS_Offload(t *testing.T) {
 			DialContext: func(ctx context.Context, network, addr string) (conn net.Conn, e error) {
 				dialer := &net.Dialer{}
 
-				if addr == ing.Spec.Rules[0].Host+":443" {
-					addr = kindURL + ":30443"
+				if addr == ing.Spec.Rules[0].Host+":80" {
+					addr = kindURL + ":30080"
 				}
 				return dialer.DialContext(ctx, network, addr)
 			},
 		},
 	}
 
-	u, err := url.ParseRequestURI(fmt.Sprintf("https://%s/", ing.Spec.Rules[0].Host))
+	u, err := url.ParseRequestURI(fmt.Sprintf("http://%s/", ing.Spec.Rules[0].Host))
 	if err != nil {
 		t.FailNow()
 	}
@@ -136,23 +129,69 @@ func Test_HTTPS_Offload(t *testing.T) {
 		Host:   ing.Spec.Rules[0].Host,
 	}
 
-	assert.Eventually(t, func() bool {
-		res, err := client.Do(req)
-		if err != nil {
-			return false
-		}
+	a := ing.GetAnnotations()
 
-		body, err := ioutil.ReadAll(res.Body)
-		if err != nil {
-			return false
+	copyAnnotations := func(src map[string]string) (dst map[string]string) {
+		dst = make(map[string]string)
+		for k, v := range src {
+			dst[k] = v
 		}
+		return
+	}
 
-		response := &echoServerResponse{}
-		err = json.Unmarshal(body, response)
+	t.Run("enabled", func(t *testing.T) {
+		e := copyAnnotations(a)
+		e["ssl-redirect"] = "true"
+		ing.SetAnnotations(e)
+		ing, err = cs.NetworkingV1beta1().Ingresses(ing.Namespace).Update(context.Background(), ing, metav1.UpdateOptions{})
 		if err != nil {
-			return false
+			t.FailNow()
 		}
+		assert.Eventually(t, func() bool {
+			res, err := client.Do(req)
+			if err != nil {
+				return false
+			}
+			defer res.Body.Close()
 
-		return strings.HasPrefix(response.OS.Hostname, ing.Name)
-	}, waitDuration, tickDuration)
+			return res.StatusCode == 302
+		}, waitDuration, tickDuration)
+	})
+	t.Run("disabled", func(t *testing.T) {
+		e := copyAnnotations(a)
+		e["ssl-redirect"] = "false"
+		ing.SetAnnotations(e)
+		ing, err = cs.NetworkingV1beta1().Ingresses(ing.Namespace).Update(context.Background(), ing, metav1.UpdateOptions{})
+		if err != nil {
+			t.FailNow()
+		}
+		assert.Eventually(t, func() bool {
+			res, err := client.Do(req)
+			if err != nil {
+				return false
+			}
+			defer res.Body.Close()
+
+			return res.StatusCode < 300
+		}, waitDuration, tickDuration)
+	})
+	t.Run("enabled with custom code", func(t *testing.T) {
+		e := copyAnnotations(a)
+		e["ssl-redirect"] = "true"
+		e["ssl-redirect-code"] = "301"
+		ing.SetAnnotations(e)
+		ing, err = cs.NetworkingV1beta1().Ingresses(ing.Namespace).Update(context.Background(), ing, metav1.UpdateOptions{})
+		if err != nil {
+			t.FailNow()
+		}
+		assert.Eventually(t, func() bool {
+			res, err := client.Do(req)
+			if err != nil {
+				return false
+			}
+			defer res.Body.Close()
+
+			return res.StatusCode == 301
+		}, waitDuration, tickDuration)
+	})
 }
