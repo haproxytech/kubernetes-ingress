@@ -15,23 +15,26 @@
 package e2e
 
 import (
+	"context"
 	"crypto/tls"
 	"fmt"
+	"net"
 	"net/http"
 	"os"
 )
 
 type Client struct {
-	Host      string
-	Port      int
-	Req       *http.Request
-	Transport *http.Transport
+	NoRedirect bool
+	Host       string
+	Port       int
+	Req        *http.Request
+	Transport  *http.Transport
 }
 
 const HTTP_PORT = 30080
 const HTTPS_PORT = 30443
 
-func newClient(port int, tls bool) (*Client, error) {
+func newClient(host string, port int, tls bool) (*Client, error) {
 	kindURL := os.Getenv("KIND_URL")
 	if kindURL == "" {
 		kindURL = "127.0.0.1"
@@ -45,13 +48,21 @@ func newClient(port int, tls bool) (*Client, error) {
 	if port != 0 {
 		dstPort = port
 	}
-	req, err := http.NewRequest("GET", fmt.Sprintf("%s://%s:%d%s", scheme, kindURL, dstPort, ""), nil)
+	req, err := http.NewRequest("GET", fmt.Sprintf("%s://%s", scheme, host), nil)
 	if err != nil {
 		return nil, err
 	}
 	return &Client{
+		Host: host,
 		Port: dstPort,
 		Req:  req,
+		Transport: &http.Transport{
+			DialContext: func(ctx context.Context, network, addr string) (conn net.Conn, e error) {
+				dialer := &net.Dialer{}
+				addr = fmt.Sprintf("%s:%d", kindURL, dstPort)
+				return dialer.DialContext(ctx, network, addr)
+			},
+		},
 	}, nil
 }
 
@@ -60,11 +71,10 @@ func NewHTTPClient(host string, port ...int) (*Client, error) {
 	if len(port) > 0 {
 		dstPort = port[0]
 	}
-	client, err := newClient(dstPort, false)
+	client, err := newClient(host, dstPort, false)
 	if err != nil {
 		return nil, err
 	}
-	client.Host = host
 	return client, nil
 }
 
@@ -73,26 +83,28 @@ func NewHTTPSClient(host string, port ...int) (*Client, error) {
 	if len(port) > 0 {
 		dstPort = port[0]
 	}
-	client, err := newClient(dstPort, true)
+	client, err := newClient(host, dstPort, true)
 	if err != nil {
 		return nil, err
 	}
-	client.Host = host
-	client.Transport = &http.Transport{
-		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: true,
-		},
+	client.Transport.TLSClientConfig = &tls.Config{
+		InsecureSkipVerify: true,
 	}
 	return client, nil
 }
 
 func (c *Client) Do() (res *http.Response, close func() error, err error) {
-	c.Req.Host = c.Host
+	client := &http.Client{}
 	if c.Transport != nil {
-		res, err = (&http.Client{Transport: c.Transport}).Do(c.Req)
-	} else {
-		res, err = http.DefaultClient.Do(c.Req)
+		client.Transport = c.Transport
 	}
+	if c.NoRedirect {
+		client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
+			return http.ErrUseLastResponse
+		}
+	}
+	c.Req.Host = c.Host
+	res, err = client.Do(c.Req)
 	if err != nil {
 		return
 	}
