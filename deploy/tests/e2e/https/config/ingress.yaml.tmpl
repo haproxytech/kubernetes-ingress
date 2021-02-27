@@ -1,0 +1,27 @@
+kind: Ingress
+apiVersion: networking.k8s.io/v1beta1
+metadata:
+  name: http-echo
+  annotations:
+    ingress.class: haproxy
+    {{range .IngAnnotations}}
+    {{ .Key }}: {{ .Value}}
+    {{end}}    
+spec:
+{{if .TLSEnabled}}
+  tls:
+    - hosts:
+        -  {{ .Host }}
+      secretName: haproxy-offload-test
+    - hosts:
+        -  default.haproxy
+      secretName: haproxy-offload-test # Another cert to make sure HAProxy picks the right one
+{{end}}    
+  rules:
+    - host: {{ .Host }}
+      http:
+        paths:
+          - path: /
+            backend:
+              serviceName: http-echo
+              servicePort: {{ .Port }}
