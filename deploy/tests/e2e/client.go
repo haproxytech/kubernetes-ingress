@@ -25,6 +25,7 @@ import (
 
 type Client struct {
 	NoRedirect bool
+	Path       string
 	Host       string
 	Port       int
 	Req        *http.Request
@@ -104,6 +105,7 @@ func (c *Client) Do() (res *http.Response, close func() error, err error) {
 		}
 	}
 	c.Req.Host = c.Host
+	c.Req.URL.Path = c.Path
 	res, err = client.Do(c.Req)
 	if err != nil {
 		return

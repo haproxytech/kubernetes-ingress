@@ -1,0 +1,22 @@
+{{$pathType:=.PathTypeSupported}}
+---
+kind: Ingress
+apiVersion: networking.k8s.io/v1beta1
+metadata:
+  name: http-echo
+  annotations:
+    ingress.class: haproxy
+spec:
+  rules:
+    {{- range .Rules }}
+    - host: "{{.Host}}"
+      http:
+        paths:
+          - path: {{.Path}}
+					{{- if $pathType}}
+            pathType: {{.PathType}}
+          {{- end}}
+            backend:
+              serviceName: {{.Service}}
+              servicePort: http
+    {{- end}}

@@ -1,0 +1,45 @@
+{{- range $_,$i :=  .Apps }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: http-echo-{{$i}}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: http-echo-{{$i}}
+  template:
+    metadata:
+      labels:
+        app: http-echo-{{$i}}
+    spec:
+      containers:
+        - name: http-echo-{{$i}}
+          image: mo3m3n/http-echo:latest
+          ports:
+          - name: http
+            containerPort: 80
+            protocol: TCP
+          - name: https
+            containerPort: 443
+            protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: http-echo-{{$i}}
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      protocol: TCP
+      port: 80
+      targetPort: http
+    - name: https
+      protocol: TCP
+      port: 443
+      targetPort: https
+  selector:
+    app: http-echo-{{$i}}
+{{- end }}
