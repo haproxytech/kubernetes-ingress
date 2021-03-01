@@ -85,7 +85,7 @@ func NewRules() *Rules {
 	}
 }
 
-func (r Rules) AddRule(rule Rule, ingressName *string, frontends ...string) error {
+func (r Rules) AddRule(rule Rule, ingressName string, frontends ...string) error {
 	if rule == nil || len(frontends) == 0 {
 		return fmt.Errorf("invalid params")
 	}
@@ -111,11 +111,11 @@ func (r Rules) AddRule(rule Rule, ingressName *string, frontends ...string) erro
 			ftRules.status[id] = TO_CREATE
 		}
 	}
-	if ingressName != nil {
+	if ingressName != "" {
 		for _, frontend := range frontends {
 			r.frontendRules[frontend].status[id] |= INGRESS
 		}
-		r.ingressRuleIDs[*ingressName] = append(r.ingressRuleIDs[*ingressName], id)
+		r.ingressRuleIDs[ingressName] = append(r.ingressRuleIDs[ingressName], id)
 	}
 	return nil
 }
