@@ -1,0 +1,52 @@
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: http-echo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: http-echo
+  template:
+    metadata:
+      labels:
+        app: http-echo
+    spec:
+      containers:
+        - name: http-echo
+          image: 'quay.io/prometherion/proxy-protocol-app:latest'
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: http-echo
+  annotations:
+    send-proxy-protocol: proxy-v1
+spec:
+  ports:
+    - name: http
+      protocol: TCP
+      port: 8080
+      targetPort: http
+  selector:
+    app: http-echo
+---
+kind: Ingress
+apiVersion: networking.k8s.io/v1beta1
+metadata:
+  name: http-echo
+  annotations:
+    ingress.class: haproxy
+spec:
+  rules:
+    - host: {{ .Host }}
+      http:
+        paths:
+          - path: /
+            backend:
+              serviceName: http-echo
+              servicePort: http    
