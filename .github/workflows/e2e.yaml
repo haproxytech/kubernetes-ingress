@@ -1,4 +1,4 @@
-name: "KinD cluster test"
+name: "e2e tests in Kind cluster"
 on: [pull_request, push]
 
 jobs:
@@ -22,5 +22,7 @@ jobs:
           version: v0.8.1
     - name: Setup
       run: deploy/tests/ci.sh
-    - name: Test
-      run: go test ./... --tags=integration
+    - name: Run parallel e2e tests
+      run: go test ./... -v --tags=e2e_parallel
+    - name: Run sequential e2e tests
+      run: go test ./... -v -p 1 --tags=e2e_sequential

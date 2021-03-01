@@ -1,7 +1,7 @@
 stages:
   - lint
-  - test
-  - kind
+  - unit-tests
+  - e2e-tests
 variables:
   KUBECTL: v1.19.3
   KIND: v0.9.0
@@ -26,8 +26,8 @@ lint-commit-msg:
     - go
   script:
       - go run /check.go
-test:
-  stage: test
+unit-tests:
+  stage: unit-tests
   image:
     name: $CI_REGISTRY_GO/golang:1.15
     entrypoint: [""]
@@ -39,13 +39,13 @@ test:
     - go build -v .
     - go test -v ./...
 .kind_deployment:
+  stage: e2e-tests
   image: docker:stable
   services:
     - name: $CI_REGISTRY_GO/docker:18.09.7-dind
       alias: docker
   tags:
     - go
-  stage: kind
   script:
     - apk add -U wget git go curl
     - wget -q -o /dev/null -O &> /dev/null /usr/local/bin/kind https://github.com/kubernetes-sigs/kind/releases/download/${KIND}/kind-linux-amd64
@@ -59,7 +59,8 @@ test:
     - sed -i -E -e "s/localhost|0\.0\.0\.0|127\.0\.0\.1/docker/g" "deploy/tests/e2e/client.go"
     - until kubectl get nodes -o wide;do sleep 2; done
     - CI_ENV=gitlab deploy/tests/create.sh
-    - KIND_URL=docker go test -v ./... --tags=integration
+    - KIND_URL=docker go test -v ./deploy/tests/e2e/... --tags=e2e_parallel
+    - KIND_URL=docker go test -v -p 1 ./deploy/tests/e2e/... --tags=e2e_sequential
   after_script:
     - kind delete cluster --name=dev
 k8s_17:
