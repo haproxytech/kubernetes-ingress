@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM golang:1.15-alpine AS builder
+FROM golang:1.16-alpine AS builder
 
 RUN apk --no-cache add git openssh
 
@@ -37,8 +37,6 @@ RUN mkdir -p /var/run/vars && \
         -o fs/haproxy-ingress-controller .
 
 FROM haproxytech/haproxy-alpine:2.3
-
-ENV GODEBUG=madvdontneed=1
 
 COPY /fs /
 COPY --from=builder /src/fs/haproxy-ingress-controller .
