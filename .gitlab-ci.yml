@@ -16,7 +16,7 @@ golangci_lint:
   tags:
     - go
   script:
-    - golangci-lint run --timeout=2m -v
+    - golangci-lint run --enable-all --timeout=5m -v
 lint-commit-msg:
   stage: lint
   image:
@@ -34,6 +34,8 @@ test:
   tags:
     - go
   script:
+    - apt update
+    - apt install --assume-yes haproxy/stable
     - go build -v .
     - go test -v ./...
 .kind_deployment:
