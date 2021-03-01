@@ -246,7 +246,7 @@ func (c *HAProxyController) updateHAProxy() {
 						Ingress:        ingress,
 						Host:           rule.Host,
 						Path:           path,
-						HAProxyRules:   c.cfg.HAProxyRules.GetIngressRuleIDs(ingress.Name),
+						HAProxyRules:   c.cfg.HAProxyRules.GetIngressRuleIDs(ingress.Namespace + "-" + ingress.Name),
 						SSLPassthrough: c.sslPassthroughEnabled(namespace, ingress, path),
 					}))
 				}
