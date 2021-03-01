@@ -26,7 +26,9 @@ type SyncType string
 type SyncDataEvent struct {
 	_ [0]int
 	SyncType
+	CRKind    string
 	Namespace string
+	Name      string
 	Data      interface{}
 }
 
@@ -36,14 +38,15 @@ type Mode string
 const (
 	CONTROLLER_CLASS = "haproxy.org/ingress-controller"
 	// SyncType values
-	COMMAND       SyncType = "COMMAND"
-	CONFIGMAP     SyncType = "CONFIGMAP"
-	ENDPOINTS     SyncType = "ENDPOINTS"
-	INGRESS       SyncType = "INGRESS"
-	INGRESS_CLASS SyncType = "INGRESS_CLASS"
-	NAMESPACE     SyncType = "NAMESPACE"
-	SERVICE       SyncType = "SERVICE"
-	SECRET        SyncType = "SECRET"
+	COMMAND         SyncType = "COMMAND"
+	CONFIGMAP       SyncType = "CONFIGMAP"
+	ENDPOINTS       SyncType = "ENDPOINTS"
+	INGRESS         SyncType = "INGRESS"
+	INGRESS_CLASS   SyncType = "INGRESS_CLASS"
+	NAMESPACE       SyncType = "NAMESPACE"
+	SERVICE         SyncType = "SERVICE"
+	SECRET          SyncType = "SECRET"
+	CUSTOM_RESOURCE SyncType = "CUSTOM_RESOURCE"
 	// Modes
 	HTTP Mode = "http"
 	TCP  Mode = "tcp"

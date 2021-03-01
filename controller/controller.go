@@ -34,6 +34,7 @@ import (
 // HAProxyController is ingress controller
 type HAProxyController struct {
 	Cfg            config.ControllerCfg
+	crManager      CRManager
 	Client         api.HAProxyClient
 	OSArgs         utils.OSArgs
 	Store          store.K8s

@@ -29,6 +29,8 @@ func (c *HAProxyController) monitorChanges() {
 
 	informersSynced := []cache.InformerSynced{}
 	stop := make(chan struct{})
+	crManager := NewCRManager(&c.Store, c.k8s.RestConfig, c.OSArgs.CacheResyncPeriod, c.eventChan, stop)
+	c.crManager = crManager
 
 	for _, namespace := range c.getWhitelistedNamespaces() {
 		factory := informers.NewSharedInformerFactoryWithOptions(c.k8s.API, c.OSArgs.CacheResyncPeriod, informers.WithNamespace(namespace))
@@ -56,6 +58,7 @@ func (c *HAProxyController) monitorChanges() {
 		c.k8s.EventsIngresses(c.eventChan, stop, ii)
 
 		informersSynced = []cache.InformerSynced{pi.HasSynced, svci.HasSynced, nsi.HasSynced, ii.HasSynced, si.HasSynced, ci.HasSynced}
+		informersSynced = append(informersSynced, crManager.RunInformers(namespace)...)
 
 		if ici != nil {
 			c.k8s.EventsIngressClass(c.eventChan, stop, ici)
@@ -90,6 +93,8 @@ func (c *HAProxyController) SyncData() {
 				hadChanges = false
 				continue
 			}
+		case CUSTOM_RESOURCE:
+			change = c.crManager.EventCustomResource(job)
 		case NAMESPACE:
 			change = c.Store.EventNamespace(ns, job.Data.(*store.Namespace))
 		case INGRESS:

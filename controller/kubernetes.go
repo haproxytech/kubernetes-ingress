@@ -41,6 +41,7 @@ type K8s struct {
 	API                        *kubernetes.Clientset
 	Logger                     utils.Logger
 	DisableServiceExternalName bool // CVE-2021-25740
+	RestConfig                 *rest.Config
 }
 
 // GetKubernetesClient returns new client that communicates with k8s
@@ -62,11 +63,11 @@ func GetKubernetesClient(disableServiceExternalName bool) (*K8s, error) {
 		API:                        clientset,
 		Logger:                     k8sLogger,
 		DisableServiceExternalName: disableServiceExternalName,
+		RestConfig:                 config,
 	}, nil
 }
 
-// GetRemoteKubernetesClient returns new client that communicates with k8s
-func GetRemoteKubernetesClient(kubeconfig string, disableServiceExternalName bool) (*K8s, error) {
+func getKubeConfig(kubeconfig string) *rest.Config {
 	k8sLogger := utils.GetK8sAPILogger()
 	if !TRACE_API {
 		k8sLogger.SetLevel(utils.Info)
@@ -77,16 +78,22 @@ func GetRemoteKubernetesClient(kubeconfig string, disableServiceExternalName boo
 	if err != nil {
 		logger.Panic(err)
 	}
+	return config
+}
 
+// GetRemoteKubernetesClient returns new client that communicates with k8s
+func GetRemoteKubernetesClient(kubeconfig string, disableServiceExternalName bool) (*K8s, error) {
 	// create the clientset
-	clientset, err := kubernetes.NewForConfig(config)
+	restConfig := getKubeConfig(kubeconfig)
+	clientset, err := kubernetes.NewForConfig(restConfig)
 	if err != nil {
 		logger.Panic(err)
 	}
 	return &K8s{
 		API:                        clientset,
-		Logger:                     k8sLogger,
+		Logger:                     logger,
 		DisableServiceExternalName: disableServiceExternalName,
+		RestConfig:                 restConfig,
 	}, nil
 }
 
