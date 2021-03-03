@@ -65,44 +65,16 @@ func (c *HAProxyController) monitorChanges() {
 		c.k8s.EventsNamespaces(nsChan, stop, nsi)
 
 		var ii, ici cache.SharedIndexInformer
-		for i, apiGroup := range []string{"networking.k8s.io/v1", "networking.k8s.io/v1beta1", "extensions/v1beta1"} {
-			resources, err := c.k8s.API.ServerResourcesForGroupVersion(apiGroup)
-			if err != nil {
-				continue
-			}
-			for _, rs := range resources.APIResources {
-				if rs.Name == "ingresses" {
-					switch i {
-					case 0:
-						ii = factory.Networking().V1().Ingresses().Informer()
-					case 1:
-						ii = factory.Networking().V1beta1().Ingresses().Informer()
-					case 2:
-						ii = factory.Extensions().V1beta1().Ingresses().Informer()
-					}
-					logger.Debugf("watching ingress resources of apiGroup %s:", apiGroup)
-					informersSynced = append(informersSynced, ii.HasSynced)
-					c.k8s.EventsIngresses(ingChan, stop, ii)
-				}
-				if rs.Name == "ingressclasses" {
-					switch i {
-					case 0:
-						ici = factory.Networking().V1().IngressClasses().Informer()
-					case 1:
-						ici = factory.Networking().V1beta1().IngressClasses().Informer()
-					}
-					informersSynced = append(informersSynced, ici.HasSynced)
-					c.k8s.EventsIngressClass(ingClassChan, stop, ici)
-				}
-			}
-			if ii != nil {
-				break
-			}
-		}
+		ii, ici = c.getIngressSharedInformers(factory)
 		if ii == nil {
 			logger.Panic("ingress resources not supported in this cluster")
 		}
-
+		informersSynced = append(informersSynced, ii.HasSynced)
+		c.k8s.EventsIngresses(ingChan, stop, ii)
+		if ici != nil {
+			informersSynced = append(informersSynced, ici.HasSynced)
+			c.k8s.EventsIngressClass(ingClassChan, stop, ici)
+		}
 		ci := factory.Core().V1().ConfigMaps().Informer()
 		informersSynced = append(informersSynced, ci.HasSynced)
 		c.k8s.EventsConfigfMaps(cfgChan, stop, ci)
@@ -231,6 +203,40 @@ func (c *HAProxyController) updateHAProxySrvs(oldEndpoints, newEndpoints *store.
 			logger.Error(stateErr)
 		}
 	}
+}
+
+func (c *HAProxyController) getIngressSharedInformers(factory informers.SharedInformerFactory) (ii, ici cache.SharedIndexInformer) {
+	for i, apiGroup := range []string{"networking.k8s.io/v1", "networking.k8s.io/v1beta1", "extensions/v1beta1"} {
+		resources, err := c.k8s.API.ServerResourcesForGroupVersion(apiGroup)
+		if err != nil {
+			continue
+		}
+		for _, rs := range resources.APIResources {
+			if rs.Name == "ingresses" {
+				switch i {
+				case 0:
+					ii = factory.Networking().V1().Ingresses().Informer()
+				case 1:
+					ii = factory.Networking().V1beta1().Ingresses().Informer()
+				case 2:
+					ii = factory.Extensions().V1beta1().Ingresses().Informer()
+				}
+				logger.Debugf("watching ingress resources of apiGroup %s:", apiGroup)
+			}
+			if rs.Name == "ingressclasses" {
+				switch i {
+				case 0:
+					ici = factory.Networking().V1().IngressClasses().Informer()
+				case 1:
+					ici = factory.Networking().V1beta1().IngressClasses().Informer()
+				}
+			}
+		}
+		if ii != nil {
+			break
+		}
+	}
+	return ii, ici
 }
 
 func (c *HAProxyController) getWhitelistedNamespaces() []string {
