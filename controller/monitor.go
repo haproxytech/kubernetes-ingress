@@ -50,27 +50,7 @@ func (c *HAProxyController) monitorChanges() {
 	cfgChan := make(chan *store.ConfigMap, 10)
 	secretChan := make(chan *store.Secret, 10)
 
-	var namespaces []string
-	var ns string
-	if len(c.Store.NamespacesAccess.Whitelist) == 0 {
-		namespaces = []string{""}
-	} else {
-		for ns = range c.Store.NamespacesAccess.Whitelist {
-			namespaces = append(namespaces, ns)
-		}
-		// Make sure that configmap namespace is whitelisted
-		for _, ns = range namespaces {
-			if ns == c.osArgs.ConfigMap.Namespace {
-				break
-			}
-		}
-		if ns != c.osArgs.ConfigMap.Namespace {
-			namespaces = append(namespaces, c.osArgs.ConfigMap.Namespace)
-		}
-		logger.Infof("Whitelisted Namespaces: %s", namespaces)
-	}
-
-	for _, namespace := range namespaces {
+	for _, namespace := range c.getWhitelistedNamespaces() {
 		factory := informers.NewSharedInformerFactoryWithOptions(c.k8s.API, c.timeFromAnnotation("cache-resync-period"), informers.WithNamespace(namespace))
 
 		pi := factory.Core().V1().Endpoints().Informer()
@@ -220,20 +200,6 @@ func (c *HAProxyController) monitorChanges() {
 func (c *HAProxyController) SyncData(chConfigMapReceivedAndProcessed chan bool) {
 	hadChanges := false
 	var cm string
-	ConfigMapsArgs := map[string]utils.NamespaceValue{
-		Main: {
-			Namespace: c.osArgs.ConfigMap.Namespace,
-			Name:      c.osArgs.ConfigMap.Name,
-		},
-		TCPServices: {
-			Namespace: c.osArgs.ConfigMapTCPServices.Namespace,
-			Name:      c.osArgs.ConfigMapTCPServices.Name,
-		},
-		Errorfiles: {
-			Namespace: c.osArgs.ConfigMapErrorfiles.Namespace,
-			Name:      c.osArgs.ConfigMapErrorfiles.Name,
-		},
-	}
 	for job := range c.eventChan {
 		ns := c.Store.GetNamespace(job.Namespace)
 		change := false
@@ -255,7 +221,7 @@ func (c *HAProxyController) SyncData(chConfigMapReceivedAndProcessed chan bool) 
 		case SERVICE:
 			change = c.Store.EventService(ns, job.Data.(*store.Service))
 		case CONFIGMAP:
-			change, cm = c.Store.EventConfigMap(ns, job.Data.(*store.ConfigMap), ConfigMapsArgs)
+			change, cm = c.Store.EventConfigMap(ns, job.Data.(*store.ConfigMap), c.getConfigMapArgs())
 			if cm == Main && c.Store.ConfigMaps[Main].Status == ADDED {
 				chConfigMapReceivedAndProcessed <- true
 			}
@@ -318,5 +284,39 @@ func (c *HAProxyController) updateHAProxySrvs(oldEndpoints, newEndpoints *store.
 			logger.Error(addrErr)
 			logger.Error(stateErr)
 		}
+	}
+}
+
+func (c *HAProxyController) getWhitelistedNamespaces() []string {
+	if len(c.Store.NamespacesAccess.Whitelist) == 0 {
+		return []string{""}
+	}
+	namespaces := make([]string, len(c.Store.NamespacesAccess.Whitelist))
+	for ns := range c.Store.NamespacesAccess.Whitelist {
+		namespaces = append(namespaces, ns)
+	}
+	cfgMapNS := c.osArgs.ConfigMap.Namespace
+	if _, ok := c.Store.NamespacesAccess.Whitelist[cfgMapNS]; !ok {
+		namespaces = []string{cfgMapNS}
+		logger.Warningf("configmap Namespace '%s' not whitelisted. Whitelisting it anyway", cfgMapNS)
+	}
+	logger.Infof("Whitelisted Namespaces: %s", namespaces)
+	return namespaces
+}
+
+func (c *HAProxyController) getConfigMapArgs() map[string]utils.NamespaceValue {
+	return map[string]utils.NamespaceValue{
+		Main: {
+			Namespace: c.osArgs.ConfigMap.Namespace,
+			Name:      c.osArgs.ConfigMap.Name,
+		},
+		TCPServices: {
+			Namespace: c.osArgs.ConfigMapTCPServices.Namespace,
+			Name:      c.osArgs.ConfigMapTCPServices.Name,
+		},
+		Errorfiles: {
+			Namespace: c.osArgs.ConfigMapErrorfiles.Namespace,
+			Name:      c.osArgs.ConfigMapErrorfiles.Name,
+		},
 	}
 }
