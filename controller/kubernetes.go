@@ -95,7 +95,7 @@ func GetRemoteKubernetesClient(kubeconfig string) (*K8s, error) {
 	}, nil
 }
 
-func (k *K8s) EventsNamespaces(channel chan *store.Namespace, stop chan struct{}, informer cache.SharedIndexInformer) {
+func (k *K8s) EventsNamespaces(channel chan SyncDataEvent, stop chan struct{}, informer cache.SharedIndexInformer) {
 	informer.AddEventHandler(
 		cache.ResourceEventHandlerFuncs{
 			AddFunc: func(obj interface{}) {
@@ -118,7 +118,7 @@ func (k *K8s) EventsNamespaces(channel chan *store.Namespace, stop chan struct{}
 					Status:    status,
 				}
 				k.Logger.Tracef("%s %s: %s", NAMESPACE, item.Status, item.Name)
-				channel <- item
+				channel <- SyncDataEvent{SyncType: NAMESPACE, Namespace: item.Name, Data: item}
 			},
 			DeleteFunc: func(obj interface{}) {
 				data, ok := obj.(*corev1.Namespace)
@@ -136,7 +136,7 @@ func (k *K8s) EventsNamespaces(channel chan *store.Namespace, stop chan struct{}
 					Status:    status,
 				}
 				k.Logger.Tracef("%s %s: %s", NAMESPACE, item.Status, item.Name)
-				channel <- item
+				channel <- SyncDataEvent{SyncType: NAMESPACE, Namespace: item.Name, Data: item}
 			},
 			UpdateFunc: func(oldObj, newObj interface{}) {
 				data1, ok := oldObj.(*corev1.Namespace)
@@ -162,14 +162,14 @@ func (k *K8s) EventsNamespaces(channel chan *store.Namespace, stop chan struct{}
 					return
 				}
 				k.Logger.Tracef("%s %s: %s", SERVICE, item2.Status, item2.Name)
-				channel <- item2
+				channel <- SyncDataEvent{SyncType: NAMESPACE, Namespace: item2.Name, Data: item2}
 			},
 		},
 	)
 	go informer.Run(stop)
 }
 
-func (k *K8s) EventsEndpoints(channel chan *store.Endpoints, stop chan struct{}, informer cache.SharedIndexInformer) {
+func (k *K8s) EventsEndpoints(channel chan SyncDataEvent, stop chan struct{}, informer cache.SharedIndexInformer) {
 	informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			item, err := k.convertToEndpoints(obj, ADDED)
@@ -177,7 +177,7 @@ func (k *K8s) EventsEndpoints(channel chan *store.Endpoints, stop chan struct{},
 				return
 			}
 			k.Logger.Tracef("%s %s: %s", ENDPOINTS, item.Status, item.Service)
-			channel <- item
+			channel <- SyncDataEvent{SyncType: ENDPOINTS, Namespace: item.Namespace, Data: item}
 		},
 		DeleteFunc: func(obj interface{}) {
 			item, err := k.convertToEndpoints(obj, DELETED)
@@ -185,7 +185,7 @@ func (k *K8s) EventsEndpoints(channel chan *store.Endpoints, stop chan struct{},
 				return
 			}
 			k.Logger.Tracef("%s %s: %s", ENDPOINTS, item.Status, item.Service)
-			channel <- item
+			channel <- SyncDataEvent{SyncType: ENDPOINTS, Namespace: item.Namespace, Data: item}
 		},
 		UpdateFunc: func(oldObj, newObj interface{}) {
 			item1, err := k.convertToEndpoints(oldObj, EMPTY)
@@ -198,7 +198,7 @@ func (k *K8s) EventsEndpoints(channel chan *store.Endpoints, stop chan struct{},
 			}
 			// fix modified state for ones that are deleted,new,same
 			k.Logger.Tracef("%s %s: %s", ENDPOINTS, item2.Status, item2.Service)
-			channel <- item2
+			channel <- SyncDataEvent{SyncType: ENDPOINTS, Namespace: item2.Namespace, Data: item2}
 		},
 	})
 	go informer.Run(stop)
@@ -245,7 +245,7 @@ func (k *K8s) convertToEndpoints(obj interface{}, status store.Status) (*store.E
 	return item, nil
 }
 
-func (k *K8s) EventsIngressClass(channel chan *store.IngressClass, stop chan struct{}, informer cache.SharedIndexInformer) {
+func (k *K8s) EventsIngressClass(channel chan SyncDataEvent, stop chan struct{}, informer cache.SharedIndexInformer) {
 	informer.AddEventHandler(
 		cache.ResourceEventHandlerFuncs{
 			AddFunc: func(obj interface{}) {
@@ -255,7 +255,7 @@ func (k *K8s) EventsIngressClass(channel chan *store.IngressClass, stop chan str
 					return
 				}
 				k.Logger.Tracef("%s %s: %s", INGRESS_CLASS, item.Status, item.Name)
-				channel <- item
+				channel <- SyncDataEvent{SyncType: INGRESS_CLASS, Data: item}
 			},
 			DeleteFunc: func(obj interface{}) {
 				item, err := store.ConvertToIngressClass(obj)
@@ -265,7 +265,7 @@ func (k *K8s) EventsIngressClass(channel chan *store.IngressClass, stop chan str
 				}
 				item.Status = DELETED
 				k.Logger.Tracef("%s %s: %s", INGRESS_CLASS, item.Status, item.Name)
-				channel <- item
+				channel <- SyncDataEvent{SyncType: INGRESS_CLASS, Data: item}
 			},
 			UpdateFunc: func(oldObj, newObj interface{}) {
 				item1, err := store.ConvertToIngressClass(oldObj)
@@ -286,14 +286,14 @@ func (k *K8s) EventsIngressClass(channel chan *store.IngressClass, stop chan str
 					return
 				}
 				k.Logger.Tracef("%s %s: %s", INGRESS_CLASS, item2.Status, item2.Name)
-				channel <- item2
+				channel <- SyncDataEvent{SyncType: INGRESS_CLASS, Data: item2}
 			},
 		},
 	)
 	go informer.Run(stop)
 }
 
-func (k *K8s) EventsIngresses(channel chan *store.Ingress, stop chan struct{}, informer cache.SharedIndexInformer) {
+func (k *K8s) EventsIngresses(channel chan SyncDataEvent, stop chan struct{}, informer cache.SharedIndexInformer) {
 	informer.AddEventHandler(
 		cache.ResourceEventHandlerFuncs{
 			AddFunc: func(obj interface{}) {
@@ -303,7 +303,7 @@ func (k *K8s) EventsIngresses(channel chan *store.Ingress, stop chan struct{}, i
 					return
 				}
 				k.Logger.Tracef("%s %s: %s", INGRESS, item.Status, item.Name)
-				channel <- item
+				channel <- SyncDataEvent{SyncType: INGRESS, Namespace: item.Namespace, Data: item}
 			},
 			DeleteFunc: func(obj interface{}) {
 				item, err := store.ConvertToIngress(obj)
@@ -313,7 +313,7 @@ func (k *K8s) EventsIngresses(channel chan *store.Ingress, stop chan struct{}, i
 				}
 				item.Status = DELETED
 				k.Logger.Tracef("%s %s: %s", INGRESS, item.Status, item.Name)
-				channel <- item
+				channel <- SyncDataEvent{SyncType: INGRESS, Namespace: item.Namespace, Data: item}
 			},
 			UpdateFunc: func(oldObj, newObj interface{}) {
 				item1, err := store.ConvertToIngress(oldObj)
@@ -334,14 +334,14 @@ func (k *K8s) EventsIngresses(channel chan *store.Ingress, stop chan struct{}, i
 					return
 				}
 				k.Logger.Tracef("%s %s: %s", INGRESS, item2.Status, item2.Name)
-				channel <- item2
+				channel <- SyncDataEvent{SyncType: INGRESS, Namespace: item2.Namespace, Data: item2}
 			},
 		},
 	)
 	go informer.Run(stop)
 }
 
-func (k *K8s) EventsServices(channel chan *store.Service, stop chan struct{}, informer cache.SharedIndexInformer, publishSvc *store.Service) {
+func (k *K8s) EventsServices(channel chan SyncDataEvent, stop chan struct{}, informer cache.SharedIndexInformer, publishSvc *store.Service) {
 	informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			data, ok := obj.(*corev1.Service)
@@ -376,7 +376,7 @@ func (k *K8s) EventsServices(channel chan *store.Service, stop chan struct{}, in
 				}
 			}
 			k.Logger.Tracef("%s %s: %s", SERVICE, item.Status, item.Name)
-			channel <- item
+			channel <- SyncDataEvent{SyncType: SERVICE, Namespace: item.Namespace, Data: item}
 		},
 		DeleteFunc: func(obj interface{}) {
 			data, ok := obj.(*corev1.Service)
@@ -398,7 +398,7 @@ func (k *K8s) EventsServices(channel chan *store.Service, stop chan struct{}, in
 				}
 			}
 			k.Logger.Tracef("%s %s: %s", SERVICE, item.Status, item.Name)
-			channel <- item
+			channel <- SyncDataEvent{SyncType: SERVICE, Namespace: item.Namespace, Data: item}
 		},
 		UpdateFunc: func(oldObj, newObj interface{}) {
 			data1, ok := oldObj.(*corev1.Service)
@@ -454,13 +454,13 @@ func (k *K8s) EventsServices(channel chan *store.Service, stop chan struct{}, in
 				}
 			}
 			k.Logger.Tracef("%s %s: %s", SERVICE, item2.Status, item2.Name)
-			channel <- item2
+			channel <- SyncDataEvent{SyncType: SERVICE, Namespace: item2.Namespace, Data: item2}
 		},
 	})
 	go informer.Run(stop)
 }
 
-func (k *K8s) EventsConfigfMaps(channel chan *store.ConfigMap, stop chan struct{}, informer cache.SharedIndexInformer) {
+func (k *K8s) EventsConfigfMaps(channel chan SyncDataEvent, stop chan struct{}, informer cache.SharedIndexInformer) {
 	informer.AddEventHandler(
 		cache.ResourceEventHandlerFuncs{
 			AddFunc: func(obj interface{}) {
@@ -481,7 +481,7 @@ func (k *K8s) EventsConfigfMaps(channel chan *store.ConfigMap, stop chan struct{
 					Status:      status,
 				}
 				k.Logger.Tracef("%s %s: %s", CONFIGMAP, item.Status, item.Name)
-				channel <- item
+				channel <- SyncDataEvent{SyncType: CONFIGMAP, Namespace: item.Namespace, Data: item}
 			},
 			DeleteFunc: func(obj interface{}) {
 				data, ok := obj.(*corev1.ConfigMap)
@@ -497,7 +497,7 @@ func (k *K8s) EventsConfigfMaps(channel chan *store.ConfigMap, stop chan struct{
 					Status:      status,
 				}
 				k.Logger.Tracef("%s %s: %s", CONFIGMAP, item.Status, item.Name)
-				channel <- item
+				channel <- SyncDataEvent{SyncType: CONFIGMAP, Namespace: item.Namespace, Data: item}
 			},
 			UpdateFunc: func(oldObj, newObj interface{}) {
 				data1, ok := oldObj.(*corev1.ConfigMap)
@@ -527,14 +527,14 @@ func (k *K8s) EventsConfigfMaps(channel chan *store.ConfigMap, stop chan struct{
 					return
 				}
 				k.Logger.Tracef("%s %s: %s", CONFIGMAP, item2.Status, item2.Name)
-				channel <- item2
+				channel <- SyncDataEvent{SyncType: CONFIGMAP, Namespace: item2.Namespace, Data: item2}
 			},
 		},
 	)
 	go informer.Run(stop)
 }
 
-func (k *K8s) EventsSecrets(channel chan *store.Secret, stop chan struct{}, informer cache.SharedIndexInformer) {
+func (k *K8s) EventsSecrets(channel chan SyncDataEvent, stop chan struct{}, informer cache.SharedIndexInformer) {
 	informer.AddEventHandler(
 		cache.ResourceEventHandlerFuncs{
 			AddFunc: func(obj interface{}) {
@@ -555,7 +555,7 @@ func (k *K8s) EventsSecrets(channel chan *store.Secret, stop chan struct{}, info
 					Status:    status,
 				}
 				k.Logger.Tracef("%s %s: %s", SECRET, item.Status, item.Name)
-				channel <- item
+				channel <- SyncDataEvent{SyncType: SECRET, Namespace: item.Namespace, Data: item}
 			},
 			DeleteFunc: func(obj interface{}) {
 				data, ok := obj.(*corev1.Secret)
@@ -571,7 +571,7 @@ func (k *K8s) EventsSecrets(channel chan *store.Secret, stop chan struct{}, info
 					Status:    status,
 				}
 				k.Logger.Tracef("%s %s: %s", SECRET, item.Status, item.Name)
-				channel <- item
+				channel <- SyncDataEvent{SyncType: SECRET, Namespace: item.Namespace, Data: item}
 			},
 			UpdateFunc: func(oldObj, newObj interface{}) {
 				data1, ok := oldObj.(*corev1.Secret)
@@ -601,7 +601,7 @@ func (k *K8s) EventsSecrets(channel chan *store.Secret, stop chan struct{}, info
 					return
 				}
 				k.Logger.Tracef("%s %s: %s", SECRET, item2.Status, item2.Name)
-				channel <- item2
+				channel <- SyncDataEvent{SyncType: SECRET, Namespace: item2.Namespace, Data: item2}
 			},
 		},
 	)

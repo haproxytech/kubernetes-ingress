@@ -35,84 +35,53 @@ func (c *HAProxyController) timeFromAnnotation(name string) (duration time.Durat
 }
 
 func (c *HAProxyController) monitorChanges() {
-	syncPeriod := c.timeFromAnnotation("sync-period")
-	logger.Debugf("Executing syncPeriod every %s", syncPeriod.String())
 	go c.SyncData()
 
 	informersSynced := []cache.InformerSynced{}
 	stop := make(chan struct{})
-	endpointsChan := make(chan *store.Endpoints, 100)
-	svcChan := make(chan *store.Service, 100)
-	nsChan := make(chan *store.Namespace, 10)
-	ingChan := make(chan *store.Ingress, 10)
-	ingClassChan := make(chan *store.IngressClass, 10)
-	cfgChan := make(chan *store.ConfigMap, 10)
-	secretChan := make(chan *store.Secret, 10)
 
 	for _, namespace := range c.getWhitelistedNamespaces() {
 		factory := informers.NewSharedInformerFactoryWithOptions(c.k8s.API, c.timeFromAnnotation("cache-resync-period"), informers.WithNamespace(namespace))
 
 		pi := factory.Core().V1().Endpoints().Informer()
-		informersSynced = append(informersSynced, pi.HasSynced)
-		c.k8s.EventsEndpoints(endpointsChan, stop, pi)
+		c.k8s.EventsEndpoints(c.eventChan, stop, pi)
 
 		svci := factory.Core().V1().Services().Informer()
-		informersSynced = append(informersSynced, svci.HasSynced)
-		c.k8s.EventsServices(svcChan, stop, svci, c.PublishService)
+		c.k8s.EventsServices(c.eventChan, stop, svci, c.PublishService)
 
 		nsi := factory.Core().V1().Namespaces().Informer()
-		informersSynced = append(informersSynced, nsi.HasSynced)
-		c.k8s.EventsNamespaces(nsChan, stop, nsi)
+		c.k8s.EventsNamespaces(c.eventChan, stop, nsi)
+
+		si := factory.Core().V1().Secrets().Informer()
+		c.k8s.EventsSecrets(c.eventChan, stop, si)
+
+		ci := factory.Core().V1().ConfigMaps().Informer()
+		c.k8s.EventsConfigfMaps(c.eventChan, stop, ci)
 
 		var ii, ici cache.SharedIndexInformer
 		ii, ici = c.getIngressSharedInformers(factory)
 		if ii == nil {
 			logger.Panic("ingress resources not supported in this cluster")
 		}
-		informersSynced = append(informersSynced, ii.HasSynced)
-		c.k8s.EventsIngresses(ingChan, stop, ii)
-		if ici != nil {
-			informersSynced = append(informersSynced, ici.HasSynced)
-			c.k8s.EventsIngressClass(ingClassChan, stop, ici)
-		}
-		ci := factory.Core().V1().ConfigMaps().Informer()
-		informersSynced = append(informersSynced, ci.HasSynced)
-		c.k8s.EventsConfigfMaps(cfgChan, stop, ci)
+		c.k8s.EventsIngresses(c.eventChan, stop, ii)
 
-		si := factory.Core().V1().Secrets().Informer()
-		informersSynced = append(informersSynced, si.HasSynced)
-		c.k8s.EventsSecrets(secretChan, stop, si)
+		informersSynced = []cache.InformerSynced{pi.HasSynced, svci.HasSynced, nsi.HasSynced, ii.HasSynced, si.HasSynced, ci.HasSynced}
+
+		if ici != nil {
+			c.k8s.EventsIngressClass(c.eventChan, stop, ici)
+			informersSynced = append(informersSynced, ici.HasSynced)
+		}
 	}
 
 	if !cache.WaitForCacheSync(stop, informersSynced...) {
 		logger.Panic("Caches are not populated due to an underlying error, cannot run the Ingress Controller")
 	}
 
+	syncPeriod := c.timeFromAnnotation("sync-period")
+	logger.Debugf("Executing syncPeriod every %s", syncPeriod.String())
 	for {
-		select {
-		case item := <-cfgChan:
-			c.eventChan <- SyncDataEvent{SyncType: CONFIGMAP, Namespace: item.Namespace, Data: item}
-		case item := <-nsChan:
-			event := SyncDataEvent{SyncType: NAMESPACE, Namespace: item.Name, Data: item}
-			c.eventChan <- event
-		case item := <-endpointsChan:
-			event := SyncDataEvent{SyncType: ENDPOINTS, Namespace: item.Namespace, Data: item}
-			c.eventChan <- event
-		case item := <-svcChan:
-			event := SyncDataEvent{SyncType: SERVICE, Namespace: item.Namespace, Data: item}
-			c.eventChan <- event
-		case item := <-ingChan:
-			event := SyncDataEvent{SyncType: INGRESS, Namespace: item.Namespace, Data: item}
-			c.eventChan <- event
-		case item := <-ingClassChan:
-			event := SyncDataEvent{SyncType: INGRESS_CLASS, Data: item}
-			c.eventChan <- event
-		case item := <-secretChan:
-			event := SyncDataEvent{SyncType: SECRET, Namespace: item.Namespace, Data: item}
-			c.eventChan <- event
-		case <-time.After(syncPeriod):
-			c.eventChan <- SyncDataEvent{SyncType: COMMAND}
-		}
+		time.Sleep(syncPeriod)
+		c.eventChan <- SyncDataEvent{SyncType: COMMAND}
 	}
 }
 
