@@ -336,6 +336,9 @@ func (k K8s) EventConfigMap(ns *Namespace, data *ConfigMap, configMapArgs map[st
 			if !different {
 				data.Status = EMPTY
 			} else {
+				if cm == MainCM {
+					logger.Print("Main ConfigMap updated")
+				}
 				updateRequired = true
 			}
 		case ADDED:

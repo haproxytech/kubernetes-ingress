@@ -35,10 +35,9 @@ func (c *HAProxyController) timeFromAnnotation(name string) (duration time.Durat
 }
 
 func (c *HAProxyController) monitorChanges() {
-	configMapReceivedAndProcessed := make(chan bool)
 	syncPeriod := c.timeFromAnnotation("sync-period")
 	logger.Debugf("Executing syncPeriod every %s", syncPeriod.String())
-	go c.SyncData(configMapReceivedAndProcessed)
+	go c.SyncData()
 
 	informersSynced := []cache.InformerSynced{}
 	stop := make(chan struct{})
@@ -117,40 +116,8 @@ func (c *HAProxyController) monitorChanges() {
 		logger.Panic("Caches are not populated due to an underlying error, cannot run the Ingress Controller")
 	}
 
-	// Buffering events so they are handled after configMap is processed
-	var eventsIngress, eventsEndpoints, eventsServices []SyncDataEvent
-	var configMapOk bool
-	if c.osArgs.ConfigMap.Name == "" {
-		configMapOk = true
-		// since we don't have configmap and everywhere in code we expect one we need to create empty one
-		c.Store.ConfigMaps[Main] = &store.ConfigMap{
-			Annotations: store.MapStringW{},
-		}
-	} else {
-		eventsIngress = []SyncDataEvent{}
-		eventsEndpoints = []SyncDataEvent{}
-		eventsServices = []SyncDataEvent{}
-		configMapOk = false
-	}
-
 	for {
 		select {
-		case <-configMapReceivedAndProcessed:
-			for _, event := range eventsIngress {
-				c.eventChan <- event
-			}
-			for _, event := range eventsEndpoints {
-				c.eventChan <- event
-			}
-			for _, event := range eventsServices {
-				c.eventChan <- event
-			}
-			eventsIngress = []SyncDataEvent{}
-			eventsEndpoints = []SyncDataEvent{}
-			eventsServices = []SyncDataEvent{}
-			configMapOk = true
-			logger.Printf("Configmap processed\n")
-			time.Sleep(1 * time.Millisecond)
 		case item := <-cfgChan:
 			c.eventChan <- SyncDataEvent{SyncType: CONFIGMAP, Namespace: item.Namespace, Data: item}
 		case item := <-nsChan:
@@ -158,48 +125,30 @@ func (c *HAProxyController) monitorChanges() {
 			c.eventChan <- event
 		case item := <-endpointsChan:
 			event := SyncDataEvent{SyncType: ENDPOINTS, Namespace: item.Namespace, Data: item}
-			if configMapOk {
-				c.eventChan <- event
-			} else {
-				eventsEndpoints = append(eventsEndpoints, event)
-			}
+			c.eventChan <- event
 		case item := <-svcChan:
 			event := SyncDataEvent{SyncType: SERVICE, Namespace: item.Namespace, Data: item}
-			if configMapOk {
-				c.eventChan <- event
-			} else {
-				eventsServices = append(eventsServices, event)
-			}
+			c.eventChan <- event
 		case item := <-ingChan:
 			event := SyncDataEvent{SyncType: INGRESS, Namespace: item.Namespace, Data: item}
-			if configMapOk {
-				c.eventChan <- event
-			} else {
-				eventsIngress = append(eventsIngress, event)
-			}
+			c.eventChan <- event
 		case item := <-ingClassChan:
 			event := SyncDataEvent{SyncType: INGRESS_CLASS, Data: item}
-			if configMapOk {
-				c.eventChan <- event
-			} else {
-				eventsIngress = append(eventsIngress, event)
-			}
+			c.eventChan <- event
 		case item := <-secretChan:
 			event := SyncDataEvent{SyncType: SECRET, Namespace: item.Namespace, Data: item}
 			c.eventChan <- event
 		case <-time.After(syncPeriod):
-			if configMapOk && len(eventsIngress) == 0 && len(eventsServices) == 0 && len(eventsEndpoints) == 0 {
-				c.eventChan <- SyncDataEvent{SyncType: COMMAND}
-			}
+			c.eventChan <- SyncDataEvent{SyncType: COMMAND}
 		}
 	}
 }
 
 // SyncData gets all kubernetes changes, aggregates them and apply to HAProxy.
 // All the changes must come through this function
-func (c *HAProxyController) SyncData(chConfigMapReceivedAndProcessed chan bool) {
+func (c *HAProxyController) SyncData() {
 	hadChanges := false
-	var cm string
+	configMapArgs := c.getConfigMapArgs()
 	for job := range c.eventChan {
 		ns := c.Store.GetNamespace(job.Namespace)
 		change := false
@@ -221,10 +170,7 @@ func (c *HAProxyController) SyncData(chConfigMapReceivedAndProcessed chan bool) 
 		case SERVICE:
 			change = c.Store.EventService(ns, job.Data.(*store.Service))
 		case CONFIGMAP:
-			change, cm = c.Store.EventConfigMap(ns, job.Data.(*store.ConfigMap), c.getConfigMapArgs())
-			if cm == Main && c.Store.ConfigMaps[Main].Status == ADDED {
-				chConfigMapReceivedAndProcessed <- true
-			}
+			change, _ = c.Store.EventConfigMap(ns, job.Data.(*store.ConfigMap), configMapArgs)
 		case SECRET:
 			change = c.Store.EventSecret(ns, job.Data.(*store.Secret))
 		}

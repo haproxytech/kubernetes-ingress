@@ -35,10 +35,17 @@ type NamespacesWatch struct {
 
 var logger = utils.GetLogger()
 
+const (
+	// Configmaps
+	MainCM = "main"
+)
+
 func NewK8sStore() K8s {
 	return K8s{
-		Namespaces:     make(map[string]*Namespace),
-		ConfigMaps:     make(map[string]*ConfigMap),
+		Namespaces: make(map[string]*Namespace),
+		ConfigMaps: map[string]*ConfigMap{
+			MainCM: {Annotations: MapStringW{}},
+		},
 		IngressClasses: make(map[string]*IngressClass),
 		NamespacesAccess: NamespacesWatch{
 			Whitelist: map[string]struct{}{},
