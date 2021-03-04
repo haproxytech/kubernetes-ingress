@@ -25,8 +25,6 @@ type UpdateHandler interface {
 
 func (c *HAProxyController) initHandlers() {
 	c.UpdateHandlers = []UpdateHandler{
-		ProxyProtocol{},
-		ErrorFile{},
 		HTTPS{
 			enabled:  !c.osArgs.DisableHTTPS,
 			certDir:  HAProxyFtCertDir,
@@ -36,6 +34,8 @@ func (c *HAProxyController) initHandlers() {
 			ipv6:     !c.osArgs.DisableIPV6,
 			port:     c.osArgs.HTTPSBindPort,
 		},
+		ProxyProtocol{},
+		ErrorFile{},
 		TCPHandler{},
 		RefreshHandler{},
 	}

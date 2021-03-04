@@ -120,30 +120,8 @@ func (r Rules) AddRule(rule Rule, ingressName string, frontends ...string) error
 	return nil
 }
 
-func (r Rules) EnableSSLPassThrough(passThroughFtd, offloadFtd string) {
-	if _, ok := r.frontendRules[offloadFtd]; !ok {
-		return
-	}
-	if _, ok := r.frontendRules[passThroughFtd]; !ok {
-		r.frontendRules[passThroughFtd] = &ruleset{
-			rules:  make(map[RuleType][]Rule),
-			status: make(map[RuleID]RuleStatus),
-		}
-	}
-	// Move some layer 4 rules from sslOffloading Frontend to sslPassthrough Frontend
-	for _, ruleType := range []RuleType{REQ_PROXY_PROTOCOL, REQ_DENY} {
-		r.frontendRules[passThroughFtd].rules[ruleType] = r.frontendRules[offloadFtd].rules[ruleType]
-		for _, rule := range r.frontendRules[passThroughFtd].rules[ruleType] {
-			id := getID(rule)
-			status := r.frontendRules[passThroughFtd].status[id]
-			_, ok := r.frontendRules[offloadFtd].status[id]
-			if ok && status&TO_CREATE != 0 {
-				status |= CREATED
-			}
-			r.frontendRules[offloadFtd].status[id] = status
-			delete(r.frontendRules[offloadFtd].status, id)
-		}
-	}
+func (r Rules) DeleteFrontend(frontend string) {
+	delete(r.frontendRules, frontend)
 }
 
 func (r Rules) Clean(frontends ...string) {
