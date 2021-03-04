@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// +build e2e_sequential
+// +build e2e_parallel
 
 package https
 
@@ -28,28 +28,54 @@ func (suite *HTTPSSuite) Test_HTTPS_Passthrough() {
 	suite.tmplData.IngAnnotations = []struct{ Key, Value string }{
 		{"ssl-passthrough", "'true'"},
 	}
-	suite.NoError(suite.test.DeployYamlTemplate("config/ingress.yaml.tmpl", suite.test.GetNS(), suite.tmplData))
-	suite.Eventually(func() bool {
-		res, cls, err := suite.client.Do()
-		if res == nil {
-			suite.T().Log(err)
-			return false
+	suite.Require().NoError(suite.test.DeployYamlTemplate("config/ingress.yaml.tmpl", suite.test.GetNS(), suite.tmplData))
+	suite.Run("Reach_Backend", func() {
+		suite.Eventually(func() bool {
+			res, cls, err := suite.client.Do()
+			if res == nil {
+				suite.T().Log(err)
+				return false
+			}
+			defer cls()
+			body, err := ioutil.ReadAll(res.Body)
+			if err != nil {
+				return false
+			}
+			type echoServerResponse struct {
+				TLS struct {
+					SNI string `json:"sni"`
+				} `json:"tls"`
+			}
+			response := &echoServerResponse{}
+			err = json.Unmarshal(body, response)
+			if err != nil {
+				return false
+			}
+			return response.TLS.SNI == suite.tmplData.Host
+		}, e2e.WaitDuration, e2e.TickDuration)
+	})
+	suite.Run("Ingress_annotations", func() {
+		suite.tmplData.IngAnnotations = []struct{ Key, Value string }{
+			{"ssl-passthrough", "'true'"},
+			{"whitelist", "6.6.6.6"},
 		}
-		defer cls()
-		body, err := ioutil.ReadAll(res.Body)
-		if err != nil {
-			return false
-		}
-		type echoServerResponse struct {
-			TLS struct {
-				SNI string `json:"sni"`
-			} `json:"tls"`
-		}
-		response := &echoServerResponse{}
-		err = json.Unmarshal(body, response)
-		if err != nil {
-			return false
-		}
-		return response.TLS.SNI == suite.tmplData.Host
-	}, e2e.WaitDuration, e2e.TickDuration)
+		suite.NoError(suite.test.DeployYamlTemplate("config/ingress.yaml.tmpl", suite.test.GetNS(), suite.tmplData))
+		suite.Eventually(func() bool {
+			res, cls, err := suite.client.Do()
+			if err == nil {
+				defer cls()
+			}
+			// should be blocked (TCP reject) by whitelist since sni matches
+			return res == nil
+		}, e2e.WaitDuration, e2e.TickDuration)
+		suite.client.Host += ".bar"
+		suite.Eventually(func() bool {
+			res, cls, err := suite.client.Do()
+			if err == nil {
+				defer cls()
+			}
+			// should not be blocked by whitelist rule since sni does not match
+			return res != nil
+		}, e2e.WaitDuration, e2e.TickDuration)
+	})
 }
