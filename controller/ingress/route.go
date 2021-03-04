@@ -58,7 +58,7 @@ func (route *Route) addToMapFile(mapFiles haproxy.Maps) error {
 		if route.Host == "" {
 			return fmt.Errorf("empty SNI for backend %s, SKIP", route.BackendName)
 		}
-		mapFiles.AppendRow(SNI, route.Host+"\t\t\t"+route.BackendName)
+		mapFiles.AppendRow(SNI, route.Host+"\t\t\t"+value)
 		return nil
 	}
 	// HTTP

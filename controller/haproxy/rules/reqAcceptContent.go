@@ -23,10 +23,10 @@ func (r ReqAcceptContent) Create(client api.HAProxyClient, frontend *models.Fron
 	}
 	tcpRule := models.TCPRequestRule{
 		Index:    utils.PtrInt64(0),
-		Action:   "accept",
+		Action:   "reject",
 		Type:     "content",
 		Cond:     "if",
-		CondTest: "{ req_ssl_hello_type 1 }",
+		CondTest: "!{ req_ssl_hello_type 1 }",
 	}
 	return client.FrontendTCPRequestRuleCreate(frontend.Name, tcpRule, ingressACL)
 }
