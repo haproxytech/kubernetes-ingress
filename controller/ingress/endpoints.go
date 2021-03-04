@@ -188,9 +188,8 @@ func (route *Route) getEndpoints() {
 		}
 		return
 	}
-	if route.Path.ResolvedSvcPort != "" {
-		portName := route.Path.ResolvedSvcPort
-		if endpoints, ok := endpoints.Ports[portName]; ok {
+	for portName, endpoints := range endpoints.Ports {
+		if portName == route.Path.ServicePortString || endpoints.Port == route.Path.ServicePortInt {
 			route.endpoints = endpoints
 			return
 		}
