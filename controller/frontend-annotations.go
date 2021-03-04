@@ -90,7 +90,12 @@ func (c *HAProxyController) handleBlacklisting(ingress *store.Ingress) {
 	reqBlackList := rules.ReqDeny{
 		SrcIPsMap: mapName,
 	}
-	logger.Error(c.cfg.HAProxyRules.AddRule(reqBlackList, ingress.Namespace+"-"+ingress.Name, FrontendHTTP, FrontendHTTPS))
+
+	frontends := []string{FrontendHTTP, FrontendHTTPS}
+	if c.sslPassthroughEnabled(ingress, nil) {
+		frontends = []string{FrontendHTTP, FrontendSSL}
+	}
+	logger.Error(c.cfg.HAProxyRules.AddRule(reqBlackList, ingress.Namespace+"-"+ingress.Name, frontends...))
 }
 
 func (c *HAProxyController) handleWhitelisting(ingress *store.Ingress) {
@@ -121,7 +126,11 @@ func (c *HAProxyController) handleWhitelisting(ingress *store.Ingress) {
 		SrcIPsMap: mapName,
 		Whitelist: true,
 	}
-	logger.Error(c.cfg.HAProxyRules.AddRule(reqWhitelist, ingress.Namespace+"-"+ingress.Name, FrontendHTTP, FrontendHTTPS))
+	frontends := []string{FrontendHTTP, FrontendHTTPS}
+	if c.sslPassthroughEnabled(ingress, nil) {
+		frontends = []string{FrontendHTTP, FrontendSSL}
+	}
+	logger.Error(c.cfg.HAProxyRules.AddRule(reqWhitelist, ingress.Namespace+"-"+ingress.Name, frontends...))
 }
 
 func (c *HAProxyController) handleRequestRateLimiting(ingress *store.Ingress) {
@@ -321,7 +330,11 @@ func (c *HAProxyController) handleRequestCapture(ingress *store.Ingress) {
 			Expression: sample,
 			CaptureLen: captureLen,
 		}
-		logger.Error(c.cfg.HAProxyRules.AddRule(reqCapture, ingress.Namespace+"-"+ingress.Name, FrontendHTTP, FrontendHTTPS))
+		frontends := []string{FrontendHTTP, FrontendHTTPS}
+		if c.sslPassthroughEnabled(ingress, nil) {
+			frontends = []string{FrontendHTTP, FrontendSSL}
+		}
+		logger.Error(c.cfg.HAProxyRules.AddRule(reqCapture, ingress.Namespace+"-"+ingress.Name, frontends...))
 	}
 }
 

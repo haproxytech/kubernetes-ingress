@@ -247,7 +247,7 @@ func (c *HAProxyController) updateHAProxy() {
 						Host:           rule.Host,
 						Path:           path,
 						HAProxyRules:   c.cfg.HAProxyRules.GetIngressRuleIDs(ingress.Namespace + "-" + ingress.Name),
-						SSLPassthrough: c.sslPassthroughEnabled(namespace, ingress, path),
+						SSLPassthrough: c.sslPassthroughEnabled(ingress, path),
 					}))
 				}
 			}
@@ -552,9 +552,13 @@ func (c *HAProxyController) clean(failedSync bool) {
 	c.Store.Clean()
 }
 
-func (c *HAProxyController) sslPassthroughEnabled(namespace *store.Namespace, ingress *store.Ingress, path *store.IngressPath) bool {
+func (c *HAProxyController) sslPassthroughEnabled(ingress *store.Ingress, path *store.IngressPath) bool {
 	var annSSLPassthrough *store.StringW
-	service, ok := namespace.Services[path.ServiceName]
+	var service *store.Service
+	ok := false
+	if path != nil {
+		service, ok = c.Store.Namespaces[ingress.Namespace].Services[path.ServiceName]
+	}
 	if ok {
 		annSSLPassthrough, _ = c.Store.GetValueFromAnnotations("ssl-passthrough", service.Annotations, ingress.Annotations, c.Store.ConfigMaps[Main].Annotations)
 	} else {

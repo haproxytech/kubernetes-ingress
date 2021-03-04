@@ -49,6 +49,10 @@ func (route *Route) addToMapFile(mapFiles haproxy.Maps) error {
 	if route.Host != "" && route.Host[0] == '*' {
 		route.Host = route.Host[1:]
 	}
+	value := route.BackendName
+	for _, id := range route.HAProxyRules {
+		value += "." + strconv.Itoa(int(id))
+	}
 	// SSLPassthrough
 	if route.SSLPassthrough {
 		if route.Host == "" {
@@ -58,10 +62,6 @@ func (route *Route) addToMapFile(mapFiles haproxy.Maps) error {
 		return nil
 	}
 	// HTTP
-	value := route.BackendName
-	for _, id := range route.HAProxyRules {
-		value += "." + strconv.Itoa(int(id))
-	}
 	if route.Host != "" {
 		mapFiles.AppendRow(HOST, route.Host+"\t\t\t"+route.Host)
 	} else if route.Path.Path == "" {
