@@ -132,26 +132,30 @@ func (route *Route) handleBackend() (err error) {
 }
 
 // SetBackendName checks if Ingress ServiceName and ServicePort exists and construct corresponding backend name
+// NB: if sp.Name is available it should be used instead of sp.Port to avoid backends duplication
 func (route *Route) SetBackendName() (err error) {
 	route.service = route.Namespace.Services[route.Path.ServiceName]
 	if route.service == nil {
 		return fmt.Errorf("ingress %s/%s: service '%s' not found", route.Namespace.Name, route.Ingress.Name, route.Path.ServiceName)
 	}
-	route.Path.ResolvedSvcPort = ""
 	for _, sp := range route.service.Ports {
-		if sp.Name == route.Path.ServicePortString || sp.Port == route.Path.ServicePortInt {
-			route.Path.ResolvedSvcPort = sp.Name
-			break
+		if sp.Name != "" && sp.Name == route.Path.ServicePortString {
+			route.BackendName = fmt.Sprintf("%s-%s-%s", route.service.Namespace, route.service.Name, sp.Name)
+			return nil
+		}
+		if sp.Port != 0 && sp.Port == route.Path.ServicePortInt {
+			portName := sp.Name
+			if portName == "" {
+				portName = strconv.Itoa(int(sp.Port))
+			}
+			route.BackendName = fmt.Sprintf("%s-%s-%s", route.service.Namespace, route.service.Name, portName)
+			return nil
 		}
 	}
-	if route.Path.ResolvedSvcPort == "" {
-		if route.Path.ServicePortInt != 0 {
-			return fmt.Errorf("ingress %s/%s: service %s: no service port matching '%d'", route.Namespace.Name, route.Ingress.Name, route.service.Name, route.Path.ServicePortInt)
-		}
-		return fmt.Errorf("ingress %s/%s: service %s: no service port matching '%s'", route.Namespace.Name, route.Ingress.Name, route.service.Name, route.Path.ServicePortString)
+	if route.Path.ServicePortString != "" {
+		return fmt.Errorf("ingress %s/%s: service %s: no service port matching '%d'", route.Namespace.Name, route.Ingress.Name, route.service.Name, route.Path.ServicePortInt)
 	}
-	route.BackendName = fmt.Sprintf("%s-%s-%s", route.service.Namespace, route.service.Name, route.Path.ResolvedSvcPort)
-	return nil
+	return fmt.Errorf("ingress %s/%s: service %s: no service port matching '%d'", route.Namespace.Name, route.Ingress.Name, route.service.Name, route.Path.ServicePortInt)
 }
 
 func (route *Route) setStatus() {

@@ -83,7 +83,6 @@ type IngressPath struct {
 	ServiceName       string
 	ServicePortInt    int64
 	ServicePortString string
-	ResolvedSvcPort   string
 	Path              string
 	ExactPathMatch    bool
 	IsDefaultBackend  bool
