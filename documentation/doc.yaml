@@ -22,12 +22,12 @@ image_arguments:
         name: tcp
         namespace: default
       data:
-        3306:              # Port where the frontend is going to listen to.
-          tcp/mysql:3306   # Kubernetes service to use for the backend.
+        3306:                    # Port where the frontend is going to listen to.
+          mysql-ns/mysql:3306    # Kubernetes service in the format NS/ServiceName:ServicePort
         389:
-          tcp/ldap:389:ssl # ssl option will enable ssl offloading for target service.
+          ldap-ns/ldap:389:ssl   # ssl option will enable ssl offloading for target service.
         6379:
-          tcp/redis:6379
+          redis-ns/redis:6379
       ```
     values:
       - The name of the ConfigMap that contains mappings for TCP services
