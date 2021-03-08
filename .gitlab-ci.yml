@@ -16,7 +16,7 @@ golangci_lint:
   tags:
     - go
   script:
-    - golangci-lint run --enable-all --timeout=5m -v
+    - golangci-lint run --timeout=5m -v
 lint-commit-msg:
   stage: lint
   image:
