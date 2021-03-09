@@ -11,7 +11,7 @@ Image can be run with arguments:
 | - |:-:|
 | [`--configmap`](#--configmap) | `default/haproxy-configmap` |
 | [`--configmap-tcp-services`](#--configmap-tcp-services) |  |
-| [`--configmap-errorfile`](#--configmap-errorfile) |  |
+| [`--configmap-errorfiles`](#--configmap-errorfiles) |  |
 | [`--default-backend-service`](#--default-backend-service) |  |
 | [`--default-ssl-certificate`](#--default-ssl-certificate) |  |
 | [`--ingress.class`](#--ingressclass) |  |
@@ -90,7 +90,7 @@ args:
 
 ***
 
-### `--configmap-errorfile`
+### `--configmap-errorfiles`
 
   Sets the ConfigMap object that defines contents to serve instead of HAProxy errors.
 As explained in the [haproxy documentation](https://cbonte.github.io/haproxy-dconv/2.0/configuration.html#4.2-errorfile) it is important to understand that errorfile content is not meant to rewrite errors returned by the server, but rather errors detected and returned by HAProxy.
@@ -122,7 +122,7 @@ Example:
 
 ```yaml
 args:
-  - --configmap-errorfile=default/errorfile
+  - --configmap-errorfiles=default/errorfile
 ```
 
 <p align='right'><a href='#haproxy-kubernetes-ingress-controller'>:arrow_up_small: back to top</a></p>
