@@ -35,7 +35,7 @@ image_arguments:
     example: |-
       args:
         - --configmap-tcp-services=default/my-tcpservices-configmap
-  - argument: --configmap-errorfile
+  - argument: --configmap-errorfiles
     description: |-
       Sets the ConfigMap object that defines contents to serve instead of HAProxy errors.
       As explained in the [haproxy documentation](https://cbonte.github.io/haproxy-dconv/2.0/configuration.html#4.2-errorfile) it is important to understand that errorfile content is not meant to rewrite errors returned by the server, but rather errors detected and returned by HAProxy.
@@ -63,7 +63,7 @@ image_arguments:
     version_min: "1.5"
     example: |-
       args:
-        - --configmap-errorfile=default/errorfile
+        - --configmap-errorfiles=default/errorfile
   - argument: --default-backend-service
     description: The name of the Kubernetes service to send requests to when no Ingress rules match.
     values:
