@@ -80,13 +80,14 @@ type IngressClass struct {
 
 //IngressPath is useful data from k8s structures about ingress path
 type IngressPath struct {
-	ServiceName       string
-	ServicePortInt    int64
-	ServicePortString string
-	Path              string
-	ExactPathMatch    bool
-	IsDefaultBackend  bool
-	Status            Status
+	ServiceName         string
+	ServicePortInt      int64
+	ServicePortString   string
+	ServicePortResolved *ServicePort
+	Path                string
+	ExactPathMatch      bool
+	IsDefaultBackend    bool
+	Status              Status
 }
 
 //IngressRule is useful data from k8s structures about ingress rule
