@@ -25,14 +25,18 @@ func (t TCPHandler) Update(k store.K8s, cfg *Configuration, api api.HAProxyClien
 		// parts[1]: Service Port
 		// parts[2]: SSL option
 		parts := strings.Split(tcpSvc.Value, ":")
-		svcPort := parts[1]
+		if len(parts) < 2 {
+			logger.Errorf("incorrect format '%s', 'ServiceName:ServicePort' is required", tcpSvc.Value)
+			continue
+		}
 		var sslOption string
+		svcName := strings.Split(parts[0], "/")
+		svcPort := parts[1]
 		if len(parts) > 2 {
 			sslOption = parts[2]
 		}
-		svcName := strings.Split(parts[0], "/")
 		if len(svcName) != 2 {
-			logger.Errorf("incorrect Service Name '%s'", parts[0])
+			logger.Errorf("incorrect Service Name '%s'. Should be in 'ServiceNS/ServiceName' format", parts[0])
 			continue
 		}
 		namespace := svcName[0]
