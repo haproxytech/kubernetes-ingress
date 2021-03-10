@@ -76,8 +76,9 @@ func (route *Route) scaleHAProxySrvs() {
 // handleEndpoints lookups the IngressPath related endpoints and makes corresponding backend servers configuration in HAProxy
 // If only the address changes , no need to reload just generate new config
 func (route *Route) handleEndpoints() {
-	route.getEndpoints()
-	if route.endpoints == nil {
+	err := route.getEndpoints()
+	if err != nil {
+		logger.Warning(err)
 		return
 	}
 	route.endpoints.BackendName = route.BackendName
@@ -138,7 +139,7 @@ func (route *Route) handleHAProxSrv(srv *store.HAProxySrv) {
 	}
 }
 
-func (route *Route) handleExternalName() {
+func (route *Route) handleExternalName() error {
 	//TODO: currently HAProxy will only resolve server name at startup/reload
 	// This needs to be improved by using HAProxy resolvers to have resolution at runtime
 	logger.Debugf("Configuring service '%s', of type ExternalName", route.service.Name)
@@ -153,18 +154,15 @@ func (route *Route) handleExternalName() {
 		if route.Path.ServicePortInt != 0 {
 			ingressPort = fmt.Sprintf("%d", route.Path.ServicePortInt)
 		}
-		logger.Warningf("service '%s': service port '%s' not found", route.service.Name, ingressPort)
-		return
+		return fmt.Errorf("service '%s': service port '%s' not found", route.service.Name, ingressPort)
 	}
 	backend, err := client.BackendGet(route.BackendName)
 	if err != nil {
-		logger.Error(err)
-		return
+		return err
 	}
 	backend.DefaultServer = &models.DefaultServer{InitAddr: "last,libc,none"}
 	if err = client.BackendEdit(backend); err != nil {
-		logger.Error(err)
-		return
+		return err
 	}
 	route.endpoints = &store.PortEndpoints{
 		Port: port,
@@ -176,26 +174,28 @@ func (route *Route) handleExternalName() {
 			},
 		},
 	}
+	return nil
 }
 
-func (route *Route) getEndpoints() {
+func (route *Route) getEndpoints() error {
 	endpoints, ok := route.Namespace.Endpoints[route.service.Name]
 	if !ok {
 		if route.service.DNS != "" {
-			route.handleExternalName()
-		} else {
-			logger.Warningf("ingress %s/%s: No Endpoints for service '%s'", route.Namespace.Name, route.Ingress.Name, route.service.Name)
+			return route.handleExternalName()
 		}
-		return
+		return fmt.Errorf("ingress %s/%s: No Endpoints for service '%s'", route.Namespace.Name, route.Ingress.Name, route.service.Name)
 	}
 	sp := route.Path.ServicePortResolved
 	if sp != nil {
 		for portName, endpoints := range endpoints.Ports {
 			if portName == sp.Name || endpoints.Port == sp.Port {
 				route.endpoints = endpoints
-				return
+				return nil
 			}
 		}
 	}
-	logger.Warningf("ingress %s/%s: no matching endpoints for service '%s' and port '%d:%s'", route.Namespace.Name, route.Ingress.Name, route.service.Name, route.Path.ServicePortInt, route.Path.ServicePortString)
+	if route.Path.ServicePortString != "" {
+		return fmt.Errorf("ingress %s/%s: no matching endpoints for service '%s' and port '%s'", route.Namespace.Name, route.Ingress.Name, route.service.Name, route.Path.ServicePortString)
+	}
+	return fmt.Errorf("ingress %s/%s: no matching endpoints for service '%s' and port '%d'", route.Namespace.Name, route.Ingress.Name, route.service.Name, route.Path.ServicePortInt)
 }
