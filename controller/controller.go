@@ -514,8 +514,8 @@ func (c *HAProxyController) handleDefaultService() {
 		Rules:       map[string]*store.IngressRule{},
 	}
 	path := &store.IngressPath{
-		ServiceName:      service.Name,
-		ServicePortInt:   service.Ports[0].Port,
+		SvcName:          service.Name,
+		SvcPortInt:       service.Ports[0].Port,
 		IsDefaultBackend: true,
 	}
 	logger.Error(c.cfg.IngressRoutes.AddRoute(&ingressRoute.Route{
@@ -556,7 +556,7 @@ func (c *HAProxyController) sslPassthroughEnabled(ingress *store.Ingress, path *
 	var service *store.Service
 	ok := false
 	if path != nil {
-		service, ok = c.Store.Namespaces[ingress.Namespace].Services[path.ServiceName]
+		service, ok = c.Store.Namespaces[ingress.Namespace].Services[path.SvcName]
 	}
 	if ok {
 		annSSLPassthrough, _ = c.Store.GetValueFromAnnotations("ssl-passthrough", service.Annotations, ingress.Annotations, c.Store.ConfigMaps[Main].Annotations)

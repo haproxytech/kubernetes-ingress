@@ -133,27 +133,27 @@ func (route *Route) handleBackend() (err error) {
 // SetBackendName checks if Ingress ServiceName and ServicePort exists and construct corresponding backend name
 // NB: if sp.Name is available it should be used instead of sp.Port to avoid backends duplication
 func (route *Route) SetBackendName() (err error) {
-	route.service = route.Namespace.Services[route.Path.ServiceName]
+	route.service = route.Namespace.Services[route.Path.SvcName]
 	if route.service == nil {
-		return fmt.Errorf("ingress %s/%s: service '%s' not found", route.Namespace.Name, route.Ingress.Name, route.Path.ServiceName)
+		return fmt.Errorf("ingress %s/%s: service '%s' not found", route.Namespace.Name, route.Ingress.Name, route.Path.SvcName)
 	}
 	var svcPort store.ServicePort
 	found := false
 	for _, sp := range route.service.Ports {
-		if (sp.Port == route.Path.ServicePortInt) ||
-			(sp.Name != "" && sp.Name == route.Path.ServicePortString) {
+		if (sp.Port == route.Path.SvcPortInt) ||
+			(sp.Name != "" && sp.Name == route.Path.SvcPortString) {
 			svcPort = sp
 			found = true
 			break
 		}
 	}
 	if !found {
-		if route.Path.ServicePortString != "" {
-			return fmt.Errorf("ingress %s/%s: service %s: no service port matching '%s'", route.Namespace.Name, route.Ingress.Name, route.service.Name, route.Path.ServicePortString)
+		if route.Path.SvcPortString != "" {
+			return fmt.Errorf("ingress %s/%s: service %s: no service port matching '%s'", route.Namespace.Name, route.Ingress.Name, route.service.Name, route.Path.SvcPortString)
 		}
-		return fmt.Errorf("ingress %s/%s: service %s: no service port matching '%d'", route.Namespace.Name, route.Ingress.Name, route.service.Name, route.Path.ServicePortInt)
+		return fmt.Errorf("ingress %s/%s: service %s: no service port matching '%d'", route.Namespace.Name, route.Ingress.Name, route.service.Name, route.Path.SvcPortInt)
 	}
-	route.Path.ServicePortResolved = &svcPort
+	route.Path.SvcPortResolved = &svcPort
 	if svcPort.Name != "" {
 		route.BackendName = fmt.Sprintf("%s-%s-%s", route.service.Namespace, route.service.Name, svcPort.Name)
 	} else {

@@ -124,9 +124,9 @@ func (k K8s) EventIngress(ns *Namespace, data *Ingress, controllerClass string) 
 				for _, newPath := range newRule.Paths {
 					if oldPath, ok := oldRule.Paths[newPath.Path]; ok {
 						// compare path for differences
-						if newPath.ServiceName != oldPath.ServiceName ||
-							newPath.ServicePortInt != oldPath.ServicePortInt ||
-							newPath.ServicePortString != oldPath.ServicePortString {
+						if newPath.SvcName != oldPath.SvcName ||
+							newPath.SvcPortInt != oldPath.SvcPortInt ||
+							newPath.SvcPortString != oldPath.SvcPortString {
 							newPath.Status = MODIFIED
 							newRule.Status = MODIFIED
 						}
