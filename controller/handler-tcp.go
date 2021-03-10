@@ -70,9 +70,9 @@ func (t TCPHandler) Update(k store.K8s, cfg *Configuration, api api.HAProxyClien
 			Rules:       map[string]*store.IngressRule{},
 		}
 		path := &store.IngressPath{
-			ServiceName:    service,
-			ServicePortInt: portNbr,
-			Status:         svc.Status,
+			SvcName:    service,
+			SvcPortInt: portNbr,
+			Status:     svc.Status,
 		}
 		route := &ingressRoute.Route{
 			Namespace:  k.GetNamespace(namespace),

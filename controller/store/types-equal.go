@@ -45,13 +45,13 @@ func (a *IngressPath) Equal(b *IngressPath) bool {
 	if a.Path != b.Path {
 		return false
 	}
-	if a.ServiceName != b.ServiceName {
+	if a.SvcName != b.SvcName {
 		return false
 	}
-	if a.ServicePortInt != b.ServicePortInt {
+	if a.SvcPortInt != b.SvcPortInt {
 		return false
 	}
-	if a.ServicePortString != b.ServicePortString {
+	if a.SvcPortString != b.SvcPortString {
 		return false
 	}
 	return true

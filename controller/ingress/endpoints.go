@@ -145,14 +145,14 @@ func (route *Route) handleExternalName() error {
 	logger.Debugf("Configuring service '%s', of type ExternalName", route.service.Name)
 	var port int64
 	for _, sp := range route.service.Ports {
-		if sp.Name == route.Path.ServicePortString || sp.Port == route.Path.ServicePortInt {
+		if sp.Name == route.Path.SvcPortString || sp.Port == route.Path.SvcPortInt {
 			port = sp.Port
 		}
 	}
 	if port == 0 {
-		ingressPort := route.Path.ServicePortString
-		if route.Path.ServicePortInt != 0 {
-			ingressPort = fmt.Sprintf("%d", route.Path.ServicePortInt)
+		ingressPort := route.Path.SvcPortString
+		if route.Path.SvcPortInt != 0 {
+			ingressPort = fmt.Sprintf("%d", route.Path.SvcPortInt)
 		}
 		return fmt.Errorf("service '%s': service port '%s' not found", route.service.Name, ingressPort)
 	}
@@ -185,7 +185,7 @@ func (route *Route) getEndpoints() error {
 		}
 		return fmt.Errorf("ingress %s/%s: No Endpoints for service '%s'", route.Namespace.Name, route.Ingress.Name, route.service.Name)
 	}
-	sp := route.Path.ServicePortResolved
+	sp := route.Path.SvcPortResolved
 	if sp != nil {
 		for portName, endpoints := range endpoints.Ports {
 			if portName == sp.Name || endpoints.Port == sp.Port {
@@ -194,8 +194,8 @@ func (route *Route) getEndpoints() error {
 			}
 		}
 	}
-	if route.Path.ServicePortString != "" {
-		return fmt.Errorf("ingress %s/%s: no matching endpoints for service '%s' and port '%s'", route.Namespace.Name, route.Ingress.Name, route.service.Name, route.Path.ServicePortString)
+	if route.Path.SvcPortString != "" {
+		return fmt.Errorf("ingress %s/%s: no matching endpoints for service '%s' and port '%s'", route.Namespace.Name, route.Ingress.Name, route.service.Name, route.Path.SvcPortString)
 	}
-	return fmt.Errorf("ingress %s/%s: no matching endpoints for service '%s' and port '%d'", route.Namespace.Name, route.Ingress.Name, route.service.Name, route.Path.ServicePortInt)
+	return fmt.Errorf("ingress %s/%s: no matching endpoints for service '%s' and port '%d'", route.Namespace.Name, route.Ingress.Name, route.service.Name, route.Path.SvcPortInt)
 }

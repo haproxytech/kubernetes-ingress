@@ -77,12 +77,12 @@ func (n ingressNetworkingV1Beta1Strategy) ConvertIngress() *Ingress {
 				}
 				for _, k8sPath := range k8sRule.HTTP.Paths {
 					paths[k8sPath.Path] = &IngressPath{
-						Path:              k8sPath.Path,
-						ExactPathMatch:    k8sPath.PathType != nil && *k8sPath.PathType == networkingv1beta1.PathTypeExact,
-						ServiceName:       k8sPath.Backend.ServiceName,
-						ServicePortInt:    int64(k8sPath.Backend.ServicePort.IntValue()),
-						ServicePortString: k8sPath.Backend.ServicePort.StrVal,
-						Status:            "",
+						Path:           k8sPath.Path,
+						ExactPathMatch: k8sPath.PathType != nil && *k8sPath.PathType == networkingv1beta1.PathTypeExact,
+						SvcName:        k8sPath.Backend.ServiceName,
+						SvcPortInt:     int64(k8sPath.Backend.ServicePort.IntValue()),
+						SvcPortString:  k8sPath.Backend.ServicePort.StrVal,
+						Status:         "",
 					}
 				}
 				if rule, ok := rules[k8sRule.Host]; ok {
@@ -104,11 +104,11 @@ func (n ingressNetworkingV1Beta1Strategy) ConvertIngress() *Ingress {
 				return nil
 			}
 			return &IngressPath{
-				ServiceName:       ingressBackend.ServiceName,
-				ServicePortInt:    int64(ingressBackend.ServicePort.IntValue()),
-				ServicePortString: ingressBackend.ServicePort.StrVal,
-				IsDefaultBackend:  true,
-				Status:            "",
+				SvcName:          ingressBackend.ServiceName,
+				SvcPortInt:       int64(ingressBackend.ServicePort.IntValue()),
+				SvcPortString:    ingressBackend.ServicePort.StrVal,
+				IsDefaultBackend: true,
+				Status:           "",
 			}
 		}(n.ig.Spec.Backend),
 		TLS: func(ingressTLS []networkingv1beta1.IngressTLS) map[string]*IngressTLS {
@@ -172,12 +172,12 @@ func (e ingressExtensionsStrategy) ConvertIngress() *Ingress {
 				}
 				for _, k8sPath := range k8sRule.HTTP.Paths {
 					paths[k8sPath.Path] = &IngressPath{
-						Path:              k8sPath.Path,
-						ExactPathMatch:    k8sPath.PathType != nil && *k8sPath.PathType == extensionsv1beta1.PathTypeExact,
-						ServiceName:       k8sPath.Backend.ServiceName,
-						ServicePortInt:    int64(k8sPath.Backend.ServicePort.IntValue()),
-						ServicePortString: k8sPath.Backend.ServicePort.StrVal,
-						Status:            "",
+						Path:           k8sPath.Path,
+						ExactPathMatch: k8sPath.PathType != nil && *k8sPath.PathType == extensionsv1beta1.PathTypeExact,
+						SvcName:        k8sPath.Backend.ServiceName,
+						SvcPortInt:     int64(k8sPath.Backend.ServicePort.IntValue()),
+						SvcPortString:  k8sPath.Backend.ServicePort.StrVal,
+						Status:         "",
 					}
 				}
 				if rule, ok := rules[k8sRule.Host]; ok {
@@ -199,11 +199,11 @@ func (e ingressExtensionsStrategy) ConvertIngress() *Ingress {
 				return nil
 			}
 			return &IngressPath{
-				ServiceName:       ingressBackend.ServiceName,
-				ServicePortInt:    int64(ingressBackend.ServicePort.IntValue()),
-				ServicePortString: ingressBackend.ServicePort.StrVal,
-				IsDefaultBackend:  true,
-				Status:            "",
+				SvcName:          ingressBackend.ServiceName,
+				SvcPortInt:       int64(ingressBackend.ServicePort.IntValue()),
+				SvcPortString:    ingressBackend.ServicePort.StrVal,
+				IsDefaultBackend: true,
+				Status:           "",
 			}
 		}(e.ig.Spec.Backend),
 		TLS: func(ingressTLS []extensionsv1beta1.IngressTLS) map[string]*IngressTLS {
@@ -255,12 +255,12 @@ func (n ingressNetworkingV1Strategy) ConvertIngress() *Ingress {
 				}
 				for _, k8sPath := range k8sRule.HTTP.Paths {
 					paths[k8sPath.Path] = &IngressPath{
-						Path:              k8sPath.Path,
-						ExactPathMatch:    k8sPath.PathType != nil && *k8sPath.PathType == networkingv1.PathTypeExact,
-						ServiceName:       k8sPath.Backend.Service.Name,
-						ServicePortInt:    int64(k8sPath.Backend.Service.Port.Number),
-						ServicePortString: k8sPath.Backend.Service.Port.Name,
-						Status:            "",
+						Path:           k8sPath.Path,
+						ExactPathMatch: k8sPath.PathType != nil && *k8sPath.PathType == networkingv1.PathTypeExact,
+						SvcName:        k8sPath.Backend.Service.Name,
+						SvcPortInt:     int64(k8sPath.Backend.Service.Port.Number),
+						SvcPortString:  k8sPath.Backend.Service.Port.Name,
+						Status:         "",
 					}
 				}
 				if rule, ok := rules[k8sRule.Host]; ok {
@@ -282,11 +282,11 @@ func (n ingressNetworkingV1Strategy) ConvertIngress() *Ingress {
 				return nil
 			}
 			return &IngressPath{
-				ServiceName:       ingressBackend.Service.Name,
-				ServicePortInt:    int64(ingressBackend.Service.Port.Number),
-				ServicePortString: ingressBackend.Service.Port.Name,
-				IsDefaultBackend:  true,
-				Status:            "",
+				SvcName:          ingressBackend.Service.Name,
+				SvcPortInt:       int64(ingressBackend.Service.Port.Number),
+				SvcPortString:    ingressBackend.Service.Port.Name,
+				IsDefaultBackend: true,
+				Status:           "",
 			}
 		}(n.ig.Spec.DefaultBackend),
 		TLS: func(ingressTLS []networkingv1.IngressTLS) map[string]*IngressTLS {
