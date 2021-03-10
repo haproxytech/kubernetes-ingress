@@ -32,7 +32,7 @@ type echoServerResponse struct {
 
 func (suite *ServiceDiscoverySuite) Test_Port_Discovery() {
 	suite.Run("port_number", func() {
-		suite.testServicePort("http-echo-2", "80")
+		suite.testServicePort("http-echo-2", "8080")
 	})
 	suite.Run("port_name", func() {
 		suite.testServicePort("http-echo-1", "http")

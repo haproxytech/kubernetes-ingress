@@ -32,7 +32,7 @@ spec:
   ports:
     - name: http
       protocol: TCP
-      port: 80
+      port: 8080
       targetPort: http
   selector:
     app: http-echo-1
@@ -68,7 +68,7 @@ metadata:
   name: http-echo-2
 spec:
   ports:
-    - port: 80
+    - port: 8080
       protocol: TCP
       targetPort: http
   selector:
