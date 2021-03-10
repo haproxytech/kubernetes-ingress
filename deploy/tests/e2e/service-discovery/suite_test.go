@@ -45,7 +45,7 @@ func (suite *ServiceDiscoverySuite) SetupSuite() {
 	suite.tmplData = tmplData{
 		Host:        suite.test.GetNS() + ".test",
 		ServiceName: "http-echo-1",
-		ServicePort: "80",
+		ServicePort: "8080",
 	}
 	suite.client, err = e2e.NewHTTPClient(suite.tmplData.Host)
 	suite.NoError(err)
