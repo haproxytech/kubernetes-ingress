@@ -1,4 +1,5 @@
 stages:
+  - diff
   - lint
   - unit-tests
   - e2e-tests
@@ -7,7 +8,18 @@ variables:
   KIND: v0.9.0
   DOCKER_HOST: tcp://docker:2375
   DOCKER_DRIVER: overlay2
-
+diff:
+  stage: diff
+  image:
+    name: $CI_REGISTRY_GO/golang:1.15
+    entrypoint: [ "" ]
+  tags:
+    - go
+  before_script:
+    - cd documentation/gen && go run .
+  script:
+    - test -z "$(git diff 2> /dev/null)" || exit "Documentation is not generated, issue \`cd documentation/gen && go run .\` and commit the result"
+    - test -z "$(git ls-files --others --exclude-standard 2> /dev/null)" || exit "Documentation created untracked files, cannot proceed"
 golangci_lint:
   stage: lint
   image:
