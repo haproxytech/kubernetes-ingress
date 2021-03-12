@@ -26,8 +26,7 @@ spec:
          requests:
            memory: 256Mi
        args:
-       - --default-backend-service=default/ingress-default-backend
-       - --default-ssl-certificate=default/tls-secret
+       - --default-backend-service=$(POD_NAMESPACE)/default-backend
        - --configmap=$(POD_NAMESPACE)/haproxy-configmap
        - --configmap-tcp-services=$(POD_NAMESPACE)/haproxy-configmap-tcp
        - --ingress.class=haproxy
