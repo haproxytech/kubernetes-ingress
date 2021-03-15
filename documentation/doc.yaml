@@ -320,18 +320,17 @@ groups:
   CORS:
     header: |-
       - *Cross-Origin Resource Sharing (CORS) is an HTTP-header based mechanism that allows a server to indicate any other origins (domain, scheme, or port) than its own from which a browser should permit loading of resources.* -  [Mozilla Docs](https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS)
-  https:
-    header: |-
-      - SSL offloading/decryption will be automatically enabled if valid SSL certificates are provided.
-      - Certificates can be provided via [tls-secrets](#tls-secret).
   access-control:
     header: |-
       - Access control is disabled by default
       - Access control can be set for all traffic (annotation on configmap) or for a set of hosts (annotation on ingress)
-  tls-secret:
+  https:
+    header: |-
+      - [SSL offloading/decryption](#ssl-offloading) will be automatically enabled if valid SSL certificates are provided.
+  ssl-offloading:
     header: |
       - Controller will look into kubernetes tls secrets for valid SSL certificates to configure in HAProxy.
-      - A default certificate can be provided via controller [argument](controller.md) `--default-ssl-certificate`=\<namespace\>/\<secret\>
+      - A default certificate can be provided via controller [argument](controller.md) `--default-ssl-certificate`=\<namespace\>/\<secret\> or ConfigMap annotation [ssl-certificate](#ssl-certificate).
       - Certificates can be defined in Ingress object: `spec.tls[].secretName`
     footer: |
       - Single certificate secret can contain two items:
@@ -350,7 +349,7 @@ annotations:
     dependencies: ""
     default: ""
     description:
-      - Enables the selected authentication strategy.
+      - Enables the selected HTTP authentication strategy.
     tip: []
     values:
       - basic-auth
@@ -484,20 +483,20 @@ annotations:
     - 'check-interval: "1m"'
   - title: client-ca
     type: string
-    group: client-ca
-    dependencies: ""
+    group: authentication
+    dependencies: ssl-offloading
     default: ""
     description:
-    - Sets the certificate authority for client certificate checking on HTTPS frontend.
+    - Sets the client certificate authority enabling HAProxy to check clients certificate (TLS authentication), thus enabling client *mTLS*.
     tip:
-    - You must set TLS ingress counterpart to activate the client certificate authority configuration.
+      - NB, [ssl-offloading](#ssl-offloading) **should be enabled** for TLS authentication to work.
     values:
     - secret path in "namespace/name" format.
     applies_to:
     - configmap
     version_min: "1.6"
     example:
-    - 'client-ca: exp/ca.crt'
+    - 'client-ca: exp/client-ca.crt'
   - title: cors-enable
     type: bool
     group: CORS
@@ -1157,15 +1156,13 @@ annotations:
     example: ['send-proxy-protocol: proxy-v2']
   - title: server-ca
     type: string
-    group: server-ca
+    group: authentication
     dependencies: ""
     default: ""
     description:
-    - Specifies the path of a secret containing a CA certificate (certificate authority)
-      enabling HAProxy to verify a backend's certificate via the `ca-file` directive.
-      When the CA certificate is properly configured this also sets the HAProxy *verify*
-      directive to *required*.
+    - Sets the certificate authority for backend servers enabling HAProxy to check backend certificates (TLS authentication) when sending encrypted traffic to the kubernetes applications.
     tip:
+      - When used with [server-crt](#server-crt) resulting configuration provides  mutual TLS authentication (mTLS).
       - The secret must use 'tls.crt' key.
     values:
     - Secret path following namespace/secretname format.
@@ -1177,13 +1174,14 @@ annotations:
     example: ['server-ca: "ns1/ca"']
   - title: server-crt
     type: string
-    group: server-crt
+    group: ""
     dependencies: ""
     default: ""
     description:
-    - Specifies the path of a secret containing a client certificate that HAProxy can provide during SSL communication with the backend servers via the HAProxy `crt` directive. 
+    - Specifies the path of a secret containing a certificate that HAProxy can provide during TLS communication with the backend servers.
     tip:
        - The secret must use 'tls.key' and 'tls.crt' keys.
+       - When used with [server-ca](#server-ca) resulting configuration provides mutual TLS authentication (mTLS).
     values:
     - Secret path following namespace/secretname format.
     applies_to:
@@ -1215,14 +1213,13 @@ annotations:
     example: ['server-proto: "h2"']           
   - title: server-ssl
     type: bool
-    group: server-ssl
+    group: ""
     dependencies: ""
     default: "false"
     description:
     - Enables SSL to pods.
     tip:
     - Enable HTTP/2 support for backend severs.
-    - Current implementation does not verify server certificates
     values:
     - "true"
     - "false"
@@ -1269,7 +1266,7 @@ annotations:
     example: ['server-slots: 75']
   - title: ssl-certificate
     type: string
-    group: tls-secret
+    group: ssl-offloading
     dependencies: ""
     default: ""
     description:
@@ -1305,7 +1302,7 @@ annotations:
   - title: ssl-redirect
     type: bool
     group: https
-    dependencies: tls-secret
+    dependencies: https
     default: "false"
     description:
     - Sets whether to redirect traffic from HTTP to HTTPS.
@@ -1326,7 +1323,7 @@ annotations:
   - title: ssl-redirect-code
     type: '[301, 302, 303]'
     group: https
-    dependencies: tls-secret
+    dependencies: ssl-redirect
     default: "302"
     description:
     - Sets the HTTP status code to use when `ssl-redirect` is true.
@@ -1346,7 +1343,7 @@ annotations:
   - title: ssl-redirect-port
     type: number
     group: https
-    dependencies: tls-secret
+    dependencies: ssl-redirect
     default: "443"
     description:
     - Sets the HTTPS port to redirect to when HTTP to HTTPS traffic redirection is enabled  when `ssl-redirect` is true.
