@@ -3,8 +3,25 @@ package api
 import (
 	"fmt"
 
+	"github.com/haproxytech/config-parser/v3/types"
 	"github.com/haproxytech/models/v2"
 )
+
+func (c *clientNative) FrontendCfgSnippetSet(frontendName string, value *[]string) error {
+	config, err := c.nativeAPI.Configuration.GetParser(c.activeTransaction)
+	if err != nil {
+		return err
+	}
+	if value == nil {
+		err = config.Set("frontend", frontendName, "config-snippet", nil)
+	} else {
+		err = config.Set("frontend", frontendName, "config-snippet", types.StringSliceC{Value: *value})
+	}
+	if err != nil {
+		c.activeTransactionHasChanges = true
+	}
+	return err
+}
 
 func (c *clientNative) FrontendCreate(frontend models.Frontend) error {
 	c.activeTransactionHasChanges = true

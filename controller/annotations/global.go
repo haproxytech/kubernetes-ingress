@@ -23,6 +23,7 @@ func HandleGlobalAnnotations(k8sStore store.K8s, client api.HAProxyClient, force
 
 func GetGlobalAnnotations(client api.HAProxyClient) []Annotation {
 	return []Annotation{
+		NewFrontendCfgSnippet("frontend-config-snippet", client, []string{"http", "https"}),
 		NewGlobalCfgSnippet("global-config-snippet", client),
 		NewGlobalSyslogServers("syslog-server", client),
 		NewGlobalNbthread("nbthread", client),
