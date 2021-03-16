@@ -31,24 +31,24 @@ func setupHAProxyEnv(osArgs utils.OSArgs) {
 	logger := utils.GetLogger()
 	logger.Print("Running Controller out of K8s cluster")
 	logger.FileName = true
-	c.HAProxyCfgDir = "/tmp/haproxy-ingress/etc"
+	c.CfgDir = "/tmp/haproxy-ingress/etc"
 	runtimeDir := "/tmp/haproxy-ingress/run"
 	if osArgs.CfgDir != "" {
-		c.HAProxyCfgDir = osArgs.CfgDir
+		c.CfgDir = osArgs.CfgDir
 	}
 	if osArgs.RuntimeDir != "" {
 		runtimeDir = osArgs.RuntimeDir
 	}
-	if err := os.MkdirAll(c.HAProxyCfgDir, 0755); err != nil {
+	if err := os.MkdirAll(c.CfgDir, 0755); err != nil {
 		logger.Panic(err)
 	}
 	if err := os.MkdirAll(runtimeDir, 0755); err != nil {
 		logger.Panic(err)
 	}
-	c.TransactionDir = path.Join(c.HAProxyCfgDir, "transactions")
-	c.HAProxyStateDir = runtimeDir
-	c.HAProxyRuntimeSocket = path.Join(runtimeDir, "haproxy-runtime-api.sock")
-	c.HAProxyPIDFile = path.Join(runtimeDir, "haproxy.pid")
+	c.TransactionDir = path.Join(c.CfgDir, "transactions")
+	c.StateDir = runtimeDir
+	c.RuntimeSocket = path.Join(runtimeDir, "haproxy-runtime-api.sock")
+	c.PIDFile = path.Join(runtimeDir, "haproxy.pid")
 
 	// Try to copy original file if current directory is project directory
 	// Otherwise check if haproxy.cfg is already in config-dir
@@ -57,7 +57,7 @@ func setupHAProxyEnv(osArgs utils.OSArgs) {
 		logger.Panic(err)
 	}
 	logger.Debug(dir)
-	cfgFile := path.Join(c.HAProxyCfgDir, "haproxy.cfg")
+	cfgFile := path.Join(c.CfgDir, "haproxy.cfg")
 	origin := path.Join(dir, "fs/etc/haproxy/haproxy.cfg")
 	_, err = os.Stat(origin)
 	if err != nil {

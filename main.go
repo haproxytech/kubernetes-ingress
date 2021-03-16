@@ -108,7 +108,7 @@ func main() {
 	logger.Debugf("Kubernetes Informers resync period: %s", osArgs.CacheResyncPeriod.String())
 	logger.Printf("Controller sync period: %s\n", osArgs.SyncPeriod.String())
 
-	c.HAProxyCfgDir = "/etc/haproxy/"
+	c.CfgDir = "/etc/haproxy/"
 	if osArgs.External {
 		setupHAProxyEnv(osArgs)
 	}

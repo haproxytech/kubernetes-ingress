@@ -110,7 +110,7 @@ func (t TCPHandler) Update(k store.K8s, cfg *Configuration, api api.HAProxyClien
 				V4v6:    true,
 			}))
 			if sslOption == "ssl" {
-				errors.Add(api.FrontendEnableSSLOffload(frontend.Name, HAProxyFtCertDir, false))
+				errors.Add(api.FrontendEnableSSLOffload(frontend.Name, FrontendCertDir, false))
 			}
 			if errors.Result() != nil {
 				logger.Errorf("error configuring tcp frontend: %s", err)
@@ -123,7 +123,7 @@ func (t TCPHandler) Update(k store.K8s, cfg *Configuration, api api.HAProxyClien
 			var errors utils.Errors
 			frontend.DefaultBackend = route.BackendName
 			if sslOption == "ssl" {
-				errors.Add(api.FrontendEnableSSLOffload(frontend.Name, HAProxyFtCertDir, false))
+				errors.Add(api.FrontendEnableSSLOffload(frontend.Name, FrontendCertDir, false))
 			} else {
 				errors.Add(api.FrontendDisableSSLOffload(frontend.Name))
 			}

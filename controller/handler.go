@@ -27,7 +27,7 @@ func (c *HAProxyController) initHandlers() {
 	c.UpdateHandlers = []UpdateHandler{
 		HTTPS{
 			enabled:  !c.osArgs.DisableHTTPS,
-			certDir:  HAProxyFtCertDir,
+			certDir:  FrontendCertDir,
 			ipv4:     !c.osArgs.DisableIPV4,
 			addrIpv4: c.osArgs.IPV4BindAddr,
 			addrIpv6: c.osArgs.IPV6BindAddr,
