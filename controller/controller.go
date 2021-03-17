@@ -270,27 +270,7 @@ func (c *HAProxyController) updateHAProxy() {
 	}
 	c.clean(false)
 	if !c.ready {
-		logger.Panic(c.clientAPIClosure(func() error {
-			return c.Client.FrontendBindEdit("healthz",
-				models.Bind{
-					Name:    "v4",
-					Address: "0.0.0.0:1042",
-				})
-		}))
-
-		if !c.osArgs.DisableIPV6 {
-			logger.Panic(c.clientAPIClosure(func() error {
-				return c.Client.FrontendBindCreate("healthz",
-					models.Bind{
-						Name:    "v6",
-						Address: ":::1042",
-						V4v6:    true,
-					})
-			}))
-		}
-
-		logger.Debugf("healthz frontend exposed for readiness probe")
-		c.ready = true
+		c.setToReady()
 	}
 	switch {
 	case restart:
@@ -308,6 +288,31 @@ func (c *HAProxyController) updateHAProxy() {
 	}
 
 	logger.Trace("HAProxy config sync ended")
+}
+
+// setToRready exposes readiness endpoint
+func (c *HAProxyController) setToReady() {
+	logger.Panic(c.clientAPIClosure(func() error {
+		return c.Client.FrontendBindEdit("healthz",
+			models.Bind{
+				Name:    "v4",
+				Address: "0.0.0.0:1042",
+			})
+	}))
+
+	if !c.osArgs.DisableIPV6 {
+		logger.Panic(c.clientAPIClosure(func() error {
+			return c.Client.FrontendBindCreate("healthz",
+				models.Bind{
+					Name:    "v6",
+					Address: ":::1042",
+					V4v6:    true,
+				})
+		}))
+	}
+
+	logger.Debugf("healthz frontend exposed for readiness probe")
+	c.ready = true
 }
 
 // haproxyInitialize initializes HAProxy environment and its API client.
