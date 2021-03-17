@@ -30,13 +30,13 @@ type ErrorFile struct {
 }
 
 func (e ErrorFile) Update(k store.K8s, cfg *Configuration, api api.HAProxyClient) (reload bool, err error) {
-	if k.ConfigMaps[Errorfiles] == nil {
+	if k.ConfigMaps.Errorfiles == nil {
 		return false, nil
 	}
 
 	var codes = [15]string{"200", "400", "401", "403", "404", "405", "407", "408", "410", "425", "429", "500", "502", "503", "504"}
 
-	for code, value := range k.ConfigMaps[Errorfiles].Annotations {
+	for code, value := range k.ConfigMaps.Errorfiles.Annotations {
 		filePath := filepath.Join(HAProxyErrFileDir, code)
 		switch value.Status {
 		case EMPTY:

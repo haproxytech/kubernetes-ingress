@@ -118,10 +118,17 @@ type IngressTLS struct {
 	Status     Status
 }
 
+type ConfigMaps struct {
+	Main        *ConfigMap
+	TCPServices *ConfigMap
+	Errorfiles  *ConfigMap
+}
+
 // ConfigMap is useful data from k8s structures about configmap
 type ConfigMap struct {
 	Namespace   string
 	Name        string
+	Loaded      bool
 	Annotations MapStringW
 	Status      Status
 }

@@ -14,11 +14,7 @@
 
 package store
 
-import (
-	"github.com/haproxytech/kubernetes-ingress/controller/utils"
-)
-
-func (k K8s) EventNamespace(ns *Namespace, data *Namespace) (updateRequired bool) {
+func (k *K8s) EventNamespace(ns *Namespace, data *Namespace) (updateRequired bool) {
 	updateRequired = false
 	switch data.Status {
 	case ADDED:
@@ -35,7 +31,7 @@ func (k K8s) EventNamespace(ns *Namespace, data *Namespace) (updateRequired bool
 	return updateRequired
 }
 
-func (k K8s) EventIngressClass(data *IngressClass) (updateRequired bool) {
+func (k *K8s) EventIngressClass(data *IngressClass) (updateRequired bool) {
 	switch data.Status {
 	case MODIFIED:
 		newIgClass := data
@@ -74,7 +70,7 @@ func (k K8s) EventIngressClass(data *IngressClass) (updateRequired bool) {
 	return updateRequired
 }
 
-func (k K8s) EventIngress(ns *Namespace, data *Ingress, controllerClass string) (updateRequired bool) {
+func (k *K8s) EventIngress(ns *Namespace, data *Ingress, controllerClass string) (updateRequired bool) {
 	updateRequired = false
 	switch data.Status {
 	case MODIFIED:
@@ -235,7 +231,7 @@ func (k K8s) EventIngress(ns *Namespace, data *Ingress, controllerClass string) 
 	return updateRequired
 }
 
-func (k K8s) EventEndpoints(ns *Namespace, data *Endpoints, syncHAproxySrvs func(oldEndpoints, newEndpoints *PortEndpoints) error) (updateRequired bool) {
+func (k *K8s) EventEndpoints(ns *Namespace, data *Endpoints, syncHAproxySrvs func(oldEndpoints, newEndpoints *PortEndpoints) error) (updateRequired bool) {
 	switch data.Status {
 	case MODIFIED:
 		newEndpoints := data
@@ -281,7 +277,7 @@ func (k K8s) EventEndpoints(ns *Namespace, data *Endpoints, syncHAproxySrvs func
 	return updateRequired
 }
 
-func (k K8s) EventService(ns *Namespace, data *Service) (updateRequired bool) {
+func (k *K8s) EventService(ns *Namespace, data *Service) (updateRequired bool) {
 	updateRequired = false
 	switch data.Status {
 	case MODIFIED:
@@ -323,45 +319,47 @@ func (k K8s) EventService(ns *Namespace, data *Service) (updateRequired bool) {
 	return updateRequired
 }
 
-func (k K8s) EventConfigMap(ns *Namespace, data *ConfigMap, configMapArgs map[string]utils.NamespaceValue) (updateRequired bool, configMap string) {
-	updateRequired = false
-	for cm, nsValue := range configMapArgs {
-		if nsValue.Namespace != ns.Name || nsValue.Name != data.Name {
-			continue
-		}
-		switch data.Status {
-		case MODIFIED:
-			different := data.Annotations.SetStatus(k.ConfigMaps[cm].Annotations)
-			k.ConfigMaps[cm] = data
-			if !different {
-				data.Status = EMPTY
-			} else {
-				if cm == MainCM {
-					logger.Print("Main ConfigMap updated")
-				}
-				updateRequired = true
-			}
-		case ADDED:
-			if k.ConfigMaps[cm] == nil {
-				k.ConfigMaps[cm] = data
-				updateRequired = true
-				return updateRequired, cm
-			}
-			if !k.ConfigMaps[cm].Equal(data) {
-				data.Status = MODIFIED
-				return k.EventConfigMap(ns, data, configMapArgs)
-			}
-		case DELETED:
-			k.ConfigMaps[cm].Annotations.SetStatusState(DELETED)
-			k.ConfigMaps[cm].Status = DELETED
-			updateRequired = true
-		}
-		return updateRequired, cm
+func (k *K8s) EventConfigMap(ns *Namespace, data *ConfigMap) (updateRequired bool) {
+	var cm *ConfigMap
+	switch {
+	case k.ConfigMaps.Main.Namespace == ns.Name && k.ConfigMaps.Main.Name == data.Name:
+		cm = k.ConfigMaps.Main
+	case k.ConfigMaps.TCPServices.Namespace == ns.Name && k.ConfigMaps.TCPServices.Name == data.Name:
+		cm = k.ConfigMaps.TCPServices
+	case k.ConfigMaps.Errorfiles.Namespace == ns.Name && k.ConfigMaps.Errorfiles.Name == data.Name:
+		cm = k.ConfigMaps.Errorfiles
+	default:
+		return false
 	}
-	return false, ""
+	switch data.Status {
+	case ADDED:
+		if cm.Loaded && !cm.Equal(data) {
+			data.Status = MODIFIED
+			return k.EventConfigMap(ns, data)
+		}
+		*cm = *data
+		cm.Loaded = true
+		logger.Debugf("configmap '%s/%s' processed", cm.Namespace, cm.Name)
+	case MODIFIED:
+		different := data.Annotations.SetStatus(cm.Annotations)
+		*cm = *data
+		if !different {
+			data.Status = EMPTY
+		} else {
+			updateRequired = true
+			logger.Infof("configmap '%s/%s' updated", cm.Namespace, cm.Name)
+		}
+	case DELETED:
+		cm.Annotations.SetStatusState(DELETED)
+		cm.Status = DELETED
+		cm.Loaded = false
+		updateRequired = true
+		logger.Debugf("configmap '%s/%s' deleted", cm.Namespace, cm.Name)
+	}
+	return updateRequired
 }
 
-func (k K8s) EventSecret(ns *Namespace, data *Secret) (updateRequired bool) {
+func (k *K8s) EventSecret(ns *Namespace, data *Secret) (updateRequired bool) {
 	updateRequired = false
 	switch data.Status {
 	case MODIFIED:

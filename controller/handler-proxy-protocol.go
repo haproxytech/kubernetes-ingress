@@ -29,7 +29,7 @@ type ProxyProtocol struct{}
 
 func (p ProxyProtocol) Update(k store.K8s, cfg *Configuration, api api.HAProxyClient) (reload bool, err error) {
 	//  Get annotation status
-	annProxyProtocol, _ := k.GetValueFromAnnotations("proxy-protocol", k.ConfigMaps[Main].Annotations)
+	annProxyProtocol, _ := k.GetValueFromAnnotations("proxy-protocol", k.ConfigMaps.Main.Annotations)
 	if annProxyProtocol == nil {
 		return false, nil
 	}

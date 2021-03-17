@@ -118,7 +118,7 @@ func main() {
 	}
 	logger.FileName = true
 	// K8s Store
-	s := store.NewK8sStore()
+	s := store.NewK8sStore(osArgs)
 	s.SetDefaultAnnotation("default-backend-service", defaultBackendSvc)
 	s.SetDefaultAnnotation("ssl-certificate", defaultCertificate)
 	s.SetDefaultAnnotation("sync-period", osArgs.SyncPeriod.String())

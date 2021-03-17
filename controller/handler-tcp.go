@@ -16,10 +16,10 @@ type TCPHandler struct {
 }
 
 func (t TCPHandler) Update(k store.K8s, cfg *Configuration, api api.HAProxyClient) (reload bool, err error) {
-	if k.ConfigMaps[TCPServices] == nil {
+	if k.ConfigMaps.TCPServices == nil {
 		return false, nil
 	}
-	for port, tcpSvc := range k.ConfigMaps[TCPServices].Annotations {
+	for port, tcpSvc := range k.ConfigMaps.TCPServices.Annotations {
 		// Get TCP service from ConfigMap
 		// parts[0]: Service Name
 		// parts[1]: Service Port

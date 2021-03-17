@@ -117,7 +117,7 @@ func (route *Route) handleBackend() (err error) {
 		route.NewBackend,
 		route.service.Annotations,
 		route.Ingress.Annotations,
-		k8sStore.ConfigMaps[Main].Annotations,
+		k8sStore.ConfigMaps.Main.Annotations,
 	) || switchMode
 	if backendUpdated {
 		if err = client.BackendEdit(backend); err != nil {

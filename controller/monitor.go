@@ -21,7 +21,6 @@ import (
 	"k8s.io/client-go/tools/cache"
 
 	"github.com/haproxytech/kubernetes-ingress/controller/store"
-	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 )
 
 func (c *HAProxyController) timeFromAnnotation(name string) (duration time.Duration) {
@@ -89,7 +88,6 @@ func (c *HAProxyController) monitorChanges() {
 // All the changes must come through this function
 func (c *HAProxyController) SyncData() {
 	hadChanges := false
-	configMapArgs := c.getConfigMapArgs()
 	for job := range c.eventChan {
 		ns := c.Store.GetNamespace(job.Namespace)
 		change := false
@@ -111,7 +109,7 @@ func (c *HAProxyController) SyncData() {
 		case SERVICE:
 			change = c.Store.EventService(ns, job.Data.(*store.Service))
 		case CONFIGMAP:
-			change, _ = c.Store.EventConfigMap(ns, job.Data.(*store.ConfigMap), configMapArgs)
+			change = c.Store.EventConfigMap(ns, job.Data.(*store.ConfigMap))
 		case SECRET:
 			change = c.Store.EventSecret(ns, job.Data.(*store.Secret))
 		}
@@ -168,21 +166,4 @@ func (c *HAProxyController) getWhitelistedNamespaces() []string {
 	}
 	logger.Infof("Whitelisted Namespaces: %s", namespaces)
 	return namespaces
-}
-
-func (c *HAProxyController) getConfigMapArgs() map[string]utils.NamespaceValue {
-	return map[string]utils.NamespaceValue{
-		Main: {
-			Namespace: c.osArgs.ConfigMap.Namespace,
-			Name:      c.osArgs.ConfigMap.Name,
-		},
-		TCPServices: {
-			Namespace: c.osArgs.ConfigMapTCPServices.Namespace,
-			Name:      c.osArgs.ConfigMapTCPServices.Name,
-		},
-		Errorfiles: {
-			Namespace: c.osArgs.ConfigMapErrorfiles.Namespace,
-			Name:      c.osArgs.ConfigMapErrorfiles.Name,
-		},
-	}
 }

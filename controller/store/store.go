@@ -23,9 +23,9 @@ import (
 
 type K8s struct {
 	Namespaces       map[string]*Namespace
-	ConfigMaps       map[string]*ConfigMap
 	IngressClasses   map[string]*IngressClass
 	NamespacesAccess NamespacesWatch
+	ConfigMaps       ConfigMaps
 }
 
 type NamespacesWatch struct {
@@ -35,21 +35,27 @@ type NamespacesWatch struct {
 
 var logger = utils.GetLogger()
 
-const (
-	// Configmaps
-	MainCM = "main"
-)
-
-func NewK8sStore() K8s {
+func NewK8sStore(args utils.OSArgs) K8s {
 	return K8s{
-		Namespaces: make(map[string]*Namespace),
-		ConfigMaps: map[string]*ConfigMap{
-			MainCM: {Annotations: MapStringW{}},
-		},
+		Namespaces:     make(map[string]*Namespace),
 		IngressClasses: make(map[string]*IngressClass),
 		NamespacesAccess: NamespacesWatch{
 			Whitelist: map[string]struct{}{},
 			Blacklist: map[string]struct{}{},
+		},
+		ConfigMaps: ConfigMaps{
+			Main: &ConfigMap{
+				Namespace: args.ConfigMap.Namespace,
+				Name:      args.ConfigMap.Name,
+			},
+			TCPServices: &ConfigMap{
+				Namespace: args.ConfigMapTCPServices.Namespace,
+				Name:      args.ConfigMapTCPServices.Name,
+			},
+			Errorfiles: &ConfigMap{
+				Namespace: args.ConfigMapErrorfiles.Namespace,
+				Name:      args.ConfigMapErrorfiles.Name,
+			},
 		},
 	}
 }
@@ -125,10 +131,11 @@ func (k K8s) Clean() {
 			}
 		}
 	}
-	for _, cm := range k.ConfigMaps {
+	for _, cm := range []*ConfigMap{k.ConfigMaps.Main, k.ConfigMaps.TCPServices, k.ConfigMaps.Errorfiles} {
 		switch cm.Status {
 		case DELETED:
-			cm = nil
+			cm.Status = DELETED
+			cm.Annotations = MapStringW{}
 		default:
 			cm.Status = EMPTY
 			cm.Annotations.Clean()

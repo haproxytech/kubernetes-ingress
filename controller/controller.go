@@ -36,10 +36,6 @@ import (
 //nolint:golint,stylecheck
 const (
 	CONTROLLER_CLASS = "haproxy.org/ingress-controller"
-	// Configmaps
-	Main        = "main"
-	TCPServices = "tcpservices"
-	Errorfiles  = "errorfiles"
 	// sections
 	FrontendHTTP      = "http"
 	FrontendHTTPS     = "https"
@@ -187,7 +183,7 @@ func (c *HAProxyController) updateHAProxy() {
 		c.Store,
 		c.Client,
 		false,
-		c.Store.ConfigMaps[Main].Annotations,
+		c.Store.ConfigMaps.Main.Annotations,
 	)
 	reload = c.handleDefaultCert() || reload
 	c.handleDefaultService()
@@ -299,7 +295,6 @@ func (c *HAProxyController) setToReady() {
 				Address: "0.0.0.0:1042",
 			})
 	}))
-
 	if !c.osArgs.DisableIPV6 {
 		logger.Panic(c.clientAPIClosure(func() error {
 			return c.Client.FrontendBindCreate("healthz",
@@ -310,8 +305,11 @@ func (c *HAProxyController) setToReady() {
 				})
 		}))
 	}
-
 	logger.Debugf("healthz frontend exposed for readiness probe")
+	cm := c.Store.ConfigMaps.Main
+	if cm.Name != "" && !cm.Loaded {
+		logger.Warningf("Main configmap '%s/%s' not found", cm.Namespace, cm.Name)
+	}
 	c.ready = true
 }
 
@@ -533,7 +531,7 @@ func (c *HAProxyController) handleDefaultService() {
 
 // handleDefaultCert configures default/fallback HAProxy certificate to use for client HTTPS requests.
 func (c *HAProxyController) handleDefaultCert() (reload bool) {
-	secretAnn, _ := c.Store.GetValueFromAnnotations("ssl-certificate", c.Store.ConfigMaps[Main].Annotations)
+	secretAnn, _ := c.Store.GetValueFromAnnotations("ssl-certificate", c.Store.ConfigMaps.Main.Annotations)
 	if secretAnn == nil {
 		return false
 	}
@@ -565,9 +563,9 @@ func (c *HAProxyController) sslPassthroughEnabled(ingress *store.Ingress, path *
 		service, ok = c.Store.Namespaces[ingress.Namespace].Services[path.SvcName]
 	}
 	if ok {
-		annSSLPassthrough, _ = c.Store.GetValueFromAnnotations("ssl-passthrough", service.Annotations, ingress.Annotations, c.Store.ConfigMaps[Main].Annotations)
+		annSSLPassthrough, _ = c.Store.GetValueFromAnnotations("ssl-passthrough", service.Annotations, ingress.Annotations, c.Store.ConfigMaps.Main.Annotations)
 	} else {
-		annSSLPassthrough, _ = c.Store.GetValueFromAnnotations("ssl-passthrough", ingress.Annotations, c.Store.ConfigMaps[Main].Annotations)
+		annSSLPassthrough, _ = c.Store.GetValueFromAnnotations("ssl-passthrough", ingress.Annotations, c.Store.ConfigMaps.Main.Annotations)
 	}
 	enabled, err := utils.GetBoolValue(annSSLPassthrough.Value, "ssl-passthrough")
 	if err != nil {

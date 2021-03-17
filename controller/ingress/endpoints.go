@@ -33,7 +33,7 @@ func (route *Route) scaleHAProxySrvs() {
 	haproxySrvs := route.endpoints.HAProxySrvs
 	// "servers-increment", "server-slots" are legacy annotations
 	for _, annotation := range []string{"servers-increment", "server-slots", "scale-server-slots"} {
-		annServerSlots, _ := k8sStore.GetValueFromAnnotations(annotation, k8sStore.ConfigMaps[Main].Annotations)
+		annServerSlots, _ := k8sStore.GetValueFromAnnotations(annotation, k8sStore.ConfigMaps.Main.Annotations)
 		if annServerSlots != nil {
 			if value, err := strconv.Atoi(annServerSlots.Value); err == nil {
 				srvSlots = value
@@ -104,7 +104,7 @@ func (route *Route) handleEndpoints() {
 		false,
 		route.service.Annotations,
 		route.Ingress.Annotations,
-		k8sStore.ConfigMaps[Main].Annotations,
+		k8sStore.ConfigMaps.Main.Annotations,
 	) || route.NewBackend
 	route.reload = route.reload || backendUpdated
 	for _, srv := range route.endpoints.HAProxySrvs {
@@ -136,7 +136,7 @@ func (route *Route) handleHAProxSrv(srv *store.HAProxySrv) {
 		true,
 		route.service.Annotations,
 		route.Ingress.Annotations,
-		k8sStore.ConfigMaps[Main].Annotations,
+		k8sStore.ConfigMaps.Main.Annotations,
 	)
 	// Update server
 	errAPI := client.BackendServerEdit(route.BackendName, server)

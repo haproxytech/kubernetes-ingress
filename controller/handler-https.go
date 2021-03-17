@@ -71,7 +71,7 @@ func (h HTTPS) bindList(passhthrough bool) (binds []models.Bind) {
 }
 
 func (h HTTPS) handleClientTLSAuth(k store.K8s, cfg *Configuration, api api.HAProxyClient) (reload bool, err error) {
-	annTLSAuth, _ := k.GetValueFromAnnotations("client-ca", k.ConfigMaps[Main].Annotations)
+	annTLSAuth, _ := k.GetValueFromAnnotations("client-ca", k.ConfigMaps.Main.Annotations)
 	if annTLSAuth == nil {
 		return false, nil
 	}
@@ -233,7 +233,7 @@ func (h HTTPS) toggleSSLPassthrough(passthrough, offload bool, api api.HAProxyCl
 
 func (h HTTPS) sslPassthroughRules(k store.K8s, cfg *Configuration) error {
 	inspectTimeout := utils.PtrInt64(5000)
-	annTimeout, _ := k.GetValueFromAnnotations("timeout-client", k.ConfigMaps[Main].Annotations)
+	annTimeout, _ := k.GetValueFromAnnotations("timeout-client", k.ConfigMaps.Main.Annotations)
 	if annTimeout != nil {
 		if value, errParse := utils.ParseTime(annTimeout.Value); errParse == nil {
 			inspectTimeout = value
