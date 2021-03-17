@@ -49,9 +49,7 @@ func NewK8sStore() K8s {
 		IngressClasses: make(map[string]*IngressClass),
 		NamespacesAccess: NamespacesWatch{
 			Whitelist: map[string]struct{}{},
-			Blacklist: map[string]struct{}{
-				"kube-system": {},
-			},
+			Blacklist: map[string]struct{}{},
 		},
 	}
 }
