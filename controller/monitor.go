@@ -107,7 +107,7 @@ func (c *HAProxyController) SyncData() {
 		case INGRESS_CLASS:
 			change = c.Store.EventIngressClass(job.Data.(*store.IngressClass))
 		case ENDPOINTS:
-			change = c.Store.EventEndpoints(ns, job.Data.(*store.Endpoints), c.updateHAProxySrvs)
+			change = c.Store.EventEndpoints(ns, job.Data.(*store.Endpoints), c.Client.SyncBackendSrvs)
 		case SERVICE:
 			change = c.Store.EventService(ns, job.Data.(*store.Service))
 		case CONFIGMAP:
@@ -116,61 +116,6 @@ func (c *HAProxyController) SyncData() {
 			change = c.Store.EventSecret(ns, job.Data.(*store.Secret))
 		}
 		hadChanges = hadChanges || change
-	}
-}
-
-// updateHAProxySrvs dynamically update (via runtime socket) HAProxy backend servers with modifed Addresses
-func (c *HAProxyController) updateHAProxySrvs(oldEndpoints, newEndpoints *store.PortEndpoints) {
-	if oldEndpoints.BackendName == "" {
-		return
-	}
-	newEndpoints.HAProxySrvs = oldEndpoints.HAProxySrvs
-	newEndpoints.BackendName = oldEndpoints.BackendName
-	haproxySrvs := newEndpoints.HAProxySrvs
-	newAddresses := newEndpoints.AddrNew
-	// Disable stale entries from HAProxySrvs
-	// and provide list of Disabled Srvs
-	var disabled []*store.HAProxySrv
-	for i, srv := range haproxySrvs {
-		if _, ok := newAddresses[srv.Address]; ok {
-			delete(newAddresses, srv.Address)
-		} else {
-			haproxySrvs[i].Address = ""
-			haproxySrvs[i].Modified = true
-			disabled = append(disabled, srv)
-		}
-	}
-
-	// Configure new Addresses in available HAProxySrvs
-	for newAddr := range newAddresses {
-		if len(disabled) == 0 {
-			break
-		}
-		disabled[0].Address = newAddr
-		disabled[0].Modified = true
-		disabled = disabled[1:]
-		delete(newAddresses, newAddr)
-	}
-	// Dynamically updates HAProxy backend servers  with HAProxySrvs content
-	var addrErr, stateErr error
-	for _, srv := range haproxySrvs {
-		if !srv.Modified {
-			continue
-		}
-		if srv.Address == "" {
-			logger.Tracef("server '%s/%s' changed status to %v", newEndpoints.BackendName, srv.Name, "maint")
-			addrErr = c.Client.SetServerAddr(newEndpoints.BackendName, srv.Name, "127.0.0.1", 0)
-			stateErr = c.Client.SetServerState(newEndpoints.BackendName, srv.Name, "maint")
-		} else {
-			logger.Tracef("server '%s/%s' changed status to %v", newEndpoints.BackendName, srv.Name, "ready")
-			addrErr = c.Client.SetServerAddr(newEndpoints.BackendName, srv.Name, srv.Address, 0)
-			stateErr = c.Client.SetServerState(newEndpoints.BackendName, srv.Name, "ready")
-		}
-		if addrErr != nil || stateErr != nil {
-			newEndpoints.DynUpdateFailed = true
-			logger.Error(addrErr)
-			logger.Error(stateErr)
-		}
 	}
 }
 

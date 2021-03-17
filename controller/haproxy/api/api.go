@@ -6,6 +6,8 @@ import (
 	"github.com/haproxytech/client-native/v2/runtime"
 	"github.com/haproxytech/config-parser/v3/types"
 	"github.com/haproxytech/models/v2"
+
+	"github.com/haproxytech/kubernetes-ingress/controller/store"
 )
 
 type HAProxyClient interface {
@@ -60,6 +62,7 @@ type HAProxyClient interface {
 	ServerStateBase(value *types.StringC) error
 	SetServerAddr(backendName string, serverName string, ip string, port int) error
 	SetServerState(backendName string, serverName string, state string) error
+	SyncBackendSrvs(oldEndpoints, newEndpoints *store.PortEndpoints) error
 	UserListDeleteByGroup(group string) error
 	UserListCreateByGroup(group string, userPasswordMap map[string][]byte) error
 }

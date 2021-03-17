@@ -235,7 +235,7 @@ func (k K8s) EventIngress(ns *Namespace, data *Ingress, controllerClass string) 
 	return updateRequired
 }
 
-func (k K8s) EventEndpoints(ns *Namespace, data *Endpoints, updateHAproxySrvs func(oldEndpoints, newEndpoints *PortEndpoints)) (updateRequired bool) {
+func (k K8s) EventEndpoints(ns *Namespace, data *Endpoints, syncHAproxySrvs func(oldEndpoints, newEndpoints *PortEndpoints) error) (updateRequired bool) {
 	switch data.Status {
 	case MODIFIED:
 		newEndpoints := data
@@ -253,7 +253,7 @@ func (k K8s) EventEndpoints(ns *Namespace, data *Endpoints, updateHAproxySrvs fu
 				newPortEdpts = &PortEndpoints{Port: oldPortEdpts.Port}
 				newEndpoints.Ports[portName] = newPortEdpts
 			}
-			updateHAproxySrvs(oldPortEdpts, newPortEdpts)
+			logger.Warning(syncHAproxySrvs(oldPortEdpts, newPortEdpts))
 		}
 		ns.Endpoints[data.Service.Value] = newEndpoints
 		return true
@@ -264,7 +264,7 @@ func (k K8s) EventEndpoints(ns *Namespace, data *Endpoints, updateHAproxySrvs fu
 			}
 			if !old.Equal(data) {
 				data.Status = MODIFIED
-				return k.EventEndpoints(ns, data, updateHAproxySrvs)
+				return k.EventEndpoints(ns, data, syncHAproxySrvs)
 			}
 			return updateRequired
 		}
