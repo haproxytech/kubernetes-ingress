@@ -18,6 +18,7 @@ import (
 	"hash/fnv"
 	"os"
 	"path"
+	"sort"
 	"strings"
 
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/api"
@@ -35,6 +36,7 @@ type mapFile struct {
 
 func (mf *mapFile) getContent() (string, uint64) {
 	var b strings.Builder
+	sort.Strings(mf.rows)
 	for _, r := range mf.rows {
 		b.WriteString(r)
 		b.WriteRune('\n')
