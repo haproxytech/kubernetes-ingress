@@ -143,6 +143,7 @@ func refreshCerts(certs map[string]bool, certDir string) (reload bool) {
 			logger.Error(os.Remove(path.Join(certDir, filename)))
 			delete(certs, filename)
 			reload = true
+			logger.Debug("Unused certificates removed, reload required")
 		}
 	}
 	return

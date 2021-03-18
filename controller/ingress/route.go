@@ -93,12 +93,12 @@ func (route *Route) handleBackend() (err error) {
 			Name: route.BackendName,
 			Mode: mode,
 		}
-		logger.Debugf("Ingress '%s/%s': Creating new backend '%s'", route.Namespace.Name, route.Ingress.Name, route.BackendName)
 		if err = client.BackendCreate(backend); err != nil {
 			return err
 		}
 		route.NewBackend = true
 		route.reload = true
+		logger.Debugf("Ingress '%s/%s': new backend '%s', reload required", route.Namespace.Name, route.Ingress.Name, route.BackendName)
 	}
 	// Update Backend
 	var switchMode bool
@@ -126,6 +126,7 @@ func (route *Route) handleBackend() (err error) {
 			return err
 		}
 		route.reload = true
+		logger.Debugf("Ingress '%s/%s': backend '%s' updated, reload required", route.Namespace.Name, route.Ingress.Name, route.BackendName)
 	}
 
 	return nil

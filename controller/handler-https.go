@@ -80,28 +80,29 @@ func (h HTTPS) Update(k store.K8s, cfg *Configuration, api api.HAProxyClient) (r
 			logger.Panic(api.FrontendEnableSSLOffload(FrontendHTTPS, h.certDir, true))
 			cfg.HTTPS = true
 			reload = true
+			logger.Debug("SSLOffload enabeld, reload required")
 		}
 	} else if cfg.HTTPS {
-		logger.Info("Disabling ssl offload")
 		logger.Panic(api.FrontendDisableSSLOffload(FrontendHTTPS))
 		cfg.HTTPS = false
 		reload = true
+		logger.Debug("SSLOffload disabled, reload required")
 	}
 	// ssl-passthrough
 	_, errFtSSL := api.FrontendGet(FrontendSSL)
 	if cfg.SSLPassthrough {
 		if errFtSSL != nil {
-			logger.Info("Enabling ssl-passthrough")
 			logger.Error(h.enableSSLPassthrough(cfg, api))
 			cfg.SSLPassthrough = true
 			reload = true
+			logger.Debug("SSLPassthrough enabled, reload required")
 		}
 		logger.Error(h.sslPassthroughRules(k, cfg))
 	} else if errFtSSL == nil {
-		logger.Info("Disabling ssl-passthrough")
 		logger.Error(h.disableSSLPassthrough(cfg, api))
 		cfg.SSLPassthrough = false
 		reload = true
+		logger.Debug("SSLPassthrough disabled, reload required")
 	}
 
 	return reload, nil
