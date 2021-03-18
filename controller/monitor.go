@@ -306,11 +306,11 @@ func (c *HAProxyController) updateHAProxySrvs(oldEndpoints, newEndpoints *store.
 			continue
 		}
 		if srv.Address == "" {
-			logger.Debugf("server '%s/%s' changed status to %v", newEndpoints.BackendName, srv.Name, "maint")
+			logger.Tracef("server '%s/%s' changed status to %v", newEndpoints.BackendName, srv.Name, "maint")
 			addrErr = c.Client.SetServerAddr(newEndpoints.BackendName, srv.Name, "127.0.0.1", 0)
 			stateErr = c.Client.SetServerState(newEndpoints.BackendName, srv.Name, "maint")
 		} else {
-			logger.Debugf("server '%s/%s' changed status to %v", newEndpoints.BackendName, srv.Name, "ready")
+			logger.Tracef("server '%s/%s' changed status to %v", newEndpoints.BackendName, srv.Name, "ready")
 			addrErr = c.Client.SetServerAddr(newEndpoints.BackendName, srv.Name, srv.Address, 0)
 			stateErr = c.Client.SetServerState(newEndpoints.BackendName, srv.Name, "ready")
 		}

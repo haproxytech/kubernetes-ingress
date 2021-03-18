@@ -34,7 +34,7 @@ func (p ProxyProtocol) Update(k store.K8s, cfg *Configuration, api api.HAProxyCl
 		return false, nil
 	}
 	if annProxyProtocol.Status == DELETED {
-		logger.Debugf("Deleting ProxyProtocol configuration")
+		logger.Trace("Deleting ProxyProtocol configuration")
 		return false, nil
 	}
 	// Validate annotation
@@ -50,7 +50,7 @@ func (p ProxyProtocol) Update(k store.K8s, cfg *Configuration, api api.HAProxyCl
 		}
 	}
 	// Configure Annotation
-	logger.Debugf("Configuring ProxyProtcol annotation")
+	logger.Trace("Configuring ProxyProtcol annotation")
 	frontends := []string{FrontendHTTP, FrontendHTTPS}
 	if cfg.SSLPassthrough {
 		frontends = []string{FrontendHTTP, FrontendSSL}

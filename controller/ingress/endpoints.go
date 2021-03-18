@@ -130,11 +130,11 @@ func (route *Route) handleHAProxSrv(srv *store.HAProxySrv) {
 	// Update server
 	errAPI := client.BackendServerEdit(route.BackendName, server)
 	if errAPI == nil {
-		logger.Debugf("Updating server '%s/%s'", route.BackendName, server.Name)
+		logger.Tracef("Updating server '%s/%s'", route.BackendName, server.Name)
 		return
 	}
 	if strings.Contains(errAPI.Error(), "does not exist") {
-		logger.Debugf("Creating server '%s/%s'", route.BackendName, server.Name)
+		logger.Tracef("Creating server '%s/%s'", route.BackendName, server.Name)
 		logger.Error(client.BackendServerCreate(route.BackendName, server))
 	}
 }
@@ -142,7 +142,7 @@ func (route *Route) handleHAProxSrv(srv *store.HAProxySrv) {
 func (route *Route) handleExternalName() error {
 	//TODO: currently HAProxy will only resolve server name at startup/reload
 	// This needs to be improved by using HAProxy resolvers to have resolution at runtime
-	logger.Debugf("Configuring service '%s', of type ExternalName", route.service.Name)
+	logger.Tracef("Configuring service '%s', of type ExternalName", route.service.Name)
 	var port int64
 	for _, sp := range route.service.Ports {
 		if sp.Name == route.Path.SvcPortString || sp.Port == route.Path.SvcPortInt {
