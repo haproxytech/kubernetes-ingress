@@ -78,7 +78,7 @@ func (r *Routes) Refresh(c api.HAProxyClient, k store.K8s, mapFiles haproxy.Maps
 	k8sStore = k
 	haproxyCerts = certs
 	r.activeBackends = make(map[string]struct{})
-	logger.Debug("Updating Backend Switching rules")
+	logger.Trace("Updating Backend Switching rules")
 	r.refreshHTTP(mapFiles)
 	r.refreshHTTPDefault()
 	r.refreshTCP()
