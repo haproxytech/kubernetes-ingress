@@ -22,7 +22,7 @@ docker build -t haproxytech/kubernetes-ingress -f build/Dockerfile .
 Example environment can be created with
 
 ```bash
-deploy/tests/create.sh
+make example
 ```
 
 Please see [controller.md](https://github.com/haproxytech/kubernetes-ingress/blob/master/documentation/controller.md) for all available arguments of controler image.

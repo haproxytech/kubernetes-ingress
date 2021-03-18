@@ -3,7 +3,7 @@
 
 ## Generator tool for markdown documentation
 
-to run it just enter this folder and run `go run .`
+to run it use `make doc`
 
 There are four parts of doc.yaml file:
 
@@ -64,6 +64,6 @@ There are four parts of doc.yaml file:
       example that overrides global one
     example_ingress: |-
       example that overrides global one
-    example_service: |- 
+    example_service: |-
       example that overrides global one
   ```
