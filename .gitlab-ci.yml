@@ -25,7 +25,7 @@ lint-commit-msg:
   tags:
     - go
   script:
-      - go run /check.go
+      - /check
 unit-tests:
   stage: unit-tests
   image:
