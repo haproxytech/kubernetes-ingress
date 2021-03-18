@@ -89,7 +89,6 @@ func (r *Routes) refreshHTTP(mapFiles haproxy.Maps) {
 	for _, route := range r.http {
 		// DELETED Route
 		if route.status == DELETED {
-			r.reload = true
 			continue
 		}
 		if !route.LocalBackend {

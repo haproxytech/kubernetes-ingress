@@ -27,6 +27,7 @@ import (
 
 // scaleHAproxySrvs adds servers to match available addresses
 func (route *Route) scaleHAProxySrvs() {
+	var reload bool
 	var srvSlots int
 	var disabled []*store.HAProxySrv
 	haproxySrvs := route.endpoints.HAProxySrvs
@@ -43,6 +44,7 @@ func (route *Route) scaleHAProxySrvs() {
 		}
 	}
 	// Add disabled HAProxySrvs to match scale-server-slots
+	reload = false
 	for len(haproxySrvs) < srvSlots {
 		srv := &store.HAProxySrv{
 			Name:     fmt.Sprintf("SRV_%d", len(haproxySrvs)+1),
@@ -51,9 +53,14 @@ func (route *Route) scaleHAProxySrvs() {
 		}
 		haproxySrvs = append(haproxySrvs, srv)
 		disabled = append(disabled, srv)
+		reload = true
+	}
+	if reload {
 		route.reload = true
+		logger.Debugf("Server slots in backend '%s' scaled to match scale-server-slots value: %d, reload required", route.BackendName, srvSlots)
 	}
 	// Configure remaining addresses in available HAProxySrvs
+	reload = false
 	for addr := range route.endpoints.AddrNew {
 		if len(disabled) != 0 {
 			disabled[0].Address = addr
@@ -66,9 +73,13 @@ func (route *Route) scaleHAProxySrvs() {
 				Modified: true,
 			}
 			haproxySrvs = append(haproxySrvs, srv)
-			route.reload = true
+			reload = true
 		}
 		delete(route.endpoints.AddrNew, addr)
+	}
+	if reload {
+		route.reload = true
+		logger.Debugf("Server slots in backend '%s' scaled to match available endpoints, reload required", route.BackendName)
 	}
 	route.endpoints.HAProxySrvs = haproxySrvs
 }

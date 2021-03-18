@@ -43,6 +43,25 @@ const (
 	RES_SET_HEADER
 )
 
+var constLookup = map[RuleType]string{
+	REQ_ACCEPT_CONTENT:   "REQ_ACCEPT_CONTENT",
+	REQ_INSPECT_DELAY:    "REQ_INSPECT_DELAY",
+	REQ_PROXY_PROTOCOL:   "REQ_PROXY_PROTOCOL",
+	REQ_SET_VAR:          "REQ_SET_VAR",
+	REQ_SET_SRC:          "REQ_SET_SRC",
+	REQ_DENY:             "REQ_DENY",
+	REQ_TRACK:            "REQ_TRACK",
+	REQ_AUTH:             "REQ_AUTH",
+	REQ_RATELIMIT:        "REQ_RATELIMIT",
+	REQ_CAPTURE:          "REQ_CAPTURE",
+	REQ_REQUEST_REDIRECT: "REQ_REQUEST_REDIRECT",
+	REQ_FORWARDED_PROTO:  "REQ_FORWARDED_PROTO",
+	REQ_SET_HEADER:       "REQ_SET_HEADER",
+	REQ_SET_HOST:         "REQ_SET_HOST",
+	REQ_PATH_REWRITE:     "REQ_PATH_REWRITE",
+	RES_SET_HEADER:       "RES_SET_HEADER",
+}
+
 // RuleStatus describing Rule creation
 type RuleStatus int
 
@@ -171,6 +190,7 @@ func (r Rules) Refresh(client api.HAProxyClient) (reload bool) {
 				logger.Error(err)
 				if err == nil && ftRules.status[id]&TO_CREATE != 0 {
 					reload = true
+					logger.Debugf("New HAProxy rule '%s' created, reload required", constLookup[ruleType])
 				}
 			}
 			ftRules.rules[ruleType] = ruleSet

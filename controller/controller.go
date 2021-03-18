@@ -228,6 +228,7 @@ func (c *HAProxyController) updateHAProxy() {
 				})
 				if crt != "" && updated {
 					reload = true
+					logger.Debugf("Secret '%s' in ingress '%s/%s' was updated, reload required", tls.SecretName.Value, ingress.Namespace, ingress.Name)
 				}
 			}
 			// Ingress annotations

@@ -53,12 +53,12 @@ func (t TCPHandler) Update(k store.K8s, cfg *Configuration, api api.HAProxyClien
 		// Delete Frontend
 		frontendName := fmt.Sprintf("tcp-%s", port)
 		if tcpSvc.Status == DELETED || svc.Status == DELETED {
-			logger.Debugf("Deleting TCP frontend '%s'", frontendName)
 			err = api.FrontendDelete(frontendName)
 			if err != nil {
 				logger.Errorf("error deleting tcp frontend: %s", err)
 			} else {
 				reload = true
+				logger.Debugf("TCP frontend '%s' deleted, reload required", frontendName)
 			}
 			continue
 		}
@@ -99,7 +99,6 @@ func (t TCPHandler) Update(k store.K8s, cfg *Configuration, api api.HAProxyClien
 				DefaultBackend: route.BackendName,
 			}
 			var errors utils.Errors
-			logger.Debugf("Creating TCP frontend '%s'", frontendName)
 			errors.Add(api.FrontendCreate(frontend))
 			errors.Add(api.FrontendBindCreate(frontendName, models.Bind{
 				Address: "0.0.0.0:" + port,
@@ -118,10 +117,10 @@ func (t TCPHandler) Update(k store.K8s, cfg *Configuration, api api.HAProxyClien
 				continue
 			}
 			reload = true
+			logger.Debugf("TCP frontend '%s' created, reload required", frontendName)
 		} else if svc.Status != EMPTY {
 			// Update  Frontend
 			var errors utils.Errors
-			logger.Debugf("Updating TCP frontend '%s'", frontendName)
 			frontend.DefaultBackend = route.BackendName
 			if sslOption == "ssl" {
 				errors.Add(api.FrontendEnableSSLOffload(frontend.Name, HAProxyFtCertDir, false))
@@ -134,6 +133,7 @@ func (t TCPHandler) Update(k store.K8s, cfg *Configuration, api api.HAProxyClien
 				continue
 			}
 			reload = true
+			logger.Debugf("TCP frontend '%s' updated, reload required", frontendName)
 		}
 		logger.Error(cfg.IngressRoutes.AddRoute(route))
 	}

@@ -81,6 +81,7 @@ func (e ErrorFile) updateAPI(api api.HAProxyClient) (reload bool) {
 
 		if err == nil {
 			reload = true
+			logger.Debug("Errorfile updated, reload required")
 		} else {
 			logger.Error(err)
 		}
