@@ -23,6 +23,19 @@ diff:
   only:
     - merge_requests
     - branches
+tidy:
+  stage: lint
+  image:
+    name: $CI_REGISTRY_GO/golang:1.16
+    entrypoint: [""]
+  tags:
+    - go
+  script:
+    - go mod tidy
+    - test -z "$(git diff 2> /dev/null)" || exit 'Go modules not tidied, issue \`go mod tidy\` and commit the result'
+  only:
+    - merge_requests
+    - branches
 golangci_lint:
   stage: lint
   image:
