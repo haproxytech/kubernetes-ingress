@@ -140,7 +140,7 @@ func (c *HAProxyController) monitorChanges() {
 
 	// Buffering events so they are handled after configMap is processed
 	var eventsIngress, eventsEndpoints, eventsServices []SyncDataEvent
-	var configMapOk bool
+	var configMapOk, configMapWarn bool
 	if c.osArgs.ConfigMap.Name == "" {
 		configMapOk = true
 		//since we don't have configmap and everywhere in code we expect one we need to create empty one
@@ -211,6 +211,9 @@ func (c *HAProxyController) monitorChanges() {
 		case <-time.After(syncPeriod):
 			if configMapOk && len(eventsIngress) == 0 && len(eventsServices) == 0 && len(eventsEndpoints) == 0 {
 				c.eventChan <- SyncDataEvent{SyncType: COMMAND}
+			} else if !configMapWarn {
+				logger.Warningf("Configmap '%s/%s' not found, controller waiting for it to proceed..", c.osArgs.ConfigMap.Namespace, c.osArgs.ConfigMap.Name)
+				configMapWarn = true
 			}
 		}
 	}
