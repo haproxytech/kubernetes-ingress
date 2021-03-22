@@ -25,10 +25,12 @@ import (
 
 func (suite *TLSAuthSuite) Test_Client_TLS_Auth() {
 	suite.Run("no_client_cert", func() {
-		suite.Eventually(func() bool {
+		suite.Require().Eventually(func() bool {
 			_, cls, err := suite.client.Do()
 			if err != nil {
-				return strings.HasSuffix(err.Error(), "certificate required")
+				suite.T().Log(err)
+				return strings.HasSuffix(err.Error(), "certificate required") ||
+					strings.HasSuffix(err.Error(), "alert(116)")
 			}
 			defer cls()
 			return false
@@ -58,7 +60,8 @@ func (suite *TLSAuthSuite) Test_Client_TLS_Auth() {
 		suite.Eventually(func() bool {
 			_, cls, err := suite.client.Do()
 			if err != nil {
-				return strings.HasSuffix(err.Error(), "certificate required")
+				return strings.HasSuffix(err.Error(), "certificate required") ||
+					strings.HasSuffix(err.Error(), "alert(116)")
 			}
 			defer cls()
 			return false
