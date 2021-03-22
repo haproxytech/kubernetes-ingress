@@ -23,7 +23,7 @@ nodes:
       - hostPort: 30443
         containerPort: 30443
       - hostPort: 31024
-        containerPort: 1024
+        containerPort: 31024
       - hostPort: 32766
         containerPort: 32766
       - hostPort: 32767

@@ -15,12 +15,15 @@
 package e2e
 
 import (
+	"bufio"
+	"bytes"
 	"context"
 	"crypto/tls"
 	"fmt"
 	"net"
 	"net/http"
 	"os"
+	"strings"
 )
 
 type Client struct {
@@ -32,8 +35,15 @@ type Client struct {
 	Transport  *http.Transport
 }
 
+type GlobalHAProxyInfo struct {
+	Pid     string
+	Maxconn string
+	Uptime  string
+}
+
 const HTTP_PORT = 30080
 const HTTPS_PORT = 30443
+const STATS_PORT = 31024
 
 func newClient(host string, port int, tls bool) (*Client, error) {
 	kindURL := os.Getenv("KIND_URL")
@@ -113,4 +123,38 @@ func (c *Client) Do() (res *http.Response, close func() error, err error) {
 	}
 	close = res.Body.Close
 	return
+}
+
+func GetGlobalHAProxyInfo() (info GlobalHAProxyInfo, err error) {
+	kindURL := os.Getenv("KIND_URL")
+	if kindURL == "" {
+		kindURL = "127.0.0.1"
+	}
+	conn, err := net.Dial("tcp", fmt.Sprintf("%s:%d", kindURL, STATS_PORT))
+	if err != nil {
+		return info, err
+	}
+	_, err = conn.Write([]byte("show info\n"))
+	if err != nil {
+		return info, err
+	}
+	reply := make([]byte, 1024)
+	_, err = conn.Read(reply)
+	if err != nil {
+		return info, err
+	}
+	scanner := bufio.NewScanner(bytes.NewReader(reply))
+	for scanner.Scan() {
+		line := scanner.Text()
+		switch {
+		case strings.HasPrefix(line, "Maxconn:"):
+			info.Maxconn = strings.Split(line, ": ")[1]
+		case strings.HasPrefix(line, "Uptime:"):
+			info.Uptime = strings.Split(line, ": ")[1]
+		case strings.HasPrefix(line, "Pid:"):
+			info.Pid = strings.Split(line, ": ")[1]
+		}
+	}
+	conn.Close()
+	return info, nil
 }

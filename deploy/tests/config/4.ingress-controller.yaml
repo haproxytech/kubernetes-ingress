@@ -45,7 +45,7 @@ spec:
        - name: https
          containerPort: 443
        - name: stat
-         containerPort: 1024
+         containerPort: 31024
        - name: tcp1
          containerPort: 32766
        - name: tcp2
@@ -90,8 +90,8 @@ spec:
     nodePort: 30443
     protocol: TCP
   - name: stat
-    port: 1024
-    targetPort: 1024
+    port: 31024
+    targetPort: 31024
     nodePort: 31024
   - name: tcp1
     port: 32766

@@ -4,11 +4,13 @@ metadata:
  name: haproxy-configmap
  namespace: haproxy-controller
 data:
+  # Mandatory config
   global-config-snippet: |
     stats socket 0.0.0.0:31024
   syslog-server: |
     address: stdout, format: raw, facility:daemon
-  maxconn: "1000"
+  # Optional config
+  maxconn: "1111"
   server-slots: "4"
   timeout-client: 50s
   timeout-connect: 5s
