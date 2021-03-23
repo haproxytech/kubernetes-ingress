@@ -36,6 +36,7 @@ type HAProxyController struct {
 	OSArgs         utils.OSArgs
 	Store          store.K8s
 	PublishService *store.Service
+	AuxCfgModTime  int64
 	eventChan      chan SyncDataEvent
 	k8s            *K8s
 	ready          bool

@@ -45,6 +45,7 @@ type Env struct {
 	RuntimeSocket   string
 	PIDFile         string
 	MainCFGFile     string
+	AuxCFGFile      string
 	CfgDir          string
 	RuntimeDir      string
 	CertDir         string
@@ -141,6 +142,9 @@ func (c *ControllerCfg) envInit() (err error) {
 	// Binary and main files
 	if c.Env.MainCFGFile == "" {
 		c.Env.MainCFGFile = filepath.Join(c.Env.CfgDir, "haproxy.cfg")
+	}
+	if c.Env.AuxCFGFile == "" {
+		c.Env.AuxCFGFile = filepath.Join(c.Env.CfgDir, "haproxy-aux.cfg")
 	}
 	if c.Env.PIDFile == "" {
 		c.Env.PIDFile = filepath.Join(c.Env.RuntimeDir, "haproxy.pid")

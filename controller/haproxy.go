@@ -35,20 +35,23 @@ func (c *HAProxyController) haproxyService(action string) (err error) {
 	// hold information about a running Master HAproxy process
 	process, processErr := c.haproxyProcess()
 
+	//nolint:gosec //checks on HAProxyBinary should be done in configuration module.
 	switch action {
 	case "start":
 		if processErr == nil {
-			logger.Error(fmt.Errorf("haproxy is already running"))
+			logger.Error("haproxy is already running")
 			return nil
 		}
-		//nolint:gosec //checks on HAProxyBinary should be done in configuration module.
-		cmd = exec.Command(c.Cfg.Env.HAProxyBinary, "-W", "-f", c.Cfg.Env.MainCFGFile, "-p", c.Cfg.Env.PIDFile)
+		cmd = exec.Command(c.Cfg.Env.HAProxyBinary, "-f", c.Cfg.Env.MainCFGFile)
+		if c.AuxCfgModTime != 0 {
+			cmd = exec.Command(c.Cfg.Env.HAProxyBinary, "-f", c.Cfg.Env.MainCFGFile, "-f", c.Cfg.Env.AuxCFGFile)
+		}
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 		return cmd.Start()
 	case "stop":
 		if processErr != nil {
-			logger.Error(fmt.Errorf("haproxy  already stopped"))
+			logger.Error("haproxy already stopped")
 			return processErr
 		}
 		if err = process.Signal(syscall.SIGUSR1); err != nil {
@@ -70,8 +73,10 @@ func (c *HAProxyController) haproxyService(action string) (err error) {
 			return c.haproxyService("start")
 		}
 		pid := strconv.Itoa(process.Pid)
-		//nolint:gosec //checks on HAProxyBinary should be done in configuration module.
-		cmd = exec.Command(c.Cfg.Env.HAProxyBinary, "-W", "-f", c.Cfg.Env.MainCFGFile, "-p", c.Cfg.Env.PIDFile, "-sf", pid)
+		cmd = exec.Command(c.Cfg.Env.HAProxyBinary, "-f", c.Cfg.Env.MainCFGFile, "-sf", pid)
+		if c.AuxCfgModTime != 0 {
+			cmd = exec.Command(c.Cfg.Env.HAProxyBinary, "-f", c.Cfg.Env.MainCFGFile, "-f", c.Cfg.Env.AuxCFGFile, "-sf", pid)
+		}
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 		return cmd.Start()

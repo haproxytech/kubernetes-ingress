@@ -15,6 +15,7 @@
 package controller
 
 import (
+	"os"
 	"time"
 
 	"k8s.io/client-go/informers"
@@ -93,7 +94,8 @@ func (c *HAProxyController) SyncData() {
 		change := false
 		switch job.SyncType {
 		case COMMAND:
-			if hadChanges {
+			c.reload = c.auxCfgUpdated()
+			if hadChanges || c.reload {
 				c.updateHAProxy()
 				hadChanges = false
 				continue
@@ -166,4 +168,26 @@ func (c *HAProxyController) getWhitelistedNamespaces() []string {
 	}
 	logger.Infof("Whitelisted Namespaces: %s", namespaces)
 	return namespaces
+}
+
+// auxCfgUpdate returns true if auxiliary HAProxy config file was updated, false otherwise.
+func (c *HAProxyController) auxCfgUpdated() bool {
+	info, errStat := os.Stat(c.Cfg.Env.AuxCFGFile)
+	// File does not exist
+	if errStat != nil {
+		if c.AuxCfgModTime == 0 {
+			return false
+		}
+		logger.Infof("Auxiliary HAProxy config '%s' removed", c.Cfg.Env.AuxCFGFile)
+		c.AuxCfgModTime = 0
+		return true
+	}
+	// Check modification time
+	modifTime := info.ModTime().Unix()
+	if c.AuxCfgModTime == modifTime {
+		return false
+	}
+	logger.Infof("Auxiliary HAProxy config '%s' updated", c.Cfg.Env.AuxCFGFile)
+	c.AuxCfgModTime = modifTime
+	return true
 }
