@@ -33,45 +33,6 @@ import (
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 )
 
-//nolint:golint,stylecheck
-const (
-	CONTROLLER_CLASS = "haproxy.org/ingress-controller"
-	// sections
-	FrontendHTTP      = "http"
-	FrontendHTTPS     = "https"
-	FrontendSSL       = "ssl"
-	SSLDefaultBaceknd = "ssl"
-	// Status
-	ADDED    = store.ADDED
-	DELETED  = store.DELETED
-	ERROR    = store.ERROR
-	EMPTY    = store.EMPTY
-	MODIFIED = store.MODIFIED
-	// MapFiles
-	SNI         = "sni"
-	HOST        = "host"
-	PATH_EXACT  = "path-exact"
-	PATH_PREFIX = "path-prefix"
-)
-
-var (
-	HAProxyBinary   string
-	MainCFGFile     string
-	CfgDir          string
-	CertDir         string
-	FrontendCertDir string
-	BackendCertDir  string
-	CaCertDir       string
-	StateDir        string
-	MapDir          string
-	ErrFileDir      string
-	RuntimeSocket   string
-	PIDFile         string
-	TransactionDir  string
-)
-
-var logger = utils.GetLogger()
-
 // HAProxyController is ingress controller
 type HAProxyController struct {
 	k8s            *K8s
