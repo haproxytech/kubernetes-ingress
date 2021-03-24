@@ -1,0 +1,19 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: http-echo
+  annotations:
+    backend-config-snippet: |
+      http-request set-header e2e-test %[str(test)]
+spec:
+  ports:
+    - name: http
+      protocol: TCP
+      port: 80
+      targetPort: http
+    - name: https
+      protocol: TCP
+      port: 443
+      targetPort: https
+  selector:
+    app: http-echo

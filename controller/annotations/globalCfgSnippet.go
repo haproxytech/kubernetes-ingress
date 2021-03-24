@@ -47,6 +47,6 @@ func (a *GlobalCfgSnippet) Update() error {
 		logger.Infof("Removing global config-snippet")
 		return a.client.GlobalCfgSnippet(nil)
 	}
-	logger.Infof("Setting global config-snippet to: %s", a.data)
+	logger.Infof("Updating global config-snippet")
 	return a.client.GlobalCfgSnippet(&types.StringSliceC{Value: a.data})
 }

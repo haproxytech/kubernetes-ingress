@@ -44,12 +44,14 @@ func (a *FrontendCfgSnippet) Parse(input store.StringW, forceParse bool) error {
 func (a *FrontendCfgSnippet) Update() error {
 	switch len(a.data) {
 	case 0:
+		logger.Infof("Removing frontend config-snippet")
 		for _, ft := range a.frontends {
 			if err := a.client.FrontendCfgSnippetSet(ft, nil); err != nil {
 				return err
 			}
 		}
 	default:
+		logger.Infof("Updating frontend config-snippet")
 		for _, ft := range a.frontends {
 			if err := a.client.FrontendCfgSnippetSet(ft, &a.data); err != nil {
 				return err

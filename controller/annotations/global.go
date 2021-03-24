@@ -15,7 +15,7 @@ func HandleGlobalAnnotations(k8sStore store.K8s, client api.HAProxyClient, force
 		reload = HandleAnnotation(a, *annValue, forcePase) || reload
 	}
 	// Check syslog-server annotation for a restart (stdout logging)
-	if a, ok := annList[1].(*GlobalSyslogServers); ok {
+	if a, ok := annList[2].(*GlobalSyslogServers); ok {
 		restart = a.Restart()
 	}
 	return restart, reload

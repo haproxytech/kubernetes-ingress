@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+ name: haproxy-configmap
+ namespace: haproxy-controller
+data:
+  frontend-config-snippet: |
+    unique-id-format %{+X}o\ %ci:%cp_%fi:%fp_%Ts_%rt:%pid
+    unique-id-header X-Unique-ID
+  syslog-server: |
+    address: stdout, format: raw, facility:daemon
+  server-slots: "4"
+  timeout-client: 50s
+  timeout-connect: 5s
+  timeout-http-keep-alive: 1m
+  timeout-http-request: 5s
+  timeout-queue: 5s
+  timeout-server: 50s
+  timeout-tunnel: 1h
