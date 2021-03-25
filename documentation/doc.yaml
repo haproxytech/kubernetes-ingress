@@ -642,6 +642,22 @@ annotations:
       frontend-config-snippet: |
         unique-id-format %{+X}o\ %ci:%cp_%fi:%fp_%Ts_%rt:%pid
         unique-id-header X-Unique-ID
+  - title: stats-config-snippet
+    type: string
+    group: config-snippet
+    dependencies: ""
+    default: ""
+    description:
+    - Defines a group of configuration directives to insert in the stats frontend.
+    tip: []
+    values:
+    - One or more valid HAProxy directives
+    applies_to:
+    - configmap 
+    version_min: "1.6"
+    example_configmap: |-
+      stats-config-snippet: |
+        stats auth foo:test
   - title: backend-config-snippet
     type: string
     group: config-snippet

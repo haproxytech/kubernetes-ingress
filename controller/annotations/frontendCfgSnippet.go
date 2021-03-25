@@ -11,8 +11,8 @@ import (
 type FrontendCfgSnippet struct {
 	name      string
 	data      []string
-	client    api.HAProxyClient
 	frontends []string
+	client    api.HAProxyClient
 }
 
 func NewFrontendCfgSnippet(n string, c api.HAProxyClient, frontendNames []string) *FrontendCfgSnippet {
@@ -36,7 +36,7 @@ func (a *FrontendCfgSnippet) Parse(input store.StringW, forceParse bool) error {
 		}
 	}
 	if len(a.data) == 0 {
-		return errors.New("unable to parse config-snippet: empty input")
+		return errors.New("unable to parse frontend config-snippet: empty input")
 	}
 	return nil
 }
@@ -44,14 +44,14 @@ func (a *FrontendCfgSnippet) Parse(input store.StringW, forceParse bool) error {
 func (a *FrontendCfgSnippet) Update() error {
 	switch len(a.data) {
 	case 0:
-		logger.Infof("Removing frontend config-snippet")
+		logger.Infof("Removing config-snippet in %s frontends", strings.Join(a.frontends, ","))
 		for _, ft := range a.frontends {
 			if err := a.client.FrontendCfgSnippetSet(ft, nil); err != nil {
 				return err
 			}
 		}
 	default:
-		logger.Infof("Updating frontend config-snippet")
+		logger.Infof("Updating config-snippet in %s frontends", strings.Join(a.frontends, ","))
 		for _, ft := range a.frontends {
 			if err := a.client.FrontendCfgSnippetSet(ft, &a.data); err != nil {
 				return err

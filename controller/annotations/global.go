@@ -15,7 +15,7 @@ func HandleGlobalAnnotations(k8sStore store.K8s, client api.HAProxyClient, force
 		reload = HandleAnnotation(a, *annValue, forcePase) || reload
 	}
 	// Check syslog-server annotation for a restart (stdout logging)
-	if a, ok := annList[2].(*GlobalSyslogServers); ok {
+	if a, ok := annList[3].(*GlobalSyslogServers); ok {
 		restart = a.Restart()
 	}
 	return restart, reload
@@ -24,6 +24,7 @@ func HandleGlobalAnnotations(k8sStore store.K8s, client api.HAProxyClient, force
 func GetGlobalAnnotations(client api.HAProxyClient) []Annotation {
 	return []Annotation{
 		NewFrontendCfgSnippet("frontend-config-snippet", client, []string{"http", "https"}),
+		NewFrontendCfgSnippet("stats-config-snippet", client, []string{"stats"}),
 		NewGlobalCfgSnippet("global-config-snippet", client),
 		NewGlobalSyslogServers("syslog-server", client),
 		NewGlobalNbthread("nbthread", client),
