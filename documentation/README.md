@@ -564,6 +564,15 @@ Possible values:
 
 - One or more valid HAProxy directives
 
+Example (service):
+
+```yaml
+backend-config-snippet: |
+  http-send-name-header x-dst-server
+  stick-table type string len 32 size 100k expire 30m
+  stick on req.cook(sessionid)
+```
+
 <p align='right'><a href='#available-annotations'>:arrow_up_small: back to top</a></p>
 
 ***

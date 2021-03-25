@@ -217,27 +217,25 @@ func selectExamples(ann *ConfItem, buff *strings.Builder) {
 		return
 	}
 
-	if numOverrides == numApplies {
-		if ann.ExampleConfigmap != "" {
-			buff.WriteString("Example (configmap):\n\n```yaml\n")
-			buff.WriteString(ann.ExampleConfigmap)
-			buff.WriteString("\n```\n\n")
-		}
-		if ann.ExampleIngress != "" && ann.ExampleIngress == ann.ExampleService {
-			buff.WriteString("Example (ingress, service):\n\n```yaml\n")
+	if ann.ExampleConfigmap != "" {
+		buff.WriteString("Example (configmap):\n\n```yaml\n")
+		buff.WriteString(ann.ExampleConfigmap)
+		buff.WriteString("\n```\n\n")
+	}
+	if ann.ExampleIngress != "" && ann.ExampleIngress == ann.ExampleService {
+		buff.WriteString("Example (ingress, service):\n\n```yaml\n")
+		buff.WriteString(ann.ExampleIngress)
+		buff.WriteString("\n```\n\n")
+	} else {
+		if ann.ExampleIngress != "" {
+			buff.WriteString("Example (ingress):\n\n```yaml\n")
 			buff.WriteString(ann.ExampleIngress)
 			buff.WriteString("\n```\n\n")
-		} else {
-			if ann.ExampleIngress != "" {
-				buff.WriteString("Example (ingress):\n\n```yaml\n")
-				buff.WriteString(ann.ExampleIngress)
-				buff.WriteString("\n```\n\n")
-			}
-			if ann.ExampleService != "" {
-				buff.WriteString("Example (service):\n\n```yaml\n")
-				buff.WriteString(ann.ExampleService)
-				buff.WriteString("\n```\n\n")
-			}
+		}
+		if ann.ExampleService != "" {
+			buff.WriteString("Example (service):\n\n```yaml\n")
+			buff.WriteString(ann.ExampleService)
+			buff.WriteString("\n```\n\n")
 		}
 	}
 }
