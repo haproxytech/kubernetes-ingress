@@ -31,6 +31,7 @@ func (r ReqTrack) Create(client api.HAProxyClient, frontend *models.Frontend, in
 		err = client.BackendCreate(models.Backend{
 			Name: r.TableName,
 			StickTable: &models.BackendStickTable{
+				Peers: "localinstance",
 				Type:  "ip",
 				Size:  r.TableSize,
 				Store: fmt.Sprintf("http_req_rate(%d)", *r.TablePeriod),
