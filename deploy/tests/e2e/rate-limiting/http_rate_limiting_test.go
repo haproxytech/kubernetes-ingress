@@ -18,19 +18,20 @@ package ratelimiting
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/haproxytech/kubernetes-ingress/deploy/tests/e2e"
 )
 
 func (suite *RateLimitingSuite) Test_Rate_Limiting() {
 	for testName, tc := range map[string]struct {
-		limitPeriodinSeconds int
 		limitRequests        int
+		limitPeriodinSeconds int
 		customStatusCode     int
 	}{
-		"5req5s":     {5, 5, 403},
-		"100req10s":  {10, 100, 403},
-		"customcode": {5, 1, 429},
+		"5req1s":     {5, 1, 403},
+		"20req2s":    {20, 2, 403},
+		"customcode": {1, 1, 429},
 	} {
 		suite.Run(testName, func() {
 			suite.tmplData.Host = testName + ".test"
@@ -55,7 +56,7 @@ func (suite *RateLimitingSuite) Test_Rate_Limiting() {
 					responseCode = res.StatusCode
 				}
 				return counter == tc.limitRequests
-			}, e2e.WaitDuration, e2e.TickDuration)
+			}, e2e.WaitDuration, time.Duration(tc.limitPeriodinSeconds)*time.Second)
 		})
 	}
 }
