@@ -36,7 +36,9 @@ func (c *HAProxyController) initHandlers() {
 		},
 		ProxyProtocol{},
 		ErrorFile{},
-		TCPHandler{},
+		TCPHandler{
+			setDefaultService: c.setDefaultService,
+		},
 		RefreshHandler{},
 	}
 }

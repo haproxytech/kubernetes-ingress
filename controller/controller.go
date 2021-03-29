@@ -28,7 +28,7 @@ import (
 	"github.com/haproxytech/kubernetes-ingress/controller/annotations"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/api"
-	ingressRoute "github.com/haproxytech/kubernetes-ingress/controller/ingress"
+	"github.com/haproxytech/kubernetes-ingress/controller/route"
 	"github.com/haproxytech/kubernetes-ingress/controller/store"
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 )
@@ -147,7 +147,7 @@ func (c *HAProxyController) updateHAProxy() {
 		c.Store.ConfigMaps.Main.Annotations,
 	)
 	reload = c.handleDefaultCert() || reload
-	c.handleDefaultService()
+	reload = c.handleDefaultService() || reload
 
 	for _, namespace := range c.Store.Namespaces {
 		if !namespace.Relevant {
@@ -164,13 +164,12 @@ func (c *HAProxyController) updateHAProxy() {
 			if c.PublishService != nil {
 				logger.Error(c.k8s.UpdateIngressStatus(ingress, c.PublishService))
 			}
-			// Default Backend
 			if ingress.DefaultBackend != nil {
-				logger.Error(c.cfg.IngressRoutes.AddRoute(&ingressRoute.Route{
-					Namespace: namespace,
-					Ingress:   ingress,
-					Path:      ingress.DefaultBackend,
-				}))
+				if r, errSvc := c.setDefaultService(ingress, []string{FrontendHTTP, FrontendHTTPS}); errSvc != nil {
+					logger.Errorf("Ingress '%s/%s': default backend: %s", ingress.Namespace, ingress.Name, errSvc)
+				} else {
+					reload = reload || r
+				}
 			}
 			// Ingress secrets
 			logger.Tracef("ingress '%s/%s': processing secrets...", ingress.Namespace, ingress.Name)
@@ -199,14 +198,11 @@ func (c *HAProxyController) updateHAProxy() {
 			logger.Tracef("ingress '%s/%s': processing rules...", ingress.Namespace, ingress.Name)
 			for _, rule := range ingress.Rules {
 				for _, path := range rule.Paths {
-					logger.Error(c.cfg.IngressRoutes.AddRoute(&ingressRoute.Route{
-						Namespace:      namespace,
-						Ingress:        ingress,
-						Host:           rule.Host,
-						Path:           path,
-						HAProxyRules:   c.cfg.HAProxyRules.GetIngressRuleIDs(ingress.Namespace + "-" + ingress.Name),
-						SSLPassthrough: c.sslPassthroughEnabled(ingress, path),
-					}))
+					if r, errIng := c.handleIngressPath(ingress, rule.Host, path); errIng != nil {
+						logger.Errorf("Ingress '%s/%s': %s", ingress.Namespace, ingress.Name, errIng)
+					} else {
+						reload = reload || r
+					}
 				}
 			}
 		}
@@ -436,19 +432,22 @@ func (c *HAProxyController) handlePprof() (err error) {
 		return err
 	}
 	logger.Debug("pprof backend created")
-	logger.Error(c.cfg.IngressRoutes.AddRoute(&ingressRoute.Route{
+	err = route.AddHostPathRoute(route.Route{
+		BackendName: pprofBackend,
 		Path: &store.IngressPath{
 			Path:           "/debug/pprof",
 			ExactPathMatch: false,
 		},
-		BackendName:  pprofBackend,
-		LocalBackend: true,
-	}))
+	}, c.cfg.MapFiles)
+	if err != nil {
+		return err
+	}
+	c.cfg.ActiveBackends[pprofBackend] = struct{}{}
 	return nil
 }
 
 // handleDefaultService configures HAProy default backend provided via cli param "default-backend-service"
-func (c *HAProxyController) handleDefaultService() {
+func (c *HAProxyController) handleDefaultService() (reload bool) {
 	dsvcData, _ := c.Store.GetValueFromAnnotations("default-backend-service")
 	if dsvcData == nil {
 		return
@@ -456,7 +455,7 @@ func (c *HAProxyController) handleDefaultService() {
 	dsvc := strings.Split(dsvcData.Value, "/")
 
 	if len(dsvc) != 2 {
-		logger.Errorf("default service invalid data")
+		logger.Errorf("default service '%s': invalid format", dsvcData.Value)
 		return
 	}
 	if dsvc[0] == "" || dsvc[1] == "" {
@@ -464,30 +463,30 @@ func (c *HAProxyController) handleDefaultService() {
 	}
 	namespace, ok := c.Store.Namespaces[dsvc[0]]
 	if !ok {
-		logger.Errorf("default service invalid namespace " + dsvc[0])
+		logger.Errorf("default service '%s': namespace not found" + dsvc[0])
 		return
 	}
 	service, ok := namespace.Services[dsvc[1]]
 	if !ok {
-		logger.Errorf("service '" + dsvc[1] + "' does not exist")
+		logger.Errorf("default service '%s': service name not found" + dsvc[1])
 		return
 	}
 	ingress := &store.Ingress{
 		Namespace:   namespace.Name,
 		Name:        "DefaultService",
 		Annotations: store.MapStringW{},
-		Rules:       map[string]*store.IngressRule{},
+		DefaultBackend: &store.IngressPath{
+			SvcName:          service.Name,
+			SvcPortInt:       service.Ports[0].Port,
+			IsDefaultBackend: true,
+		},
 	}
-	path := &store.IngressPath{
-		SvcName:          service.Name,
-		SvcPortInt:       service.Ports[0].Port,
-		IsDefaultBackend: true,
+	reload, err := c.setDefaultService(ingress, []string{FrontendHTTP, FrontendHTTPS})
+	if err != nil {
+		logger.Errorf("default service '%s/%s': %s", namespace.Name, service.Name, err)
+		return
 	}
-	logger.Error(c.cfg.IngressRoutes.AddRoute(&ingressRoute.Route{
-		Namespace: namespace,
-		Ingress:   ingress,
-		Path:      path,
-	}))
+	return reload
 }
 
 // handleDefaultCert configures default/fallback HAProxy certificate to use for client HTTPS requests.
@@ -514,60 +513,4 @@ func (c *HAProxyController) clean(failedSync bool) {
 		return
 	}
 	c.Store.Clean()
-}
-
-func (c *HAProxyController) sslPassthroughEnabled(ingress *store.Ingress, path *store.IngressPath) bool {
-	var annSSLPassthrough *store.StringW
-	var service *store.Service
-	ok := false
-	if path != nil {
-		service, ok = c.Store.Namespaces[ingress.Namespace].Services[path.SvcName]
-	}
-	if ok {
-		annSSLPassthrough, _ = c.Store.GetValueFromAnnotations("ssl-passthrough", service.Annotations, ingress.Annotations, c.Store.ConfigMaps.Main.Annotations)
-	} else {
-		annSSLPassthrough, _ = c.Store.GetValueFromAnnotations("ssl-passthrough", ingress.Annotations, c.Store.ConfigMaps.Main.Annotations)
-	}
-	enabled, err := utils.GetBoolValue(annSSLPassthrough.Value, "ssl-passthrough")
-	if err != nil {
-		logger.Errorf("ssl-passthrough annotation: %s", err)
-		return false
-	}
-	if annSSLPassthrough.Status == DELETED {
-		return false
-	}
-	if enabled {
-		c.cfg.SSLPassthrough = true
-		return true
-	}
-	return false
-}
-
-// igClassIsSupported verifies if the IngressClass matches the ControllerClass
-// and in such case returns true otherwise false
-//
-// According to https://github.com/kubernetes/api/blob/master/networking/v1/types.go#L257
-// ingress.class annotation should have precedence over the IngressClass mechanism implemented
-// in "networking.k8s.io".
-func (c *HAProxyController) igClassIsSupported(ingress *store.Ingress) bool {
-	var igClassAnn string
-	var igClass *store.IngressClass
-	if ann, _ := c.Store.GetValueFromAnnotations("ingress.class", ingress.Annotations); ann != nil {
-		igClassAnn = ann.Value
-	}
-	if igClassAnn == "" || igClassAnn != c.IngressClass {
-		igClass = c.Store.IngressClasses[ingress.Class]
-		if igClass != nil && igClass.Status != DELETED && igClass.Controller == CONTROLLER_CLASS {
-			// Corresponding IngresClass was updated so Ingress resource should be re-processed
-			// This is particularly important if the Ingress was skipped due to mismatching ingrssClass
-			if igClass.Status != EMPTY {
-				ingress.Status = MODIFIED
-			}
-			return true
-		}
-	}
-	if igClassAnn == c.IngressClass {
-		return true
-	}
-	return false
 }

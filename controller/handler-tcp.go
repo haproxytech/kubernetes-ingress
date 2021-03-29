@@ -6,136 +6,166 @@ import (
 	"strings"
 
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/api"
-	ingressRoute "github.com/haproxytech/kubernetes-ingress/controller/ingress"
 	"github.com/haproxytech/kubernetes-ingress/controller/store"
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 	"github.com/haproxytech/models/v2"
 )
 
 type TCPHandler struct {
+	setDefaultService func(ingress *store.Ingress, frontends []string) (reload bool, err error)
+}
+
+type tcpSvcParser struct {
+	service    *store.Service
+	port       int64
+	sslOffload bool
 }
 
 func (t TCPHandler) Update(k store.K8s, cfg *Configuration, api api.HAProxyClient) (reload bool, err error) {
 	if k.ConfigMaps.TCPServices == nil {
 		return false, nil
 	}
-	for port, tcpSvc := range k.ConfigMaps.TCPServices.Annotations {
-		// Get TCP service from ConfigMap
-		// parts[0]: Service Name
-		// parts[1]: Service Port
-		// parts[2]: SSL option
-		parts := strings.Split(tcpSvc.Value, ":")
-		if len(parts) < 2 {
-			logger.Errorf("incorrect format '%s', 'ServiceName:ServicePort' is required", tcpSvc.Value)
-			continue
-		}
-		var sslOption string
-		svcName := strings.Split(parts[0], "/")
-		svcPort := parts[1]
-		if len(parts) > 2 {
-			sslOption = parts[2]
-		}
-		if len(svcName) != 2 {
-			logger.Errorf("incorrect Service Name '%s'. Should be in 'ServiceNS/ServiceName' format", parts[0])
-			continue
-		}
-		namespace := svcName[0]
-		service := svcName[1]
-		if _, ok := k.Namespaces[namespace]; !ok {
-			logger.Warningf("tcp-services: namespace of service '%s/%s' not found", namespace, service)
-			continue
-		}
-		svc, ok := k.Namespaces[namespace].Services[service]
-		if !ok {
-			logger.Warningf("tcp-services: service '%s/%s' not found", namespace, service)
+	var p tcpSvcParser
+	for port, tcpSvcAnn := range k.ConfigMaps.TCPServices.Annotations {
+		p, err = t.parseTCPService(k, tcpSvcAnn.Value)
+		if err != nil {
+			logger.Error(err)
 			continue
 		}
 		// Delete Frontend
 		frontendName := fmt.Sprintf("tcp-%s", port)
-		if tcpSvc.Status == DELETED || svc.Status == DELETED {
+		if tcpSvcAnn.Status == DELETED || p.service.Status == DELETED {
 			err = api.FrontendDelete(frontendName)
 			if err != nil {
-				logger.Errorf("error deleting tcp frontend: %s", err)
+				logger.Errorf("error deleting tcp frontend '%s': %s", frontendName, err)
 			} else {
 				reload = true
 				logger.Debugf("TCP frontend '%s' deleted, reload required", frontendName)
 			}
 			continue
 		}
-		// Handle Route
-		var portNbr int64
-		if portNbr, err = strconv.ParseInt(svcPort, 10, 64); err != nil {
-			logger.Error(err)
-			continue
-		}
-		ingress := &store.Ingress{
-			Namespace:   namespace,
-			Annotations: store.MapStringW{},
-			Rules:       map[string]*store.IngressRule{},
-		}
-		path := &store.IngressPath{
-			SvcName:    service,
-			SvcPortInt: portNbr,
-			Status:     svc.Status,
-		}
-		route := &ingressRoute.Route{
-			Namespace:  k.GetNamespace(namespace),
-			Ingress:    ingress,
-			Path:       path,
-			TCPService: true,
-		}
-		err = route.SetBackendName()
-		if err != nil {
-			logger.Error(err)
-			continue
-		}
 		frontend, errGet := api.FrontendGet(frontendName)
+		// Create Frontend
 		if errGet != nil {
-			// Create Frontend
-			frontend = models.Frontend{
-				Name:           frontendName,
-				Mode:           "tcp",
-				Tcplog:         true,
-				DefaultBackend: route.BackendName,
-			}
-			var errors utils.Errors
-			errors.Add(api.FrontendCreate(frontend))
-			errors.Add(api.FrontendBindCreate(frontendName, models.Bind{
-				Address: "0.0.0.0:" + port,
-				Name:    "v4",
-			}))
-			errors.Add(api.FrontendBindCreate(frontendName, models.Bind{
-				Address: ":::" + port,
-				Name:    "v6",
-				V4v6:    true,
-			}))
-			if sslOption == "ssl" {
-				errors.Add(api.FrontendEnableSSLOffload(frontend.Name, FrontendCertDir, false))
-			}
-			if errors.Result() != nil {
-				logger.Errorf("error configuring tcp frontend: %s", err)
+			frontend, reload, err = t.createTCPFrontend(api, frontendName, port, p.sslOffload)
+			if err != nil {
+				logger.Error(err)
 				continue
 			}
-			reload = true
-			logger.Debugf("TCP frontend '%s' created, reload required", frontendName)
-		} else if svc.Status != EMPTY {
-			// Update  Frontend
-			var errors utils.Errors
-			frontend.DefaultBackend = route.BackendName
-			if sslOption == "ssl" {
-				errors.Add(api.FrontendEnableSSLOffload(frontend.Name, FrontendCertDir, false))
-			} else {
-				errors.Add(api.FrontendDisableSSLOffload(frontend.Name))
-			}
-			errors.Add(api.FrontendEdit(frontend))
-			if errors.Result() != nil {
-				logger.Errorf("error updating tcp frontend: %s", err)
-				continue
-			}
-			reload = true
-			logger.Debugf("TCP frontend '%s' updated, reload required", frontendName)
 		}
-		logger.Error(cfg.IngressRoutes.AddRoute(route))
+		// Update  Frontend
+		reload, err = t.updateTCPFrontend(api, frontend, p)
+		if err != nil {
+			logger.Errorf("TCP frontend '%s': update failed: %s", frontendName, err)
+		}
 	}
-	return reload, err
+	return reload, nil
+}
+
+func (t TCPHandler) parseTCPService(store store.K8s, input string) (p tcpSvcParser, err error) {
+	// parts[0]: Service Name
+	// parts[1]: Service Port
+	// parts[2]: SSL option
+	parts := strings.Split(input, ":")
+	if len(parts) < 2 {
+		err = fmt.Errorf("incorrect format '%s', 'ServiceName:ServicePort' is required", input)
+		return
+	}
+	svcName := strings.Split(parts[0], "/")
+	svcPort := parts[1]
+	if len(parts) > 2 {
+		if parts[2] == "ssl" {
+			p.sslOffload = true
+		}
+	}
+	if len(svcName) != 2 {
+		err = fmt.Errorf("incorrect Service Name '%s'. Should be in 'ServiceNS/ServiceName' format", parts[0])
+		return
+	}
+	namespace := svcName[0]
+	service := svcName[1]
+	var ok bool
+	if _, ok = store.Namespaces[namespace]; !ok {
+		err = fmt.Errorf("tcp-services: namespace of service '%s/%s' not found", namespace, service)
+		return
+	}
+	p.service, ok = store.Namespaces[namespace].Services[service]
+	if !ok {
+		err = fmt.Errorf("tcp-services: service '%s/%s' not found", namespace, service)
+		return
+	}
+	if p.port, err = strconv.ParseInt(svcPort, 10, 64); err != nil {
+		return
+	}
+	return p, err
+}
+
+func (t TCPHandler) createTCPFrontend(api api.HAProxyClient, frontendName, bindPort string, sslOffload bool) (frontend models.Frontend, reload bool, err error) {
+	// Create Frontend
+	frontend = models.Frontend{
+		Name:   frontendName,
+		Mode:   "tcp",
+		Tcplog: true,
+		//	DefaultBackend: route.BackendName,
+	}
+	var errors utils.Errors
+	errors.Add(api.FrontendCreate(frontend))
+	errors.Add(api.FrontendBindCreate(frontendName, models.Bind{
+		Address: "0.0.0.0:" + bindPort,
+		Name:    "v4",
+	}))
+	errors.Add(api.FrontendBindCreate(frontendName, models.Bind{
+		Address: ":::" + bindPort,
+		Name:    "v6",
+		V4v6:    true,
+	}))
+	if sslOffload {
+		errors.Add(api.FrontendEnableSSLOffload(frontend.Name, FrontendCertDir, false))
+	}
+	if errors.Result() != nil {
+		err = fmt.Errorf("error configuring tcp frontend: %w", err)
+		return frontend, false, err
+	}
+	logger.Debugf("TCP frontend '%s' created, reload required", frontendName)
+	return frontend, true, nil
+}
+
+func (t TCPHandler) updateTCPFrontend(api api.HAProxyClient, frontend models.Frontend, p tcpSvcParser) (reload bool, err error) {
+	binds, err := api.FrontendBindsGet(frontend.Name)
+	if err != nil {
+		err = fmt.Errorf("failed to get bind lines: %w", err)
+		return
+	}
+	if !binds[0].Ssl && p.sslOffload {
+		err = api.FrontendEnableSSLOffload(frontend.Name, FrontendCertDir, false)
+		if err != nil {
+			err = fmt.Errorf("failed to enable SSL offload: %w", err)
+			return
+		}
+		logger.Debugf("TCP frontend '%s': ssl offload enabled, reload required", frontend.Name)
+		reload = true
+	}
+	if binds[0].Ssl && !p.sslOffload {
+		err = api.FrontendDisableSSLOffload(frontend.Name)
+		if err != nil {
+			err = fmt.Errorf("failed to disable SSL offload: %w", err)
+			return
+		}
+		logger.Debugf("TCP frontend '%s': ssl offload disabled, reload required", frontend.Name)
+		reload = true
+	}
+	ingress := &store.Ingress{
+		Namespace:   p.service.Namespace,
+		Annotations: store.MapStringW{},
+		DefaultBackend: &store.IngressPath{
+			SvcName:    p.service.Name,
+			SvcPortInt: p.port,
+		},
+	}
+	r, err := t.setDefaultService(ingress, []string{frontend.Name})
+	if err != nil {
+		return
+	}
+
+	return reload || r, err
 }

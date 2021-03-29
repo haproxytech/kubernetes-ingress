@@ -19,7 +19,6 @@ import (
 
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/rules"
-	"github.com/haproxytech/kubernetes-ingress/controller/ingress"
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 )
 
@@ -29,7 +28,7 @@ type Configuration struct {
 	MapFiles       haproxy.Maps
 	HAProxyRules   *haproxy.Rules
 	Certificates   *haproxy.Certificates
-	IngressRoutes  ingress.Routes
+	ActiveBackends map[string]struct{}
 	HTTPS          bool
 	SSLPassthrough bool
 }
@@ -38,9 +37,9 @@ type Configuration struct {
 func (c *Configuration) Init() {
 	c.MapFiles = haproxy.NewMapFiles(MapDir)
 	c.MapFiles.SetPreserve(true, SNI, HOST, PATH_EXACT, PATH_PREFIX)
-	c.IngressRoutes = ingress.Routes{}
 	logger.Panic(c.HAProxyRulesInit())
 	c.Certificates = haproxy.NewCertificates(CaCertDir, FrontendCertDir, BackendCertDir)
+	c.ActiveBackends = make(map[string]struct{})
 }
 
 // Clean cleans all the statuses of various data that was changed
@@ -48,7 +47,6 @@ func (c *Configuration) Init() {
 func (c *Configuration) Clean() {
 	c.MapFiles.Clean()
 	c.Certificates.Clean()
-	c.IngressRoutes = ingress.Routes{}
 	logger.Panic(c.HAProxyRulesInit())
 	rateLimitTables = []string{}
 }

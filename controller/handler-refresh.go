@@ -22,8 +22,7 @@ import (
 type RefreshHandler struct{}
 
 func (h RefreshHandler) Update(k store.K8s, cfg *Configuration, api api.HAProxyClient) (reload bool, err error) {
-	reload, activeBackends := cfg.IngressRoutes.Refresh(api, k, cfg.MapFiles, cfg.Certificates)
-	h.clearBackends(api, cfg, activeBackends)
+	h.clearBackends(api, cfg)
 	reload = cfg.HAProxyRules.Refresh(api) || reload
 	reload = cfg.MapFiles.Refresh(api) || reload
 	reload = cfg.Certificates.Refresh() || reload
@@ -31,21 +30,21 @@ func (h RefreshHandler) Update(k store.K8s, cfg *Configuration, api api.HAProxyC
 }
 
 // Remove unused backends
-func (h RefreshHandler) clearBackends(api api.HAProxyClient, cfg *Configuration, activeBackends map[string]struct{}) {
+func (h RefreshHandler) clearBackends(api api.HAProxyClient, cfg *Configuration) {
 	if cfg.SSLPassthrough {
 		// SSL default backend
-		activeBackends[SSLDefaultBaceknd] = struct{}{}
+		cfg.ActiveBackends[SSLDefaultBaceknd] = struct{}{}
 	}
 	// Ratelimting backends
 	for _, rateLimitTable := range rateLimitTables {
-		activeBackends[rateLimitTable] = struct{}{}
+		cfg.ActiveBackends[rateLimitTable] = struct{}{}
 	}
 	allBackends, err := api.BackendsGet()
 	if err != nil {
 		return
 	}
 	for _, backend := range allBackends {
-		if _, ok := activeBackends[backend.Name]; !ok {
+		if _, ok := cfg.ActiveBackends[backend.Name]; !ok {
 			logger.Debugf("Deleting backend '%s'", backend.Name)
 			if err := api.BackendDelete(backend.Name); err != nil {
 				logger.Panic(err)
