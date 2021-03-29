@@ -34,17 +34,18 @@ import (
 
 // HAProxyController is ingress controller
 type HAProxyController struct {
-	k8s            *K8s
-	Store          store.K8s
-	PublishService *store.Service
-	IngressClass   string
-	ready          bool
-	cfg            Configuration
-	osArgs         utils.OSArgs
-	Client         api.HAProxyClient
-	eventChan      chan SyncDataEvent
-	serverlessPods map[string]int
-	UpdateHandlers []UpdateHandler
+	k8s               *K8s
+	Store             store.K8s
+	PublishService    *store.Service
+	IngressClass      string
+	EmptyIngressClass bool
+	ready             bool
+	cfg               Configuration
+	osArgs            utils.OSArgs
+	Client            api.HAProxyClient
+	eventChan         chan SyncDataEvent
+	serverlessPods    map[string]int
+	UpdateHandlers    []UpdateHandler
 }
 
 // Wrapping a Native-Client transaction and commit it.

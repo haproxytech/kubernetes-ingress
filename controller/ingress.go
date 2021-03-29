@@ -35,6 +35,12 @@ func (c *HAProxyController) igClassIsSupported(ingress *store.Ingress) bool {
 	if ann, _ := c.Store.GetValueFromAnnotations("ingress.class", ingress.Annotations); ann != nil {
 		igClassAnn = ann.Value
 	}
+
+	// If ingress class is unassigned and the controller is controlling any resource without explicit ingress class then support it.
+	if igClassAnn == "" && c.EmptyIngressClass {
+		return true
+	}
+
 	if igClassAnn == "" || igClassAnn != c.IngressClass {
 		igClass = c.Store.IngressClasses[ingress.Class]
 		if igClass != nil && igClass.Status != DELETED && igClass.Controller == CONTROLLER_CLASS {

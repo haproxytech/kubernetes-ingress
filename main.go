@@ -56,6 +56,7 @@ func main() {
 		if len(osArgs.Version) > 1 {
 			fmt.Printf("ConfigMap: %s", osArgs.ConfigMap)
 			fmt.Printf("Ingress class: %s", osArgs.IngressClass)
+			fmt.Printf("Empty Ingress class: %t", osArgs.EmptyIngressClass)
 		}
 		return
 	}
@@ -78,6 +79,7 @@ func main() {
 	}
 	logger.Printf("ConfigMap: %s", osArgs.ConfigMap)
 	logger.Printf("Ingress class: %s", osArgs.IngressClass)
+	logger.Printf("Empty Ingress class: %t", osArgs.EmptyIngressClass)
 	logger.Printf("Publish service: %s", osArgs.PublishService)
 	logger.Printf("Default backend service: %s", defaultBackendSvc)
 	logger.Printf("Default ssl certificate: %s", defaultCertificate)
@@ -114,7 +116,8 @@ func main() {
 	}
 
 	controller := c.HAProxyController{
-		IngressClass: osArgs.IngressClass,
+		IngressClass:      osArgs.IngressClass,
+		EmptyIngressClass: osArgs.EmptyIngressClass,
 	}
 	logger.FileName = true
 	// K8s Store

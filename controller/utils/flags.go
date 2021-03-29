@@ -75,6 +75,7 @@ type OSArgs struct {
 	ConfigMapErrorfiles   NamespaceValue `long:"configmap-errorfiles" description:"configmap used to define custom error pages associated to HTTP error codes" default:""`
 	KubeConfig            string         `long:"kubeconfig" default:"" description:"combined with -e. location of kube config file"`
 	IngressClass          string         `long:"ingress.class" default:"" description:"ingress.class to monitor in multiple controllers environment"`
+	EmptyIngressClass     bool           `long:"empty-ingress-class" description:"empty-ingress-class manages the behavior in case an ingress has no explicit ingress class annotation. true: to process, false: to skip"`
 	PublishService        string         `long:"publish-service" default:"" description:"Takes the form namespace/name. The controller mirrors the address of this service's endpoints to the load-balancer status of all Ingress objects it satisfies"`
 	NamespaceWhitelist    []string       `long:"namespace-whitelist" description:"whitelisted namespaces"`
 	NamespaceBlacklist    []string       `long:"namespace-blacklist" description:"blacklisted namespaces"`

@@ -91,6 +91,18 @@ image_arguments:
     helm: |-
       helm install intranet haproxytech/kubernetes-ingress \
         --set controller.ingressClass=haproxy
+  - argument: --empty-ingress-class
+    description: A flag to indicate the controller should process ingresses with empty ingress.class annotation.
+    values:
+      - No value.Being a flag you add it or not.
+    default: false
+    version_min: "1.6"
+    example: |-
+      args:
+        - --empty-ingress-class
+    helm: |-
+      helm install haproxy haproxytech/kubernetes-ingress \
+        --set-string "controller.extraArgs={--empty-ingress-class}"      
   - argument: --namespace-blacklist
     description: Namespaces that the ingress controller should not monitor for changes to pods and services.
     values:

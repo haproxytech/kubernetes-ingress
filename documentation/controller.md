@@ -15,6 +15,7 @@ Image can be run with arguments:
 | [`--default-backend-service`](#--default-backend-service) |  |
 | [`--default-ssl-certificate`](#--default-ssl-certificate) |  |
 | [`--ingress.class`](#--ingressclass) |  |
+| [`--empty-ingress-class`](#--empty-ingress-class) :construction:(dev) | `false` |
 | [`--namespace-blacklist`](#--namespace-blacklist) |  |
 | [`--namespace-whitelist`](#--namespace-whitelist) |  |
 | [`--publish-service`](#--publish-service) |  |
@@ -180,6 +181,28 @@ Example:
 ```yaml
 args:
   - --ingress.class=haproxy
+```
+
+<p align='right'><a href='#haproxy-kubernetes-ingress-controller'>:arrow_up_small: back to top</a></p>
+
+***
+
+### `--empty-ingress-class`
+
+
+  > :construction: this is only available from next version, currently available in dev build
+
+  A flag to indicate the controller should process ingresses with empty ingress.class annotation.
+
+Possible values:
+
+- No value.Being a flag you add it or not.
+
+Example:
+
+```yaml
+args:
+  - --empty-ingress-class
 ```
 
 <p align='right'><a href='#haproxy-kubernetes-ingress-controller'>:arrow_up_small: back to top</a></p>
