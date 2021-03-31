@@ -1,0 +1,99 @@
+---
+##### Prod app
+
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: http-echo-prod
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: http-echo-prod
+  template:
+    metadata:
+      labels:
+        app: http-echo-prod
+    spec:
+      containers:
+        - name: http-echo-prod
+          image: mo3m3n/http-echo:v1.0.0
+          args:
+          - --default-response=hostname
+          ports:
+            - name: http
+              containerPort: 8888
+              protocol: TCP
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: http-echo-prod
+spec:
+  ports:
+    - name: http
+      port: 80
+      protocol: TCP
+      targetPort: http
+  selector:
+    app: http-echo-prod
+---
+##### Staging app
+
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: http-echo-staging
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: http-echo-staging
+  template:
+    metadata:
+      labels:
+        app: http-echo-staging
+    spec:
+      containers:
+        - name: http-echo-staging
+          image: mo3m3n/http-echo:v1.0.0
+          args:
+          - --default-response=hostname
+          ports:
+            - name: http
+              containerPort: 8888
+              protocol: TCP
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: http-echo-staging
+  annotations:
+    route-acl: {{ .StagingRouteACL }}
+spec:
+  ports:
+    - name: http
+      port: 80
+      protocol: TCP
+      targetPort: http
+  selector:
+    app: http-echo-staging
+---
+kind: Ingress
+apiVersion: networking.k8s.io/v1beta1
+metadata:
+  name: http-echo
+  annotations:
+    ingress.class: haproxy
+spec:
+  rules:
+  - host: {{ .Host }}
+    http:
+      paths:
+        - path: /
+          backend:
+            serviceName: http-echo-prod
+            servicePort: http
+        - backend:
+            serviceName: http-echo-staging
+            servicePort: http
