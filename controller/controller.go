@@ -25,7 +25,6 @@ import (
 	"github.com/haproxytech/models/v2"
 	"k8s.io/apimachinery/pkg/watch"
 
-	"github.com/haproxytech/kubernetes-ingress/controller/annotations"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/api"
 	"github.com/haproxytech/kubernetes-ingress/controller/route"
@@ -126,10 +125,9 @@ func (c *HAProxyController) Stop() {
 	logger.Error(c.haproxyService("stop"))
 }
 
-// updateHAProxy syncs HAProxy configuration
+// updateHAProxy is the control loop syncing HAProxy configuration
 func (c *HAProxyController) updateHAProxy() {
 	logger.Trace("HAProxy config sync started")
-	reload := false
 
 	err := c.Client.APIStartTransaction()
 	if err != nil {
@@ -140,14 +138,7 @@ func (c *HAProxyController) updateHAProxy() {
 		c.Client.APIDisposeTransaction()
 	}()
 
-	restart, reload := annotations.HandleGlobalAnnotations(
-		c.Store,
-		c.Client,
-		false,
-		c.Store.ConfigMaps.Main.Annotations,
-	)
-	reload = c.handleDefaultCert() || reload
-	reload = c.handleDefaultService() || reload
+	reload, restart := c.handleGlobalConfig()
 
 	for _, namespace := range c.Store.Namespaces {
 		if !namespace.Relevant {
@@ -444,62 +435,6 @@ func (c *HAProxyController) handlePprof() (err error) {
 	}
 	c.cfg.ActiveBackends[pprofBackend] = struct{}{}
 	return nil
-}
-
-// handleDefaultService configures HAProy default backend provided via cli param "default-backend-service"
-func (c *HAProxyController) handleDefaultService() (reload bool) {
-	dsvcData, _ := c.Store.GetValueFromAnnotations("default-backend-service")
-	if dsvcData == nil {
-		return
-	}
-	dsvc := strings.Split(dsvcData.Value, "/")
-
-	if len(dsvc) != 2 {
-		logger.Errorf("default service '%s': invalid format", dsvcData.Value)
-		return
-	}
-	if dsvc[0] == "" || dsvc[1] == "" {
-		return
-	}
-	namespace, ok := c.Store.Namespaces[dsvc[0]]
-	if !ok {
-		logger.Errorf("default service '%s': namespace not found" + dsvc[0])
-		return
-	}
-	service, ok := namespace.Services[dsvc[1]]
-	if !ok {
-		logger.Errorf("default service '%s': service name not found" + dsvc[1])
-		return
-	}
-	ingress := &store.Ingress{
-		Namespace:   namespace.Name,
-		Name:        "DefaultService",
-		Annotations: store.MapStringW{},
-		DefaultBackend: &store.IngressPath{
-			SvcName:          service.Name,
-			SvcPortInt:       service.Ports[0].Port,
-			IsDefaultBackend: true,
-		},
-	}
-	reload, err := c.setDefaultService(ingress, []string{FrontendHTTP, FrontendHTTPS})
-	if err != nil {
-		logger.Errorf("default service '%s/%s': %s", namespace.Name, service.Name, err)
-		return
-	}
-	return reload
-}
-
-// handleDefaultCert configures default/fallback HAProxy certificate to use for client HTTPS requests.
-func (c *HAProxyController) handleDefaultCert() (reload bool) {
-	secretAnn, _ := c.Store.GetValueFromAnnotations("ssl-certificate", c.Store.ConfigMaps.Main.Annotations)
-	if secretAnn == nil {
-		return false
-	}
-	crt, updated, _ := c.cfg.Certificates.HandleTLSSecret(c.Store, haproxy.SecretCtx{
-		SecretPath: secretAnn.Value,
-		SecretType: haproxy.FT_CERT,
-	})
-	return crt != "" && updated
 }
 
 // clean controller state
