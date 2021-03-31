@@ -62,6 +62,10 @@ func (s *SvcContext) GetStatus() store.Status {
 	return s.path.Status
 }
 
+func (s *SvcContext) GetService() *store.Service {
+	return s.service
+}
+
 // GetBackendName checks if servicePort provided in IngressPath exists and construct corresponding backend name
 // Backend name is in format "ServiceNS-ServiceName-PortName"
 func (s *SvcContext) GetBackendName() (string, error) {

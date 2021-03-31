@@ -445,8 +445,8 @@ func (c *HAProxyController) clean(failedSync bool) {
 		c.PublishService.Status = EMPTY
 	}
 	c.cfg.SSLPassthrough = false
-	if failedSync {
-		return
+	route.CustomRoutes = false
+	if !failedSync {
+		c.Store.Clean()
 	}
-	c.Store.Clean()
 }

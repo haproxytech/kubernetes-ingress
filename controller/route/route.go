@@ -18,18 +18,28 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/haproxytech/models/v2"
+
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy"
+	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/api"
 	"github.com/haproxytech/kubernetes-ingress/controller/store"
+	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 )
 
 //nolint:golint,stylecheck
 const (
+	// Main frontends
+	FrontendHTTP  = "http"
+	FrontendHTTPS = "https"
 	// MapFiles
 	SNI         = "sni"
 	HOST        = "host"
 	PATH_EXACT  = "path-exact"
 	PATH_PREFIX = "path-prefix"
 )
+
+var CustomRoutes bool
+var logger = utils.GetLogger()
 
 type Route struct {
 	Host           string
@@ -79,4 +89,62 @@ func AddHostPathRoute(route Route, mapFiles haproxy.Maps) error {
 		mapFiles.AppendRow(PATH_PREFIX, route.Host+path+"/"+"\t\t\t"+value)
 	}
 	return nil
+}
+
+// AddCustomRoute adds an ingress route with specific ACL via use_backend haproxy directive
+func AddCustomRoute(route Route, routeACLAnn store.StringW, api api.HAProxyClient) (reload bool, err error) {
+	if routeACLAnn.Status == store.DELETED {
+		reload = true
+		logger.Debugf("Custom Route to backend '%s' deleted, reload required", route.BackendName)
+		return
+	}
+	if !CustomRoutes {
+		if err = customRouteInit(api); err != nil {
+			return
+		}
+		CustomRoutes = true
+	}
+	var routeCond string
+	if route.Host != "" {
+		routeCond = fmt.Sprintf("{ var(txn.host) %s } ", route.Host)
+	}
+	if route.Path.Path != "" {
+		if route.Path.ExactPathMatch {
+			routeCond = fmt.Sprintf("%s { path %s } ", routeCond, route.Path.Path)
+		} else {
+			routeCond = fmt.Sprintf("%s { path -m beg %s } ", routeCond, route.Path.Path)
+		}
+	}
+	routeCond = fmt.Sprintf("%s { %s } ", routeCond, routeACLAnn.Value)
+
+	for _, frontend := range []string{FrontendHTTP, FrontendHTTPS} {
+		err = api.BackendSwitchingRuleCreate(frontend, models.BackendSwitchingRule{
+			Cond:     "if",
+			CondTest: routeCond,
+			Name:     route.BackendName,
+			Index:    utils.PtrInt64(0),
+		})
+		if err != nil {
+			return
+		}
+	}
+	if routeACLAnn.Status != store.EMPTY {
+		reload = true
+		logger.Debugf("Custom Route to backend '%s' added, reload required", route.BackendName)
+	}
+	return reload, err
+}
+
+func customRouteInit(api api.HAProxyClient) (err error) {
+	for _, frontend := range []string{FrontendHTTP, FrontendHTTPS} {
+		api.BackendSwitchingRuleDeleteAll(frontend)
+		err = api.BackendSwitchingRuleCreate(frontend, models.BackendSwitchingRule{
+			Name:  "%[var(txn.path_match),field(1,.)]",
+			Index: utils.PtrInt64(0),
+		})
+		if err != nil {
+			return fmt.Errorf("unable to create main backendSwitching rule !!: %w", err)
+		}
+	}
+	return err
 }

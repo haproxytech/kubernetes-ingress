@@ -67,24 +67,33 @@ func (c *HAProxyController) handleIngressPath(ingress *store.Ingress, host strin
 	if svc.GetStatus() == DELETED {
 		return
 	}
+	// Backend
 	backendReload, backendName, err := svc.HandleBackend(c.Client, c.Store)
 	if err != nil {
 		return
 	}
-	err = route.AddHostPathRoute(route.Route{
+	// Route
+	var routeReload bool
+	ingRoute := route.Route{
 		Host:           host,
 		Path:           path,
 		HAProxyRules:   c.cfg.HAProxyRules.GetIngressRuleIDs(ingress.Namespace + "-" + ingress.Name),
 		BackendName:    backendName,
 		SSLPassthrough: sslPassthrough,
-	}, c.cfg.MapFiles)
+	}
+	routeACLAnn, _ := c.Store.GetValueFromAnnotations("route-acl", svc.GetService().Annotations)
+	if routeACLAnn == nil {
+		err = route.AddHostPathRoute(ingRoute, c.cfg.MapFiles)
+	} else {
+		routeReload, err = route.AddCustomRoute(ingRoute, *routeACLAnn, c.Client)
+	}
 	if err != nil {
 		return
 	}
 	c.cfg.ActiveBackends[backendName] = struct{}{}
+	// Endpoints
 	endpointsReload := svc.HandleEndpoints(c.Client, c.Store, c.cfg.Certificates)
-	reload = backendReload || endpointsReload
-	return
+	return backendReload || endpointsReload || routeReload, err
 }
 
 func (c *HAProxyController) setDefaultService(ingress *store.Ingress, frontends []string) (reload bool, err error) {
