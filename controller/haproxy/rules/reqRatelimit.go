@@ -22,7 +22,6 @@ func (r ReqRateLimit) GetType() haproxy.RuleType {
 
 func (r ReqRateLimit) Create(client api.HAProxyClient, frontend *models.Frontend, ingressACL string) error {
 	if frontend.Mode == "tcp" {
-		//TODO: tcp request tracking
 		return fmt.Errorf("request Track cannot be configured in TCP mode")
 	}
 	httpRule := models.HTTPRequestRule{

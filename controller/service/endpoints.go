@@ -41,7 +41,6 @@ func (s *SvcContext) HandleEndpoints(client api.HAProxyClient, store store.K8s, 
 	if s.service.DNS == "" {
 		srvsScaled = s.scaleHAProxySrvs(endpoints, store)
 	}
-	// TODO: log reload due to active srv annotation
 	srvsActiveAnn := annotations.HandleServerAnnotations(
 		store,
 		client,
@@ -52,6 +51,9 @@ func (s *SvcContext) HandleEndpoints(client api.HAProxyClient, store store.K8s, 
 		s.ingress.Annotations,
 		s.store.ConfigMaps.Main.Annotations,
 	)
+	if srvsActiveAnn {
+		logger.Debugf("Ingress '%s/%s': server options of  backend '%s' were updated, reload required", s.ingress.Namespace, s.ingress.Name, endpoints.BackendName)
+	}
 	for _, srv := range endpoints.HAProxySrvs {
 		if srv.Modified || s.newBackend || srvsActiveAnn {
 			server := models.Server{
@@ -182,8 +184,6 @@ func (s *SvcContext) getEndpoints(k8s store.K8s) (endpoints *store.PortEndpoints
 }
 
 func (s *SvcContext) getExternalNameEndpoints() (endpoints *store.PortEndpoints, err error) {
-	//TODO: currently HAProxy will only resolve server name at startup/reload
-	// This needs to be improved by using HAProxy resolvers to have resolution at runtime
 	logger.Tracef("Configuring service '%s', of type ExternalName", s.service.Name)
 	var port int64
 	for _, sp := range s.service.Ports {
