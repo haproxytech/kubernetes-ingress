@@ -197,7 +197,7 @@ func (h HTTPS) enableSSLPassthrough(cfg *Configuration, api api.HAProxyClient) (
 		}),
 		api.BackendSwitchingRuleCreate(FrontendSSL, models.BackendSwitchingRule{
 			Index: utils.PtrInt64(0),
-			Name:  fmt.Sprintf("%%[var(txn.match),field(1,.)]"),
+			Name:  fmt.Sprintf("%%[var(txn.sni_match),field(1,.)]"),
 		}),
 		h.toggleSSLPassthrough(true, cfg.HTTPS, api))
 	return errors.Result()
@@ -252,15 +252,15 @@ func (h HTTPS) sslPassthroughRules(k store.K8s, cfg *Configuration) error {
 			Expression: "req_ssl_sni",
 		}, "", FrontendSSL),
 		cfg.HAProxyRules.AddRule(rules.ReqSetVar{
-			Name:       "match",
+			Name:       "sni_match",
 			Scope:      "txn",
 			Expression: fmt.Sprintf("req_ssl_sni,map(%s)", haproxy.GetMapPath(SNI)),
 		}, "", FrontendSSL),
 		cfg.HAProxyRules.AddRule(rules.ReqSetVar{
-			Name:       "match",
+			Name:       "sni_match",
 			Scope:      "txn",
 			Expression: fmt.Sprintf("req_ssl_sni,regsub(^[^.]*,,),map(%s)", haproxy.GetMapPath(SNI)),
-			CondTest:   "!{ var(txn.match) -m found }",
+			CondTest:   "!{ var(txn.sni_match) -m found }",
 		}, "", FrontendSSL),
 	)
 	return errors.Result()

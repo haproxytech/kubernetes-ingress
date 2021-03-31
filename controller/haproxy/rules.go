@@ -15,9 +15,11 @@ type Rule interface {
 	GetType() RuleType
 }
 
-// IngressACLVar is the HAProxy variable
-// to be matched against the ruleID
-var IngressACLVar = "txn.match"
+// HTTPACLVar used to match against RuleID in haproxy http frontend
+var HTTPACLVar = "txn.path_match"
+
+// TCPACLVar used to match against RuleID in haproxy ssl frontend
+var TCPACLVar = "txn.sni_match"
 
 // Order matters !
 // Rules will be evaluated by HAProxy in the defined order.
@@ -168,6 +170,10 @@ func (r Rules) Refresh(client api.HAProxyClient) (reload bool) {
 			logger.Error(err)
 			continue
 		}
+		ACLVar := HTTPACLVar
+		if fe.Mode == "tcp" {
+			ACLVar = TCPACLVar
+		}
 		client.FrontendRuleDeleteAll(feName)
 		// All rules are created with Index 0,
 		// Which means first rule inserted will be last in the list of HAProxy rules after iteration
@@ -184,7 +190,7 @@ func (r Rules) Refresh(client api.HAProxyClient) (reload bool) {
 					continue
 				}
 				if ftRules.status[id]&INGRESS != 0 {
-					ingressACL = fmt.Sprintf("{ var(%s) -m dom %s }", IngressACLVar, id)
+					ingressACL = fmt.Sprintf("{ var(%s) -m dom %s }", ACLVar, id)
 				}
 				err := ruleSet[i].Create(client, &fe, ingressACL)
 				logger.Error(err)
