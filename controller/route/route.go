@@ -16,7 +16,6 @@ package route
 
 import (
 	"fmt"
-	"strconv"
 	"strings"
 
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy"
@@ -51,7 +50,7 @@ func AddHostPathRoute(route Route, mapFiles haproxy.Maps) error {
 	}
 	value := route.BackendName
 	for _, id := range route.HAProxyRules {
-		value += "." + strconv.Itoa(int(id))
+		value += "." + string(id)
 	}
 	// SSLPassthrough
 	if route.SSLPassthrough {
