@@ -53,6 +53,10 @@ func NewMapFiles(path string) Maps {
 	return maps
 }
 
+func (m Maps) Exists(name string) bool {
+	return m[name] != nil
+}
+
 // AppendRow appends row to mapFile
 func (m Maps) AppendRow(name string, row string) {
 	if row == "" {
