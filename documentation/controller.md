@@ -94,7 +94,7 @@ args:
 
   Sets the ConfigMap object that defines contents to serve instead of HAProxy errors.
 As explained in the [haproxy documentation](https://cbonte.github.io/haproxy-dconv/2.0/configuration.html#4.2-errorfile) it is important to understand that errorfile content is not meant to rewrite errors returned by the server, but rather errors detected and returned by HAProxy.
-In the following example, instead of HAProxy returning a 503 error, it will return the coressponding content in the ConfigMap:
+In the following example, instead of HAProxy returning a 503 error, it will return the corresponding content in the ConfigMap:
 
 ```yaml
 apiVersion: v1
@@ -109,7 +109,7 @@ data:
     Connection: close
     Content-Type: text/html
 
-    <html><body><h1>Oops, that's embarassing!</h1>
+    <html><body><h1>Oops, that's embarrassing!</h1>
     There are no servers available to handle your request.
     </body></html>
 ```
@@ -428,7 +428,7 @@ Example:
 
 ```yaml
 args:
-  - --cache-resync-period=30m 
+  - --cache-resync-period=30m
 ```
 
 <p align='right'><a href='#haproxy-kubernetes-ingress-controller'>:arrow_up_small: back to top</a></p>
