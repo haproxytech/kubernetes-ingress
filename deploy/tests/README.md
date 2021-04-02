@@ -13,48 +13,53 @@ GO111MODULE="on" go get sigs.k8s.io/kind@v0.8.1
 
 ## How to :runner: it
 
+### Cluster initialization
 ```bash
 ./create.sh
 ```
 
-it will create all the services, pods, resources needed for initial start
+Creates a Kubernetes cluster named `dev` via [kind](https://kind.sigs.k8s.io/) tool.
 
-all services are build from https://github.com/oktalz/go-web-simple, each has it unique response
+This will also deploy the HAProxy Ingress Controller using config in `deploy/tests/config` directory.
 
-for http services u can test
-
+### Testing application
 ```bash
-curl --header "Host: hr.haproxy" 127.0.0.1:30080/gids
+kubectl apply -f ./config/echo-app.yaml
 ```
 
-response will be from 4 pods (example is 8 requests):
+Deploys [http-echo](https://github.com/Mo3m3n/http-echo) as a test application.
 
 ```bash
-zagreb-TH9-1
-zagreb-PAQ-1
-zagreb-X34-1
-zagreb-XVT-1
-zagreb-TH9-2
-zagreb-PAQ-2
-zagreb-X34-2
-zagreb-XVT-2
+curl --header "Host: echo.haproxy.local" 127.0.0.1:30080
 ```
 
-`[SERVICE]-[ID]-[RESPONSE_COUNTER]`
+Response will include a couple of useful information:
+- The application POD name
+- Request attributes
 
-- you can see what service and what pod (each has its own id) gives response.
-- last number is response number so you can see how many request was put to each service
 
-for second http service
+### E2E tests
 
 ```bash
-curl --header "Host: fr.haproxy" 127.0.0.1:30080/gids
+go test -v --tags=<tag_name> ./e2e/... 
 ```
 
-for pure tcp service
+This will run all e2e tests in `./e2e` directory tagged with `<tag_name>`.  
+There are two available tags:
+- **e2e_parallel**: which will run tests in parallel 
+- **e2e_sequential**: which will run tests in sequence
 
+Currently two tests are run sequentially:
+- endpoints: in order to test endpoints scaling without reloading haproxy.
+- tls-auth:  tls authentication is a global config that will impact other tests running in parallel.
+
+Each E2E test runs in its **own Namespace** and has its own directory.  
+Tests are deployed by applying yaml files or/and templates from the `config` directory of the corresponding test.  
+When using yaml templates, the generated yaml files are stored in a temporary directory in `/tmp/`.  
+Using `--dev` option will keep generated files after test execution.  
+Example:
 ```bash
-curl 127.0.0.1:32767/gids
+go test -v --tags=e2e_sequential --dev ./e2e/endpoints/
 ```
 
 # recommended software

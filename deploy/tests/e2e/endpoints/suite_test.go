@@ -17,8 +17,6 @@
 package endpoints
 
 import (
-	"encoding/json"
-	"io/ioutil"
 	"net/http"
 	"os/exec"
 	"testing"
@@ -98,24 +96,4 @@ func (suite *EndpointsSuite) BeforeTest(suiteName, testName string) {
 			return res.StatusCode == http.StatusOK
 		}, e2e.WaitDuration, e2e.TickDuration)
 	}
-}
-
-func newReachResponse(t *testing.T, response *http.Response) (hostname string) {
-	type echoServerResponse struct {
-		OS struct {
-			Hostname string `json:"hostname"`
-		} `json:"os"`
-	}
-	body, err := ioutil.ReadAll(response.Body)
-	if err != nil {
-		t.Error(err)
-		return
-	}
-
-	res := &echoServerResponse{}
-	if err := json.Unmarshal(body, res); err != nil {
-		t.Error(err)
-		return
-	}
-	return res.OS.Hostname
 }

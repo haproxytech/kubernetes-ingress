@@ -17,7 +17,6 @@
 package ingressmatch
 
 import (
-	"encoding/json"
 	"io/ioutil"
 	"strings"
 
@@ -93,20 +92,9 @@ func (suite *IngressMatchSuite) Test_Http_MatchPath() {
 					if err != nil {
 						return false
 					}
-					type echoServerResponse struct {
-						OS struct {
-							Hostname string `json:"hostname"`
-						} `json:"os"`
-					}
-					response := &echoServerResponse{}
-					err = json.Unmarshal(body, response)
-					if err != nil {
-						return false
-					}
-					actual := response.OS.Hostname
-					pass := strings.HasPrefix(actual, test.target)
+					pass := strings.HasPrefix(string(body), test.target)
 					if !pass {
-						suite.T().Logf("Expected %s but got %s", test.target, actual)
+						suite.T().Logf("Expected %s in response but got %s", test.target, string(body))
 					}
 					return pass
 				}, e2e.WaitDuration, e2e.TickDuration)

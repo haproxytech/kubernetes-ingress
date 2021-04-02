@@ -23,12 +23,6 @@ import (
 	"github.com/haproxytech/kubernetes-ingress/deploy/tests/e2e"
 )
 
-type echoServerResponse struct {
-	OS struct {
-		Hostname string `json:"hostname"`
-	} `json:"os"`
-}
-
 func (suite *IngressClassSuite) Test_IngressClassName_Field() {
 	test := suite.test
 	suite.Run("Disabled", func() {

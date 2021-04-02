@@ -3,6 +3,7 @@ apiVersion: apps/v1
 metadata:
   name: http-echo
 spec:
+  replicas: 1
   selector:
     matchLabels:
       app: http-echo
@@ -13,9 +14,7 @@ spec:
     spec:
       containers:
         - name: http-echo
-          image: mo3m3n/http-echo:v1.0.0
-          args:
-          - --default-response=hostname
+          image: 'mo3m3n/http-echo:v1.0.0'
           ports:
             - name: http
               containerPort: 8888
@@ -41,9 +40,18 @@ spec:
   selector:
     app: http-echo
 ---
+kind: Ingress
 apiVersion: networking.k8s.io/v1beta1
-kind: IngressClass
 metadata:
-  name: haproxy
+  name: http-echo
+  annotations:
+    ingress.class: haproxy
 spec:
-  controller: haproxy.org/ingress-controller
+  rules:
+  - host: "echo.haproxy.local"
+    http:
+      paths:
+        - path: /
+          backend:
+            serviceName: http-echo
+            servicePort: http
