@@ -55,8 +55,12 @@ func (suite *RateLimitingSuite) Test_Rate_Limiting() {
 					}
 					responseCode = res.StatusCode
 				}
-				return counter == tc.limitRequests
-			}, e2e.WaitDuration, time.Duration(tc.limitPeriodinSeconds)*time.Second)
+				if counter != tc.limitRequests {
+					suite.T().Logf("request counter %d", counter)
+					return false
+				}
+				return true
+			}, e2e.WaitDuration, 2*time.Duration(tc.limitPeriodinSeconds)*time.Second)
 		})
 	}
 }
