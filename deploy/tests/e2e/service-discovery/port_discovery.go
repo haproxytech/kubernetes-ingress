@@ -17,18 +17,11 @@
 package servicediscovery
 
 import (
-	"encoding/json"
 	"io/ioutil"
 	"strings"
 
 	"github.com/haproxytech/kubernetes-ingress/deploy/tests/e2e"
 )
-
-type echoServerResponse struct {
-	OS struct {
-		Hostname string `json:"hostname"`
-	} `json:"os"`
-}
 
 func (suite *ServiceDiscoverySuite) Test_Port_Discovery() {
 	suite.Run("port_number", func() {
@@ -54,12 +47,7 @@ func (suite *ServiceDiscoverySuite) testServicePort(serviceName, servicePort str
 		if err != nil {
 			return false
 		}
-		response := &echoServerResponse{}
-		err = json.Unmarshal(body, response)
-		if err != nil {
-			return false
-		}
-		return strings.HasPrefix(response.OS.Hostname, serviceName)
+		return strings.HasPrefix(string(body), serviceName)
 	}, e2e.WaitDuration, e2e.TickDuration)
 
 }

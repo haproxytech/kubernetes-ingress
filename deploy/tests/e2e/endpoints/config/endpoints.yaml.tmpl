@@ -11,13 +11,15 @@ spec:
     spec:
       containers:
         - name: http-echo
-          image: 'mo3m3n/http-echo:latest'
+          image: mo3m3n/http-echo:v1.0.0
+          args:
+          - --default-response=hostname
           ports:
             - name: http
-              containerPort: 80
+              containerPort: 8888
               protocol: TCP
             - name: https
-              containerPort: 443
+              containerPort: 8443
               protocol: TCP
 ---
 kind: Service

@@ -16,6 +16,10 @@
 
 package endpoints
 
+import (
+	"io/ioutil"
+)
+
 func (suite *EndpointsSuite) Test_TCP_Reach() {
 	counter := map[string]int{}
 	for i := 0; i < 4; i++ {
@@ -23,7 +27,12 @@ func (suite *EndpointsSuite) Test_TCP_Reach() {
 			res, cls, err := suite.client.Do()
 			suite.NoError(err)
 			defer cls()
-			counter[newReachResponse(suite.T(), res)]++
+			body, err := ioutil.ReadAll(res.Body)
+			if err != nil {
+				suite.Error(err)
+				return
+			}
+			counter[string(body)]++
 		}()
 	}
 	for _, v := range counter {
