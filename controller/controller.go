@@ -535,7 +535,7 @@ func (c *HAProxyController) handleDefaultCert() (reload bool) {
 	}
 	crt, updated, _ := c.cfg.Certificates.HandleTLSSecret(c.Store, haproxy.SecretCtx{
 		SecretPath: secretAnn.Value,
-		SecretType: haproxy.FT_CERT,
+		SecretType: haproxy.FT_DEFAULT_CERT,
 	})
 	return crt != "" && updated
 }
