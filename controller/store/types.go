@@ -19,6 +19,7 @@ type ServicePort struct {
 	Name     string
 	Protocol string
 	Port     int64
+	NodePort int64
 	Status   Status
 }
 

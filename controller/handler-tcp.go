@@ -2,10 +2,12 @@ package controller
 
 import (
 	"fmt"
+	"net"
 	"strconv"
 	"strings"
 
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/api"
+	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/rules"
 	"github.com/haproxytech/kubernetes-ingress/controller/store"
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 	"github.com/haproxytech/models/v2"
@@ -22,41 +24,83 @@ type tcpSvcParser struct {
 }
 
 func (t TCPHandler) Update(k store.K8s, cfg *Configuration, api api.HAProxyClient) (reload bool, err error) {
-	if k.ConfigMaps.TCPServices == nil {
-		return false, nil
-	}
+	//if k.ConfigMaps.TCPServices == nil {
+	//	return false, nil
+	//}
 	var p tcpSvcParser
-	for port, tcpSvcAnn := range k.ConfigMaps.TCPServices.Annotations {
-		p, err = t.parseTCPService(k, tcpSvcAnn.Value)
-		if err != nil {
-			logger.Error(err)
+	//for port, tcpSvcAnn := range k.ConfigMaps.TCPServices.Annotations {
+	for _, namespace := range k.Namespaces {
+		if !namespace.Relevant {
 			continue
 		}
-		// Delete Frontend
-		frontendName := fmt.Sprintf("tcp-%s", port)
-		if tcpSvcAnn.Status == DELETED || p.service.Status == DELETED {
-			err = api.FrontendDelete(frontendName)
-			if err != nil {
-				logger.Errorf("error deleting tcp frontend '%s': %s", frontendName, err)
-			} else {
-				reload = true
-				logger.Debugf("TCP frontend '%s' deleted, reload required", frontendName)
-			}
-			continue
-		}
-		frontend, errGet := api.FrontendGet(frontendName)
-		// Create Frontend
-		if errGet != nil {
-			frontend, reload, err = t.createTCPFrontend(api, frontendName, port, p.sslOffload)
-			if err != nil {
-				logger.Error(err)
+		for _, svc := range namespace.Services {
+			svcName := svc.Namespace + "/" + svc.Name
+			var exposeNew, exposeOld bool
+			if exposeAnn, err := svc.Annotations.Get("expose"); err != nil{
 				continue
+			} else if exposeNew, err = strconv.ParseBool(exposeAnn.Value); err != nil {
+				logger.Errorf("Service Name '%s' has annotation expose: %s which cannot parse to true/false", svcName, exposeAnn)
+				continue
+			} else if exposeOld, err = strconv.ParseBool(exposeAnn.OldValue); err != nil {
+				exposeOld = false
 			}
-		}
-		// Update  Frontend
-		reload, err = t.updateTCPFrontend(api, frontend, p)
-		if err != nil {
-			logger.Errorf("TCP frontend '%s': update failed: %s", frontendName, err)
+			var exposeStatus store.Status
+			if !exposeNew && !exposeOld {
+				continue
+			} else if exposeNew && !exposeOld {
+				exposeStatus = ADDED
+			} else if exposeNew && exposeOld {
+				exposeStatus = MODIFIED
+			} else {
+				exposeStatus = DELETED
+			}
+			var sslOffloading bool = false
+			if sslOffloadingAnn, err := svc.Annotations.Get("ssl-offloading"); err == nil {
+				if sslOffloading, err = strconv.ParseBool(sslOffloadingAnn.Value); err != nil {
+					logger.Errorf("Service Name '%s' has annotation load-balancer-use-ssl: %s which cannot parse to true/false", svcName, sslOffloadingAnn)
+					continue
+				}
+			}
+			for _, svcPortSpec := range svc.Ports {
+				var port = strconv.FormatInt(svcPortSpec.NodePort, 10)
+				var tcpSvcAnn = store.StringW{Value: svcName + ":" + strconv.FormatInt(svcPortSpec.Port, 10), Status: exposeStatus}
+				if sslOffloading {
+					tcpSvcAnn.Value += ":ssl"
+				}
+
+				p, err = t.parseTCPService(k, tcpSvcAnn.Value)
+				if err != nil {
+					logger.Error(err)
+					continue
+				}
+				// Delete Frontend
+				frontendName := fmt.Sprintf("tcp-%s", port)
+				if tcpSvcAnn.Status == DELETED || p.service.Status == DELETED {
+					err = api.FrontendDelete(frontendName)
+					if err != nil {
+						logger.Errorf("error deleting tcp frontend '%s': %s", frontendName, err)
+					} else {
+						reload = true
+						logger.Debugf("TCP frontend '%s' deleted, reload required", frontendName)
+					}
+					continue
+				}
+				frontend, errGet := api.FrontendGet(frontendName)
+				handleWhitelisting(k, cfg, frontendName, svc.Annotations)
+				// Create Frontend
+				if errGet != nil {
+					frontend, reload, err = t.createTCPFrontend(api, frontendName, port, p.sslOffload)
+					if err != nil {
+						logger.Error(err)
+						continue
+					}
+				}
+				// Update  Frontend
+				reload, err = t.updateTCPFrontend(api, frontend, p)
+				if err != nil {
+					logger.Errorf("TCP frontend '%s': update failed: %s", frontendName, err)
+				}
+			}
 		}
 	}
 	return reload, nil
@@ -128,6 +172,44 @@ func (t TCPHandler) createTCPFrontend(api api.HAProxyClient, frontendName, bindP
 	}
 	logger.Debugf("TCP frontend '%s' created, reload required", frontendName)
 	return frontend, true, nil
+}
+
+// Copied and modified from frontend-annotations.go
+// HAProxyController.handleWhitelisting should be refactored to have the same interface as this
+// since the ingress parameter that it takes is only used for logging
+// while the actual frontends that it modifies are hardcoded
+func handleWhitelisting(k store.K8s, cfg *Configuration, frontend string, annotations store.MapStringW) {
+	//  Get annotation status
+	annWhitelist, _ := k.GetValueFromAnnotations("whitelist", annotations)
+	if annWhitelist == nil {
+		return
+	}
+	if annWhitelist.Status == DELETED {
+		logger.Tracef("Frontend %s: Deleting whitelist configuration", frontend)
+		// TODO: Shouldn't we delete the mapfile? I guess that complicates things
+		return
+	}
+	// Validate annotation
+	mapName := "whitelist-" + utils.Hash([]byte(annWhitelist.Value))
+	if !cfg.MapFiles.Exists(mapName) {
+		for _, address := range strings.Split(annWhitelist.Value, ",") {
+			address = strings.TrimSpace(address)
+			if ip := net.ParseIP(address); ip == nil {
+				if _, _, err := net.ParseCIDR(address); err != nil {
+					logger.Errorf("incorrect address '%s' in whitelist annotation in frontend '%s'", address, frontend)
+					continue
+				}
+			}
+			cfg.MapFiles.AppendRow(mapName, address)
+		}
+	}
+	// Configure annotation
+	logger.Tracef("Frontend %s: Configuring whitelist annotation", frontend)
+	reqWhitelist := rules.ReqDeny{
+		SrcIPsMap: mapName,
+		Whitelist: true,
+	}
+	logger.Error(cfg.HAProxyRules.AddRule(reqWhitelist, "", frontend))
 }
 
 func (t TCPHandler) updateTCPFrontend(api api.HAProxyClient, frontend models.Frontend, p tcpSvcParser) (reload bool, err error) {
