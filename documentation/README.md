@@ -148,7 +148,7 @@ cors-allow-origin: "^https://(.+\.)?(example-1\.com|example-2\.com)(:\d{1,5})?$"
 Possible values:
 
 - Wildcard `*`, allow access for all HTTP methods.
-- A comma seperated list of HTTP methods
+- A comma-separated list of HTTP methods
 
 Example:
 
@@ -184,7 +184,7 @@ cors-allow-credentials: "true"
 Possible values:
 
 - Wildcard `*`, allow access for all HTTP headers.
-- A comma seperated list of HTTP headers
+- A comma-separated list of HTTP headers
 
 Example:
 
@@ -286,8 +286,8 @@ auth-secret: default/haproxy-credentials
 
 Possible values:
 
-- The annotation format is a secret path *namespace/secretName*. If the namespace is ommited (path is only *secretName*) then the ingress namespace will be used. 
-For Basic Authentication, the Secret data should contain user credentials in the form of `username: encrypted and base-64 encoded passowrd`. For example: 
+- The annotation format is a secret path *namespace/secretName*. If the namespace is omitted (path is only *secretName*) then the ingress namespace will be used.
+For Basic Authentication, the Secret data should contain user credentials in the form of `username: encrypted and base-64 encoded password`. For example:
 
 ```
 bob: JDEkYWJjJEJYQnFwYjlCWmNaaFhMZ2JlZS4wcy8=
@@ -490,7 +490,7 @@ load-balance: "leastconn"
 #### Config Snippet
 
 - Insert raw HAProxy configuration in specific HAProxy config sections.
-- There is **no data validation** done by Ingress Controller. If input is incorret, HAProxy will fail to apply new configuration.
+- There is **no data validation** done by Ingress Controller. If input is incorrect, HAProxy will fail to apply new configuration.
 
 ##### `global-config-snippet`
 
@@ -599,11 +599,11 @@ Example:
 cookie-persistence: "mycookie"
 ```
 
-Configuring the cookie can be done in two different ways: 
+Configuring the cookie can be done in two different ways:
 - Using `cookie-persistence` annotation.
   However, currently, this **does not work** when deploying more than one ingress controller pod. For such case (multiple IC pods) the following `dynamic` cookie configuration via `backend-config-snippet` annotation an be used.
 - Using [`backend-config-snippet`](#config-snippet) annotation for more cookie options.
-  
+
   ```yaml
   backend-config-snippet: |
       dynamic-cookie-key ahgh5kiM
@@ -1450,7 +1450,7 @@ ssl-certificate: "default/tls-secret"
   - rsa.key
   - rsa.crt
   - ecdsa.key
-  - ecdsa.crt    
+  - ecdsa.crt
 
 
 <p align='right'><a href='#available-annotations'>:arrow_up_small: back to top</a></p>

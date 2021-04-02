@@ -12,9 +12,9 @@ image_arguments:
   - argument: --configmap-tcp-services
     tip:
       - Ports of TCP services should be exposed on the controller's Kubernetes service
-    description: |- 
+    description: |-
       Sets the ConfigMap that contains mappings for TCP services to proxy through the ingress controller. This ConfigMap contains mappings like this:
-      
+
       ```yaml
       apiVersion: v1
       kind: ConfigMap
@@ -39,7 +39,7 @@ image_arguments:
     description: |-
       Sets the ConfigMap object that defines contents to serve instead of HAProxy errors.
       As explained in the [haproxy documentation](https://cbonte.github.io/haproxy-dconv/2.0/configuration.html#4.2-errorfile) it is important to understand that errorfile content is not meant to rewrite errors returned by the server, but rather errors detected and returned by HAProxy.
-      In the following example, instead of HAProxy returning a 503 error, it will return the coressponding content in the ConfigMap:
+      In the following example, instead of HAProxy returning a 503 error, it will return the corresponding content in the ConfigMap:
 
       ```yaml
       apiVersion: v1
@@ -53,12 +53,12 @@ image_arguments:
           Cache-Control: no-cache
           Connection: close
           Content-Type: text/html
-      
-          <html><body><h1>Oops, that's embarassing!</h1>
+
+          <html><body><h1>Oops, that's embarrassing!</h1>
           There are no servers available to handle your request.
           </body></html>
       ```
-    values: 
+    values:
       - The name of the ConfigMap containing errorfile content
     version_min: "1.5"
     example: |-
@@ -131,7 +131,7 @@ image_arguments:
     description: Copies the ingress controller's IP address to the 'Address' field in all Ingress objects that the controller manages. This is useful for tools like external-dns, which use this information to create DNS records.
     values:
       - Name of the ingress controller's service, e.g. default/kubernetes-ingress
-    version_min: "1.4"    
+    version_min: "1.4"
     example: |-
       args:
         - --publish-service=default/kubernetes-ingress
@@ -236,7 +236,7 @@ image_arguments:
     values:
       - An integer with unit of time (1s = 1 second, 1m = 1 minute, 1h = 1 hour); Defaults to 5s
     default: 5s
-    version_min: "1.4"    
+    version_min: "1.4"
     example: |-
       args:
         - --sync-period=10s
@@ -251,7 +251,7 @@ image_arguments:
     version_min: "1.5"
     example: |-
       args:
-        - --cache-resync-period=30m 
+        - --cache-resync-period=30m
 
   - argument: --log
     description: The level of logging to perform; Defaults to <i>info</i>
@@ -312,16 +312,16 @@ groups:
   config-snippet:
     header: |-
       - Insert raw HAProxy configuration in specific HAProxy config sections.
-      - There is **no data validation** done by Ingress Controller. If input is incorret, HAProxy will fail to apply new configuration.
+      - There is **no data validation** done by Ingress Controller. If input is incorrect, HAProxy will fail to apply new configuration.
   cookie-persistence:
     header: |-
       - Configure sticky session via cookie-based persistence.
     footer: |-
-      Configuring the cookie can be done in two different ways: 
+      Configuring the cookie can be done in two different ways:
       - Using `cookie-persistence` annotation.
         However, currently, this **does not work** when deploying more than one ingress controller pod. For such case (multiple IC pods) the following `dynamic` cookie configuration via `backend-config-snippet` annotation an be used.
       - Using [`backend-config-snippet`](#config-snippet) annotation for more cookie options.
-        
+
         ```yaml
         backend-config-snippet: |
             dynamic-cookie-key ahgh5kiM
@@ -353,7 +353,7 @@ groups:
         - rsa.key
         - rsa.crt
         - ecdsa.key
-        - ecdsa.crt    
+        - ecdsa.crt
 annotations:
   - title: auth-type
     type: string
@@ -383,21 +383,21 @@ annotations:
       - Encrypted passwords are evaluated using the crypt(3) function, so depending on the system's capabilities, different algorithms are supported.
       - Unencrypted passwords (used with HAProxy [insecure-password](https://cbonte.github.io/haproxy-dconv/2.0/configuration.html#3.4-user) ) **are not accepted**.
     values:
-      - |- 
-        The annotation format is a secret path *namespace/secretName*. If the namespace is ommited (path is only *secretName*) then the ingress namespace will be used. 
-        For Basic Authentication, the Secret data should contain user credentials in the form of `username: encrypted and base-64 encoded passowrd`. For example: 
-      
+      - |-
+        The annotation format is a secret path *namespace/secretName*. If the namespace is omitted (path is only *secretName*) then the ingress namespace will be used.
+        For Basic Authentication, the Secret data should contain user credentials in the form of `username: encrypted and base-64 encoded password`. For example:
+
         ```
         bob: JDEkYWJjJEJYQnFwYjlCWmNaaFhMZ2JlZS4wcy8=
         ```
-      
+
         Create the Kubernetes Secret resource in the following way:
 
         ```bash
         kubectl create secret generic haproxy-credentials \
           --from-literal=bob=$(openssl passwd -1 bobPassword) \
           --from-literal=alice=$(openssl passwd -1 alicePassword)
-        
+
           # secret/haproxy-credentials created
         ```
     applies_to:
@@ -556,7 +556,7 @@ annotations:
     tip: []
     values:
     - Wildcard `*`, allow access for all HTTP methods.
-    - A comma seperated list of HTTP methods
+    - A comma-separated list of HTTP methods
     applies_to:
     - configmap
     - ingress
@@ -592,7 +592,7 @@ annotations:
     tip: []
     values:
     - Wildcard `*`, allow access for all HTTP headers.
-    - A comma seperated list of HTTP headers
+    - A comma-separated list of HTTP headers
     applies_to:
     - configmap
     - ingress
@@ -628,7 +628,7 @@ annotations:
     values:
     - One or more valid HAProxy directives
     applies_to:
-    - configmap 
+    - configmap
     version_min: "1.5"
     example_configmap: |-
       global-config-snippet: |
@@ -648,7 +648,7 @@ annotations:
     values:
     - One or more valid HAProxy directives
     applies_to:
-    - configmap 
+    - configmap
     version_min: "1.6"
     example_configmap: |-
       frontend-config-snippet: |
@@ -665,7 +665,7 @@ annotations:
     values:
     - One or more valid HAProxy directives
     applies_to:
-    - configmap 
+    - configmap
     version_min: "1.6"
     example_configmap: |-
       stats-config-snippet: |
@@ -681,11 +681,11 @@ annotations:
     values:
     - One or more valid HAProxy directives
     applies_to:
-    - configmap 
+    - configmap
     - ingress
     - service
     version_min: "1.5"
-    example_service: |- 
+    example_service: |-
       backend-config-snippet: |
         http-send-name-header x-dst-server
         stick-table type string len 32 size 100k expire 30m
@@ -1039,7 +1039,7 @@ annotations:
       define with this field. For example, you can capture specific cookie values or
       HTTP header values.
     tip:
-    - Captures samples of the request using [sample expression](#sample-expression) 
+    - Captures samples of the request using [sample expression](#sample-expression)
       and log them in HAProxy traffic logs.
     values:
     - A header value, e.g. `hdr(header-name)`
@@ -1052,7 +1052,7 @@ annotations:
     example_configmap: |-
       # capture a single value
       request-capture: cookie(my-cookie)
-  
+
       # capture multiple values
       request-capture: |
         cookie(my-cookie)
@@ -1061,7 +1061,7 @@ annotations:
     example_ingress: |-
       # capture a single value
       haproxy.org/request-capture: cookie(my-cookie)
-  
+
       # capture multiple values
       haproxy.org/request-capture: |
         cookie(my-cookie)
@@ -1095,7 +1095,7 @@ annotations:
     tip:
     - This sets header before HAProxy does any service/backend dispatch. So in the case
       you want to change the Host header this will impact HAProxy decision on which
-      service/backend to use (based on matching Host against ingress rules). In order 
+      service/backend to use (based on matching Host against ingress rules). In order
       to set the Host header after service selection, use [set-host](#set-host) annotation.
     values:
     - The name of the field, following by its value, e.g. Ingress-ID abcd123
@@ -1107,7 +1107,7 @@ annotations:
     example_configmap: |-
       # single header
       request-set-header: Ingress-ID abcd123
-  
+
       # multiple headers
       request-set-header: |
         Ingress-ID abcd123
@@ -1115,7 +1115,7 @@ annotations:
     example_ingress: |-
       # single header
       haproxy.org/request-set-header: Ingress-ID abcd123
-    
+
       # multiple headers
       haproxy.org/request-set-header: |
         Ingress-ID abcd123
@@ -1152,7 +1152,7 @@ annotations:
     - configmap
     - ingress
     version_min: "1.5"
-    example: ['request-redirect-code: "303"']     
+    example: ['request-redirect-code: "303"']
   - title: response-set-header
     type: string
     group: response-set-header
@@ -1171,7 +1171,7 @@ annotations:
     example_configmap: |-
       # single header
       response-set-header: Cache-Control "no-store,no-cache,private"
-  
+
       # multiple headers
       response-set-header: |
         Cache-Control "no-store,no-cache,private"
@@ -1179,7 +1179,7 @@ annotations:
     example_ingress: |-
       # single header
       haproxy.org/response-set-header: Cache-Control "no-store,no-cache,private"
-    
+
       # multiple headers
       haproxy.org/response-set-header: |
         Cache-Control "no-store,no-cache,private"
@@ -1213,7 +1213,7 @@ annotations:
     values:
     - Secret path following namespace/secretname format.
     applies_to:
-    - service  
+    - service
     - configmap
     - ingress
     version_min: "1.5"
@@ -1231,7 +1231,7 @@ annotations:
     values:
     - Secret path following namespace/secretname format.
     applies_to:
-    - service  
+    - service
     - configmap
     - ingress
     version_min: "1.5"
@@ -1256,7 +1256,7 @@ annotations:
     - configmap
     - ingress
     version_min: "1.5"
-    example: ['server-proto: "h2"']           
+    example: ['server-proto: "h2"']
   - title: server-ssl
     type: bool
     group: ""
@@ -1296,9 +1296,9 @@ annotations:
     dependencies: ""
     default: "42"
     description:
-    - Sets the number of server slots to provision in order for HAProxy to scale 
+    - Sets the number of server slots to provision in order for HAProxy to scale
       dynamically with no reload.
-      If this number is greater than the available endpoints/addresses, the remaining 
+      If this number is greater than the available endpoints/addresses, the remaining
       slots will be disabled (put on stand-by) and ready to be used.
       If this number is lower, the remaining endpoints/addresses will be added after
       scaling the HAProxy backend with a reload.
@@ -1317,7 +1317,7 @@ annotations:
     default: ""
     description:
     - Sets the name of the Kubernetes secret that contains both the TLS key and certificate.
-    tip: 
+    tip:
     - this replaces default certificate
     values:
     - Name of Kubernetes secret
@@ -1394,7 +1394,7 @@ annotations:
     description:
     - Sets the HTTPS port to redirect to when HTTP to HTTPS traffic redirection is enabled  when `ssl-redirect` is true.
     tip:
-    - When setting the HTTPS port value, keep in mind that this is the HTTPS port as seen by the client, not as set on the Ingress Controller. The reason for this distinction lies in the fact that there will probably be some middleware with its own ports mapping between the client and the Ingress Controller. As a consequence, it must be set with a distinct consideration of how the HTTPS port is set on Ingress Controller with the `https-bind-port` command line option. 
+    - When setting the HTTPS port value, keep in mind that this is the HTTPS port as seen by the client, not as set on the Ingress Controller. The reason for this distinction lies in the fact that there will probably be some middleware with its own ports mapping between the client and the Ingress Controller. As a consequence, it must be set with a distinct consideration of how the HTTPS port is set on Ingress Controller with the `https-bind-port` command line option.
     values:
     - Integer HTTPS port number
     applies_to:
@@ -1437,10 +1437,10 @@ annotations:
     example_configmap: |-
       # a single entry
       syslog-server: "address:192.158.1.1, port:514, facility:local0"
-  
+
       # log to stdout
       syslog-server: "address:stdout, format: raw, facility:daemon"
-  
+
       # multiple entries
       syslog-server: |
         address:127.0.0.1, port:514, facility:local0
