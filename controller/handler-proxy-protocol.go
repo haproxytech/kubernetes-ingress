@@ -16,7 +16,6 @@ package controller
 
 import (
 	"net"
-	"strconv"
 	"strings"
 
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/api"
@@ -38,7 +37,7 @@ func (p ProxyProtocol) Update(k store.K8s, cfg *Configuration, api api.HAProxyCl
 		return false, nil
 	}
 	// Validate annotation
-	mapName := "proxy-protocol-" + strconv.Itoa(int(utils.Hash([]byte(annProxyProtocol.Value))))
+	mapName := "proxy-protocol-" + utils.Hash([]byte(annProxyProtocol.Value))
 	for _, address := range strings.Split(annProxyProtocol.Value, ",") {
 		address = strings.TrimSpace(address)
 		if ip := net.ParseIP(address); ip == nil {

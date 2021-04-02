@@ -74,7 +74,7 @@ func (c *HAProxyController) handleBlacklisting(ingress *store.Ingress) {
 		return
 	}
 	// Validate annotation
-	mapName := "blacklist-" + strconv.Itoa(int(utils.Hash([]byte(annBlacklist.Value))))
+	mapName := "blacklist-" + utils.Hash([]byte(annBlacklist.Value))
 	for _, address := range strings.Split(annBlacklist.Value, ",") {
 		address = strings.TrimSpace(address)
 		if ip := net.ParseIP(address); ip == nil {
@@ -109,7 +109,7 @@ func (c *HAProxyController) handleWhitelisting(ingress *store.Ingress) {
 		return
 	}
 	// Validate annotation
-	mapName := "whitelist-" + strconv.Itoa(int(utils.Hash([]byte(annWhitelist.Value))))
+	mapName := "whitelist-" + utils.Hash([]byte(annWhitelist.Value))
 	if !c.cfg.MapFiles.Exists(mapName) {
 		for _, address := range strings.Split(annWhitelist.Value, ",") {
 			address = strings.TrimSpace(address)
@@ -491,7 +491,7 @@ func (c *HAProxyController) handleResponseCorsOrigin(ingress *store.Ingress) (ac
 	logger.Tracef("Ingress %s/%s: Configuring cors-allow-origin", ingress.Namespace, ingress.Name)
 
 	// SetVar rule to capture Origin header
-	originVar := fmt.Sprintf("origin.%d", utils.Hash([]byte(annOrigin.Value)))
+	originVar := fmt.Sprintf("origin.%s", utils.Hash([]byte(annOrigin.Value)))
 	err = c.cfg.HAProxyRules.AddRule(rules.ReqSetVar{
 		Name:       originVar,
 		Scope:      "txn",

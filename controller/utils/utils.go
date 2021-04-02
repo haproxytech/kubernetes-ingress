@@ -15,6 +15,7 @@
 package utils
 
 import (
+	"encoding/hex"
 	"hash/fnv"
 	"os"
 	"strconv"
@@ -28,10 +29,10 @@ func HomeDir() string {
 	return os.Getenv("USERPROFILE") // windows
 }
 
-func Hash(input []byte) uint32 {
-	h := fnv.New32a()
+func Hash(input []byte) string {
+	h := fnv.New128a()
 	_, _ = h.Write(input)
-	return h.Sum32()
+	return hex.EncodeToString(h.Sum([]byte{}))
 }
 
 func PtrInt64(value int64) *int64 {

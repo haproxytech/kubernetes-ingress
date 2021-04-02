@@ -66,7 +66,7 @@ var constLookup = map[RuleType]string{
 type RuleStatus int
 
 // RuleID uniquely identify a HAProxy Rule
-type RuleID uint32
+type RuleID string
 
 //nolint: golint,stylecheck
 const (
@@ -184,7 +184,7 @@ func (r Rules) Refresh(client api.HAProxyClient) (reload bool) {
 					continue
 				}
 				if ftRules.status[id]&INGRESS != 0 {
-					ingressACL = fmt.Sprintf("{ var(%s) -m dom %d }", IngressACLVar, id)
+					ingressACL = fmt.Sprintf("{ var(%s) -m dom %s }", IngressACLVar, id)
 				}
 				err := ruleSet[i].Create(client, &fe, ingressACL)
 				logger.Error(err)
