@@ -38,14 +38,16 @@ func (p ProxyProtocol) Update(k store.K8s, cfg *Configuration, api api.HAProxyCl
 	}
 	// Validate annotation
 	mapName := "proxy-protocol-" + utils.Hash([]byte(annProxyProtocol.Value))
-	for _, address := range strings.Split(annProxyProtocol.Value, ",") {
-		address = strings.TrimSpace(address)
-		if ip := net.ParseIP(address); ip == nil {
-			if _, _, err = net.ParseCIDR(address); err != nil {
-				logger.Errorf("incorrect address '%s' in proxy-protocol annotation", address)
-				continue
+	if !cfg.MapFiles.Exists(mapName) {
+		for _, address := range strings.Split(annProxyProtocol.Value, ",") {
+			address = strings.TrimSpace(address)
+			if ip := net.ParseIP(address); ip == nil {
+				if _, _, err = net.ParseCIDR(address); err != nil {
+					logger.Errorf("incorrect address '%s' in proxy-protocol annotation", address)
+					continue
+				}
+				cfg.MapFiles.AppendRow(mapName, address)
 			}
-			cfg.MapFiles.AppendRow(mapName, address)
 		}
 	}
 	// Configure Annotation
