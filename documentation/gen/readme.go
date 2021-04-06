@@ -34,6 +34,12 @@ var tableFooter = `
 > Service annotations have highest priority. If they are not defined, controller goes one level up until it finds value.
 >
 > This is useful if we want, for instance, to change default behaviour, but want to keep default for some service. etc.
+>
+> In general annotations follow the following rules:
+> - global  annotations can only be used in Configmap
+> - ingress annotations can be used in Ingress and ConfigMap (to configure all ingress resources in use)
+> - service annotations can be used in Service, Ingress (to configure all services used in Ingress) and ConfigMap (to configure all services in use)
+
 
 ### Options
 

@@ -943,6 +943,8 @@ annotations:
     - An integer setting the maximum number of concurrent backend connections
     applies_to:
     - service
+    - ingress
+    - configmap
     version_min: "1.4"
     example: ['pod-maxconn: 30']
   - title: proxy-protocol
@@ -1198,6 +1200,8 @@ annotations:
     - proxy-v2 - Uses PROXY v2
     applies_to:
     - service
+    - ingress
+    - configmap
     version_min: "1.5"
     example: ['send-proxy-protocol: proxy-v2']
   - title: server-ca
