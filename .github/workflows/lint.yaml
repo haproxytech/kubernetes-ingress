@@ -6,8 +6,6 @@ jobs:
     steps:
       - name: Check out code
         uses: actions/checkout@v2
-        with:
-          fetch-depth: 10
       - name: golangci-lint
         uses: docker://haproxytech/linter:1.33 # pre-build docker image - https://github.com/haproxytech/github-actions
         with:

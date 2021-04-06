@@ -7,6 +7,6 @@ jobs:
       - name: Check out code
         uses: actions/checkout@v2
         with:
-          fetch-depth: 10
+          fetch-depth: 0
       - name: check-commit
         uses: docker://haproxytech/check-commit:v2.0.0
