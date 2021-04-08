@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
+	"strings"
 
 	"github.com/haproxytech/kubernetes-ingress/controller/store"
 )
@@ -13,9 +14,14 @@ import (
 type Certificates struct {
 	//Index is secretPath
 	// Value is true if secret is used otherwise false
-	frontend map[string]bool
-	backend  map[string]bool
-	ca       map[string]bool
+	frontend map[string]*cert
+	backend  map[string]*cert
+	ca       map[string]*cert
+}
+
+type cert struct {
+	path  string
+	inUse bool
 }
 
 type SecretType int
@@ -45,9 +51,9 @@ func NewCertificates(caDir, ftDir, bdDir string) *Certificates {
 	backendCertDir = bdDir
 	caCertDir = caDir
 	return &Certificates{
-		frontend: make(map[string]bool),
-		backend:  make(map[string]bool),
-		ca:       make(map[string]bool),
+		frontend: make(map[string]*cert),
+		backend:  make(map[string]*cert),
+		ca:       make(map[string]*cert),
 	}
 }
 
@@ -60,58 +66,63 @@ func (c *Certificates) HandleTLSSecret(k8s store.K8s, secretCtx SecretCtx) (cert
 	if secret.Status == store.DELETED {
 		return "", true, nil
 	}
-	var certs map[string]bool
-	certName := ""
-	var privateKeyNull bool
+
+	var certs map[string]*cert
+	var crt *cert
+	var crtOk, privateKeyNull bool
+	var certName string
 	switch secretCtx.SecretType {
 	case FT_DEFAULT_CERT:
 		// starting filename with "0" makes it first cert to be picked by HAProxy when no SNI matches.
-		certName = fmt.Sprintf("0_%s_%s.pem", secret.Namespace, secret.Name)
+		certName = fmt.Sprintf("0_%s_%s", secret.Namespace, secret.Name)
 		certPath = path.Join(frontendCertDir, certName)
 		certs = c.frontend
 	case FT_CERT:
-		certName = fmt.Sprintf("%s_%s.pem", secret.Namespace, secret.Name)
+		certName = fmt.Sprintf("%s_%s", secret.Namespace, secret.Name)
 		certPath = path.Join(frontendCertDir, certName)
 		certs = c.frontend
 	case BD_CERT:
-		certName = fmt.Sprintf("%s_%s.pem", secret.Namespace, secret.Name)
+		certName = fmt.Sprintf("%s_%s", secret.Namespace, secret.Name)
 		certPath = path.Join(backendCertDir, certName)
 		certs = c.backend
 	case CA_CERT:
-		certName = fmt.Sprintf("%s_%s.pem", secret.Namespace, secret.Name)
+		certName = fmt.Sprintf("%s_%s", secret.Namespace, secret.Name)
 		certPath = path.Join(caCertDir, certName)
 		certs = c.ca
 		privateKeyNull = true
 	default:
 		return "", false, errors.New("unspecified context")
 	}
-	if _, ok := certs[certName]; ok && secret.Status == store.EMPTY {
-		certs[certName] = true
-		return certPath, false, nil
+	crt, crtOk = certs[certName]
+	if crtOk && secret.Status == store.EMPTY {
+		crt.inUse = true
+		return crt.path, false, nil
 	}
-	err = writeSecret(secret, certPath, privateKeyNull)
+	crt = &cert{path: certPath}
+	err = writeSecret(secret, crt, privateKeyNull)
 	if err != nil {
 		return "", false, err
 	}
-	certs[certName] = true
-	return certPath, true, nil
+	crt.inUse = true
+	certs[certName] = crt
+	return crt.path, true, nil
 }
 
 func (c *Certificates) Clean() {
 	for i := range c.frontend {
-		c.frontend[i] = false
+		c.frontend[i].inUse = false
 	}
 	for i := range c.backend {
-		c.backend[i] = false
+		c.backend[i].inUse = false
 	}
 	for i := range c.ca {
-		c.ca[i] = false
+		c.ca[i].inUse = false
 	}
 }
 
 func (c *Certificates) FrontendCertsEnabled() bool {
-	for _, used := range c.frontend {
-		if used {
+	for _, cert := range c.frontend {
+		if cert.inUse {
 			return true
 		}
 	}
@@ -119,7 +130,6 @@ func (c *Certificates) FrontendCertsEnabled() bool {
 }
 
 // Refresh removes unused certs from HAProxyCertDir
-// Certificates will remain in HAProxy memory until next Reload
 func (c *Certificates) Refresh() (reload bool) {
 	reload = refreshCerts(c.frontend, frontendCertDir)
 	reload = refreshCerts(c.backend, backendCertDir) || reload
@@ -127,7 +137,7 @@ func (c *Certificates) Refresh() (reload bool) {
 	return
 }
 
-func refreshCerts(certs map[string]bool, certDir string) (reload bool) {
+func refreshCerts(certs map[string]*cert, certDir string) (reload bool) {
 	files, err := ioutil.ReadDir(certDir)
 	if err != nil {
 		logger.Error(err)
@@ -138,10 +148,11 @@ func refreshCerts(certs map[string]bool, certDir string) (reload bool) {
 			continue
 		}
 		filename := f.Name()
-		used := certs[filename]
-		if !used {
+		// certificate file name should be already in the format: certName.pem
+		certName := strings.Split(filename, ".")[0]
+		if !certs[certName].inUse {
 			logger.Error(os.Remove(path.Join(certDir, filename)))
-			delete(certs, filename)
+			delete(certs, certName)
 			reload = true
 			logger.Debug("Unused certificates removed, reload required")
 		}
@@ -149,21 +160,38 @@ func refreshCerts(certs map[string]bool, certDir string) (reload bool) {
 	return
 }
 
-func writeSecret(secret *store.Secret, certPath string, privateKeyNull bool) (err error) {
-	for _, k := range []string{"tls", "rsa", "ecdsa"} {
-		key := secret.Data[k+".key"]
-		if key == nil {
-			if privateKeyNull {
-				key = []byte("")
-			} else {
-				return fmt.Errorf("private key missing in %s/%s", secret.Namespace, secret.Name)
+func writeSecret(secret *store.Secret, c *cert, privateKeyNull bool) (err error) {
+	var crtValue, keyValue []byte
+	var crtOk, keyOk, pemOk bool
+	var certPath string
+	if privateKeyNull {
+		crtValue, crtOk = secret.Data["tls.crt"]
+		if !crtOk {
+			return fmt.Errorf("certificate missing in %s/%s", secret.Namespace, secret.Name)
+		}
+		c.path = fmt.Sprintf("%s.pem", c.path)
+		return writeCert(c.path, []byte(""), crtValue)
+	}
+	for _, k := range []string{"tls", "rsa", "ecdsa", "dsa"} {
+		keyValue, keyOk = secret.Data[k+".key"]
+		crtValue, crtOk = secret.Data[k+".crt"]
+		if keyOk && crtOk {
+			pemOk = true
+			certPath = fmt.Sprintf("%s.pem", c.path)
+			if k != "tls" {
+				// HAProxy "cert bundle"
+				certPath = fmt.Sprintf("%s.%s", certPath, k)
+			}
+			err = writeCert(certPath, keyValue, crtValue)
+			if err != nil {
+				return err
 			}
 		}
-		crt := secret.Data[k+".crt"]
-		if len(crt) != 0 {
-			return writeCert(certPath, key, crt)
-		}
 	}
+	if !pemOk {
+		return fmt.Errorf("certificate or private key missing in %s/%s", secret.Namespace, secret.Name)
+	}
+	c.path = certPath
 	return nil
 }
 
