@@ -54,7 +54,7 @@ func NewMapFiles(path string) Maps {
 }
 
 func (m Maps) Exists(name string) bool {
-	return m[name] != nil
+	return m[name] != nil && len(m[name].rows) != 0
 }
 
 // AppendRow appends row to mapFile
