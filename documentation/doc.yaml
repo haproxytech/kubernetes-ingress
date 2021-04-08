@@ -341,19 +341,27 @@ groups:
       - [SSL offloading/decryption](#ssl-offloading) will be automatically enabled if valid SSL certificates are provided.
   ssl-offloading:
     header: |
-      - Controller will look into kubernetes tls secrets for valid SSL certificates to configure in HAProxy.
+      - Controller will look into kubernetes secrets for valid SSL certificates to configure in HAProxy.
       - A default certificate can be provided via controller [argument](controller.md) `--default-ssl-certificate`=\<namespace\>/\<secret\> or ConfigMap annotation [ssl-certificate](#ssl-certificate).
       - Certificates can be defined in Ingress object: `spec.tls[].secretName`
     footer: |
-      - Single certificate secret can contain two items:
-        - tls.key
-        - tls.crt
-      - Certificate secret with `rsa` and `ecdsa` certificates:
-        - :information_source: only one certificate (rsa/ecdsa) is also acceptable setup
+      - A secret can be of `tls` type created via (most common):
+        ```
+        kubectl create secret tls my-secret --key=<key-path> --cert=<cert-path>
+        ```
+      - A secret can be of `generic` type if we want to have a certificate in  multiple formats:
+        ```
+        kubectl create secret generic my-secret --from-file=rsa.key=<rsa-key-path> --from-file=rsa.crt=<rsa-cert-path> \
+                                                --from-file=ecdsa.key=<ecdsa-key-path> --from-file=ecdsa.crt=<ecdsa-cert-path>
+
+        ```
+        The only possible keys are the following,
         - rsa.key
         - rsa.crt
         - ecdsa.key
         - ecdsa.crt
+        - dsa.key
+        - dsa.crt
 annotations:
   - title: auth-type
     type: string
