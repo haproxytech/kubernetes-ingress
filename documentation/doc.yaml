@@ -345,7 +345,7 @@ groups:
       - A default certificate can be provided via controller [argument](controller.md) `--default-ssl-certificate`=\<namespace\>/\<secret\> or ConfigMap annotation [ssl-certificate](#ssl-certificate).
       - Certificates can be defined in Ingress object: `spec.tls[].secretName`
     footer: |
-      - A secret can be of `tls` type created via (most common):
+      - A secret can be of `tls` type (most common) created via :
         ```
         kubectl create secret tls my-secret --key=<key-path> --cert=<cert-path>
         ```
@@ -501,6 +501,24 @@ annotations:
     example:
     - 'check: "true"'
     - 'check-interval: "1m"'
+  - title: clean-certs
+    type: bool
+    group: 
+    dependencies: 
+    default: "true"
+    description:
+    - Switches certificates clean up.
+    - By default controller cleans up unused certificates in haproxy cert directory.
+    - In the case where certificates may be handled by a side-car container, it is useful not to remove certificates unkown to controller.
+    tip: []
+    values:
+    - "true"
+    - "false"
+    applies_to:
+    - configmap
+    version_min: "1.6"
+    example:
+    - 'clean-certs: "false"'
   - title: client-ca
     type: string
     group: authentication

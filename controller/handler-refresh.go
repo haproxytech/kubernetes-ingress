@@ -17,15 +17,22 @@ package controller
 import (
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/api"
 	"github.com/haproxytech/kubernetes-ingress/controller/store"
+	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 )
 
 type RefreshHandler struct{}
 
 func (h RefreshHandler) Update(k store.K8s, cfg *Configuration, api api.HAProxyClient) (reload bool, err error) {
-	h.clearBackends(api, cfg)
+	cleanCrts := true
+	if cleanCrtAnn, _ := k.GetValueFromAnnotations("clean-certs", k.ConfigMaps.Main.Annotations); cleanCrtAnn != nil && cleanCrtAnn.Status != DELETED {
+		cleanCrts, err = utils.GetBoolValue(cleanCrtAnn.Value, "clean-certs")
+	}
+	if cleanCrts {
+		reload = cfg.Certificates.Refresh() || reload
+	}
 	reload = cfg.HAProxyRules.Refresh(api) || reload
 	reload = cfg.MapFiles.Refresh(api) || reload
-	reload = cfg.Certificates.Refresh() || reload
+	h.clearBackends(api, cfg)
 	return
 }
 
