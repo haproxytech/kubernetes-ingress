@@ -47,8 +47,8 @@ func (p ProxyProtocol) Update(k store.K8s, cfg *Configuration, api api.HAProxyCl
 					logger.Errorf("incorrect address '%s' in proxy-protocol annotation", address)
 					continue
 				}
-				cfg.MapFiles.AppendRow(mapName, address)
 			}
+			cfg.MapFiles.AppendRow(mapName, address)
 		}
 	}
 	// Configure Annotation
