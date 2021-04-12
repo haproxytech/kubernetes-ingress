@@ -98,12 +98,7 @@ func AddCustomRoute(route Route, routeACLAnn store.StringW, api api.HAProxyClien
 		logger.Debugf("Custom Route to backend '%s' deleted, reload required", route.BackendName)
 		return
 	}
-	if !CustomRoutes {
-		if err = customRouteInit(api); err != nil {
-			return
-		}
-		CustomRoutes = true
-	}
+	CustomRoutes = true
 	var routeCond string
 	if route.Host != "" {
 		routeCond = fmt.Sprintf("{ var(txn.host) %s } ", route.Host)
@@ -135,7 +130,7 @@ func AddCustomRoute(route Route, routeACLAnn store.StringW, api api.HAProxyClien
 	return reload, err
 }
 
-func customRouteInit(api api.HAProxyClient) (err error) {
+func RoutesReset(api api.HAProxyClient) (err error) {
 	for _, frontend := range []string{FrontendHTTP, FrontendHTTPS} {
 		api.BackendSwitchingRuleDeleteAll(frontend)
 		err = api.BackendSwitchingRuleCreate(frontend, models.BackendSwitchingRule{

@@ -131,9 +131,9 @@ func (c *HAProxyController) setDefaultService(ingress *store.Ingress, frontends 
 			}
 			ftReload = true
 			logger.Debugf("Setting '%s' default backend to '%s'", frontendName, backendName)
-			c.cfg.ActiveBackends[backendName] = struct{}{}
 		}
 	}
+	c.cfg.ActiveBackends[backendName] = struct{}{}
 	endpointsReload := svc.HandleEndpoints(c.Client, c.Store, c.cfg.Certificates)
 	reload = bdReload || ftReload || endpointsReload
 	return reload, err

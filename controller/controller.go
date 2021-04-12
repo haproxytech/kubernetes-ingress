@@ -141,6 +141,11 @@ func (c *HAProxyController) updateHAProxy() {
 
 	reload, restart := c.handleGlobalConfig()
 
+	if route.CustomRoutes {
+		logger.Error(route.RoutesReset(c.Client))
+		route.CustomRoutes = false
+	}
+
 	for _, namespace := range c.Store.Namespaces {
 		if !namespace.Relevant {
 			continue
@@ -445,7 +450,6 @@ func (c *HAProxyController) clean(failedSync bool) {
 		c.PublishService.Status = EMPTY
 	}
 	c.cfg.SSLPassthrough = false
-	route.CustomRoutes = false
 	if !failedSync {
 		c.Store.Clean()
 	}

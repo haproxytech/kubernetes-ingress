@@ -45,10 +45,11 @@ func (c *Configuration) Init() {
 // Clean cleans all the statuses of various data that was changed
 // deletes them completely or just resets them if needed
 func (c *Configuration) Clean() {
+	rateLimitTables = []string{}
+	c.ActiveBackends = make(map[string]struct{})
 	c.MapFiles.Clean()
 	c.Certificates.Clean()
 	logger.Panic(c.HAProxyRulesInit())
-	rateLimitTables = []string{}
 }
 
 func (c *Configuration) HAProxyRulesInit() error {
