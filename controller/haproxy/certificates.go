@@ -150,7 +150,8 @@ func refreshCerts(certs map[string]*cert, certDir string) (reload bool) {
 		filename := f.Name()
 		// certificate file name should be already in the format: certName.pem
 		certName := strings.Split(filename, ".")[0]
-		if !certs[certName].inUse {
+		crt, crtOk := certs[certName]
+		if !crtOk || !crt.inUse {
 			logger.Error(os.Remove(path.Join(certDir, filename)))
 			delete(certs, certName)
 			reload = true
