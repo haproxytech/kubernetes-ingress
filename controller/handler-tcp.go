@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"strings"
 
+	config "github.com/haproxytech/kubernetes-ingress/controller/configuration"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/api"
 	"github.com/haproxytech/kubernetes-ingress/controller/store"
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
@@ -13,6 +14,7 @@ import (
 
 type TCPHandler struct {
 	setDefaultService func(ingress *store.Ingress, frontends []string) (reload bool, err error)
+	certDir           string
 }
 
 type tcpSvcParser struct {
@@ -21,7 +23,7 @@ type tcpSvcParser struct {
 	sslOffload bool
 }
 
-func (t TCPHandler) Update(k store.K8s, cfg *Configuration, api api.HAProxyClient) (reload bool, err error) {
+func (t TCPHandler) Update(k store.K8s, cfg *config.ControllerCfg, api api.HAProxyClient) (reload bool, err error) {
 	if k.ConfigMaps.TCPServices == nil {
 		return false, nil
 	}
@@ -120,7 +122,7 @@ func (t TCPHandler) createTCPFrontend(api api.HAProxyClient, frontendName, bindP
 		V4v6:    true,
 	}))
 	if sslOffload {
-		errors.Add(api.FrontendEnableSSLOffload(frontend.Name, FrontendCertDir, false))
+		errors.Add(api.FrontendEnableSSLOffload(frontend.Name, t.certDir, false))
 	}
 	if errors.Result() != nil {
 		err = fmt.Errorf("error configuring tcp frontend: %w", err)
@@ -137,7 +139,7 @@ func (t TCPHandler) updateTCPFrontend(api api.HAProxyClient, frontend models.Fro
 		return
 	}
 	if !binds[0].Ssl && p.sslOffload {
-		err = api.FrontendEnableSSLOffload(frontend.Name, FrontendCertDir, false)
+		err = api.FrontendEnableSSLOffload(frontend.Name, t.certDir, false)
 		if err != nil {
 			err = fmt.Errorf("failed to enable SSL offload: %w", err)
 			return

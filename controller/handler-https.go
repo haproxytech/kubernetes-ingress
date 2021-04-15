@@ -20,6 +20,7 @@ import (
 
 	"github.com/haproxytech/models/v2"
 
+	config "github.com/haproxytech/kubernetes-ingress/controller/configuration"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/api"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/rules"
@@ -70,7 +71,7 @@ func (h HTTPS) bindList(passhthrough bool) (binds []models.Bind) {
 	return binds
 }
 
-func (h HTTPS) handleClientTLSAuth(k store.K8s, cfg *Configuration, api api.HAProxyClient) (reload bool, err error) {
+func (h HTTPS) handleClientTLSAuth(k store.K8s, cfg *config.ControllerCfg, api api.HAProxyClient) (reload bool, err error) {
 	annTLSAuth, _ := k.GetValueFromAnnotations("client-ca", k.ConfigMaps.Main.Annotations)
 	if annTLSAuth == nil {
 		return false, nil
@@ -120,7 +121,7 @@ func (h HTTPS) handleClientTLSAuth(k store.K8s, cfg *Configuration, api api.HAPr
 	return true, nil
 }
 
-func (h HTTPS) Update(k store.K8s, cfg *Configuration, api api.HAProxyClient) (reload bool, err error) {
+func (h HTTPS) Update(k store.K8s, cfg *config.ControllerCfg, api api.HAProxyClient) (reload bool, err error) {
 	if !h.enabled {
 		logger.Debugf("Cannot proceed with SSL Passthrough update, HTTPS is disabled")
 		return false, nil
@@ -164,7 +165,7 @@ func (h HTTPS) Update(k store.K8s, cfg *Configuration, api api.HAProxyClient) (r
 	return reload, nil
 }
 
-func (h HTTPS) enableSSLPassthrough(cfg *Configuration, api api.HAProxyClient) (err error) {
+func (h HTTPS) enableSSLPassthrough(cfg *config.ControllerCfg, api api.HAProxyClient) (err error) {
 	// Create TCP frontend for ssl-passthrough
 	frontend := models.Frontend{
 		Name:           FrontendSSL,
@@ -203,7 +204,7 @@ func (h HTTPS) enableSSLPassthrough(cfg *Configuration, api api.HAProxyClient) (
 	return errors.Result()
 }
 
-func (h HTTPS) disableSSLPassthrough(cfg *Configuration, api api.HAProxyClient) (err error) {
+func (h HTTPS) disableSSLPassthrough(cfg *config.ControllerCfg, api api.HAProxyClient) (err error) {
 	err = api.FrontendDelete(FrontendSSL)
 	if err != nil {
 		return err
@@ -231,7 +232,7 @@ func (h HTTPS) toggleSSLPassthrough(passthrough, offload bool, api api.HAProxyCl
 	return nil
 }
 
-func (h HTTPS) sslPassthroughRules(k store.K8s, cfg *Configuration) error {
+func (h HTTPS) sslPassthroughRules(k store.K8s, cfg *config.ControllerCfg) error {
 	inspectTimeout := utils.PtrInt64(5000)
 	annTimeout, _ := k.GetValueFromAnnotations("timeout-client", k.ConfigMaps.Main.Annotations)
 	if annTimeout != nil {

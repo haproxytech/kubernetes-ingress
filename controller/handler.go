@@ -15,19 +15,20 @@
 package controller
 
 import (
+	config "github.com/haproxytech/kubernetes-ingress/controller/configuration"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/api"
 	"github.com/haproxytech/kubernetes-ingress/controller/store"
 )
 
 type UpdateHandler interface {
-	Update(k store.K8s, cfg *Configuration, api api.HAProxyClient) (reload bool, err error)
+	Update(k store.K8s, cfg *config.ControllerCfg, api api.HAProxyClient) (reload bool, err error)
 }
 
 func (c *HAProxyController) initHandlers() {
 	c.UpdateHandlers = []UpdateHandler{
 		HTTPS{
 			enabled:  !c.osArgs.DisableHTTPS,
-			certDir:  FrontendCertDir,
+			certDir:  c.Cfg.Env.FrontendCertDir,
 			ipv4:     !c.osArgs.DisableIPV4,
 			addrIpv4: c.osArgs.IPV4BindAddr,
 			addrIpv6: c.osArgs.IPV6BindAddr,
@@ -38,6 +39,7 @@ func (c *HAProxyController) initHandlers() {
 		ErrorFile{},
 		TCPHandler{
 			setDefaultService: c.setDefaultService,
+			certDir:           c.Cfg.Env.FrontendCertDir,
 		},
 		RefreshHandler{},
 	}

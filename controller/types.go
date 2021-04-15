@@ -60,20 +60,4 @@ const (
 	MODIFIED = store.MODIFIED
 )
 
-var (
-	HAProxyBinary   string
-	MainCFGFile     string
-	CfgDir          string
-	CertDir         string
-	FrontendCertDir string
-	BackendCertDir  string
-	CaCertDir       string
-	StateDir        string
-	MapDir          string
-	ErrFileDir      string
-	RuntimeSocket   string
-	PIDFile         string
-	TransactionDir  string
-)
-
 var logger = utils.GetLogger()

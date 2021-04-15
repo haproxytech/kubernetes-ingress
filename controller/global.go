@@ -84,7 +84,7 @@ func (c *HAProxyController) handleDefaultCert() (reload bool) {
 	if secretAnn == nil {
 		return false
 	}
-	crt, updated, _ := c.cfg.Certificates.HandleTLSSecret(c.Store, haproxy.SecretCtx{
+	crt, updated, _ := c.Cfg.Certificates.HandleTLSSecret(c.Store, haproxy.SecretCtx{
 		SecretPath: secretAnn.Value,
 		SecretType: haproxy.FT_DEFAULT_CERT,
 	})

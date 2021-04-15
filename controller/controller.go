@@ -25,6 +25,7 @@ import (
 	"github.com/haproxytech/models/v2"
 	"k8s.io/apimachinery/pkg/watch"
 
+	config "github.com/haproxytech/kubernetes-ingress/controller/configuration"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/api"
 	"github.com/haproxytech/kubernetes-ingress/controller/route"
@@ -40,7 +41,7 @@ type HAProxyController struct {
 	IngressClass      string
 	EmptyIngressClass bool
 	ready             bool
-	cfg               Configuration
+	Cfg               config.ControllerCfg
 	osArgs            utils.OSArgs
 	Client            api.HAProxyClient
 	eventChan         chan SyncDataEvent
@@ -68,8 +69,14 @@ func (c *HAProxyController) clientAPIClosure(fn func() error) (err error) {
 
 // Start initializes and runs HAProxyController
 func (c *HAProxyController) Start(osArgs utils.OSArgs) {
+	var k8s *K8s
+	var err error
+
 	c.osArgs = osArgs
 	logger.SetLevel(osArgs.LogLevel.LogLevel)
+	if err = c.Cfg.Init(); err != nil {
+		logger.Panic(err)
+	}
 	c.haproxyInitialize()
 	c.initHandlers()
 
@@ -90,9 +97,6 @@ func (c *HAProxyController) Start(osArgs utils.OSArgs) {
 			Addresses: []string{},
 		}
 	}
-
-	var k8s *K8s
-	var err error
 
 	if osArgs.External {
 		kubeconfig := filepath.Join(utils.HomeDir(), ".kube", "config")
@@ -174,7 +178,7 @@ func (c *HAProxyController) updateHAProxy() {
 				if tls.Status == store.DELETED {
 					continue
 				}
-				crt, updated, _ := c.cfg.Certificates.HandleTLSSecret(c.Store, haproxy.SecretCtx{
+				crt, updated, _ := c.Cfg.Certificates.HandleTLSSecret(c.Store, haproxy.SecretCtx{
 					DefaultNS:  ingress.Namespace,
 					SecretPath: tls.SecretName.Value,
 					SecretType: haproxy.FT_CERT,
@@ -206,7 +210,7 @@ func (c *HAProxyController) updateHAProxy() {
 	}
 
 	for _, handler := range c.UpdateHandlers {
-		r, errHandler := handler.Update(c.Store, &c.cfg, c.Client)
+		r, errHandler := handler.Update(c.Store, &c.Cfg, c.Client)
 		logger.Error(errHandler)
 		reload = reload || r
 	}
@@ -270,62 +274,9 @@ func (c *HAProxyController) setToReady() {
 // haproxyInitialize initializes HAProxy environment and its API client.
 func (c *HAProxyController) haproxyInitialize() {
 	var err error
-	// HAProxy executable
-	HAProxyBinary = "/usr/local/sbin/haproxy"
-	if c.osArgs.Program != "" {
-		HAProxyBinary = c.osArgs.Program
-	}
-	_, err = os.Stat(HAProxyBinary)
-	if err != nil && !c.osArgs.Test {
-		logger.Panic(err)
-	}
-	// Initialize files and directories
-	if MainCFGFile == "" {
-		MainCFGFile = filepath.Join(CfgDir, "haproxy.cfg")
-	}
-	if _, err = os.Stat(MainCFGFile); err != nil {
-		logger.Panic(err)
-	}
-	if PIDFile == "" {
-		PIDFile = "/var/run/haproxy.pid"
-	}
-	if RuntimeSocket == "" {
-		RuntimeSocket = "/var/run/haproxy-runtime-api.sock"
-	}
-	if CertDir == "" {
-		CertDir = filepath.Join(CfgDir, "certs")
-	}
-
-	FrontendCertDir = filepath.Join(CertDir, "frontend")
-	BackendCertDir = filepath.Join(CertDir, "backend")
-	CaCertDir = filepath.Join(CertDir, "ca")
-
-	if MapDir == "" {
-		MapDir = filepath.Join(CfgDir, "maps")
-	}
-	if ErrFileDir == "" {
-		ErrFileDir = filepath.Join(CfgDir, "errors")
-	}
-	if StateDir == "" {
-		StateDir = "/var/state/haproxy/"
-	}
-	if TransactionDir != "" {
-		err = os.MkdirAll(TransactionDir, 0755)
-		if err != nil {
-			logger.Panic(err)
-		}
-	}
-	for _, d := range []string{CertDir, FrontendCertDir, BackendCertDir, CaCertDir, MapDir, ErrFileDir, StateDir} {
-		err = os.MkdirAll(d, 0755)
-		if err != nil {
-			logger.Panic(err)
-		}
-	}
-	_, err = os.Create(filepath.Join(StateDir, "global"))
-	logger.Err(err)
 
 	// Initialize HAProxy client API
-	c.Client, err = api.Init(TransactionDir, MainCFGFile, HAProxyBinary, RuntimeSocket)
+	c.Client, err = api.Init(c.Cfg.Env.TransactionDir, c.Cfg.Env.MainCFGFile, c.Cfg.Env.HAProxyBinary, c.Cfg.Env.RuntimeSocket)
 	if err != nil {
 		logger.Panic(err)
 	}
@@ -336,22 +287,23 @@ func (c *HAProxyController) haproxyInitialize() {
 				// Configure runtime socket
 				c.Client.RuntimeSocket(nil),
 				c.Client.RuntimeSocket(&types.Socket{
-					Path: RuntimeSocket,
+					Path: c.Cfg.Env.RuntimeSocket,
 					Params: []params.BindOption{
 						&params.BindOptionDoubleWord{Name: "expose-fd", Value: "listeners"},
 						&params.BindOptionValue{Name: "level", Value: "admin"},
 					},
 				}),
 				// Configure pidfile
-				c.Client.PIDFile(&types.StringC{Value: PIDFile}),
+				c.Client.PIDFile(&types.StringC{Value: c.Cfg.Env.PIDFile}),
 				// Configure server-state-base
-				c.Client.ServerStateBase(&types.StringC{Value: StateDir}),
+				c.Client.ServerStateBase(&types.StringC{Value: c.Cfg.Env.StateDir}),
 			)
 			return errors.Result()
 		}))
 	}
 
-	cmd := exec.Command(HAProxyBinary, "-v")
+	//nolint:gosec //checks on HAProxyBinary should be done in configuration module.
+	cmd := exec.Command(c.Cfg.Env.HAProxyBinary, "-v")
 	haproxyInfo, err := cmd.Output()
 	if err == nil {
 		haproxyInfo := strings.Split(string(haproxyInfo), "\n")
@@ -360,14 +312,12 @@ func (c *HAProxyController) haproxyInitialize() {
 		logger.Error(err)
 	}
 
-	logger.Printf("Starting HAProxy with %s", MainCFGFile)
+	logger.Printf("Starting HAProxy with %s", c.Cfg.Env.MainCFGFile)
 	logger.Panic(c.haproxyService("start"))
 
 	hostname, err := os.Hostname()
 	logger.Error(err)
 	logger.Printf("Running on %s", hostname)
-
-	c.cfg.Init()
 }
 
 // handleBind configures Frontends bind lines
@@ -435,21 +385,21 @@ func (c *HAProxyController) handlePprof() (err error) {
 			Path:           "/debug/pprof",
 			ExactPathMatch: false,
 		},
-	}, c.cfg.MapFiles)
+	}, c.Cfg.MapFiles)
 	if err != nil {
 		return err
 	}
-	c.cfg.ActiveBackends[pprofBackend] = struct{}{}
+	c.Cfg.ActiveBackends[pprofBackend] = struct{}{}
 	return nil
 }
 
 // clean controller state
 func (c *HAProxyController) clean(failedSync bool) {
-	c.cfg.Clean()
+	logger.Error(c.Cfg.Clean())
 	if c.PublishService != nil {
 		c.PublishService.Status = EMPTY
 	}
-	c.cfg.SSLPassthrough = false
+	c.Cfg.SSLPassthrough = false
 	if !failedSync {
 		c.Store.Clean()
 	}

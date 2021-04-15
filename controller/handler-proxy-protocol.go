@@ -18,6 +18,7 @@ import (
 	"net"
 	"strings"
 
+	config "github.com/haproxytech/kubernetes-ingress/controller/configuration"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/api"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/rules"
 	"github.com/haproxytech/kubernetes-ingress/controller/store"
@@ -26,7 +27,7 @@ import (
 
 type ProxyProtocol struct{}
 
-func (p ProxyProtocol) Update(k store.K8s, cfg *Configuration, api api.HAProxyClient) (reload bool, err error) {
+func (p ProxyProtocol) Update(k store.K8s, cfg *config.ControllerCfg, api api.HAProxyClient) (reload bool, err error) {
 	//  Get annotation status
 	annProxyProtocol, _ := k.GetValueFromAnnotations("proxy-protocol", k.ConfigMaps.Main.Annotations)
 	if annProxyProtocol == nil {

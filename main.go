@@ -25,6 +25,7 @@ import (
 	_ "net/http/pprof"
 
 	c "github.com/haproxytech/kubernetes-ingress/controller"
+	config "github.com/haproxytech/kubernetes-ingress/controller/configuration"
 	"github.com/haproxytech/kubernetes-ingress/controller/store"
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 	"github.com/jessevdk/go-flags"
@@ -110,12 +111,23 @@ func main() {
 	logger.Debugf("Kubernetes Informers resync period: %s", osArgs.CacheResyncPeriod.String())
 	logger.Printf("Controller sync period: %s\n", osArgs.SyncPeriod.String())
 
-	c.CfgDir = "/etc/haproxy/"
+	cfg := config.ControllerCfg{
+		Env: config.Env{
+			HAProxyBinary: "/usr/local/sbin/haproxy",
+			CfgDir:        "/etc/haproxy/",
+			RuntimeDir:    "/var/run",
+			StateDir:      "/var/state/haproxy/",
+		},
+	}
 	if osArgs.External {
-		setupHAProxyEnv(osArgs)
+		cfg = setupHAProxyEnv(osArgs)
+	}
+	if osArgs.Program != "" {
+		cfg.Env.HAProxyBinary = osArgs.Program
 	}
 
 	controller := c.HAProxyController{
+		Cfg:               cfg,
 		IngressClass:      osArgs.IngressClass,
 		EmptyIngressClass: osArgs.EmptyIngressClass,
 	}

@@ -21,34 +21,37 @@ import (
 	"path/filepath"
 
 	"github.com/google/renameio"
-	c "github.com/haproxytech/kubernetes-ingress/controller"
+	config "github.com/haproxytech/kubernetes-ingress/controller/configuration"
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 )
 
 // When controller is not running on a containerized
 // environment (out of Kubernetes)
-func setupHAProxyEnv(osArgs utils.OSArgs) {
+func setupHAProxyEnv(osArgs utils.OSArgs) config.ControllerCfg {
 	logger := utils.GetLogger()
 	logger.Print("Running Controller out of K8s cluster")
 	logger.FileName = true
-	c.CfgDir = "/tmp/haproxy-ingress/etc"
-	runtimeDir := "/tmp/haproxy-ingress/run"
+	cfg := config.ControllerCfg{
+		Env: config.Env{
+			HAProxyBinary: "/usr/local/sbin/haproxy",
+			MainCFGFile:   "/tmp/haproxy-ingress/etc/haproxy.cfg",
+			CfgDir:        "/tmp/haproxy-ingress/etc",
+			RuntimeDir:    "/tmp/haproxy-ingress/run",
+			StateDir:      "/tmp/haproxy-ingress/state",
+		},
+	}
 	if osArgs.CfgDir != "" {
-		c.CfgDir = osArgs.CfgDir
+		cfg.Env.CfgDir = osArgs.CfgDir
 	}
 	if osArgs.RuntimeDir != "" {
-		runtimeDir = osArgs.RuntimeDir
+		cfg.Env.RuntimeDir = osArgs.RuntimeDir
 	}
-	if err := os.MkdirAll(c.CfgDir, 0755); err != nil {
+	if err := os.MkdirAll(cfg.Env.CfgDir, 0755); err != nil {
 		logger.Panic(err)
 	}
-	if err := os.MkdirAll(runtimeDir, 0755); err != nil {
+	if err := os.MkdirAll(cfg.Env.RuntimeDir, 0755); err != nil {
 		logger.Panic(err)
 	}
-	c.TransactionDir = path.Join(c.CfgDir, "transactions")
-	c.StateDir = runtimeDir
-	c.RuntimeSocket = path.Join(runtimeDir, "haproxy-runtime-api.sock")
-	c.PIDFile = path.Join(runtimeDir, "haproxy.pid")
 
 	// Try to copy original file if current directory is project directory
 	// Otherwise check if haproxy.cfg is already in config-dir
@@ -57,16 +60,16 @@ func setupHAProxyEnv(osArgs utils.OSArgs) {
 		logger.Panic(err)
 	}
 	logger.Debug(dir)
-	cfgFile := path.Join(c.CfgDir, "haproxy.cfg")
 	origin := path.Join(dir, "fs/etc/haproxy/haproxy.cfg")
 	_, err = os.Stat(origin)
 	if err != nil {
-		if _, err = os.Stat(cfgFile); err != nil {
-			logger.Panicf("%s not found", cfgFile)
+		if _, err = os.Stat(cfg.Env.MainCFGFile); err != nil {
+			logger.Panicf("%s not found", cfg.Env.MainCFGFile)
 		}
-	} else if err = copyFile(origin, cfgFile); err != nil {
+	} else if err = copyFile(origin, cfg.Env.MainCFGFile); err != nil {
 		logger.Panic(err)
 	}
+	return cfg
 }
 
 func copyFile(src, dst string) (err error) {

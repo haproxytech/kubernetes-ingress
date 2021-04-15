@@ -20,6 +20,7 @@ import (
 
 	"github.com/google/renameio"
 	"github.com/haproxytech/config-parser/v3/types"
+	config "github.com/haproxytech/kubernetes-ingress/controller/configuration"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/api"
 	"github.com/haproxytech/kubernetes-ingress/controller/store"
 )
@@ -29,7 +30,7 @@ type ErrorFile struct {
 	modified       bool
 }
 
-func (e ErrorFile) Update(k store.K8s, cfg *Configuration, api api.HAProxyClient) (reload bool, err error) {
+func (e ErrorFile) Update(k store.K8s, cfg *config.ControllerCfg, api api.HAProxyClient) (reload bool, err error) {
 	if k.ConfigMaps.Errorfiles == nil {
 		return false, nil
 	}
@@ -37,7 +38,7 @@ func (e ErrorFile) Update(k store.K8s, cfg *Configuration, api api.HAProxyClient
 	var codes = [15]string{"200", "400", "401", "403", "404", "405", "407", "408", "410", "425", "429", "500", "502", "503", "504"}
 
 	for code, value := range k.ConfigMaps.Errorfiles.Annotations {
-		filePath := filepath.Join(ErrFileDir, code)
+		filePath := filepath.Join(cfg.Env.ErrFileDir, code)
 		switch value.Status {
 		case EMPTY:
 			e.httpErrorCodes = append(e.httpErrorCodes, code)
@@ -69,15 +70,15 @@ func (e ErrorFile) Update(k store.K8s, cfg *Configuration, api api.HAProxyClient
 		}
 	}
 	if e.modified {
-		return e.updateAPI(api), nil
+		return e.updateAPI(api, cfg.Env.ErrFileDir), nil
 	}
 	return false, nil
 }
 
-func (e ErrorFile) updateAPI(api api.HAProxyClient) (reload bool) {
+func (e ErrorFile) updateAPI(api api.HAProxyClient, errFileDir string) (reload bool) {
 	logger.Error(api.DefaultErrorFile(nil, -1))
 	for index, code := range e.httpErrorCodes {
-		err := api.DefaultErrorFile(&types.ErrorFile{Code: code, File: filepath.Join(ErrFileDir, code)}, index)
+		err := api.DefaultErrorFile(&types.ErrorFile{Code: code, File: filepath.Join(errFileDir, code)}, index)
 
 		if err == nil {
 			reload = true

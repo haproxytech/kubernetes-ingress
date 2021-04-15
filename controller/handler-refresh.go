@@ -15,6 +15,7 @@
 package controller
 
 import (
+	config "github.com/haproxytech/kubernetes-ingress/controller/configuration"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/api"
 	"github.com/haproxytech/kubernetes-ingress/controller/store"
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
@@ -22,7 +23,7 @@ import (
 
 type RefreshHandler struct{}
 
-func (h RefreshHandler) Update(k store.K8s, cfg *Configuration, api api.HAProxyClient) (reload bool, err error) {
+func (h RefreshHandler) Update(k store.K8s, cfg *config.ControllerCfg, api api.HAProxyClient) (reload bool, err error) {
 	cleanCrts := true
 	if cleanCrtAnn, _ := k.GetValueFromAnnotations("clean-certs", k.ConfigMaps.Main.Annotations); cleanCrtAnn != nil && cleanCrtAnn.Status != DELETED {
 		cleanCrts, err = utils.GetBoolValue(cleanCrtAnn.Value, "clean-certs")
@@ -37,13 +38,13 @@ func (h RefreshHandler) Update(k store.K8s, cfg *Configuration, api api.HAProxyC
 }
 
 // Remove unused backends
-func (h RefreshHandler) clearBackends(api api.HAProxyClient, cfg *Configuration) {
+func (h RefreshHandler) clearBackends(api api.HAProxyClient, cfg *config.ControllerCfg) {
 	if cfg.SSLPassthrough {
 		// SSL default backend
 		cfg.ActiveBackends[SSLDefaultBaceknd] = struct{}{}
 	}
 	// Ratelimting backends
-	for _, rateLimitTable := range rateLimitTables {
+	for _, rateLimitTable := range cfg.RateLimitTables {
 		cfg.ActiveBackends[rateLimitTable] = struct{}{}
 	}
 	allBackends, err := api.BackendsGet()

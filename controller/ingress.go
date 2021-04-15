@@ -77,22 +77,22 @@ func (c *HAProxyController) handleIngressPath(ingress *store.Ingress, host strin
 	ingRoute := route.Route{
 		Host:           host,
 		Path:           path,
-		HAProxyRules:   c.cfg.HAProxyRules.GetIngressRuleIDs(ingress.Namespace + "-" + ingress.Name),
+		HAProxyRules:   c.Cfg.HAProxyRules.GetIngressRuleIDs(ingress.Namespace + "-" + ingress.Name),
 		BackendName:    backendName,
 		SSLPassthrough: sslPassthrough,
 	}
 	routeACLAnn, _ := c.Store.GetValueFromAnnotations("route-acl", svc.GetService().Annotations)
 	if routeACLAnn == nil {
-		err = route.AddHostPathRoute(ingRoute, c.cfg.MapFiles)
+		err = route.AddHostPathRoute(ingRoute, c.Cfg.MapFiles)
 	} else {
 		routeReload, err = route.AddCustomRoute(ingRoute, *routeACLAnn, c.Client)
 	}
 	if err != nil {
 		return
 	}
-	c.cfg.ActiveBackends[backendName] = struct{}{}
+	c.Cfg.ActiveBackends[backendName] = struct{}{}
 	// Endpoints
-	endpointsReload := svc.HandleEndpoints(c.Client, c.Store, c.cfg.Certificates)
+	endpointsReload := svc.HandleEndpoints(c.Client, c.Store, c.Cfg.Certificates)
 	return backendReload || endpointsReload || routeReload, err
 }
 
@@ -133,8 +133,8 @@ func (c *HAProxyController) setDefaultService(ingress *store.Ingress, frontends 
 			logger.Debugf("Setting '%s' default backend to '%s'", frontendName, backendName)
 		}
 	}
-	c.cfg.ActiveBackends[backendName] = struct{}{}
-	endpointsReload := svc.HandleEndpoints(c.Client, c.Store, c.cfg.Certificates)
+	c.Cfg.ActiveBackends[backendName] = struct{}{}
+	endpointsReload := svc.HandleEndpoints(c.Client, c.Store, c.Cfg.Certificates)
 	reload = bdReload || ftReload || endpointsReload
 	return reload, err
 }
@@ -160,7 +160,7 @@ func (c *HAProxyController) sslPassthroughEnabled(ingress *store.Ingress, path *
 		return false
 	}
 	if enabled {
-		c.cfg.SSLPassthrough = true
+		c.Cfg.SSLPassthrough = true
 		return true
 	}
 	return false

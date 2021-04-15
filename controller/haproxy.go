@@ -40,7 +40,8 @@ func (c *HAProxyController) haproxyService(action string) (err error) {
 			logger.Error(fmt.Errorf("haproxy is already running"))
 			return nil
 		}
-		cmd = exec.Command(HAProxyBinary, "-W", "-f", MainCFGFile, "-p", PIDFile)
+		//nolint:gosec //checks on HAProxyBinary should be done in configuration module.
+		cmd = exec.Command(c.Cfg.Env.HAProxyBinary, "-W", "-f", c.Cfg.Env.MainCFGFile, "-p", c.Cfg.Env.PIDFile)
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 		return cmd.Start()
@@ -68,7 +69,8 @@ func (c *HAProxyController) haproxyService(action string) (err error) {
 			return c.haproxyService("start")
 		}
 		pid := strconv.Itoa(process.Pid)
-		cmd = exec.Command(HAProxyBinary, "-W", "-f", MainCFGFile, "-p", PIDFile, "-sf", pid)
+		//nolint:gosec //checks on HAProxyBinary should be done in configuration module.
+		cmd = exec.Command(c.Cfg.Env.HAProxyBinary, "-W", "-f", c.Cfg.Env.MainCFGFile, "-p", c.Cfg.Env.PIDFile, "-sf", pid)
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 		return cmd.Start()
@@ -79,7 +81,7 @@ func (c *HAProxyController) haproxyService(action string) (err error) {
 
 // Return HAProxy master process if it exists.
 func (c *HAProxyController) haproxyProcess() (*os.Process, error) {
-	file, err := os.Open(PIDFile)
+	file, err := os.Open(c.Cfg.Env.PIDFile)
 	if err != nil {
 		return nil, err
 	}
@@ -105,7 +107,7 @@ func (c *HAProxyController) saveServerState() error {
 		return err
 	}
 	var f *os.File
-	if f, err = os.Create(StateDir + "global"); err != nil {
+	if f, err = os.Create(c.Cfg.Env.StateDir + "global"); err != nil {
 		logger.Error(err)
 		return err
 	}
