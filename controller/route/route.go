@@ -31,11 +31,6 @@ const (
 	// Main frontends
 	FrontendHTTP  = "http"
 	FrontendHTTPS = "https"
-	// MapFiles
-	SNI         = "sni"
-	HOST        = "host"
-	PATH_EXACT  = "path-exact"
-	PATH_PREFIX = "path-prefix"
 )
 
 var CustomRoutes bool
@@ -50,7 +45,7 @@ type Route struct {
 }
 
 // AddHostPathRoute adds Host/Path ingress route to haproxy Map files used for backend switching.
-func AddHostPathRoute(route Route, mapFiles haproxy.Maps) error {
+func AddHostPathRoute(route Route, mapFiles *haproxy.Maps) error {
 	if route.BackendName == "" {
 		return fmt.Errorf("backendName missing")
 	}
@@ -65,14 +60,14 @@ func AddHostPathRoute(route Route, mapFiles haproxy.Maps) error {
 	// SSLPassthrough
 	if route.SSLPassthrough {
 		if route.Host == "" {
-			return fmt.Errorf("empty SNI for backend %s,", route.BackendName)
+			return fmt.Errorf("empty haproxy.MAP_SNI for backend %s,", route.BackendName)
 		}
-		mapFiles.AppendRow(SNI, route.Host+"\t\t\t"+value)
+		mapFiles.AppendRow(haproxy.MAP_SNI, route.Host+"\t\t\t"+value)
 		return nil
 	}
 	// HTTP
 	if route.Host != "" {
-		mapFiles.AppendRow(HOST, route.Host+"\t\t\t"+route.Host)
+		mapFiles.AppendRow(haproxy.MAP_HOST, route.Host+"\t\t\t"+route.Host)
 	} else if route.Path.Path == "" {
 		return fmt.Errorf("neither Host nor Path are provided for backend %v,", route.BackendName)
 	}
@@ -80,13 +75,13 @@ func AddHostPathRoute(route Route, mapFiles haproxy.Maps) error {
 	path := route.Path.Path
 	switch {
 	case route.Path.ExactPathMatch:
-		mapFiles.AppendRow(PATH_EXACT, route.Host+path+"\t\t\t"+value)
+		mapFiles.AppendRow(haproxy.MAP_PATH_EXACT, route.Host+path+"\t\t\t"+value)
 	case path == "" || path == "/":
-		mapFiles.AppendRow(PATH_PREFIX, route.Host+"/"+"\t\t\t"+value)
+		mapFiles.AppendRow(haproxy.MAP_PATH_PREFIX, route.Host+"/"+"\t\t\t"+value)
 	default:
 		path = strings.TrimSuffix(path, "/")
-		mapFiles.AppendRow(PATH_EXACT, route.Host+path+"\t\t\t"+value)
-		mapFiles.AppendRow(PATH_PREFIX, route.Host+path+"/"+"\t\t\t"+value)
+		mapFiles.AppendRow(haproxy.MAP_PATH_EXACT, route.Host+path+"\t\t\t"+value)
+		mapFiles.AppendRow(haproxy.MAP_PATH_PREFIX, route.Host+path+"/"+"\t\t\t"+value)
 	}
 	return nil
 }

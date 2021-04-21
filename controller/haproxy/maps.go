@@ -28,6 +28,14 @@ type Maps map[string]*mapFile
 
 var mapDir string
 
+//nolint:golint,stylecheck
+const (
+	MAP_SNI         = "sni"
+	MAP_HOST        = "host"
+	MAP_PATH_EXACT  = "path-exact"
+	MAP_PATH_PREFIX = "path-prefix"
+)
+
 type mapFile struct {
 	rows     []string
 	hash     uint64
@@ -47,10 +55,16 @@ func (mf *mapFile) getContent() (string, uint64) {
 	return content, h.Sum64()
 }
 
-func NewMapFiles(path string) Maps {
+func NewMapFiles(path string) *Maps {
 	mapDir = path
-	var maps Maps = make(map[string]*mapFile)
-	return maps
+	var maps Maps = map[string]*mapFile{
+		// Map files required for HAProxy Rules
+		MAP_SNI:         {preserve: true},
+		MAP_HOST:        {preserve: true},
+		MAP_PATH_EXACT:  {preserve: true},
+		MAP_PATH_PREFIX: {preserve: true},
+	}
+	return &maps
 }
 
 func (m Maps) Exists(name string) bool {
@@ -110,16 +124,6 @@ func (m Maps) Refresh(client api.HAProxyClient) (reload bool) {
 		// }
 	}
 	return reload
-}
-
-// SetPreserve sets the preserve flag on a mapFile
-func (m Maps) SetPreserve(preserve bool, maps ...string) {
-	for _, name := range maps {
-		if m[name] == nil {
-			m[name] = &mapFile{}
-		}
-		m[name].preserve = preserve
-	}
 }
 
 func GetMapPath(name string) string {

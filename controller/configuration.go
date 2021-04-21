@@ -25,7 +25,7 @@ import (
 // Configuration represents k8s state
 
 type Configuration struct {
-	MapFiles       haproxy.Maps
+	MapFiles       *haproxy.Maps
 	HAProxyRules   *haproxy.Rules
 	Certificates   *haproxy.Certificates
 	ActiveBackends map[string]struct{}
@@ -36,7 +36,6 @@ type Configuration struct {
 // Init initialize configuration
 func (c *Configuration) Init() {
 	c.MapFiles = haproxy.NewMapFiles(MapDir)
-	c.MapFiles.SetPreserve(true, SNI, HOST, PATH_EXACT, PATH_PREFIX)
 	logger.Panic(c.HAProxyRulesInit())
 	c.Certificates = haproxy.NewCertificates(CaCertDir, FrontendCertDir, BackendCertDir)
 	c.ActiveBackends = make(map[string]struct{})
@@ -84,23 +83,23 @@ func (c *Configuration) HAProxyRulesInit() error {
 		c.HAProxyRules.AddRule(rules.ReqSetVar{
 			Name:       "host_match",
 			Scope:      "txn",
-			Expression: fmt.Sprintf("var(txn.host),map(%s)", haproxy.GetMapPath(HOST)),
+			Expression: fmt.Sprintf("var(txn.host),map(%s)", haproxy.GetMapPath(haproxy.MAP_HOST)),
 		}, "", FrontendHTTP, FrontendHTTPS),
 		c.HAProxyRules.AddRule(rules.ReqSetVar{
 			Name:       "host_match",
 			Scope:      "txn",
-			Expression: fmt.Sprintf("var(txn.host),regsub(^[^.]*,,),map(%s,'')", haproxy.GetMapPath(HOST)),
+			Expression: fmt.Sprintf("var(txn.host),regsub(^[^.]*,,),map(%s,'')", haproxy.GetMapPath(haproxy.MAP_HOST)),
 			CondTest:   "!{ var(txn.host_match) -m found }",
 		}, "", FrontendHTTP, FrontendHTTPS),
 		c.HAProxyRules.AddRule(rules.ReqSetVar{
 			Name:       "path_match",
 			Scope:      "txn",
-			Expression: fmt.Sprintf("var(txn.host_match),concat(,txn.path,),map(%s)", haproxy.GetMapPath(PATH_EXACT)),
+			Expression: fmt.Sprintf("var(txn.host_match),concat(,txn.path,),map(%s)", haproxy.GetMapPath(haproxy.MAP_PATH_EXACT)),
 		}, "", FrontendHTTP, FrontendHTTPS),
 		c.HAProxyRules.AddRule(rules.ReqSetVar{
 			Name:       "path_match",
 			Scope:      "txn",
-			Expression: fmt.Sprintf("var(txn.host_match),concat(,txn.path,),map_beg(%s)", haproxy.GetMapPath(PATH_PREFIX)),
+			Expression: fmt.Sprintf("var(txn.host_match),concat(,txn.path,),map_beg(%s)", haproxy.GetMapPath(haproxy.MAP_PATH_PREFIX)),
 			CondTest:   "!{ var(txn.path_match) -m found }",
 		}, "", FrontendHTTP, FrontendHTTPS),
 	)

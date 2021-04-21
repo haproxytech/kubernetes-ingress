@@ -169,7 +169,7 @@ func (h HTTPS) enableSSLPassthrough(cfg *Configuration, api api.HAProxyClient) (
 	frontend := models.Frontend{
 		Name:           FrontendSSL,
 		Mode:           "tcp",
-		LogFormat:      "'%ci:%cp [%t] %ft %b/%s %Tw/%Tc/%Tt %B %ts %ac/%fc/%bc/%sc/%rc %sq/%bq %hr %hs SNI: %[var(sess.sni)]'",
+		LogFormat:      "'%ci:%cp [%t] %ft %b/%s %Tw/%Tc/%Tt %B %ts %ac/%fc/%bc/%sc/%rc %sq/%bq %hr %hs haproxy.MAP_SNI: %[var(sess.sni)]'",
 		DefaultBackend: SSLDefaultBaceknd,
 	}
 	err = api.FrontendCreate(frontend)
@@ -254,12 +254,12 @@ func (h HTTPS) sslPassthroughRules(k store.K8s, cfg *Configuration) error {
 		cfg.HAProxyRules.AddRule(rules.ReqSetVar{
 			Name:       "sni_match",
 			Scope:      "txn",
-			Expression: fmt.Sprintf("req_ssl_sni,map(%s)", haproxy.GetMapPath(SNI)),
+			Expression: fmt.Sprintf("req_ssl_sni,map(%s)", haproxy.GetMapPath(haproxy.MAP_SNI)),
 		}, "", FrontendSSL),
 		cfg.HAProxyRules.AddRule(rules.ReqSetVar{
 			Name:       "sni_match",
 			Scope:      "txn",
-			Expression: fmt.Sprintf("req_ssl_sni,regsub(^[^.]*,,),map(%s)", haproxy.GetMapPath(SNI)),
+			Expression: fmt.Sprintf("req_ssl_sni,regsub(^[^.]*,,),map(%s)", haproxy.GetMapPath(haproxy.MAP_SNI)),
 			CondTest:   "!{ var(txn.sni_match) -m found }",
 		}, "", FrontendSSL),
 	)
