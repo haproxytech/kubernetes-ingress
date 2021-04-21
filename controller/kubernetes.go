@@ -368,6 +368,7 @@ func (k *K8s) EventsServices(channel chan SyncDataEvent, stop chan struct{}, inf
 					Name:     sp.Name,
 					Protocol: string(sp.Protocol),
 					Port:     int64(sp.Port),
+					NodePort: int64(sp.NodePort),
 				})
 			}
 			if publishSvc != nil {
@@ -426,6 +427,7 @@ func (k *K8s) EventsServices(channel chan SyncDataEvent, stop chan struct{}, inf
 					Name:     sp.Name,
 					Protocol: string(sp.Protocol),
 					Port:     int64(sp.Port),
+					NodePort: int64(sp.NodePort),
 				})
 			}
 
@@ -443,6 +445,7 @@ func (k *K8s) EventsServices(channel chan SyncDataEvent, stop chan struct{}, inf
 					Name:     sp.Name,
 					Protocol: string(sp.Protocol),
 					Port:     int64(sp.Port),
+					NodePort: int64(sp.NodePort),
 				})
 			}
 			if item2.Equal(item1) {
