@@ -5,6 +5,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: check-commit
-        uses: docker://haproxytech/check-commit:latest
+        uses: docker://haproxytech/check-commit:v2.1.0
         env:
           API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
