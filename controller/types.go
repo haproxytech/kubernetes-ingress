@@ -44,11 +44,6 @@ const (
 	NAMESPACE     SyncType = "NAMESPACE"
 	SERVICE       SyncType = "SERVICE"
 	SECRET        SyncType = "SECRET"
-	// sections
-	FrontendHTTP      = "http"
-	FrontendHTTPS     = "https"
-	FrontendSSL       = "ssl"
-	SSLDefaultBaceknd = "ssl"
 	// Modes
 	HTTP Mode = "http"
 	TCP  Mode = "tcp"

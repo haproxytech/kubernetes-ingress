@@ -119,7 +119,7 @@ func (c *HAProxyController) setDefaultService(ingress *store.Ingress, frontends 
 		return
 	}
 	if frontend.DefaultBackend != backendName {
-		if frontend.Name == FrontendHTTP {
+		if frontend.Name == c.Cfg.FrontHTTP {
 			logger.Infof("Setting http default backend to '%s'", backendName)
 		}
 		for _, frontendName := range frontends {

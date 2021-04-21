@@ -70,7 +70,7 @@ func (c *HAProxyController) handleDefaultService() (reload bool) {
 			IsDefaultBackend: true,
 		},
 	}
-	reload, err := c.setDefaultService(ingress, []string{FrontendHTTP, FrontendHTTPS})
+	reload, err := c.setDefaultService(ingress, []string{c.Cfg.FrontHTTP, c.Cfg.FrontHTTPS})
 	if err != nil {
 		logger.Errorf("default service '%s/%s': %s", namespace.Name, service.Name, err)
 		return

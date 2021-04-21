@@ -76,7 +76,7 @@ func (h HTTPS) handleClientTLSAuth(k store.K8s, cfg *config.ControllerCfg, api a
 	if annTLSAuth == nil {
 		return false, nil
 	}
-	binds, err := api.FrontendBindsGet(FrontendHTTPS)
+	binds, err := api.FrontendBindsGet(cfg.FrontHTTPS)
 	if err != nil {
 		return false, err
 	}
@@ -91,7 +91,7 @@ func (h HTTPS) handleClientTLSAuth(k store.K8s, cfg *config.ControllerCfg, api a
 		for i := range binds {
 			binds[i].SslCafile = ""
 			binds[i].Verify = ""
-			if err = api.FrontendBindEdit(FrontendHTTPS, *binds[i]); err != nil {
+			if err = api.FrontendBindEdit(cfg.FrontHTTPS, *binds[i]); err != nil {
 				return false, err
 			}
 		}
@@ -114,7 +114,7 @@ func (h HTTPS) handleClientTLSAuth(k store.K8s, cfg *config.ControllerCfg, api a
 	for i := range binds {
 		binds[i].SslCafile = caFile
 		binds[i].Verify = "required"
-		if err = api.FrontendBindEdit(FrontendHTTPS, *binds[i]); err != nil {
+		if err = api.FrontendBindEdit(cfg.FrontHTTPS, *binds[i]); err != nil {
 			return false, err
 		}
 	}
@@ -129,7 +129,7 @@ func (h HTTPS) Update(k store.K8s, cfg *config.ControllerCfg, api api.HAProxyCli
 	// ssl-offload
 	if cfg.Certificates.FrontendCertsEnabled() {
 		if !cfg.HTTPS {
-			logger.Panic(api.FrontendEnableSSLOffload(FrontendHTTPS, h.certDir, true))
+			logger.Panic(api.FrontendEnableSSLOffload(cfg.FrontHTTPS, h.certDir, true))
 			cfg.HTTPS = true
 			reload = true
 			logger.Debug("SSLOffload enabeld, reload required")
@@ -140,13 +140,13 @@ func (h HTTPS) Update(k store.K8s, cfg *config.ControllerCfg, api api.HAProxyCli
 		}
 		reload = reload || r
 	} else if cfg.HTTPS {
-		logger.Panic(api.FrontendDisableSSLOffload(FrontendHTTPS))
+		logger.Panic(api.FrontendDisableSSLOffload(cfg.FrontHTTPS))
 		cfg.HTTPS = false
 		reload = true
 		logger.Debug("SSLOffload disabled, reload required")
 	}
 	// ssl-passthrough
-	_, errFtSSL := api.FrontendGet(FrontendSSL)
+	_, errFtSSL := api.FrontendGet(cfg.FrontSSL)
 	if cfg.SSLPassthrough {
 		if errFtSSL != nil {
 			logger.Error(h.enableSSLPassthrough(cfg, api))
@@ -168,17 +168,17 @@ func (h HTTPS) Update(k store.K8s, cfg *config.ControllerCfg, api api.HAProxyCli
 func (h HTTPS) enableSSLPassthrough(cfg *config.ControllerCfg, api api.HAProxyClient) (err error) {
 	// Create TCP frontend for ssl-passthrough
 	frontend := models.Frontend{
-		Name:           FrontendSSL,
+		Name:           cfg.FrontSSL,
 		Mode:           "tcp",
 		LogFormat:      "'%ci:%cp [%t] %ft %b/%s %Tw/%Tc/%Tt %B %ts %ac/%fc/%bc/%sc/%rc %sq/%bq %hr %hs haproxy.MAP_SNI: %[var(sess.sni)]'",
-		DefaultBackend: SSLDefaultBaceknd,
+		DefaultBackend: cfg.BackSSL,
 	}
 	err = api.FrontendCreate(frontend)
 	if err != nil {
 		return err
 	}
 	for _, b := range h.bindList(false) {
-		if err = api.FrontendBindCreate(FrontendSSL, b); err != nil {
+		if err = api.FrontendBindCreate(cfg.FrontSSL, b); err != nil {
 			return fmt.Errorf("cannot create bind for SSL Passthrough: %w", err)
 		}
 	}
@@ -187,47 +187,47 @@ func (h HTTPS) enableSSLPassthrough(cfg *config.ControllerCfg, api api.HAProxyCl
 	var errors utils.Errors
 	errors.Add(
 		api.BackendCreate(models.Backend{
-			Name: SSLDefaultBaceknd,
+			Name: cfg.BackSSL,
 			Mode: "tcp",
 		}),
-		api.BackendServerCreate(SSLDefaultBaceknd, models.Server{
-			Name:        FrontendHTTPS,
+		api.BackendServerCreate(cfg.BackSSL, models.Server{
+			Name:        cfg.FrontHTTPS,
 			Address:     "127.0.0.1",
 			Port:        utils.PtrInt64(h.port),
 			SendProxyV2: "enabled",
 		}),
-		api.BackendSwitchingRuleCreate(FrontendSSL, models.BackendSwitchingRule{
+		api.BackendSwitchingRuleCreate(cfg.FrontSSL, models.BackendSwitchingRule{
 			Index: utils.PtrInt64(0),
 			Name:  fmt.Sprintf("%%[var(txn.sni_match),field(1,.)]"),
 		}),
-		h.toggleSSLPassthrough(true, cfg.HTTPS, api))
+		h.toggleSSLPassthrough(true, cfg, api))
 	return errors.Result()
 }
 
 func (h HTTPS) disableSSLPassthrough(cfg *config.ControllerCfg, api api.HAProxyClient) (err error) {
-	err = api.FrontendDelete(FrontendSSL)
+	err = api.FrontendDelete(cfg.FrontSSL)
 	if err != nil {
 		return err
 	}
-	cfg.HAProxyRules.DeleteFrontend(FrontendSSL)
-	err = api.BackendDelete(SSLDefaultBaceknd)
+	cfg.HAProxyRules.DeleteFrontend(cfg.FrontSSL)
+	err = api.BackendDelete(cfg.BackSSL)
 	if err != nil {
 		return err
 	}
-	if err = h.toggleSSLPassthrough(false, cfg.HTTPS, api); err != nil {
+	if err = h.toggleSSLPassthrough(false, cfg, api); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (h HTTPS) toggleSSLPassthrough(passthrough, offload bool, api api.HAProxyClient) (err error) {
+func (h HTTPS) toggleSSLPassthrough(passthrough bool, cfg *config.ControllerCfg, api api.HAProxyClient) (err error) {
 	for _, bind := range h.bindList(passthrough) {
-		if err = api.FrontendBindEdit(FrontendHTTPS, bind); err != nil {
+		if err = api.FrontendBindEdit(cfg.FrontHTTPS, bind); err != nil {
 			return err
 		}
 	}
-	if offload {
-		logger.Panic(api.FrontendEnableSSLOffload(FrontendHTTPS, h.certDir, true))
+	if cfg.HTTPS {
+		logger.Panic(api.FrontendEnableSSLOffload(cfg.FrontHTTPS, h.certDir, true))
 	}
 	return nil
 }
@@ -243,26 +243,26 @@ func (h HTTPS) sslPassthroughRules(k store.K8s, cfg *config.ControllerCfg) error
 		}
 	}
 	errors := utils.Errors{}
-	errors.Add(cfg.HAProxyRules.AddRule(rules.ReqAcceptContent{}, "", FrontendSSL),
+	errors.Add(cfg.HAProxyRules.AddRule(rules.ReqAcceptContent{}, "", cfg.FrontSSL),
 		cfg.HAProxyRules.AddRule(rules.ReqInspectDelay{
 			Timeout: inspectTimeout,
-		}, "", FrontendSSL),
+		}, "", cfg.FrontSSL),
 		cfg.HAProxyRules.AddRule(rules.ReqSetVar{
 			Name:       "sni",
 			Scope:      "sess",
 			Expression: "req_ssl_sni",
-		}, "", FrontendSSL),
+		}, "", cfg.FrontSSL),
 		cfg.HAProxyRules.AddRule(rules.ReqSetVar{
 			Name:       "sni_match",
 			Scope:      "txn",
 			Expression: fmt.Sprintf("req_ssl_sni,map(%s)", haproxy.GetMapPath(haproxy.MAP_SNI)),
-		}, "", FrontendSSL),
+		}, "", cfg.FrontSSL),
 		cfg.HAProxyRules.AddRule(rules.ReqSetVar{
 			Name:       "sni_match",
 			Scope:      "txn",
 			Expression: fmt.Sprintf("req_ssl_sni,regsub(^[^.]*,,),map(%s)", haproxy.GetMapPath(haproxy.MAP_SNI)),
 			CondTest:   "!{ var(txn.sni_match) -m found }",
-		}, "", FrontendSSL),
+		}, "", cfg.FrontSSL),
 	)
 	return errors.Result()
 }

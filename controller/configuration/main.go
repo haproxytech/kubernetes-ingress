@@ -132,7 +132,6 @@ func (c *ControllerCfg) haproxyRulesInit() error {
 }
 
 func (c *ControllerCfg) envInit() (err error) {
-	// TODO: If Test param don't fail if binary not there
 	for _, dir := range []string{c.Env.CfgDir, c.Env.RuntimeDir, c.Env.StateDir} {
 		if dir == "" {
 			return fmt.Errorf("failed to init controller config: missing config directories")

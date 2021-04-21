@@ -41,7 +41,7 @@ func (h RefreshHandler) Update(k store.K8s, cfg *config.ControllerCfg, api api.H
 func (h RefreshHandler) clearBackends(api api.HAProxyClient, cfg *config.ControllerCfg) {
 	if cfg.SSLPassthrough {
 		// SSL default backend
-		cfg.ActiveBackends[SSLDefaultBaceknd] = struct{}{}
+		cfg.ActiveBackends[cfg.BackSSL] = struct{}{}
 	}
 	// Ratelimting backends
 	for _, rateLimitTable := range cfg.RateLimitTables {

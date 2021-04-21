@@ -166,7 +166,7 @@ func (c *HAProxyController) updateHAProxy() {
 				logger.Error(c.k8s.UpdateIngressStatus(ingress, c.PublishService))
 			}
 			if ingress.DefaultBackend != nil {
-				if r, errSvc := c.setDefaultService(ingress, []string{FrontendHTTP, FrontendHTTPS}); errSvc != nil {
+				if r, errSvc := c.setDefaultService(ingress, []string{c.Cfg.FrontHTTP, c.Cfg.FrontHTTPS}); errSvc != nil {
 					logger.Errorf("Ingress '%s/%s': default backend: %s", ingress.Namespace, ingress.Name, errSvc)
 				} else {
 					reload = reload || r
@@ -326,10 +326,10 @@ func (c *HAProxyController) handleBinds() (err error) {
 	frontends := make(map[string]int64, 2)
 	protos := make(map[string]string, 2)
 	if !c.osArgs.DisableHTTP {
-		frontends[FrontendHTTP] = c.osArgs.HTTPBindPort
+		frontends[c.Cfg.FrontHTTP] = c.osArgs.HTTPBindPort
 	}
 	if !c.osArgs.DisableHTTPS {
-		frontends[FrontendHTTPS] = c.osArgs.HTTPSBindPort
+		frontends[c.Cfg.FrontHTTPS] = c.osArgs.HTTPSBindPort
 	}
 	if !c.osArgs.DisableIPV4 {
 		protos["v4"] = c.osArgs.IPV4BindAddr

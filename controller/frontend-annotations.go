@@ -58,7 +58,7 @@ func (c *HAProxyController) handleSourceIPHeader(ingress *store.Ingress) {
 	reqSetSrc := rules.ReqSetSrc{
 		HeaderName: srcIPHeader.Value,
 	}
-	logger.Error(c.Cfg.HAProxyRules.AddRule(reqSetSrc, ingress.Namespace+"-"+ingress.Name, FrontendHTTP, FrontendHTTPS))
+	logger.Error(c.Cfg.HAProxyRules.AddRule(reqSetSrc, ingress.Namespace+"-"+ingress.Name, c.Cfg.FrontHTTP, c.Cfg.FrontHTTPS))
 }
 
 func (c *HAProxyController) handleBlacklisting(ingress *store.Ingress) {
@@ -91,9 +91,9 @@ func (c *HAProxyController) handleBlacklisting(ingress *store.Ingress) {
 		SrcIPsMap: mapName,
 	}
 
-	frontends := []string{FrontendHTTP, FrontendHTTPS}
+	frontends := []string{c.Cfg.FrontHTTP, c.Cfg.FrontHTTPS}
 	if c.sslPassthroughEnabled(ingress, nil) {
-		frontends = []string{FrontendHTTP, FrontendSSL}
+		frontends = []string{c.Cfg.FrontHTTP, c.Cfg.FrontSSL}
 	}
 	logger.Error(c.Cfg.HAProxyRules.AddRule(reqBlackList, ingress.Namespace+"-"+ingress.Name, frontends...))
 }
@@ -128,9 +128,9 @@ func (c *HAProxyController) handleWhitelisting(ingress *store.Ingress) {
 		SrcIPsMap: mapName,
 		Whitelist: true,
 	}
-	frontends := []string{FrontendHTTP, FrontendHTTPS}
+	frontends := []string{c.Cfg.FrontHTTP, c.Cfg.FrontHTTPS}
 	if c.sslPassthroughEnabled(ingress, nil) {
-		frontends = []string{FrontendHTTP, FrontendSSL}
+		frontends = []string{c.Cfg.FrontHTTP, c.Cfg.FrontSSL}
 	}
 	logger.Error(c.Cfg.HAProxyRules.AddRule(reqWhitelist, ingress.Namespace+"-"+ingress.Name, frontends...))
 }
@@ -182,8 +182,8 @@ func (c *HAProxyController) handleRequestRateLimiting(ingress *store.Ingress) {
 		ReqsLimit:      reqsLimit,
 		DenyStatusCode: rateLimitCode,
 	}
-	logger.Error(c.Cfg.HAProxyRules.AddRule(reqTrack, ingress.Namespace+"-"+ingress.Name, FrontendHTTP, FrontendHTTPS))
-	logger.Error(c.Cfg.HAProxyRules.AddRule(reqRateLimit, ingress.Namespace+"-"+ingress.Name, FrontendHTTP, FrontendHTTPS))
+	logger.Error(c.Cfg.HAProxyRules.AddRule(reqTrack, ingress.Namespace+"-"+ingress.Name, c.Cfg.FrontHTTP, c.Cfg.FrontHTTPS))
+	logger.Error(c.Cfg.HAProxyRules.AddRule(reqRateLimit, ingress.Namespace+"-"+ingress.Name, c.Cfg.FrontHTTP, c.Cfg.FrontHTTPS))
 }
 
 func (c *HAProxyController) handleRequestBasicAuth(ingress *store.Ingress) {
@@ -243,7 +243,7 @@ func (c *HAProxyController) handleRequestBasicAuth(ingress *store.Ingress) {
 		AuthRealm: realm,
 		AuthGroup: userListName,
 	}
-	logger.Error(c.Cfg.HAProxyRules.AddRule(reqBasicAuth, ingress.Namespace+"-"+ingress.Name, FrontendHTTP, FrontendHTTPS))
+	logger.Error(c.Cfg.HAProxyRules.AddRule(reqBasicAuth, ingress.Namespace+"-"+ingress.Name, c.Cfg.FrontHTTP, c.Cfg.FrontHTTPS))
 }
 
 func (c *HAProxyController) handleRequestHostRedirect(ingress *store.Ingress) {
@@ -263,9 +263,9 @@ func (c *HAProxyController) handleRequestHostRedirect(ingress *store.Ingress) {
 		RedirectCode: domainRedirectCode,
 		Host:         annDomainRedirect.Value,
 	}
-	logger.Error(c.Cfg.HAProxyRules.AddRule(reqDomainRedirect, ingress.Namespace+"-"+ingress.Name, FrontendHTTP))
+	logger.Error(c.Cfg.HAProxyRules.AddRule(reqDomainRedirect, ingress.Namespace+"-"+ingress.Name, c.Cfg.FrontHTTP))
 	reqDomainRedirect.SSLRequest = true
-	logger.Error(c.Cfg.HAProxyRules.AddRule(reqDomainRedirect, ingress.Namespace+"-"+ingress.Name, FrontendHTTPS))
+	logger.Error(c.Cfg.HAProxyRules.AddRule(reqDomainRedirect, ingress.Namespace+"-"+ingress.Name, c.Cfg.FrontHTTPS))
 }
 
 func (c *HAProxyController) handleRequestHTTPSRedirect(ingress *store.Ingress) {
@@ -301,7 +301,7 @@ func (c *HAProxyController) handleRequestHTTPSRedirect(ingress *store.Ingress) {
 		RedirectPort: sslRedirectPort,
 		SSLRedirect:  true,
 	}
-	logger.Error(c.Cfg.HAProxyRules.AddRule(reqSSLRedirect, ingress.Namespace+"-"+ingress.Name, FrontendHTTP))
+	logger.Error(c.Cfg.HAProxyRules.AddRule(reqSSLRedirect, ingress.Namespace+"-"+ingress.Name, c.Cfg.FrontHTTP))
 }
 
 func (c *HAProxyController) handleRequestCapture(ingress *store.Ingress) {
@@ -332,9 +332,9 @@ func (c *HAProxyController) handleRequestCapture(ingress *store.Ingress) {
 			Expression: sample,
 			CaptureLen: captureLen,
 		}
-		frontends := []string{FrontendHTTP, FrontendHTTPS}
+		frontends := []string{c.Cfg.FrontHTTP, c.Cfg.FrontHTTPS}
 		if c.sslPassthroughEnabled(ingress, nil) {
-			frontends = []string{FrontendHTTP, FrontendSSL}
+			frontends = []string{c.Cfg.FrontHTTP, c.Cfg.FrontSSL}
 		}
 		logger.Error(c.Cfg.HAProxyRules.AddRule(reqCapture, ingress.Namespace+"-"+ingress.Name, frontends...))
 	}
@@ -356,7 +356,7 @@ func (c *HAProxyController) handleRequestSetHost(ingress *store.Ingress) {
 		HdrName:   "Host",
 		HdrFormat: annSetHost.Value,
 	}
-	logger.Error(c.Cfg.HAProxyRules.AddRule(reqSetHost, ingress.Namespace+"-"+ingress.Name, FrontendHTTP, FrontendHTTPS))
+	logger.Error(c.Cfg.HAProxyRules.AddRule(reqSetHost, ingress.Namespace+"-"+ingress.Name, c.Cfg.FrontHTTP, c.Cfg.FrontHTTPS))
 }
 
 func (c *HAProxyController) handleRequestPathRewrite(ingress *store.Ingress) {
@@ -389,7 +389,7 @@ func (c *HAProxyController) handleRequestPathRewrite(ingress *store.Ingress) {
 		logger.Errorf("incorrect value '%s', path-rewrite takes 1 or 2 params ", annPathRewrite.Value)
 		return
 	}
-	logger.Error(c.Cfg.HAProxyRules.AddRule(reqPathReWrite, ingress.Namespace+"-"+ingress.Name, FrontendHTTP, FrontendHTTPS))
+	logger.Error(c.Cfg.HAProxyRules.AddRule(reqPathReWrite, ingress.Namespace+"-"+ingress.Name, c.Cfg.FrontHTTP, c.Cfg.FrontHTTPS))
 }
 
 func (c *HAProxyController) handleRequestSetHdr(ingress *store.Ingress) {
@@ -414,7 +414,7 @@ func (c *HAProxyController) handleRequestSetHdr(ingress *store.Ingress) {
 			HdrName:   parts[0],
 			HdrFormat: parts[1],
 		}
-		logger.Error(c.Cfg.HAProxyRules.AddRule(reqSetHdr, ingress.Namespace+"-"+ingress.Name, FrontendHTTP, FrontendHTTPS))
+		logger.Error(c.Cfg.HAProxyRules.AddRule(reqSetHdr, ingress.Namespace+"-"+ingress.Name, c.Cfg.FrontHTTP, c.Cfg.FrontHTTPS))
 	}
 }
 
@@ -444,7 +444,7 @@ func (c *HAProxyController) handleResponseSetHdr(ingress *store.Ingress) {
 			HdrFormat: param[indexSpace+1:],
 			Response:  true,
 		}
-		logger.Error(c.Cfg.HAProxyRules.AddRule(resSetHdr, ingress.Namespace+"-"+ingress.Name, FrontendHTTP, FrontendHTTPS))
+		logger.Error(c.Cfg.HAProxyRules.AddRule(resSetHdr, ingress.Namespace+"-"+ingress.Name, c.Cfg.FrontHTTP, c.Cfg.FrontHTTPS))
 	}
 }
 
@@ -496,7 +496,7 @@ func (c *HAProxyController) handleResponseCorsOrigin(ingress *store.Ingress) (ac
 		Name:       originVar,
 		Scope:      "txn",
 		Expression: "req.hdr(origin)",
-	}, ingress.Namespace+"-"+ingress.Name, FrontendHTTP, FrontendHTTPS)
+	}, ingress.Namespace+"-"+ingress.Name, c.Cfg.FrontHTTP, c.Cfg.FrontHTTPS)
 	if err != nil {
 		return acl, err
 	}
@@ -515,7 +515,7 @@ func (c *HAProxyController) handleResponseCorsOrigin(ingress *store.Ingress) (ac
 		resSetHdr.HdrFormat = "%[var(txn." + originVar + ")]"
 		resSetHdr.CondTest = acl
 	}
-	err = c.Cfg.HAProxyRules.AddRule(resSetHdr, ingress.Namespace+"-"+ingress.Name, FrontendHTTP, FrontendHTTPS)
+	err = c.Cfg.HAProxyRules.AddRule(resSetHdr, ingress.Namespace+"-"+ingress.Name, c.Cfg.FrontHTTP, c.Cfg.FrontHTTPS)
 	if err != nil {
 		return acl, err
 	}
@@ -552,7 +552,7 @@ func (c *HAProxyController) handleResponseCorsMethod(ingress *store.Ingress, acl
 		Response:  true,
 		CondTest:  acl,
 	}
-	logger.Error(c.Cfg.HAProxyRules.AddRule(resSetHdr, ingress.Namespace+"-"+ingress.Name, FrontendHTTP, FrontendHTTPS))
+	logger.Error(c.Cfg.HAProxyRules.AddRule(resSetHdr, ingress.Namespace+"-"+ingress.Name, c.Cfg.FrontHTTP, c.Cfg.FrontHTTPS))
 }
 
 func (c *HAProxyController) handleResponseCorsCredential(ingress *store.Ingress, acl string) {
@@ -576,7 +576,7 @@ func (c *HAProxyController) handleResponseCorsCredential(ingress *store.Ingress,
 		Response:  true,
 		CondTest:  acl,
 	}
-	logger.Error(c.Cfg.HAProxyRules.AddRule(resSetHdr, ingress.Namespace+"-"+ingress.Name, FrontendHTTP, FrontendHTTPS))
+	logger.Error(c.Cfg.HAProxyRules.AddRule(resSetHdr, ingress.Namespace+"-"+ingress.Name, c.Cfg.FrontHTTP, c.Cfg.FrontHTTPS))
 }
 
 func (c *HAProxyController) handleResponseCorsHeaders(ingress *store.Ingress, acl string) {
@@ -596,7 +596,7 @@ func (c *HAProxyController) handleResponseCorsHeaders(ingress *store.Ingress, ac
 		Response:  true,
 		CondTest:  acl,
 	}
-	logger.Error(c.Cfg.HAProxyRules.AddRule(resSetHdr, ingress.Namespace+"-"+ingress.Name, FrontendHTTP, FrontendHTTPS))
+	logger.Error(c.Cfg.HAProxyRules.AddRule(resSetHdr, ingress.Namespace+"-"+ingress.Name, c.Cfg.FrontHTTP, c.Cfg.FrontHTTPS))
 }
 
 func (c *HAProxyController) handleResponseCorsMaxAge(ingress *store.Ingress, acl string) {
@@ -626,7 +626,7 @@ func (c *HAProxyController) handleResponseCorsMaxAge(ingress *store.Ingress, acl
 		Response:  true,
 		CondTest:  acl,
 	}
-	logger.Error(c.Cfg.HAProxyRules.AddRule(resSetHdr, ingress.Namespace+"-"+ingress.Name, FrontendHTTP, FrontendHTTPS))
+	logger.Error(c.Cfg.HAProxyRules.AddRule(resSetHdr, ingress.Namespace+"-"+ingress.Name, c.Cfg.FrontHTTP, c.Cfg.FrontHTTPS))
 }
 
 func tlsEnabled(ingress *store.Ingress) bool {
