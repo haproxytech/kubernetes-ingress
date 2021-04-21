@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package controller
+package handler
 
 import (
 	"net"
@@ -33,7 +33,7 @@ func (p ProxyProtocol) Update(k store.K8s, cfg *config.ControllerCfg, api api.HA
 	if annProxyProtocol == nil {
 		return false, nil
 	}
-	if annProxyProtocol.Status == DELETED {
+	if annProxyProtocol.Status == store.DELETED {
 		logger.Trace("Deleting ProxyProtocol configuration")
 		return false, nil
 	}

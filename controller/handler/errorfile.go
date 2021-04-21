@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package controller
+package handler
 
 import (
 	"os"
@@ -40,16 +40,16 @@ func (e ErrorFile) Update(k store.K8s, cfg *config.ControllerCfg, api api.HAProx
 	for code, value := range k.ConfigMaps.Errorfiles.Annotations {
 		filePath := filepath.Join(cfg.Env.ErrFileDir, code)
 		switch value.Status {
-		case EMPTY:
+		case store.EMPTY:
 			e.httpErrorCodes = append(e.httpErrorCodes, code)
 			continue
-		case DELETED:
+		case store.DELETED:
 			logger.Debugf("deleting errorfile associated to '%s' error code ", code)
 			if err = os.Remove(filePath); err != nil {
 				logger.Errorf("failed deleting '%s': %s", filePath, err)
 			}
 			e.modified = true
-		case ADDED, MODIFIED:
+		case store.ADDED, store.MODIFIED:
 			var c string
 			for _, c = range codes {
 				if code == c {

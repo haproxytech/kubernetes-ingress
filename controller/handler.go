@@ -16,6 +16,7 @@ package controller
 
 import (
 	config "github.com/haproxytech/kubernetes-ingress/controller/configuration"
+	"github.com/haproxytech/kubernetes-ingress/controller/handler"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/api"
 	"github.com/haproxytech/kubernetes-ingress/controller/store"
 )
@@ -26,21 +27,21 @@ type UpdateHandler interface {
 
 func (c *HAProxyController) initHandlers() {
 	c.UpdateHandlers = []UpdateHandler{
-		HTTPS{
-			enabled:  !c.osArgs.DisableHTTPS,
-			certDir:  c.Cfg.Env.FrontendCertDir,
-			ipv4:     !c.osArgs.DisableIPV4,
-			addrIpv4: c.osArgs.IPV4BindAddr,
-			addrIpv6: c.osArgs.IPV6BindAddr,
-			ipv6:     !c.osArgs.DisableIPV6,
-			port:     c.osArgs.HTTPSBindPort,
+		handler.HTTPS{
+			Enabled:  !c.osArgs.DisableHTTPS,
+			CertDir:  c.Cfg.Env.FrontendCertDir,
+			IPv4:     !c.osArgs.DisableIPV4,
+			AddrIPv4: c.osArgs.IPV4BindAddr,
+			AddrIPv6: c.osArgs.IPV6BindAddr,
+			IPv6:     !c.osArgs.DisableIPV6,
+			Port:     c.osArgs.HTTPSBindPort,
 		},
-		ProxyProtocol{},
-		ErrorFile{},
-		TCPHandler{
-			setDefaultService: c.setDefaultService,
-			certDir:           c.Cfg.Env.FrontendCertDir,
+		handler.ProxyProtocol{},
+		handler.ErrorFile{},
+		handler.TCPServices{
+			SetDefaultService: c.setDefaultService,
+			CertDir:           c.Cfg.Env.FrontendCertDir,
 		},
-		RefreshHandler{},
+		handler.Refresh{},
 	}
 }

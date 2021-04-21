@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package controller
+package handler
 
 import (
 	config "github.com/haproxytech/kubernetes-ingress/controller/configuration"
@@ -21,11 +21,11 @@ import (
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 )
 
-type RefreshHandler struct{}
+type Refresh struct{}
 
-func (h RefreshHandler) Update(k store.K8s, cfg *config.ControllerCfg, api api.HAProxyClient) (reload bool, err error) {
+func (h Refresh) Update(k store.K8s, cfg *config.ControllerCfg, api api.HAProxyClient) (reload bool, err error) {
 	cleanCrts := true
-	if cleanCrtAnn, _ := k.GetValueFromAnnotations("clean-certs", k.ConfigMaps.Main.Annotations); cleanCrtAnn != nil && cleanCrtAnn.Status != DELETED {
+	if cleanCrtAnn, _ := k.GetValueFromAnnotations("clean-certs", k.ConfigMaps.Main.Annotations); cleanCrtAnn != nil && cleanCrtAnn.Status != store.DELETED {
 		cleanCrts, err = utils.GetBoolValue(cleanCrtAnn.Value, "clean-certs")
 	}
 	if cleanCrts {
@@ -38,7 +38,7 @@ func (h RefreshHandler) Update(k store.K8s, cfg *config.ControllerCfg, api api.H
 }
 
 // Remove unused backends
-func (h RefreshHandler) clearBackends(api api.HAProxyClient, cfg *config.ControllerCfg) {
+func (h Refresh) clearBackends(api api.HAProxyClient, cfg *config.ControllerCfg) {
 	if cfg.SSLPassthrough {
 		// SSL default backend
 		cfg.ActiveBackends[cfg.BackSSL] = struct{}{}

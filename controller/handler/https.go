@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package controller
+package handler
 
 import (
 	"errors"
@@ -29,40 +29,40 @@ import (
 )
 
 type HTTPS struct {
-	enabled  bool
-	ipv4     bool
-	ipv6     bool
-	port     int64
-	addrIpv4 string
-	addrIpv6 string
-	certDir  string
+	Enabled  bool
+	IPv4     bool
+	IPv6     bool
+	Port     int64
+	AddrIPv4 string
+	AddrIPv6 string
+	CertDir  string
 }
 
 func (h HTTPS) bindList(passhthrough bool) (binds []models.Bind) {
-	if h.ipv4 {
+	if h.IPv4 {
 		binds = append(binds, models.Bind{
 			Address: func() (addr string) {
-				addr = h.addrIpv4
+				addr = h.AddrIPv4
 				if passhthrough {
 					addr = "127.0.0.1"
 				}
 				return
 			}(),
-			Port:        utils.PtrInt64(h.port),
+			Port:        utils.PtrInt64(h.Port),
 			Name:        "v4",
 			AcceptProxy: passhthrough,
 		})
 	}
-	if h.ipv6 {
+	if h.IPv6 {
 		binds = append(binds, models.Bind{
 			Address: func() (addr string) {
-				addr = h.addrIpv6
+				addr = h.AddrIPv6
 				if passhthrough {
 					addr = "::1"
 				}
 				return
 			}(),
-			Port:        utils.PtrInt64(h.port),
+			Port:        utils.PtrInt64(h.Port),
 			AcceptProxy: passhthrough,
 			Name:        "v6",
 			V4v6:        true,
@@ -86,7 +86,7 @@ func (h HTTPS) handleClientTLSAuth(k store.K8s, cfg *config.ControllerCfg, api a
 		SecretType: haproxy.CA_CERT,
 	})
 	// Annotation or secret DELETED
-	if annTLSAuth.Status == DELETED || (secretUpdated && caFile == "") {
+	if annTLSAuth.Status == store.DELETED || (secretUpdated && caFile == "") {
 		logger.Infof("removing client TLS authentication")
 		for i := range binds {
 			binds[i].SslCafile = ""
@@ -106,7 +106,7 @@ func (h HTTPS) handleClientTLSAuth(k store.K8s, cfg *config.ControllerCfg, api a
 		return false, secretErr
 	}
 	// No changes
-	if annTLSAuth.Status == EMPTY && !secretUpdated {
+	if annTLSAuth.Status == store.EMPTY && !secretUpdated {
 		return false, nil
 	}
 	// Configure TLS Authentication
@@ -122,14 +122,14 @@ func (h HTTPS) handleClientTLSAuth(k store.K8s, cfg *config.ControllerCfg, api a
 }
 
 func (h HTTPS) Update(k store.K8s, cfg *config.ControllerCfg, api api.HAProxyClient) (reload bool, err error) {
-	if !h.enabled {
+	if !h.Enabled {
 		logger.Debugf("Cannot proceed with SSL Passthrough update, HTTPS is disabled")
 		return false, nil
 	}
 	// ssl-offload
 	if cfg.Certificates.FrontendCertsEnabled() {
 		if !cfg.HTTPS {
-			logger.Panic(api.FrontendEnableSSLOffload(cfg.FrontHTTPS, h.certDir, true))
+			logger.Panic(api.FrontendEnableSSLOffload(cfg.FrontHTTPS, h.CertDir, true))
 			cfg.HTTPS = true
 			reload = true
 			logger.Debug("SSLOffload enabeld, reload required")
@@ -193,7 +193,7 @@ func (h HTTPS) enableSSLPassthrough(cfg *config.ControllerCfg, api api.HAProxyCl
 		api.BackendServerCreate(cfg.BackSSL, models.Server{
 			Name:        cfg.FrontHTTPS,
 			Address:     "127.0.0.1",
-			Port:        utils.PtrInt64(h.port),
+			Port:        utils.PtrInt64(h.Port),
 			SendProxyV2: "enabled",
 		}),
 		api.BackendSwitchingRuleCreate(cfg.FrontSSL, models.BackendSwitchingRule{
@@ -227,7 +227,7 @@ func (h HTTPS) toggleSSLPassthrough(passthrough bool, cfg *config.ControllerCfg,
 		}
 	}
 	if cfg.HTTPS {
-		logger.Panic(api.FrontendEnableSSLOffload(cfg.FrontHTTPS, h.certDir, true))
+		logger.Panic(api.FrontendEnableSSLOffload(cfg.FrontHTTPS, h.CertDir, true))
 	}
 	return nil
 }

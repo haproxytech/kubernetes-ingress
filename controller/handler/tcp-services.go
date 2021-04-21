@@ -1,4 +1,4 @@
-package controller
+package handler
 
 import (
 	"fmt"
@@ -12,9 +12,9 @@ import (
 	"github.com/haproxytech/models/v2"
 )
 
-type TCPHandler struct {
-	setDefaultService func(ingress *store.Ingress, frontends []string) (reload bool, err error)
-	certDir           string
+type TCPServices struct {
+	SetDefaultService func(ingress *store.Ingress, frontends []string) (reload bool, err error)
+	CertDir           string
 }
 
 type tcpSvcParser struct {
@@ -23,7 +23,7 @@ type tcpSvcParser struct {
 	sslOffload bool
 }
 
-func (t TCPHandler) Update(k store.K8s, cfg *config.ControllerCfg, api api.HAProxyClient) (reload bool, err error) {
+func (t TCPServices) Update(k store.K8s, cfg *config.ControllerCfg, api api.HAProxyClient) (reload bool, err error) {
 	if k.ConfigMaps.TCPServices == nil {
 		return false, nil
 	}
@@ -36,7 +36,7 @@ func (t TCPHandler) Update(k store.K8s, cfg *config.ControllerCfg, api api.HAPro
 		}
 		// Delete Frontend
 		frontendName := fmt.Sprintf("tcp-%s", port)
-		if tcpSvcAnn.Status == DELETED || p.service.Status == DELETED {
+		if tcpSvcAnn.Status == store.DELETED || p.service.Status == store.DELETED {
 			err = api.FrontendDelete(frontendName)
 			if err != nil {
 				logger.Errorf("error deleting tcp frontend '%s': %s", frontendName, err)
@@ -64,7 +64,7 @@ func (t TCPHandler) Update(k store.K8s, cfg *config.ControllerCfg, api api.HAPro
 	return reload, nil
 }
 
-func (t TCPHandler) parseTCPService(store store.K8s, input string) (p tcpSvcParser, err error) {
+func (t TCPServices) parseTCPService(store store.K8s, input string) (p tcpSvcParser, err error) {
 	// parts[0]: Service Name
 	// parts[1]: Service Port
 	// parts[2]: SSL option
@@ -102,7 +102,7 @@ func (t TCPHandler) parseTCPService(store store.K8s, input string) (p tcpSvcPars
 	return p, err
 }
 
-func (t TCPHandler) createTCPFrontend(api api.HAProxyClient, frontendName, bindPort string, sslOffload bool) (frontend models.Frontend, reload bool, err error) {
+func (t TCPServices) createTCPFrontend(api api.HAProxyClient, frontendName, bindPort string, sslOffload bool) (frontend models.Frontend, reload bool, err error) {
 	// Create Frontend
 	frontend = models.Frontend{
 		Name:   frontendName,
@@ -122,7 +122,7 @@ func (t TCPHandler) createTCPFrontend(api api.HAProxyClient, frontendName, bindP
 		V4v6:    true,
 	}))
 	if sslOffload {
-		errors.Add(api.FrontendEnableSSLOffload(frontend.Name, t.certDir, false))
+		errors.Add(api.FrontendEnableSSLOffload(frontend.Name, t.CertDir, false))
 	}
 	if errors.Result() != nil {
 		err = fmt.Errorf("error configuring tcp frontend: %w", err)
@@ -132,14 +132,14 @@ func (t TCPHandler) createTCPFrontend(api api.HAProxyClient, frontendName, bindP
 	return frontend, true, nil
 }
 
-func (t TCPHandler) updateTCPFrontend(api api.HAProxyClient, frontend models.Frontend, p tcpSvcParser) (reload bool, err error) {
+func (t TCPServices) updateTCPFrontend(api api.HAProxyClient, frontend models.Frontend, p tcpSvcParser) (reload bool, err error) {
 	binds, err := api.FrontendBindsGet(frontend.Name)
 	if err != nil {
 		err = fmt.Errorf("failed to get bind lines: %w", err)
 		return
 	}
 	if !binds[0].Ssl && p.sslOffload {
-		err = api.FrontendEnableSSLOffload(frontend.Name, t.certDir, false)
+		err = api.FrontendEnableSSLOffload(frontend.Name, t.CertDir, false)
 		if err != nil {
 			err = fmt.Errorf("failed to enable SSL offload: %w", err)
 			return
@@ -164,7 +164,7 @@ func (t TCPHandler) updateTCPFrontend(api api.HAProxyClient, frontend models.Fro
 			SvcPortInt: p.port,
 		},
 	}
-	r, err := t.setDefaultService(ingress, []string{frontend.Name})
+	r, err := t.SetDefaultService(ingress, []string{frontend.Name})
 	if err != nil {
 		return
 	}
