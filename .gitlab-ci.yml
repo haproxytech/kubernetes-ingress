@@ -38,7 +38,7 @@ golangci_lint:
 lint-commit-msg:
   stage: lint
   image:
-    name: $CI_REGISTRY_GO/check-commit:latest
+    name: $CI_REGISTRY_GO/check-commit:v2.1.0
     entrypoint: [""]
   tags:
     - go
