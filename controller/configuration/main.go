@@ -53,6 +53,7 @@ type Env struct {
 	CaCertDir       string
 	StateDir        string
 	MapDir          string
+	PatternDir      string
 	ErrFileDir      string
 	TransactionDir  string
 }
@@ -163,6 +164,9 @@ func (c *ControllerCfg) envInit() (err error) {
 	if c.Env.MapDir == "" {
 		c.Env.MapDir = filepath.Join(c.Env.CfgDir, "maps")
 	}
+	if c.Env.PatternDir == "" {
+		c.Env.PatternDir = filepath.Join(c.Env.CfgDir, "patterns")
+	}
 	if c.Env.ErrFileDir == "" {
 		c.Env.ErrFileDir = filepath.Join(c.Env.CfgDir, "errors")
 	}
@@ -170,7 +174,7 @@ func (c *ControllerCfg) envInit() (err error) {
 		c.Env.TransactionDir = filepath.Join(c.Env.CfgDir, "transactions")
 	}
 
-	for _, d := range []string{c.Env.CertDir, c.Env.FrontendCertDir, c.Env.BackendCertDir, c.Env.CaCertDir, c.Env.MapDir, c.Env.ErrFileDir, c.Env.StateDir, c.Env.TransactionDir} {
+	for _, d := range []string{c.Env.CertDir, c.Env.FrontendCertDir, c.Env.BackendCertDir, c.Env.CaCertDir, c.Env.MapDir, c.Env.ErrFileDir, c.Env.StateDir, c.Env.TransactionDir, c.Env.PatternDir} {
 		err = os.MkdirAll(d, 0755)
 		if err != nil {
 			return err

@@ -103,10 +103,13 @@ func main() {
 		logger.Printf("Disabling IPv6 support")
 	}
 	if osArgs.ConfigMapTCPServices.Name != "" {
-		logger.Printf("TCP Services defined in %s", osArgs.ConfigMapTCPServices)
+		logger.Printf("TCP Services provided in '%s'", osArgs.ConfigMapTCPServices)
 	}
-	if osArgs.ConfigMapErrorfiles.Name != "" {
-		logger.Printf("Errofile pages defined in %s", osArgs.ConfigMapErrorfiles)
+	if osArgs.ConfigMapErrorFiles.Name != "" {
+		logger.Printf("Errofile pages provided in '%s'", osArgs.ConfigMapErrorFiles)
+	}
+	if osArgs.ConfigMapPatternFiles.Name != "" {
+		logger.Printf("Pattern files provided in '%s'", osArgs.ConfigMapPatternFiles)
 	}
 	logger.Debugf("Kubernetes Informers resync period: %s", osArgs.CacheResyncPeriod.String())
 	logger.Printf("Controller sync period: %s\n", osArgs.SyncPeriod.String())
@@ -129,6 +132,7 @@ func main() {
 	if osArgs.Program != "" {
 		cfg.Env.HAProxyBinary = osArgs.Program
 	}
+	logger.Error(os.Chdir(cfg.Env.CfgDir))
 
 	controller := c.HAProxyController{
 		Cfg:    cfg,

@@ -72,7 +72,8 @@ type OSArgs struct {
 	DefaultCertificate    NamespaceValue `long:"default-ssl-certificate" default:"" description:"secret name of the certificate"`
 	ConfigMap             NamespaceValue `long:"configmap" description:"configmap designated for HAProxy" default:""`
 	ConfigMapTCPServices  NamespaceValue `long:"configmap-tcp-services" description:"configmap used to define tcp services" default:""`
-	ConfigMapErrorfiles   NamespaceValue `long:"configmap-errorfiles" description:"configmap used to define custom error pages associated to HTTP error codes" default:""`
+	ConfigMapErrorFiles   NamespaceValue `long:"configmap-errorfiles" description:"configmap used to define custom error pages associated to HTTP error codes" default:""`
+	ConfigMapPatternFiles NamespaceValue `long:"configmap-patternfiles" description:"configmap used to provide a list of pattern files to use in haproxy configuration " default:""`
 	KubeConfig            string         `long:"kubeconfig" default:"" description:"combined with -e. location of kube config file"`
 	IngressClass          string         `long:"ingress.class" default:"" description:"ingress.class to monitor in multiple controllers environment"`
 	EmptyIngressClass     bool           `long:"empty-ingress-class" description:"empty-ingress-class manages the behavior in case an ingress has no explicit ingress class annotation. true: to process, false: to skip"`

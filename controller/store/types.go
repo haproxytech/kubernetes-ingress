@@ -119,9 +119,10 @@ type IngressTLS struct {
 }
 
 type ConfigMaps struct {
-	Main        *ConfigMap
-	TCPServices *ConfigMap
-	Errorfiles  *ConfigMap
+	Main         *ConfigMap
+	TCPServices  *ConfigMap
+	Errorfiles   *ConfigMap
+	PatternFiles *ConfigMap
 }
 
 // ConfigMap is useful data from k8s structures about configmap

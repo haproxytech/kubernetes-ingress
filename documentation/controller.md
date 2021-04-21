@@ -12,6 +12,7 @@ Image can be run with arguments:
 | [`--configmap`](#--configmap) | `default/haproxy-configmap` |
 | [`--configmap-tcp-services`](#--configmap-tcp-services) |  |
 | [`--configmap-errorfiles`](#--configmap-errorfiles) |  |
+| [`--configmap-patternfiles`](#--configmap-patternfiles) :construction:(dev) |  |
 | [`--default-backend-service`](#--default-backend-service) |  |
 | [`--default-ssl-certificate`](#--default-ssl-certificate) |  |
 | [`--ingress.class`](#--ingressclass) |  |
@@ -124,6 +125,74 @@ Example:
 ```yaml
 args:
   - --configmap-errorfiles=default/errorfile
+```
+
+<p align='right'><a href='#haproxy-kubernetes-ingress-controller'>:arrow_up_small: back to top</a></p>
+
+***
+
+### `--configmap-patternfiles`
+
+
+  > :construction: this is only available from next version, currently available in dev build
+
+  Sets the ConfigMap object that defines pattern files to be used in HAProxy configuration.
+Controller will create corresponding files and update them when ConfigMap is updated.
+Pattern files are particularly useful for [HAProxy ACLs](https://cbonte.github.io/haproxy-dconv/2.3/configuration.html#7.1) where we can load patterns from file.
+The following example will load two pattern files:
+```
+% cat /tmp/ips
+127.0.0.1
+10.0.0.0/8
+1.2.3.4/24
+```
+```
+% cat /tmp/names
+foo
+bar
+toto
+bidule
+```
+
+```
+kubectl create -n default configmap acl-patterns --from-file=/tmp/ips --from-file=/tmp/names
+```
+The resulting configmap will be:
+
+```yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: acls-patterns
+  namespace: default
+data:
+  ips: |
+    127.0.0.1
+    10.0.0.0/8
+    1.2.3.4/24
+  names: |
+    foo
+    bar
+    toto
+    bidule
+```
+Pattern files are useful in [config-snippets](./README.md#config-snippet). Example:
+```
+backend-config-snippet: |
+  http-request deny if !{ src -f patterns/ips }
+```
+
+  :information_source: In order to use pattern files, the target file **should be prefixed with "patterns/"**
+
+Possible values:
+
+- The name of the ConfigMap in format NS/ConfigMapName
+
+Example:
+
+```yaml
+args:
+  - --configmap-patternfiles=default/acl-patterns
 ```
 
 <p align='right'><a href='#haproxy-kubernetes-ingress-controller'>:arrow_up_small: back to top</a></p>

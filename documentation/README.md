@@ -527,6 +527,7 @@ clean-certs: "false"
 
 - Insert raw HAProxy configuration in specific HAProxy config sections.
 - There is **no data validation** done by Ingress Controller. If input is incorrect, HAProxy will fail to apply new configuration.
+- It is possible to use [pattern files](controller.md/#--configmap-patternfiles) inside config snippets.
 
 ##### `global-config-snippet`
 

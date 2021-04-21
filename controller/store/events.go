@@ -328,6 +328,8 @@ func (k *K8s) EventConfigMap(ns *Namespace, data *ConfigMap) (updateRequired boo
 		cm = k.ConfigMaps.TCPServices
 	case k.ConfigMaps.Errorfiles.Namespace == ns.Name && k.ConfigMaps.Errorfiles.Name == data.Name:
 		cm = k.ConfigMaps.Errorfiles
+	case k.ConfigMaps.PatternFiles.Namespace == ns.Name && k.ConfigMaps.PatternFiles.Name == data.Name:
+		cm = k.ConfigMaps.PatternFiles
 	default:
 		return false
 	}

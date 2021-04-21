@@ -46,6 +46,7 @@ func (c *HAProxyController) initHandlers() {
 			SetDefaultService: c.setDefaultService,
 			CertDir:           c.Cfg.Env.FrontendCertDir,
 		},
+		handler.PatternFiles{},
 		handler.Refresh{},
 	}
 }

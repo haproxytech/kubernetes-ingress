@@ -53,8 +53,12 @@ func NewK8sStore(args utils.OSArgs) K8s {
 				Name:      args.ConfigMapTCPServices.Name,
 			},
 			Errorfiles: &ConfigMap{
-				Namespace: args.ConfigMapErrorfiles.Namespace,
-				Name:      args.ConfigMapErrorfiles.Name,
+				Namespace: args.ConfigMapErrorFiles.Namespace,
+				Name:      args.ConfigMapErrorFiles.Name,
+			},
+			PatternFiles: &ConfigMap{
+				Namespace: args.ConfigMapPatternFiles.Namespace,
+				Name:      args.ConfigMapPatternFiles.Name,
 			},
 		},
 	}
