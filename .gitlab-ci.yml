@@ -17,6 +17,9 @@ golangci_lint:
     - go
   script:
     - golangci-lint run --timeout=5m -v
+  only:
+    - merge_requests
+    - branches
 lint-commit-msg:
   stage: lint
   image:
@@ -26,6 +29,8 @@ lint-commit-msg:
     - go
   script:
       - /check
+  only:
+    - merge_requests
 unit-tests:
   stage: unit-tests
   image:
@@ -38,6 +43,9 @@ unit-tests:
     - apt install --assume-yes haproxy/stable
     - go build -v .
     - go test -v ./...
+  only:
+    - merge_requests
+    - branches
 .kind_deployment:
   stage: e2e-tests
   image: docker:stable
@@ -63,6 +71,9 @@ unit-tests:
     - KIND_URL=docker go test -v -p 1 ./deploy/tests/e2e/... --tags=e2e_sequential
   after_script:
     - kind delete cluster --name=dev
+  only:
+    - merge_requests
+    - branches
 k8s_17:
   variables:
     K8S_VERSION: v1.17.5
