@@ -1,12 +1,10 @@
 name: Commit subject
-on: [push, pull_request]
+on: [pull_request]
 jobs:
   check:
     runs-on: ubuntu-latest
     steps:
-      - name: Check out code
-        uses: actions/checkout@v2
-        with:
-          fetch-depth: 0
       - name: check-commit
-        uses: docker://haproxytech/check-commit:v2.0.0
+        uses: docker://haproxytech/check-commit:latest
+        env:
+          API_TOKEN: ${{ secrets.GITHUB_TOKEN }}

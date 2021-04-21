@@ -20,6 +20,9 @@ diff:
   script:
     - test -z "$(git diff 2> /dev/null)" || exit "Documentation is not generated, issue \`cd documentation/gen && go run .\` and commit the result"
     - test -z "$(git ls-files --others --exclude-standard 2> /dev/null)" || exit "Documentation created untracked files, cannot proceed"
+  only:
+    - merge_requests
+    - branches
 golangci_lint:
   stage: lint
   image:
@@ -29,6 +32,9 @@ golangci_lint:
     - go
   script:
     - golangci-lint run --enable-all --timeout=10m
+  only:
+    - merge_requests
+    - branches
 lint-commit-msg:
   stage: lint
   image:
@@ -38,6 +44,8 @@ lint-commit-msg:
     - go
   script:
       - /check
+  only:
+    - merge_requests
 unit-tests:
   stage: unit-tests
   image:
@@ -50,6 +58,9 @@ unit-tests:
     - apt install --assume-yes haproxy/stable
     - go build -v .
     - go test -v ./...
+  only:
+    - merge_requests
+    - branches
 .kind_deployment:
   stage: e2e-tests
   image: docker:stable
@@ -75,6 +86,9 @@ unit-tests:
     - KIND_URL=docker go test -v -p 1 ./deploy/tests/e2e/... --tags=e2e_sequential
   after_script:
     - kind delete cluster --name=dev
+  only:
+    - merge_requests
+    - branches
 k8s_17:
   variables:
     K8S_VERSION: v1.17.5
