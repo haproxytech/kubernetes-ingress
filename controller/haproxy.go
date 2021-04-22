@@ -20,6 +20,7 @@ import (
 	"os"
 	"os/exec"
 	"strconv"
+	"strings"
 	"syscall"
 )
 
@@ -125,4 +126,18 @@ func (c *HAProxyController) saveServerState() error {
 		return err
 	}
 	return nil
+}
+
+func (c *HAProxyController) haproxyStartup() {
+	//nolint:gosec //checks on HAProxyBinary should be done in configuration module.
+	cmd := exec.Command(c.Cfg.Env.HAProxyBinary, "-v")
+	haproxyInfo, err := cmd.Output()
+	if err == nil {
+		haproxyInfo := strings.Split(string(haproxyInfo), "\n")
+		logger.Printf("Running with %s", haproxyInfo[0])
+	} else {
+		logger.Error(err)
+	}
+	logger.Printf("Starting HAProxy with %s", c.Cfg.Env.MainCFGFile)
+	logger.Panic(c.haproxyService("start"))
 }

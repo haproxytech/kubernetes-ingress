@@ -111,6 +111,10 @@ func main() {
 	logger.Debugf("Kubernetes Informers resync period: %s", osArgs.CacheResyncPeriod.String())
 	logger.Printf("Controller sync period: %s\n", osArgs.SyncPeriod.String())
 
+	hostname, err := os.Hostname()
+	logger.Error(err)
+	logger.Printf("Running on %s", hostname)
+
 	cfg := config.ControllerCfg{
 		Env: config.Env{
 			HAProxyBinary: "/usr/local/sbin/haproxy",

@@ -26,7 +26,11 @@ type UpdateHandler interface {
 }
 
 func (c *HAProxyController) initHandlers() {
-	c.UpdateHandlers = []UpdateHandler{
+	// handlers executed only once at controller initialization
+	logger.Panic(c.clientAPIClosure(c.startupHandlers))
+
+	// handlers executed at reconciliation loop
+	c.updateHandlers = []UpdateHandler{
 		handler.HTTPS{
 			Enabled:  !c.osArgs.DisableHTTPS,
 			CertDir:  c.Cfg.Env.FrontendCertDir,
@@ -44,4 +48,31 @@ func (c *HAProxyController) initHandlers() {
 		},
 		handler.Refresh{},
 	}
+}
+
+func (c *HAProxyController) startupHandlers() error {
+	handlers := []UpdateHandler{
+		handler.HTTPBind{
+			HTTP:      !c.osArgs.DisableHTTP,
+			HTTPS:     !c.osArgs.DisableHTTPS,
+			IPv4:      !c.osArgs.DisableIPV4,
+			IPv6:      !c.osArgs.DisableIPV6,
+			HTTPPort:  c.osArgs.HTTPBindPort,
+			HTTPSPort: c.osArgs.HTTPSBindPort,
+			IPv4Addr:  c.osArgs.IPV4BindAddr,
+			IPv6Addr:  c.osArgs.IPV6BindAddr,
+		}}
+	if c.osArgs.External {
+		handlers = append(handlers, handler.GlobalCfg{})
+	}
+	if c.osArgs.PprofEnabled {
+		handlers = append(handlers, handler.Pprof{})
+	}
+	for _, handler := range handlers {
+		_, err := handler.Update(c.Store, &c.Cfg, c.Client)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }

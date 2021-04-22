@@ -15,13 +15,9 @@
 package controller
 
 import (
-	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 
-	"github.com/haproxytech/config-parser/v3/params"
-	"github.com/haproxytech/config-parser/v3/types"
 	"github.com/haproxytech/models/v2"
 	"k8s.io/apimachinery/pkg/watch"
 
@@ -45,7 +41,7 @@ type HAProxyController struct {
 	osArgs            utils.OSArgs
 	Client            api.HAProxyClient
 	eventChan         chan SyncDataEvent
-	UpdateHandlers    []UpdateHandler
+	updateHandlers    []UpdateHandler
 }
 
 // Wrapping a Native-Client transaction and commit it.
@@ -68,25 +64,24 @@ func (c *HAProxyController) clientAPIClosure(fn func() error) (err error) {
 
 // Start initializes and runs HAProxyController
 func (c *HAProxyController) Start(osArgs utils.OSArgs) {
-	var k8s *K8s
 	var err error
 
 	c.osArgs = osArgs
 	logger.SetLevel(osArgs.LogLevel.LogLevel)
-	if err = c.Cfg.Init(); err != nil {
+
+	// Initialize controller
+	err = c.Cfg.Init()
+	if err != nil {
 		logger.Panic(err)
 	}
-	c.haproxyInitialize()
+	c.Client, err = api.Init(c.Cfg.Env.TransactionDir, c.Cfg.Env.MainCFGFile, c.Cfg.Env.HAProxyBinary, c.Cfg.Env.RuntimeSocket)
+	if err != nil {
+		logger.Panic(err)
+	}
 	c.initHandlers()
+	c.haproxyStartup()
 
-	logger.Panic(c.clientAPIClosure(func() error {
-		logger.Error(c.handleBinds())
-		if osArgs.PprofEnabled {
-			logger.Error(c.handlePprof())
-		}
-		return nil
-	}))
-
+	// Controller PublishService
 	parts := strings.Split(osArgs.PublishService, "/")
 	if len(parts) == 2 {
 		c.PublishService = &store.Service{
@@ -97,27 +92,26 @@ func (c *HAProxyController) Start(osArgs utils.OSArgs) {
 		}
 	}
 
+	// Get K8s client
+	c.k8s, err = GetKubernetesClient()
 	if osArgs.External {
 		kubeconfig := filepath.Join(utils.HomeDir(), ".kube", "config")
 		if osArgs.KubeConfig != "" {
 			kubeconfig = osArgs.KubeConfig
 		}
-		k8s, err = GetRemoteKubernetesClient(kubeconfig)
-	} else {
-		k8s, err = GetKubernetesClient()
+		c.k8s, err = GetRemoteKubernetesClient(kubeconfig)
 	}
 	if err != nil {
 		logger.Panic(err)
 	}
-	c.k8s = k8s
-
-	x := k8s.API.Discovery()
+	x := c.k8s.API.Discovery()
 	if k8sVersion, err := x.ServerVersion(); err != nil {
 		logger.Panicf("Unable to get Kubernetes version: %v\n", err)
 	} else {
 		logger.Printf("Running on Kubernetes version: %s %s", k8sVersion.String(), k8sVersion.Platform)
 	}
 
+	// Monitor k8s events
 	c.eventChan = make(chan SyncDataEvent, watch.DefaultChanSize*6)
 	go c.monitorChanges()
 }
@@ -207,7 +201,7 @@ func (c *HAProxyController) updateHAProxy() {
 		}
 	}
 
-	for _, handler := range c.UpdateHandlers {
+	for _, handler := range c.updateHandlers {
 		r, errHandler := handler.Update(c.Store, &c.Cfg, c.Client)
 		logger.Error(errHandler)
 		reload = reload || r
@@ -267,128 +261,6 @@ func (c *HAProxyController) setToReady() {
 		logger.Warningf("Main configmap '%s/%s' not found", cm.Namespace, cm.Name)
 	}
 	c.ready = true
-}
-
-// haproxyInitialize initializes HAProxy environment and its API client.
-func (c *HAProxyController) haproxyInitialize() {
-	var err error
-
-	// Initialize HAProxy client API
-	c.Client, err = api.Init(c.Cfg.Env.TransactionDir, c.Cfg.Env.MainCFGFile, c.Cfg.Env.HAProxyBinary, c.Cfg.Env.RuntimeSocket)
-	if err != nil {
-		logger.Panic(err)
-	}
-	if c.osArgs.External && !c.osArgs.Test {
-		logger.Panic(c.clientAPIClosure(func() error {
-			var errors utils.Errors
-			errors.Add(
-				// Configure runtime socket
-				c.Client.RuntimeSocket(nil),
-				c.Client.RuntimeSocket(&types.Socket{
-					Path: c.Cfg.Env.RuntimeSocket,
-					Params: []params.BindOption{
-						&params.BindOptionDoubleWord{Name: "expose-fd", Value: "listeners"},
-						&params.BindOptionValue{Name: "level", Value: "admin"},
-					},
-				}),
-				// Configure pidfile
-				c.Client.PIDFile(&types.StringC{Value: c.Cfg.Env.PIDFile}),
-				// Configure server-state-base
-				c.Client.ServerStateBase(&types.StringC{Value: c.Cfg.Env.StateDir}),
-			)
-			return errors.Result()
-		}))
-	}
-
-	//nolint:gosec //checks on HAProxyBinary should be done in configuration module.
-	cmd := exec.Command(c.Cfg.Env.HAProxyBinary, "-v")
-	haproxyInfo, err := cmd.Output()
-	if err == nil {
-		haproxyInfo := strings.Split(string(haproxyInfo), "\n")
-		logger.Printf("Running with %s", haproxyInfo[0])
-	} else {
-		logger.Error(err)
-	}
-
-	logger.Printf("Starting HAProxy with %s", c.Cfg.Env.MainCFGFile)
-	logger.Panic(c.haproxyService("start"))
-
-	hostname, err := os.Hostname()
-	logger.Error(err)
-	logger.Printf("Running on %s", hostname)
-}
-
-// handleBind configures Frontends bind lines
-func (c *HAProxyController) handleBinds() (err error) {
-	var errors utils.Errors
-	frontends := make(map[string]int64, 2)
-	protos := make(map[string]string, 2)
-	if !c.osArgs.DisableHTTP {
-		frontends[c.Cfg.FrontHTTP] = c.osArgs.HTTPBindPort
-	}
-	if !c.osArgs.DisableHTTPS {
-		frontends[c.Cfg.FrontHTTPS] = c.osArgs.HTTPSBindPort
-	}
-	if !c.osArgs.DisableIPV4 {
-		protos["v4"] = c.osArgs.IPV4BindAddr
-	}
-	if !c.osArgs.DisableIPV6 {
-		protos["v6"] = c.osArgs.IPV6BindAddr
-
-		// IPv6 not disabled, so add v6 listening to stats frontend
-		errors.Add(c.Client.FrontendBindCreate("stats",
-			models.Bind{
-				Name:    "v6",
-				Address: ":::1024",
-				V4v6:    false,
-			}))
-	}
-	for ftName, ftPort := range frontends {
-		for proto, addr := range protos {
-			bind := models.Bind{
-				Name:    proto,
-				Address: addr,
-				Port:    utils.PtrInt64(ftPort),
-			}
-			if err = c.Client.FrontendBindEdit(ftName, bind); err != nil {
-				errors.Add(c.Client.FrontendBindCreate(ftName, bind))
-			}
-		}
-	}
-	return errors.Result()
-}
-
-// handlePprof enables  pprof backend
-func (c *HAProxyController) handlePprof() (err error) {
-	pprofBackend := "pprof"
-
-	err = c.Client.BackendCreate(models.Backend{
-		Name: pprofBackend,
-		Mode: "http",
-	})
-	if err != nil {
-		return err
-	}
-	err = c.Client.BackendServerCreate(pprofBackend, models.Server{
-		Name:    "pprof",
-		Address: "127.0.0.1:6060",
-	})
-	if err != nil {
-		return err
-	}
-	logger.Debug("pprof backend created")
-	err = route.AddHostPathRoute(route.Route{
-		BackendName: pprofBackend,
-		Path: &store.IngressPath{
-			Path:           "/debug/pprof",
-			ExactPathMatch: false,
-		},
-	}, c.Cfg.MapFiles)
-	if err != nil {
-		return err
-	}
-	c.Cfg.ActiveBackends[pprofBackend] = struct{}{}
-	return nil
 }
 
 // clean controller state
