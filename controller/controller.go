@@ -45,7 +45,6 @@ type HAProxyController struct {
 	osArgs            utils.OSArgs
 	Client            api.HAProxyClient
 	eventChan         chan SyncDataEvent
-	serverlessPods    map[string]int
 	UpdateHandlers    []UpdateHandler
 }
 
@@ -119,7 +118,6 @@ func (c *HAProxyController) Start(osArgs utils.OSArgs) {
 		logger.Printf("Running on Kubernetes version: %s %s", k8sVersion.String(), k8sVersion.Platform)
 	}
 
-	c.serverlessPods = map[string]int{}
 	c.eventChan = make(chan SyncDataEvent, watch.DefaultChanSize*6)
 	go c.monitorChanges()
 }
