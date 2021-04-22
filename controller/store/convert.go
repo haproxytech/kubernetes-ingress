@@ -76,7 +76,11 @@ func (n ingressNetworkingV1Beta1Strategy) ConvertIngress() *Ingress {
 					continue
 				}
 				for _, k8sPath := range k8sRule.HTTP.Paths {
-					paths[k8sPath.Path] = &IngressPath{
+					prefix := ""
+					if k8sPath.PathType != nil {
+						prefix = string(*k8sPath.PathType)
+					}
+					paths[prefix+"-"+k8sPath.Path] = &IngressPath{
 						Path:           k8sPath.Path,
 						ExactPathMatch: k8sPath.PathType != nil && *k8sPath.PathType == networkingv1beta1.PathTypeExact,
 						SvcName:        k8sPath.Backend.ServiceName,
@@ -171,7 +175,11 @@ func (e ingressExtensionsStrategy) ConvertIngress() *Ingress {
 					continue
 				}
 				for _, k8sPath := range k8sRule.HTTP.Paths {
-					paths[k8sPath.Path] = &IngressPath{
+					prefix := ""
+					if k8sPath.PathType != nil {
+						prefix = string(*k8sPath.PathType)
+					}
+					paths[prefix+"-"+k8sPath.Path] = &IngressPath{
 						Path:           k8sPath.Path,
 						ExactPathMatch: k8sPath.PathType != nil && *k8sPath.PathType == extensionsv1beta1.PathTypeExact,
 						SvcName:        k8sPath.Backend.ServiceName,
@@ -254,7 +262,11 @@ func (n ingressNetworkingV1Strategy) ConvertIngress() *Ingress {
 					continue
 				}
 				for _, k8sPath := range k8sRule.HTTP.Paths {
-					paths[k8sPath.Path] = &IngressPath{
+					prefix := ""
+					if k8sPath.PathType != nil {
+						prefix = string(*k8sPath.PathType)
+					}
+					paths[prefix+"-"+k8sPath.Path] = &IngressPath{
 						Path:           k8sPath.Path,
 						ExactPathMatch: k8sPath.PathType != nil && *k8sPath.PathType == networkingv1.PathTypeExact,
 						SvcName:        k8sPath.Backend.Service.Name,
