@@ -31,17 +31,15 @@ import (
 
 // HAProxyController is ingress controller
 type HAProxyController struct {
-	k8s               *K8s
-	Store             store.K8s
-	PublishService    *store.Service
-	IngressClass      string
-	EmptyIngressClass bool
-	ready             bool
-	Cfg               config.ControllerCfg
-	osArgs            utils.OSArgs
-	Client            api.HAProxyClient
-	eventChan         chan SyncDataEvent
-	updateHandlers    []UpdateHandler
+	Cfg            config.ControllerCfg
+	Client         api.HAProxyClient
+	OSArgs         utils.OSArgs
+	Store          store.K8s
+	PublishService *store.Service
+	eventChan      chan SyncDataEvent
+	k8s            *K8s
+	ready          bool
+	updateHandlers []UpdateHandler
 }
 
 // Wrapping a Native-Client transaction and commit it.
@@ -63,11 +61,9 @@ func (c *HAProxyController) clientAPIClosure(fn func() error) (err error) {
 }
 
 // Start initializes and runs HAProxyController
-func (c *HAProxyController) Start(osArgs utils.OSArgs) {
+func (c *HAProxyController) Start() {
 	var err error
-
-	c.osArgs = osArgs
-	logger.SetLevel(osArgs.LogLevel.LogLevel)
+	logger.SetLevel(c.OSArgs.LogLevel.LogLevel)
 
 	// Initialize controller
 	err = c.Cfg.Init()
@@ -82,7 +78,7 @@ func (c *HAProxyController) Start(osArgs utils.OSArgs) {
 	c.haproxyStartup()
 
 	// Controller PublishService
-	parts := strings.Split(osArgs.PublishService, "/")
+	parts := strings.Split(c.OSArgs.PublishService, "/")
 	if len(parts) == 2 {
 		c.PublishService = &store.Service{
 			Namespace: parts[0],
@@ -94,10 +90,10 @@ func (c *HAProxyController) Start(osArgs utils.OSArgs) {
 
 	// Get K8s client
 	c.k8s, err = GetKubernetesClient()
-	if osArgs.External {
+	if c.OSArgs.External {
 		kubeconfig := filepath.Join(utils.HomeDir(), ".kube", "config")
-		if osArgs.KubeConfig != "" {
-			kubeconfig = osArgs.KubeConfig
+		if c.OSArgs.KubeConfig != "" {
+			kubeconfig = c.OSArgs.KubeConfig
 		}
 		c.k8s, err = GetRemoteKubernetesClient(kubeconfig)
 	}
@@ -245,7 +241,7 @@ func (c *HAProxyController) setToReady() {
 				Address: "0.0.0.0:1042",
 			})
 	}))
-	if !c.osArgs.DisableIPV6 {
+	if !c.OSArgs.DisableIPV6 {
 		logger.Panic(c.clientAPIClosure(func() error {
 			return c.Client.FrontendBindCreate("healthz",
 				models.Bind{

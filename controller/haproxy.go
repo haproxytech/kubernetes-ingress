@@ -26,7 +26,7 @@ import (
 
 // Handle HAProxy daemon via Master process
 func (c *HAProxyController) haproxyService(action string) (err error) {
-	if c.osArgs.Test {
+	if c.OSArgs.Test {
 		logger.Infof("HAProxy would be %sed now", action)
 		return nil
 	}

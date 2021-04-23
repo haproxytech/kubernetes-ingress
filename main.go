@@ -131,9 +131,8 @@ func main() {
 	}
 
 	controller := c.HAProxyController{
-		Cfg:               cfg,
-		IngressClass:      osArgs.IngressClass,
-		EmptyIngressClass: osArgs.EmptyIngressClass,
+		Cfg:    cfg,
+		OSArgs: osArgs,
 	}
 	logger.FileName = true
 	// K8s Store
@@ -149,7 +148,7 @@ func main() {
 		s.NamespacesAccess.Blacklist[namespace] = struct{}{}
 	}
 	controller.Store = s
-	controller.Start(osArgs)
+	controller.Start()
 	signalC := make(chan os.Signal, 1)
 	signal.Notify(signalC, os.Interrupt, syscall.SIGTERM, syscall.SIGUSR1)
 	<-signalC

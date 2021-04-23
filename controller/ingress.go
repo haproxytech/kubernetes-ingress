@@ -37,11 +37,11 @@ func (c *HAProxyController) igClassIsSupported(ingress *store.Ingress) bool {
 	}
 
 	// If ingress class is unassigned and the controller is controlling any resource without explicit ingress class then support it.
-	if igClassAnn == "" && c.EmptyIngressClass {
+	if igClassAnn == "" && c.OSArgs.EmptyIngressClass {
 		return true
 	}
 
-	if igClassAnn == "" || igClassAnn != c.IngressClass {
+	if igClassAnn == "" || igClassAnn != c.OSArgs.IngressClass {
 		igClass = c.Store.IngressClasses[ingress.Class]
 		if igClass != nil && igClass.Status != DELETED && igClass.Controller == CONTROLLER_CLASS {
 			// Corresponding IngresClass was updated so Ingress resource should be re-processed
@@ -52,7 +52,7 @@ func (c *HAProxyController) igClassIsSupported(ingress *store.Ingress) bool {
 			return true
 		}
 	}
-	if igClassAnn == c.IngressClass {
+	if igClassAnn == c.OSArgs.IngressClass {
 		return true
 	}
 	return false

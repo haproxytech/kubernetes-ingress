@@ -32,13 +32,13 @@ func (c *HAProxyController) initHandlers() {
 	// handlers executed at reconciliation loop
 	c.updateHandlers = []UpdateHandler{
 		handler.HTTPS{
-			Enabled:  !c.osArgs.DisableHTTPS,
+			Enabled:  !c.OSArgs.DisableHTTPS,
 			CertDir:  c.Cfg.Env.FrontendCertDir,
-			IPv4:     !c.osArgs.DisableIPV4,
-			AddrIPv4: c.osArgs.IPV4BindAddr,
-			AddrIPv6: c.osArgs.IPV6BindAddr,
-			IPv6:     !c.osArgs.DisableIPV6,
-			Port:     c.osArgs.HTTPSBindPort,
+			IPv4:     !c.OSArgs.DisableIPV4,
+			AddrIPv4: c.OSArgs.IPV4BindAddr,
+			AddrIPv6: c.OSArgs.IPV6BindAddr,
+			IPv6:     !c.OSArgs.DisableIPV6,
+			Port:     c.OSArgs.HTTPSBindPort,
 		},
 		handler.ProxyProtocol{},
 		handler.ErrorFile{},
@@ -53,19 +53,19 @@ func (c *HAProxyController) initHandlers() {
 func (c *HAProxyController) startupHandlers() error {
 	handlers := []UpdateHandler{
 		handler.HTTPBind{
-			HTTP:      !c.osArgs.DisableHTTP,
-			HTTPS:     !c.osArgs.DisableHTTPS,
-			IPv4:      !c.osArgs.DisableIPV4,
-			IPv6:      !c.osArgs.DisableIPV6,
-			HTTPPort:  c.osArgs.HTTPBindPort,
-			HTTPSPort: c.osArgs.HTTPSBindPort,
-			IPv4Addr:  c.osArgs.IPV4BindAddr,
-			IPv6Addr:  c.osArgs.IPV6BindAddr,
+			HTTP:      !c.OSArgs.DisableHTTP,
+			HTTPS:     !c.OSArgs.DisableHTTPS,
+			IPv4:      !c.OSArgs.DisableIPV4,
+			IPv6:      !c.OSArgs.DisableIPV6,
+			HTTPPort:  c.OSArgs.HTTPBindPort,
+			HTTPSPort: c.OSArgs.HTTPSBindPort,
+			IPv4Addr:  c.OSArgs.IPV4BindAddr,
+			IPv6Addr:  c.OSArgs.IPV6BindAddr,
 		}}
-	if c.osArgs.External {
+	if c.OSArgs.External {
 		handlers = append(handlers, handler.GlobalCfg{})
 	}
-	if c.osArgs.PprofEnabled {
+	if c.OSArgs.PprofEnabled {
 		handlers = append(handlers, handler.Pprof{})
 	}
 	for _, handler := range handlers {

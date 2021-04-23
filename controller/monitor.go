@@ -101,7 +101,7 @@ func (c *HAProxyController) SyncData() {
 		case NAMESPACE:
 			change = c.Store.EventNamespace(ns, job.Data.(*store.Namespace))
 		case INGRESS:
-			change = c.Store.EventIngress(ns, job.Data.(*store.Ingress), c.IngressClass)
+			change = c.Store.EventIngress(ns, job.Data.(*store.Ingress), c.OSArgs.IngressClass)
 		case INGRESS_CLASS:
 			change = c.Store.EventIngressClass(job.Data.(*store.IngressClass))
 		case ENDPOINTS:
@@ -159,7 +159,7 @@ func (c *HAProxyController) getWhitelistedNamespaces() []string {
 	for ns := range c.Store.NamespacesAccess.Whitelist {
 		namespaces = append(namespaces, ns)
 	}
-	cfgMapNS := c.osArgs.ConfigMap.Namespace
+	cfgMapNS := c.OSArgs.ConfigMap.Namespace
 	if _, ok := c.Store.NamespacesAccess.Whitelist[cfgMapNS]; !ok {
 		namespaces = []string{cfgMapNS}
 		logger.Warningf("configmap Namespace '%s' not whitelisted. Whitelisting it anyway", cfgMapNS)
