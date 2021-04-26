@@ -39,6 +39,8 @@ type HAProxyController struct {
 	eventChan      chan SyncDataEvent
 	k8s            *K8s
 	ready          bool
+	reload         bool
+	restart        bool
 	updateHandlers []UpdateHandler
 }
 
@@ -120,9 +122,11 @@ func (c *HAProxyController) Stop() {
 
 // updateHAProxy is the control loop syncing HAProxy configuration
 func (c *HAProxyController) updateHAProxy() {
+	var reload bool
+	var err error
 	logger.Trace("HAProxy config sync started")
 
-	err := c.Client.APIStartTransaction()
+	err = c.Client.APIStartTransaction()
 	if err != nil {
 		logger.Error(err)
 		return
@@ -131,7 +135,8 @@ func (c *HAProxyController) updateHAProxy() {
 		c.Client.APIDisposeTransaction()
 	}()
 
-	reload, restart := c.handleGlobalConfig()
+	reload, c.restart = c.handleGlobalConfig()
+	c.reload = c.reload || reload
 
 	if route.CustomRoutes {
 		logger.Error(route.RoutesReset(c.Client))
@@ -154,10 +159,10 @@ func (c *HAProxyController) updateHAProxy() {
 				logger.Error(c.k8s.UpdateIngressStatus(ingress, c.PublishService))
 			}
 			if ingress.DefaultBackend != nil {
-				if r, errSvc := c.setDefaultService(ingress, []string{c.Cfg.FrontHTTP, c.Cfg.FrontHTTPS}); errSvc != nil {
-					logger.Errorf("Ingress '%s/%s': default backend: %s", ingress.Namespace, ingress.Name, errSvc)
+				if reload, err = c.setDefaultService(ingress, []string{c.Cfg.FrontHTTP, c.Cfg.FrontHTTPS}); err != nil {
+					logger.Errorf("Ingress '%s/%s': default backend: %s", ingress.Namespace, ingress.Name, err)
 				} else {
-					reload = reload || r
+					c.reload = c.reload || reload
 				}
 			}
 			// Ingress secrets
@@ -172,7 +177,7 @@ func (c *HAProxyController) updateHAProxy() {
 					SecretType: haproxy.FT_CERT,
 				})
 				if crt != "" && updated {
-					reload = true
+					c.reload = true
 					logger.Debugf("Secret '%s' in ingress '%s/%s' was updated, reload required", tls.SecretName.Value, ingress.Namespace, ingress.Name)
 				}
 			}
@@ -187,10 +192,10 @@ func (c *HAProxyController) updateHAProxy() {
 			logger.Tracef("ingress '%s/%s': processing rules...", ingress.Namespace, ingress.Name)
 			for _, rule := range ingress.Rules {
 				for _, path := range rule.Paths {
-					if r, errIng := c.handleIngressPath(ingress, rule.Host, path); errIng != nil {
-						logger.Errorf("Ingress '%s/%s': %s", ingress.Namespace, ingress.Name, errIng)
+					if reload, err = c.handleIngressPath(ingress, rule.Host, path); err != nil {
+						logger.Errorf("Ingress '%s/%s': %s", ingress.Namespace, ingress.Name, err)
 					} else {
-						reload = reload || r
+						c.reload = c.reload || reload
 					}
 				}
 			}
@@ -198,9 +203,9 @@ func (c *HAProxyController) updateHAProxy() {
 	}
 
 	for _, handler := range c.updateHandlers {
-		r, errHandler := handler.Update(c.Store, &c.Cfg, c.Client)
-		logger.Error(errHandler)
-		reload = reload || r
+		reload, err = handler.Update(c.Store, &c.Cfg, c.Client)
+		logger.Error(err)
+		c.reload = c.reload || reload
 	}
 
 	err = c.Client.APICommitTransaction()
@@ -210,24 +215,27 @@ func (c *HAProxyController) updateHAProxy() {
 		c.clean(true)
 		return
 	}
-	c.clean(false)
+
 	if !c.ready {
 		c.setToReady()
 	}
+
 	switch {
-	case restart:
+	case c.restart:
 		if err = c.haproxyService("restart"); err != nil {
 			logger.Error(err)
 		} else {
 			logger.Info("HAProxy restarted")
 		}
-	case reload:
+	case c.reload:
 		if err = c.haproxyService("reload"); err != nil {
 			logger.Error(err)
 		} else {
 			logger.Info("HAProxy reloaded")
 		}
 	}
+
+	c.clean(false)
 
 	logger.Trace("HAProxy config sync ended")
 }
@@ -269,4 +277,6 @@ func (c *HAProxyController) clean(failedSync bool) {
 	if !failedSync {
 		c.Store.Clean()
 	}
+	c.reload = false
+	c.restart = false
 }
