@@ -276,7 +276,7 @@ func (k K8s) EventEndpoints(ns *Namespace, data *Endpoints, updateHAproxySrvs fu
 			oldData.Status = DELETED
 			updateRequired = true
 		} else {
-			logger.Warningf("Endpoints '%s' not registered with controller, cannot delete !", oldData.Service)
+			logger.Warningf("Endpoints '%s' not registered with controller, cannot delete !", data.Service.Value)
 		}
 	}
 	return updateRequired
