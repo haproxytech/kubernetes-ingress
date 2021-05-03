@@ -12,11 +12,11 @@ Image can be run with arguments:
 | [`--configmap`](#--configmap) | `default/haproxy-configmap` |
 | [`--configmap-tcp-services`](#--configmap-tcp-services) |  |
 | [`--configmap-errorfiles`](#--configmap-errorfiles) |  |
-| [`--configmap-patternfiles`](#--configmap-patternfiles) :construction:(dev) |  |
+| [`--configmap-patternfiles`](#--configmap-patternfiles) |  |
 | [`--default-backend-service`](#--default-backend-service) |  |
 | [`--default-ssl-certificate`](#--default-ssl-certificate) |  |
 | [`--ingress.class`](#--ingressclass) |  |
-| [`--empty-ingress-class`](#--empty-ingress-class) :construction:(dev) | `false` |
+| [`--empty-ingress-class`](#--empty-ingress-class) | `false` |
 | [`--namespace-blacklist`](#--namespace-blacklist) |  |
 | [`--namespace-whitelist`](#--namespace-whitelist) |  |
 | [`--publish-service`](#--publish-service) |  |
@@ -132,9 +132,6 @@ args:
 ***
 
 ### `--configmap-patternfiles`
-
-
-  > :construction: this is only available from next version, currently available in dev build
 
   Sets the ConfigMap object that defines pattern files to be used in HAProxy configuration.
 Controller will create corresponding files and update them when ConfigMap is updated.
@@ -257,9 +254,6 @@ args:
 ***
 
 ### `--empty-ingress-class`
-
-
-  > :construction: this is only available from next version, currently available in dev build
 
   A flag to indicate the controller should process ingresses with empty ingress.class annotation.
 
