@@ -137,6 +137,8 @@ image_arguments:
         - --default-ssl-certificate=default/my-tls
   - argument: --ingress.class
     description: A name to assign to the ingress controller so that Ingress objects can target it apart from other running ingress controllers.
+    tip:
+      - Starting from kubernetes 1.18, a new `ingressClass` resource can be referenced by Ingress objects to target an Ingress Controller. HAProxy Ingress Controller will handle IngressClasses with controller value equal to `haproxy.org/ingress-controller`.  More About how IngressClass mechanism can be found in official kubernetes [documentation](https://kubernetes.io/docs/concepts/services-networking/ingress/#ingress-class).
     values:
       - The name of the ingress class
     version_min: "1.4"
@@ -893,11 +895,10 @@ annotations:
     dependencies: ""
     default: ""
     description:
-    - Targets an ingress controller by class name for this ingress to use.
+    - Identifies the ingress controller to be used. If this value is the same as the [--ingress.class](./controller.md#--ingressclass) controller arg, the ingress resource will be processed.
+    - Starting from kubernetes 1.18, a new `ingressClassName` field has been added to the Ingress spec resource. This fields should reference an `IngressClass` and HAProxy Ingress controller will process the Ingress resource if the controller value of the referenced `IngressClass` is `haproxy.org/ingress-controller`. More About how IngressClass mechanism can be found in official kubernetes [documentation](https://kubernetes.io/docs/concepts/services-networking/ingress/#ingress-class).
     tip:
-    - Any ingress object which have class specified and its different from one defined
-      in [image arguments](controller.md) will be ignored
-    - 'default: "" - all ingress objects are monitored'
+    - In case both `ingress.class` annotation and `ingressClassName` are used, `ingress.class` will have precedence.
     values:
     - The ingress class name
     applies_to:
