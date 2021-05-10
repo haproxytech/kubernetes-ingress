@@ -341,6 +341,7 @@ func (k *K8s) EventConfigMap(ns *Namespace, data *ConfigMap) (updateRequired boo
 		}
 		*cm = *data
 		cm.Loaded = true
+		updateRequired = true
 		logger.Debugf("configmap '%s/%s' processed", cm.Namespace, cm.Name)
 	case MODIFIED:
 		different := data.Annotations.SetStatus(cm.Annotations)
