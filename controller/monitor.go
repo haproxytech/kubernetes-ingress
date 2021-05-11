@@ -157,13 +157,14 @@ func (c *HAProxyController) getWhitelistedNamespaces() []string {
 	if len(c.Store.NamespacesAccess.Whitelist) == 0 {
 		return []string{""}
 	}
-	namespaces := make([]string, len(c.Store.NamespacesAccess.Whitelist))
+	// Add one because of potential whitelisting of configmap namespace
+	namespaces := make([]string, len(c.Store.NamespacesAccess.Whitelist)+1)
 	for ns := range c.Store.NamespacesAccess.Whitelist {
 		namespaces = append(namespaces, ns)
 	}
 	cfgMapNS := c.OSArgs.ConfigMap.Namespace
 	if _, ok := c.Store.NamespacesAccess.Whitelist[cfgMapNS]; !ok {
-		namespaces = []string{cfgMapNS}
+		namespaces = append(namespaces, cfgMapNS)
 		logger.Warningf("configmap Namespace '%s' not whitelisted. Whitelisting it anyway", cfgMapNS)
 	}
 	logger.Infof("Whitelisted Namespaces: %s", namespaces)
