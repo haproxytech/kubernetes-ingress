@@ -18,7 +18,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/haproxytech/models/v2"
+	"github.com/haproxytech/client-native/v2/models"
 
 	config "github.com/haproxytech/kubernetes-ingress/controller/configuration"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy"

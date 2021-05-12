@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/haproxytech/models/v2"
+	"github.com/haproxytech/client-native/v2/models"
 
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/api"
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
@@ -193,8 +193,9 @@ func (r Rules) Refresh(client api.HAProxyClient) (reload bool) {
 					ingressACL = fmt.Sprintf("{ var(%s) -m dom %s }", ACLVar, id)
 				}
 				err := ruleSet[i].Create(client, &fe, ingressACL)
-				logger.Error(err)
-				if err == nil && ftRules.status[id]&TO_CREATE != 0 {
+				if err != nil {
+					logger.Errorf("%s: %s", constLookup[ruleType], err)
+				} else if ftRules.status[id]&TO_CREATE != 0 {
 					reload = true
 					logger.Debugf("New HAProxy rule '%s' created, reload required", constLookup[ruleType])
 				}

@@ -1,8 +1,8 @@
 package api
 
 import (
+	"github.com/haproxytech/client-native/v2/models"
 	"github.com/haproxytech/config-parser/v3/types"
-	"github.com/haproxytech/models/v2"
 )
 
 func (c *clientNative) BackendsGet() (models.Backends, error) {
