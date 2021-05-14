@@ -1015,7 +1015,8 @@ path-rewrite: /foo/(.*) /\1              # strip /foo ... "/foo/bar?q=1" into "/
 
 ##### `proxy-protocol`
 
-  Enables Proxy Protocol for a comma-delimited list of IP addresses and/or CIDR ranges.
+  Enables Proxy Protocol on client side for a comma-delimited list of IP addresses and/or CIDR ranges.
+  The `0.0.0.0/0` CIDR will enable Proxy Protocol for all incoming traffic.
 
   Available on:  `configmap`
 

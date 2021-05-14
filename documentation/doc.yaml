@@ -1038,8 +1038,8 @@ annotations:
     dependencies: ""
     default: ""
     description:
-    - Enables Proxy Protocol for a comma-delimited list of IP addresses and/or CIDR
-      ranges.
+    - Enables Proxy Protocol on client side for a comma-delimited list of IP addresses and/or CIDR ranges.
+    - The `0.0.0.0/0` CIDR will enable Proxy Protocol for all incoming traffic.
     tip:
     - Connection will fail with 400 Bad Request if source IP is in annotation list but
       no Proxy Protocol data is sent.
