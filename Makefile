@@ -33,3 +33,7 @@ example-remove:
 .PHONY: build
 build:
 	docker build -t haproxytech/kubernetes-ingress -f build/Dockerfile .
+
+.PHONY: publish
+publish:
+	goreleaser release --rm-dist

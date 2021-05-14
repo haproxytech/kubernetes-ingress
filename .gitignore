@@ -1,3 +1,4 @@
 .vscode/*
 .idea/*
 kubernetes-ingress
+dist/
