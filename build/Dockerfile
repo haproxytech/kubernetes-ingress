@@ -38,7 +38,8 @@ RUN mkdir -p /var/run/vars && \
 
 FROM haproxytech/haproxy-alpine:2.3
 
-COPY /fs /
+COPY /fs/start.sh /
+COPY /fs/usr/local/etc/haproxy/haproxy.cfg /usr/local/etc/haproxy/
 COPY --from=builder /src/fs/haproxy-ingress-controller .
 
 ARG DUMB_INIT_SHA256=cd7ab5513d20f4b985012d264fbdee60ccd2ea528b94b4b9308c6c6d26f8ba90
@@ -46,10 +47,9 @@ ARG DUMB_INIT_SHA256=cd7ab5513d20f4b985012d264fbdee60ccd2ea528b94b4b9308c6c6d26f
 RUN apk --no-cache add socat openssl util-linux htop tzdata && \
     wget --no-check-certificate -O /dumb-init https://github.com/Yelp/dumb-init/releases/download/v1.2.4/dumb-init_1.2.4_x86_64 && \
     rm -f /usr/local/bin/dataplaneapi /usr/bin/dataplaneapi && \
-    rm -f /usr/local/etc/haproxy/haproxy.cfg && \
     echo "$DUMB_INIT_SHA256  /dumb-init" | sha256sum -c - && \
     chmod +x /dumb-init &&\
-    chgrp -R haproxy /etc/haproxy /run /var &&\
-    chmod -R g+w /etc/haproxy /run /var
+    chgrp -R haproxy /usr/local/etc/haproxy /run /var && \
+    chmod -R g+w /usr/local/etc/haproxy /run /var
 
 ENTRYPOINT ["/dumb-init", "--", "/start.sh"]
