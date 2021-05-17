@@ -76,9 +76,9 @@ func (e ErrorFile) Update(k store.K8s, cfg *config.ControllerCfg, api api.HAProx
 }
 
 func (e ErrorFile) updateAPI(api api.HAProxyClient, errFileDir string) (reload bool) {
-	logger.Error(api.DefaultErrorFile(nil, -1))
+	logger.Error(api.DefaultsErrorFile(nil, -1))
 	for index, code := range e.httpErrorCodes {
-		err := api.DefaultErrorFile(&types.ErrorFile{Code: code, File: filepath.Join(errFileDir, code)}, index)
+		err := api.DefaultsErrorFile(&types.ErrorFile{Code: code, File: filepath.Join(errFileDir, code)}, index)
 
 		if err == nil {
 			reload = true

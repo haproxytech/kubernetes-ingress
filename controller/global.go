@@ -23,12 +23,32 @@ import (
 )
 
 func (c *HAProxyController) handleGlobalConfig() (reload, restart bool) {
+	global, err := c.Client.GlobalGetConfiguration()
+	if err != nil {
+		logger.Error(err)
+		return
+	}
+	defaults, err := c.Client.DefaultsGetConfiguration()
+	if err != nil {
+		logger.Error(err)
+		return
+	}
 	restart, reload = annotations.HandleGlobalAnnotations(
 		c.Store,
 		c.Client,
+		global,
+		defaults,
 		false,
 		c.Store.ConfigMaps.Main.Annotations,
 	)
+	if err = c.Client.GlobalPushConfiguration(global); err != nil {
+		logger.Error(err)
+		return false, false
+	}
+	if err = c.Client.DefaultsPushConfiguration(defaults); err != nil {
+		logger.Error(err)
+		return false, false
+	}
 	reload = c.handleDefaultCert() || reload
 	reload = c.handleDefaultService() || reload
 

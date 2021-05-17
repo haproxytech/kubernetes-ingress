@@ -3,20 +3,19 @@ package annotations
 import (
 	"strconv"
 
-	"github.com/haproxytech/config-parser/v3/types"
+	"github.com/haproxytech/client-native/v2/models"
 
-	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/api"
 	"github.com/haproxytech/kubernetes-ingress/controller/store"
 )
 
 type GlobalMaxconn struct {
 	name   string
-	data   *types.Int64C
-	client api.HAProxyClient
+	data   int64
+	global *models.Global
 }
 
-func NewGlobalMaxconn(n string, c api.HAProxyClient) *GlobalMaxconn {
-	return &GlobalMaxconn{name: n, client: c}
+func NewGlobalMaxconn(n string, g *models.Global) *GlobalMaxconn {
+	return &GlobalMaxconn{name: n, global: g}
 }
 
 func (a *GlobalMaxconn) GetName() string {
@@ -34,15 +33,16 @@ func (a *GlobalMaxconn) Parse(input store.StringW, forceParse bool) error {
 	if err != nil {
 		return err
 	}
-	a.data = &types.Int64C{Value: int64(v)}
+	a.data = int64(v)
 	return nil
 }
 
 func (a *GlobalMaxconn) Update() error {
-	if a.data == nil {
-		logger.Infof("Removing default maxconn")
-		return a.client.GlobalMaxconn(nil)
+	if a.data == 0 {
+		logger.Infof("Removing global maxconn")
+	} else {
+		logger.Infof("Setting global maxconn to %d", a.data)
 	}
-	logger.Infof("Setting default maxconn to %d", a.data.Value)
-	return a.client.GlobalMaxconn(a.data)
+	a.global.Maxconn = a.data
+	return nil
 }

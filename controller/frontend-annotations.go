@@ -232,9 +232,9 @@ func (c *HAProxyController) handleRequestBasicAuth(ingress *store.Ingress) {
 		return
 	}
 
-	realm := "\"Protected Content\""
+	realm := "Protected-Content"
 	if authRealm != nil {
-		realm = "\"" + authRealm.Value + "\""
+		realm = strings.ReplaceAll(authRealm.Value, " ", "-")
 	}
 	// Adding HAProxy Rule
 	logger.Tracef("Ingress %s/%s: Configuring basic-auth annotation", ingress.Namespace, ingress.Name)

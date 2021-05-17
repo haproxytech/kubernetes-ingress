@@ -1,23 +1,23 @@
 package annotations
 
 import (
+	"errors"
 	"strings"
-	"time"
 
-	"github.com/haproxytech/config-parser/v3/types"
+	"github.com/haproxytech/client-native/v2/models"
 
-	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/api"
 	"github.com/haproxytech/kubernetes-ingress/controller/store"
+	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 )
 
 type DefaultTimeout struct {
-	name   string
-	data   *types.SimpleTimeout
-	client api.HAProxyClient
+	name     string
+	defaults *models.Defaults
+	timeout  *int64
 }
 
-func NewDefaultTimeout(n string, c api.HAProxyClient) *DefaultTimeout {
-	return &DefaultTimeout{name: n, client: c}
+func NewDefaultTimeout(n string, d *models.Defaults) *DefaultTimeout {
+	return &DefaultTimeout{name: n, defaults: d}
 }
 
 func (a *DefaultTimeout) GetName() string {
@@ -31,27 +31,39 @@ func (a *DefaultTimeout) Parse(input store.StringW, forceParse bool) error {
 	if input.Status == store.DELETED {
 		return nil
 	}
-	timeout, err := time.ParseDuration(input.Value)
-	if err != nil {
-		return err
-	}
-	s := timeout.String()
-	if strings.HasSuffix(s, "m0s") {
-		s = s[:len(s)-2]
-	}
-	if strings.HasSuffix(s, "h0m") {
-		s = s[:len(s)-2]
-	}
-	a.data = &types.SimpleTimeout{Value: s}
-	return nil
+	var err error
+	a.timeout, err = utils.ParseTime(input.Value)
+	return err
 }
 
 func (a *DefaultTimeout) Update() error {
 	timeout := strings.TrimPrefix(a.name, "timeout-")
-	if a.data == nil {
-		logger.Infof("Removing default timeout-%s ", timeout)
-		return a.client.DefaultTimeout(timeout, nil)
+	if a.timeout == nil {
+		logger.Infof("Removing default timeout-%s", timeout)
+	} else {
+		logger.Infof("Setting default timeout-%s to %ds", timeout, *a.timeout)
 	}
-	logger.Infof("Setting default timeout-%s to %s", timeout, a.data.Value)
-	return a.client.DefaultTimeout(timeout, a.data)
+	switch a.name {
+	case "timeout-client":
+		a.defaults.ClientTimeout = a.timeout
+	case "timeout-client-fin":
+		a.defaults.ClientFinTimeout = a.timeout
+	case "timeout-connect":
+		a.defaults.ConnectTimeout = a.timeout
+	case "timeout-http-keep-alive":
+		a.defaults.HTTPKeepAliveTimeout = a.timeout
+	case "timeout-http-request":
+		a.defaults.HTTPRequestTimeout = a.timeout
+	case "timeout-queue":
+		a.defaults.QueueTimeout = a.timeout
+	case "timeout-server":
+		a.defaults.ServerTimeout = a.timeout
+	case "timeout-server-fin":
+		a.defaults.ServerFinTimeout = a.timeout
+	case "timeout-tunnel":
+		a.defaults.TunnelTimeout = a.timeout
+	default:
+		return errors.New("unknown param")
+	}
+	return nil
 }

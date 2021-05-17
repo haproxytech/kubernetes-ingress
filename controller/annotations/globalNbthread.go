@@ -4,20 +4,19 @@ import (
 	"runtime"
 	"strconv"
 
-	"github.com/haproxytech/config-parser/v3/types"
+	"github.com/haproxytech/client-native/v2/models"
 
-	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/api"
 	"github.com/haproxytech/kubernetes-ingress/controller/store"
 )
 
 type GlobalNbthread struct {
 	name   string
-	data   *types.Int64C
-	client api.HAProxyClient
+	data   int64
+	global *models.Global
 }
 
-func NewGlobalNbthread(n string, c api.HAProxyClient) *GlobalNbthread {
-	return &GlobalNbthread{name: n, client: c}
+func NewGlobalNbthread(n string, g *models.Global) *GlobalNbthread {
+	return &GlobalNbthread{name: n, global: g}
 }
 
 func (a *GlobalNbthread) GetName() string {
@@ -39,15 +38,16 @@ func (a *GlobalNbthread) Parse(input store.StringW, forceParse bool) error {
 	if v > maxProcs {
 		v = maxProcs
 	}
-	a.data = &types.Int64C{Value: int64(v)}
+	a.data = int64(v)
 	return nil
 }
 
 func (a *GlobalNbthread) Update() error {
-	if a.data == nil {
+	if a.data == 0 {
 		logger.Infof("Removing nbThread option")
-		return a.client.Nbthread(nil)
+	} else {
+		logger.Infof("Setting nbThread to %d", a.data)
 	}
-	logger.Infof("Setting nbThread to: %d", a.data.Value)
-	return a.client.Nbthread(a.data)
+	a.global.Nbthread = a.data
+	return nil
 }

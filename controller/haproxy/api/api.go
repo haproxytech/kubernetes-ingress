@@ -28,6 +28,9 @@ type HAProxyClient interface {
 	BackendServerDelete(backendName string, serverName string) error
 	BackendSwitchingRuleCreate(frontend string, rule models.BackendSwitchingRule) error
 	BackendSwitchingRuleDeleteAll(frontend string)
+	DefaultsErrorFile(value *types.ErrorFile, index int) error
+	DefaultsGetConfiguration() (*models.Defaults, error)
+	DefaultsPushConfiguration(*models.Defaults) error
 	ExecuteRaw(command string) (result []string, err error)
 	FrontendCfgSnippetSet(frontendName string, value *[]string) error
 	FrontendCreate(frontend models.Frontend) error
@@ -44,23 +47,13 @@ type HAProxyClient interface {
 	FrontendHTTPResponseRuleCreate(frontend string, rule models.HTTPResponseRule, ingressACL string) error
 	FrontendTCPRequestRuleCreate(frontend string, rule models.TCPRequestRule, ingressACL string) error
 	FrontendRuleDeleteAll(frontend string)
-	GlobalConfigEnabled(section string, config string) (enabled bool, err error)
-	GlobalWriteConfig(section string, config string) (result string, err error)
-	DaemonMode(value *types.Enabled) error
-	DefaultErrorFile(value *types.ErrorFile, index int) error
-	DefaultLogFormat(value *types.StringC) error
-	GlobalMaxconn(value *types.Int64C) error
-	DefaultOption(option string, value *types.SimpleOption) error
-	DefaultTimeout(timeout string, value *types.SimpleTimeout) error
+	GlobalCreateLogTarget(*models.LogTarget) error
+	GlobalDeleteLogTargets()
+	GlobalGetConfiguration() (*models.Global, error)
+	GlobalPushConfiguration(*models.Global) error
 	GlobalCfgSnippet(snippet *types.StringSliceC) error
-	GlobalHardStopAfter(value *types.StringC) error
-	LogTarget(value *types.Log, index int) error
-	Nbthread(value *types.Int64C) error
-	PIDFile(value *types.StringC) error
-	RuntimeSocket(value *types.Socket) error
 	GetMap(mapFile string) (*models.Map, error)
 	SetMapContent(mapFile string, payload string) error
-	ServerStateBase(value *types.StringC) error
 	SetServerAddr(backendName string, serverName string, ip string, port int) error
 	SetServerState(backendName string, serverName string, state string) error
 	SyncBackendSrvs(oldEndpoints, newEndpoints *store.PortEndpoints) error

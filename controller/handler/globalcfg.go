@@ -15,36 +15,34 @@
 package handler
 
 import (
-	"github.com/haproxytech/config-parser/v3/params"
-	"github.com/haproxytech/config-parser/v3/types"
+	"github.com/haproxytech/client-native/v2/models"
 
 	config "github.com/haproxytech/kubernetes-ingress/controller/configuration"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/api"
 	"github.com/haproxytech/kubernetes-ingress/controller/store"
-	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 )
 
 type GlobalCfg struct {
 }
 
 func (h GlobalCfg) Update(k store.K8s, cfg *config.ControllerCfg, api api.HAProxyClient) (reload bool, err error) {
-	var errors utils.Errors
-	errors.Add(
-		// Configure runtime socket
-		api.RuntimeSocket(nil),
-		api.RuntimeSocket(&types.Socket{
-			Path: cfg.Env.RuntimeSocket,
-			Params: []params.BindOption{
-				&params.BindOptionDoubleWord{Name: "expose-fd", Value: "listeners"},
-				&params.BindOptionValue{Name: "level", Value: "admin"},
-			},
-		}),
-		// Configure pidfile
-		api.PIDFile(&types.StringC{Value: cfg.Env.PIDFile}),
-		// Configure server-state-base
-		api.ServerStateBase(&types.StringC{Value: cfg.Env.StateDir}),
-	)
-	err = errors.Result()
+	global, err := api.GlobalGetConfiguration()
+	if err != nil {
+		return
+	}
+	global.Pidfile = cfg.Env.PIDFile
+	global.ServerStateBase = cfg.Env.StateDir
+	global.RuntimeAPIs = []*models.RuntimeAPI{
+		{
+			Address:           &cfg.Env.RuntimeSocket,
+			ExposeFdListeners: true,
+			Level:             "admin",
+		},
+	}
+	err = api.GlobalPushConfiguration(global)
+	if err != nil {
+		return
+	}
 	reload = true
 	return
 }

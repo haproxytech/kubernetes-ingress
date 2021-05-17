@@ -4,20 +4,19 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/haproxytech/config-parser/v3/types"
+	"github.com/haproxytech/client-native/v2/models"
 
-	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/api"
 	"github.com/haproxytech/kubernetes-ingress/controller/store"
 )
 
 type DefaultLogFormat struct {
-	name   string
-	data   *types.StringC
-	client api.HAProxyClient
+	name     string
+	defaults *models.Defaults
+	data     string
 }
 
-func NewDefaultLogFormat(n string, c api.HAProxyClient) *DefaultLogFormat {
-	return &DefaultLogFormat{name: n, client: c}
+func NewDefaultLogFormat(n string, d *models.Defaults) *DefaultLogFormat {
+	return &DefaultLogFormat{name: n, defaults: d}
 }
 
 func (a *DefaultLogFormat) GetName() string {
@@ -31,19 +30,19 @@ func (a *DefaultLogFormat) Parse(input store.StringW, forceParse bool) error {
 	if input.Status == store.DELETED {
 		return nil
 	}
-	v := strings.TrimSpace(input.Value)
-	if v == "" {
+	a.data = strings.TrimSpace(input.Value)
+	if a.data == "" {
 		return errors.New("unable to parse log-format: empty input")
 	}
-	a.data = &types.StringC{Value: "'" + v + "'"}
 	return nil
 }
 
 func (a *DefaultLogFormat) Update() error {
-	if a.data == nil {
+	if a.data == "" {
 		logger.Infof("Removing default log-format")
-		return a.client.DefaultLogFormat(nil)
+	} else {
+		logger.Infof("Setting default log-format to: %s", a.data)
 	}
-	logger.Infof("Setting default log-format to: %s", a.data.Value)
-	return a.client.DefaultLogFormat(a.data)
+	a.defaults.LogFormat = a.data
+	return nil
 }
