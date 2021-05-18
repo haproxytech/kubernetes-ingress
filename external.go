@@ -60,7 +60,7 @@ func setupHAProxyEnv(osArgs utils.OSArgs) config.ControllerCfg {
 		logger.Panic(err)
 	}
 	logger.Debug(dir)
-	origin := path.Join(dir, "fs/etc/haproxy/haproxy.cfg")
+	origin := path.Join(dir, "fs/usr/local/etc/haproxy/haproxy.cfg")
 	_, err = os.Stat(origin)
 	if err != nil {
 		if _, err = os.Stat(cfg.Env.MainCFGFile); err != nil {
