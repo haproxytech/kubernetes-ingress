@@ -82,6 +82,7 @@ func Init(transactionDir, configFile, programPath, runtimeSocket string) (client
 		PersistentTransactions:    false,
 		Haproxy:                   programPath,
 		ValidateConfigurationFile: true,
+		UseValidation:             true,
 	}
 	if transactionDir != "" {
 		confParams.TransactionDir = transactionDir
