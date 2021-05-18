@@ -20,13 +20,13 @@ func HandleAnnotation(a Annotation, value store.StringW, forceParse bool) (updat
 	err := a.Parse(value, forceParse)
 	if err != nil {
 		if !errors.Is(err, ErrEmptyStatus) {
-			logger.Error(err)
+			logger.Errorf("%s: %s", a.GetName(), err)
 		}
 		return false
 	}
 	err = a.Update()
 	if err != nil {
-		logger.Error(err)
+		logger.Errorf("%s: %s", a.GetName(), err)
 		return false
 	}
 	return true
