@@ -1,0 +1,26 @@
+name: Update Docker Hub description
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - README.md
+  workflow_dispatch:
+jobs:
+  main:
+    runs-on: ubuntu-latest
+    env:
+      DOCKER_IMAGE: haproxytech/kubernetes-ingress
+    steps:
+      - name: Check out repo
+        id: checkout
+        uses: actions/checkout@v2
+
+      - name: Update Docker Hub description
+        id: description
+        uses: peter-evans/dockerhub-description@v2
+        with:
+          username: ${{ secrets.DOCKER_HUB_USERNAME }}
+          password: ${{ secrets.DOCKER_HUB_PASSWORD }}
+          repository: ${{ env.DOCKER_IMAGE }}
+          short-description: ${{ github.event.repository.description }}
