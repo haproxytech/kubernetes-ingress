@@ -29,21 +29,24 @@ type Pprof struct {
 func (h Pprof) Update(k store.K8s, cfg *config.ControllerCfg, api api.HAProxyClient) (reload bool, err error) {
 	pprofBackend := "pprof"
 
-	err = api.BackendCreate(models.Backend{
-		Name: pprofBackend,
-		Mode: "http",
-	})
+	_, err = api.BackendGet(pprofBackend)
 	if err != nil {
-		return
+		err = api.BackendCreate(models.Backend{
+			Name: pprofBackend,
+			Mode: "http",
+		})
+		if err != nil {
+			return
+		}
+		err = api.BackendServerCreate(pprofBackend, models.Server{
+			Name:    "pprof",
+			Address: "127.0.0.1:6060",
+		})
+		if err != nil {
+			return
+		}
+		logger.Debug("pprof backend created")
 	}
-	err = api.BackendServerCreate(pprofBackend, models.Server{
-		Name:    "pprof",
-		Address: "127.0.0.1:6060",
-	})
-	if err != nil {
-		return
-	}
-	logger.Debug("pprof backend created")
 	err = route.AddHostPathRoute(route.Route{
 		BackendName: pprofBackend,
 		Path: &store.IngressPath{

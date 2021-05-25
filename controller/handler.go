@@ -49,6 +49,10 @@ func (c *HAProxyController) initHandlers() {
 		handler.PatternFiles{},
 		handler.Refresh{},
 	}
+	if c.OSArgs.PprofEnabled {
+		c.updateHandlers = append(c.updateHandlers, handler.Pprof{})
+	}
+	c.updateHandlers = append(c.updateHandlers, handler.Refresh{})
 }
 
 func (c *HAProxyController) startupHandlers() error {
@@ -65,9 +69,6 @@ func (c *HAProxyController) startupHandlers() error {
 		}}
 	if c.OSArgs.External {
 		handlers = append(handlers, handler.GlobalCfg{})
-	}
-	if c.OSArgs.PprofEnabled {
-		handlers = append(handlers, handler.Pprof{})
 	}
 	for _, handler := range handlers {
 		_, err := handler.Update(c.Store, &c.Cfg, c.Client)
