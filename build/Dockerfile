@@ -12,9 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM golang:1.16-alpine AS builder
+FROM golang:1.16-buster AS builder
 
-RUN apk --no-cache add git openssh
+# RUN apk --no-cache add git openssh
 
 COPY /go.mod /src/go.mod
 COPY /go.sum /src/go.sum
@@ -36,7 +36,7 @@ RUN mkdir -p /var/run/vars && \
         -ldflags "-X main.GitRepo=$(cat /var/run/vars/GIT_REPO) -X main.GitTag=$(cat /var/run/vars/GIT_LAST_TAG) -X main.GitCommit=$(cat /var/run/vars/GIT_HEAD_COMMIT) -X main.GitDirty=$(cat /var/run/vars/GIT_MODIFIED) -X main.BuildTime=$(cat /var/run/vars/BUILD_DATE)" \
         -o fs/haproxy-ingress-controller .
 
-FROM haproxytech/haproxy-alpine:2.3
+FROM haproxytech/haproxy-debian:2.3
 
 COPY /fs/start.sh /
 COPY /fs/usr/local/etc/haproxy/haproxy.cfg /usr/local/etc/haproxy/
@@ -44,7 +44,8 @@ COPY --from=builder /src/fs/haproxy-ingress-controller .
 
 ARG DUMB_INIT_SHA256=cd7ab5513d20f4b985012d264fbdee60ccd2ea528b94b4b9308c6c6d26f8ba90
 
-RUN apk --no-cache add socat openssl util-linux htop tzdata && \
+RUN apt-get update && \
+    apt-get install -y socat openssl htop tzdata wget && \
     wget --no-check-certificate -O /dumb-init https://github.com/Yelp/dumb-init/releases/download/v1.2.4/dumb-init_1.2.4_x86_64 && \
     rm -f /usr/local/bin/dataplaneapi /usr/bin/dataplaneapi && \
     echo "$DUMB_INIT_SHA256  /dumb-init" | sha256sum -c - && \
