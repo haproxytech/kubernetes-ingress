@@ -178,7 +178,17 @@ func (c *ControllerCfg) envInit() (err error) {
 		c.Env.TransactionDir = filepath.Join(c.Env.CfgDir, "transactions")
 	}
 
-	for _, d := range []string{c.Env.CertDir, c.Env.FrontendCertDir, c.Env.BackendCertDir, c.Env.CaCertDir, c.Env.MapDir, c.Env.ErrFileDir, c.Env.StateDir, c.Env.TransactionDir, c.Env.PatternDir} {
+	for _, d := range []string{
+		c.Env.CertDir,
+		c.Env.FrontendCertDir,
+		c.Env.BackendCertDir,
+		c.Env.CaCertDir,
+		c.Env.MapDir,
+		c.Env.ErrFileDir,
+		c.Env.StateDir,
+		c.Env.TransactionDir,
+		c.Env.PatternDir,
+	} {
 		err = os.MkdirAll(d, 0755)
 		if err != nil {
 			return err
