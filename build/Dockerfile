@@ -32,7 +32,7 @@ RUN mkdir -p /var/run/vars && \
     git diff --quiet > /var/run/vars/GIT_MODIFIED2 || echo '.dirty' > /var/run/vars/GIT_MODIFIED2 && \
     cat /var/run/vars/GIT_MODIFIED1 /var/run/vars/GIT_MODIFIED2 | tr -d '\n' > /var/run/vars/GIT_MODIFIED && \
     date '+%Y-%m-%dT%H:%M:%S' > /var/run/vars/BUILD_DATE && \
-    CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
+    CGO_ENABLED=0 go build \
         -ldflags "-X main.GitRepo=$(cat /var/run/vars/GIT_REPO) -X main.GitTag=$(cat /var/run/vars/GIT_LAST_TAG) -X main.GitCommit=$(cat /var/run/vars/GIT_HEAD_COMMIT) -X main.GitDirty=$(cat /var/run/vars/GIT_MODIFIED) -X main.BuildTime=$(cat /var/run/vars/BUILD_DATE)" \
         -o fs/haproxy-ingress-controller .
 
@@ -42,13 +42,9 @@ COPY /fs/start.sh /
 COPY /fs/usr/local/etc/haproxy/haproxy.cfg /usr/local/etc/haproxy/
 COPY --from=builder /src/fs/haproxy-ingress-controller .
 
-ARG DUMB_INIT_SHA256=cd7ab5513d20f4b985012d264fbdee60ccd2ea528b94b4b9308c6c6d26f8ba90
-
-RUN apk --no-cache add socat openssl util-linux htop tzdata && \
-    wget --no-check-certificate -O /dumb-init https://github.com/Yelp/dumb-init/releases/download/v1.2.4/dumb-init_1.2.4_x86_64 && \
+RUN apk --no-cache add socat openssl util-linux htop tzdata dumb-init && \
     rm -f /usr/local/bin/dataplaneapi /usr/bin/dataplaneapi && \
-    echo "$DUMB_INIT_SHA256  /dumb-init" | sha256sum -c - && \
-    chmod +x /dumb-init &&\
+    ln -sf /usr/bin/dumb-init /dumb-init &&\
     chgrp -R haproxy /usr/local/etc/haproxy /run /var && \
     chmod -R g+w /usr/local/etc/haproxy /run /var
 
