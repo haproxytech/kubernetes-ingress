@@ -45,6 +45,8 @@ func (c *HAProxyController) initHandlers() {
 		handler.TCPServices{
 			SetDefaultService: c.setDefaultService,
 			CertDir:           c.Cfg.Env.FrontendCertDir,
+			AddrIPv4:          c.OSArgs.IPV4BindAddr,
+			AddrIPv6:          c.OSArgs.IPV6BindAddr,
 		},
 		handler.PatternFiles{},
 		handler.Refresh{},
