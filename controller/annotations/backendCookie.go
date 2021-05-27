@@ -40,6 +40,7 @@ func (a *BackendCookie) Parse(input store.StringW, forceParse bool) error {
 func (a *BackendCookie) Update() error {
 	if a.cookieName == "" {
 		a.backend.Cookie = nil
+		return nil
 	}
 	cookie := models.Cookie{
 		Name:     &a.cookieName,
