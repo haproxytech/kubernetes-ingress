@@ -40,11 +40,13 @@ func (c *clientNative) SyncBackendSrvs(oldEndpoints, newEndpoints *store.PortEnd
 	newEndpoints.BackendName = oldEndpoints.BackendName
 	haproxySrvs := newEndpoints.HAProxySrvs
 	newAddresses := newEndpoints.AddrNew
+	portChanged := newEndpoints.Port != oldEndpoints.Port
 	// Disable stale entries from HAProxySrvs
 	// and provide list of Disabled Srvs
 	var disabled []*store.HAProxySrv
 	var errors utils.Errors
 	for i, srv := range haproxySrvs {
+		srv.Modified = portChanged || srv.Modified
 		if _, ok := newAddresses[srv.Address]; ok {
 			delete(newAddresses, srv.Address)
 		} else {
@@ -76,7 +78,7 @@ func (c *clientNative) SyncBackendSrvs(oldEndpoints, newEndpoints *store.PortEnd
 			stateErr = c.SetServerState(newEndpoints.BackendName, srv.Name, "maint")
 		} else {
 			// logger.Tracef("server '%s/%s' changed status to %v", newEndpoints.BackendName, srv.Name, "ready")
-			addrErr = c.SetServerAddr(newEndpoints.BackendName, srv.Name, srv.Address, 0)
+			addrErr = c.SetServerAddr(newEndpoints.BackendName, srv.Name, srv.Address, int(newEndpoints.Port))
 			stateErr = c.SetServerState(newEndpoints.BackendName, srv.Name, "ready")
 		}
 		if addrErr != nil || stateErr != nil {
