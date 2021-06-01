@@ -15,7 +15,7 @@
 package controller
 
 import (
-	"github.com/haproxytech/models/v2"
+	"github.com/haproxytech/client-native/v2/models"
 
 	"github.com/haproxytech/kubernetes-ingress/controller/route"
 	"github.com/haproxytech/kubernetes-ingress/controller/service"

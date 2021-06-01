@@ -1,12 +1,14 @@
 package annotations
 
 import (
+	"github.com/haproxytech/client-native/v2/models"
+
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/api"
 	"github.com/haproxytech/kubernetes-ingress/controller/store"
 )
 
-func HandleGlobalAnnotations(k8sStore store.K8s, client api.HAProxyClient, forcePase bool, annotations store.MapStringW) (restart bool, reload bool) {
-	annList := GetGlobalAnnotations(client)
+func HandleGlobalAnnotations(k8sStore store.K8s, client api.HAProxyClient, global *models.Global, defaults *models.Defaults, forcePase bool, annotations store.MapStringW) (restart bool, reload bool) {
+	annList := GetGlobalAnnotations(client, global, defaults)
 	for _, a := range annList {
 		annValue, _ := k8sStore.GetValueFromAnnotations(a.GetName(), annotations)
 		if annValue == nil {
@@ -21,28 +23,28 @@ func HandleGlobalAnnotations(k8sStore store.K8s, client api.HAProxyClient, force
 	return restart, reload
 }
 
-func GetGlobalAnnotations(client api.HAProxyClient) []Annotation {
+func GetGlobalAnnotations(client api.HAProxyClient, global *models.Global, defaults *models.Defaults) []Annotation {
 	return []Annotation{
 		NewFrontendCfgSnippet("frontend-config-snippet", client, []string{"http", "https"}),
 		NewFrontendCfgSnippet("stats-config-snippet", client, []string{"stats"}),
 		NewGlobalCfgSnippet("global-config-snippet", client),
-		NewGlobalSyslogServers("syslog-server", client),
-		NewGlobalNbthread("nbthread", client),
-		NewGlobalMaxconn("maxconn", client),
-		NewGlobalHardStopAfter("hard-stop-after", client),
-		NewDefaultOption("http-server-close", client),
-		NewDefaultOption("http-keep-alive", client),
-		NewDefaultOption("dontlognull", client),
-		NewDefaultOption("logasap", client),
-		NewDefaultTimeout("timeout-http-request", client),
-		NewDefaultTimeout("timeout-connect", client),
-		NewDefaultTimeout("timeout-client", client),
-		NewDefaultTimeout("timeout-client-fin", client),
-		NewDefaultTimeout("timeout-queue", client),
-		NewDefaultTimeout("timeout-server", client),
-		NewDefaultTimeout("timeout-server-fin", client),
-		NewDefaultTimeout("timeout-tunnel", client),
-		NewDefaultTimeout("timeout-http-keep-alive", client),
-		NewDefaultLogFormat("log-format", client),
+		NewGlobalSyslogServers("syslog-server", client, global),
+		NewGlobalNbthread("nbthread", global),
+		NewGlobalMaxconn("maxconn", global),
+		NewGlobalHardStopAfter("hard-stop-after", global),
+		NewDefaultOption("http-server-close", defaults),
+		NewDefaultOption("http-keep-alive", defaults),
+		NewDefaultOption("dontlognull", defaults),
+		NewDefaultOption("logasap", defaults),
+		NewDefaultTimeout("timeout-http-request", defaults),
+		NewDefaultTimeout("timeout-connect", defaults),
+		NewDefaultTimeout("timeout-client", defaults),
+		NewDefaultTimeout("timeout-client-fin", defaults),
+		NewDefaultTimeout("timeout-queue", defaults),
+		NewDefaultTimeout("timeout-server", defaults),
+		NewDefaultTimeout("timeout-server-fin", defaults),
+		NewDefaultTimeout("timeout-tunnel", defaults),
+		NewDefaultTimeout("timeout-http-keep-alive", defaults),
+		NewDefaultLogFormat("log-format", defaults),
 	}
 }

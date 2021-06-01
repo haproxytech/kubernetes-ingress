@@ -1,23 +1,20 @@
 package annotations
 
 import (
-	"strings"
-	"time"
+	"github.com/haproxytech/client-native/v2/models"
 
-	"github.com/haproxytech/config-parser/v3/types"
-
-	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/api"
 	"github.com/haproxytech/kubernetes-ingress/controller/store"
+	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 )
 
 type GlobalHardStopAfter struct {
 	name   string
-	data   *types.StringC
-	client api.HAProxyClient
+	data   *int64
+	global *models.Global
 }
 
-func NewGlobalHardStopAfter(n string, c api.HAProxyClient) *GlobalHardStopAfter {
-	return &GlobalHardStopAfter{name: n, client: c}
+func NewGlobalHardStopAfter(n string, g *models.Global) *GlobalHardStopAfter {
+	return &GlobalHardStopAfter{name: n, global: g}
 }
 
 func (a *GlobalHardStopAfter) GetName() string {
@@ -25,41 +22,26 @@ func (a *GlobalHardStopAfter) GetName() string {
 }
 
 func (a *GlobalHardStopAfter) Parse(input store.StringW, forceParse bool) error {
+	var err error
 	if input.Status == store.EMPTY && !forceParse {
 		return ErrEmptyStatus
 	}
 	if input.Status == store.DELETED {
 		return nil
 	}
-	after, err := time.ParseDuration(input.Value)
+	a.data, err = utils.ParseTime(input.Value)
 	if err != nil {
 		return err
 	}
-	duration := after.String()
-	if strings.HasSuffix(duration, "m0s") {
-		duration = duration[:len(duration)-2]
-	}
-	if strings.HasSuffix(duration, "h0m") {
-		duration = duration[:len(duration)-2]
-	}
-
-	if err != nil {
-		return err
-	}
-
-	a.data = &types.StringC{Value: duration}
 	return nil
-}
-
-func (a *GlobalHardStopAfter) Delete() error {
-	return a.client.GlobalHardStopAfter(nil)
 }
 
 func (a *GlobalHardStopAfter) Update() error {
 	if a.data == nil {
 		logger.Infof("Removing hard-stop-after timeout")
-		return a.client.GlobalHardStopAfter(nil)
+	} else {
+		logger.Infof("Setting hard-stop-after to %ds", *a.data)
 	}
-	logger.Infof("Setting hard-stop-after to %s", a.data.Value)
-	return a.client.GlobalHardStopAfter(a.data)
+	a.global.HardStopAfter = a.data
+	return nil
 }

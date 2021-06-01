@@ -3,7 +3,7 @@ package annotations
 import (
 	"fmt"
 
-	"github.com/haproxytech/models/v2"
+	"github.com/haproxytech/client-native/v2/models"
 
 	"github.com/haproxytech/kubernetes-ingress/controller/store"
 )
@@ -29,10 +29,16 @@ func (a *ServerProto) Parse(input store.StringW, forceParse bool) error {
 	if input.Status == store.EMPTY && !forceParse {
 		return ErrEmptyStatus
 	}
-	if input.Value != "h2" {
+
+	switch input.Value {
+	case "h1":
+		a.server.Alpn = ""
+	case "h2":
+		a.proto = "h2"
+	default:
 		return fmt.Errorf("unknown proto %s", input.Value)
 	}
-	a.proto = "h2"
+
 	return nil
 }
 

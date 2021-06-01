@@ -1,23 +1,24 @@
 package annotations
 
 import (
-	"github.com/haproxytech/config-parser/v3/types"
+	"errors"
 
-	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/api"
+	"github.com/haproxytech/client-native/v2/models"
+
 	"github.com/haproxytech/kubernetes-ingress/controller/store"
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 )
 
 type DefaultOption struct {
-	name   string
-	data   *types.SimpleOption
-	client api.HAProxyClient
+	name     string
+	defaults *models.Defaults
+	enabled  *bool
 }
 
-func NewDefaultOption(n string, c api.HAProxyClient) *DefaultOption {
+func NewDefaultOption(n string, d *models.Defaults) *DefaultOption {
 	return &DefaultOption{
-		name:   n,
-		client: c,
+		name:     n,
+		defaults: d,
 	}
 }
 
@@ -36,19 +37,50 @@ func (a *DefaultOption) Parse(input store.StringW, forceParse bool) error {
 	if err != nil {
 		return err
 	}
-	a.data = &types.SimpleOption{NoOption: !enabled}
+	a.enabled = &enabled
 	return nil
 }
 
 func (a *DefaultOption) Update() error {
-	if a.data == nil {
+	if a.enabled == nil {
 		logger.Infof("Removing option %s", a.name)
-		return a.client.DefaultOption(a.name, nil)
+		switch a.name {
+		case "http-server-close", "http-keep-alive":
+			a.defaults.HTTPConnectionMode = ""
+		case "dontlognull":
+			a.defaults.Dontlognull = ""
+		case "logasap":
+			a.defaults.Logasap = ""
+		default:
+			return errors.New("unknown param")
+		}
 	}
-	if a.data.NoOption {
-		logger.Infof("disabling option %s", a.name)
-	} else {
+	if *a.enabled {
 		logger.Infof("enabling option %s", a.name)
+		switch a.name {
+		case "http-server-close":
+			a.defaults.HTTPConnectionMode = "http-server-close"
+		case "http-keep-alive":
+			a.defaults.HTTPConnectionMode = "http-keep-alive"
+		case "dontlognull":
+			a.defaults.Dontlognull = "enabled"
+		case "logasap":
+			a.defaults.Logasap = "enabled"
+		default:
+			return errors.New("unknown param")
+		}
+	} else {
+		logger.Infof("disabling option %s", a.name)
+		switch a.name {
+		case "http-server-close", "http-keep-alive":
+			a.defaults.HTTPConnectionMode = ""
+		case "dontlognull":
+			a.defaults.Dontlognull = "disabled"
+		case "logasap":
+			a.defaults.Logasap = "disabled"
+		default:
+			return errors.New("unknown param")
+		}
 	}
-	return a.client.DefaultOption(a.name, a.data)
+	return nil
 }

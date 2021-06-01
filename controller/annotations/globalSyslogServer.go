@@ -5,22 +5,24 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/haproxytech/config-parser/v3/types"
+	"github.com/haproxytech/client-native/v2/models"
 
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/api"
 	"github.com/haproxytech/kubernetes-ingress/controller/store"
+	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 )
 
 type GlobalSyslogServers struct {
-	name    string
-	data    []*types.Log
-	client  api.HAProxyClient
-	stdout  bool
-	restart bool
+	name       string
+	global     *models.Global
+	logTargets models.LogTargets
+	client     api.HAProxyClient
+	stdout     bool
+	restart    bool
 }
 
-func NewGlobalSyslogServers(n string, c api.HAProxyClient) *GlobalSyslogServers {
-	return &GlobalSyslogServers{name: n, client: c}
+func NewGlobalSyslogServers(n string, c api.HAProxyClient, g *models.Global) *GlobalSyslogServers {
+	return &GlobalSyslogServers{name: n, client: c, global: g}
 }
 
 func (a *GlobalSyslogServers) GetName() string {
@@ -40,7 +42,6 @@ func (a *GlobalSyslogServers) Parse(input store.StringW, forceParse bool) error 
 	if input.Status == store.DELETED {
 		return nil
 	}
-	a.data = nil
 	a.stdout = false
 	for _, syslogLine := range strings.Split(input.Value, "\n") {
 		if syslogLine == "" {
@@ -64,12 +65,12 @@ func (a *GlobalSyslogServers) Parse(input store.StringW, forceParse bool) error 
 			}
 		}
 		// populate annotation data
-		logData := new(types.Log)
+		logTarget := models.LogTarget{Index: utils.PtrInt64(0)}
 		if address, ok := logParams["address"]; !ok {
 			logger.Errorf("incorrect syslog Line: no address param in '%s'", syslogLine)
 			continue
 		} else {
-			logData.Address = address
+			logTarget.Address = address
 		}
 		for k, v := range logParams {
 			switch strings.ToLower(k) {
@@ -79,65 +80,64 @@ func (a *GlobalSyslogServers) Parse(input store.StringW, forceParse bool) error 
 				}
 			case "port":
 				if logParams["address"] != "stdout" {
-					logData.Address += ":" + v
+					logTarget.Address += ":" + v
 				}
 			case "length":
 				if length, errConv := strconv.Atoi(v); errConv == nil {
-					logData.Length = int64(length)
+					logTarget.Length = int64(length)
 				}
 			case "format":
-				logData.Format = v
+				logTarget.Format = v
 			case "facility":
-				logData.Facility = v
+				logTarget.Facility = v
 			case "level":
-				logData.Level = v
+				logTarget.Level = v
 			case "minlevel":
-				logData.Level = v
+				logTarget.Minlevel = v
 			default:
 				logger.Errorf("unknown syslog param: '%s' in '%s' ", k, syslogLine)
 				continue
 			}
 		}
-		a.data = append(a.data, logData)
+		a.logTargets = append(a.logTargets, &logTarget)
 	}
-	if len(a.data) == 0 {
+	if len(a.logTargets) == 0 {
 		return errors.New("could not parse syslog-server annotation")
 	}
 	return nil
 }
 
 func (a *GlobalSyslogServers) Update() error {
-	err := a.client.LogTarget(nil, -1)
-	if err != nil {
-		return err
-	}
-	if len(a.data) == 0 {
+	a.client.GlobalDeleteLogTargets()
+	if len(a.logTargets) == 0 {
 		logger.Infof("log targets removed")
+		return nil
 	}
-	for i, syslog := range a.data {
-		logger.Infof("adding syslog server: 'address: %s, facility: %s'", syslog.Address, syslog.Facility)
-		if err = a.client.LogTarget(syslog, i); err != nil {
+	var err error
+	for _, logTarget := range a.logTargets {
+		logger.Infof("adding syslog server: 'address: %s, facility: %s'", logTarget.Address, logTarget.Facility)
+		err = a.client.GlobalCreateLogTarget(logTarget)
+		if err != nil {
 			return err
 		}
 	}
 	// stdout logging won't work with daemon mode
-	daemonMode, err := a.client.GlobalConfigEnabled("global", "daemon")
+	var daemonMode bool
+	if a.global.Daemon == "enabled" {
+		daemonMode = true
+	}
 	if err != nil {
 		return err
 	}
 	if a.stdout {
 		if daemonMode {
 			logger.Info("Disabling Daemon mode")
-			if err = a.client.DaemonMode(nil); err != nil {
-				return err
-			}
+			a.global.Daemon = "disabled"
 			a.restart = true
 		}
 	} else if !daemonMode {
 		logger.Info("Enabling Daemon mode")
-		if err = a.client.DaemonMode(&types.Enabled{}); err != nil {
-			return err
-		}
+		a.global.Daemon = "enabled"
 		a.restart = true
 	}
 	return nil

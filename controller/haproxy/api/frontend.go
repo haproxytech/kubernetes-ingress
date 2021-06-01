@@ -3,8 +3,8 @@ package api
 import (
 	"fmt"
 
+	"github.com/haproxytech/client-native/v2/models"
 	"github.com/haproxytech/config-parser/v3/types"
-	"github.com/haproxytech/models/v2"
 )
 
 func (c *clientNative) FrontendCfgSnippetSet(frontendName string, value *[]string) error {

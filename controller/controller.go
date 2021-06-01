@@ -18,7 +18,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/haproxytech/models/v2"
+	"github.com/haproxytech/client-native/v2/models"
 	"k8s.io/apimachinery/pkg/watch"
 
 	config "github.com/haproxytech/kubernetes-ingress/controller/configuration"
