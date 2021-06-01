@@ -37,6 +37,8 @@ jobs:
       - name: Check out repo
         id: checkout
         uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
 
       - name: Prepare env variables
         id: env
