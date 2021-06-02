@@ -11,7 +11,7 @@ variables:
 diff:
   stage: diff
   image:
-    name: $CI_REGISTRY_GO/golang:1.15
+    name: $CI_REGISTRY_GO/golang:1.16
     entrypoint: [ "" ]
   tags:
     - go
@@ -49,7 +49,7 @@ lint-commit-msg:
 unit-tests:
   stage: unit-tests
   image:
-    name: $CI_REGISTRY_GO/golang:1.15
+    name: $CI_REGISTRY_GO/golang:1.16
     entrypoint: [""]
   tags:
     - go

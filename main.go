@@ -15,6 +15,7 @@
 package main
 
 import (
+	_ "embed"
 	"fmt"
 	"net/http"
 	"os"
@@ -31,9 +32,12 @@ import (
 	"github.com/jessevdk/go-flags"
 )
 
+//go:embed fs/usr/local/etc/haproxy/haproxy.cfg
+var haproxyConf []byte
+
 func main() {
 	var osArgs utils.OSArgs
-	var parser = flags.NewParser(&osArgs, flags.IgnoreUnknown)
+	parser := flags.NewParser(&osArgs, flags.IgnoreUnknown)
 	_, err := parser.Parse()
 	exitCode := 0
 	defer func() {

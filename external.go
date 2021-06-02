@@ -15,7 +15,6 @@
 package main
 
 import (
-	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -40,8 +39,10 @@ func setupHAProxyEnv(osArgs utils.OSArgs) config.ControllerCfg {
 			StateDir:      "/tmp/haproxy-ingress/state",
 		},
 	}
+
 	if osArgs.CfgDir != "" {
 		cfg.Env.CfgDir = osArgs.CfgDir
+		cfg.Env.MainCFGFile = path.Join(cfg.Env.CfgDir, "haproxy.cfg")
 	}
 	if osArgs.RuntimeDir != "" {
 		cfg.Env.RuntimeDir = osArgs.RuntimeDir
@@ -53,29 +54,15 @@ func setupHAProxyEnv(osArgs utils.OSArgs) config.ControllerCfg {
 		logger.Panic(err)
 	}
 
-	// Try to copy original file if current directory is project directory
-	// Otherwise check if haproxy.cfg is already in config-dir
 	dir, err := filepath.Abs(filepath.Dir(os.Args[0]))
 	if err != nil {
 		logger.Panic(err)
 	}
 	logger.Debug(dir)
-	origin := path.Join(dir, "fs/usr/local/etc/haproxy/haproxy.cfg")
-	_, err = os.Stat(origin)
+	err = renameio.WriteFile(cfg.Env.MainCFGFile, haproxyConf, 0755)
 	if err != nil {
-		if _, err = os.Stat(cfg.Env.MainCFGFile); err != nil {
-			logger.Panicf("%s not found", cfg.Env.MainCFGFile)
-		}
-	} else if err = copyFile(origin, cfg.Env.MainCFGFile); err != nil {
 		logger.Panic(err)
 	}
-	return cfg
-}
 
-func copyFile(src, dst string) (err error) {
-	content, err := ioutil.ReadFile(src)
-	if err != nil {
-		return
-	}
-	return renameio.WriteFile(dst, content, 0640)
+	return cfg
 }
