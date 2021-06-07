@@ -14,6 +14,8 @@ import (
 
 type TCPServices struct {
 	SetDefaultService func(ingress *store.Ingress, frontends []string) (reload bool, err error)
+	IPv4              bool
+	IPv6              bool
 	CertDir           string
 	AddrIPv4          string
 	AddrIPv6          string
@@ -114,15 +116,19 @@ func (t TCPServices) createTCPFrontend(api api.HAProxyClient, frontendName, bind
 	}
 	var errors utils.Errors
 	errors.Add(api.FrontendCreate(frontend))
-	errors.Add(api.FrontendBindCreate(frontendName, models.Bind{
-		Address: t.AddrIPv4 + ":" + bindPort,
-		Name:    "v4",
-	}))
-	errors.Add(api.FrontendBindCreate(frontendName, models.Bind{
-		Address: t.AddrIPv6 + ":" + bindPort,
-		Name:    "v6",
-		V4v6:    true,
-	}))
+	if t.IPv4 {
+		errors.Add(api.FrontendBindCreate(frontendName, models.Bind{
+			Address: t.AddrIPv4 + ":" + bindPort,
+			Name:    "v4",
+		}))
+	}
+	if t.IPv6 {
+		errors.Add(api.FrontendBindCreate(frontendName, models.Bind{
+			Address: t.AddrIPv6 + ":" + bindPort,
+			Name:    "v6",
+			V4v6:    true,
+		}))
+	}
 	if sslOffload {
 		errors.Add(api.FrontendEnableSSLOffload(frontend.Name, t.CertDir, false))
 	}
