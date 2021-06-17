@@ -73,6 +73,7 @@ func (h HTTPS) bindList(passhthrough bool) (binds []models.Bind) {
 
 func (h HTTPS) handleClientTLSAuth(k store.K8s, cfg *config.ControllerCfg, api api.HAProxyClient) (reload bool, err error) {
 	annTLSAuth, _ := k.GetValueFromAnnotations("client-ca", k.ConfigMaps.Main.Annotations)
+	annTLSVerify, _ := k.GetValueFromAnnotations("client-crt-optional", k.ConfigMaps.Main.Annotations)
 	if annTLSAuth == nil {
 		return false, nil
 	}
@@ -109,11 +110,17 @@ func (h HTTPS) handleClientTLSAuth(k store.K8s, cfg *config.ControllerCfg, api a
 	if annTLSAuth.Status == store.EMPTY && !secretUpdated {
 		return false, nil
 	}
+	verify := "required"
+	enabled, annErr := utils.GetBoolValue("client-crt-optional", annTLSVerify.Value)
+	logger.Error(annErr)
+	if enabled {
+		verify = "optional"
+	}
 	// Configure TLS Authentication
 	logger.Infof("enabling client TLS authentication")
 	for i := range binds {
 		binds[i].SslCafile = caFile
-		binds[i].Verify = "required"
+		binds[i].Verify = verify
 		if err = api.FrontendBindEdit(cfg.FrontHTTPS, *binds[i]); err != nil {
 			return false, err
 		}

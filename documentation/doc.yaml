@@ -593,6 +593,24 @@ annotations:
     version_min: "1.6"
     example:
     - 'client-ca: exp/client-ca.crt'
+  - title: client-crt-optional
+    type: bool
+    group: authentication
+    dependencies: client-ca
+    default: "false"
+    description:
+    - If enabled, certificate verification will be optional which means haproxy will still accept the client connection even if the certificate verification fails.
+    - If disabled haproxy will enforce verification of client certificates and only accepts client with valid certificate.
+    tip:
+      - NB, [client-ca](#client-ca) **should be enabled** for certificate verification to work.
+    values:
+    -  "true"
+    -  "false"
+    applies_to:
+    - configmap
+    version_min: "1.6"
+    example:
+    - 'client-crt-optional: true'
   - title: cors-enable
     type: bool
     group: CORS
