@@ -1,0 +1,131 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: globals.core.haproxy.org
+spec:
+  group: core.haproxy.org
+  names:
+    kind: Global
+    plural: globals
+  scope: Namespaced
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            spec:
+              type: object
+              required: 
+                - config
+              properties: 
+                config: 
+                  title: Global
+                  description: HAProxy global configuration
+                  type: object
+                  properties:
+                    chroot:
+                      type: string
+                      pattern: '^[^\s]+$'
+                    group:
+                      type: string
+                      pattern: '^[^\s]+$'
+                    hard_stop_after:
+                      type: integer
+                    user:
+                      type: string
+                      pattern: '^[^\s]+$'
+                    daemon:
+                      type: string
+                      enum: [enabled, disabled]
+                    nbproc:
+                      type: integer
+                    nbthread:
+                      type: integer
+                    master-worker:
+                      type: boolean
+                    external_check:
+                      type: boolean
+                    pidfile:
+                      type: string
+                    maxconn:
+                      type: integer
+                    server_state_base:
+                      type: string
+                      pattern: '^[^\s]+$'
+                    tune_ssl_default_dh_param:
+                      type: integer
+                    ssl_default_bind_options:
+                      type: string
+                    ssl_default_bind_ciphers:
+                      type: string
+                    ssl_default_bind_ciphersuites:
+                      type: string
+                    ssl_default_server_options:
+                      type: string
+                    ssl_default_server_ciphers:
+                      type: string
+                    ssl_default_server_ciphersuites:
+                      type: string
+                    ssl_mode_async:
+                      type: string
+                      enum: [enabled, disabled]
+                    cpu_maps:
+                      type: array
+                      items:
+                        type: object
+                        required:
+                          - process
+                          - cpu_set
+                        properties:
+                          process:
+                            type: string
+                          cpu_set:
+                            type: string
+                    runtime_apis:
+                      type: array
+                      items:
+                        type: object
+                        required:
+                          - address
+                        properties:
+                          address:
+                            type: string
+                            pattern: '^[^\s]+$'
+                          mode:
+                            type: string
+                            pattern: '^[^\s]+$'
+                          level:
+                            type: string
+                            enum: [user, operator, admin]
+                          process:
+                            type: string
+                            pattern: '^[^\s]+$'
+                          exposeFdListeners:
+                            type: boolean
+                    stats_timeout:
+                      type: integer
+                    lua_loads:
+                      type: array
+                      items:
+                        type: object
+                        required:
+                          - file
+                        properties:
+                          file:
+                            type: string
+                            pattern: '^[^\s]+$'
+                    log_send_hostname:
+                      type: object
+                      required:
+                        - enabled
+                      properties:
+                        enabled:
+                          type: string
+                          enum: [enabled, disabled]
+                        param:
+                          type: string
+                          pattern: '^[^\s]+$'

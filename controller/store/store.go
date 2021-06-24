@@ -18,6 +18,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/haproxytech/client-native/v2/models"
+
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 )
 
@@ -26,6 +28,11 @@ type K8s struct {
 	IngressClasses   map[string]*IngressClass
 	NamespacesAccess NamespacesWatch
 	ConfigMaps       ConfigMaps
+	CR               CustomResources
+}
+
+type CustomResources struct {
+	Global *models.Global
 }
 
 type NamespacesWatch struct {
@@ -61,6 +68,7 @@ func NewK8sStore(args utils.OSArgs) K8s {
 				Name:      args.ConfigMapPatternFiles.Name,
 			},
 		},
+		CR: CustomResources{},
 	}
 }
 

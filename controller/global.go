@@ -36,8 +36,7 @@ func (c *HAProxyController) handleGlobalConfig() (reload, restart bool) {
 }
 
 func (c *HAProxyController) globalCfg() (restart bool) {
-	var global *models.Global
-	var newGlobal models.Global
+	var newGlobal, global *models.Global
 	var newLg models.LogTargets
 	var err error
 	var updated []string
@@ -51,17 +50,22 @@ func (c *HAProxyController) globalCfg() (restart bool) {
 		logger.Error(errL)
 		return
 	}
-	newGlobal = *global
-	for _, a := range annotations.GetGlobalAnnotations(&newGlobal, &newLg) {
-		annValue := annotations.GetValue(a.GetName(), c.Store.ConfigMaps.Main.Annotations)
-		err = a.Process(annValue)
-		if err != nil {
-			logger.Errorf("annotation %s: %s", a.GetName(), err)
+	if c.Store.CR.Global != nil {
+		newGlobal = c.Store.CR.Global
+	} else {
+		g := *global
+		for _, a := range annotations.GetGlobalAnnotations(&g, &newLg) {
+			annValue := annotations.GetValue(a.GetName(), c.Store.ConfigMaps.Main.Annotations)
+			err = a.Process(annValue)
+			if err != nil {
+				logger.Errorf("annotation %s: %s", a.GetName(), err)
+			}
 		}
+		newGlobal = &g
 	}
-	updated = deep.Equal(newGlobal, *global)
+	updated = deep.Equal(newGlobal, global)
 	if len(updated) != 0 {
-		logger.Error(c.Client.GlobalPushConfiguration(newGlobal))
+		logger.Error(c.Client.GlobalPushConfiguration(*newGlobal))
 		logger.Debugf("Global config updated: %s\nRestart required", updated)
 		restart = true
 	}
