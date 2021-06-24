@@ -24,7 +24,7 @@ func (a *ServerSendProxy) GetName() string {
 func (a *ServerSendProxy) Parse(input string) error {
 	v := strings.ToLower(input)
 	switch v {
-	case "proxy", "proxy-v1", "proxy-v2":
+	case "proxy", "proxy-v1", "proxy-v2", "proxy-v2-ssl", "proxy-v2-ssl-cn":
 		a.proxyPorto = v
 	default:
 		return fmt.Errorf("%s is an unknown enum", input)
@@ -40,9 +40,15 @@ func (a *ServerSendProxy) Update() error {
 		a.server.SendProxy = "enabled"
 	case "proxy-v2":
 		a.server.SendProxyV2 = "enabled"
+	case "proxy-v2-ssl":
+		a.server.SendProxyV2Ssl = "enabled"
+	case "proxy-v2-ssl-cn":
+		a.server.SendProxyV2SslCn = "enabled"
 	case "":
 		a.server.SendProxy = ""
 		a.server.SendProxyV2 = ""
+		a.server.SendProxyV2Ssl = ""
+		a.server.SendProxyV2SslCn = ""
 	default:
 		return fmt.Errorf("%s is an unknown enum", a.proxyPorto)
 	}
