@@ -1,12 +1,14 @@
 package handler
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
 
 	"github.com/haproxytech/client-native/v2/models"
 	config "github.com/haproxytech/kubernetes-ingress/controller/configuration"
+	"github.com/haproxytech/kubernetes-ingress/controller/haproxy"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/api"
 	"github.com/haproxytech/kubernetes-ingress/controller/store"
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
@@ -53,14 +55,14 @@ func (t TCPServices) Update(k store.K8s, cfg *config.ControllerCfg, api api.HAPr
 		frontend, errGet := api.FrontendGet(frontendName)
 		// Create Frontend
 		if errGet != nil {
-			frontend, reload, err = t.createTCPFrontend(api, frontendName, port, p.sslOffload)
+			frontend, reload, err = t.createTCPFrontend(k, cfg, api, frontendName, port, p.sslOffload)
 			if err != nil {
 				logger.Error(err)
 				continue
 			}
 		}
 		// Update  Frontend
-		reload, err = t.updateTCPFrontend(api, frontend, p)
+		reload, err = t.updateTCPFrontend(k, cfg, api, frontend, p)
 		if err != nil {
 			logger.Errorf("TCP frontend '%s': update failed: %s", frontendName, err)
 		}
@@ -106,7 +108,8 @@ func (t TCPServices) parseTCPService(store store.K8s, input string) (p tcpSvcPar
 	return p, err
 }
 
-func (t TCPServices) createTCPFrontend(api api.HAProxyClient, frontendName, bindPort string, sslOffload bool) (frontend models.Frontend, reload bool, err error) {
+func (t TCPServices) createTCPFrontend(k store.K8s, cfg *config.ControllerCfg, api api.HAProxyClient,
+	frontendName, bindPort string, sslOffload bool) (frontend models.Frontend, reload bool, err error) {
 	// Create Frontend
 	frontend = models.Frontend{
 		Name:   frontendName,
@@ -131,6 +134,7 @@ func (t TCPServices) createTCPFrontend(api api.HAProxyClient, frontendName, bind
 	}
 	if sslOffload {
 		errors.Add(api.FrontendEnableSSLOffload(frontend.Name, t.CertDir, false))
+		errors.Add(t.handleClientTLSAuth(k, cfg, api, frontendName))
 	}
 	if errors.Result() != nil {
 		err = fmt.Errorf("error configuring tcp frontend: %w", err)
@@ -140,7 +144,7 @@ func (t TCPServices) createTCPFrontend(api api.HAProxyClient, frontendName, bind
 	return frontend, true, nil
 }
 
-func (t TCPServices) updateTCPFrontend(api api.HAProxyClient, frontend models.Frontend, p tcpSvcParser) (reload bool, err error) {
+func (t TCPServices) updateTCPFrontend(k store.K8s, cfg *config.ControllerCfg, api api.HAProxyClient, frontend models.Frontend, p tcpSvcParser) (reload bool, err error) {
 	binds, err := api.FrontendBindsGet(frontend.Name)
 	if err != nil {
 		err = fmt.Errorf("failed to get bind lines: %w", err)
@@ -148,6 +152,11 @@ func (t TCPServices) updateTCPFrontend(api api.HAProxyClient, frontend models.Fr
 	}
 	if !binds[0].Ssl && p.sslOffload {
 		err = api.FrontendEnableSSLOffload(frontend.Name, t.CertDir, false)
+		if err != nil {
+			err = fmt.Errorf("failed to enable SSL offload: %w", err)
+			return
+		}
+		err = t.handleClientTLSAuth(k, cfg, api, frontend.Name)
 		if err != nil {
 			err = fmt.Errorf("failed to enable SSL offload: %w", err)
 			return
@@ -178,4 +187,61 @@ func (t TCPServices) updateTCPFrontend(api api.HAProxyClient, frontend models.Fr
 	}
 
 	return reload || r, err
+}
+
+func (t TCPServices) handleClientTLSAuth(k store.K8s, cfg *config.ControllerCfg, api api.HAProxyClient, frontendName string) error {
+	annTLSAuth, _ := k.GetValueFromAnnotations("client-ca", k.ConfigMaps.Main.Annotations)
+	annTLSVerify, _ := k.GetValueFromAnnotations("client-crt-optional", k.ConfigMaps.Main.Annotations)
+	if annTLSAuth == nil {
+		return nil
+	}
+	binds, err := api.FrontendBindsGet(frontendName)
+	if err != nil {
+		return err
+	}
+	caFile, secretUpdated, secretErr := cfg.Certificates.HandleTLSSecret(k, haproxy.SecretCtx{
+		DefaultNS:  "",
+		SecretPath: annTLSAuth.Value,
+		SecretType: haproxy.CA_CERT,
+	})
+	// Annotation or secret DELETED
+	if annTLSAuth.Status == store.DELETED || (secretUpdated && caFile == "") {
+		logger.Infof("removing client TLS authentication")
+		for i := range binds {
+			binds[i].SslCafile = ""
+			binds[i].Verify = ""
+			if err = api.FrontendBindEdit(frontendName, *binds[i]); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+	// Handle secret errors
+	if secretErr != nil {
+		if errors.Is(secretErr, haproxy.ErrCertNotFound) {
+			logger.Warning("unable to configure TLS authentication secret '%s' not found", annTLSAuth.Value)
+			return nil
+		}
+		return secretErr
+	}
+	// No changes
+	if annTLSAuth.Status == store.EMPTY && !secretUpdated {
+		return nil
+	}
+	verify := "required"
+	enabled, annErr := utils.GetBoolValue("client-crt-optional", annTLSVerify.Value)
+	logger.Error(annErr)
+	if enabled {
+		verify = "optional"
+	}
+	// Configure TLS Authentication
+	logger.Infof("enabling client TLS authentication")
+	for i := range binds {
+		binds[i].SslCafile = caFile
+		binds[i].Verify = verify
+		if err = api.FrontendBindEdit(frontendName, *binds[i]); err != nil {
+			return err
+		}
+	}
+	return nil
 }
