@@ -22,7 +22,7 @@ func GetBackendAnnotations(client api.HAProxyClient, b *models.Backend) []Annota
 	annotations := []Annotation{
 		NewBackendCfgSnippet("backend-config-snippet", client, b),
 		NewBackendAbortOnClose("abortonclose", b),
-		NewBackendTimeoutCheck("check-timeout", b),
+		NewBackendTimeoutCheck("timeout-check", b),
 		NewBackendLoadBalance("load-balance", b),
 		NewBackendCookie("cookie-persistence", b),
 	}
