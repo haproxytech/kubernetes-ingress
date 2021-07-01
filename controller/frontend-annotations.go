@@ -404,15 +404,18 @@ func (c *HAProxyController) handleRequestSetHdr(ingress *store.Ingress) {
 	}
 	// Configure annotation
 	for _, param := range strings.Split(annReqSetHdr.Value, "\n") {
-		parts := strings.Fields(param)
-		if len(parts) != 2 {
+		if param == "" {
+			continue
+		}
+		indexSpace := strings.IndexByte(param, ' ')
+		if indexSpace == -1 {
 			logger.Errorf("incorrect value '%s' in request-set-header annotation", param)
 			continue
 		}
 		logger.Tracef("Ingress %s/%s: Configuring request set '%s' header ", ingress.Namespace, ingress.Name, param)
 		reqSetHdr := rules.SetHdr{
-			HdrName:   parts[0],
-			HdrFormat: parts[1],
+			HdrName:   param[:indexSpace],
+			HdrFormat: "\"" + param[indexSpace+1:] + "\"",
 		}
 		logger.Error(c.Cfg.HAProxyRules.AddRule(reqSetHdr, ingress.Namespace+"-"+ingress.Name, c.Cfg.FrontHTTP, c.Cfg.FrontHTTPS))
 	}
@@ -441,7 +444,7 @@ func (c *HAProxyController) handleResponseSetHdr(ingress *store.Ingress) {
 		logger.Tracef("Ingress %s/%s: Configuring response set '%s' header ", ingress.Namespace, ingress.Name, param)
 		resSetHdr := rules.SetHdr{
 			HdrName:   param[:indexSpace],
-			HdrFormat: param[indexSpace+1:],
+			HdrFormat: "\"" + param[indexSpace+1:] + "\"",
 			Response:  true,
 		}
 		logger.Error(c.Cfg.HAProxyRules.AddRule(resSetHdr, ingress.Namespace+"-"+ingress.Name, c.Cfg.FrontHTTP, c.Cfg.FrontHTTPS))
