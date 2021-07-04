@@ -55,7 +55,6 @@ type Service struct {
 	Addresses   []string // Used only for publish-service
 	DNS         string
 	Annotations MapStringW
-	Selector    MapStringW
 	Status      Status
 }
 

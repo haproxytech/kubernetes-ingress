@@ -137,9 +137,6 @@ func (a *Service) Equal(b *Service) bool {
 	if !a.Annotations.Equal(b.Annotations) {
 		return false
 	}
-	if !a.Selector.Equal(b.Selector) {
-		return false
-	}
 	if len(a.Ports) != len(b.Ports) {
 		return false
 	}

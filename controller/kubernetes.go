@@ -364,7 +364,6 @@ func (k *K8s) EventsServices(channel chan SyncDataEvent, stop chan struct{}, inf
 				Namespace:   data.GetNamespace(),
 				Name:        data.GetName(),
 				Annotations: store.ConvertToMapStringW(data.ObjectMeta.Annotations),
-				Selector:    store.ConvertToMapStringW(data.Spec.Selector),
 				Ports:       []store.ServicePort{},
 				Status:      status,
 			}
@@ -400,7 +399,6 @@ func (k *K8s) EventsServices(channel chan SyncDataEvent, stop chan struct{}, inf
 				Namespace:   data.GetNamespace(),
 				Name:        data.GetName(),
 				Annotations: store.ConvertToMapStringW(data.ObjectMeta.Annotations),
-				Selector:    store.ConvertToMapStringW(data.Spec.Selector),
 				Status:      status,
 			}
 			if data.Spec.Type == corev1.ServiceTypeExternalName {
@@ -438,7 +436,6 @@ func (k *K8s) EventsServices(channel chan SyncDataEvent, stop chan struct{}, inf
 				Namespace:   data1.GetNamespace(),
 				Name:        data1.GetName(),
 				Annotations: store.ConvertToMapStringW(data1.ObjectMeta.Annotations),
-				Selector:    store.ConvertToMapStringW(data1.Spec.Selector),
 				Ports:       []store.ServicePort{},
 				Status:      status,
 			}
@@ -457,7 +454,6 @@ func (k *K8s) EventsServices(channel chan SyncDataEvent, stop chan struct{}, inf
 				Namespace:   data2.GetNamespace(),
 				Name:        data2.GetName(),
 				Annotations: store.ConvertToMapStringW(data2.ObjectMeta.Annotations),
-				Selector:    store.ConvertToMapStringW(data2.Spec.Selector),
 				Ports:       []store.ServicePort{},
 				Status:      status,
 			}
