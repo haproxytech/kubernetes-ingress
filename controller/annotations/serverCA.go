@@ -34,7 +34,7 @@ func (a *ServerCA) Parse(input store.StringW, forceParse bool) error {
 	if input.Status == store.DELETED {
 		return nil
 	}
-	caFile, updated, err := a.haproxyCerts.HandleTLSSecret(a.k8sStore, haproxy.SecretCtx{
+	caFile, err := a.haproxyCerts.HandleTLSSecret(a.k8sStore, haproxy.SecretCtx{
 		DefaultNS:  a.server.Namespace,
 		SecretPath: input.Value,
 		SecretType: haproxy.CA_CERT,
@@ -42,7 +42,7 @@ func (a *ServerCA) Parse(input store.StringW, forceParse bool) error {
 	if err != nil && !errors.Is(err, haproxy.ErrCertNotFound) {
 		return err
 	}
-	if input.Status == store.EMPTY && !updated && !forceParse {
+	if input.Status == store.EMPTY && !forceParse {
 		return ErrEmptyStatus
 	}
 	a.caFile = caFile

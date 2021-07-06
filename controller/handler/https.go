@@ -81,13 +81,13 @@ func (h HTTPS) handleClientTLSAuth(k store.K8s, cfg *config.ControllerCfg, api a
 	if err != nil {
 		return false, err
 	}
-	caFile, secretUpdated, secretErr := cfg.Certificates.HandleTLSSecret(k, haproxy.SecretCtx{
+	caFile, secretErr := cfg.Certificates.HandleTLSSecret(k, haproxy.SecretCtx{
 		DefaultNS:  "",
 		SecretPath: annTLSAuth.Value,
 		SecretType: haproxy.CA_CERT,
 	})
 	// Annotation or secret DELETED
-	if annTLSAuth.Status == store.DELETED || (secretUpdated && caFile == "") {
+	if binds[0].SslCafile != "" && (annTLSAuth.Status == store.DELETED || caFile == "") {
 		logger.Infof("removing client TLS authentication")
 		for i := range binds {
 			binds[i].SslCafile = ""
@@ -107,7 +107,7 @@ func (h HTTPS) handleClientTLSAuth(k store.K8s, cfg *config.ControllerCfg, api a
 		return false, secretErr
 	}
 	// No changes
-	if annTLSAuth.Status == store.EMPTY && !secretUpdated {
+	if annTLSAuth.Status == store.EMPTY {
 		return false, nil
 	}
 	verify := "required"
@@ -167,6 +167,9 @@ func (h HTTPS) Update(k store.K8s, cfg *config.ControllerCfg, api api.HAProxyCli
 		cfg.SSLPassthrough = false
 		reload = true
 		logger.Debug("SSLPassthrough disabled, reload required")
+	}
+	if cfg.Certificates.Updated() {
+		reload = true
 	}
 
 	return reload, nil

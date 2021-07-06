@@ -12,16 +12,16 @@ import (
 )
 
 type Certificates struct {
-	// Index is secretPath
-	// Value is true if secret is used otherwise false
 	frontend map[string]*cert
 	backend  map[string]*cert
 	ca       map[string]*cert
 }
 
 type cert struct {
-	path  string
-	inUse bool
+	name    string
+	path    string
+	inUse   bool
+	updated bool
 }
 
 type SecretType int
@@ -57,14 +57,11 @@ func NewCertificates(caDir, ftDir, bdDir string) *Certificates {
 	}
 }
 
-func (c *Certificates) HandleTLSSecret(k8s store.K8s, secretCtx SecretCtx) (certPath string, updated bool, err error) {
+func (c *Certificates) HandleTLSSecret(k8s store.K8s, secretCtx SecretCtx) (certPath string, err error) {
 	secret, err := k8s.FetchSecret(secretCtx.SecretPath, secretCtx.DefaultNS)
-	if secret == nil {
+	if secret == nil || secret.Status == store.DELETED {
 		logger.Warning(err)
-		return "", false, ErrCertNotFound
-	}
-	if secret.Status == store.DELETED {
-		return "", true, nil
+		return "", ErrCertNotFound
 	}
 
 	var certs map[string]*cert
@@ -91,32 +88,41 @@ func (c *Certificates) HandleTLSSecret(k8s store.K8s, secretCtx SecretCtx) (cert
 		certs = c.ca
 		privateKeyNull = true
 	default:
-		return "", false, errors.New("unspecified context")
+		return "", errors.New("unspecified context")
 	}
 	crt, crtOk = certs[certName]
-	if crtOk && secret.Status == store.EMPTY {
+	if crtOk {
 		crt.inUse = true
-		return crt.path, false, nil
+		if secret.Status == store.EMPTY {
+			return crt.path, nil
+		}
 	}
-	crt = &cert{path: certPath}
+	crt = &cert{
+		path:    certPath,
+		name:    fmt.Sprintf("%s/%s", secret.Namespace, secret.Name),
+		inUse:   true,
+		updated: true,
+	}
 	err = writeSecret(secret, crt, privateKeyNull)
 	if err != nil {
-		return "", false, err
+		return "", err
 	}
-	crt.inUse = true
 	certs[certName] = crt
-	return crt.path, true, nil
+	return crt.path, nil
 }
 
 func (c *Certificates) Clean() {
 	for i := range c.frontend {
 		c.frontend[i].inUse = false
+		c.frontend[i].updated = false
 	}
 	for i := range c.backend {
 		c.backend[i].inUse = false
+		c.backend[i].updated = false
 	}
 	for i := range c.ca {
 		c.ca[i].inUse = false
+		c.ca[i].updated = false
 	}
 }
 
@@ -137,6 +143,18 @@ func (c *Certificates) Refresh() (reload bool) {
 	return
 }
 
+func (c *Certificates) Updated() (reload bool) {
+	for _, certs := range []map[string]*cert{c.frontend, c.backend, c.ca} {
+		for _, crt := range certs {
+			if crt.updated {
+				logger.Debugf("Secret '%s' was updated, reload required", crt.name)
+				reload = true
+			}
+		}
+	}
+	return reload
+}
+
 func refreshCerts(certs map[string]*cert, certDir string) (reload bool) {
 	files, err := ioutil.ReadDir(certDir)
 	if err != nil {
@@ -155,7 +173,7 @@ func refreshCerts(certs map[string]*cert, certDir string) (reload bool) {
 			logger.Error(os.Remove(path.Join(certDir, filename)))
 			delete(certs, certName)
 			reload = true
-			logger.Debug("Unused certificates removed, reload required")
+			logger.Debug("secret %s removed, reload required", crt.name)
 		}
 	}
 	return

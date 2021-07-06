@@ -49,7 +49,7 @@ func (c *HAProxyController) handleGlobalConfig() (reload, restart bool) {
 		logger.Error(err)
 		return false, false
 	}
-	reload = c.handleDefaultCert() || reload
+	c.handleDefaultCert()
 	reload = c.handleDefaultService() || reload
 
 	return reload, restart
@@ -99,14 +99,13 @@ func (c *HAProxyController) handleDefaultService() (reload bool) {
 }
 
 // handleDefaultCert configures default/fallback HAProxy certificate to use for client HTTPS requests.
-func (c *HAProxyController) handleDefaultCert() (reload bool) {
+func (c *HAProxyController) handleDefaultCert() {
 	secretAnn, _ := c.Store.GetValueFromAnnotations("ssl-certificate", c.Store.ConfigMaps.Main.Annotations)
 	if secretAnn == nil {
-		return false
+		return
 	}
-	crt, updated, _ := c.Cfg.Certificates.HandleTLSSecret(c.Store, haproxy.SecretCtx{
+	c.Cfg.Certificates.HandleTLSSecret(c.Store, haproxy.SecretCtx{
 		SecretPath: secretAnn.Value,
 		SecretType: haproxy.FT_DEFAULT_CERT,
 	})
-	return crt != "" && updated
 }
