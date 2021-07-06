@@ -30,20 +30,14 @@ func (a *ServerCA) GetName() string {
 	return a.name
 }
 
-func (a *ServerCA) Parse(input store.StringW, forceParse bool) error {
-	if input.Status == store.DELETED {
-		return nil
-	}
+func (a *ServerCA) Parse(input string) error {
 	caFile, err := a.haproxyCerts.HandleTLSSecret(a.k8sStore, haproxy.SecretCtx{
 		DefaultNS:  a.server.Namespace,
-		SecretPath: input.Value,
+		SecretPath: input,
 		SecretType: haproxy.CA_CERT,
 	})
 	if err != nil && !errors.Is(err, haproxy.ErrCertNotFound) {
 		return err
-	}
-	if input.Status == store.EMPTY && !forceParse {
-		return ErrEmptyStatus
 	}
 	a.caFile = caFile
 	return nil

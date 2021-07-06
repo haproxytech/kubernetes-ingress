@@ -56,6 +56,7 @@ type HAProxyClient interface {
 	SetMapContent(mapFile string, payload string) error
 	SetServerAddr(backendName string, serverName string, ip string, port int) error
 	SetServerState(backendName string, serverName string, state string) error
+	ServerGet(serverName, backendNa string) (models.Server, error)
 	SyncBackendSrvs(oldEndpoints, newEndpoints *store.PortEndpoints) error
 	UserListDeleteByGroup(group string) error
 	UserListCreateByGroup(group string, userPasswordMap map[string][]byte) error

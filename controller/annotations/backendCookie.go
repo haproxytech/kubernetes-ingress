@@ -5,8 +5,6 @@ import (
 	"strings"
 
 	"github.com/haproxytech/client-native/v2/models"
-
-	"github.com/haproxytech/kubernetes-ingress/controller/store"
 )
 
 type BackendCookie struct {
@@ -23,17 +21,11 @@ func (a *BackendCookie) GetName() string {
 	return a.name
 }
 
-func (a *BackendCookie) Parse(input store.StringW, forceParse bool) error {
-	if input.Status == store.EMPTY && !forceParse {
-		return ErrEmptyStatus
+func (a *BackendCookie) Parse(input string) error {
+	if len(strings.Fields(input)) != 1 {
+		return fmt.Errorf("cookie-persistence: Incorrect input %s", input)
 	}
-	if input.Status == store.DELETED {
-		return nil
-	}
-	if len(strings.Fields(input.Value)) != 1 {
-		return fmt.Errorf("cookie-persistence: Incorrect input %s", input.Value)
-	}
-	a.cookieName = input.Value
+	a.cookieName = input
 	return nil
 }
 

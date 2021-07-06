@@ -8,7 +8,6 @@ import (
 	"github.com/haproxytech/client-native/v2/models"
 
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/api"
-	"github.com/haproxytech/kubernetes-ingress/controller/store"
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 )
 
@@ -35,15 +34,9 @@ func (a *GlobalSyslogServers) GetName() string {
 //  syslog-server: |
 //    address:127.0.0.1, port:514, facility:local0
 //    address:192.168.1.1, port:514, facility:local1
-func (a *GlobalSyslogServers) Parse(input store.StringW, forceParse bool) error {
-	if input.Status == store.EMPTY && !forceParse {
-		return ErrEmptyStatus
-	}
-	if input.Status == store.DELETED {
-		return nil
-	}
+func (a *GlobalSyslogServers) Parse(input string) error {
 	a.stdout = false
-	for _, syslogLine := range strings.Split(input.Value, "\n") {
+	for _, syslogLine := range strings.Split(input, "\n") {
 		if syslogLine == "" {
 			continue
 		}

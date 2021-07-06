@@ -6,7 +6,6 @@ import (
 
 	"github.com/haproxytech/client-native/v2/models"
 
-	"github.com/haproxytech/kubernetes-ingress/controller/store"
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 )
 
@@ -24,15 +23,9 @@ func (a *DefaultTimeout) GetName() string {
 	return a.name
 }
 
-func (a *DefaultTimeout) Parse(input store.StringW, forceParse bool) error {
-	if input.Status == store.EMPTY && !forceParse {
-		return ErrEmptyStatus
-	}
-	if input.Status == store.DELETED {
-		return nil
-	}
+func (a *DefaultTimeout) Parse(input string) error {
 	var err error
-	a.timeout, err = utils.ParseTime(input.Value)
+	a.timeout, err = utils.ParseTime(input)
 	return err
 }
 

@@ -5,7 +5,6 @@ import (
 
 	"github.com/haproxytech/client-native/v2/models"
 
-	"github.com/haproxytech/kubernetes-ingress/controller/store"
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 )
 
@@ -23,14 +22,8 @@ func (a *BackendForwardedFor) GetName() string {
 	return a.name
 }
 
-func (a *BackendForwardedFor) Parse(input store.StringW, forceParse bool) error {
-	if input.Status == store.EMPTY && !forceParse {
-		return ErrEmptyStatus
-	}
-	if input.Status == store.DELETED {
-		return nil
-	}
-	enabled, err := utils.GetBoolValue(input.Value, "forwarded-for")
+func (a *BackendForwardedFor) Parse(input string) error {
+	enabled, err := utils.GetBoolValue(input, "forwarded-for")
 	if enabled {
 		params := &models.Forwardfor{
 			Enabled: utils.PtrString("enabled"),

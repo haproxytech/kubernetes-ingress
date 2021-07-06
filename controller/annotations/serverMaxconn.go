@@ -4,8 +4,6 @@ import (
 	"strconv"
 
 	"github.com/haproxytech/client-native/v2/models"
-
-	"github.com/haproxytech/kubernetes-ingress/controller/store"
 )
 
 type ServerMaxconn struct {
@@ -22,14 +20,8 @@ func (a *ServerMaxconn) GetName() string {
 	return a.name
 }
 
-func (a *ServerMaxconn) Parse(input store.StringW, forceParse bool) error {
-	if input.Status == store.DELETED {
-		return nil
-	}
-	if input.Status == store.EMPTY && !forceParse {
-		return ErrEmptyStatus
-	}
-	v, err := strconv.ParseInt(input.Value, 10, 64)
+func (a *ServerMaxconn) Parse(input string) error {
+	v, err := strconv.ParseInt(input, 10, 64)
 	if err != nil {
 		return err
 	}

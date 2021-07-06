@@ -8,15 +8,15 @@ import (
 	"github.com/haproxytech/kubernetes-ingress/controller/store"
 )
 
-func HandleServerAnnotations(k8sStore store.K8s, client api.HAProxyClient, haproxyCerts *haproxy.Certificates, server *models.Server, forceParse bool, annotations ...store.MapStringW) (reload bool) {
+// HandleServerAnnotations returns a pointer to a server model holding server configuration from annotations
+func HandleServerAnnotations(server *models.Server, k8sStore store.K8s, client api.HAProxyClient, haproxyCerts *haproxy.Certificates, annotations ...store.MapStringW) {
 	for _, a := range GetServerAnnotations(server, k8sStore, haproxyCerts) {
 		annValue, _ := k8sStore.GetValueFromAnnotations(a.GetName(), annotations...)
 		if annValue == nil {
 			continue
 		}
-		reload = HandleAnnotation(a, *annValue, forceParse) || reload
+		HandleAnnotation(a, annValue.Value)
 	}
-	return reload
 }
 
 func GetServerAnnotations(s *models.Server, k8sStore store.K8s, certs *haproxy.Certificates) []Annotation {

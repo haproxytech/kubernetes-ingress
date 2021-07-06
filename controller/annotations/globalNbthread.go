@@ -5,8 +5,6 @@ import (
 	"strconv"
 
 	"github.com/haproxytech/client-native/v2/models"
-
-	"github.com/haproxytech/kubernetes-ingress/controller/store"
 )
 
 type GlobalNbthread struct {
@@ -23,14 +21,8 @@ func (a *GlobalNbthread) GetName() string {
 	return a.name
 }
 
-func (a *GlobalNbthread) Parse(input store.StringW, forceParse bool) error {
-	if input.Status == store.EMPTY && !forceParse {
-		return ErrEmptyStatus
-	}
-	if input.Status == store.DELETED {
-		return nil
-	}
-	v, err := strconv.Atoi(input.Value)
+func (a *GlobalNbthread) Parse(input string) error {
+	v, err := strconv.Atoi(input)
 	if err != nil {
 		return err
 	}

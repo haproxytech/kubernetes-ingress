@@ -16,6 +16,7 @@ package service
 
 import (
 	"fmt"
+	"reflect"
 	"strconv"
 
 	"github.com/haproxytech/client-native/v2/models"
@@ -103,16 +104,18 @@ func (s *SvcContext) HandleBackend(client api.HAProxyClient, store store.K8s) (r
 		return reload, backendName, err
 	}
 	// Get/Create Backend
-	var backend models.Backend
-	if backend, err = client.BackendGet(backendName); err != nil {
-		mode := "http"
-		backend = models.Backend{
-			Name: backendName,
-			Mode: mode,
-		}
-		if s.service.DNS != "" {
-			backend.DefaultServer = &models.DefaultServer{InitAddr: "last,libc,none"}
-		}
+	backend := models.Backend{
+		Name: backendName,
+		Mode: "http",
+	}
+	if s.service.DNS != "" {
+		backend.DefaultServer = &models.DefaultServer{InitAddr: "last,libc,none"}
+	}
+	if s.tcpService {
+		backend.Mode = "tcp"
+	}
+	oldBackend, err := client.BackendGet(backendName)
+	if err != nil {
 		if err = client.BackendCreate(backend); err != nil {
 			return reload, backendName, err
 		}
@@ -120,27 +123,16 @@ func (s *SvcContext) HandleBackend(client api.HAProxyClient, store store.K8s) (r
 		reload = true
 		logger.Debugf("Ingress '%s/%s': new backend '%s', reload required", s.ingress.Namespace, s.ingress.Name, backendName)
 	}
-	// Update Backend
-	var switchMode bool
-	if backend.Mode == "http" {
-		if s.tcpService {
-			backend.Mode = "tcp"
-			switchMode = true
-		}
-	} else if !s.tcpService {
-		backend.Mode = "http"
-		switchMode = true
-	}
-	backendUpdated := annotations.HandleBackendAnnotations(
+	annotations.HandleBackendAnnotations(
+		&backend,
 		store,
 		client,
-		&backend,
-		s.newBackend,
 		s.service.Annotations,
 		s.ingress.Annotations,
 		s.store.ConfigMaps.Main.Annotations,
-	) || switchMode
-	if backendUpdated {
+	)
+	// Update Backend
+	if !reflect.DeepEqual(oldBackend, backend) {
 		if err = client.BackendEdit(backend); err != nil {
 			return reload, backendName, err
 		}

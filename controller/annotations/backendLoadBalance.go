@@ -4,8 +4,6 @@ import (
 	"fmt"
 
 	"github.com/haproxytech/client-native/v2/models"
-
-	"github.com/haproxytech/kubernetes-ingress/controller/store"
 )
 
 type BackendLoadBalance struct {
@@ -22,15 +20,9 @@ func (a *BackendLoadBalance) GetName() string {
 	return a.name
 }
 
-func (a *BackendLoadBalance) Parse(input store.StringW, forceParse bool) error {
-	if input.Status == store.EMPTY && !forceParse {
-		return ErrEmptyStatus
-	}
-	if input.Status == store.DELETED {
-		return nil
-	}
+func (a *BackendLoadBalance) Parse(input string) error {
 	params := &models.Balance{
-		Algorithm: &input.Value,
+		Algorithm: &input,
 	}
 	if err := params.Validate(nil); err != nil {
 		return fmt.Errorf("load-balance: %w", err)

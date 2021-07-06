@@ -3,7 +3,6 @@ package annotations
 import (
 	"github.com/haproxytech/client-native/v2/models"
 
-	"github.com/haproxytech/kubernetes-ingress/controller/store"
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 )
 
@@ -21,14 +20,8 @@ func (a *ServerCheckInter) GetName() string {
 	return a.name
 }
 
-func (a *ServerCheckInter) Parse(input store.StringW, forceParse bool) error {
-	if input.Status == store.DELETED {
-		return nil
-	}
-	if input.Status == store.EMPTY && !forceParse {
-		return ErrEmptyStatus
-	}
-	value, err := utils.ParseTime(input.Value)
+func (a *ServerCheckInter) Parse(input string) error {
+	value, err := utils.ParseTime(input)
 	if err != nil {
 		return err
 	}

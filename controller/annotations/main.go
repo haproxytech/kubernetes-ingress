@@ -1,33 +1,26 @@
 package annotations
 
 import (
-	"errors"
-
-	"github.com/haproxytech/kubernetes-ingress/controller/store"
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 )
 
 type Annotation interface {
-	Parse(value store.StringW, forceParse bool) error
+	Parse(value string) error
 	GetName() string
 	Update() error
 }
 
-var ErrEmptyStatus = errors.New("emptyST")
 var logger = utils.GetLogger()
 
-func HandleAnnotation(a Annotation, value store.StringW, forceParse bool) (updated bool) {
-	err := a.Parse(value, forceParse)
+func HandleAnnotation(a Annotation, value string) {
+	err := a.Parse(value)
 	if err != nil {
-		if !errors.Is(err, ErrEmptyStatus) {
-			logger.Errorf("%s: %s", a.GetName(), err)
-		}
-		return false
+		logger.Errorf("%s: %s", a.GetName(), err)
+		return
 	}
 	err = a.Update()
 	if err != nil {
 		logger.Errorf("%s: %s", a.GetName(), err)
-		return false
+		return
 	}
-	return true
 }

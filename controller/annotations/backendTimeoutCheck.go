@@ -3,7 +3,6 @@ package annotations
 import (
 	"github.com/haproxytech/client-native/v2/models"
 
-	"github.com/haproxytech/kubernetes-ingress/controller/store"
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 )
 
@@ -21,15 +20,9 @@ func (a *BackendTimeoutCheck) GetName() string {
 	return a.name
 }
 
-func (a *BackendTimeoutCheck) Parse(input store.StringW, forceParse bool) error {
-	if input.Status == store.EMPTY && !forceParse {
-		return ErrEmptyStatus
-	}
-	if input.Status == store.DELETED {
-		return nil
-	}
+func (a *BackendTimeoutCheck) Parse(input string) error {
 	var err error
-	a.timeout, err = utils.ParseTime(input.Value)
+	a.timeout, err = utils.ParseTime(input)
 	return err
 }
 

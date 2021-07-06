@@ -3,7 +3,6 @@ package annotations
 import (
 	"github.com/haproxytech/client-native/v2/models"
 
-	"github.com/haproxytech/kubernetes-ingress/controller/store"
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 )
 
@@ -21,15 +20,9 @@ func (a *BackendAbortOnClose) GetName() string {
 	return a.name
 }
 
-func (a *BackendAbortOnClose) Parse(input store.StringW, forceParse bool) error {
-	if input.Status == store.EMPTY && !forceParse {
-		return ErrEmptyStatus
-	}
-	if input.Status == store.DELETED {
-		return nil
-	}
+func (a *BackendAbortOnClose) Parse(input string) error {
 	var err error
-	a.enabled, err = utils.GetBoolValue(input.Value, "abortonclose")
+	a.enabled, err = utils.GetBoolValue(input, "abortonclose")
 	return err
 }
 

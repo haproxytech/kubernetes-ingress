@@ -4,8 +4,6 @@ import (
 	"fmt"
 
 	"github.com/haproxytech/client-native/v2/models"
-
-	"github.com/haproxytech/kubernetes-ingress/controller/store"
 )
 
 type ServerProto struct {
@@ -22,21 +20,14 @@ func (a *ServerProto) GetName() string {
 	return a.name
 }
 
-func (a *ServerProto) Parse(input store.StringW, forceParse bool) error {
-	if input.Status == store.DELETED {
-		return nil
-	}
-	if input.Status == store.EMPTY && !forceParse {
-		return ErrEmptyStatus
-	}
-
-	switch input.Value {
+func (a *ServerProto) Parse(input string) error {
+	switch input {
 	case "h1":
 		a.server.Alpn = ""
 	case "h2":
 		a.proto = "h2"
 	default:
-		return fmt.Errorf("unknown proto %s", input.Value)
+		return fmt.Errorf("unknown proto %s", input)
 	}
 
 	return nil

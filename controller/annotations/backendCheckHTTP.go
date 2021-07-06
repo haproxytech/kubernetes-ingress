@@ -5,8 +5,6 @@ import (
 	"strings"
 
 	"github.com/haproxytech/client-native/v2/models"
-
-	"github.com/haproxytech/kubernetes-ingress/controller/store"
 )
 
 type BackendCheckHTTP struct {
@@ -23,14 +21,8 @@ func (a *BackendCheckHTTP) GetName() string {
 	return a.name
 }
 
-func (a *BackendCheckHTTP) Parse(input store.StringW, forceParse bool) error {
-	if input.Status == store.EMPTY && !forceParse {
-		return ErrEmptyStatus
-	}
-	if input.Status == store.DELETED {
-		return nil
-	}
-	checkHTTPParams := strings.Fields(strings.TrimSpace(input.Value))
+func (a *BackendCheckHTTP) Parse(input string) error {
+	checkHTTPParams := strings.Fields(strings.TrimSpace(input))
 	switch len(checkHTTPParams) {
 	case 0:
 		return fmt.Errorf("httpchk option: incorrect number of params")

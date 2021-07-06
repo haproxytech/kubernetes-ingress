@@ -6,7 +6,6 @@ import (
 
 	"github.com/haproxytech/config-parser/v4/types"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/api"
-	"github.com/haproxytech/kubernetes-ingress/controller/store"
 )
 
 type GlobalCfgSnippet struct {
@@ -24,14 +23,8 @@ func (a *GlobalCfgSnippet) GetName() string {
 	return a.name
 }
 
-func (a *GlobalCfgSnippet) Parse(input store.StringW, forceParse bool) error {
-	if input.Status == store.EMPTY && !forceParse {
-		return ErrEmptyStatus
-	}
-	if input.Status == store.DELETED {
-		return nil
-	}
-	for _, line := range strings.Split(strings.Trim(input.Value, "\n"), "\n") {
+func (a *GlobalCfgSnippet) Parse(input string) error {
+	for _, line := range strings.Split(strings.Trim(input, "\n"), "\n") {
 		if line = strings.TrimSpace(line); line != "" {
 			a.data = append(a.data, line)
 		}

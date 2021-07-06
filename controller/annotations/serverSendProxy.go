@@ -5,8 +5,6 @@ import (
 	"strings"
 
 	"github.com/haproxytech/client-native/v2/models"
-
-	"github.com/haproxytech/kubernetes-ingress/controller/store"
 )
 
 type ServerSendProxy struct {
@@ -23,14 +21,8 @@ func (a *ServerSendProxy) GetName() string {
 	return a.name
 }
 
-func (a *ServerSendProxy) Parse(input store.StringW, forceParse bool) error {
-	if input.Status == store.DELETED {
-		return nil
-	}
-	if input.Status == store.EMPTY && !forceParse {
-		return ErrEmptyStatus
-	}
-	v := strings.ToLower(input.Value)
+func (a *ServerSendProxy) Parse(input string) error {
+	v := strings.ToLower(input)
 	switch v {
 	case "proxy", "proxy-v1", "proxy-v2":
 		a.proxyPorto = v

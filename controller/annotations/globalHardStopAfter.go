@@ -3,7 +3,6 @@ package annotations
 import (
 	"github.com/haproxytech/client-native/v2/models"
 
-	"github.com/haproxytech/kubernetes-ingress/controller/store"
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 )
 
@@ -21,15 +20,9 @@ func (a *GlobalHardStopAfter) GetName() string {
 	return a.name
 }
 
-func (a *GlobalHardStopAfter) Parse(input store.StringW, forceParse bool) error {
+func (a *GlobalHardStopAfter) Parse(input string) error {
 	var err error
-	if input.Status == store.EMPTY && !forceParse {
-		return ErrEmptyStatus
-	}
-	if input.Status == store.DELETED {
-		return nil
-	}
-	a.data, err = utils.ParseTime(input.Value)
+	a.data, err = utils.ParseTime(input)
 	if err != nil {
 		return err
 	}

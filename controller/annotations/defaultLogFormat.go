@@ -5,8 +5,6 @@ import (
 	"strings"
 
 	"github.com/haproxytech/client-native/v2/models"
-
-	"github.com/haproxytech/kubernetes-ingress/controller/store"
 )
 
 type DefaultLogFormat struct {
@@ -23,14 +21,8 @@ func (a *DefaultLogFormat) GetName() string {
 	return a.name
 }
 
-func (a *DefaultLogFormat) Parse(input store.StringW, forceParse bool) error {
-	if input.Status == store.EMPTY && !forceParse {
-		return ErrEmptyStatus
-	}
-	if input.Status == store.DELETED {
-		return nil
-	}
-	a.data = strings.TrimSpace(input.Value)
+func (a *DefaultLogFormat) Parse(input string) error {
+	a.data = strings.TrimSpace(input)
 	if a.data == "" {
 		return errors.New("unable to parse log-format: empty input")
 	}

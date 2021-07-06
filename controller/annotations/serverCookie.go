@@ -4,8 +4,6 @@ import (
 	"strings"
 
 	"github.com/haproxytech/client-native/v2/models"
-
-	"github.com/haproxytech/kubernetes-ingress/controller/store"
 )
 
 type ServerCookie struct {
@@ -22,14 +20,8 @@ func (a *ServerCookie) GetName() string {
 	return a.name
 }
 
-func (a *ServerCookie) Parse(input store.StringW, forceParse bool) error {
-	if input.Status == store.DELETED {
-		return nil
-	}
-	if input.Status == store.EMPTY && !forceParse {
-		return ErrEmptyStatus
-	}
-	if len(strings.Fields(input.Value)) != 1 {
+func (a *ServerCookie) Parse(input string) error {
+	if len(strings.Fields(input)) != 1 {
 		// Error should already be reported in BackendCookie
 		return nil
 	}

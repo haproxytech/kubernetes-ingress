@@ -16,6 +16,7 @@ package service
 
 import (
 	"fmt"
+	"reflect"
 	"strconv"
 	"strings"
 
@@ -29,7 +30,7 @@ import (
 
 // HandleEndpoints lookups the IngressPath related endpoints and handles corresponding backend servers configuration in HAProxy
 func (s *SvcContext) HandleEndpoints(client api.HAProxyClient, store store.K8s, certs *haproxy.Certificates) (reload bool) {
-	var srvsScaled bool
+	var srvsScaled, srvsActiveAnn bool
 	endpoints, err := s.getEndpoints(store)
 	if err != nil {
 		logger.Warningf("Ingress '%s/%s': %s", s.ingress.Namespace, s.ingress.Name, err)
@@ -40,27 +41,27 @@ func (s *SvcContext) HandleEndpoints(client api.HAProxyClient, store store.K8s, 
 	if s.service.DNS == "" {
 		srvsScaled = s.scaleHAProxySrvs(endpoints, store)
 	}
-	srvsActiveAnn := annotations.HandleServerAnnotations(
+	srv := models.Server{}
+	annotations.HandleServerAnnotations(
+		&srv,
 		store,
 		client,
 		certs,
-		&models.Server{Namespace: s.service.Name},
-		false,
 		s.service.Annotations,
 		s.ingress.Annotations,
 		s.store.ConfigMaps.Main.Annotations,
 	)
-	if srvsActiveAnn {
-		logger.Debugf("Ingress '%s/%s': server options of  backend '%s' were updated, reload required", s.ingress.Namespace, s.ingress.Name, endpoints.BackendName)
+	if !s.newBackend {
+		oldSrv, _ := client.ServerGet("SRV_1", s.backendName)
+		srv.Name = "SRV_1"
+		if reflect.DeepEqual(oldSrv, srv) {
+			logger.Debugf("Ingress '%s/%s': server options of backend '%s' were updated, reload required", s.ingress.Namespace, s.ingress.Name, endpoints.BackendName)
+			srvsActiveAnn = true
+		}
 	}
-	for _, srv := range endpoints.HAProxySrvs {
-		if srv.Modified || s.newBackend || srvsActiveAnn {
-			server := models.Server{
-				Name:    srv.Name,
-				Address: srv.Address,
-				Port:    &endpoints.Port,
-			}
-			s.updateHAProxySrv(server, client, store, certs)
+	for _, srvSlot := range endpoints.HAProxySrvs {
+		if srvSlot.Modified || s.newBackend || srvsActiveAnn {
+			s.updateHAProxySrv(client, srv, *srvSlot, endpoints.Port)
 		}
 	}
 
@@ -68,32 +69,26 @@ func (s *SvcContext) HandleEndpoints(client api.HAProxyClient, store store.K8s, 
 }
 
 // updateHAProxySrv updates corresponding HAProxy backend server or creates one if it does not exist
-func (s *SvcContext) updateHAProxySrv(server models.Server, client api.HAProxyClient, store store.K8s, haproxyCerts *haproxy.Certificates) {
-	// Disabled
-	if server.Address == "" {
-		server.Address = "127.0.0.1"
-		server.Maintenance = "enabled"
+func (s *SvcContext) updateHAProxySrv(client api.HAProxyClient, srv models.Server, srvSlot store.HAProxySrv, port int64) {
+	srv.Name = srvSlot.Name
+	srv.Port = &port
+	// Enabled/Disabled
+	if srvSlot.Address == "" {
+		srv.Address = "127.0.0.1"
+		srv.Maintenance = "enabled"
+	} else {
+		srv.Address = srvSlot.Address
 	}
-	// Server related annotations
-	annotations.HandleServerAnnotations(
-		store,
-		client,
-		haproxyCerts,
-		&server,
-		true,
-		s.service.Annotations,
-		s.ingress.Annotations,
-		s.store.ConfigMaps.Main.Annotations,
-	)
 	// Update server
-	errAPI := client.BackendServerEdit(s.backendName, server)
+	errAPI := client.BackendServerEdit(s.backendName, srv)
 	if errAPI == nil {
-		logger.Tracef("Updating server '%s/%s'", s.backendName, server.Name)
+		logger.Tracef("Updating server '%s/%s'", s.backendName, srv.Name)
 		return
 	}
+	// Create server
 	if strings.Contains(errAPI.Error(), "does not exist") {
-		logger.Tracef("Creating server '%s/%s'", s.backendName, server.Name)
-		logger.Error(client.BackendServerCreate(s.backendName, server))
+		logger.Tracef("Creating server '%s/%s'", s.backendName, srv.Name)
+		logger.Error(client.BackendServerCreate(s.backendName, srv))
 	}
 }
 

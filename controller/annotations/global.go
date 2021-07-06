@@ -7,20 +7,15 @@ import (
 	"github.com/haproxytech/kubernetes-ingress/controller/store"
 )
 
-func HandleGlobalAnnotations(k8sStore store.K8s, client api.HAProxyClient, global *models.Global, defaults *models.Defaults, forcePase bool, annotations store.MapStringW) (restart bool, reload bool) {
+func HandleGlobalAnnotations(global *models.Global, defaults *models.Defaults, k8sStore store.K8s, client api.HAProxyClient, annotations store.MapStringW) {
 	annList := GetGlobalAnnotations(client, global, defaults)
 	for _, a := range annList {
 		annValue, _ := k8sStore.GetValueFromAnnotations(a.GetName(), annotations)
 		if annValue == nil {
 			continue
 		}
-		reload = HandleAnnotation(a, *annValue, forcePase) || reload
+		HandleAnnotation(a, annValue.Value)
 	}
-	// Check syslog-server annotation for a restart (stdout logging)
-	if a, ok := annList[3].(*GlobalSyslogServers); ok {
-		restart = a.Restart()
-	}
-	return restart, reload
 }
 
 func GetGlobalAnnotations(client api.HAProxyClient, global *models.Global, defaults *models.Defaults) []Annotation {

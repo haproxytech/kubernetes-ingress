@@ -3,7 +3,6 @@ package annotations
 import (
 	"github.com/haproxytech/client-native/v2/models"
 
-	"github.com/haproxytech/kubernetes-ingress/controller/store"
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 )
 
@@ -21,15 +20,9 @@ func (a *ServerSSL) GetName() string {
 	return a.name
 }
 
-func (a *ServerSSL) Parse(input store.StringW, forceParse bool) error {
-	if input.Status == store.DELETED {
-		return nil
-	}
-	if input.Status == store.EMPTY && !forceParse {
-		return ErrEmptyStatus
-	}
+func (a *ServerSSL) Parse(input string) error {
 	var err error
-	a.enabled, err = utils.GetBoolValue(input.Value, "server-ssl")
+	a.enabled, err = utils.GetBoolValue(input, "server-ssl")
 	return err
 }
 

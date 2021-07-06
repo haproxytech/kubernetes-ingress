@@ -7,7 +7,6 @@ import (
 	"github.com/haproxytech/client-native/v2/models"
 
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/api"
-	"github.com/haproxytech/kubernetes-ingress/controller/store"
 )
 
 type BackendCfgSnippet struct {
@@ -25,14 +24,8 @@ func (a *BackendCfgSnippet) GetName() string {
 	return a.name
 }
 
-func (a *BackendCfgSnippet) Parse(input store.StringW, forceParse bool) error {
-	if input.Status == store.EMPTY && !forceParse {
-		return ErrEmptyStatus
-	}
-	if input.Status == store.DELETED {
-		return nil
-	}
-	for _, line := range strings.Split(strings.Trim(input.Value, "\n"), "\n") {
+func (a *BackendCfgSnippet) Parse(input string) error {
+	for _, line := range strings.Split(strings.Trim(input, "\n"), "\n") {
 		if line = strings.TrimSpace(line); line != "" {
 			a.data = append(a.data, line)
 		}

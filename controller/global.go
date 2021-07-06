@@ -15,6 +15,7 @@
 package controller
 
 import (
+	"reflect"
 	"strings"
 
 	"github.com/haproxytech/kubernetes-ingress/controller/annotations"
@@ -33,21 +34,28 @@ func (c *HAProxyController) handleGlobalConfig() (reload, restart bool) {
 		logger.Error(err)
 		return
 	}
-	restart, reload = annotations.HandleGlobalAnnotations(
-		c.Store,
-		c.Client,
+	oldGlobal := *global
+	oldDefaults := *defaults
+	annotations.HandleGlobalAnnotations(
 		global,
 		defaults,
-		false,
+		c.Store,
+		c.Client,
 		c.Store.ConfigMaps.Main.Annotations,
 	)
-	if err = c.Client.GlobalPushConfiguration(global); err != nil {
-		logger.Error(err)
-		return false, false
+	if !reflect.DeepEqual(oldGlobal, global) {
+		if err = c.Client.GlobalPushConfiguration(global); err != nil {
+			logger.Error(err)
+			return false, false
+		}
+		restart = true
 	}
-	if err = c.Client.DefaultsPushConfiguration(defaults); err != nil {
-		logger.Error(err)
-		return false, false
+	if !reflect.DeepEqual(oldDefaults, defaults) {
+		if err = c.Client.DefaultsPushConfiguration(defaults); err != nil {
+			logger.Error(err)
+			return false, false
+		}
+		reload = true
 	}
 	c.handleDefaultCert()
 	reload = c.handleDefaultService() || reload
@@ -64,7 +72,7 @@ func (c *HAProxyController) handleDefaultService() (reload bool) {
 	dsvc := strings.Split(dsvcData.Value, "/")
 
 	if len(dsvc) != 2 {
-		logger.Errorf("default service '%s': invalid format", dsvcData.Value)
+		logger.Errorf("default service '%s': invalid format", dsvcData)
 		return
 	}
 	if dsvc[0] == "" || dsvc[1] == "" {
@@ -104,8 +112,9 @@ func (c *HAProxyController) handleDefaultCert() {
 	if secretAnn == nil {
 		return
 	}
-	c.Cfg.Certificates.HandleTLSSecret(c.Store, haproxy.SecretCtx{
+	_, err := c.Cfg.Certificates.HandleTLSSecret(c.Store, haproxy.SecretCtx{
 		SecretPath: secretAnn.Value,
 		SecretType: haproxy.FT_DEFAULT_CERT,
 	})
+	logger.Error(err)
 }
