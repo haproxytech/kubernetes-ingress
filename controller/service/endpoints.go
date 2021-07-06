@@ -25,7 +25,6 @@ import (
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/api"
 	"github.com/haproxytech/kubernetes-ingress/controller/store"
-	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 )
 
 // HandleEndpoints lookups the IngressPath related endpoints and handles corresponding backend servers configuration in HAProxy
@@ -60,7 +59,6 @@ func (s *SvcContext) HandleEndpoints(client api.HAProxyClient, store store.K8s, 
 				Name:    srv.Name,
 				Address: srv.Address,
 				Port:    &endpoints.Port,
-				Weight:  utils.PtrInt64(128),
 			}
 			s.updateHAProxySrv(server, client, store, certs)
 		}
