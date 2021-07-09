@@ -59,6 +59,7 @@ type HAProxyClient interface {
 	ServerGet(serverName, backendNa string) (models.Server, error)
 	SyncBackendSrvs(oldEndpoints, newEndpoints *store.PortEndpoints) error
 	UserListDeleteByGroup(group string) error
+	UserListExistsByGroup(group string) (bool, error)
 	UserListCreateByGroup(group string, userPasswordMap map[string][]byte) error
 }
 

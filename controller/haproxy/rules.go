@@ -187,6 +187,7 @@ func (r Rules) Refresh(client api.HAProxyClient) (reload bool) {
 				if ftRules.status[id] == TO_DELETE {
 					delete(ftRules.status, id)
 					ruleSet = append(ruleSet[:i], ruleSet[i+1:]...)
+					logger.Debugf("HAProxy rule '%s' deleted", constLookup[ruleType])
 					continue
 				}
 				if ftRules.status[id]&INGRESS != 0 {

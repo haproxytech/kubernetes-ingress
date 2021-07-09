@@ -5,6 +5,24 @@ import (
 	"github.com/haproxytech/config-parser/v4/types"
 )
 
+func (c *clientNative) UserListExistsByGroup(group string) (exist bool, err error) {
+	c.activeTransactionHasChanges = true
+
+	var p parser.Parser
+	var sections []string
+	if p, err = c.nativeAPI.Configuration.GetParser(c.activeTransaction); err != nil {
+		return
+	}
+	sections, err = p.SectionsGet(parser.UserList)
+	for _, section := range sections {
+		if section == group {
+			exist = true
+			break
+		}
+	}
+	return
+}
+
 func (c *clientNative) UserListDeleteByGroup(group string) (err error) {
 	c.activeTransactionHasChanges = true
 

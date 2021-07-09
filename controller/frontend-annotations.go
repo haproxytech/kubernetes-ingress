@@ -47,11 +47,7 @@ func (c *HAProxyController) handleIngressAnnotations(ingress *store.Ingress) {
 func (c *HAProxyController) handleSourceIPHeader(ingress *store.Ingress) {
 	srcIPHeader, _ := c.Store.GetValueFromAnnotations("src-ip-header", ingress.Annotations, c.Store.ConfigMaps.Main.Annotations)
 
-	if srcIPHeader == nil {
-		return
-	}
-	if srcIPHeader.Status == DELETED || len(srcIPHeader.Value) == 0 {
-		logger.Tracef("Ingress %s/%s: Deleting Source IP configuration", ingress.Namespace, ingress.Name)
+	if srcIPHeader == nil || len(srcIPHeader.Value) == 0 {
 		return
 	}
 	logger.Tracef("Ingress %s/%s: Configuring Source IP annotation", ingress.Namespace, ingress.Name)
@@ -65,10 +61,6 @@ func (c *HAProxyController) handleBlacklisting(ingress *store.Ingress) {
 	//  Get annotation status
 	annBlacklist, _ := c.Store.GetValueFromAnnotations("blacklist", ingress.Annotations, c.Store.ConfigMaps.Main.Annotations)
 	if annBlacklist == nil {
-		return
-	}
-	if annBlacklist.Status == DELETED {
-		logger.Tracef("Ingress %s/%s: Deleting blacklist configuration", ingress.Namespace, ingress.Name)
 		return
 	}
 	// Validate annotation
@@ -104,10 +96,6 @@ func (c *HAProxyController) handleWhitelisting(ingress *store.Ingress) {
 	if annWhitelist == nil {
 		return
 	}
-	if annWhitelist.Status == DELETED {
-		logger.Tracef("Ingress %s/%s: Deleting whitelist configuration", ingress.Namespace, ingress.Name)
-		return
-	}
 	// Validate annotation
 	mapName := "whitelist-" + utils.Hash([]byte(annWhitelist.Value))
 	if !c.Cfg.MapFiles.Exists(mapName) {
@@ -139,10 +127,6 @@ func (c *HAProxyController) handleRequestRateLimiting(ingress *store.Ingress) {
 	//  Get annotations status
 	annRateLimitReq, _ := c.Store.GetValueFromAnnotations("rate-limit-requests", ingress.Annotations, c.Store.ConfigMaps.Main.Annotations)
 	if annRateLimitReq == nil {
-		return
-	}
-	if annRateLimitReq.Status == DELETED {
-		logger.Tracef("Ingress %s/%s: Deleting rate-limit-requests configuration", ingress.Namespace, ingress.Name)
 		return
 	}
 	// Validate annotations
@@ -193,14 +177,14 @@ func (c *HAProxyController) handleRequestBasicAuth(ingress *store.Ingress) {
 	authRealm, _ := c.Store.GetValueFromAnnotations("auth-realm", ingress.Annotations, c.Store.ConfigMaps.Main.Annotations)
 	switch {
 	case authType == nil:
+		if ok, _ := c.Client.UserListExistsByGroup(userListName); ok {
+			logger.Tracef("Ingress %s/%s: Deleting HTTP Basic Authentication", ingress.Namespace, ingress.Name)
+			logger.Error(c.Client.UserListDeleteByGroup(userListName))
+		}
 		return
 	case authType.Value != "basic-auth":
-		logger.Errorf("Ingress %s/%s: incorrect auth-type value '%s'. Only 'basic-auth' value is currently supported", ingress.Namespace, ingress.Name, authType.Value)
-	case authType.Status == DELETED:
-		logger.Tracef("Ingress %s/%s: Deleting HTTP Basic Authentication", ingress.Namespace, ingress.Name)
-		logger.Error(c.Client.UserListDeleteByGroup(userListName))
-		return
-	case authSecret == nil || authSecret.Status == DELETED:
+		logger.Errorf("Ingress %s/%s: incorrect auth-type value '%s'. Only 'basic-auth' value is currently supported", ingress.Namespace, ingress.Name, authType)
+	case authSecret == nil:
 		logger.Warningf("Ingress %s/%s: auth-type annotation active but no auth-secret provided. Service won't be accessible", ingress.Namespace, ingress.Name)
 	}
 
@@ -255,7 +239,7 @@ func (c *HAProxyController) handleRequestHostRedirect(ingress *store.Ingress) {
 		logger.Error(err)
 		return
 	}
-	if annDomainRedirect == nil || annDomainRedirect.Status == DELETED {
+	if annDomainRedirect == nil {
 		return
 	}
 	// Configure redirection
@@ -279,7 +263,7 @@ func (c *HAProxyController) handleRequestHTTPSRedirect(ingress *store.Ingress) {
 		logger.Error(err)
 		return
 	}
-	if annSSLRedirect != nil && annSSLRedirect.Status != DELETED {
+	if annSSLRedirect != nil {
 		if toEnable, err = utils.GetBoolValue(annSSLRedirect.Value, "ssl-redirect"); err != nil {
 			logger.Error(err)
 			return
@@ -308,10 +292,6 @@ func (c *HAProxyController) handleRequestCapture(ingress *store.Ingress) {
 	//  Get annotation status
 	annReqCapture, _ := c.Store.GetValueFromAnnotations("request-capture", ingress.Annotations, c.Store.ConfigMaps.Main.Annotations)
 	if annReqCapture == nil {
-		return
-	}
-	if annReqCapture.Status == DELETED {
-		logger.Tracef("Ingress %s/%s: Deleting request-capture configuration", ingress.Namespace, ingress.Name)
 		return
 	}
 	//  Validate annotation
@@ -346,10 +326,6 @@ func (c *HAProxyController) handleRequestSetHost(ingress *store.Ingress) {
 	if annSetHost == nil {
 		return
 	}
-	if annSetHost.Status == DELETED {
-		logger.Tracef("Ingress %s/%s: Deleting request-set-host configuration", ingress.Namespace, ingress.Name)
-		return
-	}
 	// Configure annotation
 	logger.Tracef("Ingress %s/%s: Configuring request-set-host", ingress.Namespace, ingress.Name)
 	reqSetHost := rules.SetHdr{
@@ -363,10 +339,6 @@ func (c *HAProxyController) handleRequestPathRewrite(ingress *store.Ingress) {
 	//  Get annotation status
 	annPathRewrite, _ := c.Store.GetValueFromAnnotations("path-rewrite", ingress.Annotations, c.Store.ConfigMaps.Main.Annotations)
 	if annPathRewrite == nil {
-		return
-	}
-	if annPathRewrite.Status == DELETED {
-		logger.Tracef("Ingress %s/%s: Deleting path-rewrite configuration", ingress.Namespace, ingress.Name)
 		return
 	}
 	// Configure annotation
@@ -398,10 +370,6 @@ func (c *HAProxyController) handleRequestSetHdr(ingress *store.Ingress) {
 	if annReqSetHdr == nil {
 		return
 	}
-	if annReqSetHdr.Status == DELETED {
-		logger.Tracef("Ingress %s/%s: Deleting request-set-header configuration", ingress.Namespace, ingress.Name)
-		return
-	}
 	// Configure annotation
 	for _, param := range strings.Split(annReqSetHdr.Value, "\n") {
 		if param == "" {
@@ -427,10 +395,6 @@ func (c *HAProxyController) handleResponseSetHdr(ingress *store.Ingress) {
 	if annResSetHdr == nil {
 		return
 	}
-	if annResSetHdr.Status == DELETED {
-		logger.Tracef("Ingress %s/%s: Deleting response-set-header configuration", ingress.Namespace, ingress.Name)
-		return
-	}
 	// Configure annotation
 	for _, param := range strings.Split(annResSetHdr.Value, "\n") {
 		if param == "" {
@@ -454,10 +418,6 @@ func (c *HAProxyController) handleResponseSetHdr(ingress *store.Ingress) {
 func (c *HAProxyController) handleResponseCors(ingress *store.Ingress) {
 	annotation, _ := c.Store.GetValueFromAnnotations("cors-enable", ingress.Annotations, c.Store.ConfigMaps.Main.Annotations)
 	if annotation == nil {
-		return
-	}
-	if annotation.Status == DELETED {
-		logger.Tracef("Ingress %s/%s: Disabling Cors configuration", ingress.Namespace, ingress.Name)
 		return
 	}
 	enabled, err := utils.GetBoolValue(annotation.Value, "cors-enable")
@@ -487,10 +447,6 @@ func (c *HAProxyController) handleResponseCorsOrigin(ingress *store.Ingress) (ac
 		return acl, fmt.Errorf("cors-allow-origin not defined")
 	}
 	logger.Trace("Cors acl processing")
-	if annOrigin.Status == DELETED {
-		logger.Tracef("Ingress %s/%s: Disabling Cors configuration", ingress.Namespace, ingress.Name)
-		return acl, fmt.Errorf("cors-allow-origin not defined")
-	}
 	logger.Tracef("Ingress %s/%s: Configuring cors-allow-origin", ingress.Namespace, ingress.Name)
 
 	// SetVar rule to capture Origin header
@@ -530,10 +486,6 @@ func (c *HAProxyController) handleResponseCorsMethod(ingress *store.Ingress, acl
 	if annotation == nil {
 		return
 	}
-	if annotation.Status == DELETED {
-		logger.Tracef("Ingress %s/%s: Deleting cors-allow-methods configuration", ingress.Namespace, ingress.Name)
-		return
-	}
 	logger.Tracef("Ingress %s/%s: Configuring cors-allow-methods", ingress.Namespace, ingress.Name)
 	existingHTTPMethods := map[string]struct{}{"GET": {}, "POST": {}, "PUT": {}, "DELETE": {}, "HEAD": {}, "CONNECT": {}, "OPTIONS": {}, "TRACE": {}, "PATCH": {}}
 	value := annotation.Value
@@ -568,7 +520,7 @@ func (c *HAProxyController) handleResponseCorsCredential(ingress *store.Ingress,
 		logger.Error(err)
 		return
 	}
-	if annotation.Status == DELETED || !enabled {
+	if !enabled {
 		logger.Tracef("Ingress %s/%s: Deleting cors-allow-credentials configuration", ingress.Namespace, ingress.Name)
 		return
 	}
@@ -587,10 +539,6 @@ func (c *HAProxyController) handleResponseCorsHeaders(ingress *store.Ingress, ac
 	if annotation == nil || annotation.Value == "" {
 		return
 	}
-	if annotation.Status == DELETED {
-		logger.Tracef("Ingress %s/%s: Deleting cors-allow-headers configuration", ingress.Namespace, ingress.Name)
-		return
-	}
 	logger.Tracef("Ingress %s/%s: Configuring cors-allow-headers", ingress.Namespace, ingress.Name)
 	value := strings.Join(strings.Fields(annotation.Value), "") // strip spaces
 	resSetHdr := rules.SetHdr{
@@ -606,10 +554,6 @@ func (c *HAProxyController) handleResponseCorsMaxAge(ingress *store.Ingress, acl
 	logger.Trace("Cors max age processing")
 	annotation, _ := c.Store.GetValueFromAnnotations("cors-max-age", ingress.Annotations, c.Store.ConfigMaps.Main.Annotations)
 	if annotation == nil {
-		return
-	}
-	if annotation.Status == DELETED {
-		logger.Tracef("Ingress %s/%s: Deleting cors max age configuration", ingress.Namespace, ingress.Name)
 		return
 	}
 	r, err := utils.ParseTime(annotation.Value)
