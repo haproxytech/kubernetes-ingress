@@ -25,8 +25,8 @@ type Refresh struct{}
 
 func (h Refresh) Update(k store.K8s, cfg *config.ControllerCfg, api api.HAProxyClient) (reload bool, err error) {
 	cleanCrts := true
-	if cleanCrtAnn, _ := k.GetValueFromAnnotations("clean-certs", k.ConfigMaps.Main.Annotations); cleanCrtAnn != nil && cleanCrtAnn.Status != store.DELETED {
-		cleanCrts, err = utils.GetBoolValue(cleanCrtAnn.Value, "clean-certs")
+	if cleanCrtAnn := k.GetValueFromAnnotations("clean-certs", k.ConfigMaps.Main.Annotations); cleanCrtAnn != "" {
+		cleanCrts, err = utils.GetBoolValue(cleanCrtAnn, "clean-certs")
 	}
 	if cleanCrts {
 		reload = cfg.Certificates.Refresh() || reload

@@ -16,18 +16,16 @@ package store
 
 import (
 	"strings"
+	"time"
 )
 
-// ConvertToMapStringW removes prefixes in annotation
-func ConvertToMapStringW(annotations map[string]string) MapStringW {
-	newAnnotations := make(MapStringW, len(annotations))
-	for name, value := range annotations {
-		newAnnotations[convertAnnotationName(name)] = &StringW{
-			Value:  value,
-			Status: ADDED,
-		}
+// CopyAnnotations returns a copy of annotations map and removes prefixe from annotations name
+func CopyAnnotations(in map[string]string) map[string]string {
+	out := make(map[string]string, len(in))
+	for name, value := range in {
+		out[convertAnnotationName(name)] = value
 	}
-	return newAnnotations
+	return out
 }
 
 func convertAnnotationName(annotation string) string {
@@ -37,129 +35,63 @@ func convertAnnotationName(annotation string) string {
 
 // GetValueFromAnnotations returns value by checking in multiple annotations.
 // moves through list until it finds value
-// if value is new or deleted, we check for next state to correctly set watch & value
-func (k K8s) GetValueFromAnnotations(annotationName string, annotations ...MapStringW) (data *StringW, err error) {
-	deleted := false
-	oldValue := ""
+func (k K8s) GetValueFromAnnotations(annotationName string, annotations ...map[string]string) string {
 	for _, a := range annotations {
-		if item, errAnn := a.Get(annotationName); errAnn == nil {
-			if item.Status == ERROR {
-				continue
-			}
-			if item.Status == DELETED {
-				if data == nil && !deleted {
-					oldValue = item.Value
-					deleted = true
-				}
-				continue
-			}
-			if data == nil {
-				if deleted {
-					watchState := MODIFIED
-					if item.Value == oldValue {
-						watchState = ""
-					}
-					item.OldValue = oldValue
-					item.Status = watchState
-					return item, nil
-				}
-				if item.Status == MODIFIED {
-					return item, err
-				}
-				if item.Status == EMPTY {
-					return item, err
-				}
-				watchState := item.Status // Added
-				data = &StringW{
-					Value:    item.Value,
-					OldValue: item.OldValue,
-					Status:   watchState,
-				}
-			} else {
-				// so we have some data from previous annotations
-				if item.Status == MODIFIED || item.Status == EMPTY {
-					if item.Value != data.Value {
-						data.OldValue = item.Value
-						data.Status = MODIFIED
-					} else {
-						data.Status = EMPTY
-					}
-					return data, nil
-				}
-				return data, nil
-			}
+		val, ok := a[annotationName]
+		if ok {
+			return val
 		}
 	}
-	if data != nil {
-		return data, nil
+	return defaultAnnotationValues[annotationName]
+}
+
+func (k K8s) GetTimeFromAnnotation(name string) time.Duration {
+	d := k.GetValueFromAnnotations(name)
+	if d == "" {
+		logger.Panic("Empty annotation %s", name)
 	}
-	data, err = defaultAnnotationValues.Get(annotationName)
-	if !deleted {
-		return data, err
+	duration, parseErr := time.ParseDuration(d)
+	if parseErr != nil {
+		logger.Panic("Unable to parse annotation %s: %s", name, parseErr)
 	}
-	// we only have deleted annotation, so we have to see if default exists
-	if err != nil {
-		data = &StringW{
-			Value:    oldValue,
-			OldValue: oldValue,
-			Status:   DELETED,
-		}
-		return data, nil
-	}
-	// default exists, just set flags correctly
-	watchState := MODIFIED
-	if data.Value == oldValue {
-		watchState = ""
-	}
-	data = &StringW{
-		Value:    data.Value,
-		OldValue: oldValue,
-		Status:   watchState,
-	}
-	return data, nil
+	return duration
 }
 
 func (k K8s) SetDefaultAnnotation(annotation, value string) {
-	if value == "" {
-		return
-	}
-	defaultAnnotationValues[annotation] = &StringW{
-		Value:  value,
-		Status: ADDED,
-	}
+	defaultAnnotationValues[annotation] = value
 }
 
-var defaultAnnotationValues = MapStringW{
-	"auth-realm":              &StringW{Value: "Protected Content"},
-	"check":                   &StringW{Value: "true"},
-	"cors-allow-origin":       &StringW{Value: "*"},
-	"cors-allow-methods":      &StringW{Value: "*"},
-	"cors-allow-headers":      &StringW{Value: "*"},
-	"cors-max-age":            &StringW{Value: "5s"},
-	"cookie-indirect":         &StringW{Value: "true"},
-	"cookie-nocache":          &StringW{Value: "true"},
-	"cookie-type":             &StringW{Value: "insert"},
-	"forwarded-for":           &StringW{Value: "true"},
-	"load-balance":            &StringW{Value: "roundrobin"},
-	"log-format":              &StringW{Value: "%ci:%cp [%tr] %ft %b/%s %TR/%Tw/%Tc/%Tr/%Ta %ST %B %CC %CS %tsc %ac/%fc/%bc/%sc/%rc %sq/%bq %hr %hs \"%HM %[var(txn.base)] %HV\""},
-	"rate-limit-size":         &StringW{Value: "100k"},
-	"rate-limit-period":       &StringW{Value: "1s"},
-	"rate-limit-status-code":  &StringW{Value: "403"},
-	"request-capture-len":     &StringW{Value: "128"},
-	"ssl-redirect-code":       &StringW{Value: "302"},
-	"request-redirect-code":   &StringW{Value: "302"},
-	"ssl-redirect-port":       &StringW{Value: "443"},
-	"ssl-passthrough":         &StringW{Value: "false"},
-	"server-ssl":              &StringW{Value: "false"},
-	"scale-server-slots":      &StringW{Value: "42"},
-	"syslog-server":           &StringW{Value: "address:127.0.0.1, facility: local0, level: notice"},
-	"timeout-http-request":    &StringW{Value: "5s"},
-	"timeout-connect":         &StringW{Value: "5s"},
-	"timeout-client":          &StringW{Value: "50s"},
-	"timeout-queue":           &StringW{Value: "5s"},
-	"timeout-server":          &StringW{Value: "50s"},
-	"timeout-tunnel":          &StringW{Value: "1h"},
-	"timeout-http-keep-alive": &StringW{Value: "1m"},
-	"hard-stop-after":         &StringW{Value: "1h"},
-	"client-crt-optional":     &StringW{Value: "false"},
+var defaultAnnotationValues = map[string]string{
+	"auth-realm":              "Protected Content",
+	"check":                   "true",
+	"cors-allow-origin":       "*",
+	"cors-allow-methods":      "*",
+	"cors-allow-headers":      "*",
+	"cors-max-age":            "5s",
+	"cookie-indirect":         "true",
+	"cookie-nocache":          "true",
+	"cookie-type":             "insert",
+	"forwarded-for":           "true",
+	"load-balance":            "roundrobin",
+	"log-format":              "%ci:%cp [%tr] %ft %b/%s %TR/%Tw/%Tc/%Tr/%Ta %ST %B %CC %CS %tsc %ac/%fc/%bc/%sc/%rc %sq/%bq %hr %hs \"%HM %[var(txn.base)] %HV\"",
+	"rate-limit-size":         "100k",
+	"rate-limit-period":       "1s",
+	"rate-limit-status-code":  "403",
+	"request-capture-len":     "128",
+	"ssl-redirect-code":       "302",
+	"request-redirect-code":   "302",
+	"ssl-redirect-port":       "443",
+	"ssl-passthrough":         "false",
+	"server-ssl":              "false",
+	"scale-server-slots":      "42",
+	"syslog-server":           "address:127.0.0.1, facility: local0, level: notice",
+	"timeout-http-request":    "5s",
+	"timeout-connect":         "5s",
+	"timeout-client":          "50s",
+	"timeout-queue":           "5s",
+	"timeout-server":          "50s",
+	"timeout-tunnel":          "1h",
+	"timeout-http-keep-alive": "1m",
+	"hard-stop-after":         "1h",
+	"client-crt-optional":     "false",
 }

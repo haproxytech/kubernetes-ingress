@@ -9,13 +9,13 @@ import (
 )
 
 // HandleServerAnnotations returns a pointer to a server model holding server configuration from annotations
-func HandleServerAnnotations(server *models.Server, k8sStore store.K8s, client api.HAProxyClient, haproxyCerts *haproxy.Certificates, annotations ...store.MapStringW) {
+func HandleServerAnnotations(server *models.Server, k8sStore store.K8s, client api.HAProxyClient, haproxyCerts *haproxy.Certificates, annotations ...map[string]string) {
 	for _, a := range GetServerAnnotations(server, k8sStore, haproxyCerts) {
-		annValue, _ := k8sStore.GetValueFromAnnotations(a.GetName(), annotations...)
-		if annValue == nil {
+		annValue := k8sStore.GetValueFromAnnotations(a.GetName(), annotations...)
+		if annValue == "" {
 			continue
 		}
-		HandleAnnotation(a, annValue.Value)
+		HandleAnnotation(a, annValue)
 	}
 }
 

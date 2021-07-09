@@ -40,7 +40,7 @@ func (h ErrorFile) Update(k store.K8s, cfg *config.ControllerCfg, api api.HAProx
 	for code, v := range k.ConfigMaps.Errorfiles.Annotations {
 		_, ok := h.files.data[code]
 		if ok {
-			err = h.files.updateFile(code, v.Value)
+			err = h.files.updateFile(code, v)
 			if err != nil {
 				logger.Errorf("failed updating errorfile for code '%s': %s", code, err)
 			}
@@ -50,7 +50,7 @@ func (h ErrorFile) Update(k store.K8s, cfg *config.ControllerCfg, api api.HAProx
 		if err != nil {
 			logger.Errorf("failed creating errorfile for code '%s': %s", code, err)
 		}
-		err = h.files.newFile(code, v.Value)
+		err = h.files.newFile(code, v)
 		if err != nil {
 			logger.Errorf("failed creating errorfile for code '%s': %s", code, err)
 		}

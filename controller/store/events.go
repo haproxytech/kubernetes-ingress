@@ -83,24 +83,20 @@ func (k *K8s) EventIngress(ns *Namespace, data *Ingress, controllerClass string)
 		if oldIngress.Equal(data) {
 			return false
 		}
-		newIngress.Annotations.SetStatus(oldIngress.Annotations)
 		for host, tls := range newIngress.TLS {
-			old, ok := oldIngress.TLS[host]
+			_, ok := oldIngress.TLS[host]
 			if !ok {
 				tls.Status = ADDED
 				continue
 			}
-			tls.SecretName.OldValue = old.SecretName.Value
 		}
 		for host, tls := range oldIngress.TLS {
 			_, ok := newIngress.TLS[host]
 			if !ok {
 				newIngress.TLS[host] = &IngressTLS{
-					Host: host,
-					SecretName: StringW{
-						Value: tls.SecretName.Value,
-					},
-					Status: DELETED,
+					Host:       host,
+					SecretName: tls.SecretName,
+					Status:     DELETED,
 				}
 				continue
 			}
@@ -155,27 +151,7 @@ func (k *K8s) EventIngress(ns *Namespace, data *Ingress, controllerClass string)
 				newIngress.Rules[oldRule.Host] = oldRule
 			}
 		}
-		// Annotations
-		for annName, ann := range newIngress.Annotations {
-			annOLD, ok := oldIngress.Annotations[annName]
-			if ok {
-				if ann.Value != annOLD.Value {
-					ann.OldValue = annOLD.Value
-					ann.Status = MODIFIED
-				}
-			} else {
-				ann.Status = ADDED
-			}
-		}
-		for annName, ann := range oldIngress.Annotations {
-			_, ok := oldIngress.Annotations[annName]
-			if !ok {
-				ann.Status = DELETED
-			}
-		}
 		ns.Ingresses[data.Name] = newIngress
-		// diffStr := cmp.Diff(oldIngress, newIngress)
-		// logger.Tracef("Ingress modified %s %s", data.Name, diffStr)
 		updateRequired = true
 	case ADDED:
 		if old, ok := ns.Ingresses[data.Name]; ok {
@@ -199,9 +175,6 @@ func (k *K8s) EventIngress(ns *Namespace, data *Ingress, controllerClass string)
 				newPath.Status = ADDED
 			}
 		}
-		for _, ann := range data.Annotations {
-			ann.Status = ADDED
-		}
 		for _, tls := range data.TLS {
 			tls.Status = ADDED
 		}
@@ -222,7 +195,6 @@ func (k *K8s) EventIngress(ns *Namespace, data *Ingress, controllerClass string)
 			for _, tls := range ingress.TLS {
 				tls.Status = DELETED
 			}
-			ingress.Annotations.SetStatusState(DELETED)
 			updateRequired = true
 		} else {
 			logger.Warningf("Ingress '%s' not registered with controller, cannot delete !", data.Name)
@@ -235,7 +207,7 @@ func (k *K8s) EventEndpoints(ns *Namespace, data *Endpoints, syncHAproxySrvs fun
 	switch data.Status {
 	case MODIFIED:
 		newEndpoints := data
-		oldEndpoints, ok := ns.Endpoints[data.Service.Value]
+		oldEndpoints, ok := ns.Endpoints[data.Service]
 		if !ok {
 			logger.Warningf("Endpoints '%s' not registered with controller !", data.Service)
 			return false
@@ -251,12 +223,12 @@ func (k *K8s) EventEndpoints(ns *Namespace, data *Endpoints, syncHAproxySrvs fun
 			}
 			logger.Warning(syncHAproxySrvs(oldPortEdpts, newPortEdpts))
 		}
-		ns.Endpoints[data.Service.Value] = newEndpoints
+		ns.Endpoints[data.Service] = newEndpoints
 		return true
 	case ADDED:
-		if old, ok := ns.Endpoints[data.Service.Value]; ok {
+		if old, ok := ns.Endpoints[data.Service]; ok {
 			if old.Status == DELETED {
-				ns.Endpoints[data.Service.Value].Status = ADDED
+				ns.Endpoints[data.Service].Status = ADDED
 			}
 			if !old.Equal(data) {
 				data.Status = MODIFIED
@@ -264,14 +236,14 @@ func (k *K8s) EventEndpoints(ns *Namespace, data *Endpoints, syncHAproxySrvs fun
 			}
 			return updateRequired
 		}
-		ns.Endpoints[data.Service.Value] = data
+		ns.Endpoints[data.Service] = data
 	case DELETED:
-		oldData, ok := ns.Endpoints[data.Service.Value]
+		oldData, ok := ns.Endpoints[data.Service]
 		if ok {
 			oldData.Status = DELETED
 			updateRequired = true
 		} else {
-			logger.Warningf("Endpoints '%s' not registered with controller, cannot delete !", data.Service.Value)
+			logger.Warningf("Endpoints '%s' not registered with controller, cannot delete !", data.Service)
 		}
 	}
 	return updateRequired
@@ -290,7 +262,6 @@ func (k *K8s) EventService(ns *Namespace, data *Service) (updateRequired bool) {
 		if oldService.Equal(newService) {
 			return updateRequired
 		}
-		newService.Annotations.SetStatus(oldService.Annotations)
 		ns.Services[data.Name] = newService
 		updateRequired = true
 	case ADDED:
@@ -310,7 +281,6 @@ func (k *K8s) EventService(ns *Namespace, data *Service) (updateRequired bool) {
 		service, ok := ns.Services[data.Name]
 		if ok {
 			service.Status = DELETED
-			service.Annotations.SetStatusState(DELETED)
 			updateRequired = true
 		} else {
 			logger.Warningf("Service '%s' not registered with controller, cannot delete !", data.Name)
@@ -344,17 +314,10 @@ func (k *K8s) EventConfigMap(ns *Namespace, data *ConfigMap) (updateRequired boo
 		updateRequired = true
 		logger.Debugf("configmap '%s/%s' processed", cm.Namespace, cm.Name)
 	case MODIFIED:
-		different := data.Annotations.SetStatus(cm.Annotations)
 		*cm = *data
-		if !different {
-			data.Status = EMPTY
-		} else {
-			updateRequired = true
-			logger.Infof("configmap '%s/%s' updated", cm.Namespace, cm.Name)
-		}
+		updateRequired = true
+		logger.Infof("configmap '%s/%s' updated", cm.Namespace, cm.Name)
 	case DELETED:
-		cm.Annotations.SetStatusState(DELETED)
-		cm.Status = DELETED
 		cm.Loaded = false
 		updateRequired = true
 		logger.Debugf("configmap '%s/%s' deleted", cm.Namespace, cm.Name)

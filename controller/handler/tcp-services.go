@@ -35,7 +35,7 @@ func (t TCPServices) Update(k store.K8s, cfg *config.ControllerCfg, api api.HAPr
 	var p tcpSvcParser
 	for port, tcpSvcAnn := range k.ConfigMaps.TCPServices.Annotations {
 		frontendName := fmt.Sprintf("tcp-%s", port)
-		p, err = t.parseTCPService(k, tcpSvcAnn.Value)
+		p, err = t.parseTCPService(k, tcpSvcAnn)
 		if err != nil {
 			logger.Error(err)
 			continue
@@ -184,7 +184,7 @@ func (t TCPServices) updateTCPFrontend(api api.HAProxyClient, frontend models.Fr
 	}
 	ingress := &store.Ingress{
 		Namespace:   p.service.Namespace,
-		Annotations: store.MapStringW{},
+		Annotations: make(map[string]string),
 		DefaultBackend: &store.IngressPath{
 			SvcName:    p.service.Name,
 			SvcPortInt: p.port,

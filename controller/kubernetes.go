@@ -226,7 +226,7 @@ func (k *K8s) convertToEndpoints(obj interface{}, status store.Status) (*store.E
 	}
 	item := &store.Endpoints{
 		Namespace: data.GetNamespace(),
-		Service:   store.StringW{Value: data.GetName()},
+		Service:   data.GetName(),
 		Ports:     make(map[string]*store.PortEndpoints),
 		Status:    status,
 	}
@@ -363,7 +363,7 @@ func (k *K8s) EventsServices(channel chan SyncDataEvent, stop chan struct{}, inf
 			item := &store.Service{
 				Namespace:   data.GetNamespace(),
 				Name:        data.GetName(),
-				Annotations: store.ConvertToMapStringW(data.ObjectMeta.Annotations),
+				Annotations: store.CopyAnnotations(data.ObjectMeta.Annotations),
 				Ports:       []store.ServicePort{},
 				Status:      status,
 			}
@@ -398,7 +398,7 @@ func (k *K8s) EventsServices(channel chan SyncDataEvent, stop chan struct{}, inf
 			item := &store.Service{
 				Namespace:   data.GetNamespace(),
 				Name:        data.GetName(),
-				Annotations: store.ConvertToMapStringW(data.ObjectMeta.Annotations),
+				Annotations: store.CopyAnnotations(data.ObjectMeta.Annotations),
 				Status:      status,
 			}
 			if data.Spec.Type == corev1.ServiceTypeExternalName {
@@ -435,7 +435,7 @@ func (k *K8s) EventsServices(channel chan SyncDataEvent, stop chan struct{}, inf
 			item1 := &store.Service{
 				Namespace:   data1.GetNamespace(),
 				Name:        data1.GetName(),
-				Annotations: store.ConvertToMapStringW(data1.ObjectMeta.Annotations),
+				Annotations: store.CopyAnnotations(data1.ObjectMeta.Annotations),
 				Ports:       []store.ServicePort{},
 				Status:      status,
 			}
@@ -453,7 +453,7 @@ func (k *K8s) EventsServices(channel chan SyncDataEvent, stop chan struct{}, inf
 			item2 := &store.Service{
 				Namespace:   data2.GetNamespace(),
 				Name:        data2.GetName(),
-				Annotations: store.ConvertToMapStringW(data2.ObjectMeta.Annotations),
+				Annotations: store.CopyAnnotations(data2.ObjectMeta.Annotations),
 				Ports:       []store.ServicePort{},
 				Status:      status,
 			}
@@ -499,7 +499,7 @@ func (k *K8s) EventsConfigfMaps(channel chan SyncDataEvent, stop chan struct{}, 
 				item := &store.ConfigMap{
 					Namespace:   data.GetNamespace(),
 					Name:        data.GetName(),
-					Annotations: store.ConvertToMapStringW(data.Data),
+					Annotations: store.CopyAnnotations(data.Data),
 					Status:      status,
 				}
 				k.Logger.Tracef("%s %s: %s", CONFIGMAP, item.Status, item.Name)
@@ -515,7 +515,7 @@ func (k *K8s) EventsConfigfMaps(channel chan SyncDataEvent, stop chan struct{}, 
 				item := &store.ConfigMap{
 					Namespace:   data.GetNamespace(),
 					Name:        data.GetName(),
-					Annotations: store.ConvertToMapStringW(data.Data),
+					Annotations: store.CopyAnnotations(data.Data),
 					Status:      status,
 				}
 				k.Logger.Tracef("%s %s: %s", CONFIGMAP, item.Status, item.Name)
@@ -536,13 +536,13 @@ func (k *K8s) EventsConfigfMaps(channel chan SyncDataEvent, stop chan struct{}, 
 				item1 := &store.ConfigMap{
 					Namespace:   data1.GetNamespace(),
 					Name:        data1.GetName(),
-					Annotations: store.ConvertToMapStringW(data1.Data),
+					Annotations: store.CopyAnnotations(data1.Data),
 					Status:      status,
 				}
 				item2 := &store.ConfigMap{
 					Namespace:   data2.GetNamespace(),
 					Name:        data2.GetName(),
-					Annotations: store.ConvertToMapStringW(data2.Data),
+					Annotations: store.CopyAnnotations(data2.Data),
 					Status:      status,
 				}
 				if item2.Equal(item1) {

@@ -45,28 +45,28 @@ func (c *HAProxyController) handleIngressAnnotations(ingress *store.Ingress) {
 }
 
 func (c *HAProxyController) handleSourceIPHeader(ingress *store.Ingress) {
-	srcIPHeader, _ := c.Store.GetValueFromAnnotations("src-ip-header", ingress.Annotations, c.Store.ConfigMaps.Main.Annotations)
+	srcIPHeader := c.Store.GetValueFromAnnotations("src-ip-header", ingress.Annotations, c.Store.ConfigMaps.Main.Annotations)
 
-	if srcIPHeader == nil || len(srcIPHeader.Value) == 0 {
+	if srcIPHeader == "" || len(srcIPHeader) == 0 {
 		return
 	}
 	logger.Tracef("Ingress %s/%s: Configuring Source IP annotation", ingress.Namespace, ingress.Name)
 	reqSetSrc := rules.ReqSetSrc{
-		HeaderName: srcIPHeader.Value,
+		HeaderName: srcIPHeader,
 	}
 	logger.Error(c.Cfg.HAProxyRules.AddRule(reqSetSrc, ingress.Namespace+"-"+ingress.Name, c.Cfg.FrontHTTP, c.Cfg.FrontHTTPS))
 }
 
 func (c *HAProxyController) handleBlacklisting(ingress *store.Ingress) {
 	//  Get annotation status
-	annBlacklist, _ := c.Store.GetValueFromAnnotations("blacklist", ingress.Annotations, c.Store.ConfigMaps.Main.Annotations)
-	if annBlacklist == nil {
+	annBlacklist := c.Store.GetValueFromAnnotations("blacklist", ingress.Annotations, c.Store.ConfigMaps.Main.Annotations)
+	if annBlacklist == "" {
 		return
 	}
 	// Validate annotation
-	mapName := "blacklist-" + utils.Hash([]byte(annBlacklist.Value))
+	mapName := "blacklist-" + utils.Hash([]byte(annBlacklist))
 	if !c.Cfg.MapFiles.Exists(mapName) {
-		for _, address := range strings.Split(annBlacklist.Value, ",") {
+		for _, address := range strings.Split(annBlacklist, ",") {
 			address = strings.TrimSpace(address)
 			if ip := net.ParseIP(address); ip == nil {
 				if _, _, err := net.ParseCIDR(address); err != nil {
@@ -92,14 +92,14 @@ func (c *HAProxyController) handleBlacklisting(ingress *store.Ingress) {
 
 func (c *HAProxyController) handleWhitelisting(ingress *store.Ingress) {
 	//  Get annotation status
-	annWhitelist, _ := c.Store.GetValueFromAnnotations("whitelist", ingress.Annotations, c.Store.ConfigMaps.Main.Annotations)
-	if annWhitelist == nil {
+	annWhitelist := c.Store.GetValueFromAnnotations("whitelist", ingress.Annotations, c.Store.ConfigMaps.Main.Annotations)
+	if annWhitelist == "" {
 		return
 	}
 	// Validate annotation
-	mapName := "whitelist-" + utils.Hash([]byte(annWhitelist.Value))
+	mapName := "whitelist-" + utils.Hash([]byte(annWhitelist))
 	if !c.Cfg.MapFiles.Exists(mapName) {
-		for _, address := range strings.Split(annWhitelist.Value, ",") {
+		for _, address := range strings.Split(annWhitelist, ",") {
 			address = strings.TrimSpace(address)
 			if ip := net.ParseIP(address); ip == nil {
 				if _, _, err := net.ParseCIDR(address); err != nil {
@@ -125,27 +125,27 @@ func (c *HAProxyController) handleWhitelisting(ingress *store.Ingress) {
 
 func (c *HAProxyController) handleRequestRateLimiting(ingress *store.Ingress) {
 	//  Get annotations status
-	annRateLimitReq, _ := c.Store.GetValueFromAnnotations("rate-limit-requests", ingress.Annotations, c.Store.ConfigMaps.Main.Annotations)
-	if annRateLimitReq == nil {
+	annRateLimitReq := c.Store.GetValueFromAnnotations("rate-limit-requests", ingress.Annotations, c.Store.ConfigMaps.Main.Annotations)
+	if annRateLimitReq == "" {
 		return
 	}
 	// Validate annotations
-	reqsLimit, err := strconv.ParseInt(annRateLimitReq.Value, 10, 64)
+	reqsLimit, err := strconv.ParseInt(annRateLimitReq, 10, 64)
 	if err != nil {
 		logger.Error(err)
 		return
 	}
-	annRateLimitPeriod, _ := c.Store.GetValueFromAnnotations("rate-limit-period", ingress.Annotations, c.Store.ConfigMaps.Main.Annotations)
-	rateLimitPeriod, err := utils.ParseTime(annRateLimitPeriod.Value)
+	annRateLimitPeriod := c.Store.GetValueFromAnnotations("rate-limit-period", ingress.Annotations, c.Store.ConfigMaps.Main.Annotations)
+	rateLimitPeriod, err := utils.ParseTime(annRateLimitPeriod)
 	if err != nil {
 		logger.Error(err)
 		return
 	}
-	annRateLimitSize, _ := c.Store.GetValueFromAnnotations("rate-limit-size", ingress.Annotations, c.Store.ConfigMaps.Main.Annotations)
-	rateLimitSize := misc.ParseSize(annRateLimitSize.Value)
+	annRateLimitSize := c.Store.GetValueFromAnnotations("rate-limit-size", ingress.Annotations, c.Store.ConfigMaps.Main.Annotations)
+	rateLimitSize := misc.ParseSize(annRateLimitSize)
 
-	annRateLimitCode, _ := c.Store.GetValueFromAnnotations("rate-limit-status-code", ingress.Annotations, c.Store.ConfigMaps.Main.Annotations)
-	rateLimitCode, err := utils.ParseInt(annRateLimitCode.Value)
+	annRateLimitCode := c.Store.GetValueFromAnnotations("rate-limit-status-code", ingress.Annotations, c.Store.ConfigMaps.Main.Annotations)
+	rateLimitCode, err := utils.ParseInt(annRateLimitCode)
 	if err != nil {
 		logger.Error(err)
 		return
@@ -172,26 +172,26 @@ func (c *HAProxyController) handleRequestRateLimiting(ingress *store.Ingress) {
 
 func (c *HAProxyController) handleRequestBasicAuth(ingress *store.Ingress) {
 	userListName := fmt.Sprintf("%s-%s", ingress.Namespace, ingress.Name)
-	authType, _ := c.Store.GetValueFromAnnotations("auth-type", ingress.Annotations, c.Store.ConfigMaps.Main.Annotations)
-	authSecret, _ := c.Store.GetValueFromAnnotations("auth-secret", ingress.Annotations, c.Store.ConfigMaps.Main.Annotations)
-	authRealm, _ := c.Store.GetValueFromAnnotations("auth-realm", ingress.Annotations, c.Store.ConfigMaps.Main.Annotations)
+	authType := c.Store.GetValueFromAnnotations("auth-type", ingress.Annotations, c.Store.ConfigMaps.Main.Annotations)
+	authSecret := c.Store.GetValueFromAnnotations("auth-secret", ingress.Annotations, c.Store.ConfigMaps.Main.Annotations)
+	authRealm := c.Store.GetValueFromAnnotations("auth-realm", ingress.Annotations, c.Store.ConfigMaps.Main.Annotations)
 	switch {
-	case authType == nil:
+	case authType == "":
 		if ok, _ := c.Client.UserListExistsByGroup(userListName); ok {
 			logger.Tracef("Ingress %s/%s: Deleting HTTP Basic Authentication", ingress.Namespace, ingress.Name)
 			logger.Error(c.Client.UserListDeleteByGroup(userListName))
 		}
 		return
-	case authType.Value != "basic-auth":
+	case authType != "basic-auth":
 		logger.Errorf("Ingress %s/%s: incorrect auth-type value '%s'. Only 'basic-auth' value is currently supported", ingress.Namespace, ingress.Name, authType)
-	case authSecret == nil:
+	case authSecret == "":
 		logger.Warningf("Ingress %s/%s: auth-type annotation active but no auth-secret provided. Service won't be accessible", ingress.Namespace, ingress.Name)
 	}
 
 	// Parsing secret
 	credentials := make(map[string][]byte)
-	if authSecret != nil {
-		if secret, err := c.Store.FetchSecret(authSecret.Value, ingress.Namespace); secret == nil {
+	if authSecret != "" {
+		if secret, err := c.Store.FetchSecret(authSecret, ingress.Namespace); secret == nil {
 			logger.Warningf("Ingress %s/%s: %s", ingress.Namespace, ingress.Name, err)
 		} else {
 			if secret.Status == DELETED {
@@ -217,8 +217,8 @@ func (c *HAProxyController) handleRequestBasicAuth(ingress *store.Ingress) {
 	}
 
 	realm := "Protected-Content"
-	if authRealm != nil {
-		realm = strings.ReplaceAll(authRealm.Value, " ", "-")
+	if authRealm != "" {
+		realm = strings.ReplaceAll(authRealm, " ", "-")
 	}
 	// Adding HAProxy Rule
 	logger.Tracef("Ingress %s/%s: Configuring basic-auth annotation", ingress.Namespace, ingress.Name)
@@ -232,20 +232,20 @@ func (c *HAProxyController) handleRequestBasicAuth(ingress *store.Ingress) {
 
 func (c *HAProxyController) handleRequestHostRedirect(ingress *store.Ingress) {
 	//  Get and validate annotations
-	annDomainRedirect, _ := c.Store.GetValueFromAnnotations("request-redirect", ingress.Annotations, c.Store.ConfigMaps.Main.Annotations)
-	annDomainRedirectCode, _ := c.Store.GetValueFromAnnotations("request-redirect-code", ingress.Annotations, c.Store.ConfigMaps.Main.Annotations)
-	domainRedirectCode, err := strconv.ParseInt(annDomainRedirectCode.Value, 10, 64)
+	annDomainRedirect := c.Store.GetValueFromAnnotations("request-redirect", ingress.Annotations, c.Store.ConfigMaps.Main.Annotations)
+	annDomainRedirectCode := c.Store.GetValueFromAnnotations("request-redirect-code", ingress.Annotations, c.Store.ConfigMaps.Main.Annotations)
+	domainRedirectCode, err := strconv.ParseInt(annDomainRedirectCode, 10, 64)
 	if err != nil {
 		logger.Error(err)
 		return
 	}
-	if annDomainRedirect == nil {
+	if annDomainRedirect == "" {
 		return
 	}
 	// Configure redirection
 	reqDomainRedirect := rules.RequestRedirect{
 		RedirectCode: domainRedirectCode,
-		Host:         annDomainRedirect.Value,
+		Host:         annDomainRedirect,
 	}
 	logger.Error(c.Cfg.HAProxyRules.AddRule(reqDomainRedirect, ingress.Namespace+"-"+ingress.Name, c.Cfg.FrontHTTP))
 	reqDomainRedirect.SSLRequest = true
@@ -255,16 +255,16 @@ func (c *HAProxyController) handleRequestHostRedirect(ingress *store.Ingress) {
 func (c *HAProxyController) handleRequestHTTPSRedirect(ingress *store.Ingress) {
 	//  Get and validate annotations
 	toEnable := false
-	annSSLRedirect, _ := c.Store.GetValueFromAnnotations("ssl-redirect", ingress.Annotations, c.Store.ConfigMaps.Main.Annotations)
-	annSSLRedirectPort, _ := c.Store.GetValueFromAnnotations("ssl-redirect-port", ingress.Annotations, c.Store.ConfigMaps.Main.Annotations)
-	annRedirectCode, _ := c.Store.GetValueFromAnnotations("ssl-redirect-code", ingress.Annotations, c.Store.ConfigMaps.Main.Annotations)
-	sslRedirectCode, err := strconv.ParseInt(annRedirectCode.Value, 10, 64)
+	annSSLRedirect := c.Store.GetValueFromAnnotations("ssl-redirect", ingress.Annotations, c.Store.ConfigMaps.Main.Annotations)
+	annSSLRedirectPort := c.Store.GetValueFromAnnotations("ssl-redirect-port", ingress.Annotations, c.Store.ConfigMaps.Main.Annotations)
+	annRedirectCode := c.Store.GetValueFromAnnotations("ssl-redirect-code", ingress.Annotations, c.Store.ConfigMaps.Main.Annotations)
+	sslRedirectCode, err := strconv.ParseInt(annRedirectCode, 10, 64)
 	if err != nil {
 		logger.Error(err)
 		return
 	}
-	if annSSLRedirect != nil {
-		if toEnable, err = utils.GetBoolValue(annSSLRedirect.Value, "ssl-redirect"); err != nil {
+	if annSSLRedirect != "" {
+		if toEnable, err = utils.GetBoolValue(annSSLRedirect, "ssl-redirect"); err != nil {
 			logger.Error(err)
 			return
 		}
@@ -274,7 +274,7 @@ func (c *HAProxyController) handleRequestHTTPSRedirect(ingress *store.Ingress) {
 	if !toEnable {
 		return
 	}
-	sslRedirectPort, err := strconv.Atoi(annSSLRedirectPort.Value)
+	sslRedirectPort, err := strconv.Atoi(annSSLRedirectPort)
 	if err != nil {
 		logger.Error(err)
 		return
@@ -290,20 +290,20 @@ func (c *HAProxyController) handleRequestHTTPSRedirect(ingress *store.Ingress) {
 
 func (c *HAProxyController) handleRequestCapture(ingress *store.Ingress) {
 	//  Get annotation status
-	annReqCapture, _ := c.Store.GetValueFromAnnotations("request-capture", ingress.Annotations, c.Store.ConfigMaps.Main.Annotations)
-	if annReqCapture == nil {
+	annReqCapture := c.Store.GetValueFromAnnotations("request-capture", ingress.Annotations, c.Store.ConfigMaps.Main.Annotations)
+	if annReqCapture == "" {
 		return
 	}
 	//  Validate annotation
-	annCaptureLen, _ := c.Store.GetValueFromAnnotations("request-capture-len", ingress.Annotations, c.Store.ConfigMaps.Main.Annotations)
-	captureLen, err := strconv.ParseInt(annCaptureLen.Value, 10, 64)
+	annCaptureLen := c.Store.GetValueFromAnnotations("request-capture-len", ingress.Annotations, c.Store.ConfigMaps.Main.Annotations)
+	captureLen, err := strconv.ParseInt(annCaptureLen, 10, 64)
 	if err != nil {
 		logger.Error(err)
 		return
 	}
 
 	// Configure annotation
-	for _, sample := range strings.Split(annReqCapture.Value, "\n") {
+	for _, sample := range strings.Split(annReqCapture, "\n") {
 		logger.Tracef("Ingress %s/%s: Configuring request capture for '%s'", ingress.Namespace, ingress.Name, sample)
 		if sample == "" {
 			continue
@@ -322,28 +322,28 @@ func (c *HAProxyController) handleRequestCapture(ingress *store.Ingress) {
 
 func (c *HAProxyController) handleRequestSetHost(ingress *store.Ingress) {
 	//  Get annotation status
-	annSetHost, _ := c.Store.GetValueFromAnnotations("set-host", ingress.Annotations, c.Store.ConfigMaps.Main.Annotations)
-	if annSetHost == nil {
+	annSetHost := c.Store.GetValueFromAnnotations("set-host", ingress.Annotations, c.Store.ConfigMaps.Main.Annotations)
+	if annSetHost == "" {
 		return
 	}
 	// Configure annotation
 	logger.Tracef("Ingress %s/%s: Configuring request-set-host", ingress.Namespace, ingress.Name)
 	reqSetHost := rules.SetHdr{
 		HdrName:   "Host",
-		HdrFormat: annSetHost.Value,
+		HdrFormat: annSetHost,
 	}
 	logger.Error(c.Cfg.HAProxyRules.AddRule(reqSetHost, ingress.Namespace+"-"+ingress.Name, c.Cfg.FrontHTTP, c.Cfg.FrontHTTPS))
 }
 
 func (c *HAProxyController) handleRequestPathRewrite(ingress *store.Ingress) {
 	//  Get annotation status
-	annPathRewrite, _ := c.Store.GetValueFromAnnotations("path-rewrite", ingress.Annotations, c.Store.ConfigMaps.Main.Annotations)
-	if annPathRewrite == nil {
+	annPathRewrite := c.Store.GetValueFromAnnotations("path-rewrite", ingress.Annotations, c.Store.ConfigMaps.Main.Annotations)
+	if annPathRewrite == "" {
 		return
 	}
 	// Configure annotation
 	logger.Tracef("Ingress %s/%s: Configuring path-rewrite", ingress.Namespace, ingress.Name)
-	parts := strings.Fields(strings.TrimSpace(annPathRewrite.Value))
+	parts := strings.Fields(strings.TrimSpace(annPathRewrite))
 
 	var reqPathReWrite haproxy.Rule
 	switch len(parts) {
@@ -358,7 +358,7 @@ func (c *HAProxyController) handleRequestPathRewrite(ingress *store.Ingress) {
 			PathFmt:   parts[1],
 		}
 	default:
-		logger.Errorf("incorrect value '%s', path-rewrite takes 1 or 2 params ", annPathRewrite.Value)
+		logger.Errorf("incorrect value '%s', path-rewrite takes 1 or 2 params ", annPathRewrite)
 		return
 	}
 	logger.Error(c.Cfg.HAProxyRules.AddRule(reqPathReWrite, ingress.Namespace+"-"+ingress.Name, c.Cfg.FrontHTTP, c.Cfg.FrontHTTPS))
@@ -366,12 +366,12 @@ func (c *HAProxyController) handleRequestPathRewrite(ingress *store.Ingress) {
 
 func (c *HAProxyController) handleRequestSetHdr(ingress *store.Ingress) {
 	//  Get annotation status
-	annReqSetHdr, _ := c.Store.GetValueFromAnnotations("request-set-header", ingress.Annotations, c.Store.ConfigMaps.Main.Annotations)
-	if annReqSetHdr == nil {
+	annReqSetHdr := c.Store.GetValueFromAnnotations("request-set-header", ingress.Annotations, c.Store.ConfigMaps.Main.Annotations)
+	if annReqSetHdr == "" {
 		return
 	}
 	// Configure annotation
-	for _, param := range strings.Split(annReqSetHdr.Value, "\n") {
+	for _, param := range strings.Split(annReqSetHdr, "\n") {
 		if param == "" {
 			continue
 		}
@@ -391,12 +391,12 @@ func (c *HAProxyController) handleRequestSetHdr(ingress *store.Ingress) {
 
 func (c *HAProxyController) handleResponseSetHdr(ingress *store.Ingress) {
 	//  Get annotation status
-	annResSetHdr, _ := c.Store.GetValueFromAnnotations("response-set-header", ingress.Annotations, c.Store.ConfigMaps.Main.Annotations)
-	if annResSetHdr == nil {
+	annResSetHdr := c.Store.GetValueFromAnnotations("response-set-header", ingress.Annotations, c.Store.ConfigMaps.Main.Annotations)
+	if annResSetHdr == "" {
 		return
 	}
 	// Configure annotation
-	for _, param := range strings.Split(annResSetHdr.Value, "\n") {
+	for _, param := range strings.Split(annResSetHdr, "\n") {
 		if param == "" {
 			continue
 		}
@@ -416,11 +416,11 @@ func (c *HAProxyController) handleResponseSetHdr(ingress *store.Ingress) {
 }
 
 func (c *HAProxyController) handleResponseCors(ingress *store.Ingress) {
-	annotation, _ := c.Store.GetValueFromAnnotations("cors-enable", ingress.Annotations, c.Store.ConfigMaps.Main.Annotations)
-	if annotation == nil {
+	annotation := c.Store.GetValueFromAnnotations("cors-enable", ingress.Annotations, c.Store.ConfigMaps.Main.Annotations)
+	if annotation == "" {
 		return
 	}
-	enabled, err := utils.GetBoolValue(annotation.Value, "cors-enable")
+	enabled, err := utils.GetBoolValue(annotation, "cors-enable")
 	if err != nil {
 		logger.Error(err)
 		return
@@ -442,15 +442,15 @@ func (c *HAProxyController) handleResponseCors(ingress *store.Ingress) {
 }
 
 func (c *HAProxyController) handleResponseCorsOrigin(ingress *store.Ingress) (acl string, err error) {
-	annOrigin, _ := c.Store.GetValueFromAnnotations("cors-allow-origin", ingress.Annotations, c.Store.ConfigMaps.Main.Annotations)
-	if annOrigin == nil || annOrigin.Value == "" {
+	annOrigin := c.Store.GetValueFromAnnotations("cors-allow-origin", ingress.Annotations, c.Store.ConfigMaps.Main.Annotations)
+	if annOrigin == "" {
 		return acl, fmt.Errorf("cors-allow-origin not defined")
 	}
 	logger.Trace("Cors acl processing")
 	logger.Tracef("Ingress %s/%s: Configuring cors-allow-origin", ingress.Namespace, ingress.Name)
 
 	// SetVar rule to capture Origin header
-	originVar := fmt.Sprintf("origin.%s", utils.Hash([]byte(annOrigin.Value)))
+	originVar := fmt.Sprintf("origin.%s", utils.Hash([]byte(annOrigin)))
 	err = c.Cfg.HAProxyRules.AddRule(rules.ReqSetVar{
 		Name:       originVar,
 		Scope:      "txn",
@@ -469,8 +469,8 @@ func (c *HAProxyController) handleResponseCorsOrigin(ingress *store.Ingress) (ac
 		CondTest:  acl,
 	}
 	// Access-Control-Allow-Origin = <origin>
-	if annOrigin.Value != "*" {
-		acl = fmt.Sprintf("{ var(txn.%s) -m reg %s }", originVar, annOrigin.Value)
+	if annOrigin != "*" {
+		acl = fmt.Sprintf("{ var(txn.%s) -m reg %s }", originVar, annOrigin)
 		resSetHdr.HdrFormat = "%[var(txn." + originVar + ")]"
 		resSetHdr.CondTest = acl
 	}
@@ -482,13 +482,13 @@ func (c *HAProxyController) handleResponseCorsOrigin(ingress *store.Ingress) (ac
 }
 
 func (c *HAProxyController) handleResponseCorsMethod(ingress *store.Ingress, acl string) {
-	annotation, _ := c.Store.GetValueFromAnnotations("cors-allow-methods", ingress.Annotations, c.Store.ConfigMaps.Main.Annotations)
-	if annotation == nil {
+	annotation := c.Store.GetValueFromAnnotations("cors-allow-methods", ingress.Annotations, c.Store.ConfigMaps.Main.Annotations)
+	if annotation == "" {
 		return
 	}
 	logger.Tracef("Ingress %s/%s: Configuring cors-allow-methods", ingress.Namespace, ingress.Name)
 	existingHTTPMethods := map[string]struct{}{"GET": {}, "POST": {}, "PUT": {}, "DELETE": {}, "HEAD": {}, "CONNECT": {}, "OPTIONS": {}, "TRACE": {}, "PATCH": {}}
-	value := annotation.Value
+	value := annotation
 	if value != "*" {
 		value = strings.Join(strings.Fields(value), "") // strip spaces
 		methods := strings.Split(value, ",")
@@ -511,11 +511,11 @@ func (c *HAProxyController) handleResponseCorsMethod(ingress *store.Ingress, acl
 }
 
 func (c *HAProxyController) handleResponseCorsCredential(ingress *store.Ingress, acl string) {
-	annotation, _ := c.Store.GetValueFromAnnotations("cors-allow-credentials", ingress.Annotations, c.Store.ConfigMaps.Main.Annotations)
-	if annotation == nil {
+	annotation := c.Store.GetValueFromAnnotations("cors-allow-credentials", ingress.Annotations, c.Store.ConfigMaps.Main.Annotations)
+	if annotation == "" {
 		return
 	}
-	enabled, err := utils.GetBoolValue(annotation.Value, "cors-allow-credentials")
+	enabled, err := utils.GetBoolValue(annotation, "cors-allow-credentials")
 	if err != nil {
 		logger.Error(err)
 		return
@@ -535,12 +535,12 @@ func (c *HAProxyController) handleResponseCorsCredential(ingress *store.Ingress,
 }
 
 func (c *HAProxyController) handleResponseCorsHeaders(ingress *store.Ingress, acl string) {
-	annotation, _ := c.Store.GetValueFromAnnotations("cors-allow-headers", ingress.Annotations, c.Store.ConfigMaps.Main.Annotations)
-	if annotation == nil || annotation.Value == "" {
+	annotation := c.Store.GetValueFromAnnotations("cors-allow-headers", ingress.Annotations, c.Store.ConfigMaps.Main.Annotations)
+	if annotation == "" {
 		return
 	}
 	logger.Tracef("Ingress %s/%s: Configuring cors-allow-headers", ingress.Namespace, ingress.Name)
-	value := strings.Join(strings.Fields(annotation.Value), "") // strip spaces
+	value := strings.Join(strings.Fields(annotation), "") // strip spaces
 	resSetHdr := rules.SetHdr{
 		HdrName:   "Access-Control-Allow-Headers",
 		HdrFormat: "\"" + value + "\"",
@@ -552,11 +552,11 @@ func (c *HAProxyController) handleResponseCorsHeaders(ingress *store.Ingress, ac
 
 func (c *HAProxyController) handleResponseCorsMaxAge(ingress *store.Ingress, acl string) {
 	logger.Trace("Cors max age processing")
-	annotation, _ := c.Store.GetValueFromAnnotations("cors-max-age", ingress.Annotations, c.Store.ConfigMaps.Main.Annotations)
-	if annotation == nil {
+	annotation := c.Store.GetValueFromAnnotations("cors-max-age", ingress.Annotations, c.Store.ConfigMaps.Main.Annotations)
+	if annotation == "" {
 		return
 	}
-	r, err := utils.ParseTime(annotation.Value)
+	r, err := utils.ParseTime(annotation)
 	if err != nil {
 		logger.Error(err)
 		return

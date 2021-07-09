@@ -29,7 +29,7 @@ type HAProxySrv struct {
 	Modified bool
 }
 
-// PortEndpoints describes endpionts of a service port
+// PortEndpoints describes endpoints of a service port
 type PortEndpoints struct {
 	Port            int64
 	BackendName     string // For runtime operations
@@ -42,7 +42,7 @@ type PortEndpoints struct {
 // Endpoints describes endpoints of a service
 type Endpoints struct {
 	Namespace string
-	Service   StringW
+	Service   string
 	Ports     map[string]*PortEndpoints
 	Status    Status
 }
@@ -54,7 +54,7 @@ type Service struct {
 	Ports       []ServicePort
 	Addresses   []string // Used only for publish-service
 	DNS         string
-	Annotations MapStringW
+	Annotations map[string]string
 	Status      Status
 }
 
@@ -103,7 +103,7 @@ type Ingress struct {
 	Namespace      string
 	Name           string
 	Class          string
-	Annotations    MapStringW
+	Annotations    map[string]string
 	Rules          map[string]*IngressRule
 	DefaultBackend *IngressPath
 	TLS            map[string]*IngressTLS
@@ -113,7 +113,7 @@ type Ingress struct {
 // IngressTLS describes the transport layer security associated with an Ingress.
 type IngressTLS struct {
 	Host       string
-	SecretName StringW
+	SecretName string
 	Status     Status
 }
 
@@ -129,7 +129,7 @@ type ConfigMap struct {
 	Namespace   string
 	Name        string
 	Loaded      bool
-	Annotations MapStringW
+	Annotations map[string]string
 	Status      Status
 }
 

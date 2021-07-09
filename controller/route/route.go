@@ -89,7 +89,7 @@ func AddHostPathRoute(route Route, mapFiles *haproxy.Maps) error {
 }
 
 // AddCustomRoute adds an ingress route with specific ACL via use_backend haproxy directive
-func AddCustomRoute(route Route, routeACLAnn store.StringW, api api.HAProxyClient) (reload bool, err error) {
+func AddCustomRoute(route Route, routeACLAnn string, api api.HAProxyClient) (reload bool, err error) {
 	var routeCond string
 	if route.Host != "" {
 		routeCond = fmt.Sprintf("{ var(txn.host) %s } ", route.Host)
@@ -101,7 +101,7 @@ func AddCustomRoute(route Route, routeACLAnn store.StringW, api api.HAProxyClien
 			routeCond = fmt.Sprintf("%s { path -m beg %s } ", routeCond, route.Path.Path)
 		}
 	}
-	routeCond = fmt.Sprintf("%s { %s } ", routeCond, routeACLAnn.Value)
+	routeCond = fmt.Sprintf("%s { %s } ", routeCond, routeACLAnn)
 
 	for _, frontend := range []string{FrontendHTTP, FrontendHTTPS} {
 		err = api.BackendSwitchingRuleCreate(frontend, models.BackendSwitchingRule{

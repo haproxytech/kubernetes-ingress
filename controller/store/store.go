@@ -96,7 +96,6 @@ func (k K8s) Clean() {
 					}
 				}
 			}
-			data.Annotations.Clean()
 			switch data.Status {
 			case DELETED:
 				delete(namespace.Ingresses, data.Name)
@@ -105,7 +104,6 @@ func (k K8s) Clean() {
 			}
 		}
 		for _, data := range namespace.Services {
-			data.Annotations.Clean()
 			switch data.Status {
 			case DELETED:
 				delete(namespace.Services, data.Name)
@@ -116,7 +114,7 @@ func (k K8s) Clean() {
 		for _, data := range namespace.Endpoints {
 			switch data.Status {
 			case DELETED:
-				delete(namespace.Endpoints, data.Service.Value)
+				delete(namespace.Endpoints, data.Service)
 			default:
 				data.Status = EMPTY
 				for _, endpoints := range data.Ports {
@@ -139,10 +137,9 @@ func (k K8s) Clean() {
 		switch cm.Status {
 		case DELETED:
 			cm.Status = DELETED
-			cm.Annotations = MapStringW{}
+			cm.Annotations = map[string]string{}
 		default:
 			cm.Status = EMPTY
-			cm.Annotations.Clean()
 		}
 	}
 	for _, igClass := range k.IngressClasses {
@@ -153,7 +150,6 @@ func (k K8s) Clean() {
 			igClass.Status = EMPTY
 		}
 	}
-	defaultAnnotationValues.Clean()
 }
 
 // GetNamespace returns Namespace. Creates one if not existing

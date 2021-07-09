@@ -123,7 +123,16 @@ func (a *Ingress) Equal(b *Ingress) bool {
 	if a.DefaultBackend != b.DefaultBackend && !a.DefaultBackend.Equal(b.DefaultBackend) {
 		return false
 	}
-	return a.Annotations.Equal(b.Annotations)
+	if len(a.Annotations) != len(b.Annotations) {
+		return false
+	}
+	for name, value1 := range a.Annotations {
+		value2 := b.Annotations[name]
+		if value1 != value2 {
+			return false
+		}
+	}
+	return true
 }
 
 // Equal compares two services, ignores statuses and old values
@@ -134,8 +143,14 @@ func (a *Service) Equal(b *Service) bool {
 	if a.Name != b.Name {
 		return false
 	}
-	if !a.Annotations.Equal(b.Annotations) {
+	if len(a.Annotations) != len(b.Annotations) {
 		return false
+	}
+	for name, value1 := range a.Annotations {
+		value2 := b.Annotations[name]
+		if value1 != value2 {
+			return false
+		}
 	}
 	if len(a.Ports) != len(b.Ports) {
 		return false
@@ -157,8 +172,14 @@ func (a *ConfigMap) Equal(b *ConfigMap) bool {
 	if a.Name != b.Name {
 		return false
 	}
-	if !a.Annotations.Equal(b.Annotations) {
+	if len(a.Annotations) != len(b.Annotations) {
 		return false
+	}
+	for name, value1 := range a.Annotations {
+		value2 := b.Annotations[name]
+		if value1 != value2 {
+			return false
+		}
 	}
 	return true
 }

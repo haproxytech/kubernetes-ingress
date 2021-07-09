@@ -29,18 +29,14 @@ type ProxyProtocol struct{}
 
 func (p ProxyProtocol) Update(k store.K8s, cfg *config.ControllerCfg, api api.HAProxyClient) (reload bool, err error) {
 	//  Get annotation status
-	annProxyProtocol, _ := k.GetValueFromAnnotations("proxy-protocol", k.ConfigMaps.Main.Annotations)
-	if annProxyProtocol == nil {
-		return false, nil
-	}
-	if annProxyProtocol.Status == store.DELETED {
-		logger.Trace("Deleting ProxyProtocol configuration")
+	annProxyProtocol := k.GetValueFromAnnotations("proxy-protocol", k.ConfigMaps.Main.Annotations)
+	if annProxyProtocol == "" {
 		return false, nil
 	}
 	// Validate annotation
-	mapName := "proxy-protocol-" + utils.Hash([]byte(annProxyProtocol.Value))
+	mapName := "proxy-protocol-" + utils.Hash([]byte(annProxyProtocol))
 	if !cfg.MapFiles.Exists(mapName) {
-		for _, address := range strings.Split(annProxyProtocol.Value, ",") {
+		for _, address := range strings.Split(annProxyProtocol, ",") {
 			address = strings.TrimSpace(address)
 			if ip := net.ParseIP(address); ip == nil {
 				if _, _, err = net.ParseCIDR(address); err != nil {

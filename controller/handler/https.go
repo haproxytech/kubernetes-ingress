@@ -72,10 +72,10 @@ func (h HTTPS) bindList(passhthrough bool) (binds []models.Bind) {
 }
 
 func (h HTTPS) handleClientTLSAuth(k store.K8s, cfg *config.ControllerCfg, api api.HAProxyClient) (reload bool, err error) {
-	annTLSAuth, _ := k.GetValueFromAnnotations("client-ca", k.ConfigMaps.Main.Annotations)
-	annTLSVerify, _ := k.GetValueFromAnnotations("client-crt-optional", k.ConfigMaps.Main.Annotations)
-	if annTLSAuth == nil {
-		return
+	annTLSAuth := k.GetValueFromAnnotations("client-ca", k.ConfigMaps.Main.Annotations)
+	annTLSVerify := k.GetValueFromAnnotations("client-crt-optional", k.ConfigMaps.Main.Annotations)
+	if annTLSAuth == "" {
+		return false, nil
 	}
 	binds, err := api.FrontendBindsGet(cfg.FrontHTTPS)
 	if err != nil {
@@ -85,17 +85,17 @@ func (h HTTPS) handleClientTLSAuth(k store.K8s, cfg *config.ControllerCfg, api a
 	var caFile string
 	caFile, err = cfg.Certificates.HandleTLSSecret(k, haproxy.SecretCtx{
 		DefaultNS:  "",
-		SecretPath: annTLSAuth.Value,
+		SecretPath: annTLSAuth,
 		SecretType: haproxy.CA_CERT,
 	})
 	if err != nil {
 		if errors.Is(err, haproxy.ErrCertNotFound) {
-			logger.Warning("unable to configure TLS authentication secret '%s' not found", annTLSAuth.Value)
+			logger.Warningf("unable to configure TLS authentication secret '%s' not found", annTLSAuth)
 			err = nil
 		}
 	}
 	verify := "required"
-	enabled, annErr := utils.GetBoolValue("client-crt-optional", annTLSVerify.Value)
+	enabled, annErr := utils.GetBoolValue(annTLSVerify, "client-crt-optional")
 	logger.Error(annErr)
 	if enabled {
 		verify = "optional"
@@ -246,9 +246,9 @@ func (h HTTPS) toggleSSLPassthrough(passthrough bool, cfg *config.ControllerCfg,
 
 func (h HTTPS) sslPassthroughRules(k store.K8s, cfg *config.ControllerCfg) error {
 	inspectTimeout := utils.PtrInt64(5000)
-	annTimeout, _ := k.GetValueFromAnnotations("timeout-client", k.ConfigMaps.Main.Annotations)
-	if annTimeout != nil {
-		if value, errParse := utils.ParseTime(annTimeout.Value); errParse == nil {
+	annTimeout := k.GetValueFromAnnotations("timeout-client", k.ConfigMaps.Main.Annotations)
+	if annTimeout != "" {
+		if value, errParse := utils.ParseTime(annTimeout); errParse == nil {
 			inspectTimeout = value
 		} else {
 			logger.Error(errParse)

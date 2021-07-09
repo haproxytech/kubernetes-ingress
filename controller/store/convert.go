@@ -20,8 +20,6 @@ import (
 	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
 	networkingv1 "k8s.io/api/networking/v1"
 	networkingv1beta1 "k8s.io/api/networking/v1beta1"
-
-	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 )
 
 //nolint:golint,stylecheck
@@ -90,13 +88,12 @@ func (n ingressNetworkingV1Beta1Strategy) ConvertIngress() *Ingress {
 		Namespace:   n.ig.GetNamespace(),
 		Name:        n.ig.GetName(),
 		Class:       getIgClass(n.ig.Spec.IngressClassName),
-		Annotations: ConvertToMapStringW(n.ig.GetAnnotations()),
+		Annotations: CopyAnnotations(n.ig.GetAnnotations()),
 		Rules: func(ingressRules []networkingv1beta1.IngressRule) map[string]*IngressRule {
 			rules := make(map[string]*IngressRule)
 			for _, k8sRule := range ingressRules {
 				paths := make(map[string]*IngressPath)
 				if k8sRule.HTTP == nil {
-					logger := utils.GetLogger()
 					logger.Warningf("Ingress HTTP rules for [%s] does not exists", k8sRule.Host)
 					continue
 				}
@@ -145,11 +142,9 @@ func (n ingressNetworkingV1Beta1Strategy) ConvertIngress() *Ingress {
 			for _, k8sTLS := range ingressTLS {
 				for _, host := range k8sTLS.Hosts {
 					tls[host] = &IngressTLS{
-						Host: host,
-						SecretName: StringW{
-							Value: k8sTLS.SecretName,
-						},
-						Status: EMPTY,
+						Host:       host,
+						SecretName: k8sTLS.SecretName,
+						Status:     EMPTY,
 					}
 				}
 			}
@@ -189,13 +184,12 @@ func (e ingressExtensionsStrategy) ConvertIngress() *Ingress {
 		APIVersion:  EXTENSIONSV1BETA1,
 		Namespace:   e.ig.GetNamespace(),
 		Name:        e.ig.GetName(),
-		Annotations: ConvertToMapStringW(e.ig.GetAnnotations()),
+		Annotations: CopyAnnotations(e.ig.GetAnnotations()),
 		Rules: func(ingressRules []extensionsv1beta1.IngressRule) map[string]*IngressRule {
 			rules := make(map[string]*IngressRule)
 			for _, k8sRule := range ingressRules {
 				paths := make(map[string]*IngressPath)
 				if k8sRule.HTTP == nil {
-					logger := utils.GetLogger()
 					logger.Warningf("Ingress HTTP rules for [%s] does not exists", k8sRule.Host)
 					continue
 				}
@@ -244,11 +238,9 @@ func (e ingressExtensionsStrategy) ConvertIngress() *Ingress {
 			for _, k8sTLS := range ingressTLS {
 				for _, host := range k8sTLS.Hosts {
 					tls[host] = &IngressTLS{
-						Host: host,
-						SecretName: StringW{
-							Value: k8sTLS.SecretName,
-						},
-						Status: EMPTY,
+						Host:       host,
+						SecretName: k8sTLS.SecretName,
+						Status:     EMPTY,
 					}
 				}
 			}
@@ -276,13 +268,12 @@ func (n ingressNetworkingV1Strategy) ConvertIngress() *Ingress {
 		Namespace:   n.ig.GetNamespace(),
 		Name:        n.ig.GetName(),
 		Class:       getIgClass(n.ig.Spec.IngressClassName),
-		Annotations: ConvertToMapStringW(n.ig.GetAnnotations()),
+		Annotations: CopyAnnotations(n.ig.GetAnnotations()),
 		Rules: func(ingressRules []networkingv1.IngressRule) map[string]*IngressRule {
 			rules := make(map[string]*IngressRule)
 			for _, k8sRule := range ingressRules {
 				paths := make(map[string]*IngressPath)
 				if k8sRule.HTTP == nil {
-					logger := utils.GetLogger()
 					logger.Warningf("Ingress HTTP rules for [%s] does not exists", k8sRule.Host)
 					continue
 				}
@@ -331,11 +322,9 @@ func (n ingressNetworkingV1Strategy) ConvertIngress() *Ingress {
 			for _, k8sTLS := range ingressTLS {
 				for _, host := range k8sTLS.Hosts {
 					tls[host] = &IngressTLS{
-						Host: host,
-						SecretName: StringW{
-							Value: k8sTLS.SecretName,
-						},
-						Status: EMPTY,
+						Host:       host,
+						SecretName: k8sTLS.SecretName,
+						Status:     EMPTY,
 					}
 				}
 			}

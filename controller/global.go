@@ -65,11 +65,11 @@ func (c *HAProxyController) handleGlobalConfig() (reload, restart bool) {
 
 // handleDefaultService configures HAProy default backend provided via cli param "default-backend-service"
 func (c *HAProxyController) handleDefaultService() (reload bool) {
-	dsvcData, _ := c.Store.GetValueFromAnnotations("default-backend-service")
-	if dsvcData == nil {
+	dsvcData := c.Store.GetValueFromAnnotations("default-backend-service")
+	if dsvcData == "" {
 		return
 	}
-	dsvc := strings.Split(dsvcData.Value, "/")
+	dsvc := strings.Split(dsvcData, "/")
 
 	if len(dsvc) != 2 {
 		logger.Errorf("default service '%s': invalid format", dsvcData)
@@ -91,7 +91,7 @@ func (c *HAProxyController) handleDefaultService() (reload bool) {
 	ingress := &store.Ingress{
 		Namespace:   namespace.Name,
 		Name:        "DefaultService",
-		Annotations: store.MapStringW{},
+		Annotations: map[string]string{},
 		DefaultBackend: &store.IngressPath{
 			SvcName:          service.Name,
 			SvcPortInt:       service.Ports[0].Port,
@@ -108,12 +108,12 @@ func (c *HAProxyController) handleDefaultService() (reload bool) {
 
 // handleDefaultCert configures default/fallback HAProxy certificate to use for client HTTPS requests.
 func (c *HAProxyController) handleDefaultCert() {
-	secretAnn, _ := c.Store.GetValueFromAnnotations("ssl-certificate", c.Store.ConfigMaps.Main.Annotations)
-	if secretAnn == nil {
+	secretAnn := c.Store.GetValueFromAnnotations("ssl-certificate", c.Store.ConfigMaps.Main.Annotations)
+	if secretAnn == "" {
 		return
 	}
 	_, err := c.Cfg.Certificates.HandleTLSSecret(c.Store, haproxy.SecretCtx{
-		SecretPath: secretAnn.Value,
+		SecretPath: secretAnn,
 		SecretType: haproxy.FT_DEFAULT_CERT,
 	})
 	logger.Error(err)

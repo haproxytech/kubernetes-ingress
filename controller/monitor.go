@@ -24,16 +24,6 @@ import (
 	"github.com/haproxytech/kubernetes-ingress/controller/store"
 )
 
-func (c *HAProxyController) timeFromAnnotation(name string) (duration time.Duration) {
-	d, err := c.Store.GetValueFromAnnotations(name)
-	if err != nil {
-		logger.Panic(err)
-	}
-	duration, _ = time.ParseDuration(d.Value)
-
-	return
-}
-
 func (c *HAProxyController) monitorChanges() {
 	go c.SyncData()
 
@@ -41,7 +31,7 @@ func (c *HAProxyController) monitorChanges() {
 	stop := make(chan struct{})
 
 	for _, namespace := range c.getWhitelistedNamespaces() {
-		factory := informers.NewSharedInformerFactoryWithOptions(c.k8s.API, c.timeFromAnnotation("cache-resync-period"), informers.WithNamespace(namespace))
+		factory := informers.NewSharedInformerFactoryWithOptions(c.k8s.API, c.Store.GetTimeFromAnnotation("cache-resync-period"), informers.WithNamespace(namespace))
 
 		pi := factory.Core().V1().Endpoints().Informer()
 		c.k8s.EventsEndpoints(c.eventChan, stop, pi)
@@ -77,7 +67,7 @@ func (c *HAProxyController) monitorChanges() {
 		logger.Panic("Caches are not populated due to an underlying error, cannot run the Ingress Controller")
 	}
 
-	syncPeriod := c.timeFromAnnotation("sync-period")
+	syncPeriod := c.Store.GetTimeFromAnnotation("sync-period")
 	logger.Debugf("Executing syncPeriod every %s", syncPeriod.String())
 	for {
 		time.Sleep(syncPeriod)

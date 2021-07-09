@@ -7,13 +7,13 @@ import (
 	"github.com/haproxytech/kubernetes-ingress/controller/store"
 )
 
-func HandleBackendAnnotations(backend *models.Backend, k8sStore store.K8s, client api.HAProxyClient, annotations ...store.MapStringW) {
+func HandleBackendAnnotations(backend *models.Backend, k8sStore store.K8s, client api.HAProxyClient, annotations ...map[string]string) {
 	for _, a := range GetBackendAnnotations(client, backend) {
-		annValue, _ := k8sStore.GetValueFromAnnotations(a.GetName(), annotations...)
-		if annValue == nil {
+		annValue := k8sStore.GetValueFromAnnotations(a.GetName(), annotations...)
+		if annValue == "" {
 			continue
 		}
-		HandleAnnotation(a, annValue.Value)
+		HandleAnnotation(a, annValue)
 	}
 }
 

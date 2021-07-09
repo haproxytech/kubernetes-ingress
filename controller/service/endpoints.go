@@ -101,9 +101,9 @@ func (s *SvcContext) scaleHAProxySrvs(endpoints *store.PortEndpoints, k8sStore s
 	// scale-server-slots has a default value in defaultAnnotations
 	// "servers-increment", "server-slots" are legacy annotations
 	for _, annotation := range []string{"servers-increment", "server-slots", "scale-server-slots"} {
-		annServerSlots, _ := k8sStore.GetValueFromAnnotations(annotation, k8sStore.ConfigMaps.Main.Annotations)
-		if annServerSlots != nil {
-			if value, err := strconv.Atoi(annServerSlots.Value); err == nil {
+		annServerSlots := k8sStore.GetValueFromAnnotations(annotation, k8sStore.ConfigMaps.Main.Annotations)
+		if annServerSlots != "" {
+			if value, err := strconv.Atoi(annServerSlots); err == nil {
 				srvSlots = value
 				break
 			} else {

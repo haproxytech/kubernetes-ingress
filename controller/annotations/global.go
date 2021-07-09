@@ -7,14 +7,14 @@ import (
 	"github.com/haproxytech/kubernetes-ingress/controller/store"
 )
 
-func HandleGlobalAnnotations(global *models.Global, defaults *models.Defaults, k8sStore store.K8s, client api.HAProxyClient, annotations store.MapStringW) {
+func HandleGlobalAnnotations(global *models.Global, defaults *models.Defaults, k8sStore store.K8s, client api.HAProxyClient, annotations map[string]string) {
 	annList := GetGlobalAnnotations(client, global, defaults)
 	for _, a := range annList {
-		annValue, _ := k8sStore.GetValueFromAnnotations(a.GetName(), annotations)
-		if annValue == nil {
+		annValue := k8sStore.GetValueFromAnnotations(a.GetName(), annotations)
+		if annValue == "" {
 			continue
 		}
-		HandleAnnotation(a, annValue.Value)
+		HandleAnnotation(a, annValue)
 	}
 }
 

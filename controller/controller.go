@@ -175,7 +175,7 @@ func (c *HAProxyController) updateHAProxy() {
 				}
 				_, err = c.Cfg.Certificates.HandleTLSSecret(c.Store, haproxy.SecretCtx{
 					DefaultNS:  ingress.Namespace,
-					SecretPath: tls.SecretName.Value,
+					SecretPath: tls.SecretName,
 					SecretType: haproxy.FT_CERT,
 				})
 				logger.Error(err)

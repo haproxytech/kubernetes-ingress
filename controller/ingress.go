@@ -32,9 +32,7 @@ import (
 func (c *HAProxyController) igClassIsSupported(ingress *store.Ingress) bool {
 	var igClassAnn string
 	var igClass *store.IngressClass
-	if ann, _ := c.Store.GetValueFromAnnotations("ingress.class", ingress.Annotations); ann != nil {
-		igClassAnn = ann.Value
-	}
+	igClassAnn = c.Store.GetValueFromAnnotations("ingress.class", ingress.Annotations)
 
 	// If ingress class is unassigned and the controller is controlling any resource without explicit ingress class then support it.
 	if igClassAnn == "" && c.OSArgs.EmptyIngressClass {
@@ -81,8 +79,8 @@ func (c *HAProxyController) handleIngressPath(ingress *store.Ingress, host strin
 		BackendName:    backendName,
 		SSLPassthrough: sslPassthrough,
 	}
-	routeACLAnn, _ := c.Store.GetValueFromAnnotations("route-acl", svc.GetService().Annotations)
-	if routeACLAnn == nil {
+	routeACLAnn := c.Store.GetValueFromAnnotations("route-acl", svc.GetService().Annotations)
+	if routeACLAnn == "" {
 		if _, ok := route.CustomRoutes[backendName]; ok {
 			delete(route.CustomRoutes, backendName)
 			logger.Debugf("Custom Route to backend '%s' deleted, reload required", backendName)
@@ -90,7 +88,7 @@ func (c *HAProxyController) handleIngressPath(ingress *store.Ingress, host strin
 		}
 		err = route.AddHostPathRoute(ingRoute, c.Cfg.MapFiles)
 	} else {
-		routeReload, err = route.AddCustomRoute(ingRoute, *routeACLAnn, c.Client)
+		routeReload, err = route.AddCustomRoute(ingRoute, routeACLAnn, c.Client)
 	}
 	if err != nil {
 		return
@@ -145,23 +143,23 @@ func (c *HAProxyController) setDefaultService(ingress *store.Ingress, frontends 
 }
 
 func (c *HAProxyController) sslPassthroughEnabled(ingress *store.Ingress, path *store.IngressPath) bool {
-	var annSSLPassthrough *store.StringW
+	var annSSLPassthrough string
 	var service *store.Service
 	ok := false
 	if path != nil {
 		service, ok = c.Store.Namespaces[ingress.Namespace].Services[path.SvcName]
 	}
 	if ok {
-		annSSLPassthrough, _ = c.Store.GetValueFromAnnotations("ssl-passthrough", service.Annotations, ingress.Annotations, c.Store.ConfigMaps.Main.Annotations)
+		annSSLPassthrough = c.Store.GetValueFromAnnotations("ssl-passthrough", service.Annotations, ingress.Annotations, c.Store.ConfigMaps.Main.Annotations)
 	} else {
-		annSSLPassthrough, _ = c.Store.GetValueFromAnnotations("ssl-passthrough", ingress.Annotations, c.Store.ConfigMaps.Main.Annotations)
+		annSSLPassthrough = c.Store.GetValueFromAnnotations("ssl-passthrough", ingress.Annotations, c.Store.ConfigMaps.Main.Annotations)
 	}
-	enabled, err := utils.GetBoolValue(annSSLPassthrough.Value, "ssl-passthrough")
-	if err != nil {
-		logger.Errorf("ssl-passthrough annotation: %s", err)
+	if annSSLPassthrough == "" {
 		return false
 	}
-	if annSSLPassthrough.Status == DELETED {
+	enabled, err := utils.GetBoolValue(annSSLPassthrough, "ssl-passthrough")
+	if err != nil {
+		logger.Errorf("ssl-passthrough annotation: %s", err)
 		return false
 	}
 	if enabled {

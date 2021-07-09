@@ -47,12 +47,12 @@ func (h PatternFiles) Update(k store.K8s, cfg *config.ControllerCfg, api api.HAP
 	for name, v := range k.ConfigMaps.PatternFiles.Annotations {
 		_, ok := h.files.data[name]
 		if ok {
-			err = h.files.updateFile(name, v.Value)
+			err = h.files.updateFile(name, v)
 			if err != nil {
 				logger.Errorf("failed updating patternFile '%s': %s", name, err)
 			}
 		} else {
-			err = h.files.newFile(name, v.Value)
+			err = h.files.newFile(name, v)
 			if err != nil {
 				logger.Errorf("failed creating patternFile '%s': %s", name, err)
 			}
