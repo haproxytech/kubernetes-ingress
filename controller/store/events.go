@@ -365,3 +365,13 @@ func (k *K8s) EventSecret(ns *Namespace, data *Secret) (updateRequired bool) {
 	}
 	return updateRequired
 }
+
+func (k *K8s) EventPod(podEvent PodEvent) (updateRequired bool) {
+	if podEvent.Created {
+		k.NbrHAProxyInst++
+	} else {
+		k.NbrHAProxyInst--
+	}
+
+	return true
+}

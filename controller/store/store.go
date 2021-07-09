@@ -24,6 +24,7 @@ import (
 )
 
 type K8s struct {
+	NbrHAProxyInst   int64
 	Namespaces       map[string]*Namespace
 	IngressClasses   map[string]*IngressClass
 	NamespacesAccess NamespacesWatch

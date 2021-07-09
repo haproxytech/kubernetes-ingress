@@ -19,8 +19,6 @@ import (
 	"strings"
 
 	"github.com/haproxytech/client-native/v2/models"
-	"k8s.io/apimachinery/pkg/watch"
-
 	config "github.com/haproxytech/kubernetes-ingress/controller/configuration"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/api"
@@ -29,6 +27,7 @@ import (
 	"github.com/haproxytech/kubernetes-ingress/controller/status"
 	"github.com/haproxytech/kubernetes-ingress/controller/store"
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
+	"k8s.io/apimachinery/pkg/watch"
 )
 
 // HAProxyController is ingress controller
@@ -48,6 +47,8 @@ type HAProxyController struct {
 	restart        bool
 	updateHandlers []UpdateHandler
 	haproxyProcess process.Process
+	PodNamespace   string
+	PodPrefix      string
 }
 
 // Wrapping a Native-Client transaction and commit it.

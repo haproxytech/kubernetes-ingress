@@ -16,8 +16,14 @@ package controller
 
 import (
 	"errors"
+	"strings"
+	"time"
 
 	corev1 "k8s.io/api/core/v1"
+
+	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/apimachinery/pkg/util/wait"
+
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
@@ -622,6 +628,33 @@ func (k *K8s) EventsSecrets(channel chan SyncDataEvent, stop chan struct{}, info
 		},
 	)
 	go informer.Run(stop)
+}
+
+func (k *K8s) EventPods(namespace, podPrefix string, resyncPeriod time.Duration, eventChan chan SyncDataEvent) {
+	watchlist := cache.NewListWatchFromClient(k.API.CoreV1().RESTClient(), "pods", namespace, fields.Nothing())
+	_, eController := cache.NewInformer(
+		watchlist,
+		&corev1.Pod{},
+		resyncPeriod,
+		cache.ResourceEventHandlerFuncs{
+			AddFunc: func(obj interface{}) {
+				meta := obj.(*corev1.Pod).ObjectMeta
+				if !strings.HasPrefix(meta.Name, podPrefix) {
+					return
+				}
+				eventChan <- SyncDataEvent{SyncType: POD, Namespace: meta.Namespace, Data: store.PodEvent{Created: true}}
+			},
+			DeleteFunc: func(obj interface{}) {
+				meta := obj.(*corev1.Pod).ObjectMeta
+
+				if !strings.HasPrefix(meta.Name, podPrefix) {
+					return
+				}
+				eventChan <- SyncDataEvent{SyncType: POD, Namespace: meta.Namespace, Data: store.PodEvent{}}
+			},
+		},
+	)
+	go eController.Run(wait.NeverStop)
 }
 
 func (k *K8s) IsNetworkingV1Beta1ApiSupported() bool {

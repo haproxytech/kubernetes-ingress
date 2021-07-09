@@ -963,9 +963,11 @@ syslog-server: |
 
 ##### `pod-maxconn`
 
-  Sets the maximum number of concurrent backend connections allowed.
+  Sets the maximum number of concurrent connections (maxconn) on a backend server (application pod).
 
   Available on:  `service`  `ingress`  `configmap`
+
+  :information_source: NB, If multiple HAProxy instances are running, the maxconn will be pod-maxconn number devided by the number of haproxy instances.
 
 Possible values:
 

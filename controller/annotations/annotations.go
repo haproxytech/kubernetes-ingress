@@ -106,7 +106,7 @@ func GetServerAnnotations(s *models.Server, k8sStore store.K8s, certs *haproxy.C
 		service.NewCheck("check", s),
 		service.NewCheckInter("check-interval", s),
 		service.NewCookie("cookie-persistence", nil, s),
-		service.NewMaxconn("pod-maxconn", s),
+		service.NewMaxconn("pod-maxconn", s, k8sStore.NbrHAProxyInst),
 		service.NewSendProxy("send-proxy-protocol", s),
 		// Order is important for ssl annotations so they don't conflict
 		service.NewSSL("server-ssl", s),

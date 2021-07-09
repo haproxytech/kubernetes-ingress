@@ -47,6 +47,11 @@ type Endpoints struct {
 	Status    Status
 }
 
+// PodEvent carries creation/deletion pod event.
+type PodEvent struct {
+	Created bool
+}
+
 // Service is useful data from k8s structures about service
 type Service struct {
 	Namespace   string

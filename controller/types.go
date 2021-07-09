@@ -44,6 +44,7 @@ const (
 	INGRESS         SyncType = "INGRESS"
 	INGRESS_CLASS   SyncType = "INGRESS_CLASS"
 	NAMESPACE       SyncType = "NAMESPACE"
+	POD             SyncType = "POD"
 	SERVICE         SyncType = "SERVICE"
 	SECRET          SyncType = "SECRET"
 	CUSTOM_RESOURCE SyncType = "CUSTOM_RESOURCE"

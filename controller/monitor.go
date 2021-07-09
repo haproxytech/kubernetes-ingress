@@ -32,6 +32,8 @@ func (c *HAProxyController) monitorChanges() {
 	crManager := NewCRManager(&c.Store, c.k8s.RestConfig, c.OSArgs.CacheResyncPeriod, c.eventChan, stop)
 	c.crManager = crManager
 
+	c.k8s.EventPods(c.PodNamespace, c.PodPrefix, c.OSArgs.CacheResyncPeriod, c.eventChan)
+
 	for _, namespace := range c.getWhitelistedNamespaces() {
 		factory := informers.NewSharedInformerFactoryWithOptions(c.k8s.API, c.OSArgs.CacheResyncPeriod, informers.WithNamespace(namespace))
 
@@ -109,6 +111,8 @@ func (c *HAProxyController) SyncData() {
 			change = c.Store.EventConfigMap(ns, job.Data.(*store.ConfigMap))
 		case SECRET:
 			change = c.Store.EventSecret(ns, job.Data.(*store.Secret))
+		case POD:
+			change = c.Store.EventPod(job.Data.(store.PodEvent))
 		}
 		hadChanges = hadChanges || change
 	}

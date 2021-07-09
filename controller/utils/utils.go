@@ -115,3 +115,9 @@ func GetBoolValue(dataValue, dataName string) (result bool, err error) {
 	}
 	return result, nil
 }
+
+func GetPodPrefix(podName string) string {
+	i := strings.LastIndex(podName, "-")
+	i = strings.LastIndex(string([]rune(podName)[:i]), "-")
+	return string([]rune(podName)[:i])
+}

@@ -143,14 +143,18 @@ func main() {
 	if err != nil {
 		logger.Panic(err)
 	}
+	podName := os.Getenv("POD_NAME")
+
 	if osArgs.Program != "" {
 		cfg.Env.HAProxyBinary = osArgs.Program
 	}
 	logger.Error(os.Chdir(cfg.Env.CfgDir))
 
 	controller := c.HAProxyController{
-		Cfg:    cfg,
-		OSArgs: osArgs,
+		Cfg:          cfg,
+		OSArgs:       osArgs,
+		PodNamespace: os.Getenv("POD_NAMESPACE"),
+		PodPrefix:    utils.GetPodPrefix(podName),
 	}
 	logger.FileName = true
 	// K8s Store

@@ -1060,8 +1060,9 @@ annotations:
     dependencies: ""
     default: ""
     description:
-      - Sets the maximum number of concurrent backend connections allowed.
-    tip: []
+      - Sets the maximum number of concurrent connections (maxconn) on a backend server (application pod).
+    tip:
+      - NB, If multiple HAProxy instances are running, the maxconn will be pod-maxconn number devided by the number of haproxy instances.
     values:
       - An integer setting the maximum number of concurrent backend connections
     applies_to:
