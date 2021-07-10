@@ -33,7 +33,7 @@ const (
 	FrontendHTTPS = "https"
 )
 
-var CustomRoutes bool
+var CustomRoutes = make(map[string]string)
 var logger = utils.GetLogger()
 
 type Route struct {
@@ -90,12 +90,6 @@ func AddHostPathRoute(route Route, mapFiles *haproxy.Maps) error {
 
 // AddCustomRoute adds an ingress route with specific ACL via use_backend haproxy directive
 func AddCustomRoute(route Route, routeACLAnn store.StringW, api api.HAProxyClient) (reload bool, err error) {
-	if routeACLAnn.Status == store.DELETED {
-		reload = true
-		logger.Debugf("Custom Route to backend '%s' deleted, reload required", route.BackendName)
-		return
-	}
-	CustomRoutes = true
 	var routeCond string
 	if route.Host != "" {
 		routeCond = fmt.Sprintf("{ var(txn.host) %s } ", route.Host)
@@ -120,14 +114,15 @@ func AddCustomRoute(route Route, routeACLAnn store.StringW, api api.HAProxyClien
 			return
 		}
 	}
-	if routeACLAnn.Status != store.EMPTY {
+	if acl := CustomRoutes[route.BackendName]; acl != routeCond {
+		CustomRoutes[route.BackendName] = routeCond
 		reload = true
 		logger.Debugf("Custom Route to backend '%s' added, reload required", route.BackendName)
 	}
 	return reload, err
 }
 
-func RoutesReset(api api.HAProxyClient) (err error) {
+func CustomRoutesReset(api api.HAProxyClient) (err error) {
 	for _, frontend := range []string{FrontendHTTP, FrontendHTTPS} {
 		api.BackendSwitchingRuleDeleteAll(frontend)
 		err = api.BackendSwitchingRuleCreate(frontend, models.BackendSwitchingRule{

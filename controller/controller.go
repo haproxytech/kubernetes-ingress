@@ -141,9 +141,8 @@ func (c *HAProxyController) updateHAProxy() {
 	reload, c.restart = c.handleGlobalConfig()
 	c.reload = c.reload || reload
 
-	if route.CustomRoutes {
-		logger.Error(route.RoutesReset(c.Client))
-		route.CustomRoutes = false
+	if len(route.CustomRoutes) != 0 {
+		logger.Error(route.CustomRoutesReset(c.Client))
 	}
 
 	for _, namespace := range c.Store.Namespaces {

@@ -83,6 +83,11 @@ func (c *HAProxyController) handleIngressPath(ingress *store.Ingress, host strin
 	}
 	routeACLAnn, _ := c.Store.GetValueFromAnnotations("route-acl", svc.GetService().Annotations)
 	if routeACLAnn == nil {
+		if _, ok := route.CustomRoutes[backendName]; ok {
+			delete(route.CustomRoutes, backendName)
+			logger.Debugf("Custom Route to backend '%s' deleted, reload required", backendName)
+			routeReload = true
+		}
 		err = route.AddHostPathRoute(ingRoute, c.Cfg.MapFiles)
 	} else {
 		routeReload, err = route.AddCustomRoute(ingRoute, *routeACLAnn, c.Client)
