@@ -18,6 +18,8 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/google/renameio"
+
 	config "github.com/haproxytech/kubernetes-ingress/controller/configuration"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/api"
 	"github.com/haproxytech/kubernetes-ingress/controller/store"
@@ -25,35 +27,84 @@ import (
 )
 
 type PatternFiles struct {
+	files files
 }
 
-func (t PatternFiles) Update(k store.K8s, cfg *config.ControllerCfg, api api.HAProxyClient) (reload bool, err error) {
-	var f *os.File
-	var errors utils.Errors
+type files struct {
+	dir  string
+	data map[string]file
+}
+type file struct {
+	hash    string
+	inUse   bool
+	updated bool
+}
+
+func (h PatternFiles) Update(k store.K8s, cfg *config.ControllerCfg, api api.HAProxyClient) (reload bool, err error) {
 	if k.ConfigMaps.PatternFiles == nil {
 		return false, nil
 	}
-	for name, content := range k.ConfigMaps.PatternFiles.Annotations {
-		filename := filepath.Join(cfg.Env.PatternDir, name)
-		switch content.Status {
-		case store.EMPTY:
-			continue
-		case store.DELETED:
-			logger.Error(os.Remove(filename))
-		default:
-			f, err = os.Create(filename)
+	for name, v := range k.ConfigMaps.PatternFiles.Annotations {
+		_, ok := h.files.data[name]
+		if ok {
+			err = h.files.updateFile(name, v.Value)
 			if err != nil {
-				errors.Add(err)
-				continue
+				logger.Errorf("failed updating patternFile '%s': %s", name, err)
 			}
-			defer f.Close()
-			_, err = f.WriteString(content.Value)
+		} else {
+			err = h.files.newFile(name, v.Value)
 			if err != nil {
-				errors.Add(err)
-				continue
+				logger.Errorf("failed creating patternFile '%s': %s", name, err)
 			}
-			reload = true
 		}
 	}
-	return reload, errors.Result()
+
+	for name, f := range h.files.data {
+		if !f.inUse {
+			err = h.files.deleteFile(name)
+			if err != nil {
+				logger.Errorf("failed deleting PatternFile '%s': %s", name, err)
+			}
+			continue
+		}
+		if f.updated {
+			logger.Debugf("updating PatternFile '%s': reload required", name)
+			reload = true
+		}
+		f.inUse = false
+		f.updated = false
+	}
+	return reload, nil
+}
+
+func (f files) deleteFile(code string) error {
+	delete(f.data, code)
+	err := os.Remove(filepath.Join(f.dir, code))
+	return err
+}
+func (f files) newFile(code, value string) error {
+	if err := renameio.WriteFile(filepath.Join(f.dir, code), []byte(value), os.ModePerm); err != nil {
+		return err
+	}
+	f.data[code] = file{
+		hash:    utils.Hash([]byte(value)),
+		inUse:   true,
+		updated: true,
+	}
+	return nil
+}
+func (f files) updateFile(name, value string) error {
+	newHash := utils.Hash([]byte(value))
+	file := f.data[name]
+	if file.hash != newHash {
+		err := renameio.WriteFile(filepath.Join(f.dir, name), []byte(value), os.ModePerm)
+		if err != nil {
+			return err
+		}
+		file.hash = newHash
+		file.updated = true
+	}
+	file.inUse = true
+	f.data[name] = file
+	return nil
 }

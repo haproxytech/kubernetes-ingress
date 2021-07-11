@@ -6,15 +6,6 @@ import (
 	"github.com/haproxytech/config-parser/v4/types"
 )
 
-func (c *clientNative) DefaultsErrorFile(value *types.ErrorFile, index int) error {
-	config, err := c.nativeAPI.Configuration.GetParser(c.activeTransaction)
-	if err != nil {
-		return err
-	}
-	err = config.Set(parser.Defaults, parser.DefaultSectionName, "errorfile", value)
-	return err
-}
-
 func (c *clientNative) DefaultsGetConfiguration() (defaults *models.Defaults, err error) {
 	_, defaults, err = c.nativeAPI.Configuration.GetDefaultsConfiguration(c.activeTransaction)
 	return

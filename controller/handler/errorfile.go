@@ -15,77 +15,97 @@
 package handler
 
 import (
-	"os"
+	"fmt"
 	"path/filepath"
+	"strconv"
 
-	"github.com/google/renameio"
-	"github.com/haproxytech/config-parser/v4/types"
+	"github.com/haproxytech/client-native/v2/models"
+
 	config "github.com/haproxytech/kubernetes-ingress/controller/configuration"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/api"
 	"github.com/haproxytech/kubernetes-ingress/controller/store"
 )
 
 type ErrorFile struct {
-	httpErrorCodes []string
-	modified       bool
+	files     files
+	updateAPI bool
 }
 
-func (e ErrorFile) Update(k store.K8s, cfg *config.ControllerCfg, api api.HAProxyClient) (reload bool, err error) {
+func (h ErrorFile) Update(k store.K8s, cfg *config.ControllerCfg, api api.HAProxyClient) (reload bool, err error) {
+	h.files.dir = cfg.Env.ErrFileDir
 	if k.ConfigMaps.Errorfiles == nil {
 		return false, nil
 	}
 
-	codes := [15]string{"200", "400", "401", "403", "404", "405", "407", "408", "410", "425", "429", "500", "502", "503", "504"}
-
-	for code, value := range k.ConfigMaps.Errorfiles.Annotations {
-		filePath := filepath.Join(cfg.Env.ErrFileDir, code)
-		switch value.Status {
-		case store.EMPTY:
-			e.httpErrorCodes = append(e.httpErrorCodes, code)
+	for code, v := range k.ConfigMaps.Errorfiles.Annotations {
+		_, ok := h.files.data[code]
+		if ok {
+			err = h.files.updateFile(code, v.Value)
+			if err != nil {
+				logger.Errorf("failed updating errorfile for code '%s': %s", code, err)
+			}
 			continue
-		case store.DELETED:
-			logger.Debugf("deleting errorfile associated to '%s' error code ", code)
-			if err = os.Remove(filePath); err != nil {
-				logger.Errorf("failed deleting '%s': %s", filePath, err)
-			}
-			e.modified = true
-		case store.ADDED, store.MODIFIED:
-			var c string
-			for _, c = range codes {
-				if code == c {
-					break
-				}
-			}
-			if c != code {
-				logger.Errorf("HTTP error code '%s' not supported", code)
-				continue
-			}
-			e.httpErrorCodes = append(e.httpErrorCodes, code)
-			logger.Debugf("Setting errorfile associated to '%s' error code", code)
-			if err = renameio.WriteFile(filePath, []byte(value.Value), os.ModePerm); err != nil {
-				logger.Errorf("failed writing errorfile '%s': %s", filePath, err)
-				continue
-			}
-			e.modified = true
 		}
+		err = checkCode(code)
+		if err != nil {
+			logger.Errorf("failed creating errorfile for code '%s': %s", code, err)
+		}
+		err = h.files.newFile(code, v.Value)
+		if err != nil {
+			logger.Errorf("failed creating errorfile for code '%s': %s", code, err)
+		}
+		h.updateAPI = true
 	}
-	if e.modified {
-		return e.updateAPI(api, cfg.Env.ErrFileDir), nil
+
+	var apiInput = []*models.Errorfile{}
+	for code, f := range h.files.data {
+		if !f.inUse {
+			h.updateAPI = true
+			err = h.files.deleteFile(code)
+			if err != nil {
+				logger.Errorf("failed deleting errorfile for code '%s': %s", code, err)
+			}
+			continue
+		}
+		if f.updated {
+			logger.Debugf("updating errorfile for code '%s': reload required", code)
+			reload = true
+		}
+		c, _ := strconv.Atoi(code) // code already checked in newCode
+		apiInput = append(apiInput, &models.Errorfile{
+			Code: int64(c),
+			File: filepath.Join(h.files.dir, code),
+		})
+		f.inUse = false
+		f.updated = false
 	}
-	return false, nil
+	// HAProxy config update
+	if h.updateAPI {
+		defaults, err := api.DefaultsGetConfiguration()
+		if err != nil {
+			logger.Error(err)
+			return reload, err
+		}
+		defaults.ErrorFiles = apiInput
+		if err = api.DefaultsPushConfiguration(defaults); err != nil {
+			logger.Error(err)
+			return reload, err
+		}
+		h.updateAPI = false
+	}
+	return reload, nil
 }
 
-func (e ErrorFile) updateAPI(api api.HAProxyClient, errFileDir string) (reload bool) {
-	logger.Error(api.DefaultsErrorFile(nil, -1))
-	for index, code := range e.httpErrorCodes {
-		err := api.DefaultsErrorFile(&types.ErrorFile{Code: code, File: filepath.Join(errFileDir, code)}, index)
-
-		if err == nil {
-			reload = true
-			logger.Debug("Errorfile updated, reload required")
-		} else {
-			logger.Error(err)
+func checkCode(code string) error {
+	var codes = [15]string{"200", "400", "401", "403", "404", "405", "407", "408", "410", "425", "429", "500", "502", "503", "504"}
+	var c string
+	for _, c = range codes {
+		if code == c {
+			break
 		}
 	}
-	return reload
+	if c != code {
+		return fmt.Errorf("HTTP error code '%s' not supported", code)
+	}
+	return nil
 }
