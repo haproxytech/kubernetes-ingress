@@ -5,7 +5,7 @@ stages:
   - e2e-tests
 variables:
   KUBECTL: v1.19.3
-  KIND: v0.9.0
+  KIND: v0.11.1
   DOCKER_HOST: tcp://docker:2375
   DOCKER_DRIVER: overlay2
 diff:
@@ -89,15 +89,15 @@ unit-tests:
   only:
     - merge_requests
     - branches
-k8s_17:
-  variables:
-    K8S_VERSION: v1.17.5
-  extends: .kind_deployment
-k8s_18:
-  variables:
-    K8S_VERSION: v1.18.6
-  extends: .kind_deployment
 k8s_19:
   variables:
-    K8S_VERSION: v1.19.3
+    K8S_VERSION: v1.19.11
+  extends: .kind_deployment
+k8s_20:
+  variables:
+    K8S_VERSION: v1.20.7
+  extends: .kind_deployment
+k8s_21:
+  variables:
+    K8S_VERSION: v1.21.1
   extends: .kind_deployment
