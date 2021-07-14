@@ -14,7 +14,7 @@ kubeadmConfigPatchesJSON6902:
 kind: Cluster
 nodes:
   - role: control-plane
-    image: kindest/node:K8S_VERSION
+    image: CI_REGISTRY_GO/kindest/node:K8S_VERSION
     extraPortMappings:
       - hostPort: 30080
         containerPort: 30080

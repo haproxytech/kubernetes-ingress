@@ -69,6 +69,8 @@ unit-tests:
       alias: docker
   tags:
     - go
+  before_script:
+    - docker login -u gitlab-ci-token -p $CI_BUILD_TOKEN $CI_REGISTRY_GO
   script:
     - apk add -U wget git go curl
     - wget -q -o /dev/null -O &> /dev/null /usr/local/bin/kind https://github.com/kubernetes-sigs/kind/releases/download/${KIND}/kind-linux-amd64
@@ -76,6 +78,9 @@ unit-tests:
     - wget -q -o /dev/null -O &> /dev/null /usr/local/bin/kubectl https://storage.googleapis.com/kubernetes-release/release/${KUBECTL}/bin/linux/amd64/kubectl
     - chmod +x /usr/local/bin/kubectl
     - sed -i "s/K8S_VERSION/$K8S_VERSION/g" ".gitlab/kind-config.yaml"
+    - sed -i "s~CI_REGISTRY_GO~$CI_REGISTRY_GO~g" ".gitlab/kind-config.yaml"
+    - sed -i "s~FROM golang~FROM $CI_REGISTRY_GO/golang~g" "build/Dockerfile"
+    - sed -i "s~FROM haproxytech/haproxy-alpine~FROM $CI_REGISTRY_GO/haproxy-alpine~g" "build/Dockerfile"
     - kind create cluster --name=dev --config=./.gitlab/kind-config.yaml
     - sed -i -E -e "s/localhost|0\.0\.0\.0|127\.0\.0\.1/docker/g" "$HOME/.kube/config"
     - sed -i -E -e "s/localhost|0\.0\.0\.0|127\.0\.0\.1/docker/g" "deploy/tests/ci.sh"
