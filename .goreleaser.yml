@@ -49,5 +49,5 @@ checksum:
 snapshot:
   name_template: "{{ .Tag }}-next"
 release:
-  draft: true
+  draft: false
   name_template: "HAProxy Ingress Controller v{{.Version}}"
