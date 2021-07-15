@@ -35,6 +35,7 @@ Image can be run with arguments:
 | [`--program`](#--program) | `haproxy in PATH location` |
 | [`--config-dir`](#--config-dir) | `/tmp/haproxy-ingress/etc` |
 | [`--runtime-dir`](#--runtime-dir) | `/tmp/haproxy-ingress/run` |
+| [`--disable-service-external-name`](#--disable-service-external-name) | `false` |
 
 
 ### `--configmap`
@@ -619,6 +620,25 @@ Example:
 args:
   - --external
   - --runtime-dir=/haproxy-ingress/run
+```
+
+<p align='right'><a href='#haproxy-kubernetes-ingress-controller'>:arrow_up_small: back to top</a></p>
+
+***
+
+### `--disable-service-external-name`
+
+  Disable forwarding to ExternalName Services due to CVE-2021-25740
+
+Possible values:
+
+- Boolean value, just need to declare the flag to disable forwarding to ExternalName Services.
+
+Example:
+
+```yaml
+args:
+  - --disable-service-external-name
 ```
 
 <p align='right'><a href='#haproxy-kubernetes-ingress-controller'>:arrow_up_small: back to top</a></p>

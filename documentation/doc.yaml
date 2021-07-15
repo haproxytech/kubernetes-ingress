@@ -365,6 +365,18 @@ image_arguments:
       args:
         - --external
         - --runtime-dir=/haproxy-ingress/run
+  - argument: --disable-service-external-name
+    description: Disable forwarding to ExternalName Services due to CVE-2021-25740
+    values:
+      - Boolean value, just need to declare the flag to disable forwarding to ExternalName Services.
+    default: "false"
+    version_min: "1.6"
+    example: |-
+      args:
+        - --disable-service-external-name
+    helm: |-
+      helm install haproxy haproxytech/kubernetes-ingress \
+        --set-string "controller.extraArgs={--disable-service-external-name}"
 groups:
   config-snippet:
     header: |-
@@ -743,7 +755,7 @@ annotations:
     group: config-snippet
     dependencies: ""
     default: ""
-    description: 
+    description:
     - Defines a group of configuration directives to insert in the main HTTP/HTTPS frontends.
     tip:
     - Because frontend-config-snippet is inserted in the main http/https frontends it will apply to all traffic. To apply configuration by Ingress, annotations should be privileged.
@@ -789,7 +801,7 @@ annotations:
     - ingress
     - service
     version_min: "1.5"
-    example: 
+    example:
     - |-
       backend-config-snippet: |
             http-send-name-header x-dst-server
