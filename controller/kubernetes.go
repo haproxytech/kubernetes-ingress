@@ -45,12 +45,13 @@ var ErrIgnored = errors.New("ignored resource")
 
 // K8s is structure with all data required to synchronize with k8s
 type K8s struct {
-	API    *kubernetes.Clientset
-	Logger utils.Logger
+	API                        *kubernetes.Clientset
+	Logger                     utils.Logger
+	DisableServiceExternalName bool // CVE-2021-25740
 }
 
 // GetKubernetesClient returns new client that communicates with k8s
-func GetKubernetesClient() (*K8s, error) {
+func GetKubernetesClient(disableServiceExternalName bool) (*K8s, error) {
 	k8sLogger := utils.GetK8sAPILogger()
 	if !TRACE_API {
 		k8sLogger.SetLevel(utils.Info)
@@ -65,13 +66,14 @@ func GetKubernetesClient() (*K8s, error) {
 		logger.Panic(err)
 	}
 	return &K8s{
-		API:    clientset,
-		Logger: k8sLogger,
+		API:                        clientset,
+		Logger:                     k8sLogger,
+		DisableServiceExternalName: disableServiceExternalName,
 	}, nil
 }
 
 // GetRemoteKubernetesClient returns new client that communicates with k8s
-func GetRemoteKubernetesClient(kubeconfig string) (*K8s, error) {
+func GetRemoteKubernetesClient(kubeconfig string, disableServiceExternalName bool) (*K8s, error) {
 	k8sLogger := utils.GetK8sAPILogger()
 	if !TRACE_API {
 		k8sLogger.SetLevel(utils.Info)
@@ -85,13 +87,13 @@ func GetRemoteKubernetesClient(kubeconfig string) (*K8s, error) {
 
 	// create the clientset
 	clientset, err := kubernetes.NewForConfig(config)
-
 	if err != nil {
 		logger.Panic(err)
 	}
 	return &K8s{
-		API:    clientset,
-		Logger: k8sLogger,
+		API:                        clientset,
+		Logger:                     k8sLogger,
+		DisableServiceExternalName: disableServiceExternalName,
 	}, nil
 }
 
@@ -104,7 +106,7 @@ func (k *K8s) EventsNamespaces(channel chan SyncDataEvent, stop chan struct{}, i
 					k.Logger.Errorf("%s: Invalid data from k8s api, %s", NAMESPACE, obj)
 					return
 				}
-				var status = ADDED
+				status := ADDED
 				if data.ObjectMeta.GetDeletionTimestamp() != nil {
 					// detect services that are in terminating state
 					status = DELETED
@@ -126,7 +128,7 @@ func (k *K8s) EventsNamespaces(channel chan SyncDataEvent, stop chan struct{}, i
 					k.Logger.Errorf("%s: Invalid data from k8s api, %s", NAMESPACE, obj)
 					return
 				}
-				var status = DELETED
+				status := DELETED
 				item := &store.Namespace{
 					Name:      data.GetName(),
 					Endpoints: make(map[string]*store.Endpoints),
@@ -149,7 +151,7 @@ func (k *K8s) EventsNamespaces(channel chan SyncDataEvent, stop chan struct{}, i
 					k.Logger.Errorf("%s: Invalid data from k8s api, %s", NAMESPACE, newObj)
 					return
 				}
-				var status = MODIFIED
+				status := MODIFIED
 				item1 := &store.Namespace{
 					Name:   data1.GetName(),
 					Status: status,
@@ -349,7 +351,11 @@ func (k *K8s) EventsServices(channel chan SyncDataEvent, stop chan struct{}, inf
 				k.Logger.Errorf("%s: Invalid data from k8s api, %s", SERVICE, obj)
 				return
 			}
-			var status = ADDED
+			if data.Spec.Type == corev1.ServiceTypeExternalName && k.DisableServiceExternalName {
+				k.Logger.Tracef("forwarding to ExternalName Services for %v is disabled", data)
+				return
+			}
+			status := ADDED
 			if data.ObjectMeta.GetDeletionTimestamp() != nil {
 				// detect services that are in terminating state
 				status = DELETED
@@ -360,8 +366,10 @@ func (k *K8s) EventsServices(channel chan SyncDataEvent, stop chan struct{}, inf
 				Annotations: store.ConvertToMapStringW(data.ObjectMeta.Annotations),
 				Selector:    store.ConvertToMapStringW(data.Spec.Selector),
 				Ports:       []store.ServicePort{},
-				DNS:         data.Spec.ExternalName,
 				Status:      status,
+			}
+			if data.Spec.Type == corev1.ServiceTypeExternalName {
+				item.DNS = data.Spec.ExternalName
 			}
 			for _, sp := range data.Spec.Ports {
 				item.Ports = append(item.Ports, store.ServicePort{
@@ -384,13 +392,19 @@ func (k *K8s) EventsServices(channel chan SyncDataEvent, stop chan struct{}, inf
 				k.Logger.Errorf("%s: Invalid data from k8s api, %s", SERVICE, obj)
 				return
 			}
-			var status = DELETED
+			if data.Spec.Type == corev1.ServiceTypeExternalName && k.DisableServiceExternalName {
+				return
+			}
+			status := DELETED
 			item := &store.Service{
 				Namespace:   data.GetNamespace(),
 				Name:        data.GetName(),
 				Annotations: store.ConvertToMapStringW(data.ObjectMeta.Annotations),
 				Selector:    store.ConvertToMapStringW(data.Spec.Selector),
 				Status:      status,
+			}
+			if data.Spec.Type == corev1.ServiceTypeExternalName {
+				item.DNS = data.Spec.ExternalName
 			}
 			if publishSvc != nil {
 				if publishSvc.Namespace == item.Namespace && publishSvc.Name == item.Name {
@@ -406,20 +420,30 @@ func (k *K8s) EventsServices(channel chan SyncDataEvent, stop chan struct{}, inf
 				k.Logger.Errorf("%s: Invalid data from k8s api, %s", SERVICE, oldObj)
 				return
 			}
+			if data1.Spec.Type == corev1.ServiceTypeExternalName && k.DisableServiceExternalName {
+				k.Logger.Tracef("forwarding to ExternalName Services for %v is disabled", data1)
+				return
+			}
 			data2, ok := newObj.(*corev1.Service)
 			if !ok {
 				k.Logger.Errorf("%s: Invalid data from k8s api, %s", SERVICE, newObj)
 				return
 			}
-			var status = MODIFIED
+			if data2.Spec.Type == corev1.ServiceTypeExternalName && k.DisableServiceExternalName {
+				k.Logger.Tracef("forwarding to ExternalName Services for %v is disabled", data2)
+				return
+			}
+			status := MODIFIED
 			item1 := &store.Service{
 				Namespace:   data1.GetNamespace(),
 				Name:        data1.GetName(),
 				Annotations: store.ConvertToMapStringW(data1.ObjectMeta.Annotations),
 				Selector:    store.ConvertToMapStringW(data1.Spec.Selector),
 				Ports:       []store.ServicePort{},
-				DNS:         data1.Spec.ExternalName,
 				Status:      status,
+			}
+			if data1.Spec.Type == corev1.ServiceTypeExternalName {
+				item1.DNS = data1.Spec.ExternalName
 			}
 			for _, sp := range data1.Spec.Ports {
 				item1.Ports = append(item1.Ports, store.ServicePort{
@@ -435,8 +459,10 @@ func (k *K8s) EventsServices(channel chan SyncDataEvent, stop chan struct{}, inf
 				Annotations: store.ConvertToMapStringW(data2.ObjectMeta.Annotations),
 				Selector:    store.ConvertToMapStringW(data2.Spec.Selector),
 				Ports:       []store.ServicePort{},
-				DNS:         data1.Spec.ExternalName,
 				Status:      status,
+			}
+			if data2.Spec.Type == corev1.ServiceTypeExternalName {
+				item2.DNS = data2.Spec.ExternalName
 			}
 			for _, sp := range data2.Spec.Ports {
 				item2.Ports = append(item2.Ports, store.ServicePort{
@@ -469,7 +495,7 @@ func (k *K8s) EventsConfigfMaps(channel chan SyncDataEvent, stop chan struct{}, 
 					k.Logger.Errorf("%s: Invalid data from k8s api, %s", CONFIGMAP, obj)
 					return
 				}
-				var status = ADDED
+				status := ADDED
 				if data.ObjectMeta.GetDeletionTimestamp() != nil {
 					// detect services that are in terminating state
 					status = DELETED
@@ -489,7 +515,7 @@ func (k *K8s) EventsConfigfMaps(channel chan SyncDataEvent, stop chan struct{}, 
 					k.Logger.Errorf("%s: Invalid data from k8s api, %s", CONFIGMAP, obj)
 					return
 				}
-				var status = DELETED
+				status := DELETED
 				item := &store.ConfigMap{
 					Namespace:   data.GetNamespace(),
 					Name:        data.GetName(),
@@ -510,7 +536,7 @@ func (k *K8s) EventsConfigfMaps(channel chan SyncDataEvent, stop chan struct{}, 
 					k.Logger.Errorf("%s: Invalid data from k8s api, %s", CONFIGMAP, newObj)
 					return
 				}
-				var status = MODIFIED
+				status := MODIFIED
 				item1 := &store.ConfigMap{
 					Namespace:   data1.GetNamespace(),
 					Name:        data1.GetName(),
@@ -543,7 +569,7 @@ func (k *K8s) EventsSecrets(channel chan SyncDataEvent, stop chan struct{}, info
 					k.Logger.Errorf("%s: Invalid data from k8s api, %s", SECRET, obj)
 					return
 				}
-				var status = ADDED
+				status := ADDED
 				if data.ObjectMeta.GetDeletionTimestamp() != nil {
 					// detect services that are in terminating state
 					status = DELETED
@@ -563,7 +589,7 @@ func (k *K8s) EventsSecrets(channel chan SyncDataEvent, stop chan struct{}, info
 					k.Logger.Errorf("%s: Invalid data from k8s api, %s", SECRET, obj)
 					return
 				}
-				var status = DELETED
+				status := DELETED
 				item := &store.Secret{
 					Namespace: data.GetNamespace(),
 					Name:      data.GetName(),
@@ -584,7 +610,7 @@ func (k *K8s) EventsSecrets(channel chan SyncDataEvent, stop chan struct{}, info
 					k.Logger.Errorf("%s: Invalid data from k8s api, %s", SECRET, newObj)
 					return
 				}
-				var status = MODIFIED
+				status := MODIFIED
 				item1 := &store.Secret{
 					Namespace: data1.GetNamespace(),
 					Name:      data1.GetName(),
