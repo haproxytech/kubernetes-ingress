@@ -1318,7 +1318,7 @@ annotations:
     version_min: "1.6"
     example: ['route-acl: cookie(staging) -m found']
   - title: send-proxy-protocol
-    type: '["proxy", "proxy-v1", "proxy-v2", ""]'
+    type: '["proxy", "proxy-v1", "proxy-v2", "proxy-v2-ssl", "proxy-v2-ssl-cn"]'
     group: send-proxy-protocol
     dependencies: ""
     default: ""
@@ -1329,6 +1329,8 @@ annotations:
     - proxy - Uses PROXY v1
     - proxy-v1 - Uses PROXY v1
     - proxy-v2 - Uses PROXY v2
+    - proxy-v2-ssl Uses PROXY v2 with SSL information extension
+    - proxy-v2-ssl-cn Uses PROXY v2 with SSL and Common Name information extension
     applies_to:
     - service
     - ingress
