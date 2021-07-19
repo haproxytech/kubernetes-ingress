@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/haproxytech/client-native/v2/models"
-	"github.com/haproxytech/config-parser/v3/types"
+	"github.com/haproxytech/config-parser/v4/types"
 )
 
 func (c *clientNative) FrontendCfgSnippetSet(frontendName string, value *[]string) error {

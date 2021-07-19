@@ -5,7 +5,7 @@ import (
 	"github.com/haproxytech/client-native/v2/configuration"
 	"github.com/haproxytech/client-native/v2/models"
 	"github.com/haproxytech/client-native/v2/runtime"
-	"github.com/haproxytech/config-parser/v3/types"
+	"github.com/haproxytech/config-parser/v4/types"
 
 	"github.com/haproxytech/kubernetes-ingress/controller/store"
 )

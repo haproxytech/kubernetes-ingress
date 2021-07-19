@@ -1,14 +1,14 @@
 package api
 
 import (
-	parser "github.com/haproxytech/config-parser/v3"
-	"github.com/haproxytech/config-parser/v3/types"
+	parser "github.com/haproxytech/config-parser/v4"
+	"github.com/haproxytech/config-parser/v4/types"
 )
 
 func (c *clientNative) UserListDeleteByGroup(group string) (err error) {
 	c.activeTransactionHasChanges = true
 
-	var p *parser.Parser
+	var p parser.Parser
 	if p, err = c.nativeAPI.Configuration.GetParser(c.activeTransaction); err != nil {
 		return
 	}
@@ -19,7 +19,7 @@ func (c *clientNative) UserListDeleteByGroup(group string) (err error) {
 func (c *clientNative) UserListCreateByGroup(group string, userPasswordMap map[string][]byte) (err error) {
 	c.activeTransactionHasChanges = true
 
-	var p *parser.Parser
+	var p parser.Parser
 	if p, err = c.nativeAPI.Configuration.GetParser(c.activeTransaction); err != nil {
 		return
 	}

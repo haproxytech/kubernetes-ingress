@@ -2,8 +2,8 @@ package api
 
 import (
 	"github.com/haproxytech/client-native/v2/models"
-	parser "github.com/haproxytech/config-parser/v3"
-	"github.com/haproxytech/config-parser/v3/types"
+	parser "github.com/haproxytech/config-parser/v4"
+	"github.com/haproxytech/config-parser/v4/types"
 )
 
 func (c *clientNative) DefaultsErrorFile(value *types.ErrorFile, index int) error {

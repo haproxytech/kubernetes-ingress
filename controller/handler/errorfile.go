@@ -19,7 +19,7 @@ import (
 	"path/filepath"
 
 	"github.com/google/renameio"
-	"github.com/haproxytech/config-parser/v3/types"
+	"github.com/haproxytech/config-parser/v4/types"
 	config "github.com/haproxytech/kubernetes-ingress/controller/configuration"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/api"
 	"github.com/haproxytech/kubernetes-ingress/controller/store"
@@ -35,7 +35,7 @@ func (e ErrorFile) Update(k store.K8s, cfg *config.ControllerCfg, api api.HAProx
 		return false, nil
 	}
 
-	var codes = [15]string{"200", "400", "401", "403", "404", "405", "407", "408", "410", "425", "429", "500", "502", "503", "504"}
+	codes := [15]string{"200", "400", "401", "403", "404", "405", "407", "408", "410", "425", "429", "500", "502", "503", "504"}
 
 	for code, value := range k.ConfigMaps.Errorfiles.Annotations {
 		filePath := filepath.Join(cfg.Env.ErrFileDir, code)
