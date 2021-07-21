@@ -31,23 +31,13 @@ func (t TCPServices) Update(k store.K8s, cfg *config.ControllerCfg, api api.HAPr
 	if k.ConfigMaps.TCPServices == nil {
 		return false, nil
 	}
+	reload = t.clearFrontends(api, k)
 	var p tcpSvcParser
 	for port, tcpSvcAnn := range k.ConfigMaps.TCPServices.Annotations {
+		frontendName := fmt.Sprintf("tcp-%s", port)
 		p, err = t.parseTCPService(k, tcpSvcAnn.Value)
 		if err != nil {
 			logger.Error(err)
-			continue
-		}
-		// Delete Frontend
-		frontendName := fmt.Sprintf("tcp-%s", port)
-		if tcpSvcAnn.Status == store.DELETED || p.service.Status == store.DELETED {
-			err = api.FrontendDelete(frontendName)
-			if err != nil {
-				logger.Errorf("error deleting tcp frontend '%s': %s", frontendName, err)
-			} else {
-				reload = true
-				logger.Debugf("TCP frontend '%s' deleted, reload required", frontendName)
-			}
 			continue
 		}
 		frontend, errGet := api.FrontendGet(frontendName)
@@ -104,6 +94,28 @@ func (t TCPServices) parseTCPService(store store.K8s, input string) (p tcpSvcPar
 		return
 	}
 	return p, err
+}
+
+func (t TCPServices) clearFrontends(api api.HAProxyClient, k store.K8s) (cleared bool) {
+	frontends, err := api.FrontendsGet()
+	if err != nil {
+		logger.Error(err)
+		return
+	}
+	for _, ft := range frontends {
+		_, isRequired := k.ConfigMaps.TCPServices.Annotations[strings.TrimPrefix(ft.Name, "tcp-")]
+		isTCPSvc := strings.HasPrefix(ft.Name, "tcp-")
+		if isTCPSvc && !isRequired {
+			err = api.FrontendDelete(ft.Name)
+			if err != nil {
+				logger.Errorf("error deleting tcp frontend '%s': %s", ft.Name, err)
+			} else {
+				cleared = true
+				logger.Debugf("TCP frontend '%s' deleted, reload required", ft.Name)
+			}
+		}
+	}
+	return
 }
 
 func (t TCPServices) createTCPFrontend(api api.HAProxyClient, frontendName, bindPort string, sslOffload bool) (frontend models.Frontend, reload bool, err error) {
@@ -163,6 +175,12 @@ func (t TCPServices) updateTCPFrontend(api api.HAProxyClient, frontend models.Fr
 		}
 		logger.Debugf("TCP frontend '%s': ssl offload disabled, reload required", frontend.Name)
 		reload = true
+	}
+	if p.service.Status == store.DELETED {
+		frontend.DefaultBackend = ""
+		err = api.FrontendEdit(frontend)
+		reload = true
+		return
 	}
 	ingress := &store.Ingress{
 		Namespace:   p.service.Namespace,
