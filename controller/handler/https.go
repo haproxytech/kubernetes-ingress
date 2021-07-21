@@ -75,19 +75,37 @@ func (h HTTPS) handleClientTLSAuth(k store.K8s, cfg *config.ControllerCfg, api a
 	annTLSAuth, _ := k.GetValueFromAnnotations("client-ca", k.ConfigMaps.Main.Annotations)
 	annTLSVerify, _ := k.GetValueFromAnnotations("client-crt-optional", k.ConfigMaps.Main.Annotations)
 	if annTLSAuth == nil {
-		return false, nil
+		return
 	}
 	binds, err := api.FrontendBindsGet(cfg.FrontHTTPS)
 	if err != nil {
-		return false, err
+		return
 	}
-	caFile, secretErr := cfg.Certificates.HandleTLSSecret(k, haproxy.SecretCtx{
+	// Parsing annotations
+	var caFile string
+	caFile, err = cfg.Certificates.HandleTLSSecret(k, haproxy.SecretCtx{
 		DefaultNS:  "",
 		SecretPath: annTLSAuth.Value,
 		SecretType: haproxy.CA_CERT,
 	})
-	// Annotation or secret DELETED
-	if binds[0].SslCafile != "" && (annTLSAuth.Status == store.DELETED || caFile == "") {
+	if err != nil {
+		if errors.Is(err, haproxy.ErrCertNotFound) {
+			logger.Warning("unable to configure TLS authentication secret '%s' not found", annTLSAuth.Value)
+			err = nil
+		}
+	}
+	verify := "required"
+	enabled, annErr := utils.GetBoolValue("client-crt-optional", annTLSVerify.Value)
+	logger.Error(annErr)
+	if enabled {
+		verify = "optional"
+	}
+	// No changes
+	if binds[0].SslCafile == caFile && binds[0].Verify == verify {
+		return
+	}
+	// Removing config
+	if caFile == "" {
 		logger.Infof("removing client TLS authentication")
 		for i := range binds {
 			binds[i].SslCafile = ""
@@ -96,28 +114,11 @@ func (h HTTPS) handleClientTLSAuth(k store.K8s, cfg *config.ControllerCfg, api a
 				return false, err
 			}
 		}
-		return true, nil
+		reload = true
+		return
 	}
-	// Handle secret errors
-	if secretErr != nil {
-		if errors.Is(secretErr, haproxy.ErrCertNotFound) {
-			logger.Warning("unable to configure TLS authentication secret '%s' not found", annTLSAuth.Value)
-			return false, nil
-		}
-		return false, secretErr
-	}
-	// No changes
-	if annTLSAuth.Status == store.EMPTY {
-		return false, nil
-	}
-	verify := "required"
-	enabled, annErr := utils.GetBoolValue("client-crt-optional", annTLSVerify.Value)
-	logger.Error(annErr)
-	if enabled {
-		verify = "optional"
-	}
-	// Configure TLS Authentication
-	logger.Infof("enabling client TLS authentication")
+	// Updating config
+	logger.Infof("configuring client TLS authentication")
 	for i := range binds {
 		binds[i].SslCafile = caFile
 		binds[i].Verify = verify
@@ -125,7 +126,8 @@ func (h HTTPS) handleClientTLSAuth(k store.K8s, cfg *config.ControllerCfg, api a
 			return false, err
 		}
 	}
-	return true, nil
+	reload = true
+	return
 }
 
 func (h HTTPS) Update(k store.K8s, cfg *config.ControllerCfg, api api.HAProxyClient) (reload bool, err error) {
