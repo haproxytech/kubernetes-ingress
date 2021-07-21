@@ -181,6 +181,7 @@ func (c *HAProxyController) auxCfgUpdated() bool {
 		}
 		logger.Infof("Auxiliary HAProxy config '%s' removed", c.Cfg.Env.AuxCFGFile)
 		c.AuxCfgModTime = 0
+		c.haproxyProcess.UseAuxFile(false)
 		return true
 	}
 	// Check modification time
@@ -190,5 +191,6 @@ func (c *HAProxyController) auxCfgUpdated() bool {
 	}
 	logger.Infof("Auxiliary HAProxy config '%s' updated", c.Cfg.Env.AuxCFGFile)
 	c.AuxCfgModTime = modifTime
+	c.haproxyProcess.UseAuxFile(true)
 	return true
 }

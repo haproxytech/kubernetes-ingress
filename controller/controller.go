@@ -24,6 +24,7 @@ import (
 	config "github.com/haproxytech/kubernetes-ingress/controller/configuration"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/api"
+	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/process"
 	"github.com/haproxytech/kubernetes-ingress/controller/route"
 	"github.com/haproxytech/kubernetes-ingress/controller/store"
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
@@ -43,6 +44,7 @@ type HAProxyController struct {
 	reload         bool
 	restart        bool
 	updateHandlers []UpdateHandler
+	haproxyProcess process.Process
 }
 
 // Wrapping a Native-Client transaction and commit it.
