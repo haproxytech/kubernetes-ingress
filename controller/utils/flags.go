@@ -98,4 +98,5 @@ type OSArgs struct { //nolint:maligned
 	CfgDir                     string         `long:"config-dir" description:"path to HAProxy configuration directory. NOTE: works only in External mode"`
 	RuntimeDir                 string         `long:"runtime-dir" description:"path to HAProxy runtime directory. NOTE: works only in External mode"`
 	DisableServiceExternalName bool           `long:"disable-service-external-name" description:"disable forwarding to ExternalName Services due to CVE-2021-25740"`
+	UseWiths6Overlay           bool           `long:"with-s6-overlay" description:"use s6 overlay to start/stpop/reload HAProxy"`
 }

@@ -36,8 +36,11 @@ func (c *HAProxyController) haproxyStartup() {
 	} else {
 		logger.Error(err)
 	}
-	c.haproxyProcess = process.NewDirectControl(c.Cfg.Env, c.OSArgs, c.Client)
-
+	if c.OSArgs.UseWiths6Overlay {
+		c.haproxyProcess = process.NewControlOverS6(c.Cfg.Env, c.OSArgs, c.Client)
+	} else {
+		c.haproxyProcess = process.NewDirectControl(c.Cfg.Env, c.OSArgs, c.Client)
+	}
 	logger.Printf("Starting HAProxy with %s", c.Cfg.Env.MainCFGFile)
 	logger.Panic(c.haproxyService("start"))
 }
