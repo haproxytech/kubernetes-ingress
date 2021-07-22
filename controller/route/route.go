@@ -71,17 +71,19 @@ func AddHostPathRoute(route Route, mapFiles *haproxy.Maps) error {
 	} else if route.Path.Path == "" {
 		return fmt.Errorf("neither Host nor Path are provided for backend %v,", route.BackendName)
 	}
-	// if PathTypeExact is not set, PathTypePrefix will be applied
+
 	path := route.Path.Path
 	switch {
-	case route.Path.ExactPathMatch:
+	case route.Path.PathTypeMatch == store.PATH_TYPE_EXACT:
 		mapFiles.AppendRow(haproxy.MAP_PATH_EXACT, route.Host+path+"\t\t\t"+value)
 	case path == "" || path == "/":
 		mapFiles.AppendRow(haproxy.MAP_PATH_PREFIX, route.Host+"/"+"\t\t\t"+value)
-	default:
+	case route.Path.PathTypeMatch == store.PATH_TYPE_IMPLEMENTATION_SPECIFIC || route.Path.PathTypeMatch == store.PATH_TYPE_PREFIX:
 		path = strings.TrimSuffix(path, "/")
 		mapFiles.AppendRow(haproxy.MAP_PATH_EXACT, route.Host+path+"\t\t\t"+value)
 		mapFiles.AppendRow(haproxy.MAP_PATH_PREFIX, route.Host+path+"/"+"\t\t\t"+value)
+	default:
+		return fmt.Errorf("unknown path type '%s' with backend '%s'", route.Path.PathTypeMatch, route.BackendName)
 	}
 	return nil
 }
@@ -99,7 +101,7 @@ func AddCustomRoute(route Route, routeACLAnn store.StringW, api api.HAProxyClien
 		routeCond = fmt.Sprintf("{ var(txn.host) %s } ", route.Host)
 	}
 	if route.Path.Path != "" {
-		if route.Path.ExactPathMatch {
+		if route.Path.PathTypeMatch == store.PATH_TYPE_EXACT {
 			routeCond = fmt.Sprintf("%s { path %s } ", routeCond, route.Path.Path)
 		} else {
 			routeCond = fmt.Sprintf("%s { path -m beg %s } ", routeCond, route.Path.Path)

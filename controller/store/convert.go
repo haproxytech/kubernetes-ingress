@@ -24,14 +24,39 @@ import (
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 )
 
+//nolint:golint,stylecheck
+const (
+	NETWORKINGV1BETA1 = "networking.k8s.io/v1beta1"
+	EXTENSIONSV1BETA1 = "extensions/v1beta1"
+	NETWORKINGV1      = "networking.k8s.io/v1"
+
+	PATH_TYPE_EXACT                   = "Exact"
+	PATH_TYPE_PREFIX                  = "Prefix"
+	PATH_TYPE_IMPLEMENTATION_SPECIFIC = "ImplementationSpecific"
+)
+
 // ConvertToIngress detects the interface{} provided by the SharedInformer and select
 // the proper strategy to convert and return the resource as a store.Ingress struct
 func ConvertToIngress(resource interface{}) (ingress *Ingress, err error) {
 	switch t := resource.(type) {
 	case *networkingv1beta1.Ingress:
 		ingress = ingressNetworkingV1Beta1Strategy{ig: resource.(*networkingv1beta1.Ingress)}.ConvertIngress()
+		for _, rule := range ingress.Rules {
+			for _, path := range rule.Paths {
+				if path.PathTypeMatch == "" {
+					path.PathTypeMatch = PATH_TYPE_IMPLEMENTATION_SPECIFIC
+				}
+			}
+		}
 	case *extensionsv1beta1.Ingress:
 		ingress = ingressExtensionsStrategy{ig: resource.(*extensionsv1beta1.Ingress)}.ConvertIngress()
+		for _, rule := range ingress.Rules {
+			for _, path := range rule.Paths {
+				if path.PathTypeMatch == "" {
+					path.PathTypeMatch = PATH_TYPE_IMPLEMENTATION_SPECIFIC
+				}
+			}
+		}
 	case *networkingv1.Ingress:
 		ingress = ingressNetworkingV1Strategy{ig: resource.(*networkingv1.Ingress)}.ConvertIngress()
 	default:
@@ -61,7 +86,7 @@ type ingressNetworkingV1Beta1Strategy struct {
 
 func (n ingressNetworkingV1Beta1Strategy) ConvertIngress() *Ingress {
 	return &Ingress{
-		APIVersion:  "networking.k8s.io/v1beta1",
+		APIVersion:  NETWORKINGV1BETA1,
 		Namespace:   n.ig.GetNamespace(),
 		Name:        n.ig.GetName(),
 		Class:       getIgClass(n.ig.Spec.IngressClassName),
@@ -81,12 +106,12 @@ func (n ingressNetworkingV1Beta1Strategy) ConvertIngress() *Ingress {
 						prefix = string(*k8sPath.PathType)
 					}
 					paths[prefix+"-"+k8sPath.Path] = &IngressPath{
-						Path:           k8sPath.Path,
-						ExactPathMatch: k8sPath.PathType != nil && *k8sPath.PathType == networkingv1beta1.PathTypeExact,
-						SvcName:        k8sPath.Backend.ServiceName,
-						SvcPortInt:     int64(k8sPath.Backend.ServicePort.IntValue()),
-						SvcPortString:  k8sPath.Backend.ServicePort.StrVal,
-						Status:         "",
+						Path:          k8sPath.Path,
+						PathTypeMatch: string(*k8sPath.PathType),
+						SvcName:       k8sPath.Backend.ServiceName,
+						SvcPortInt:    int64(k8sPath.Backend.ServicePort.IntValue()),
+						SvcPortString: k8sPath.Backend.ServicePort.StrVal,
+						Status:        "",
 					}
 				}
 				if rule, ok := rules[k8sRule.Host]; ok {
@@ -141,7 +166,7 @@ func (n ingressNetworkingV1Beta1Strategy) ConvertIngress() *Ingress {
 
 func (n ingressNetworkingV1Beta1Strategy) ConvertClass() *IngressClass {
 	return &IngressClass{
-		APIVersion: "networking.k8s.io/v1beta1",
+		APIVersion: NETWORKINGV1BETA1,
 		Name:       n.class.GetName(),
 		Controller: n.class.Spec.Controller,
 		Status: func() Status {
@@ -161,7 +186,7 @@ type ingressExtensionsStrategy struct {
 
 func (e ingressExtensionsStrategy) ConvertIngress() *Ingress {
 	return &Ingress{
-		APIVersion:  "extensions/v1beta1",
+		APIVersion:  EXTENSIONSV1BETA1,
 		Namespace:   e.ig.GetNamespace(),
 		Name:        e.ig.GetName(),
 		Annotations: ConvertToMapStringW(e.ig.GetAnnotations()),
@@ -180,12 +205,12 @@ func (e ingressExtensionsStrategy) ConvertIngress() *Ingress {
 						prefix = string(*k8sPath.PathType)
 					}
 					paths[prefix+"-"+k8sPath.Path] = &IngressPath{
-						Path:           k8sPath.Path,
-						ExactPathMatch: k8sPath.PathType != nil && *k8sPath.PathType == extensionsv1beta1.PathTypeExact,
-						SvcName:        k8sPath.Backend.ServiceName,
-						SvcPortInt:     int64(k8sPath.Backend.ServicePort.IntValue()),
-						SvcPortString:  k8sPath.Backend.ServicePort.StrVal,
-						Status:         "",
+						Path:          k8sPath.Path,
+						PathTypeMatch: string(*k8sPath.PathType),
+						SvcName:       k8sPath.Backend.ServiceName,
+						SvcPortInt:    int64(k8sPath.Backend.ServicePort.IntValue()),
+						SvcPortString: k8sPath.Backend.ServicePort.StrVal,
+						Status:        "",
 					}
 				}
 				if rule, ok := rules[k8sRule.Host]; ok {
@@ -247,7 +272,7 @@ type ingressNetworkingV1Strategy struct {
 
 func (n ingressNetworkingV1Strategy) ConvertIngress() *Ingress {
 	return &Ingress{
-		APIVersion:  "networking.k8s.io/v1",
+		APIVersion:  NETWORKINGV1,
 		Namespace:   n.ig.GetNamespace(),
 		Name:        n.ig.GetName(),
 		Class:       getIgClass(n.ig.Spec.IngressClassName),
@@ -267,12 +292,12 @@ func (n ingressNetworkingV1Strategy) ConvertIngress() *Ingress {
 						prefix = string(*k8sPath.PathType)
 					}
 					paths[prefix+"-"+k8sPath.Path] = &IngressPath{
-						Path:           k8sPath.Path,
-						ExactPathMatch: k8sPath.PathType != nil && *k8sPath.PathType == networkingv1.PathTypeExact,
-						SvcName:        k8sPath.Backend.Service.Name,
-						SvcPortInt:     int64(k8sPath.Backend.Service.Port.Number),
-						SvcPortString:  k8sPath.Backend.Service.Port.Name,
-						Status:         "",
+						Path:          k8sPath.Path,
+						PathTypeMatch: string(*k8sPath.PathType),
+						SvcName:       k8sPath.Backend.Service.Name,
+						SvcPortInt:    int64(k8sPath.Backend.Service.Port.Number),
+						SvcPortString: k8sPath.Backend.Service.Port.Name,
+						Status:        "",
 					}
 				}
 				if rule, ok := rules[k8sRule.Host]; ok {
@@ -327,7 +352,7 @@ func (n ingressNetworkingV1Strategy) ConvertIngress() *Ingress {
 
 func (n ingressNetworkingV1Strategy) ConvertClass() *IngressClass {
 	return &IngressClass{
-		APIVersion: "networking.k8s.io/v1",
+		APIVersion: NETWORKINGV1,
 		Name:       n.class.GetName(),
 		Controller: n.class.Spec.Controller,
 		Status: func() Status {

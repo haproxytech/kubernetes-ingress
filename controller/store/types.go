@@ -85,7 +85,7 @@ type IngressPath struct {
 	SvcPortString    string
 	SvcPortResolved  *ServicePort
 	Path             string
-	ExactPathMatch   bool
+	PathTypeMatch    string
 	IsDefaultBackend bool
 	Status           Status
 }

@@ -50,8 +50,8 @@ func (h Pprof) Update(k store.K8s, cfg *config.ControllerCfg, api api.HAProxyCli
 	err = route.AddHostPathRoute(route.Route{
 		BackendName: pprofBackend,
 		Path: &store.IngressPath{
-			Path:           "/debug/pprof",
-			ExactPathMatch: false,
+			Path:          "/debug/pprof",
+			PathTypeMatch: store.PATH_TYPE_IMPLEMENTATION_SPECIFIC,
 		},
 	}, cfg.MapFiles)
 	if err != nil {
