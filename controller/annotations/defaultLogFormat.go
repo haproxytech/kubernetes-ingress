@@ -23,6 +23,7 @@ func (a *DefaultLogFormat) GetName() string {
 
 func (a *DefaultLogFormat) Parse(input string) error {
 	a.data = strings.TrimSpace(input)
+	a.data = "'" + strings.TrimSpace(input) + "'"
 	if a.data == "" {
 		return errors.New("unable to parse log-format: empty input")
 	}
