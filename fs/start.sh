@@ -19,6 +19,7 @@ set -e
 if [ $# -gt 0 ] && [ "$(echo $1 | cut -b1-2)" != "--" ]; then
     # Probably a `docker run -ti`, so exec and exit
     exec "$@"
-else
-    exec /haproxy-ingress-controller "$@"
 fi
+
+export EXTRA_OPTIONS="$@"
+exec /init
