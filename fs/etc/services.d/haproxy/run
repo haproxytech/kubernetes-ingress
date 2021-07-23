@@ -1,0 +1,4 @@
+#!/usr/bin/execlineb -P
+
+with-contenv
+/usr/local/sbin/haproxy -W -db -f /etc/haproxy/haproxy.cfg -f /etc/haproxy/haproxy-aux.cfg -x /var/run/haproxy-runtime-api.sock

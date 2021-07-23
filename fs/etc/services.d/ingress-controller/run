@@ -1,0 +1,3 @@
+#!/usr/bin/with-contenv sh
+
+exec /haproxy-ingress-controller --with-s6-overlay ${EXTRA_OPTIONS}
