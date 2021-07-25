@@ -25,6 +25,7 @@ import (
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/api"
 	"github.com/haproxytech/kubernetes-ingress/controller/route"
+	"github.com/haproxytech/kubernetes-ingress/controller/status"
 	"github.com/haproxytech/kubernetes-ingress/controller/store"
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 )
@@ -35,9 +36,10 @@ type HAProxyController struct {
 	Client         api.HAProxyClient
 	OSArgs         utils.OSArgs
 	Store          store.K8s
-	PublishService *store.Service
+	PublishService *utils.NamespaceValue
 	AuxCfgModTime  int64
 	eventChan      chan SyncDataEvent
+	statusChan     chan status.SyncIngress
 	k8s            *K8s
 	ready          bool
 	reload         bool
@@ -83,11 +85,9 @@ func (c *HAProxyController) Start() {
 	// Controller PublishService
 	parts := strings.Split(c.OSArgs.PublishService, "/")
 	if len(parts) == 2 {
-		c.PublishService = &store.Service{
+		c.PublishService = &utils.NamespaceValue{
 			Namespace: parts[0],
 			Name:      parts[1],
-			Status:    EMPTY,
-			Addresses: []string{},
 		}
 	}
 
@@ -113,6 +113,11 @@ func (c *HAProxyController) Start() {
 	// Monitor k8s events
 	c.eventChan = make(chan SyncDataEvent, watch.DefaultChanSize*6)
 	go c.monitorChanges()
+	if c.PublishService != nil {
+		// Update Ingress status
+		c.statusChan = make(chan status.SyncIngress, watch.DefaultChanSize*6)
+		go status.UpdateIngress(c.k8s.API, c.Store, c.statusChan)
+	}
 }
 
 // Stop handles shutting down HAProxyController
@@ -156,8 +161,12 @@ func (c *HAProxyController) updateHAProxy() {
 				logger.Debugf("ingress '%s/%s' ignored: no matching IngressClass", ingress.Namespace, ingress.Name)
 				continue
 			}
-			if c.PublishService != nil {
-				logger.Error(c.k8s.UpdateIngressStatus(ingress, c.PublishService))
+			if c.PublishService != nil && ingress.Status == ADDED {
+				select {
+				case c.statusChan <- status.SyncIngress{Ingress: ingress}:
+				default:
+					logger.Errorf("Ingress %s/%s: unable to sync status: sync channel full", ingress.Namespace, ingress.Name)
+				}
 			}
 			if ingress.DefaultBackend != nil {
 				if reload, err = c.setDefaultService(ingress, []string{c.Cfg.FrontHTTP, c.Cfg.FrontHTTPS}); err != nil {
@@ -271,9 +280,6 @@ func (c *HAProxyController) setToReady() {
 // clean controller state
 func (c *HAProxyController) clean(failedSync bool) {
 	logger.Error(c.Cfg.Clean())
-	if c.PublishService != nil {
-		c.PublishService.Status = EMPTY
-	}
 	c.Cfg.SSLPassthrough = false
 	if !failedSync {
 		c.Store.Clean()
