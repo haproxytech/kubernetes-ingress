@@ -15,22 +15,15 @@
 package controller
 
 import (
-	"context"
 	"errors"
-	"fmt"
-	"net"
 
 	corev1 "k8s.io/api/core/v1"
-	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
-	networkingv1 "k8s.io/api/networking/v1"
-	networkingv1beta "k8s.io/api/networking/v1beta1"
-	k8serror "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/clientcmd"
 
+	ingstatus "github.com/haproxytech/kubernetes-ingress/controller/status"
 	"github.com/haproxytech/kubernetes-ingress/controller/store"
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 )
@@ -343,7 +336,7 @@ func (k *K8s) EventsIngresses(channel chan SyncDataEvent, stop chan struct{}, in
 	go informer.Run(stop)
 }
 
-func (k *K8s) EventsServices(channel chan SyncDataEvent, stop chan struct{}, informer cache.SharedIndexInformer, publishSvc *store.Service) {
+func (k *K8s) EventsServices(channel chan SyncDataEvent, ingChan chan ingstatus.SyncIngress, stop chan struct{}, informer cache.SharedIndexInformer, publishSvc *utils.NamespaceValue) {
 	informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			data, ok := obj.(*corev1.Service)
@@ -377,13 +370,11 @@ func (k *K8s) EventsServices(channel chan SyncDataEvent, stop chan struct{}, inf
 					Port:     int64(sp.Port),
 				})
 			}
-			if publishSvc != nil {
-				if publishSvc.Namespace == item.Namespace && publishSvc.Name == item.Name {
-					k.GetPublishServiceAddresses(data, publishSvc)
-				}
-			}
 			k.Logger.Tracef("%s %s: %s", SERVICE, item.Status, item.Name)
 			channel <- SyncDataEvent{SyncType: SERVICE, Namespace: item.Namespace, Data: item}
+			if publishSvc != nil && publishSvc.Namespace == data.Namespace && publishSvc.Name == data.Name {
+				ingChan <- ingstatus.SyncIngress{Service: data}
+			}
 		},
 		DeleteFunc: func(obj interface{}) {
 			data, ok := obj.(*corev1.Service)
@@ -404,13 +395,11 @@ func (k *K8s) EventsServices(channel chan SyncDataEvent, stop chan struct{}, inf
 			if data.Spec.Type == corev1.ServiceTypeExternalName {
 				item.DNS = data.Spec.ExternalName
 			}
-			if publishSvc != nil {
-				if publishSvc.Namespace == item.Namespace && publishSvc.Name == item.Name {
-					publishSvc.Status = DELETED
-				}
-			}
 			k.Logger.Tracef("%s %s: %s", SERVICE, item.Status, item.Name)
 			channel <- SyncDataEvent{SyncType: SERVICE, Namespace: item.Namespace, Data: item}
+			if publishSvc != nil && publishSvc.Namespace == data.Namespace && publishSvc.Name == data.Name {
+				ingChan <- ingstatus.SyncIngress{Service: data}
+			}
 		},
 		UpdateFunc: func(oldObj, newObj interface{}) {
 			data1, ok := oldObj.(*corev1.Service)
@@ -430,6 +419,9 @@ func (k *K8s) EventsServices(channel chan SyncDataEvent, stop chan struct{}, inf
 			if data2.Spec.Type == corev1.ServiceTypeExternalName && k.DisableServiceExternalName {
 				k.Logger.Tracef("forwarding to ExternalName Services for %v is disabled", data2)
 				return
+			}
+			if publishSvc != nil && publishSvc.Namespace == data2.Namespace && publishSvc.Name == data2.Name {
+				ingChan <- ingstatus.SyncIngress{Service: data2}
 			}
 			status := MODIFIED
 			item1 := &store.Service{
@@ -469,11 +461,6 @@ func (k *K8s) EventsServices(channel chan SyncDataEvent, stop chan struct{}, inf
 			}
 			if item2.Equal(item1) {
 				return
-			}
-			if publishSvc != nil {
-				if publishSvc.Namespace == item2.Namespace && publishSvc.Name == item2.Name {
-					k.GetPublishServiceAddresses(data2, publishSvc)
-				}
 			}
 			k.Logger.Tracef("%s %s: %s", SERVICE, item2.Status, item2.Name)
 			channel <- SyncDataEvent{SyncType: SERVICE, Namespace: item2.Namespace, Data: item2}
@@ -628,116 +615,6 @@ func (k *K8s) EventsSecrets(channel chan SyncDataEvent, stop chan struct{}, info
 		},
 	)
 	go informer.Run(stop)
-}
-
-func (k *K8s) UpdateIngressStatus(ingress *store.Ingress, publishSvc *store.Service) (err error) {
-	var status store.Status
-
-	if status = publishSvc.Status; status == EMPTY {
-		if ingress.Status == EMPTY {
-			return nil
-		}
-		status = ingress.Status
-	}
-
-	var lbi []corev1.LoadBalancerIngress
-
-	// Update addresses
-	if status == ADDED || status == MODIFIED {
-		for _, addr := range publishSvc.Addresses {
-			if net.ParseIP(addr) == nil {
-				lbi = append(lbi, corev1.LoadBalancerIngress{Hostname: addr})
-			} else {
-				lbi = append(lbi, corev1.LoadBalancerIngress{IP: addr})
-			}
-		}
-	}
-
-	switch ingress.APIVersion {
-	// Required for Kubernetes < 1.14
-	case "extensions/v1beta1":
-		var ingSource *extensionsv1beta1.Ingress
-		ingSource, err = k.API.ExtensionsV1beta1().Ingresses(ingress.Namespace).Get(context.Background(), ingress.Name, metav1.GetOptions{})
-		if err != nil {
-			break
-		}
-		ingCopy := ingSource.DeepCopy()
-		ingCopy.Status = extensionsv1beta1.IngressStatus{LoadBalancer: corev1.LoadBalancerStatus{Ingress: lbi}}
-		_, err = k.API.ExtensionsV1beta1().Ingresses(ingress.Namespace).UpdateStatus(context.Background(), ingCopy, metav1.UpdateOptions{})
-	// Required for Kubernetes < 1.19
-	case "networking.k8s.io/v1beta1":
-		var ingSource *networkingv1beta.Ingress
-		ingSource, err = k.API.NetworkingV1beta1().Ingresses(ingress.Namespace).Get(context.Background(), ingress.Name, metav1.GetOptions{})
-		if err != nil {
-			break
-		}
-		ingCopy := ingSource.DeepCopy()
-		ingCopy.Status = networkingv1beta.IngressStatus{LoadBalancer: corev1.LoadBalancerStatus{Ingress: lbi}}
-		_, err = k.API.NetworkingV1beta1().Ingresses(ingress.Namespace).UpdateStatus(context.Background(), ingCopy, metav1.UpdateOptions{})
-	case "networking.k8s.io/v1":
-		var ingSource *networkingv1.Ingress
-		ingSource, err = k.API.NetworkingV1().Ingresses(ingress.Namespace).Get(context.Background(), ingress.Name, metav1.GetOptions{})
-		if err != nil {
-			break
-		}
-		ingCopy := ingSource.DeepCopy()
-		ingCopy.Status = networkingv1.IngressStatus{LoadBalancer: corev1.LoadBalancerStatus{Ingress: lbi}}
-		_, err = k.API.NetworkingV1().Ingresses(ingress.Namespace).UpdateStatus(context.Background(), ingCopy, metav1.UpdateOptions{})
-	}
-
-	if k8serror.IsNotFound(err) {
-		return fmt.Errorf("update ingress status: failed to get ingress %s/%s: %w", ingress.Namespace, ingress.Name, err)
-	}
-	if err != nil {
-		return fmt.Errorf("failed to update LoadBalancer status of ingress %s/%s: %w", ingress.Namespace, ingress.Name, err)
-	}
-	k.Logger.Debugf("Successful update of LoadBalancer status in ingress %s/%s", ingress.Namespace, ingress.Name)
-
-	return nil
-}
-
-func (k *K8s) GetPublishServiceAddresses(service *corev1.Service, publishSvc *store.Service) {
-	addresses := []string{}
-	switch service.Spec.Type {
-	case corev1.ServiceTypeExternalName:
-		addresses = []string{service.Spec.ExternalName}
-	case corev1.ServiceTypeClusterIP:
-		addresses = []string{service.Spec.ClusterIP}
-	case corev1.ServiceTypeNodePort:
-		if service.Spec.ExternalIPs != nil {
-			addresses = append(addresses, service.Spec.ExternalIPs...)
-		} else {
-			addresses = append(addresses, service.Spec.ClusterIP)
-		}
-	case corev1.ServiceTypeLoadBalancer:
-		for _, ip := range service.Status.LoadBalancer.Ingress {
-			if ip.IP == "" {
-				addresses = append(addresses, ip.Hostname)
-			} else {
-				addresses = append(addresses, ip.IP)
-			}
-		}
-		addresses = append(addresses, service.Spec.ExternalIPs...)
-	default:
-		k.Logger.Tracef("Unable to extract IP address/es from service %v", service)
-		return
-	}
-
-	equal := false
-	if len(publishSvc.Addresses) == len(addresses) {
-		equal = true
-		for i, address := range publishSvc.Addresses {
-			if address != publishSvc.Addresses[i] {
-				equal = false
-				break
-			}
-		}
-	}
-	if equal {
-		return
-	}
-	publishSvc.Addresses = addresses
-	publishSvc.Status = MODIFIED
 }
 
 func (k *K8s) IsNetworkingV1Beta1ApiSupported() bool {
