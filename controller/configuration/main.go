@@ -140,9 +140,6 @@ func (c *ControllerCfg) envInit() (err error) {
 		}
 	}
 	// Binary and main files
-	if c.Env.MainCFGFile == "" {
-		c.Env.MainCFGFile = filepath.Join(c.Env.CfgDir, "haproxy.cfg")
-	}
 	if c.Env.AuxCFGFile == "" {
 		c.Env.AuxCFGFile = filepath.Join(c.Env.CfgDir, "haproxy-aux.cfg")
 	}

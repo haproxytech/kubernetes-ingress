@@ -19,7 +19,6 @@ import (
 	"path"
 	"path/filepath"
 
-	"github.com/google/renameio"
 	config "github.com/haproxytech/kubernetes-ingress/controller/configuration"
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 )
@@ -59,10 +58,6 @@ func setupHAProxyEnv(osArgs utils.OSArgs) config.ControllerCfg {
 		logger.Panic(err)
 	}
 	logger.Debug(dir)
-	err = renameio.WriteFile(cfg.Env.MainCFGFile, haproxyConf, 0755)
-	if err != nil {
-		logger.Panic(err)
-	}
 
 	return cfg
 }

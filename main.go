@@ -25,6 +25,7 @@ import (
 	//nolint:gosec
 	_ "net/http/pprof"
 
+	"github.com/google/renameio"
 	c "github.com/haproxytech/kubernetes-ingress/controller"
 	config "github.com/haproxytech/kubernetes-ingress/controller/configuration"
 	"github.com/haproxytech/kubernetes-ingress/controller/store"
@@ -125,6 +126,7 @@ func main() {
 	cfg := config.ControllerCfg{
 		Env: config.Env{
 			HAProxyBinary: "/usr/local/sbin/haproxy",
+			MainCFGFile:   "/etc/haproxy/haproxy.cfg",
 			CfgDir:        "/etc/haproxy/",
 			RuntimeDir:    "/var/run",
 			StateDir:      "/var/state/haproxy/",
@@ -132,6 +134,10 @@ func main() {
 	}
 	if osArgs.External {
 		cfg = setupHAProxyEnv(osArgs)
+	}
+	err = renameio.WriteFile(cfg.Env.MainCFGFile, haproxyConf, 0755)
+	if err != nil {
+		logger.Panic(err)
 	}
 	if osArgs.Program != "" {
 		cfg.Env.HAProxyBinary = osArgs.Program
