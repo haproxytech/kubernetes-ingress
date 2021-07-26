@@ -26,6 +26,10 @@ lint:
 example:
 	deploy/tests/create.sh
 
+.PHONY: example-rebuild
+example-rebuild:
+	deploy/tests/rebuild.sh
+
 .PHONY: example-remove
 example-remove:
 	deploy/tests/delete.sh
