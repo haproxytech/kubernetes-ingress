@@ -78,10 +78,14 @@ func AddHostPathRoute(route Route, mapFiles *haproxy.Maps) error {
 		mapFiles.AppendRow(haproxy.MAP_PATH_EXACT, route.Host+path+"\t\t\t"+value)
 	case path == "" || path == "/":
 		mapFiles.AppendRow(haproxy.MAP_PATH_PREFIX, route.Host+"/"+"\t\t\t"+value)
-	case route.Path.PathTypeMatch == store.PATH_TYPE_IMPLEMENTATION_SPECIFIC || route.Path.PathTypeMatch == store.PATH_TYPE_PREFIX:
+	case route.Path.PathTypeMatch == store.PATH_TYPE_PREFIX:
 		path = strings.TrimSuffix(path, "/")
 		mapFiles.AppendRow(haproxy.MAP_PATH_EXACT, route.Host+path+"\t\t\t"+value)
 		mapFiles.AppendRow(haproxy.MAP_PATH_PREFIX, route.Host+path+"/"+"\t\t\t"+value)
+	case route.Path.PathTypeMatch == store.PATH_TYPE_IMPLEMENTATION_SPECIFIC:
+		path = strings.TrimSuffix(path, "/")
+		mapFiles.AppendRow(haproxy.MAP_PATH_EXACT, route.Host+path+"\t\t\t"+value)
+		mapFiles.AppendRow(haproxy.MAP_PATH_PREFIX, route.Host+path+"\t\t\t"+value)
 	default:
 		return fmt.Errorf("unknown path type '%s' with backend '%s'", route.Path.PathTypeMatch, route.BackendName)
 	}
