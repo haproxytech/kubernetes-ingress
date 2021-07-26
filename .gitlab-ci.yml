@@ -95,10 +95,14 @@ unit-tests:
     - merge_requests
     - branches
 k8s_19:
+  only:
+    - schedules
   variables:
     K8S_VERSION: v1.19.11
   extends: .kind_deployment
 k8s_20:
+  only:
+    - schedules
   variables:
     K8S_VERSION: v1.20.7
   extends: .kind_deployment
