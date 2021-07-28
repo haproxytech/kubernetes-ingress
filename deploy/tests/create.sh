@@ -7,18 +7,25 @@ DIR=$(dirname "$0")
 
 if [ -n "${CI_ENV}" ]; then
   echo "cluster was already created by $CI_ENV CI"
-else
+
+  echo "building image for ingress controller"
+  docker build --build-arg TARGETPLATFORM="linux/amd64" -t haproxytech/kubernetes-ingress -f build/Dockerfile .
+
+  echo "loading image of ingress controller in kind"
+  kind load docker-image haproxytech/kubernetes-ingress:latest  --name=dev
+elif [ -n "${K8S_IC_STABLE}" ]; then
   kind delete cluster --name dev
   kind create cluster --name dev --config $DIR/kind-config.yaml
-fi
 
-if [ -n "${K8S_IC_STABLE}" ]; then
   echo "using last stable image for ingress controller"
   docker pull haproxytech/kubernetes-ingress:latest
   kind load docker-image haproxytech/kubernetes-ingress:latest  --name=dev
 else
+  kind delete cluster --name dev
+  kind create cluster --name dev --config $DIR/kind-config.yaml
+
   echo "building image for ingress controller"
-  docker build -t haproxytech/kubernetes-ingress -f build/Dockerfile .
+  docker build --build-arg TARGETPLATFORM="linux/amd64" -t haproxytech/kubernetes-ingress -f build/Dockerfile .
 
   echo "loading image of ingress controller in kind"
   kind load docker-image haproxytech/kubernetes-ingress:latest  --name=dev
