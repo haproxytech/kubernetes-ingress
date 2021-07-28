@@ -103,8 +103,9 @@ func (s *SvcContext) HandleBackend(client api.HAProxyClient, store store.K8s) (r
 	if backendName, err = s.GetBackendName(); err != nil {
 		return reload, backendName, err
 	}
+	var backend, oldBackend *models.Backend
 	// Get/Create Backend
-	backend := models.Backend{
+	backend = &models.Backend{
 		Name: backendName,
 		Mode: "http",
 	}
@@ -114,9 +115,9 @@ func (s *SvcContext) HandleBackend(client api.HAProxyClient, store store.K8s) (r
 	if s.tcpService {
 		backend.Mode = "tcp"
 	}
-	oldBackend, err := client.BackendGet(backendName)
+	oldBackend, err = client.BackendGet(backendName)
 	if err != nil {
-		if err = client.BackendCreate(backend); err != nil {
+		if err = client.BackendCreate(*backend); err != nil {
 			return reload, backendName, err
 		}
 		s.newBackend = true
@@ -124,7 +125,7 @@ func (s *SvcContext) HandleBackend(client api.HAProxyClient, store store.K8s) (r
 		logger.Debugf("Ingress '%s/%s': new backend '%s', reload required", s.ingress.Namespace, s.ingress.Name, backendName)
 	}
 	annotations.HandleBackendAnnotations(
-		&backend,
+		backend,
 		store,
 		client,
 		s.service.Annotations,
@@ -133,7 +134,7 @@ func (s *SvcContext) HandleBackend(client api.HAProxyClient, store store.K8s) (r
 	)
 	// Update Backend
 	if !reflect.DeepEqual(oldBackend, backend) {
-		if err = client.BackendEdit(backend); err != nil {
+		if err = client.BackendEdit(*backend); err != nil {
 			return reload, backendName, err
 		}
 		reload = true

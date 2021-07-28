@@ -31,6 +31,7 @@ import (
 // HandleEndpoints lookups the IngressPath related endpoints and handles corresponding backend servers configuration in HAProxy
 func (s *SvcContext) HandleEndpoints(client api.HAProxyClient, store store.K8s, certs *haproxy.Certificates) (reload bool) {
 	var srvsScaled, srvsActiveAnn bool
+	var srv, oldSrv *models.Server
 	endpoints, err := s.getEndpoints(store)
 	if err != nil {
 		logger.Warningf("Ingress '%s/%s': %s", s.ingress.Namespace, s.ingress.Name, err)
@@ -41,9 +42,9 @@ func (s *SvcContext) HandleEndpoints(client api.HAProxyClient, store store.K8s, 
 	if s.service.DNS == "" {
 		srvsScaled = s.scaleHAProxySrvs(endpoints, store)
 	}
-	srv := models.Server{}
+	srv = &models.Server{}
 	annotations.HandleServerAnnotations(
-		&srv,
+		srv,
 		store,
 		client,
 		certs,
@@ -52,7 +53,7 @@ func (s *SvcContext) HandleEndpoints(client api.HAProxyClient, store store.K8s, 
 		s.store.ConfigMaps.Main.Annotations,
 	)
 	if !s.newBackend {
-		oldSrv, _ := client.ServerGet("SRV_1", s.backendName)
+		oldSrv, _ = client.ServerGet("SRV_1", s.backendName)
 		srv.Name = "SRV_1"
 		if reflect.DeepEqual(oldSrv, srv) {
 			logger.Debugf("Ingress '%s/%s': server options of backend '%s' were updated, reload required", s.ingress.Namespace, s.ingress.Name, endpoints.BackendName)
@@ -61,7 +62,7 @@ func (s *SvcContext) HandleEndpoints(client api.HAProxyClient, store store.K8s, 
 	}
 	for _, srvSlot := range endpoints.HAProxySrvs {
 		if srvSlot.Modified || s.newBackend || srvsActiveAnn {
-			s.updateHAProxySrv(client, srv, *srvSlot, endpoints.Port)
+			s.updateHAProxySrv(client, *srv, *srvSlot, endpoints.Port)
 		}
 	}
 
@@ -78,6 +79,7 @@ func (s *SvcContext) updateHAProxySrv(client api.HAProxyClient, srv models.Serve
 		srv.Maintenance = "enabled"
 	} else {
 		srv.Address = srvSlot.Address
+		srv.Maintenance = "disabled"
 	}
 	// Update server
 	errAPI := client.BackendServerEdit(s.backendName, srv)

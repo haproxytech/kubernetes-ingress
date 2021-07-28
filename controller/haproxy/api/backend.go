@@ -10,12 +10,12 @@ func (c *clientNative) BackendsGet() (models.Backends, error) {
 	return backends, err
 }
 
-func (c *clientNative) BackendGet(backendName string) (models.Backend, error) {
+func (c *clientNative) BackendGet(backendName string) (*models.Backend, error) {
 	_, backend, err := c.nativeAPI.Configuration.GetBackend(backendName, c.activeTransaction)
 	if err != nil {
-		return models.Backend{}, err
+		return nil, err
 	}
-	return *backend, nil
+	return backend, nil
 }
 
 func (c *clientNative) BackendCreate(backend models.Backend) error {
@@ -100,10 +100,10 @@ func (c *clientNative) BackendSwitchingRuleDeleteAll(frontend string) {
 	}
 }
 
-func (c *clientNative) ServerGet(serverName, backendName string) (models.Server, error) {
+func (c *clientNative) ServerGet(serverName, backendName string) (*models.Server, error) {
 	_, server, err := c.nativeAPI.Configuration.GetServer(serverName, backendName, c.activeTransaction)
 	if err != nil {
-		return models.Server{}, err
+		return nil, err
 	}
-	return *server, nil
+	return server, nil
 }

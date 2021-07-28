@@ -15,7 +15,7 @@ type HAProxyClient interface {
 	APICommitTransaction() error
 	APIDisposeTransaction()
 	BackendsGet() (models.Backends, error)
-	BackendGet(backendName string) (models.Backend, error)
+	BackendGet(backendName string) (*models.Backend, error)
 	BackendCreate(backend models.Backend) error
 	BackendEdit(backend models.Backend) error
 	BackendDelete(backendName string) error
@@ -55,7 +55,7 @@ type HAProxyClient interface {
 	SetMapContent(mapFile string, payload string) error
 	SetServerAddr(backendName string, serverName string, ip string, port int) error
 	SetServerState(backendName string, serverName string, state string) error
-	ServerGet(serverName, backendNa string) (models.Server, error)
+	ServerGet(serverName, backendNa string) (*models.Server, error)
 	SyncBackendSrvs(oldEndpoints, newEndpoints *store.PortEndpoints) error
 	UserListDeleteByGroup(group string) error
 	UserListExistsByGroup(group string) (bool, error)

@@ -18,24 +18,31 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/haproxytech/client-native/v2/models"
+
 	"github.com/haproxytech/kubernetes-ingress/controller/annotations"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy"
 	"github.com/haproxytech/kubernetes-ingress/controller/store"
 )
 
 func (c *HAProxyController) handleGlobalConfig() (reload, restart bool) {
-	global, err := c.Client.GlobalGetConfiguration()
+	var err error
+	var global *models.Global
+	var oldGlobal models.Global
+	var defaults *models.Defaults
+	var oldDefaults models.Defaults
+	global, err = c.Client.GlobalGetConfiguration()
 	if err != nil {
 		logger.Error(err)
 		return
 	}
-	defaults, err := c.Client.DefaultsGetConfiguration()
+	defaults, err = c.Client.DefaultsGetConfiguration()
 	if err != nil {
 		logger.Error(err)
 		return
 	}
-	oldGlobal := *global
-	oldDefaults := *defaults
+	oldGlobal = *global
+	oldDefaults = *defaults
 	annotations.HandleGlobalAnnotations(
 		global,
 		defaults,
@@ -43,14 +50,14 @@ func (c *HAProxyController) handleGlobalConfig() (reload, restart bool) {
 		c.Client,
 		c.Store.ConfigMaps.Main.Annotations,
 	)
-	if !reflect.DeepEqual(oldGlobal, global) {
+	if !reflect.DeepEqual(&oldGlobal, global) {
 		if err = c.Client.GlobalPushConfiguration(global); err != nil {
 			logger.Error(err)
 			return false, false
 		}
 		restart = true
 	}
-	if !reflect.DeepEqual(oldDefaults, defaults) {
+	if !reflect.DeepEqual(&oldDefaults, defaults) {
 		if err = c.Client.DefaultsPushConfiguration(defaults); err != nil {
 			logger.Error(err)
 			return false, false
