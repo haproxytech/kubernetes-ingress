@@ -42,6 +42,7 @@ ARG TARGETPLATFORM
 
 ARG S6_OVERLAY_VERSION=2.2.0.3
 ENV S6_OVERLAY_VERSION $S6_OVERLAY_VERSION
+ENV S6_READ_ONLY_ROOT=1
 
 COPY /fs /
 COPY --from=builder /src/fs/haproxy-ingress-controller .
@@ -49,7 +50,7 @@ COPY --from=builder /src/fs/haproxy-ingress-controller .
 RUN apk --no-cache add socat openssl util-linux htop tzdata curl && \
     rm -f /usr/local/bin/dataplaneapi /usr/bin/dataplaneapi && \
     chgrp -R haproxy /usr/local/etc/haproxy /run /var && \
-    chmod -R g+w /usr/local/etc/haproxy /run /var && \
+    chmod -R ug+rwx /usr/local/etc/haproxy /run /var && \
     case "${TARGETPLATFORM}" in \
         "linux/arm64")      S6_ARCH=aarch64     ;; \
         "linux/amd64")      S6_ARCH=amd64       ;; \
@@ -62,6 +63,10 @@ RUN apk --no-cache add socat openssl util-linux htop tzdata curl && \
     curl -sS -L -o /tmp/s6-overlay-installer "https://github.com/just-containers/s6-overlay/releases/download/v${S6_OVERLAY_VERSION}/s6-overlay-${S6_ARCH}-installer" && \
     chmod +x /tmp/s6-overlay-installer && \
     /tmp/s6-overlay-installer / && \
-    rm -f /tmp/s6-overlay-installer
+    rm -f /tmp/s6-overlay-installer && \
+    mkdir /var/run/s6 && \
+    chown haproxy:haproxy /var/run/s6 && \
+    chmod ug+rwx /var/run/s6 && \
+    sed -i 's/ root / haproxy /g' /etc/s6/init/init-stage2-fixattrs.txt
 
 ENTRYPOINT ["/start.sh"]
