@@ -15,8 +15,9 @@
 package controller
 
 import (
-	"reflect"
 	"strings"
+
+	"github.com/go-test/deep"
 
 	"github.com/haproxytech/client-native/v2/models"
 
@@ -50,19 +51,23 @@ func (c *HAProxyController) handleGlobalConfig() (reload, restart bool) {
 		c.Client,
 		c.Store.ConfigMaps.Main.Annotations,
 	)
-	if !reflect.DeepEqual(&oldGlobal, global) {
+	result := deep.Equal(&oldGlobal, global)
+	if len(result) != 0 {
 		if err = c.Client.GlobalPushConfiguration(global); err != nil {
 			logger.Error(err)
 			return false, false
 		}
 		restart = true
+		logger.Debugf("Global config updated: %s\nRestart required", result)
 	}
-	if !reflect.DeepEqual(&oldDefaults, defaults) {
+	result = deep.Equal(&oldDefaults, defaults)
+	if len(result) != 0 {
 		if err = c.Client.DefaultsPushConfiguration(defaults); err != nil {
 			logger.Error(err)
 			return false, false
 		}
 		reload = true
+		logger.Debugf("Defaults config updated: %s\nReload required", result)
 	}
 	c.handleDefaultCert()
 	reload = c.handleDefaultService() || reload

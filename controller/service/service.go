@@ -16,8 +16,9 @@ package service
 
 import (
 	"fmt"
-	"reflect"
 	"strconv"
+
+	"github.com/go-test/deep"
 
 	"github.com/haproxytech/client-native/v2/models"
 
@@ -133,12 +134,13 @@ func (s *SvcContext) HandleBackend(client api.HAProxyClient, store store.K8s) (r
 		s.store.ConfigMaps.Main.Annotations,
 	)
 	// Update Backend
-	if !reflect.DeepEqual(oldBackend, backend) {
+	result := deep.Equal(oldBackend, backend)
+	if len(result) != 0 {
 		if err = client.BackendEdit(*backend); err != nil {
 			return reload, backendName, err
 		}
 		reload = true
-		logger.Debugf("Ingress '%s/%s': backend '%s' updated, reload required", s.ingress.Namespace, s.ingress.Name, backendName)
+		logger.Debugf("Ingress '%s/%s': backend '%s' updated: %s\nReload required", s.ingress.Namespace, s.ingress.Name, backend.Name, result)
 	}
 
 	return reload, backendName, nil

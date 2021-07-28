@@ -16,9 +16,10 @@ package service
 
 import (
 	"fmt"
-	"reflect"
 	"strconv"
 	"strings"
+
+	"github.com/go-test/deep"
 
 	"github.com/haproxytech/client-native/v2/models"
 
@@ -55,9 +56,10 @@ func (s *SvcContext) HandleEndpoints(client api.HAProxyClient, store store.K8s, 
 	if !s.newBackend {
 		oldSrv, _ = client.ServerGet("SRV_1", s.backendName)
 		srv.Name = "SRV_1"
-		if reflect.DeepEqual(oldSrv, srv) {
-			logger.Debugf("Ingress '%s/%s': server options of backend '%s' were updated, reload required", s.ingress.Namespace, s.ingress.Name, endpoints.BackendName)
+		result := deep.Equal(oldSrv, srv)
+		if len(result) != 0 {
 			srvsActiveAnn = true
+			logger.Debugf("Ingress '%s/%s': server options for backend '%s' were updated:%s\nReload required", s.ingress.Namespace, s.ingress.Name, endpoints.BackendName, result)
 		}
 	}
 	for _, srvSlot := range endpoints.HAProxySrvs {
