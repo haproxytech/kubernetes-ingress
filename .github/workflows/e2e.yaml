@@ -21,7 +21,7 @@ jobs:
           image: kindest/node:${{ matrix.k8s-version }}
           version: v0.11.1
     - name: Setup
-      run: deploy/tests/ci.sh
+      run: CI_ENV=github deploy/tests/create.sh
     - name: Run parallel e2e tests
       run: go test ./... -v --tags=e2e_parallel
     - name: Run sequential e2e tests
