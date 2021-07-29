@@ -78,7 +78,6 @@ unit-tests:
     - sed -i "s/K8S_VERSION/$K8S_VERSION/g" ".gitlab/kind-config.yaml"
     - kind create cluster --name=dev --config=./.gitlab/kind-config.yaml
     - sed -i -E -e "s/localhost|0\.0\.0\.0|127\.0\.0\.1/docker/g" "$HOME/.kube/config"
-    - sed -i -E -e "s/localhost|0\.0\.0\.0|127\.0\.0\.1/docker/g" "deploy/tests/ci.sh"
     - sed -i -E -e "s/localhost|0\.0\.0\.0|127\.0\.0\.1/docker/g" "deploy/tests/e2e/client.go"
     - until kubectl get nodes -o wide;do sleep 2; done
     - CI_ENV=gitlab deploy/tests/create.sh
