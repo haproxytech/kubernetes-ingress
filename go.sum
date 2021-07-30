@@ -215,10 +215,10 @@ github.com/googleapis/gnostic v0.4.1 h1:DLJCy1n/vrD4HPjOvYcT8aYQXpPIzoRZONaYwyyc
 github.com/googleapis/gnostic v0.4.1/go.mod h1:LRhVm6pbyptWbWbuZ38d1eyptfvIytN3ir6b65WBswg=
 github.com/gorilla/websocket v1.4.2/go.mod h1:YR8l580nyteQvAITg2hZ9XVh4b55+EU/adAjf1fMHhE=
 github.com/gregjones/httpcache v0.0.0-20180305231024-9cad4c3443a7/go.mod h1:FecbI9+v66THATjSRHfNgh1IVFe/9kFxbXtjV0ctIMA=
-github.com/haproxytech/client-native/v2 v2.5.1-0.20210722153259-a0b616644239 h1:G7my0K5hKvurgax6lLzT321KR5tKFpw6AtbRXC2GDYQ=
-github.com/haproxytech/client-native/v2 v2.5.1-0.20210722153259-a0b616644239/go.mod h1:zX+Ga9GELfriBDlU3m9fyLWYFEtEktGgOqZTzyfVmEU=
-github.com/haproxytech/config-parser/v4 v4.0.0-rc1.0.20210719074749-d9f3915990e4 h1:JOeBczd0RHhhF81/Sc1ygkZ6TjhSz051VKIgU+amz/Y=
-github.com/haproxytech/config-parser/v4 v4.0.0-rc1.0.20210719074749-d9f3915990e4/go.mod h1:R2KvNW3R5pf+ucN4K0Wtdhib08U8L10rRAwP2lEDuWQ=
+github.com/haproxytech/client-native/v2 v2.5.1-0.20210902093307-1f696b917f86 h1:eEgH/EZJ17W4+3KQuU00UVpHzoFmh+IzaNsDNE2MKu0=
+github.com/haproxytech/client-native/v2 v2.5.1-0.20210902093307-1f696b917f86/go.mod h1:Uda+J1oMsbh8UIsBnRB9BTpdDCaKLoa6L+AlYr+MSxg=
+github.com/haproxytech/config-parser/v4 v4.0.0-rc1.0.20210813110106-49a72c168ed5 h1:HnVlVDTouABD3qS4seBr06H+bE8vh0GfVWqhqFIONvQ=
+github.com/haproxytech/config-parser/v4 v4.0.0-rc1.0.20210813110106-49a72c168ed5/go.mod h1:R2KvNW3R5pf+ucN4K0Wtdhib08U8L10rRAwP2lEDuWQ=
 github.com/hashicorp/golang-lru v0.5.0/go.mod h1:/m3WP610KZHVQ1SGc6re/UDhFvYD7pJ4Ao+sR/qLZy8=
 github.com/hashicorp/golang-lru v0.5.1 h1:0hERBMJE1eitiLkihrMvRVBYAkpHzc/J3QdDN+dAcgU=
 github.com/hashicorp/golang-lru v0.5.1/go.mod h1:/m3WP610KZHVQ1SGc6re/UDhFvYD7pJ4Ao+sR/qLZy8=

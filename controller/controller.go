@@ -61,6 +61,7 @@ func (c *HAProxyController) clientAPIClosure(fn func() error) (err error) {
 	if err = fn(); err != nil {
 		return err
 	}
+
 	if err = c.Client.APICommitTransaction(); err != nil {
 		return err
 	}
@@ -77,10 +78,12 @@ func (c *HAProxyController) Start() {
 	if err != nil {
 		logger.Panic(err)
 	}
+
 	c.Client, err = api.Init(c.Cfg.Env.TransactionDir, c.Cfg.Env.MainCFGFile, c.Cfg.Env.HAProxyBinary, c.Cfg.Env.RuntimeSocket)
 	if err != nil {
 		logger.Panic(err)
 	}
+
 	c.initHandlers()
 	c.haproxyStartup()
 
