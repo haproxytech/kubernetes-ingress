@@ -207,8 +207,8 @@ github.com/googleapis/gax-go/v2 v2.0.5/go.mod h1:DWXyrwAJ9X0FpwwEdw+IPEYBICEFu5m
 github.com/googleapis/gnostic v0.4.1 h1:DLJCy1n/vrD4HPjOvYcT8aYQXpPIzoRZONaYwyycI+I=
 github.com/googleapis/gnostic v0.4.1/go.mod h1:LRhVm6pbyptWbWbuZ38d1eyptfvIytN3ir6b65WBswg=
 github.com/gregjones/httpcache v0.0.0-20180305231024-9cad4c3443a7/go.mod h1:FecbI9+v66THATjSRHfNgh1IVFe/9kFxbXtjV0ctIMA=
-github.com/haproxytech/client-native/v2 v2.2.1-0.20210202111144-7c1e53d92758 h1:0mgmRsHKSiXLmVJ/yMCihoqSvj2EF/Y9DhPnbhwUXFE=
-github.com/haproxytech/client-native/v2 v2.2.1-0.20210202111144-7c1e53d92758/go.mod h1:PwZEyFw1UlwUp+OPETx/0hpUhNPYmgdLJ/+ss/FVv2w=
+github.com/haproxytech/client-native/v2 v2.2.1 h1:ufbAxRA1s/cU6ByAxHO1A/Bhn0pg64AIVfNQDtKd4bE=
+github.com/haproxytech/client-native/v2 v2.2.1/go.mod h1:PwZEyFw1UlwUp+OPETx/0hpUhNPYmgdLJ/+ss/FVv2w=
 github.com/haproxytech/config-parser/v3 v3.0.0-rc1.0.20201218192213-cf1331eaac44 h1:lWMn14Si9rseZ3UfTI2w7nqKRjjTIUkyJc7PCHI9928=
 github.com/haproxytech/config-parser/v3 v3.0.0-rc1.0.20201218192213-cf1331eaac44/go.mod h1:68k+xwy1wGoufI/VKOOilrx/65M85eeQP6Atg+a29Ds=
 github.com/haproxytech/models/v2 v2.2.0-rc1.0.20210112080933-32de531b38f2 h1:cJfX3CNxOcZ7FW3pB88IxJfczdHBEG/dZ25A8JrQr78=

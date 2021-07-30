@@ -63,6 +63,7 @@ type HAProxyClient interface {
 	ServerStateBase(value *types.StringC) error
 	SetServerAddr(backendName string, serverName string, ip string, port int) error
 	SetServerState(backendName string, serverName string, state string) error
+	SetAuxCfgFile(auxCfgFile string)
 	SyncBackendSrvs(oldEndpoints, newEndpoints *store.PortEndpoints) error
 	UserListDeleteByGroup(group string) error
 	UserListCreateByGroup(group string, userPasswordMap map[string][]byte) error
@@ -90,6 +91,7 @@ func Init(transactionDir, configFile, programPath, runtimeSocket string) (client
 		Haproxy:                   programPath,
 		ValidateConfigurationFile: true,
 	}
+
 	if transactionDir != "" {
 		confParams.TransactionDir = transactionDir
 	}
@@ -136,4 +138,12 @@ func (c *clientNative) APICommitTransaction() error {
 func (c *clientNative) APIDisposeTransaction() {
 	c.activeTransaction = ""
 	c.activeTransactionHasChanges = false
+}
+
+func (c *clientNative) SetAuxCfgFile(auxCfgFile string) {
+	if auxCfgFile == "" {
+		c.nativeAPI.Configuration.Transaction.ValidateConfigFilesAfter = nil
+		return
+	}
+	c.nativeAPI.Configuration.Transaction.ValidateConfigFilesAfter = []string{auxCfgFile}
 }
