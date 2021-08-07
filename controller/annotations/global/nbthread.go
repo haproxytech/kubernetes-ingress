@@ -1,4 +1,4 @@
-package annotations
+package global
 
 import (
 	"runtime"
@@ -7,20 +7,20 @@ import (
 	"github.com/haproxytech/client-native/v2/models"
 )
 
-type GlobalNbthread struct {
+type Nbthread struct {
 	name   string
 	global *models.Global
 }
 
-func NewGlobalNbthread(n string, g *models.Global) *GlobalNbthread {
-	return &GlobalNbthread{name: n, global: g}
+func NewNbthread(n string, g *models.Global) *Nbthread {
+	return &Nbthread{name: n, global: g}
 }
 
-func (a *GlobalNbthread) GetName() string {
+func (a *Nbthread) GetName() string {
 	return a.name
 }
 
-func (a *GlobalNbthread) Process(input string) error {
+func (a *Nbthread) Process(input string) error {
 	if input == "" {
 		a.global.Nbthread = 0
 		return nil

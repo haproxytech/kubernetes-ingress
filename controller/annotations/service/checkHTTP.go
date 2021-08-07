@@ -1,4 +1,4 @@
-package annotations
+package service
 
 import (
 	"fmt"
@@ -7,20 +7,20 @@ import (
 	"github.com/haproxytech/client-native/v2/models"
 )
 
-type BackendCheckHTTP struct {
+type CheckHTTP struct {
 	name    string
 	backend *models.Backend
 }
 
-func NewBackendCheckHTTP(n string, b *models.Backend) *BackendCheckHTTP {
-	return &BackendCheckHTTP{name: n, backend: b}
+func NewCheckHTTP(n string, b *models.Backend) *CheckHTTP {
+	return &CheckHTTP{name: n, backend: b}
 }
 
-func (a *BackendCheckHTTP) GetName() string {
+func (a *CheckHTTP) GetName() string {
 	return a.name
 }
 
-func (a *BackendCheckHTTP) Process(input string) error {
+func (a *CheckHTTP) Process(input string) error {
 	if input == "" {
 		a.backend.AdvCheck = ""
 		a.backend.HttpchkParams = nil

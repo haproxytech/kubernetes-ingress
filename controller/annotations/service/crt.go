@@ -1,4 +1,4 @@
-package annotations
+package service
 
 import (
 	"errors"
@@ -9,15 +9,15 @@ import (
 	"github.com/haproxytech/kubernetes-ingress/controller/store"
 )
 
-type ServerCA struct {
+type Crt struct {
 	name         string
 	haproxyCerts *haproxy.Certificates
 	k8sStore     store.K8s
 	server       *models.Server
 }
 
-func NewServerCA(n string, k store.K8s, c *haproxy.Certificates, s *models.Server) *ServerCA {
-	return &ServerCA{
+func NewCrt(n string, k store.K8s, c *haproxy.Certificates, s *models.Server) *Crt {
+	return &Crt{
 		name:         n,
 		k8sStore:     k,
 		haproxyCerts: c,
@@ -25,27 +25,27 @@ func NewServerCA(n string, k store.K8s, c *haproxy.Certificates, s *models.Serve
 	}
 }
 
-func (a *ServerCA) GetName() string {
+func (a *Crt) GetName() string {
 	return a.name
 }
 
-func (a *ServerCA) Process(input string) error {
+func (a *Crt) Process(input string) error {
 	if input == "" {
-		a.server.SslCafile = ""
+		a.server.SslCertificate = ""
 		// Other values from serverSSL annotation are kept
 		return nil
 	}
-	caFile, err := a.haproxyCerts.HandleTLSSecret(a.k8sStore, haproxy.SecretCtx{
+	crtFile, err := a.haproxyCerts.HandleTLSSecret(a.k8sStore, haproxy.SecretCtx{
 		DefaultNS:  a.server.Namespace,
 		SecretPath: input,
-		SecretType: haproxy.CA_CERT,
+		SecretType: haproxy.BD_CERT,
 	})
 	if err != nil && !errors.Is(err, haproxy.ErrCertNotFound) {
 		return err
 	}
 	a.server.Ssl = "enabled"
 	a.server.Alpn = "h2,http/1.1"
-	a.server.Verify = "required"
-	a.server.SslCafile = caFile
+	a.server.Verify = "none"
+	a.server.SslCertificate = crtFile
 	return nil
 }

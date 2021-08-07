@@ -1,4 +1,4 @@
-package annotations
+package global
 
 import (
 	"fmt"
@@ -11,7 +11,7 @@ import (
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 )
 
-type GlobalSyslogServers struct {
+type SyslogServers struct {
 	name       string
 	global     *models.Global
 	logTargets models.LogTargets
@@ -20,11 +20,11 @@ type GlobalSyslogServers struct {
 	restart    bool
 }
 
-func NewGlobalSyslogServers(n string, c api.HAProxyClient, g *models.Global) *GlobalSyslogServers {
-	return &GlobalSyslogServers{name: n, client: c, global: g}
+func NewSyslogServers(n string, c api.HAProxyClient, g *models.Global) *SyslogServers {
+	return &SyslogServers{name: n, client: c, global: g}
 }
 
-func (a *GlobalSyslogServers) GetName() string {
+func (a *SyslogServers) GetName() string {
 	return a.name
 }
 
@@ -34,7 +34,7 @@ func (a *GlobalSyslogServers) GetName() string {
 //  syslog-server: |
 //    address:127.0.0.1, port:514, facility:local0
 //    address:192.168.1.1, port:514, facility:local1
-func (a *GlobalSyslogServers) Process(input string) error {
+func (a *SyslogServers) Process(input string) error {
 	a.stdout = false
 	for _, syslogLine := range strings.Split(input, "\n") {
 		if syslogLine == "" {

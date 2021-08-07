@@ -1,4 +1,4 @@
-package annotations
+package service
 
 import (
 	"strconv"
@@ -6,20 +6,20 @@ import (
 	"github.com/haproxytech/client-native/v2/models"
 )
 
-type ServerMaxconn struct {
+type Maxconn struct {
 	name   string
 	server *models.Server
 }
 
-func NewServerMaxconn(n string, s *models.Server) *ServerMaxconn {
-	return &ServerMaxconn{name: n, server: s}
+func NewMaxconn(n string, s *models.Server) *Maxconn {
+	return &Maxconn{name: n, server: s}
 }
 
-func (a *ServerMaxconn) GetName() string {
+func (a *Maxconn) GetName() string {
 	return a.name
 }
 
-func (a *ServerMaxconn) Process(input string) error {
+func (a *Maxconn) Process(input string) error {
 	if input == "" {
 		a.server.Maxconn = nil
 		return nil

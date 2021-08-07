@@ -1,4 +1,4 @@
-package annotations
+package service
 
 import (
 	"github.com/haproxytech/client-native/v2/models"
@@ -6,20 +6,20 @@ import (
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 )
 
-type ServerCheck struct {
+type Check struct {
 	name   string
 	server *models.Server
 }
 
-func NewServerCheck(n string, s *models.Server) *ServerCheck {
-	return &ServerCheck{name: n, server: s}
+func NewCheck(n string, s *models.Server) *Check {
+	return &Check{name: n, server: s}
 }
 
-func (a *ServerCheck) GetName() string {
+func (a *Check) GetName() string {
 	return a.name
 }
 
-func (a *ServerCheck) Process(input string) error {
+func (a *Check) Process(input string) error {
 	if input == "" {
 		a.server.Check = ""
 		return nil

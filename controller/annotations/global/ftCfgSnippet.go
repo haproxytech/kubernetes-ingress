@@ -1,4 +1,4 @@
-package annotations
+package global
 
 import (
 	"strings"

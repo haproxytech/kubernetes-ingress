@@ -1,4 +1,4 @@
-package annotations
+package service
 
 import (
 	"github.com/haproxytech/client-native/v2/models"
@@ -6,20 +6,20 @@ import (
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 )
 
-type BackendTimeoutCheck struct {
+type TimeoutCheck struct {
 	name    string
 	backend *models.Backend
 }
 
-func NewBackendTimeoutCheck(n string, b *models.Backend) *BackendTimeoutCheck {
-	return &BackendTimeoutCheck{name: n, backend: b}
+func NewTimeoutCheck(n string, b *models.Backend) *TimeoutCheck {
+	return &TimeoutCheck{name: n, backend: b}
 }
 
-func (a *BackendTimeoutCheck) GetName() string {
+func (a *TimeoutCheck) GetName() string {
 	return a.name
 }
 
-func (a *BackendTimeoutCheck) Process(input string) error {
+func (a *TimeoutCheck) Process(input string) error {
 	if input == "" {
 		a.backend.CheckTimeout = nil
 		return nil

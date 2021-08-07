@@ -1,4 +1,4 @@
-package annotations
+package service
 
 import (
 	"fmt"
@@ -9,20 +9,20 @@ import (
 	"github.com/haproxytech/client-native/v2/models"
 )
 
-type BackendLoadBalance struct {
+type LoadBalance struct {
 	name    string
 	backend *models.Backend
 }
 
-func NewBackendLoadBalance(n string, b *models.Backend) *BackendLoadBalance {
-	return &BackendLoadBalance{name: n, backend: b}
+func NewLoadBalance(n string, b *models.Backend) *LoadBalance {
+	return &LoadBalance{name: n, backend: b}
 }
 
-func (a *BackendLoadBalance) GetName() string {
+func (a *LoadBalance) GetName() string {
 	return a.name
 }
 
-func (a *BackendLoadBalance) Process(input string) error {
+func (a *LoadBalance) Process(input string) error {
 	if input == "" {
 		a.backend.Balance = nil
 		return nil

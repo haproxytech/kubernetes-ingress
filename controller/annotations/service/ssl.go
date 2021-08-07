@@ -1,4 +1,4 @@
-package annotations
+package service
 
 import (
 	"github.com/haproxytech/client-native/v2/models"
@@ -6,20 +6,20 @@ import (
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 )
 
-type ServerSSL struct {
+type SSL struct {
 	name   string
 	server *models.Server
 }
 
-func NewServerSSL(n string, s *models.Server) *ServerSSL {
-	return &ServerSSL{name: n, server: s}
+func NewSSL(n string, s *models.Server) *SSL {
+	return &SSL{name: n, server: s}
 }
 
-func (a *ServerSSL) GetName() string {
+func (a *SSL) GetName() string {
 	return a.name
 }
 
-func (a *ServerSSL) Process(input string) error {
+func (a *SSL) Process(input string) error {
 	var enabled bool
 	var err error
 	if input != "" {

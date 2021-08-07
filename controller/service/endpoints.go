@@ -46,7 +46,10 @@ func (s *SvcContext) HandleEndpoints(client api.HAProxyClient, store store.K8s, 
 	srv = &models.Server{}
 	for _, a := range annotations.GetServerAnnotations(srv, store, certs) {
 		annValue := store.GetValueFromAnnotations(a.GetName(), s.service.Annotations, s.ingress.Annotations, s.store.ConfigMaps.Main.Annotations)
-		logger.Error(a.Process(annValue))
+		err = a.Process(annValue)
+		if err != nil {
+			logger.Errorf("service %s/%s: annotation '%s': %s", s.service.Namespace, s.service.Name, a.GetName(), err)
+		}
 	}
 	if !s.newBackend {
 		oldSrv, _ = client.ServerGet("SRV_1", s.backendName)

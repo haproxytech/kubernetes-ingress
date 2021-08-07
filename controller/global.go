@@ -27,50 +27,61 @@ import (
 )
 
 func (c *HAProxyController) handleGlobalConfig() (reload, restart bool) {
-	var err error
-	var global *models.Global
+	restart = c.globalCfg()
+	reload = c.defaultsCfg()
+	c.handleDefaultCert()
+	reload = c.handleDefaultService() || reload
+	return reload, restart
+}
+
+func (c *HAProxyController) globalCfg() (restart bool) {
 	var oldGlobal models.Global
-	var defaults *models.Defaults
-	var oldDefaults models.Defaults
-	global, err = c.Client.GlobalGetConfiguration()
-	if err != nil {
-		logger.Error(err)
-		return
-	}
-	defaults, err = c.Client.DefaultsGetConfiguration()
+	global, err := c.Client.GlobalGetConfiguration()
 	if err != nil {
 		logger.Error(err)
 		return
 	}
 	oldGlobal = *global
-	oldDefaults = *defaults
-
-	for _, a := range annotations.GetGlobalAnnotations(c.Client, global, defaults) {
+	for _, a := range annotations.GetGlobalAnnotations(c.Client, global) {
 		annValue := c.Store.GetValueFromAnnotations(a.GetName(), c.Store.ConfigMaps.Main.Annotations)
-		logger.Error(a.Process(annValue))
+		err = a.Process(annValue)
+		if err != nil {
+			logger.Errorf("annotation %s: %s", a.GetName(), err)
+		}
 	}
 	result := deep.Equal(&oldGlobal, global)
 	if len(result) != 0 {
 		if err = c.Client.GlobalPushConfiguration(global); err != nil {
-			logger.Error(err)
-			return false, false
+			return
 		}
-		restart = true
 		logger.Debugf("Global config updated: %s\nRestart required", result)
+		restart = true
 	}
-	result = deep.Equal(&oldDefaults, defaults)
+	return
+}
+
+func (c *HAProxyController) defaultsCfg() (reload bool) {
+	var oldDefaults models.Defaults
+	defaults, err := c.Client.DefaultsGetConfiguration()
+	if err != nil {
+		logger.Error(err)
+		return
+	}
+	oldDefaults = *defaults
+	for _, a := range annotations.GetDefaultsAnnotations(defaults) {
+		annValue := c.Store.GetValueFromAnnotations(a.GetName(), c.Store.ConfigMaps.Main.Annotations)
+		logger.Error(a.Process(annValue))
+	}
+	result := deep.Equal(&oldDefaults, defaults)
 	if len(result) != 0 {
 		if err = c.Client.DefaultsPushConfiguration(defaults); err != nil {
 			logger.Error(err)
-			return false, false
+			return
 		}
 		reload = true
 		logger.Debugf("Defaults config updated: %s\nReload required", result)
 	}
-	c.handleDefaultCert()
-	reload = c.handleDefaultService() || reload
-
-	return reload, restart
+	return
 }
 
 // handleDefaultService configures HAProy default backend provided via cli param "default-backend-service"

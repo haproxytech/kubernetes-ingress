@@ -1,4 +1,4 @@
-package annotations
+package service
 
 import (
 	"fmt"
@@ -7,20 +7,20 @@ import (
 	"github.com/haproxytech/client-native/v2/models"
 )
 
-type ServerSendProxy struct {
+type SendProxy struct {
 	name   string
 	server *models.Server
 }
 
-func NewServerSendProxy(n string, s *models.Server) *ServerSendProxy {
-	return &ServerSendProxy{name: n, server: s}
+func NewSendProxy(n string, s *models.Server) *SendProxy {
+	return &SendProxy{name: n, server: s}
 }
 
-func (a *ServerSendProxy) GetName() string {
+func (a *SendProxy) GetName() string {
 	return a.name
 }
 
-func (a *ServerSendProxy) Process(input string) error {
+func (a *SendProxy) Process(input string) error {
 	var proxyPorto string
 	v := strings.ToLower(input)
 	switch v {

@@ -1,4 +1,4 @@
-package annotations
+package service
 
 import (
 	"fmt"
@@ -8,20 +8,20 @@ import (
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 )
 
-type BackendForwardedFor struct {
+type ForwardedFor struct {
 	name    string
 	backend *models.Backend
 }
 
-func NewBackendForwardedFor(n string, b *models.Backend) *BackendForwardedFor {
-	return &BackendForwardedFor{name: n, backend: b}
+func NewForwardedFor(n string, b *models.Backend) *ForwardedFor {
+	return &ForwardedFor{name: n, backend: b}
 }
 
-func (a *BackendForwardedFor) GetName() string {
+func (a *ForwardedFor) GetName() string {
 	return a.name
 }
 
-func (a *BackendForwardedFor) Process(input string) error {
+func (a *ForwardedFor) Process(input string) error {
 	if input == "" {
 		a.backend.Forwardfor = nil
 		return nil

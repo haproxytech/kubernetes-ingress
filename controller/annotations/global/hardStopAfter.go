@@ -1,4 +1,4 @@
-package annotations
+package global
 
 import (
 	"github.com/haproxytech/client-native/v2/models"
@@ -6,20 +6,20 @@ import (
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 )
 
-type GlobalHardStopAfter struct {
+type HardStopAfter struct {
 	name   string
 	global *models.Global
 }
 
-func NewGlobalHardStopAfter(n string, g *models.Global) *GlobalHardStopAfter {
-	return &GlobalHardStopAfter{name: n, global: g}
+func NewHardStopAfter(n string, g *models.Global) *HardStopAfter {
+	return &HardStopAfter{name: n, global: g}
 }
 
-func (a *GlobalHardStopAfter) GetName() string {
+func (a *HardStopAfter) GetName() string {
 	return a.name
 }
 
-func (a *GlobalHardStopAfter) Process(input string) error {
+func (a *HardStopAfter) Process(input string) error {
 	if input == "" {
 		a.global.HardStopAfter = nil
 		return nil

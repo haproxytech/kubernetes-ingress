@@ -1,4 +1,4 @@
-package annotations
+package service
 
 import (
 	"fmt"
@@ -6,20 +6,20 @@ import (
 	"github.com/haproxytech/client-native/v2/models"
 )
 
-type ServerProto struct {
+type Proto struct {
 	name   string
 	server *models.Server
 }
 
-func NewServerProto(n string, s *models.Server) *ServerProto {
-	return &ServerProto{name: n, server: s}
+func NewProto(n string, s *models.Server) *Proto {
+	return &Proto{name: n, server: s}
 }
 
-func (a *ServerProto) GetName() string {
+func (a *Proto) GetName() string {
 	return a.name
 }
 
-func (a *ServerProto) Process(input string) error {
+func (a *Proto) Process(input string) error {
 	switch input {
 	case "":
 		a.server.Proto = ""

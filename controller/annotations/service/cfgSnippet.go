@@ -1,4 +1,4 @@
-package annotations
+package service
 
 import (
 	"strings"
@@ -8,21 +8,21 @@ import (
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/api"
 )
 
-type BackendCfgSnippet struct {
+type CfgSnippet struct {
 	name    string
 	client  api.HAProxyClient
 	backend *models.Backend
 }
 
-func NewBackendCfgSnippet(n string, c api.HAProxyClient, b *models.Backend) *BackendCfgSnippet {
-	return &BackendCfgSnippet{name: n, client: c, backend: b}
+func NewCfgSnippet(n string, c api.HAProxyClient, b *models.Backend) *CfgSnippet {
+	return &CfgSnippet{name: n, client: c, backend: b}
 }
 
-func (a *BackendCfgSnippet) GetName() string {
+func (a *CfgSnippet) GetName() string {
 	return a.name
 }
 
-func (a *BackendCfgSnippet) Process(input string) error {
+func (a *CfgSnippet) Process(input string) error {
 	var data []string
 	for _, line := range strings.Split(strings.Trim(input, "\n"), "\n") {
 		if line = strings.TrimSpace(line); line != "" {

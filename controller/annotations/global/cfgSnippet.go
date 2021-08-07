@@ -1,4 +1,4 @@
-package annotations
+package global
 
 import (
 	"strings"
@@ -7,21 +7,21 @@ import (
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/api"
 )
 
-type GlobalCfgSnippet struct {
+type CfgSnippet struct {
 	name   string
 	data   []string
 	client api.HAProxyClient
 }
 
-func NewGlobalCfgSnippet(n string, c api.HAProxyClient) *GlobalCfgSnippet {
-	return &GlobalCfgSnippet{name: n, client: c}
+func NewCfgSnippet(n string, c api.HAProxyClient) *CfgSnippet {
+	return &CfgSnippet{name: n, client: c}
 }
 
-func (a *GlobalCfgSnippet) GetName() string {
+func (a *CfgSnippet) GetName() string {
 	return a.name
 }
 
-func (a *GlobalCfgSnippet) Process(input string) error {
+func (a *CfgSnippet) Process(input string) error {
 	for _, line := range strings.Split(strings.Trim(input, "\n"), "\n") {
 		if line = strings.TrimSpace(line); line != "" {
 			a.data = append(a.data, line)

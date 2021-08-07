@@ -1,4 +1,4 @@
-package annotations
+package global
 
 import (
 	"errors"
@@ -8,23 +8,23 @@ import (
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 )
 
-type DefaultOption struct {
+type Option struct {
 	name     string
 	defaults *models.Defaults
 }
 
-func NewDefaultOption(n string, d *models.Defaults) *DefaultOption {
-	return &DefaultOption{
+func NewOption(n string, d *models.Defaults) *Option {
+	return &Option{
 		name:     n,
 		defaults: d,
 	}
 }
 
-func (a *DefaultOption) GetName() string {
+func (a *Option) GetName() string {
 	return a.name
 }
 
-func (a *DefaultOption) Process(input string) error {
+func (a *Option) Process(input string) error {
 	if input == "" {
 		switch a.name {
 		case "http-server-close", "http-keep-alive":

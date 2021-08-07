@@ -1,4 +1,4 @@
-package annotations
+package global
 
 import (
 	"errors"
@@ -8,20 +8,20 @@ import (
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 )
 
-type DefaultTimeout struct {
+type Timeout struct {
 	name     string
 	defaults *models.Defaults
 }
 
-func NewDefaultTimeout(n string, d *models.Defaults) *DefaultTimeout {
-	return &DefaultTimeout{name: n, defaults: d}
+func NewTimeout(n string, d *models.Defaults) *Timeout {
+	return &Timeout{name: n, defaults: d}
 }
 
-func (a *DefaultTimeout) GetName() string {
+func (a *Timeout) GetName() string {
 	return a.name
 }
 
-func (a *DefaultTimeout) Process(input string) error {
+func (a *Timeout) Process(input string) error {
 	var timeout *int64
 	var err error
 	if input != "" {

@@ -1,4 +1,4 @@
-package annotations
+package service
 
 import (
 	"github.com/haproxytech/client-native/v2/models"
@@ -6,20 +6,20 @@ import (
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 )
 
-type BackendAbortOnClose struct {
+type AbortOnClose struct {
 	name    string
 	backend *models.Backend
 }
 
-func NewBackendAbortOnClose(n string, b *models.Backend) *BackendAbortOnClose {
-	return &BackendAbortOnClose{name: n, backend: b}
+func NewAbortOnClose(n string, b *models.Backend) *AbortOnClose {
+	return &AbortOnClose{name: n, backend: b}
 }
 
-func (a *BackendAbortOnClose) GetName() string {
+func (a *AbortOnClose) GetName() string {
 	return a.name
 }
 
-func (a *BackendAbortOnClose) Process(input string) error {
+func (a *AbortOnClose) Process(input string) error {
 	var enabled bool
 	var err error
 	if input != "" {
