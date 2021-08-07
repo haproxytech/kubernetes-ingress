@@ -13,7 +13,6 @@ type ServerCA struct {
 	name         string
 	haproxyCerts *haproxy.Certificates
 	k8sStore     store.K8s
-	caFile       string
 	server       *models.Server
 }
 
@@ -30,7 +29,12 @@ func (a *ServerCA) GetName() string {
 	return a.name
 }
 
-func (a *ServerCA) Parse(input string) error {
+func (a *ServerCA) Process(input string) error {
+	if input == "" {
+		a.server.SslCafile = ""
+		// Other values from serverSSL annotation are kept
+		return nil
+	}
 	caFile, err := a.haproxyCerts.HandleTLSSecret(a.k8sStore, haproxy.SecretCtx{
 		DefaultNS:  a.server.Namespace,
 		SecretPath: input,
@@ -39,18 +43,9 @@ func (a *ServerCA) Parse(input string) error {
 	if err != nil && !errors.Is(err, haproxy.ErrCertNotFound) {
 		return err
 	}
-	a.caFile = caFile
-	return nil
-}
-
-func (a *ServerCA) Update() error {
-	if a.caFile == "" {
-		a.server.SslCafile = ""
-		return nil
-	}
 	a.server.Ssl = "enabled"
 	a.server.Alpn = "h2,http/1.1"
 	a.server.Verify = "required"
-	a.server.SslCafile = a.caFile
+	a.server.SslCafile = caFile
 	return nil
 }

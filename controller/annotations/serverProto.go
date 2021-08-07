@@ -8,7 +8,6 @@ import (
 
 type ServerProto struct {
 	name   string
-	proto  string
 	server *models.Server
 }
 
@@ -20,24 +19,18 @@ func (a *ServerProto) GetName() string {
 	return a.name
 }
 
-func (a *ServerProto) Parse(input string) error {
+func (a *ServerProto) Process(input string) error {
 	switch input {
+	case "":
+		a.server.Proto = ""
 	case "h1":
+		// Forces H1 even when SSL is enabled
 		a.server.Alpn = ""
+		a.server.Proto = ""
 	case "h2":
-		a.proto = "h2"
+		a.server.Proto = "h2"
 	default:
 		return fmt.Errorf("unknown proto %s", input)
 	}
-
-	return nil
-}
-
-func (a *ServerProto) Update() error {
-	// Exclusive with SSL (which sets ALPN to H1/H2)
-	if a.server.Alpn != "" {
-		return nil
-	}
-	a.server.Proto = a.proto
 	return nil
 }

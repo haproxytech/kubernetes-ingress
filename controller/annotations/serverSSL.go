@@ -7,9 +7,8 @@ import (
 )
 
 type ServerSSL struct {
-	name    string
-	enabled bool
-	server  *models.Server
+	name   string
+	server *models.Server
 }
 
 func NewServerSSL(n string, s *models.Server) *ServerSSL {
@@ -20,14 +19,16 @@ func (a *ServerSSL) GetName() string {
 	return a.name
 }
 
-func (a *ServerSSL) Parse(input string) error {
+func (a *ServerSSL) Process(input string) error {
+	var enabled bool
 	var err error
-	a.enabled, err = utils.GetBoolValue(input, "server-ssl")
-	return err
-}
-
-func (a *ServerSSL) Update() error {
-	if a.enabled {
+	if input != "" {
+		enabled, err = utils.GetBoolValue(input, "server-ssl")
+		if err != nil {
+			return err
+		}
+	}
+	if enabled {
 		a.server.Ssl = "enabled"
 		a.server.Alpn = "h2,http/1.1"
 		a.server.Verify = "none"

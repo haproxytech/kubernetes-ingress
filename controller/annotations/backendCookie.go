@@ -8,9 +8,8 @@ import (
 )
 
 type BackendCookie struct {
-	name       string
-	cookieName string
-	backend    *models.Backend
+	name    string
+	backend *models.Backend
 }
 
 func NewBackendCookie(n string, b *models.Backend) *BackendCookie {
@@ -21,21 +20,17 @@ func (a *BackendCookie) GetName() string {
 	return a.name
 }
 
-func (a *BackendCookie) Parse(input string) error {
-	if len(strings.Fields(input)) != 1 {
-		return fmt.Errorf("cookie-persistence: Incorrect input %s", input)
-	}
-	a.cookieName = input
-	return nil
-}
-
-func (a *BackendCookie) Update() error {
-	if a.cookieName == "" {
+func (a *BackendCookie) Process(input string) error {
+	if input == "" {
 		a.backend.Cookie = nil
 		return nil
 	}
+	cookieName := input
+	if len(strings.Fields(cookieName)) != 1 {
+		return fmt.Errorf("cookie-persistence: Incorrect input %s", input)
+	}
 	cookie := models.Cookie{
-		Name:     &a.cookieName,
+		Name:     &cookieName,
 		Type:     "insert",
 		Nocache:  true,
 		Indirect: true,

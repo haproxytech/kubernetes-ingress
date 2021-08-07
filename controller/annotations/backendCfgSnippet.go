@@ -1,7 +1,6 @@
 package annotations
 
 import (
-	"errors"
 	"strings"
 
 	"github.com/haproxytech/client-native/v2/models"
@@ -11,7 +10,6 @@ import (
 
 type BackendCfgSnippet struct {
 	name    string
-	data    []string
 	client  api.HAProxyClient
 	backend *models.Backend
 }
@@ -24,21 +22,15 @@ func (a *BackendCfgSnippet) GetName() string {
 	return a.name
 }
 
-func (a *BackendCfgSnippet) Parse(input string) error {
+func (a *BackendCfgSnippet) Process(input string) error {
+	var data []string
 	for _, line := range strings.Split(strings.Trim(input, "\n"), "\n") {
 		if line = strings.TrimSpace(line); line != "" {
-			a.data = append(a.data, line)
+			data = append(data, line)
 		}
 	}
-	if len(a.data) == 0 {
-		return errors.New("unable to parse config-snippet: empty input")
-	}
-	return nil
-}
-
-func (a *BackendCfgSnippet) Update() error {
-	if len(a.data) == 0 {
+	if len(data) == 0 {
 		return a.client.BackendCfgSnippetSet(a.backend.Name, nil)
 	}
-	return a.client.BackendCfgSnippetSet(a.backend.Name, &a.data)
+	return a.client.BackendCfgSnippetSet(a.backend.Name, &data)
 }

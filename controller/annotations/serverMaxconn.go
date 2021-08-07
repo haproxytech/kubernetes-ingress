@@ -7,9 +7,8 @@ import (
 )
 
 type ServerMaxconn struct {
-	name    string
-	maxconn *int64
-	server  *models.Server
+	name   string
+	server *models.Server
 }
 
 func NewServerMaxconn(n string, s *models.Server) *ServerMaxconn {
@@ -20,16 +19,15 @@ func (a *ServerMaxconn) GetName() string {
 	return a.name
 }
 
-func (a *ServerMaxconn) Parse(input string) error {
+func (a *ServerMaxconn) Process(input string) error {
+	if input == "" {
+		a.server.Maxconn = nil
+		return nil
+	}
 	v, err := strconv.ParseInt(input, 10, 64)
 	if err != nil {
 		return err
 	}
-	a.maxconn = &v
-	return nil
-}
-
-func (a *ServerMaxconn) Update() error {
-	a.server.Maxconn = a.maxconn
+	a.server.Maxconn = &v
 	return nil
 }

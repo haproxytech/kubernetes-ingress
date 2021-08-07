@@ -9,7 +9,6 @@ import (
 
 type GlobalNbthread struct {
 	name   string
-	data   int64
 	global *models.Global
 }
 
@@ -21,7 +20,12 @@ func (a *GlobalNbthread) GetName() string {
 	return a.name
 }
 
-func (a *GlobalNbthread) Parse(input string) error {
+func (a *GlobalNbthread) Process(input string) error {
+	if input == "" {
+		a.global.Nbthread = 0
+		return nil
+	}
+
 	v, err := strconv.Atoi(input)
 	if err != nil {
 		return err
@@ -30,16 +34,6 @@ func (a *GlobalNbthread) Parse(input string) error {
 	if v > maxProcs {
 		v = maxProcs
 	}
-	a.data = int64(v)
-	return nil
-}
-
-func (a *GlobalNbthread) Update() error {
-	if a.data == 0 {
-		logger.Infof("Removing nbThread option")
-	} else {
-		logger.Infof("Setting nbThread to %d", a.data)
-	}
-	a.global.Nbthread = a.data
+	a.global.Nbthread = int64(v)
 	return nil
 }

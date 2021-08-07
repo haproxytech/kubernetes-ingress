@@ -7,9 +7,8 @@ import (
 )
 
 type ServerCheck struct {
-	name    string
-	enabled bool
-	server  *models.Server
+	name   string
+	server *models.Server
 }
 
 func NewServerCheck(n string, s *models.Server) *ServerCheck {
@@ -20,14 +19,16 @@ func (a *ServerCheck) GetName() string {
 	return a.name
 }
 
-func (a *ServerCheck) Parse(input string) error {
-	var err error
-	a.enabled, err = utils.GetBoolValue(input, "check")
-	return err
-}
-
-func (a *ServerCheck) Update() error {
-	if a.enabled {
+func (a *ServerCheck) Process(input string) error {
+	if input == "" {
+		a.server.Check = ""
+		return nil
+	}
+	enabled, err := utils.GetBoolValue(input, "check")
+	if err != nil {
+		return err
+	}
+	if enabled {
 		a.server.Check = "enabled"
 	} else {
 		a.server.Check = "disabled"

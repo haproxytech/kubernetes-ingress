@@ -8,7 +8,6 @@ import (
 
 type BackendAbortOnClose struct {
 	name    string
-	enabled bool
 	backend *models.Backend
 }
 
@@ -20,14 +19,16 @@ func (a *BackendAbortOnClose) GetName() string {
 	return a.name
 }
 
-func (a *BackendAbortOnClose) Parse(input string) error {
+func (a *BackendAbortOnClose) Process(input string) error {
+	var enabled bool
 	var err error
-	a.enabled, err = utils.GetBoolValue(input, "abortonclose")
-	return err
-}
-
-func (a *BackendAbortOnClose) Update() error {
-	if a.enabled {
+	if input != "" {
+		enabled, err = utils.GetBoolValue(input, "abortonclose")
+		if err != nil {
+			return err
+		}
+	}
+	if enabled {
 		a.backend.Abortonclose = "enabled"
 	} else {
 		a.backend.Abortonclose = "disabled"

@@ -1,7 +1,7 @@
 package annotations
 
 import (
-	"errors"
+	"fmt"
 	"strconv"
 	"strings"
 
@@ -34,7 +34,7 @@ func (a *GlobalSyslogServers) GetName() string {
 //  syslog-server: |
 //    address:127.0.0.1, port:514, facility:local0
 //    address:192.168.1.1, port:514, facility:local1
-func (a *GlobalSyslogServers) Parse(input string) error {
+func (a *GlobalSyslogServers) Process(input string) error {
 	a.stdout = false
 	for _, syslogLine := range strings.Split(input, "\n") {
 		if syslogLine == "" {
@@ -53,18 +53,16 @@ func (a *GlobalSyslogServers) Parse(input string) error {
 			if len(parts) == 2 {
 				logParams[parts[0]] = parts[1]
 			} else {
-				logger.Errorf("incorrect syslog param: '%s' in '%s'", param, syslogLine)
-				continue
+				return fmt.Errorf("incorrect syslog param: '%s' in '%s'", param, syslogLine)
 			}
 		}
 		// populate annotation data
 		logTarget := models.LogTarget{Index: utils.PtrInt64(0)}
-		if address, ok := logParams["address"]; !ok {
-			logger.Errorf("incorrect syslog Line: no address param in '%s'", syslogLine)
-			continue
-		} else {
-			logTarget.Address = address
+		address, ok := logParams["address"]
+		if !ok {
+			return fmt.Errorf("incorrect syslog Line: no address param in '%s'", syslogLine)
 		}
+		logTarget.Address = address
 		for k, v := range logParams {
 			switch strings.ToLower(k) {
 			case "address":
@@ -88,27 +86,19 @@ func (a *GlobalSyslogServers) Parse(input string) error {
 			case "minlevel":
 				logTarget.Minlevel = v
 			default:
-				logger.Errorf("unknown syslog param: '%s' in '%s' ", k, syslogLine)
-				continue
+				return fmt.Errorf("unknown syslog param: '%s' in '%s' ", k, syslogLine)
 			}
 		}
 		a.logTargets = append(a.logTargets, &logTarget)
 	}
-	if len(a.logTargets) == 0 {
-		return errors.New("could not parse syslog-server annotation")
-	}
-	return nil
-}
 
-func (a *GlobalSyslogServers) Update() error {
+	// Update
+	var err error
 	a.client.GlobalDeleteLogTargets()
 	if len(a.logTargets) == 0 {
-		logger.Infof("log targets removed")
 		return nil
 	}
-	var err error
 	for _, logTarget := range a.logTargets {
-		logger.Infof("adding syslog server: 'address: %s, facility: %s'", logTarget.Address, logTarget.Facility)
 		err = a.client.GlobalCreateLogTarget(logTarget)
 		if err != nil {
 			return err
@@ -124,18 +114,12 @@ func (a *GlobalSyslogServers) Update() error {
 	}
 	if a.stdout {
 		if daemonMode {
-			logger.Info("Disabling Daemon mode")
 			a.global.Daemon = "disabled"
 			a.restart = true
 		}
 	} else if !daemonMode {
-		logger.Info("Enabling Daemon mode")
 		a.global.Daemon = "enabled"
 		a.restart = true
 	}
 	return nil
-}
-
-func (a *GlobalSyslogServers) Restart() bool {
-	return a.restart
 }

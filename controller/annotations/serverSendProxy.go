@@ -8,9 +8,8 @@ import (
 )
 
 type ServerSendProxy struct {
-	name       string
-	proxyPorto string
-	server     *models.Server
+	name   string
+	server *models.Server
 }
 
 func NewServerSendProxy(n string, s *models.Server) *ServerSendProxy {
@@ -21,19 +20,10 @@ func (a *ServerSendProxy) GetName() string {
 	return a.name
 }
 
-func (a *ServerSendProxy) Parse(input string) error {
+func (a *ServerSendProxy) Process(input string) error {
+	var proxyPorto string
 	v := strings.ToLower(input)
 	switch v {
-	case "proxy", "proxy-v1", "proxy-v2", "proxy-v2-ssl", "proxy-v2-ssl-cn":
-		a.proxyPorto = v
-	default:
-		return fmt.Errorf("%s is an unknown enum", input)
-	}
-	return nil
-}
-
-func (a *ServerSendProxy) Update() error {
-	switch a.proxyPorto {
 	case "proxy":
 		a.server.SendProxy = "enabled"
 	case "proxy-v1":
@@ -50,7 +40,7 @@ func (a *ServerSendProxy) Update() error {
 		a.server.SendProxyV2Ssl = ""
 		a.server.SendProxyV2SslCn = ""
 	default:
-		return fmt.Errorf("%s is an unknown enum", a.proxyPorto)
+		return fmt.Errorf("%s is an unknown enum", proxyPorto)
 	}
 	return nil
 }

@@ -8,7 +8,6 @@ import (
 
 type BackendTimeoutCheck struct {
 	name    string
-	timeout *int64
 	backend *models.Backend
 }
 
@@ -20,13 +19,15 @@ func (a *BackendTimeoutCheck) GetName() string {
 	return a.name
 }
 
-func (a *BackendTimeoutCheck) Parse(input string) error {
-	var err error
-	a.timeout, err = utils.ParseTime(input)
-	return err
-}
-
-func (a *BackendTimeoutCheck) Update() error {
-	a.backend.CheckTimeout = a.timeout
+func (a *BackendTimeoutCheck) Process(input string) error {
+	if input == "" {
+		a.backend.CheckTimeout = nil
+		return nil
+	}
+	timeout, err := utils.ParseTime(input)
+	if err != nil {
+		return err
+	}
+	a.backend.CheckTimeout = timeout
 	return nil
 }

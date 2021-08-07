@@ -10,7 +10,6 @@ import (
 
 type BackendForwardedFor struct {
 	name    string
-	params  *models.Forwardfor
 	backend *models.Backend
 }
 
@@ -22,21 +21,24 @@ func (a *BackendForwardedFor) GetName() string {
 	return a.name
 }
 
-func (a *BackendForwardedFor) Parse(input string) error {
+func (a *BackendForwardedFor) Process(input string) error {
+	if input == "" {
+		a.backend.Forwardfor = nil
+		return nil
+	}
+	var params *models.Forwardfor
 	enabled, err := utils.GetBoolValue(input, "forwarded-for")
+	if err != nil {
+		return err
+	}
 	if enabled {
-		params := &models.Forwardfor{
+		params = &models.Forwardfor{
 			Enabled: utils.PtrString("enabled"),
 		}
 		if err = params.Validate(nil); err != nil {
 			return fmt.Errorf("forwarded-for: %w", err)
 		}
-		a.params = params
 	}
-	return err
-}
-
-func (a *BackendForwardedFor) Update() error {
-	a.backend.Forwardfor = a.params
+	a.backend.Forwardfor = params
 	return nil
 }

@@ -8,7 +8,6 @@ import (
 
 type GlobalHardStopAfter struct {
 	name   string
-	data   *int64
 	global *models.Global
 }
 
@@ -20,21 +19,15 @@ func (a *GlobalHardStopAfter) GetName() string {
 	return a.name
 }
 
-func (a *GlobalHardStopAfter) Parse(input string) error {
-	var err error
-	a.data, err = utils.ParseTime(input)
+func (a *GlobalHardStopAfter) Process(input string) error {
+	if input == "" {
+		a.global.HardStopAfter = nil
+		return nil
+	}
+	v, err := utils.ParseTime(input)
 	if err != nil {
 		return err
 	}
-	return nil
-}
-
-func (a *GlobalHardStopAfter) Update() error {
-	if a.data == nil {
-		logger.Infof("Removing hard-stop-after timeout")
-	} else {
-		logger.Infof("Setting hard-stop-after to %ds", *a.data)
-	}
-	a.global.HardStopAfter = a.data
+	a.global.HardStopAfter = v
 	return nil
 }

@@ -3,19 +3,14 @@ package annotations
 import (
 	"github.com/haproxytech/client-native/v2/models"
 
+	"github.com/haproxytech/kubernetes-ingress/controller/haproxy"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/api"
 	"github.com/haproxytech/kubernetes-ingress/controller/store"
 )
 
-func HandleGlobalAnnotations(global *models.Global, defaults *models.Defaults, k8sStore store.K8s, client api.HAProxyClient, annotations map[string]string) {
-	annList := GetGlobalAnnotations(client, global, defaults)
-	for _, a := range annList {
-		annValue := k8sStore.GetValueFromAnnotations(a.GetName(), annotations)
-		if annValue == "" {
-			continue
-		}
-		HandleAnnotation(a, annValue)
-	}
+type Annotation interface {
+	GetName() string
+	Process(value string) error
 }
 
 func GetGlobalAnnotations(client api.HAProxyClient, global *models.Global, defaults *models.Defaults) []Annotation {
@@ -41,5 +36,37 @@ func GetGlobalAnnotations(client api.HAProxyClient, global *models.Global, defau
 		NewDefaultTimeout("timeout-tunnel", defaults),
 		NewDefaultTimeout("timeout-http-keep-alive", defaults),
 		NewDefaultLogFormat("log-format", defaults),
+	}
+}
+
+func GetBackendAnnotations(client api.HAProxyClient, b *models.Backend) []Annotation {
+	annotations := []Annotation{
+		NewBackendCfgSnippet("backend-config-snippet", client, b),
+		NewBackendAbortOnClose("abortonclose", b),
+		NewBackendTimeoutCheck("timeout-check", b),
+		NewBackendLoadBalance("load-balance", b),
+		NewBackendCookie("cookie-persistence", b),
+	}
+	if b.Mode == "http" {
+		annotations = append(annotations,
+			NewBackendCheckHTTP("check-http", b),
+			NewBackendForwardedFor("forwarded-for", b),
+		)
+	}
+	return annotations
+}
+
+func GetServerAnnotations(s *models.Server, k8sStore store.K8s, certs *haproxy.Certificates) []Annotation {
+	return []Annotation{
+		NewServerCheck("check", s),
+		NewServerCheckInter("check-interval", s),
+		NewServerCookie("cookie-persistence", s),
+		NewServerMaxconn("pod-maxconn", s),
+		NewServerSendProxy("send-proxy-protocol", s),
+		// Order is important for ssl annotations so they don't conflict
+		NewServerSSL("server-ssl", s),
+		NewServerCrt("server-crt", k8sStore, certs, s),
+		NewServerCA("server-ca", k8sStore, certs, s),
+		NewServerProto("server-proto", s),
 	}
 }

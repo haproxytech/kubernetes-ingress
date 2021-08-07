@@ -11,7 +11,6 @@ import (
 type DefaultOption struct {
 	name     string
 	defaults *models.Defaults
-	enabled  *bool
 }
 
 func NewDefaultOption(n string, d *models.Defaults) *DefaultOption {
@@ -25,18 +24,8 @@ func (a *DefaultOption) GetName() string {
 	return a.name
 }
 
-func (a *DefaultOption) Parse(input string) error {
-	enabled, err := utils.GetBoolValue(input, a.name)
-	if err != nil {
-		return err
-	}
-	a.enabled = &enabled
-	return nil
-}
-
-func (a *DefaultOption) Update() error {
-	if a.enabled == nil {
-		logger.Infof("Removing option %s", a.name)
+func (a *DefaultOption) Process(input string) error {
+	if input == "" {
 		switch a.name {
 		case "http-server-close", "http-keep-alive":
 			a.defaults.HTTPConnectionMode = ""
@@ -47,9 +36,14 @@ func (a *DefaultOption) Update() error {
 		default:
 			return errors.New("unknown param")
 		}
+		return nil
 	}
-	if *a.enabled {
-		logger.Infof("enabling option %s", a.name)
+
+	enabled, err := utils.GetBoolValue(input, a.name)
+	if err != nil {
+		return err
+	}
+	if enabled {
 		switch a.name {
 		case "http-server-close":
 			a.defaults.HTTPConnectionMode = "http-server-close"
@@ -63,7 +57,6 @@ func (a *DefaultOption) Update() error {
 			return errors.New("unknown param")
 		}
 	} else {
-		logger.Infof("disabling option %s", a.name)
 		switch a.name {
 		case "http-server-close", "http-keep-alive":
 			a.defaults.HTTPConnectionMode = ""

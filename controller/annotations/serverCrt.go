@@ -13,7 +13,6 @@ type ServerCrt struct {
 	name         string
 	haproxyCerts *haproxy.Certificates
 	k8sStore     store.K8s
-	crtFile      string
 	server       *models.Server
 }
 
@@ -30,7 +29,12 @@ func (a *ServerCrt) GetName() string {
 	return a.name
 }
 
-func (a *ServerCrt) Parse(input string) error {
+func (a *ServerCrt) Process(input string) error {
+	if input == "" {
+		a.server.SslCertificate = ""
+		// Other values from serverSSL annotation are kept
+		return nil
+	}
 	crtFile, err := a.haproxyCerts.HandleTLSSecret(a.k8sStore, haproxy.SecretCtx{
 		DefaultNS:  a.server.Namespace,
 		SecretPath: input,
@@ -39,18 +43,9 @@ func (a *ServerCrt) Parse(input string) error {
 	if err != nil && !errors.Is(err, haproxy.ErrCertNotFound) {
 		return err
 	}
-	a.crtFile = crtFile
-	return nil
-}
-
-func (a *ServerCrt) Update() error {
-	if a.crtFile == "" {
-		a.server.SslCertificate = ""
-		return nil
-	}
 	a.server.Ssl = "enabled"
 	a.server.Alpn = "h2,http/1.1"
 	a.server.Verify = "none"
-	a.server.SslCertificate = a.crtFile
+	a.server.SslCertificate = crtFile
 	return nil
 }

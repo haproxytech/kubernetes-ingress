@@ -1,7 +1,6 @@
 package annotations
 
 import (
-	"errors"
 	"fmt"
 	"regexp"
 	"strconv"
@@ -12,7 +11,6 @@ import (
 
 type BackendLoadBalance struct {
 	name    string
-	params  *models.Balance
 	backend *models.Backend
 }
 
@@ -24,8 +22,14 @@ func (a *BackendLoadBalance) GetName() string {
 	return a.name
 }
 
-func (a *BackendLoadBalance) Parse(input string) error {
-	params, err := getParamsFromInput(input)
+func (a *BackendLoadBalance) Process(input string) error {
+	if input == "" {
+		a.backend.Balance = nil
+		return nil
+	}
+	var params *models.Balance
+	var err error
+	params, err = getParamsFromInput(input)
 	if err != nil {
 		return fmt.Errorf("load-balance: %w", err)
 	}
@@ -33,12 +37,7 @@ func (a *BackendLoadBalance) Parse(input string) error {
 	if err := params.Validate(nil); err != nil {
 		return fmt.Errorf("load-balance: %w", err)
 	}
-	a.params = params
-	return nil
-}
-
-func (a *BackendLoadBalance) Update() error {
-	a.backend.Balance = a.params
+	a.backend.Balance = params
 	return nil
 }
 
@@ -46,7 +45,7 @@ func getParamsFromInput(value string) (*models.Balance, error) {
 	balance := &models.Balance{}
 	tokens := strings.Split(value, " ")
 	if len(tokens) == 0 {
-		return nil, errors.New("missing algorithm name")
+		return nil, fmt.Errorf("missing algorithm name")
 	}
 
 	reg := regexp.MustCompile(`(\\(|\\))"`)
@@ -58,8 +57,10 @@ func getParamsFromInput(value string) (*models.Balance, error) {
 		case "hdr":
 			balance.HdrName = algorithmTokens[1]
 		case "random":
-			if randomDraws, err := strconv.Atoi(algorithmTokens[1]); err == nil {
-				balance.RandomDraws = int64(randomDraws)
+			if rand, err := strconv.Atoi(algorithmTokens[1]); err == nil {
+				balance.RandomDraws = int64(rand)
+			} else {
+				return balance, err
 			}
 		case "rdp-cookie":
 			balance.RdpCookieName = algorithmTokens[1]
@@ -76,21 +77,23 @@ func getParamsFromInput(value string) (*models.Balance, error) {
 		switch token {
 		case "len":
 			if i+1 >= len(tokens) {
-				logger.Errorf("Missing parameter for option '%s' in balance configuration", token)
-				continue
+				return balance, fmt.Errorf("missing parameter for option '%s' in balance configuration", token)
 			}
 			if length, err := strconv.Atoi(tokens[i+1]); err == nil {
 				balance.URILen = int64(length)
+			} else {
+				return balance, err
 			}
 			// We already got the next token
 			i++
 		case "depth":
 			if i+1 >= len(tokens) {
-				logger.Errorf("Missing parameter for option '%s' in balance configuration", token)
-				continue
+				return balance, fmt.Errorf("missing parameter for option '%s' in balance configuration", token)
 			}
 			if depth, err := strconv.Atoi(tokens[i+1]); err == nil {
 				balance.URIDepth = int64(depth)
+			} else {
+				return balance, err
 			}
 			// We already got the next token
 			i++
@@ -98,11 +101,12 @@ func getParamsFromInput(value string) (*models.Balance, error) {
 			balance.URIWhole = true
 		case "max_wait":
 			if i+1 >= len(tokens) {
-				logger.Errorf("Missing parameter for option '%s' in balance configuration", token)
-				continue
+				return balance, fmt.Errorf("missing parameter for option '%s' in balance configuration", token)
 			}
 			if maxWait, err := strconv.Atoi(tokens[i+1]); err == nil {
 				balance.URLParamMaxWait = int64(maxWait)
+			} else {
+				return balance, err
 			}
 			// We already got the next token
 			i++
@@ -110,18 +114,19 @@ func getParamsFromInput(value string) (*models.Balance, error) {
 			balance.URIPathOnly = true
 		case "check_post":
 			if i+1 >= len(tokens) {
-				logger.Errorf("Missing parameter for option '%s' in balance configuration", token)
-				continue
+				return balance, fmt.Errorf("missing parameter for option '%s' in balance configuration", token)
 			}
 			if checkPost, err := strconv.Atoi(tokens[i+1]); err == nil {
 				balance.URLParamCheckPost = int64(checkPost)
+			} else {
+				return balance, err
 			}
 			// We already got the next token
 			i++
 		case "use_domain_only":
 			balance.HdrUseDomainOnly = true
 		default:
-			logger.Warningf("balance configuration '%s' is ignored", token)
+			return balance, fmt.Errorf("unknown balance configuration '%s' ", token)
 		}
 	}
 	return balance, nil

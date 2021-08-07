@@ -44,13 +44,11 @@ func (c *HAProxyController) handleGlobalConfig() (reload, restart bool) {
 	}
 	oldGlobal = *global
 	oldDefaults = *defaults
-	annotations.HandleGlobalAnnotations(
-		global,
-		defaults,
-		c.Store,
-		c.Client,
-		c.Store.ConfigMaps.Main.Annotations,
-	)
+
+	for _, a := range annotations.GetGlobalAnnotations(c.Client, global, defaults) {
+		annValue := c.Store.GetValueFromAnnotations(a.GetName(), c.Store.ConfigMaps.Main.Annotations)
+		logger.Error(a.Process(annValue))
+	}
 	result := deep.Equal(&oldGlobal, global)
 	if len(result) != 0 {
 		if err = c.Client.GlobalPushConfiguration(global); err != nil {

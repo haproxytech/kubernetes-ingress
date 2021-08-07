@@ -7,9 +7,8 @@ import (
 )
 
 type ServerCookie struct {
-	name    string
-	enabled bool
-	server  *models.Server
+	name   string
+	server *models.Server
 }
 
 func NewServerCookie(n string, s *models.Server) *ServerCookie {
@@ -20,20 +19,12 @@ func (a *ServerCookie) GetName() string {
 	return a.name
 }
 
-func (a *ServerCookie) Parse(input string) error {
+func (a *ServerCookie) Process(input string) error {
+	// Cookie is handled also at the Backend
 	if len(strings.Fields(input)) != 1 {
-		// Error should already be reported in BackendCookie
-		return nil
-	}
-	a.enabled = true
-	return nil
-}
-
-func (a *ServerCookie) Update() error {
-	if a.enabled {
-		a.server.Cookie = a.server.Name
-	} else {
 		a.server.Cookie = ""
+	} else {
+		a.server.Cookie = a.server.Name
 	}
 	return nil
 }

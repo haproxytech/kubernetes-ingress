@@ -8,7 +8,6 @@ import (
 
 type ServerCheckInter struct {
 	name   string
-	inter  int64
 	server *models.Server
 }
 
@@ -20,16 +19,15 @@ func (a *ServerCheckInter) GetName() string {
 	return a.name
 }
 
-func (a *ServerCheckInter) Parse(input string) error {
+func (a *ServerCheckInter) Process(input string) error {
+	if input == "" {
+		a.server.Inter = nil
+		return nil
+	}
 	value, err := utils.ParseTime(input)
 	if err != nil {
 		return err
 	}
-	a.inter = *value
-	return nil
-}
-
-func (a *ServerCheckInter) Update() error {
-	a.server.Inter = &a.inter
+	a.server.Inter = value
 	return nil
 }
