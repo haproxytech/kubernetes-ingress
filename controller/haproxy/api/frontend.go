@@ -7,15 +7,15 @@ import (
 	"github.com/haproxytech/config-parser/v4/types"
 )
 
-func (c *clientNative) FrontendCfgSnippetSet(frontendName string, value *[]string) error {
+func (c *clientNative) FrontendCfgSnippetSet(frontendName string, value []string) error {
 	config, err := c.nativeAPI.Configuration.GetParser(c.activeTransaction)
 	if err != nil {
 		return err
 	}
-	if value == nil {
+	if len(value) == 0 {
 		err = config.Set("frontend", frontendName, "config-snippet", nil)
 	} else {
-		err = config.Set("frontend", frontendName, "config-snippet", types.StringSliceC{Value: *value})
+		err = config.Set("frontend", frontendName, "config-snippet", types.StringSliceC{Value: value})
 	}
 	if err != nil {
 		c.activeTransactionHasChanges = true

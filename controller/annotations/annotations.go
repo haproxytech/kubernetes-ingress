@@ -17,9 +17,10 @@ type Annotation interface {
 
 func GetGlobalAnnotations(client api.HAProxyClient, g *models.Global) []Annotation {
 	return []Annotation{
-		global.NewFrontendCfgSnippet("frontend-config-snippet", client, []string{"http", "https"}),
-		global.NewFrontendCfgSnippet("stats-config-snippet", client, []string{"stats"}),
-		global.NewCfgSnippet("global-config-snippet", client),
+		NewGlobalCfgSnippet("global-config-snippet"),
+		NewFrontendCfgSnippet("frontend-config-snippet", "http"),
+		NewFrontendCfgSnippet("frontend-config-snippet", "https"),
+		NewFrontendCfgSnippet("stats-config-snippet", "stats"),
 		global.NewSyslogServers("syslog-server", client, g),
 		global.NewNbthread("nbthread", g),
 		global.NewMaxconn("maxconn", g),
@@ -46,13 +47,12 @@ func GetDefaultsAnnotations(d *models.Defaults) []Annotation {
 	}
 }
 
-func GetBackendAnnotations(client api.HAProxyClient, b *models.Backend) []Annotation {
+func GetBackendAnnotations(b *models.Backend) []Annotation {
 	annotations := []Annotation{
-		service.NewCfgSnippet("backend-config-snippet", client, b),
+		NewBackendCfgSnippet("backend-config-snippet", b.Name),
 		service.NewAbortOnClose("abortonclose", b),
 		service.NewTimeoutCheck("timeout-check", b),
 		service.NewLoadBalance("load-balance", b),
-		service.NewCookie("cookie-persistence", b, nil),
 	}
 	if b.Mode == "http" {
 		annotations = append(annotations,

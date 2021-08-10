@@ -15,12 +15,16 @@ func (c *clientNative) DefaultsPushConfiguration(defaults *models.Defaults) erro
 	return c.nativeAPI.Configuration.PushDefaultsConfiguration(defaults, c.activeTransaction, 0)
 }
 
-func (c *clientNative) GlobalCfgSnippet(value *types.StringSliceC) error {
+func (c *clientNative) GlobalCfgSnippet(value []string) error {
 	config, err := c.nativeAPI.Configuration.GetParser(c.activeTransaction)
 	if err != nil {
 		return err
 	}
-	err = config.Set(parser.Global, parser.GlobalSectionName, "config-snippet", value)
+	if len(value) == 0 {
+		err = config.Set(parser.Global, parser.GlobalSectionName, "config-snippet", nil)
+	} else {
+		err = config.Set(parser.Global, parser.GlobalSectionName, "config-snippet", types.StringSliceC{Value: value})
+	}
 	return err
 }
 

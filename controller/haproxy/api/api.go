@@ -5,7 +5,6 @@ import (
 	"github.com/haproxytech/client-native/v2/configuration"
 	"github.com/haproxytech/client-native/v2/models"
 	"github.com/haproxytech/client-native/v2/runtime"
-	"github.com/haproxytech/config-parser/v4/types"
 
 	"github.com/haproxytech/kubernetes-ingress/controller/store"
 )
@@ -19,7 +18,7 @@ type HAProxyClient interface {
 	BackendCreate(backend models.Backend) error
 	BackendEdit(backend models.Backend) error
 	BackendDelete(backendName string) error
-	BackendCfgSnippetSet(backendName string, value *[]string) error
+	BackendCfgSnippetSet(backendName string, value []string) error
 	BackendHTTPRequestRuleCreate(backend string, rule models.HTTPRequestRule) error
 	BackendRuleDeleteAll(backend string)
 	BackendServerDeleteAll(backendName string) (deleteServers bool)
@@ -31,7 +30,7 @@ type HAProxyClient interface {
 	DefaultsGetConfiguration() (*models.Defaults, error)
 	DefaultsPushConfiguration(*models.Defaults) error
 	ExecuteRaw(command string) (result []string, err error)
-	FrontendCfgSnippetSet(frontendName string, value *[]string) error
+	FrontendCfgSnippetSet(frontendName string, value []string) error
 	FrontendCreate(frontend models.Frontend) error
 	FrontendDelete(frontendName string) error
 	FrontendsGet() (models.Frontends, error)
@@ -50,7 +49,7 @@ type HAProxyClient interface {
 	GlobalDeleteLogTargets()
 	GlobalGetConfiguration() (*models.Global, error)
 	GlobalPushConfiguration(*models.Global) error
-	GlobalCfgSnippet(snippet *types.StringSliceC) error
+	GlobalCfgSnippet(snippet []string) error
 	GetMap(mapFile string) (*models.Map, error)
 	SetMapContent(mapFile string, payload string) error
 	SetServerAddr(backendName string, serverName string, ip string, port int) error

@@ -33,15 +33,15 @@ func (c *clientNative) BackendDelete(backendName string) error {
 	return c.nativeAPI.Configuration.DeleteBackend(backendName, c.activeTransaction, 0)
 }
 
-func (c *clientNative) BackendCfgSnippetSet(backendName string, value *[]string) error {
+func (c *clientNative) BackendCfgSnippetSet(backendName string, value []string) error {
 	config, err := c.nativeAPI.Configuration.GetParser(c.activeTransaction)
 	if err != nil {
 		return err
 	}
-	if value == nil {
+	if len(value) == 0 {
 		err = config.Set("backend", backendName, "config-snippet", nil)
 	} else {
-		err = config.Set("backend", backendName, "config-snippet", types.StringSliceC{Value: *value})
+		err = config.Set("backend", backendName, "config-snippet", types.StringSliceC{Value: value})
 	}
 	if err != nil {
 		c.activeTransactionHasChanges = true

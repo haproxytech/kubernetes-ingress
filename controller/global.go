@@ -57,6 +57,12 @@ func (c *HAProxyController) globalCfg() (restart bool) {
 		logger.Debugf("Global config updated: %s\nRestart required", result)
 		restart = true
 	}
+	change, errSnipp := annotations.UpdateGlobalCfgSnippet(c.Client)
+	logger.Error(errSnipp)
+	restart = restart || change
+	change, errSnipp = annotations.UpdateFrontendCfgSnippet(c.Client, "http", "https", "stats")
+	logger.Error(errSnipp)
+	restart = restart || change
 	return
 }
 
