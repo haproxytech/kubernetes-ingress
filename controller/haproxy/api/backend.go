@@ -100,10 +100,10 @@ func (c *clientNative) BackendSwitchingRuleDeleteAll(frontend string) {
 	}
 }
 
-func (c *clientNative) ServerGet(serverName, backendName string) (*models.Server, error) {
+func (c *clientNative) ServerGet(serverName, backendName string) (models.Server, error) {
 	_, server, err := c.nativeAPI.Configuration.GetServer(serverName, backendName, c.activeTransaction)
 	if err != nil {
-		return nil, err
+		return models.Server{}, err
 	}
-	return server, nil
+	return *server, nil
 }

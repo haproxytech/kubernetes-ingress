@@ -32,18 +32,30 @@ import (
 // HandleEndpoints lookups the IngressPath related endpoints and handles corresponding backend servers configuration in HAProxy
 func (s *SvcContext) HandleEndpoints(client api.HAProxyClient, store store.K8s, certs *haproxy.Certificates) (reload bool) {
 	var srvsScaled, srvsActiveAnn bool
-	var srv, oldSrv *models.Server
 	endpoints, err := s.getEndpoints(store)
 	if err != nil {
 		logger.Warningf("Ingress '%s/%s': %s", s.ingress.Namespace, s.ingress.Name, err)
 		return
 	}
-	// set backendName in store.PortEndpoints for runtime updates.
-	endpoints.BackendName = s.backendName
+	endpoints.BackendName = s.backendName // set backendName in store.PortEndpoints for runtime updates.
+	// scale servers
 	if s.service.DNS == "" {
 		srvsScaled = s.scaleHAProxySrvs(endpoints, store)
 	}
-	srv = &models.Server{}
+	// update servers
+	srv, _ := client.ServerGet("SRV_1", s.backendName)
+	srvsActiveAnn = s.handleSrvAnnotations(&srv, store, certs)
+	for _, srvSlot := range endpoints.HAProxySrvs {
+		if srvSlot.Modified || srvsActiveAnn {
+			s.updateHAProxySrv(client, srv, *srvSlot, endpoints.Port)
+		}
+	}
+	return srvsScaled || srvsActiveAnn
+}
+
+func (s *SvcContext) handleSrvAnnotations(srv *models.Server, store store.K8s, certs *haproxy.Certificates) bool {
+	var err error
+	oldSrv := *srv
 	for _, a := range annotations.GetServerAnnotations(srv, store, certs) {
 		annValue := annotations.GetValue(a.GetName(), s.service.Annotations, s.ingress.Annotations, s.store.ConfigMaps.Main.Annotations)
 		err = a.Process(annValue)
@@ -51,22 +63,15 @@ func (s *SvcContext) HandleEndpoints(client api.HAProxyClient, store store.K8s, 
 			logger.Errorf("service %s/%s: annotation '%s': %s", s.service.Namespace, s.service.Name, a.GetName(), err)
 		}
 	}
-	if !s.newBackend {
-		oldSrv, _ = client.ServerGet("SRV_1", s.backendName)
-		srv.Name = "SRV_1"
-		result := deep.Equal(oldSrv, srv)
-		if len(result) != 0 {
-			srvsActiveAnn = true
-			logger.Debugf("Ingress '%s/%s': server options for backend '%s' were updated:%s\nReload required", s.ingress.Namespace, s.ingress.Name, endpoints.BackendName, result)
-		}
+	if s.newBackend {
+		return true
 	}
-	for _, srvSlot := range endpoints.HAProxySrvs {
-		if srvSlot.Modified || s.newBackend || srvsActiveAnn {
-			s.updateHAProxySrv(client, *srv, *srvSlot, endpoints.Port)
-		}
+	result := deep.Equal(&oldSrv, srv)
+	if len(result) != 0 {
+		logger.Debugf("Ingress '%s/%s': server options for backend '%s' were updated:%s\nReload required", s.ingress.Namespace, s.ingress.Name, s.backendName, result)
+		return true
 	}
-
-	return srvsScaled || srvsActiveAnn
+	return false
 }
 
 // updateHAProxySrv updates corresponding HAProxy backend server or creates one if it does not exist
