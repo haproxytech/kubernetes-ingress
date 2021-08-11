@@ -6,7 +6,6 @@ import (
 	"github.com/haproxytech/kubernetes-ingress/controller/annotations/global"
 	"github.com/haproxytech/kubernetes-ingress/controller/annotations/service"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy"
-	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/api"
 	"github.com/haproxytech/kubernetes-ingress/controller/store"
 )
 
@@ -15,13 +14,13 @@ type Annotation interface {
 	Process(value string) error
 }
 
-func GetGlobalAnnotations(client api.HAProxyClient, g *models.Global) []Annotation {
+func GetGlobalAnnotations(g *models.Global, l *models.LogTargets) []Annotation {
 	return []Annotation{
 		NewGlobalCfgSnippet("global-config-snippet"),
 		NewFrontendCfgSnippet("frontend-config-snippet", "http"),
 		NewFrontendCfgSnippet("frontend-config-snippet", "https"),
 		NewFrontendCfgSnippet("stats-config-snippet", "stats"),
-		global.NewSyslogServers("syslog-server", client, g),
+		global.NewSyslogServers("syslog-server", g, l),
 		global.NewNbthread("nbthread", g),
 		global.NewMaxconn("maxconn", g),
 		global.NewHardStopAfter("hard-stop-after", g),

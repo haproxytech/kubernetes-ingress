@@ -28,11 +28,22 @@ func (c *clientNative) GlobalCfgSnippet(value []string) error {
 	return err
 }
 
-func (c *clientNative) GlobalCreateLogTarget(logTarget *models.LogTarget) error {
+func (c *clientNative) GlobalGetLogTargets() (lg models.LogTargets, err error) {
+	c.activeTransactionHasChanges = true
+	_, lg, err = c.nativeAPI.Configuration.GetLogTargets("global", parser.GlobalSectionName, c.activeTransaction)
+	return
+}
+
+func (c *clientNative) GlobalCreateLogTargets(logTargets models.LogTargets) error {
 	var err error
 	c.activeTransactionHasChanges = true
-	err = c.nativeAPI.Configuration.CreateLogTarget(string(parser.Global), parser.GlobalSectionName, logTarget, c.activeTransaction, 0)
-	return err
+	for _, log := range logTargets {
+		err = c.nativeAPI.Configuration.CreateLogTarget(string(parser.Global), parser.GlobalSectionName, log, c.activeTransaction, 0)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (c *clientNative) GlobalDeleteLogTargets() {
@@ -45,11 +56,11 @@ func (c *clientNative) GlobalDeleteLogTargets() {
 	}
 }
 
-func (c *clientNative) GlobalGetConfiguration() (global *models.Global, err error) {
-	_, global, err = c.nativeAPI.Configuration.GetGlobalConfiguration(c.activeTransaction)
-	return
+func (c *clientNative) GlobalGetConfiguration() (models.Global, error) {
+	_, global, err := c.nativeAPI.Configuration.GetGlobalConfiguration(c.activeTransaction)
+	return *global, err
 }
 
-func (c *clientNative) GlobalPushConfiguration(global *models.Global) error {
-	return c.nativeAPI.Configuration.PushGlobalConfiguration(global, c.activeTransaction, 0)
+func (c *clientNative) GlobalPushConfiguration(global models.Global) error {
+	return c.nativeAPI.Configuration.PushGlobalConfiguration(&global, c.activeTransaction, 0)
 }

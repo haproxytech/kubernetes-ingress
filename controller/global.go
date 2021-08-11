@@ -35,26 +35,38 @@ func (c *HAProxyController) handleGlobalConfig() (reload, restart bool) {
 }
 
 func (c *HAProxyController) globalCfg() (restart bool) {
-	var oldGlobal models.Global
-	global, err := c.Client.GlobalGetConfiguration()
-	if err != nil {
-		logger.Error(err)
+	var newGlobal models.Global
+	var newLg models.LogTargets
+	var err error
+	global, errG := c.Client.GlobalGetConfiguration()
+	if errG != nil {
+		logger.Error(errG)
 		return
 	}
-	oldGlobal = *global
-	for _, a := range annotations.GetGlobalAnnotations(c.Client, global) {
+	lg, errL := c.Client.GlobalGetLogTargets()
+	if errL != nil {
+		logger.Error(errL)
+		return
+	}
+	newGlobal = global
+	for _, a := range annotations.GetGlobalAnnotations(&newGlobal, &newLg) {
 		annValue := annotations.GetValue(a.GetName(), c.Store.ConfigMaps.Main.Annotations)
 		err = a.Process(annValue)
 		if err != nil {
 			logger.Errorf("annotation %s: %s", a.GetName(), err)
 		}
 	}
-	result := deep.Equal(&oldGlobal, global)
+	result := deep.Equal(newGlobal, global)
 	if len(result) != 0 {
-		if err = c.Client.GlobalPushConfiguration(global); err != nil {
-			return
-		}
+		logger.Error(c.Client.GlobalPushConfiguration(newGlobal))
 		logger.Debugf("Global config updated: %s\nRestart required", result)
+		restart = true
+	}
+	result = deep.Equal(newLg, lg)
+	if len(result) != 0 {
+		c.Client.GlobalDeleteLogTargets()
+		logger.Error(c.Client.GlobalCreateLogTargets(newLg))
+		logger.Debugf("Syslog servers updated: %s\nRestart required", result)
 		restart = true
 	}
 	change, errSnipp := annotations.UpdateGlobalCfgSnippet(c.Client)

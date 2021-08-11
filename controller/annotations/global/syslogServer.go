@@ -7,21 +7,18 @@ import (
 
 	"github.com/haproxytech/client-native/v2/models"
 
-	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/api"
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 )
 
 type SyslogServers struct {
 	name       string
 	global     *models.Global
-	logTargets models.LogTargets
-	client     api.HAProxyClient
+	logTargets *models.LogTargets
 	stdout     bool
-	restart    bool
 }
 
-func NewSyslogServers(n string, c api.HAProxyClient, g *models.Global) *SyslogServers {
-	return &SyslogServers{name: n, client: c, global: g}
+func NewSyslogServers(n string, g *models.Global, l *models.LogTargets) *SyslogServers {
+	return &SyslogServers{name: n, global: g, logTargets: l}
 }
 
 func (a *SyslogServers) GetName() string {
@@ -89,37 +86,20 @@ func (a *SyslogServers) Process(input string) error {
 				return fmt.Errorf("unknown syslog param: '%s' in '%s' ", k, syslogLine)
 			}
 		}
-		a.logTargets = append(a.logTargets, &logTarget)
+		*(a.logTargets) = append(*(a.logTargets), &logTarget)
 	}
 
-	// Update
-	var err error
-	a.client.GlobalDeleteLogTargets()
-	if len(a.logTargets) == 0 {
-		return nil
-	}
-	for _, logTarget := range a.logTargets {
-		err = a.client.GlobalCreateLogTarget(logTarget)
-		if err != nil {
-			return err
-		}
-	}
 	// stdout logging won't work with daemon mode
 	var daemonMode bool
 	if a.global.Daemon == "enabled" {
 		daemonMode = true
 	}
-	if err != nil {
-		return err
-	}
 	if a.stdout {
 		if daemonMode {
 			a.global.Daemon = "disabled"
-			a.restart = true
 		}
 	} else if !daemonMode {
 		a.global.Daemon = "enabled"
-		a.restart = true
 	}
 	return nil
 }
