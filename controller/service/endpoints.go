@@ -45,7 +45,7 @@ func (s *SvcContext) HandleEndpoints(client api.HAProxyClient, store store.K8s, 
 	}
 	srv = &models.Server{}
 	for _, a := range annotations.GetServerAnnotations(srv, store, certs) {
-		annValue := store.GetValueFromAnnotations(a.GetName(), s.service.Annotations, s.ingress.Annotations, s.store.ConfigMaps.Main.Annotations)
+		annValue := annotations.GetValue(a.GetName(), s.service.Annotations, s.ingress.Annotations, s.store.ConfigMaps.Main.Annotations)
 		err = a.Process(annValue)
 		if err != nil {
 			logger.Errorf("service %s/%s: annotation '%s': %s", s.service.Namespace, s.service.Name, a.GetName(), err)
@@ -103,7 +103,7 @@ func (s *SvcContext) scaleHAProxySrvs(endpoints *store.PortEndpoints, k8sStore s
 	// scale-server-slots has a default value in defaultAnnotations
 	// "servers-increment", "server-slots" are legacy annotations
 	for _, annotation := range []string{"servers-increment", "server-slots", "scale-server-slots"} {
-		annServerSlots := k8sStore.GetValueFromAnnotations(annotation, k8sStore.ConfigMaps.Main.Annotations)
+		annServerSlots := annotations.GetValue(annotation, k8sStore.ConfigMaps.Main.Annotations)
 		if annServerSlots != "" {
 			if value, err := strconv.Atoi(annServerSlots); err == nil {
 				srvSlots = value

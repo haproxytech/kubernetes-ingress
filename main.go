@@ -27,6 +27,7 @@ import (
 
 	"github.com/google/renameio"
 	c "github.com/haproxytech/kubernetes-ingress/controller"
+	"github.com/haproxytech/kubernetes-ingress/controller/annotations"
 	config "github.com/haproxytech/kubernetes-ingress/controller/configuration"
 	"github.com/haproxytech/kubernetes-ingress/controller/store"
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
@@ -151,10 +152,8 @@ func main() {
 	logger.FileName = true
 	// K8s Store
 	s := store.NewK8sStore(osArgs)
-	s.SetDefaultAnnotation("default-backend-service", defaultBackendSvc)
-	s.SetDefaultAnnotation("ssl-certificate", defaultCertificate)
-	s.SetDefaultAnnotation("sync-period", osArgs.SyncPeriod.String())
-	s.SetDefaultAnnotation("cache-resync-period", osArgs.CacheResyncPeriod.String())
+	annotations.SetDefaultValue("default-backend-service", defaultBackendSvc)
+	annotations.SetDefaultValue("ssl-certificate", defaultCertificate)
 	for _, namespace := range osArgs.NamespaceWhitelist {
 		s.NamespacesAccess.Whitelist[namespace] = struct{}{}
 	}

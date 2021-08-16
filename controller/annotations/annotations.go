@@ -77,3 +77,53 @@ func GetServerAnnotations(s *models.Server, k8sStore store.K8s, certs *haproxy.C
 		service.NewProto("server-proto", s),
 	}
 }
+
+// GetValue returns value by checking in multiple annotations.
+func GetValue(annotationName string, annotations ...map[string]string) string {
+	for _, a := range annotations {
+		val, ok := a[annotationName]
+		if ok {
+			return val
+		}
+	}
+	return defaultValues[annotationName]
+}
+
+func SetDefaultValue(annotation, value string) {
+	defaultValues[annotation] = value
+}
+
+var defaultValues = map[string]string{
+	"auth-realm":              "Protected Content",
+	"check":                   "true",
+	"cors-allow-origin":       "*",
+	"cors-allow-methods":      "*",
+	"cors-allow-headers":      "*",
+	"cors-max-age":            "5s",
+	"cookie-indirect":         "true",
+	"cookie-nocache":          "true",
+	"cookie-type":             "insert",
+	"forwarded-for":           "true",
+	"load-balance":            "roundrobin",
+	"log-format":              "%ci:%cp [%tr] %ft %b/%s %TR/%Tw/%Tc/%Tr/%Ta %ST %B %CC %CS %tsc %ac/%fc/%bc/%sc/%rc %sq/%bq %hr %hs \"%HM %[var(txn.base)] %HV\"",
+	"rate-limit-size":         "100k",
+	"rate-limit-period":       "1s",
+	"rate-limit-status-code":  "403",
+	"request-capture-len":     "128",
+	"ssl-redirect-code":       "302",
+	"request-redirect-code":   "302",
+	"ssl-redirect-port":       "443",
+	"ssl-passthrough":         "false",
+	"server-ssl":              "false",
+	"scale-server-slots":      "42",
+	"syslog-server":           "address:127.0.0.1, facility: local0, level: notice",
+	"timeout-http-request":    "5s",
+	"timeout-connect":         "5s",
+	"timeout-client":          "50s",
+	"timeout-queue":           "5s",
+	"timeout-server":          "50s",
+	"timeout-tunnel":          "1h",
+	"timeout-http-keep-alive": "1m",
+	"hard-stop-after":         "1h",
+	"client-crt-optional":     "false",
+}

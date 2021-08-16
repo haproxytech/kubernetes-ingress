@@ -31,7 +31,7 @@ func (c *HAProxyController) monitorChanges() {
 	stop := make(chan struct{})
 
 	for _, namespace := range c.getWhitelistedNamespaces() {
-		factory := informers.NewSharedInformerFactoryWithOptions(c.k8s.API, c.Store.GetTimeFromAnnotation("cache-resync-period"), informers.WithNamespace(namespace))
+		factory := informers.NewSharedInformerFactoryWithOptions(c.k8s.API, c.OSArgs.CacheResyncPeriod, informers.WithNamespace(namespace))
 
 		pi := factory.Core().V1().Endpoints().Informer()
 		c.k8s.EventsEndpoints(c.eventChan, stop, pi)
@@ -67,7 +67,7 @@ func (c *HAProxyController) monitorChanges() {
 		logger.Panic("Caches are not populated due to an underlying error, cannot run the Ingress Controller")
 	}
 
-	syncPeriod := c.Store.GetTimeFromAnnotation("sync-period")
+	syncPeriod := c.OSArgs.SyncPeriod
 	logger.Debugf("Executing syncPeriod every %s", syncPeriod.String())
 	for {
 		time.Sleep(syncPeriod)

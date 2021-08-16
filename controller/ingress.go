@@ -17,6 +17,7 @@ package controller
 import (
 	"github.com/haproxytech/client-native/v2/models"
 
+	"github.com/haproxytech/kubernetes-ingress/controller/annotations"
 	"github.com/haproxytech/kubernetes-ingress/controller/route"
 	"github.com/haproxytech/kubernetes-ingress/controller/service"
 	"github.com/haproxytech/kubernetes-ingress/controller/store"
@@ -32,7 +33,7 @@ import (
 func (c *HAProxyController) igClassIsSupported(ingress *store.Ingress) bool {
 	var igClassAnn string
 	var igClass *store.IngressClass
-	igClassAnn = c.Store.GetValueFromAnnotations("ingress.class", ingress.Annotations)
+	igClassAnn = annotations.GetValue("ingress.class", ingress.Annotations)
 
 	// If ingress class is unassigned and the controller is controlling any resource without explicit ingress class then support it.
 	if igClassAnn == "" && c.OSArgs.EmptyIngressClass {
@@ -79,7 +80,7 @@ func (c *HAProxyController) handleIngressPath(ingress *store.Ingress, host strin
 		BackendName:    backendName,
 		SSLPassthrough: sslPassthrough,
 	}
-	routeACLAnn := c.Store.GetValueFromAnnotations("route-acl", svc.GetService().Annotations)
+	routeACLAnn := annotations.GetValue("route-acl", svc.GetService().Annotations)
 	if routeACLAnn == "" {
 		if _, ok := route.CustomRoutes[backendName]; ok {
 			delete(route.CustomRoutes, backendName)
@@ -150,9 +151,9 @@ func (c *HAProxyController) sslPassthroughEnabled(ingress *store.Ingress, path *
 		service, ok = c.Store.Namespaces[ingress.Namespace].Services[path.SvcName]
 	}
 	if ok {
-		annSSLPassthrough = c.Store.GetValueFromAnnotations("ssl-passthrough", service.Annotations, ingress.Annotations, c.Store.ConfigMaps.Main.Annotations)
+		annSSLPassthrough = annotations.GetValue("ssl-passthrough", service.Annotations, ingress.Annotations, c.Store.ConfigMaps.Main.Annotations)
 	} else {
-		annSSLPassthrough = c.Store.GetValueFromAnnotations("ssl-passthrough", ingress.Annotations, c.Store.ConfigMaps.Main.Annotations)
+		annSSLPassthrough = annotations.GetValue("ssl-passthrough", ingress.Annotations, c.Store.ConfigMaps.Main.Annotations)
 	}
 	if annSSLPassthrough == "" {
 		return false

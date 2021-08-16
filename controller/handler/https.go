@@ -20,6 +20,7 @@ import (
 
 	"github.com/haproxytech/client-native/v2/models"
 
+	"github.com/haproxytech/kubernetes-ingress/controller/annotations"
 	config "github.com/haproxytech/kubernetes-ingress/controller/configuration"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/api"
@@ -72,8 +73,8 @@ func (h HTTPS) bindList(passhthrough bool) (binds []models.Bind) {
 }
 
 func (h HTTPS) handleClientTLSAuth(k store.K8s, cfg *config.ControllerCfg, api api.HAProxyClient) (reload bool, err error) {
-	annTLSAuth := k.GetValueFromAnnotations("client-ca", k.ConfigMaps.Main.Annotations)
-	annTLSVerify := k.GetValueFromAnnotations("client-crt-optional", k.ConfigMaps.Main.Annotations)
+	annTLSAuth := annotations.GetValue("client-ca", k.ConfigMaps.Main.Annotations)
+	annTLSVerify := annotations.GetValue("client-crt-optional", k.ConfigMaps.Main.Annotations)
 	if annTLSAuth == "" {
 		return false, nil
 	}
@@ -246,7 +247,7 @@ func (h HTTPS) toggleSSLPassthrough(passthrough bool, cfg *config.ControllerCfg,
 
 func (h HTTPS) sslPassthroughRules(k store.K8s, cfg *config.ControllerCfg) error {
 	inspectTimeout := utils.PtrInt64(5000)
-	annTimeout := k.GetValueFromAnnotations("timeout-client", k.ConfigMaps.Main.Annotations)
+	annTimeout := annotations.GetValue("timeout-client", k.ConfigMaps.Main.Annotations)
 	if annTimeout != "" {
 		if value, errParse := utils.ParseTime(annTimeout); errParse == nil {
 			inspectTimeout = value

@@ -15,6 +15,7 @@
 package handler
 
 import (
+	"github.com/haproxytech/kubernetes-ingress/controller/annotations"
 	config "github.com/haproxytech/kubernetes-ingress/controller/configuration"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/api"
 	"github.com/haproxytech/kubernetes-ingress/controller/store"
@@ -25,7 +26,7 @@ type Refresh struct{}
 
 func (h Refresh) Update(k store.K8s, cfg *config.ControllerCfg, api api.HAProxyClient) (reload bool, err error) {
 	cleanCrts := true
-	if cleanCrtAnn := k.GetValueFromAnnotations("clean-certs", k.ConfigMaps.Main.Annotations); cleanCrtAnn != "" {
+	if cleanCrtAnn := annotations.GetValue("clean-certs", k.ConfigMaps.Main.Annotations); cleanCrtAnn != "" {
 		cleanCrts, err = utils.GetBoolValue(cleanCrtAnn, "clean-certs")
 	}
 	if cleanCrts {

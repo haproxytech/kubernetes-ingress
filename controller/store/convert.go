@@ -16,6 +16,7 @@ package store
 
 import (
 	"fmt"
+	"strings"
 
 	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
 	networkingv1 "k8s.io/api/networking/v1"
@@ -358,4 +359,14 @@ func getIgClass(className *string) string {
 		return ""
 	}
 	return *className
+}
+
+// CopyAnnotations returns a copy of annotations map and removes prefixe from annotations name
+func CopyAnnotations(in map[string]string) map[string]string {
+	out := make(map[string]string, len(in))
+	for name, value := range in {
+		split := strings.SplitN(name, "/", 2)
+		out[split[len(split)-1]] = value
+	}
+	return out
 }

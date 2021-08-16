@@ -43,7 +43,7 @@ func (c *HAProxyController) globalCfg() (restart bool) {
 	}
 	oldGlobal = *global
 	for _, a := range annotations.GetGlobalAnnotations(c.Client, global) {
-		annValue := c.Store.GetValueFromAnnotations(a.GetName(), c.Store.ConfigMaps.Main.Annotations)
+		annValue := annotations.GetValue(a.GetName(), c.Store.ConfigMaps.Main.Annotations)
 		err = a.Process(annValue)
 		if err != nil {
 			logger.Errorf("annotation %s: %s", a.GetName(), err)
@@ -69,7 +69,7 @@ func (c *HAProxyController) defaultsCfg() (reload bool) {
 	}
 	oldDefaults = *defaults
 	for _, a := range annotations.GetDefaultsAnnotations(defaults) {
-		annValue := c.Store.GetValueFromAnnotations(a.GetName(), c.Store.ConfigMaps.Main.Annotations)
+		annValue := annotations.GetValue(a.GetName(), c.Store.ConfigMaps.Main.Annotations)
 		logger.Error(a.Process(annValue))
 	}
 	result := deep.Equal(&oldDefaults, defaults)
@@ -86,7 +86,7 @@ func (c *HAProxyController) defaultsCfg() (reload bool) {
 
 // handleDefaultService configures HAProy default backend provided via cli param "default-backend-service"
 func (c *HAProxyController) handleDefaultService() (reload bool) {
-	dsvcData := c.Store.GetValueFromAnnotations("default-backend-service")
+	dsvcData := annotations.GetValue("default-backend-service")
 	if dsvcData == "" {
 		return
 	}
@@ -129,7 +129,7 @@ func (c *HAProxyController) handleDefaultService() (reload bool) {
 
 // handleDefaultCert configures default/fallback HAProxy certificate to use for client HTTPS requests.
 func (c *HAProxyController) handleDefaultCert() {
-	secretAnn := c.Store.GetValueFromAnnotations("ssl-certificate", c.Store.ConfigMaps.Main.Annotations)
+	secretAnn := annotations.GetValue("ssl-certificate", c.Store.ConfigMaps.Main.Annotations)
 	if secretAnn == "" {
 		return
 	}
