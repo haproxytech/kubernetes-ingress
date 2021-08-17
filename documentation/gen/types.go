@@ -15,6 +15,7 @@ type ConfArg struct {
 	Values      []string `yaml:"values"`
 	VersionMin  Version  `yaml:"version_min"`
 	VersionMax  Version  `yaml:"version_max,omitempty"`
+	External    bool     `yaml:"external,omitempty"`
 	Example     string   `yaml:"example,omitempty,flow"`
 	Helm        string   `yaml:"helm,omitempty"`
 }
@@ -52,7 +53,6 @@ type Conf struct {
 }
 
 func (c *Conf) getConf() *Conf {
-
 	yamlFile, err := ioutil.ReadFile("../doc.yaml")
 	if err != nil {
 		log.Printf("yamlFile.Get err   #%v ", err)
@@ -73,6 +73,7 @@ func Contains(values []string, key string) string {
 	}
 	return ":white_circle:"
 }
+
 func ContainsB(values []string, key string) bool {
 	for _, v := range values {
 		if v == key {

@@ -60,6 +60,10 @@ func (c *Conf) generateReadmeController() {
 		for _, tip := range ann.Tip {
 			buff.WriteString(fmt.Sprintf("\n  :information_source: %s\n", tip))
 		}
+		if ann.External && ann.Argument != `--external` {
+			buff.WriteString("\n:warning: this is only available in external mode\n\n")
+		}
+
 		buff.WriteString("\nPossible values:\n\n")
 		for _, value := range ann.Values {
 			buff.WriteString(fmt.Sprintf("- %s\n", writeValue(value, ann.Default)))
@@ -75,5 +79,4 @@ func (c *Conf) generateReadmeController() {
 	if err != nil {
 		log.Println(err)
 	}
-
 }

@@ -570,6 +570,9 @@ args:
 
   Path to HAProxy binary to use when running controller in [external mode](#--external).
 
+:warning: this is only available in external mode
+
+
 Possible values:
 
 - Path to HAProxy binary
@@ -590,6 +593,9 @@ args:
 
   Path to HAProxy configuration directory when running controller in [external mode](#--external). Configuration directory is where resources like configuration file, certificates, haproxy map files, are located.
 
+:warning: this is only available in external mode
+
+
 Possible values:
 
 - Path to configuration directory
@@ -609,6 +615,9 @@ args:
 ### `--runtime-dir`
 
   Path to HAProxy runtime directory when running controller in [external mode](#--external). Runtime directory is where resources like PID file, runtime socket, etc are located.
+
+:warning: this is only available in external mode
+
 
 Possible values:
 

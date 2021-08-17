@@ -331,6 +331,7 @@ image_arguments:
     values:
       - Boolean value.
     default: false
+    external: true
     version_min: "1.5"
     example: |-
       args:
@@ -340,6 +341,7 @@ image_arguments:
     values:
       - Path to HAProxy binary
     default: haproxy in PATH location
+    external: true
     version_min: "1.5"
     example: |-
       args:
@@ -350,6 +352,7 @@ image_arguments:
     values:
       - Path to configuration directory
     default: "/tmp/haproxy-ingress/etc"
+    external: true
     version_min: "1.5"
     example: |-
       args:
@@ -360,6 +363,7 @@ image_arguments:
     values:
       - Path to runtime directory
     default: "/tmp/haproxy-ingress/run"
+    external: true
     version_min: "1.5"
     example: |-
       args:
