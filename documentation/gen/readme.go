@@ -120,7 +120,7 @@ func (c *Conf) generateReadme() {
 			dev = " :construction:(dev)"
 		}
 		groupLink := strings.ReplaceAll(ann.Group, " ", "-")
-		log.Println(ann.Group, groupLink)
+		// log.Println(ann.Group, groupLink)
 		// 3 can be a link to type maybe like for [IPs or CIDRs](#access-control)?
 		buff.WriteString(fmt.Sprintf("| [%s](#%s)%s | %s | %s | %s |%s|%s|%s|\n",
 			ann.Title, groupLink, dev, annType, defaultValue, ann.Dependencies,
@@ -181,7 +181,6 @@ func (c *Conf) generateReadme() {
 	if err != nil {
 		log.Println(err)
 	}
-
 }
 
 func selectExamples(ann *ConfItem, buff *strings.Builder) {
