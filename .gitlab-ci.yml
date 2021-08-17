@@ -55,7 +55,6 @@ unit-tests:
     - go
   script:
     - apt update
-    - apt install --assume-yes haproxy/stable
     - go build -v .
     - go test -v ./...
   only:
