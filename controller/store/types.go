@@ -31,23 +31,21 @@ type HAProxySrv struct {
 	Name     string
 	Address  string
 	Modified bool
+	Port     int64
 }
 
 // PortEndpoints describes endpoints of a service port
 type PortEndpoints struct {
-	Port            int64
-	BackendName     string // For runtime operations
-	DynUpdateFailed bool
-	AddrCount       int
-	AddrNew         map[string]struct{}
-	HAProxySrvs     []*HAProxySrv
+	Port      int64
+	Addresses map[string]struct{}
 }
 
 // Endpoints describes endpoints of a service
 type Endpoints struct {
+	SliceName string
 	Namespace string
 	Service   string
-	Ports     map[string]*PortEndpoints
+	Ports     map[string]*PortEndpoints // Ports[portName]
 	Status    Status
 }
 
@@ -67,17 +65,26 @@ type Service struct {
 	Status      Status
 }
 
+// RuntimeBackend holds the runtime state of an HAProxy backend
+type RuntimeBackend struct {
+	Name            string
+	HAProxySrvs     []*HAProxySrv
+	Endpoints       PortEndpoints
+	DynUpdateFailed bool
+}
+
 // Namespace is useful data from k8s structures about namespace
 type Namespace struct {
-	_         [0]int
-	Name      string
-	Relevant  bool
-	Ingresses map[string]*Ingress
-	Endpoints map[string]*Endpoints
-	Services  map[string]*Service
-	Secret    map[string]*Secret
-	CRs       *CustomResources
-	Status    Status
+	_              [0]int
+	Name           string
+	Relevant       bool
+	Ingresses      map[string]*Ingress
+	Endpoints      map[string]map[string]*Endpoints // service -> sliceName -> Endpoints
+	Services       map[string]*Service
+	Secret         map[string]*Secret
+	HAProxyRuntime map[string]map[string]*RuntimeBackend // service -> portName -> Backend
+	CRs            *CustomResources
+	Status         Status
 }
 
 type CustomResources struct {

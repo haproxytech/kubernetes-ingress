@@ -37,8 +37,13 @@ func (c *HAProxyController) monitorChanges() {
 	for _, namespace := range c.getWhitelistedNamespaces() {
 		factory := informers.NewSharedInformerFactoryWithOptions(c.k8s.API, c.OSArgs.CacheResyncPeriod, informers.WithNamespace(namespace))
 
-		pi := factory.Core().V1().Endpoints().Informer()
-		c.k8s.EventsEndpoints(c.eventChan, stop, pi)
+		pi := c.getEndpointSlicesSharedInformer(factory)
+		if pi != nil {
+			c.k8s.EventsEndpointSlices(c.eventChan, stop, pi)
+		} else {
+			pi = factory.Core().V1().Endpoints().Informer()
+			c.k8s.EventsEndpoints(c.eventChan, stop, pi)
+		}
 
 		svci := factory.Core().V1().Services().Informer()
 		c.k8s.EventsServices(c.eventChan, c.statusChan, stop, svci, c.PublishService)
@@ -150,6 +155,30 @@ func (c *HAProxyController) getIngressSharedInformers(factory informers.SharedIn
 		}
 	}
 	return ii, ici
+}
+
+func (c *HAProxyController) getEndpointSlicesSharedInformer(factory informers.SharedInformerFactory) cache.SharedIndexInformer {
+	for i, apiGroup := range []string{"discovery.k8s.io/v1", "discovery.k8s.io/v1beta1"} {
+		resources, err := c.k8s.API.ServerResourcesForGroupVersion(apiGroup)
+		if err != nil {
+			continue
+		}
+
+		for _, rs := range resources.APIResources {
+			if rs.Name == "endpointslices" {
+				switch i {
+				case 0:
+					logger.Debug("Using discovery.k8s.io/v1 endpointslices")
+					return factory.Discovery().V1().EndpointSlices().Informer()
+
+				case 1:
+					logger.Debug("Using discovery.k8s.io/v1beta1 endpointslices")
+					return factory.Discovery().V1beta1().EndpointSlices().Informer()
+				}
+			}
+		}
+	}
+	return nil
 }
 
 func (c *HAProxyController) getWhitelistedNamespaces() []string {

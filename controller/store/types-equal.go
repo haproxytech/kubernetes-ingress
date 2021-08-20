@@ -212,6 +212,9 @@ func (a *Endpoints) Equal(b *Endpoints) bool {
 	if a == nil || b == nil {
 		return false
 	}
+	if a.SliceName != b.SliceName {
+		return false
+	}
 	if a.Namespace != b.Namespace {
 		return false
 	}
@@ -231,30 +234,18 @@ func (a *Endpoints) Equal(b *Endpoints) bool {
 }
 
 // Equal checks if old PortEndpoints equals to a new PortEndpoints.
-// All Addresses of a new PortEndpoints are in AddrNew.
-// Addresses of old PortEndpoints are configured in HAProxySrvs
-// and some may be still in AddrNew in case len(HAProxySrvs) < AddrCount.
-// (Eventually all addresses will be in HAProxySrvs after updateHAProxy())
-func (oldE *PortEndpoints) Equal(newE *PortEndpoints) bool {
-	if oldE == nil || newE == nil {
+func (a *PortEndpoints) Equal(b *PortEndpoints) bool {
+	if a == nil || b == nil {
 		return false
 	}
-	if oldE.Port != newE.Port {
+	if a.Port != b.Port {
 		return false
 	}
-	if oldE.AddrCount != newE.AddrCount {
+	if len(a.Addresses) != len(b.Addresses) {
 		return false
 	}
-	for _, srv := range oldE.HAProxySrvs {
-		if srv.Address == "" {
-			continue
-		}
-		if _, ok := newE.AddrNew[srv.Address]; !ok {
-			return false
-		}
-	}
-	for addr := range oldE.AddrNew {
-		if _, ok := newE.AddrNew[addr]; !ok {
+	for addr := range a.Addresses {
+		if _, ok := b.Addresses[addr]; !ok {
 			return false
 		}
 	}

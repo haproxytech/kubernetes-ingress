@@ -115,15 +115,21 @@ func (k K8s) Clean() {
 				data.Status = EMPTY
 			}
 		}
-		for _, data := range namespace.Endpoints {
-			switch data.Status {
-			case DELETED:
-				delete(namespace.Endpoints, data.Service)
-			default:
-				data.Status = EMPTY
-				for _, endpoints := range data.Ports {
-					for _, srv := range endpoints.HAProxySrvs {
-						srv.Modified = false
+		for _, serviceEndpointSlices := range namespace.Endpoints {
+			for _, slice := range serviceEndpointSlices {
+				switch slice.Status {
+				case DELETED:
+					delete(namespace.Endpoints[slice.Service], slice.SliceName)
+					if len(namespace.Endpoints[slice.Service]) == 0 {
+						delete(namespace.Endpoints, slice.Service)
+						delete(namespace.HAProxyRuntime, slice.Service)
+					}
+				default:
+					slice.Status = EMPTY
+					for _, backend := range namespace.HAProxyRuntime[slice.Service] {
+						for _, srv := range backend.HAProxySrvs {
+							srv.Modified = false
+						}
 					}
 				}
 			}
@@ -163,12 +169,13 @@ func (k K8s) GetNamespace(name string) *Namespace {
 		return namespace
 	}
 	newNamespace := &Namespace{
-		Name:      name,
-		Relevant:  k.isRelevantNamespace(name),
-		Endpoints: make(map[string]*Endpoints),
-		Services:  make(map[string]*Service),
-		Ingresses: make(map[string]*Ingress),
-		Secret:    make(map[string]*Secret),
+		Name:           name,
+		Relevant:       k.isRelevantNamespace(name),
+		Endpoints:      make(map[string]map[string]*Endpoints),
+		Services:       make(map[string]*Service),
+		Ingresses:      make(map[string]*Ingress),
+		Secret:         make(map[string]*Secret),
+		HAProxyRuntime: make(map[string]map[string]*RuntimeBackend),
 		CRs: &CustomResources{
 			Global:     make(map[string]*models.Global),
 			Defaults:   make(map[string]*models.Defaults),
@@ -209,6 +216,25 @@ func (k K8s) GetService(namespace, name string) (*Service, error) {
 		return nil, ErrNotFound(fmt.Errorf("service '%s/%s' deleted", namespace, name))
 	}
 	return svc, nil
+}
+
+// GetEndpoints takes the ns and name of a service and provides a map of endpoints: portName --> *PortEndpoints
+func (k K8s) GetEndpoints(namespace, name string) (endpoints map[string]*PortEndpoints, err error) {
+	ns, nsOk := k.Namespaces[namespace]
+	if !nsOk {
+		return nil, fmt.Errorf("service '%s/%s' does not exist, namespace not found", namespace, name)
+	}
+	slices, ok := ns.Endpoints[name]
+	if !ok {
+		return nil, fmt.Errorf("endpoints for service '%s/%s', does not exist", namespace, name)
+	}
+	endpoints = make(map[string]*PortEndpoints)
+	for sliceName := range slices {
+		for portName, portEndpoints := range slices[sliceName].Ports {
+			endpoints[portName] = portEndpoints
+		}
+	}
+	return
 }
 
 func (k K8s) isRelevantNamespace(namespace string) bool {

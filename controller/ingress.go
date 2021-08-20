@@ -100,7 +100,7 @@ func (c *HAProxyController) handleIngressPath(ingress *store.Ingress, host strin
 	}
 	c.Cfg.ActiveBackends[backendName] = struct{}{}
 	// Endpoints
-	endpointsReload := svc.HandleEndpoints(c.Client, c.Store)
+	endpointsReload := svc.HandleHAProxySrvs(c.Client, c.Store)
 	return backendReload || endpointsReload || routeReload, err
 }
 
@@ -143,7 +143,7 @@ func (c *HAProxyController) setDefaultService(ingress *store.Ingress, frontends 
 		}
 	}
 	c.Cfg.ActiveBackends[backendName] = struct{}{}
-	endpointsReload := svc.HandleEndpoints(c.Client, c.Store)
+	endpointsReload := svc.HandleHAProxySrvs(c.Client, c.Store)
 	reload = bdReload || ftReload || endpointsReload
 	return reload, err
 }
