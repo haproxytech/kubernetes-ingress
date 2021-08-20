@@ -57,7 +57,7 @@ type HAProxyClient interface {
 	SetServerState(backendName string, serverName string, state string) error
 	ServerGet(serverName, backendNa string) (models.Server, error)
 	SetAuxCfgFile(auxCfgFile string)
-	SyncBackendSrvs(oldEndpoints, newEndpoints *store.PortEndpoints) error
+	SyncBackendSrvs(backendName string, haproxysrvs []*store.HAProxySrv, newAddresses map[string]*store.Address) error
 	UserListDeleteAll() error
 	UserListExistsByGroup(group string) (bool, error)
 	UserListCreateByGroup(group string, userPasswordMap map[string][]byte) error

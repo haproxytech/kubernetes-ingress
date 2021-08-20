@@ -27,23 +27,23 @@ type HAProxySrv struct {
 	Name     string
 	Address  string
 	Modified bool
+	Port     int64
 }
 
 // PortEndpoints describes endpoints of a service port
 type PortEndpoints struct {
 	Port            int64
-	BackendName     string // For runtime operations
 	DynUpdateFailed bool
 	AddrCount       int
 	AddrNew         map[string]struct{}
-	HAProxySrvs     []*HAProxySrv
 }
 
 // Endpoints describes endpoints of a service
 type Endpoints struct {
+	SliceName string
 	Namespace string
 	Service   string
-	Ports     map[string]*PortEndpoints
+	Ports     map[string]*PortEndpoints // Ports[portName]
 	Status    Status
 }
 
@@ -63,16 +63,29 @@ type Service struct {
 	Status      Status
 }
 
+type Address struct {
+	Address string
+	Port    int64
+}
+
+// Auxiliary data about the state of the HAProxy for a service
+type HAProxyConfig struct {
+	HAProxySrvs  map[string]*[]*HAProxySrv      // port -> slice of HAProxySrvs
+	NewAddresses map[string]map[string]*Address // port -> set of Addresses
+	BackendName  map[string]string              // port -> for runtime operations
+}
+
 // Namespace is useful data from k8s structures about namespace
 type Namespace struct {
-	_         [0]int
-	Name      string
-	Relevant  bool
-	Ingresses map[string]*Ingress
-	Endpoints map[string]*Endpoints
-	Services  map[string]*Service
-	Secret    map[string]*Secret
-	Status    Status
+	_             [0]int
+	Name          string
+	Relevant      bool
+	Ingresses     map[string]*Ingress
+	Endpoints     map[string]map[string]*Endpoints // service -> slice -> Endpoints
+	Services      map[string]*Service
+	Secret        map[string]*Secret
+	HAProxyConfig map[string]*HAProxyConfig
+	Status        Status
 }
 
 type IngressClass struct {

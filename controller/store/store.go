@@ -121,15 +121,20 @@ func (k K8s) Clean() {
 				data.Status = EMPTY
 			}
 		}
-		for _, data := range namespace.Endpoints {
-			switch data.Status {
-			case DELETED:
-				delete(namespace.Endpoints, data.Service)
-			default:
-				data.Status = EMPTY
-				for _, endpoints := range data.Ports {
-					for _, srv := range endpoints.HAProxySrvs {
-						srv.Modified = false
+		for _, serviceEndpointSlices := range namespace.Endpoints {
+			for _, data := range serviceEndpointSlices {
+				switch data.Status {
+				case DELETED:
+					delete(namespace.Endpoints[data.Service], data.SliceName)
+					if len(namespace.Endpoints[data.Service]) == 0 {
+						delete(namespace.Endpoints, data.Service)
+					}
+				default:
+					data.Status = EMPTY
+					for _, portHAProxySrvs := range namespace.HAProxyConfig[data.Service].HAProxySrvs {
+						for _, srv := range *portHAProxySrvs {
+							srv.Modified = false
+						}
 					}
 				}
 			}
@@ -169,13 +174,14 @@ func (k K8s) GetNamespace(name string) *Namespace {
 		return namespace
 	}
 	newNamespace := &Namespace{
-		Name:      name,
-		Relevant:  k.isRelevantNamespace(name),
-		Endpoints: make(map[string]*Endpoints),
-		Services:  make(map[string]*Service),
-		Ingresses: make(map[string]*Ingress),
-		Secret:    make(map[string]*Secret),
-		Status:    ADDED,
+		Name:          name,
+		Relevant:      k.isRelevantNamespace(name),
+		Endpoints:     make(map[string]map[string]*Endpoints),
+		Services:      make(map[string]*Service),
+		Ingresses:     make(map[string]*Ingress),
+		Secret:        make(map[string]*Secret),
+		HAProxyConfig: make(map[string]*HAProxyConfig),
+		Status:        ADDED,
 	}
 	k.Namespaces[name] = newNamespace
 	return newNamespace

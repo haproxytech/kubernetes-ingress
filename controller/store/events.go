@@ -203,32 +203,39 @@ func (k *K8s) EventIngress(ns *Namespace, data *Ingress, controllerClass string)
 	return updateRequired
 }
 
-func (k *K8s) EventEndpoints(ns *Namespace, data *Endpoints, syncHAproxySrvs func(oldEndpoints, newEndpoints *PortEndpoints) error) (updateRequired bool) {
+func (k *K8s) EventEndpoints(ns *Namespace, data *Endpoints, syncHAproxySrvs func(backendName string, haproxysrvs []*HAProxySrv, newAddresses map[string]*Address) error) (updateRequired bool) {
 	switch data.Status {
 	case MODIFIED:
+
 		newEndpoints := data
-		oldEndpoints, ok := ns.Endpoints[data.Service]
-		if !ok {
-			logger.Warningf("Endpoints '%s' not registered with controller !", data.Service)
-			return false
-		}
+		oldEndpoints := ns.Endpoints[data.Service][data.SliceName]
+
 		if oldEndpoints.Equal(newEndpoints) {
 			return false
 		}
-		for portName, oldPortEdpts := range oldEndpoints.Ports {
-			newPortEdpts, ok := newEndpoints.Ports[portName]
-			if !ok {
-				newPortEdpts = &PortEndpoints{Port: oldPortEdpts.Port}
-				newEndpoints.Ports[portName] = newPortEdpts
+
+		ns.Endpoints[data.Service][data.SliceName] = newEndpoints
+
+		ns.HAProxyConfig[data.Service].NewAddresses = getAddressMap(ns.Endpoints[data.Service])
+
+		for portName := range ns.HAProxyConfig[data.Service].NewAddresses {
+			portAddresses := ns.HAProxyConfig[data.Service].NewAddresses[portName]
+
+			if ns.HAProxyConfig[data.Service].HAProxySrvs[portName] == nil {
+				tmp := make([]*HAProxySrv, 0, len(portAddresses))
+				ns.HAProxyConfig[data.Service].HAProxySrvs[portName] = &tmp
 			}
-			logger.Warning(syncHAproxySrvs(oldPortEdpts, newPortEdpts))
+			portHAProxySrvs := *ns.HAProxyConfig[data.Service].HAProxySrvs[portName]
+			backendName := ns.HAProxyConfig[data.Service].BackendName[portName]
+			logger.Warning(syncHAproxySrvs(backendName, portHAProxySrvs, portAddresses))
 		}
-		ns.Endpoints[data.Service] = newEndpoints
+
 		return true
+
 	case ADDED:
-		if old, ok := ns.Endpoints[data.Service]; ok {
+		if old, ok := ns.Endpoints[data.Service][data.SliceName]; ok {
 			if old.Status == DELETED {
-				ns.Endpoints[data.Service].Status = ADDED
+				ns.Endpoints[data.Service][data.SliceName].Status = ADDED
 			}
 			if !old.Equal(data) {
 				data.Status = MODIFIED
@@ -236,17 +243,45 @@ func (k *K8s) EventEndpoints(ns *Namespace, data *Endpoints, syncHAproxySrvs fun
 			}
 			return updateRequired
 		}
-		ns.Endpoints[data.Service] = data
+		if ns.Endpoints[data.Service] == nil {
+			ns.Endpoints[data.Service] = make(map[string]*Endpoints)
+		}
+		ns.Endpoints[data.Service][data.SliceName] = data
+
+		if ns.HAProxyConfig[data.Service] == nil {
+			ns.HAProxyConfig[data.Service] = &HAProxyConfig{
+				HAProxySrvs:  make(map[string]*[]*HAProxySrv),
+				NewAddresses: make(map[string]map[string]*Address),
+				BackendName:  make(map[string]string),
+			}
+		}
+		ns.HAProxyConfig[data.Service].NewAddresses = getAddressMap(ns.Endpoints[data.Service])
+
 	case DELETED:
-		oldData, ok := ns.Endpoints[data.Service]
+		oldData, ok := ns.Endpoints[data.Service][data.SliceName]
 		if ok {
 			oldData.Status = DELETED
 			updateRequired = true
 		} else {
-			logger.Warningf("Endpoints '%s' not registered with controller, cannot delete !", data.Service)
+			logger.Warningf("Endpoints '%s'/'%s' not registered with controller, cannot delete !", data.Service, data.SliceName)
 		}
 	}
 	return updateRequired
+}
+
+func getAddressMap(endpointSlices map[string]*Endpoints) (addressMap map[string]map[string]*Address) {
+	newAddresses := make(map[string]map[string]*Address)
+	for sliceName := range endpointSlices {
+		for portName, PortEndpoints := range endpointSlices[sliceName].Ports {
+			for addr := range endpointSlices[sliceName].Ports[portName].AddrNew {
+				if newAddresses[portName] == nil {
+					newAddresses[portName] = make(map[string]*Address)
+				}
+				newAddresses[portName][addr] = &Address{Address: addr, Port: PortEndpoints.Port}
+			}
+		}
+	}
+	return newAddresses
 }
 
 func (k *K8s) EventService(ns *Namespace, data *Service) (updateRequired bool) {

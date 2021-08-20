@@ -30,24 +30,34 @@ import (
 )
 
 // HandleEndpoints lookups the IngressPath related endpoints and handles corresponding backend servers configuration in HAProxy
-func (s *SvcContext) HandleEndpoints(client api.HAProxyClient, store store.K8s, certs *haproxy.Certificates) (reload bool) {
+func (s *SvcContext) HandleEndpoints(client api.HAProxyClient, k8sStore store.K8s, certs *haproxy.Certificates) (reload bool) {
 	var srvsScaled, srvsActiveAnn bool
-	endpoints, err := s.getEndpoints(store)
+
+	ns := k8sStore.Namespaces[s.service.Namespace]
+	if ns == nil {
+		logger.Warningf("Ingress '%s/%s': Not found", s.ingress.Namespace, s.ingress.Name)
+		return
+	}
+	sp := s.path.SvcPortResolved
+	newAddresses, HAProxySrvs, err := s.getEndpointConfiguration(ns)
+
 	if err != nil {
 		logger.Warningf("Ingress '%s/%s': %s", s.ingress.Namespace, s.ingress.Name, err)
 		return
 	}
-	endpoints.BackendName = s.backendName // set backendName in store.PortEndpoints for runtime updates.
+	// set backendName in store for runtime updates.
+	ns.HAProxyConfig[s.service.Name].BackendName[sp.Name] = s.backendName
+
 	// scale servers
 	if s.service.DNS == "" {
-		srvsScaled = s.scaleHAProxySrvs(endpoints, store)
+		srvsScaled = s.scaleHAProxySrvs(newAddresses, HAProxySrvs, k8sStore)
 	}
 	// update servers
 	srv, _ := client.ServerGet("SRV_1", s.backendName)
-	srvsActiveAnn = s.handleSrvAnnotations(&srv, store, certs)
-	for _, srvSlot := range endpoints.HAProxySrvs {
+	srvsActiveAnn = s.handleSrvAnnotations(&srv, k8sStore, certs)
+	for _, srvSlot := range *HAProxySrvs {
 		if srvSlot.Modified || srvsActiveAnn {
-			s.updateHAProxySrv(client, srv, *srvSlot, endpoints.Port)
+			s.updateHAProxySrv(client, srv, *srvSlot, srvSlot.Port)
 		}
 	}
 	return srvsScaled || srvsActiveAnn
@@ -89,18 +99,18 @@ func (s *SvcContext) updateHAProxySrv(client api.HAProxyClient, srv models.Serve
 	// Update server
 	errAPI := client.BackendServerEdit(s.backendName, srv)
 	if errAPI == nil {
-		logger.Tracef("Updating server '%s/%s'", s.backendName, srv.Name)
+		logger.Tracef("Updating server '%s/%s' %d", s.backendName, srv.Name, srv.Port)
 		return
 	}
 	// Create server
 	if strings.Contains(errAPI.Error(), "does not exist") {
-		logger.Tracef("Creating server '%s/%s'", s.backendName, srv.Name)
+		logger.Tracef("Updating server '%s/%s' %d", s.backendName, srv.Name, srv.Port)
 		logger.Error(client.BackendServerCreate(s.backendName, srv))
 	}
 }
 
 // scaleHAproxySrvs adds servers to match available addresses
-func (s *SvcContext) scaleHAProxySrvs(endpoints *store.PortEndpoints, k8sStore store.K8s) (reload bool) {
+func (s *SvcContext) scaleHAProxySrvs(newAddresses *map[string]*store.Address, haProxySrvs *[]*store.HAProxySrv, k8sStore store.K8s) (reload bool) {
 	var flag bool
 	var srvSlots int
 	var disabled []*store.HAProxySrv
@@ -118,13 +128,15 @@ func (s *SvcContext) scaleHAProxySrvs(endpoints *store.PortEndpoints, k8sStore s
 			}
 		}
 	}
-	for len(endpoints.HAProxySrvs) < srvSlots {
+
+	for len(*haProxySrvs) < srvSlots {
 		srv := &store.HAProxySrv{
-			Name:     fmt.Sprintf("SRV_%d", len(endpoints.HAProxySrvs)+1),
+			Name:     fmt.Sprintf("SRV_%d", len(*haProxySrvs)+1),
 			Address:  "",
 			Modified: true,
+			Port:     1,
 		}
-		endpoints.HAProxySrvs = append(endpoints.HAProxySrvs, srv)
+		*haProxySrvs = append(*haProxySrvs, srv)
 		disabled = append(disabled, srv)
 		flag = true
 	}
@@ -132,23 +144,25 @@ func (s *SvcContext) scaleHAProxySrvs(endpoints *store.PortEndpoints, k8sStore s
 		reload = true
 		logger.Debugf("Server slots in backend '%s' scaled to match scale-server-slots value: %d, reload required", s.backendName, srvSlots)
 	}
-	// Configure remaining addresses in available HAProxySrvs
+	// Configure remaining addresses in available haProxySrvs
 	flag = false
-	for addr := range endpoints.AddrNew {
+	for addr, Address := range *newAddresses {
 		if len(disabled) != 0 {
 			disabled[0].Address = addr
 			disabled[0].Modified = true
+			disabled[0].Port = Address.Port
 			disabled = disabled[1:]
 		} else {
 			srv := &store.HAProxySrv{
-				Name:     fmt.Sprintf("SRV_%d", len(endpoints.HAProxySrvs)+1),
+				Name:     fmt.Sprintf("SRV_%d", len(*haProxySrvs)+1),
 				Address:  addr,
 				Modified: true,
+				Port:     Address.Port,
 			}
-			endpoints.HAProxySrvs = append(endpoints.HAProxySrvs, srv)
+			*haProxySrvs = append(*haProxySrvs, srv)
 			flag = true
 		}
-		delete(endpoints.AddrNew, addr)
+		delete(*newAddresses, addr)
 	}
 	if flag {
 		reload = true
@@ -157,33 +171,46 @@ func (s *SvcContext) scaleHAProxySrvs(endpoints *store.PortEndpoints, k8sStore s
 	return reload
 }
 
-func (s *SvcContext) getEndpoints(k8s store.K8s) (endpoints *store.PortEndpoints, err error) {
-	var ok bool
-	var e *store.Endpoints
-	if ns := k8s.Namespaces[s.service.Namespace]; ns != nil {
-		e, ok = ns.Endpoints[s.service.Name]
-	}
-	if !ok {
-		if s.service.DNS != "" {
-			return s.getExternalNameEndpoints()
-		}
-		return nil, fmt.Errorf("no Endpoints for service '%s'", s.service.Name)
-	}
+func (s *SvcContext) getEndpointConfiguration(ns *store.Namespace) (newAddresses *map[string]*store.Address, haProxySrvs *[]*store.HAProxySrv, err error) {
 	sp := s.path.SvcPortResolved
-	if sp != nil {
-		for portName, endpoints := range e.Ports {
-			if portName == sp.Name || endpoints.Port == sp.Port {
-				return endpoints, nil
-			}
+
+	if ns.HAProxyConfig[s.service.Name] == nil {
+		ns.HAProxyConfig[s.service.Name] = &store.HAProxyConfig{
+			HAProxySrvs:  make(map[string]*[]*store.HAProxySrv),
+			NewAddresses: make(map[string]map[string]*store.Address),
+			BackendName:  make(map[string]string),
 		}
 	}
-	if s.path.SvcPortString != "" {
-		return nil, fmt.Errorf("no matching endpoints for service '%s' and port '%s'", s.service.Name, s.path.SvcPortString)
+	isExternalNameService := s.service.DNS != ""
+	if isExternalNameService {
+		var err error
+		haProxySrvs, err = s.getExternalNameEndpoints()
+		if err != nil {
+			return nil, nil, err
+		}
+		return nil, haProxySrvs, nil
 	}
-	return nil, fmt.Errorf("no matching endpoints for service '%s' and port '%d'", s.service.Name, s.path.SvcPortInt)
+
+	addresses := ns.HAProxyConfig[s.service.Name].NewAddresses[sp.Name]
+
+	if ns.HAProxyConfig[s.service.Name].HAProxySrvs[sp.Name] == nil {
+		tmp := make([]*store.HAProxySrv, 0, len(addresses))
+		ns.HAProxyConfig[s.service.Name].HAProxySrvs[sp.Name] = &tmp
+	}
+
+	haProxySrvs = ns.HAProxyConfig[s.service.Name].HAProxySrvs[sp.Name]
+
+	if len(addresses) == 0 && len(*haProxySrvs) == 0 {
+		if s.path.SvcPortString != "" {
+			return nil, nil, fmt.Errorf("no matching endpoints for service '%s' and port '%s'", s.service.Name, s.path.SvcPortString)
+		}
+		return nil, nil, fmt.Errorf("no matching endpoints for service '%s' and port '%d'", s.service.Name, s.path.SvcPortInt)
+	}
+
+	return &addresses, haProxySrvs, nil
 }
 
-func (s *SvcContext) getExternalNameEndpoints() (endpoints *store.PortEndpoints, err error) {
+func (s *SvcContext) getExternalNameEndpoints() (haProxySrvs *[]*store.HAProxySrv, err error) {
 	logger.Tracef("Configuring service '%s', of type ExternalName", s.service.Name)
 	var port int64
 	for _, sp := range s.service.Ports {
@@ -198,15 +225,15 @@ func (s *SvcContext) getExternalNameEndpoints() (endpoints *store.PortEndpoints,
 		}
 		return nil, fmt.Errorf("service '%s': service port '%s' not found", s.service.Name, ingressPort)
 	}
-	endpoints = &store.PortEndpoints{
-		Port: port,
-		HAProxySrvs: []*store.HAProxySrv{
-			{
-				Name:     "SRV_1",
-				Address:  s.service.DNS,
-				Modified: true,
-			},
+
+	srvs := []*store.HAProxySrv{
+		{
+			Name:     "SRV_1",
+			Address:  s.service.DNS,
+			Modified: true,
+			Port:     port,
 		},
 	}
-	return endpoints, nil
+
+	return &srvs, nil
 }
