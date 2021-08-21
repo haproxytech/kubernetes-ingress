@@ -31,6 +31,7 @@ func (c *HAProxyController) handleGlobalConfig() (reload, restart bool) {
 	reload = c.defaultsCfg()
 	c.handleDefaultCert()
 	reload = c.handleDefaultService() || reload
+	_ = c.handleIngressAnnotations(store.Ingress{})
 	return reload, restart
 }
 

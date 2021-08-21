@@ -195,7 +195,7 @@ func (c *HAProxyController) updateHAProxy() {
 				logger.Debugf("Ingress %s/%s: no rules defined", ingress.Namespace, ingress.Name)
 				continue
 			}
-			ruleIDs := c.handleIngressAnnotations(ingress)
+			ruleIDs := c.handleIngressAnnotations(*ingress)
 			// Ingress rules
 			logger.Tracef("ingress '%s/%s': processing rules...", ingress.Namespace, ingress.Name)
 			for _, rule := range ingress.Rules {

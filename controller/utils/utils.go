@@ -75,6 +75,28 @@ func ParseTime(data string) (*int64, error) {
 	return &v, err
 }
 
+func ParseSize(size string) (*int64, error) {
+	var v int64
+	var err error
+	switch {
+	case strings.HasSuffix(size, "k"):
+		v, err = strconv.ParseInt(strings.TrimSuffix(size, "k"), 10, 64)
+		v *= 1024
+	case strings.HasSuffix(size, "m"):
+		v, err = strconv.ParseInt(strings.TrimSuffix(size, "m"), 10, 64)
+		v = v * 1024 * 1024
+	case strings.HasSuffix(size, "g"):
+		v, err = strconv.ParseInt(strings.TrimSuffix(size, "g"), 10, 64)
+		v = v * 1024 * 1024 * 1024
+	default:
+		v, err = strconv.ParseInt(size, 10, 64)
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &v, nil
+}
+
 func GetBoolValue(dataValue, dataName string) (result bool, err error) {
 	result, err = strconv.ParseBool(dataValue)
 	if err != nil {

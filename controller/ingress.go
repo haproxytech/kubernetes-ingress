@@ -15,10 +15,13 @@
 package controller
 
 import (
+	"fmt"
+
 	"github.com/haproxytech/client-native/v2/models"
 
 	"github.com/haproxytech/kubernetes-ingress/controller/annotations"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy"
+	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/rules"
 	"github.com/haproxytech/kubernetes-ingress/controller/route"
 	"github.com/haproxytech/kubernetes-ingress/controller/service"
 	"github.com/haproxytech/kubernetes-ingress/controller/store"
@@ -59,7 +62,7 @@ func (c *HAProxyController) igClassIsSupported(ingress *store.Ingress) bool {
 }
 
 func (c *HAProxyController) handleIngressPath(ingress *store.Ingress, host string, path *store.IngressPath, ruleIDs []haproxy.RuleID) (reload bool, err error) {
-	sslPassthrough := c.sslPassthroughEnabled(ingress, path)
+	sslPassthrough := c.sslPassthroughEnabled(*ingress, path)
 	svc, err := service.NewCtx(c.Store, ingress, path, sslPassthrough)
 	if err != nil {
 		return
@@ -144,7 +147,7 @@ func (c *HAProxyController) setDefaultService(ingress *store.Ingress, frontends 
 	return reload, err
 }
 
-func (c *HAProxyController) sslPassthroughEnabled(ingress *store.Ingress, path *store.IngressPath) bool {
+func (c *HAProxyController) sslPassthroughEnabled(ingress store.Ingress, path *store.IngressPath) bool {
 	var annSSLPassthrough string
 	var service *store.Service
 	ok := false
@@ -169,4 +172,57 @@ func (c *HAProxyController) sslPassthroughEnabled(ingress *store.Ingress, path *
 		return true
 	}
 	return false
+}
+
+// handleIngressAnnotations processes ingress annotations to create HAProxy Rules and provide
+// corresponding list of RuleIDs.
+// If Ingress Annotations are at the ConfigMap scope, HAProxy Rules will be applied globally
+// without the need to map Rule IDs to specific ingress traffic.
+func (c *HAProxyController) handleIngressAnnotations(ingress store.Ingress) []haproxy.RuleID {
+	var err error
+	var ingressRule bool
+	var annValue, annSource string
+	var annList map[string]string
+	if ingress.Equal(&store.Ingress{}) {
+		annSource = "ConfigMap"
+		annList = c.Store.ConfigMaps.Main.Annotations
+		ingressRule = false
+	} else {
+		annSource = fmt.Sprintf("Ingress '%s/%s'", ingress.Namespace, ingress.Name)
+		annList = ingress.Annotations
+		ingressRule = true
+	}
+	ids := []haproxy.RuleID{}
+	frontends := []string{c.Cfg.FrontHTTP, c.Cfg.FrontHTTPS}
+	result := haproxy.Rules{}
+	for _, a := range annotations.GetFrontendAnnotations(ingress, &result, *c.Cfg.MapFiles, c.Store) {
+		annValue = annotations.GetValue(a.GetName(), annList)
+		err = a.Process(annValue)
+		if err != nil {
+			logger.Errorf("%s: annotation %s: %s", annSource, a.GetName(), err)
+		}
+	}
+	for _, rule := range result {
+		switch rule.GetType() {
+		case haproxy.REQ_REDIRECT:
+			redirRule := rule.(*rules.RequestRedirect)
+			if redirRule.SSLRedirect {
+				frontends = []string{c.Cfg.FrontHTTP}
+			} else {
+				frontends = []string{c.Cfg.FrontHTTP, c.Cfg.FrontHTTPS}
+			}
+		case haproxy.REQ_DENY, haproxy.REQ_CAPTURE:
+			if c.sslPassthroughEnabled(ingress, nil) {
+				frontends = []string{c.Cfg.FrontHTTP, c.Cfg.FrontSSL}
+			}
+		case haproxy.REQ_RATELIMIT:
+			limitRule := rule.(*rules.ReqRateLimit)
+			c.Cfg.RateLimitTables = append(c.Cfg.RateLimitTables, limitRule.TableName)
+		}
+		for _, frontend := range frontends {
+			logger.Error(c.Cfg.HAProxyRules.AddRule(rule, ingressRule, frontend))
+		}
+		ids = append(ids, haproxy.GetID(rule))
+	}
+	return ids
 }

@@ -4,6 +4,7 @@ import (
 	"github.com/haproxytech/client-native/v2/models"
 
 	"github.com/haproxytech/kubernetes-ingress/controller/annotations/global"
+	"github.com/haproxytech/kubernetes-ingress/controller/annotations/ingress"
 	"github.com/haproxytech/kubernetes-ingress/controller/annotations/service"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy"
 	"github.com/haproxytech/kubernetes-ingress/controller/store"
@@ -43,6 +44,44 @@ func GetDefaultsAnnotations(d *models.Defaults) []Annotation {
 		global.NewTimeout("timeout-tunnel", d),
 		global.NewTimeout("timeout-http-keep-alive", d),
 		global.NewLogFormat("log-format", d),
+	}
+}
+
+func GetFrontendAnnotations(i store.Ingress, r *haproxy.Rules, m haproxy.Maps, k store.K8s) []Annotation {
+	reqRateLimit := ingress.NewReqRateLimit(r)
+	httpsRedirect := ingress.NewHTTPSRedirect(r, i)
+	hostRedirect := ingress.NewHostRedirect(r)
+	reqAuth := ingress.NewReqAuth(r, i, k)
+	reqCapture := ingress.NewReqCapture(r)
+	resSetCORS := ingress.NewResSetCORS(r)
+	return []Annotation{
+		// Simple annoations
+		ingress.NewBlackList("blacklist", r, m),
+		ingress.NewWhiteList("whitelist", r, m),
+		ingress.NewSrcIPHdr("src-ip-header", r),
+		ingress.NewReqSetHost("set-host", r),
+		ingress.NewReqPathRewrite("path-rewrite", r),
+		ingress.NewReqSetHdr("request-set-header", r),
+		ingress.NewResSetHdr("response-set-header", r),
+		// Annotation factory for related annotations
+		httpsRedirect.NewAnnotation("ssl-redirect"),
+		httpsRedirect.NewAnnotation("ssl-redirect-port"),
+		httpsRedirect.NewAnnotation("ssl-redirect-code"),
+		hostRedirect.NewAnnotation("request-redirect"),
+		hostRedirect.NewAnnotation("request-redirect-code"),
+		reqRateLimit.NewAnnotation("rate-limit-requests"),
+		reqRateLimit.NewAnnotation("rate-limit-period"),
+		reqRateLimit.NewAnnotation("rate-limit-size"),
+		reqRateLimit.NewAnnotation("rate-limit-status-code"),
+		reqAuth.NewAnnotation("auth-type"),
+		reqAuth.NewAnnotation("auth-realm"),
+		reqAuth.NewAnnotation("auth-secret"),
+		reqCapture.NewAnnotation("request-capture"),
+		reqCapture.NewAnnotation("request-capture-len"),
+		resSetCORS.NewAnnotation("cors-allow-origin"),
+		resSetCORS.NewAnnotation("cors-allow-method"),
+		resSetCORS.NewAnnotation("cors-allow-headers"),
+		resSetCORS.NewAnnotation("cors-max-age"),
 	}
 }
 
