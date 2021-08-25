@@ -256,26 +256,26 @@ func (h HTTPS) sslPassthroughRules(k store.K8s, cfg *config.ControllerCfg) error
 		}
 	}
 	errors := utils.Errors{}
-	errors.Add(cfg.HAProxyRules.AddRule(rules.ReqAcceptContent{}, "", cfg.FrontSSL),
+	errors.Add(cfg.HAProxyRules.AddRule(rules.ReqAcceptContent{}, false, cfg.FrontSSL),
 		cfg.HAProxyRules.AddRule(rules.ReqInspectDelay{
 			Timeout: inspectTimeout,
-		}, "", cfg.FrontSSL),
+		}, false, cfg.FrontSSL),
 		cfg.HAProxyRules.AddRule(rules.ReqSetVar{
 			Name:       "sni",
 			Scope:      "sess",
 			Expression: "req_ssl_sni",
-		}, "", cfg.FrontSSL),
+		}, false, cfg.FrontSSL),
 		cfg.HAProxyRules.AddRule(rules.ReqSetVar{
 			Name:       "sni_match",
 			Scope:      "txn",
 			Expression: fmt.Sprintf("req_ssl_sni,map(%s)", haproxy.GetMapPath(haproxy.MAP_SNI)),
-		}, "", cfg.FrontSSL),
+		}, false, cfg.FrontSSL),
 		cfg.HAProxyRules.AddRule(rules.ReqSetVar{
 			Name:       "sni_match",
 			Scope:      "txn",
 			Expression: fmt.Sprintf("req_ssl_sni,regsub(^[^.]*,,),map(%s)", haproxy.GetMapPath(haproxy.MAP_SNI)),
 			CondTest:   "!{ var(txn.sni_match) -m found }",
-		}, "", cfg.FrontSSL),
+		}, false, cfg.FrontSSL),
 	)
 	return errors.Result()
 }

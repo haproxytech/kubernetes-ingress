@@ -18,6 +18,7 @@ import (
 	"github.com/haproxytech/client-native/v2/models"
 
 	"github.com/haproxytech/kubernetes-ingress/controller/annotations"
+	"github.com/haproxytech/kubernetes-ingress/controller/haproxy"
 	"github.com/haproxytech/kubernetes-ingress/controller/route"
 	"github.com/haproxytech/kubernetes-ingress/controller/service"
 	"github.com/haproxytech/kubernetes-ingress/controller/store"
@@ -57,7 +58,7 @@ func (c *HAProxyController) igClassIsSupported(ingress *store.Ingress) bool {
 	return false
 }
 
-func (c *HAProxyController) handleIngressPath(ingress *store.Ingress, host string, path *store.IngressPath) (reload bool, err error) {
+func (c *HAProxyController) handleIngressPath(ingress *store.Ingress, host string, path *store.IngressPath, ruleIDs []haproxy.RuleID) (reload bool, err error) {
 	sslPassthrough := c.sslPassthroughEnabled(ingress, path)
 	svc, err := service.NewCtx(c.Store, ingress, path, sslPassthrough)
 	if err != nil {
@@ -76,7 +77,7 @@ func (c *HAProxyController) handleIngressPath(ingress *store.Ingress, host strin
 	ingRoute := route.Route{
 		Host:           host,
 		Path:           path,
-		HAProxyRules:   c.Cfg.HAProxyRules.GetIngressRuleIDs(ingress.Namespace + "-" + ingress.Name),
+		HAProxyRules:   ruleIDs,
 		BackendName:    backendName,
 		SSLPassthrough: sslPassthrough,
 	}

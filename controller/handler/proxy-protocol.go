@@ -54,6 +54,11 @@ func (p ProxyProtocol) Update(k store.K8s, cfg *config.ControllerCfg, api api.HA
 	if cfg.SSLPassthrough {
 		frontends = []string{cfg.FrontHTTP, cfg.FrontSSL}
 	}
-	err = cfg.HAProxyRules.AddRule(rules.ReqProxyProtocol{SrcIPsMap: mapName}, "", frontends...)
-	return false, err
+	for _, frontend := range frontends {
+		err = cfg.HAProxyRules.AddRule(rules.ReqProxyProtocol{SrcIPsMap: mapName}, false, frontend)
+		if err != nil {
+			return
+		}
+	}
+	return
 }

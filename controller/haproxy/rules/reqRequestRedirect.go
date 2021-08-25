@@ -19,7 +19,7 @@ type RequestRedirect struct {
 }
 
 func (r RequestRedirect) GetType() haproxy.RuleType {
-	return haproxy.REQ_REQUEST_REDIRECT
+	return haproxy.REQ_REDIRECT
 }
 
 func (r RequestRedirect) Create(client api.HAProxyClient, frontend *models.Frontend, ingressACL string) error {

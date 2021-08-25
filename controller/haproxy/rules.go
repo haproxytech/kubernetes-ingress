@@ -15,6 +15,12 @@ type Rule interface {
 	GetType() RuleType
 }
 
+type Rules []Rule
+
+func (r *Rules) Add(rule Rule) {
+	*r = append(*r, rule)
+}
+
 // HTTPACLVar used to match against RuleID in haproxy http frontend
 var HTTPACLVar = "txn.path_match"
 
@@ -37,7 +43,7 @@ const (
 	REQ_AUTH
 	REQ_RATELIMIT
 	REQ_CAPTURE
-	REQ_REQUEST_REDIRECT
+	REQ_REDIRECT
 	REQ_FORWARDED_PROTO
 	REQ_SET_HEADER
 	REQ_SET_HOST
@@ -46,133 +52,116 @@ const (
 )
 
 var constLookup = map[RuleType]string{
-	REQ_ACCEPT_CONTENT:   "REQ_ACCEPT_CONTENT",
-	REQ_INSPECT_DELAY:    "REQ_INSPECT_DELAY",
-	REQ_PROXY_PROTOCOL:   "REQ_PROXY_PROTOCOL",
-	REQ_SET_VAR:          "REQ_SET_VAR",
-	REQ_SET_SRC:          "REQ_SET_SRC",
-	REQ_DENY:             "REQ_DENY",
-	REQ_TRACK:            "REQ_TRACK",
-	REQ_AUTH:             "REQ_AUTH",
-	REQ_RATELIMIT:        "REQ_RATELIMIT",
-	REQ_CAPTURE:          "REQ_CAPTURE",
-	REQ_REQUEST_REDIRECT: "REQ_REQUEST_REDIRECT",
-	REQ_FORWARDED_PROTO:  "REQ_FORWARDED_PROTO",
-	REQ_SET_HEADER:       "REQ_SET_HEADER",
-	REQ_SET_HOST:         "REQ_SET_HOST",
-	REQ_PATH_REWRITE:     "REQ_PATH_REWRITE",
-	RES_SET_HEADER:       "RES_SET_HEADER",
+	REQ_ACCEPT_CONTENT:  "REQ_ACCEPT_CONTENT",
+	REQ_INSPECT_DELAY:   "REQ_INSPECT_DELAY",
+	REQ_PROXY_PROTOCOL:  "REQ_PROXY_PROTOCOL",
+	REQ_SET_VAR:         "REQ_SET_VAR",
+	REQ_SET_SRC:         "REQ_SET_SRC",
+	REQ_DENY:            "REQ_DENY",
+	REQ_TRACK:           "REQ_TRACK",
+	REQ_AUTH:            "REQ_AUTH",
+	REQ_RATELIMIT:       "REQ_RATELIMIT",
+	REQ_CAPTURE:         "REQ_CAPTURE",
+	REQ_REDIRECT:        "REQ_REDIRECT",
+	REQ_FORWARDED_PROTO: "REQ_FORWARDED_PROTO",
+	REQ_SET_HEADER:      "REQ_SET_HEADER",
+	REQ_SET_HOST:        "REQ_SET_HOST",
+	REQ_PATH_REWRITE:    "REQ_PATH_REWRITE",
+	RES_SET_HEADER:      "RES_SET_HEADER",
 }
-
-// RuleStatus describing Rule creation
-type RuleStatus int
 
 // RuleID uniquely identify a HAProxy Rule
 type RuleID string
 
-//nolint: golint,stylecheck
-const (
-	// exclusive states
-	CREATED   RuleStatus = 0
-	TO_CREATE RuleStatus = 1
-	TO_DELETE RuleStatus = 2
-	// non exclusive states
-	INGRESS RuleStatus = 4
-)
-
-type Rules struct {
-	frontendRules  map[string]*ruleset
-	ingressRuleIDs map[string][]RuleID
-}
+type SectionRules map[string]*ruleset
 
 type ruleset struct {
-	// rules holds a map of HAProxy rules
+	// rules is a map of HAProxy rules
 	// grouped by rule types
 	rules map[RuleType][]Rule
-	// status holds a map of RuleIDs and
-	// the corresponding ruleStatus
-	status map[RuleID]RuleStatus
+	// meta is a map of RuleIDs and
+	// the corresponding ruleInfo
+	meta map[RuleID]*ruleInfo
 }
+
+// ruleInfo holds information about a HAProxy rule
+type ruleInfo struct {
+	state   ruleState
+	ingress bool
+}
+
+// ruleState describes Rule creation
+type ruleState int
+
+//nolint: golint,stylecheck
+const (
+	CREATED   ruleState = 0
+	TO_CREATE ruleState = 1
+	TO_DELETE ruleState = 2
+)
 
 // module logger
 var logger = utils.GetLogger()
 
-func NewRules() *Rules {
-	return &Rules{
-		// frontend rules
-		frontendRules: make(map[string]*ruleset),
-		// ruleIDs grouped by ingressName
-		ingressRuleIDs: make(map[string][]RuleID),
-	}
+func NewRules() SectionRules {
+	return make(map[string]*ruleset)
 }
 
-func (r Rules) AddRule(rule Rule, ingressName string, frontends ...string) error {
-	if rule == nil || len(frontends) == 0 {
+func (r SectionRules) AddRule(rule Rule, ingressRule bool, frontend string) error {
+	if rule == nil || frontend == "" {
 		return fmt.Errorf("invalid params")
 	}
-	id := getID(rule)
-	ruleType := rule.GetType()
-	for _, frontend := range frontends {
-		ftRules, ok := r.frontendRules[frontend]
-		// Create frontend ruleSet
-		if !ok {
-			ftRules = &ruleset{
-				rules:  make(map[RuleType][]Rule),
-				status: make(map[RuleID]RuleStatus),
-			}
-			r.frontendRules[frontend] = ftRules
+	// Create frontend ruleSet
+	ftRuleSet, ok := r[frontend]
+	if !ok {
+		ftRuleSet = &ruleset{
+			rules: make(map[RuleType][]Rule),
+			meta:  make(map[RuleID]*ruleInfo),
 		}
-		// Update frontend ruleSet
-		if _, ok := ftRules.status[id]; ok {
-			// Rule already created
-			ftRules.status[id] = CREATED
-		} else {
-			// Rule to create at next refresh
-			ftRules.rules[ruleType] = append(ftRules.rules[ruleType], rule)
-			ftRules.status[id] = TO_CREATE
-		}
+		r[frontend] = ftRuleSet
 	}
-	if ingressName != "" {
-		for _, frontend := range frontends {
-			r.frontendRules[frontend].status[id] |= INGRESS
-		}
-		r.ingressRuleIDs[ingressName] = append(r.ingressRuleIDs[ingressName], id)
+	// Update frontend ruleSet
+	ruleType := rule.GetType()
+	ruleID := GetID(rule)
+	_, ok = ftRuleSet.meta[ruleID]
+	if ok {
+		// rule already created
+		ftRuleSet.meta[ruleID].state = CREATED
+	} else {
+		// rule to be created at next refresh
+		ftRuleSet.rules[ruleType] = append(ftRuleSet.rules[ruleType], rule)
+		ftRuleSet.meta[ruleID] = &ruleInfo{state: TO_CREATE}
+	}
+	if ingressRule {
+		ftRuleSet.meta[ruleID].ingress = true
 	}
 	return nil
 }
 
-func (r Rules) DeleteFrontend(frontend string) {
-	delete(r.frontendRules, frontend)
+func (r SectionRules) DeleteFrontend(frontend string) {
+	delete(r, frontend)
 }
 
-func (r Rules) Clean(frontends ...string) {
+func (r SectionRules) Clean(frontends ...string) {
 	for _, frontend := range frontends {
-		if ftRules, ok := r.frontendRules[frontend]; ok {
-			for id := range ftRules.status {
-				ftRules.status[id] = TO_DELETE
+		if ftRuleSet, ok := r[frontend]; ok {
+			for id := range ftRuleSet.meta {
+				ftRuleSet.meta[id].state = TO_DELETE
 			}
 		}
 	}
-	for ingress := range r.ingressRuleIDs {
-		r.ingressRuleIDs[ingress] = r.ingressRuleIDs[ingress][:0]
-	}
 }
 
-func (r Rules) GetIngressRuleIDs(ingress string) (ruleIDs []RuleID) {
-	ids := r.ingressRuleIDs[ingress]
-	return ids
-}
-
-func (r Rules) Refresh(client api.HAProxyClient) (reload bool) {
-	for feName, ftRules := range r.frontendRules {
+func (r SectionRules) Refresh(client api.HAProxyClient) (reload bool) {
+	for feName, ftRuleSet := range r {
 		fe, err := client.FrontendGet(feName)
 		if err != nil {
 			logger.Error(err)
 			continue
 		}
-		ACLVar := HTTPACLVar
+		aclVar := HTTPACLVar
 		if fe.Mode == "tcp" {
-			ACLVar = TCPACLVar
+			aclVar = TCPACLVar
 		}
 		client.FrontendRuleDeleteAll(feName)
 		// All rules are created with Index 0,
@@ -180,34 +169,38 @@ func (r Rules) Refresh(client api.HAProxyClient) (reload bool) {
 		// Thus iteration is done in reverse to preserve order between the defined rules in
 		// controller and the resulting order in HAProxy configuration.
 		for ruleType := RES_SET_HEADER; ruleType >= REQ_ACCEPT_CONTENT; ruleType-- {
-			ruleSet := ftRules.rules[ruleType]
-			for i := len(ruleSet) - 1; i >= 0; i-- {
-				ingressACL := ""
-				id := getID(ruleSet[i])
-				if ftRules.status[id] == TO_DELETE {
-					delete(ftRules.status, id)
-					ruleSet = append(ruleSet[:i], ruleSet[i+1:]...)
+			rules := ftRuleSet.rules[ruleType]
+			for i := len(rules) - 1; i >= 0; i-- {
+				id := GetID(rules[i])
+				// Delete HAProxy Rule
+				if ftRuleSet.meta[id].state == TO_DELETE {
+					delete(ftRuleSet.meta, id)
+					rules = append(rules[:i], rules[i+1:]...)
 					logger.Debugf("HAProxy rule '%s' deleted", constLookup[ruleType])
 					continue
 				}
-				if ftRules.status[id]&INGRESS != 0 {
-					ingressACL = fmt.Sprintf("{ var(%s) -m dom %s }", ACLVar, id)
+				// Create HAProxy Rule
+				ingressACL := ""
+				if ftRuleSet.meta[id].ingress {
+					ingressACL = fmt.Sprintf("{ var(%s) -m dom %s }", aclVar, id)
 				}
-				err := ruleSet[i].Create(client, &fe, ingressACL)
+				err := rules[i].Create(client, &fe, ingressACL)
 				if err != nil {
-					logger.Errorf("%s: %s", constLookup[ruleType], err)
-				} else if ftRules.status[id]&TO_CREATE != 0 {
+					logger.Errorf("failed to create a %s rule: %s", constLookup[ruleType], err)
+					continue
+				}
+				if ftRuleSet.meta[id].state == TO_CREATE {
 					reload = true
 					logger.Debugf("New HAProxy rule '%s' created, reload required", constLookup[ruleType])
 				}
 			}
-			ftRules.rules[ruleType] = ruleSet
+			ftRuleSet.rules[ruleType] = rules
 		}
 	}
 	return reload
 }
 
-func getID(rule Rule) RuleID {
+func GetID(rule Rule) RuleID {
 	b, _ := json.Marshal(rule)
 	b = append(b, byte(rule.GetType()))
 	return RuleID(utils.Hash(b))
