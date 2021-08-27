@@ -153,6 +153,7 @@ func (r SectionRules) Clean(frontends ...string) {
 }
 
 func (r SectionRules) Refresh(client api.HAProxyClient) (reload bool) {
+	logger.Error(client.UserListDeleteAll())
 	for feName, ftRuleSet := range r {
 		fe, err := client.FrontendGet(feName)
 		if err != nil {

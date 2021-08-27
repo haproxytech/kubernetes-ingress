@@ -23,7 +23,7 @@ func (c *clientNative) UserListExistsByGroup(group string) (exist bool, err erro
 	return
 }
 
-func (c *clientNative) UserListDeleteByGroup(group string) (err error) {
+func (c *clientNative) UserListDeleteAll() (err error) {
 	c.activeTransactionHasChanges = true
 
 	var p parser.Parser
@@ -31,7 +31,15 @@ func (c *clientNative) UserListDeleteByGroup(group string) (err error) {
 		return
 	}
 
-	return p.SectionsDelete(parser.UserList, group)
+	var sections []string
+	sections, err = p.SectionsGet(parser.UserList)
+	for _, section := range sections {
+		err = p.SectionsDelete(parser.UserList, section)
+		if err != nil {
+			return
+		}
+	}
+	return
 }
 
 func (c *clientNative) UserListCreateByGroup(group string, userPasswordMap map[string][]byte) (err error) {

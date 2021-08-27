@@ -195,7 +195,6 @@ func (c *HAProxyController) handleRequestBasicAuth(ingress *store.Ingress, resul
 	case authType == "":
 		if ok, _ := c.Client.UserListExistsByGroup(userListName); ok {
 			logger.Tracef("Ingress %s/%s: Deleting HTTP Basic Authentication", ingress.Namespace, ingress.Name)
-			logger.Error(c.Client.UserListDeleteByGroup(userListName))
 		}
 		return
 	case authType != "basic-auth":
@@ -223,15 +222,6 @@ func (c *HAProxyController) handleRequestBasicAuth(ingress *store.Ingress, resul
 		}
 	}
 	// Configuring annotation
-	var errors utils.Errors
-	errors.Add(
-		c.Client.UserListDeleteByGroup(userListName),
-		c.Client.UserListCreateByGroup(userListName, credentials))
-	if errors.Result() != nil {
-		logger.Errorf("Ingress %s/%s: Cannot create userlist for basic-auth, %s", ingress.Namespace, ingress.Name, errors.Result())
-		return
-	}
-
 	realm := "Protected-Content"
 	if authRealm != "" {
 		realm = strings.ReplaceAll(authRealm, " ", "-")
@@ -239,9 +229,9 @@ func (c *HAProxyController) handleRequestBasicAuth(ingress *store.Ingress, resul
 	// Adding HAProxy Rule
 	logger.Tracef("Ingress %s/%s: Configuring basic-auth annotation", ingress.Namespace, ingress.Name)
 	reqBasicAuth := rules.ReqBasicAuth{
-		Data:      credentials,
-		AuthRealm: realm,
-		AuthGroup: userListName,
+		Credentials: credentials,
+		AuthRealm:   realm,
+		AuthGroup:   userListName,
 	}
 	result.Add(reqBasicAuth)
 }
