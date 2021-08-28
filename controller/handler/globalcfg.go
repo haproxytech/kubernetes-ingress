@@ -39,7 +39,7 @@ func (h GlobalCfg) Update(k store.K8s, cfg *config.ControllerCfg, api api.HAProx
 			Level:             "admin",
 		},
 	}
-	err = api.GlobalPushConfiguration(global)
+	err = api.GlobalPushConfiguration(*global)
 	if err != nil {
 		return
 	}

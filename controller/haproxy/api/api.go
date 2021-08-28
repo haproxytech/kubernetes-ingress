@@ -48,7 +48,7 @@ type HAProxyClient interface {
 	GlobalGetLogTargets() (models.LogTargets, error)
 	GlobalCreateLogTargets(models.LogTargets) error
 	GlobalDeleteLogTargets()
-	GlobalGetConfiguration() (models.Global, error)
+	GlobalGetConfiguration() (*models.Global, error)
 	GlobalPushConfiguration(models.Global) error
 	GlobalCfgSnippet(snippet []string) error
 	GetMap(mapFile string) (*models.Map, error)
