@@ -162,6 +162,5 @@ var defaultValues = map[string]string{
 	"timeout-server":          "50s",
 	"timeout-tunnel":          "1h",
 	"timeout-http-keep-alive": "1m",
-	"hard-stop-after":         "1h",
 	"client-crt-optional":     "false",
 }

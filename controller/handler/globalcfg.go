@@ -26,19 +26,8 @@ type GlobalCfg struct {
 }
 
 func (h GlobalCfg) Update(k store.K8s, cfg *config.ControllerCfg, api api.HAProxyClient) (reload bool, err error) {
-	global, err := api.GlobalGetConfiguration()
-	if err != nil {
-		return
-	}
-	global.Pidfile = cfg.Env.PIDFile
-	global.ServerStateBase = cfg.Env.StateDir
-	global.RuntimeAPIs = []*models.RuntimeAPI{
-		{
-			Address:           &cfg.Env.RuntimeSocket,
-			ExposeFdListeners: true,
-			Level:             "admin",
-		},
-	}
+	global := &models.Global{}
+	config.SetGlobal(global, cfg.Env)
 	err = api.GlobalPushConfiguration(*global)
 	if err != nil {
 		return

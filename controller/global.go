@@ -22,6 +22,7 @@ import (
 	"github.com/haproxytech/client-native/v2/models"
 
 	"github.com/haproxytech/kubernetes-ingress/controller/annotations"
+	"github.com/haproxytech/kubernetes-ingress/controller/configuration"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy"
 	"github.com/haproxytech/kubernetes-ingress/controller/store"
 )
@@ -50,19 +51,19 @@ func (c *HAProxyController) globalCfg() (restart bool) {
 		logger.Error(errL)
 		return
 	}
+	newGlobal = &models.Global{}
 	if c.Store.CR.Global != nil {
 		newGlobal = c.Store.CR.Global
 	} else {
-		g := *global
-		for _, a := range annotations.GetGlobalAnnotations(&g, &newLg) {
+		for _, a := range annotations.GetGlobalAnnotations(newGlobal, &newLg) {
 			annValue := annotations.GetValue(a.GetName(), c.Store.ConfigMaps.Main.Annotations)
 			err = a.Process(annValue)
 			if err != nil {
 				logger.Errorf("annotation %s: %s", a.GetName(), err)
 			}
 		}
-		newGlobal = &g
 	}
+	configuration.SetGlobal(newGlobal, c.Cfg.Env)
 	updated = deep.Equal(newGlobal, global)
 	if len(updated) != 0 {
 		logger.Error(c.Client.GlobalPushConfiguration(*newGlobal))
