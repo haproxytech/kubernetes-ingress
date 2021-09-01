@@ -48,7 +48,10 @@ func (a *CfgSnippet) GetName() string {
 }
 
 func (a *CfgSnippet) Process(input string) error {
-	data := strings.Split(strings.Trim(input, "\n"), "\n")
+	data := []string{}
+	if input != "" {
+		data = strings.Split(strings.Trim(input, "\n"), "\n")
+	}
 	switch {
 	case a.frontend != "":
 		_, ok := cfgSnippet.frontends[a.frontend]
@@ -109,22 +112,20 @@ func UpdateFrontendCfgSnippet(api api.HAProxyClient, frontends ...string) (updat
 	return
 }
 
-func UpdateBackendCfgSnippet(api api.HAProxyClient, backends ...string) (updated bool, err error) {
-	for _, bnd := range backends {
-		data, ok := cfgSnippet.backends[bnd]
-		if !ok {
-			continue
-		}
-		if !data.toUpdate {
-			continue
-		}
-		err = api.BackendCfgSnippetSet(bnd, data.value)
-		if err != nil {
-			return
-		}
-		updated = true
-		data.toUpdate = false
-		cfgSnippet.backends[bnd] = data
+func UpdateBackendCfgSnippet(api api.HAProxyClient, backend string) (updated bool, err error) {
+	data, ok := cfgSnippet.backends[backend]
+	if !ok {
+		return
 	}
+	if !data.toUpdate {
+		return
+	}
+	err = api.BackendCfgSnippetSet(backend, data.value)
+	if err != nil {
+		return
+	}
+	updated = true
+	data.toUpdate = false
+	cfgSnippet.backends[backend] = data
 	return
 }
