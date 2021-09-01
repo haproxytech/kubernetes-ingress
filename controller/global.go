@@ -87,20 +87,24 @@ func (c *HAProxyController) globalCfg() (restart bool) {
 }
 
 func (c *HAProxyController) defaultsCfg() (reload bool) {
-	var oldDefaults models.Defaults
+	var newDefaults, defaults *models.Defaults
 	defaults, err := c.Client.DefaultsGetConfiguration()
 	if err != nil {
 		logger.Error(err)
 		return
 	}
-	oldDefaults = *defaults
-	for _, a := range annotations.GetDefaultsAnnotations(defaults) {
-		annValue := annotations.GetValue(a.GetName(), c.Store.ConfigMaps.Main.Annotations)
-		logger.Error(a.Process(annValue))
+	newDefaults = &models.Defaults{}
+	if c.Store.CR.Defaults != nil {
+		newDefaults = c.Store.CR.Defaults
+	} else {
+		for _, a := range annotations.GetDefaultsAnnotations(newDefaults) {
+			annValue := annotations.GetValue(a.GetName(), c.Store.ConfigMaps.Main.Annotations)
+			logger.Error(a.Process(annValue))
+		}
 	}
-	result := deep.Equal(&oldDefaults, defaults)
+	result := deep.Equal(newDefaults, defaults)
 	if len(result) != 0 {
-		if err = c.Client.DefaultsPushConfiguration(defaults); err != nil {
+		if err = c.Client.DefaultsPushConfiguration(newDefaults); err != nil {
 			logger.Error(err)
 			return
 		}

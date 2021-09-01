@@ -52,6 +52,8 @@ func (f *genericInformer) Lister() cache.GenericLister {
 func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource) (GenericInformer, error) {
 	switch resource {
 	// Group=core.haproxy.org, Version=v1alpha1
+	case v1alpha1.SchemeGroupVersion.WithResource("defaults"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Core().V1alpha1().Defaults().Informer()}, nil
 	case v1alpha1.SchemeGroupVersion.WithResource("globals"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Core().V1alpha1().Globals().Informer()}, nil
 

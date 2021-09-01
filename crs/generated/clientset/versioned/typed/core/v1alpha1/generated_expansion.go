@@ -17,4 +17,6 @@
 
 package v1alpha1
 
+type DefaultsExpansion interface{}
+
 type GlobalExpansion interface{}

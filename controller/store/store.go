@@ -32,7 +32,8 @@ type K8s struct {
 }
 
 type CustomResources struct {
-	Global *models.Global
+	Global   *models.Global
+	Defaults *models.Defaults
 }
 
 type NamespacesWatch struct {

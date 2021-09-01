@@ -17,6 +17,14 @@
 
 package v1alpha1
 
+// DefaultsListerExpansion allows custom methods to be added to
+// DefaultsLister.
+type DefaultsListerExpansion interface{}
+
+// DefaultsNamespaceListerExpansion allows custom methods to be added to
+// DefaultsNamespaceLister.
+type DefaultsNamespaceListerExpansion interface{}
+
 // GlobalListerExpansion allows custom methods to be added to
 // GlobalLister.
 type GlobalListerExpansion interface{}

@@ -25,8 +25,15 @@ import (
 type GlobalCR struct {
 }
 
+type DefaultsCR struct {
+}
+
 func NewGlobalCR() GlobalCR {
 	return GlobalCR{}
+}
+
+func NewDefaultsCR() DefaultsCR {
+	return DefaultsCR{}
 }
 
 func (c GlobalCR) GetKind() string {
@@ -71,5 +78,50 @@ func (c GlobalCR) ProcessEvent(s *store.K8s, job SyncDataEvent) bool {
 		return false
 	}
 	s.CR.Global = data.Spec.Config
+	return true
+}
+
+func (c DefaultsCR) GetKind() string {
+	return "Defaults"
+}
+
+func (c DefaultsCR) GetInformer(eventChan chan SyncDataEvent, factory informers.SharedInformerFactory) cache.SharedIndexInformer {
+	informer := factory.Core().V1alpha1().Defaults().Informer()
+
+	sendToChannel := func(eventChan chan SyncDataEvent, object interface{}, status store.Status) {
+		data := object.(*corev1alpha1.Defaults)
+		logger.Debugf("%s %s: %s", data.GetNamespace(), status, data.GetName())
+		if status == DELETED {
+			eventChan <- SyncDataEvent{SyncType: CUSTOM_RESOURCE, CRKind: c.GetKind(), Namespace: data.GetNamespace(), Name: data.GetName(), Data: nil}
+			return
+		}
+		eventChan <- SyncDataEvent{SyncType: CUSTOM_RESOURCE, CRKind: c.GetKind(), Namespace: data.GetNamespace(), Name: data.GetName(), Data: data}
+	}
+
+	informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc: func(obj interface{}) {
+			sendToChannel(eventChan, obj, store.ADDED)
+		},
+		UpdateFunc: func(oldObj, newObj interface{}) {
+			sendToChannel(eventChan, newObj, store.MODIFIED)
+		},
+		DeleteFunc: func(obj interface{}) {
+			sendToChannel(eventChan, obj, store.DELETED)
+		},
+	})
+	return informer
+}
+
+func (c DefaultsCR) ProcessEvent(s *store.K8s, job SyncDataEvent) bool {
+	if job.Data == nil {
+		s.CR.Defaults = nil
+		return true
+	}
+	data, ok := job.Data.(*corev1alpha1.Defaults)
+	if !ok {
+		logger.Warning(CoreGroupVersion + ": type mismatch with Defaults kind")
+		return false
+	}
+	s.CR.Defaults = data.Spec.Config
 	return true
 }
