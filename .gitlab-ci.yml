@@ -11,7 +11,7 @@ variables:
 diff:
   stage: diff
   image:
-    name: $CI_REGISTRY_GO/golang:1.16
+    name: $CI_REGISTRY_GO/golang:1.17
     entrypoint: [ "" ]
   tags:
     - go
@@ -20,6 +20,19 @@ diff:
   script:
     - test -z "$(git diff 2> /dev/null)" || exit "Documentation is not generated, issue \`cd documentation/gen && go run .\` and commit the result"
     - test -z "$(git ls-files --others --exclude-standard 2> /dev/null)" || exit "Documentation created untracked files, cannot proceed"
+  only:
+    - merge_requests
+    - branches
+tidy:
+  stage: lint
+  image:
+    name: $CI_REGISTRY_GO/golang:1.17
+    entrypoint: [""]
+  tags:
+    - go
+  script:
+    - go mod tidy
+    - test -z "$(git diff 2> /dev/null)" || exit 'Go modules not tidied, issue \`go mod tidy\` and commit the result'
   only:
     - merge_requests
     - branches
@@ -49,7 +62,7 @@ lint-commit-msg:
 unit-tests:
   stage: unit-tests
   image:
-    name: $CI_REGISTRY_GO/golang:1.16
+    name: $CI_REGISTRY_GO/golang:1.17
     entrypoint: [""]
   tags:
     - go
