@@ -43,6 +43,9 @@ func main() {
 	_, err := parser.Parse()
 	exitCode := 0
 	defer func() {
+		if r := recover(); r != nil {
+			fmt.Println("Error : ", r)
+		}
 		os.Exit(exitCode)
 	}()
 	if err != nil {
