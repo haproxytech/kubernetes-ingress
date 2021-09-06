@@ -102,14 +102,15 @@ func (c *HAProxyController) defaultsCfg() (reload bool) {
 			logger.Error(a.Process(annValue))
 		}
 	}
-	result := deep.Equal(newDefaults, defaults)
-	if len(result) != 0 {
-		if err = c.Client.DefaultsPushConfiguration(newDefaults); err != nil {
+	configuration.SetDefaults(newDefaults)
+	updated := deep.Equal(newDefaults, defaults)
+	if len(updated) != 0 {
+		if err = c.Client.DefaultsPushConfiguration(*newDefaults); err != nil {
 			logger.Error(err)
 			return
 		}
 		reload = true
-		logger.Debugf("Defaults config updated: %s\nReload required", result)
+		logger.Debugf("Defaults config updated: %s\nReload required", updated)
 	}
 	return
 }

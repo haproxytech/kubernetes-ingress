@@ -6,7 +6,7 @@ import (
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 )
 
-// SetGlobal will set default values for Global config.
+// SetGlobal will set default values for Global section config.
 func SetGlobal(global *models.Global, env Env) {
 	// Enforced values
 	global.MasterWorker = true
@@ -34,5 +34,43 @@ func SetGlobal(global *models.Global, env Env) {
 	}
 	if global.SslDefaultBindOptions == "" {
 		global.SslDefaultBindOptions = "no-sslv3 no-tls-tickets no-tlsv10"
+	}
+}
+
+// SetDefaults will set default values for Defaults section config.
+func SetDefaults(defaults *models.Defaults) {
+	enabled := "enabled"
+	if defaults.Redispatch == nil {
+		defaults.Redispatch = &models.Redispatch{Enabled: &enabled}
+	}
+	if defaults.Dontlognull == "" {
+		defaults.Dontlognull = "enabled"
+	}
+	if defaults.HTTPConnectionMode == "" {
+		defaults.HTTPConnectionMode = "http-keep-alive"
+	}
+	if defaults.HTTPRequestTimeout == nil {
+		defaults.HTTPRequestTimeout = utils.PtrInt64(5000) // 5s
+	}
+	if defaults.ConnectTimeout == nil {
+		defaults.ConnectTimeout = utils.PtrInt64(5000) // 5s
+	}
+	if defaults.ConnectTimeout == nil {
+		defaults.QueueTimeout = utils.PtrInt64(5000) // 5s
+	}
+	if defaults.ClientTimeout == nil {
+		defaults.ClientTimeout = utils.PtrInt64(50000) // 50s
+	}
+	if defaults.ServerTimeout == nil {
+		defaults.ServerTimeout = utils.PtrInt64(50000) // 50s
+	}
+	if defaults.TunnelTimeout == nil {
+		defaults.TunnelTimeout = utils.PtrInt64(3600000) // 1h
+	}
+	if defaults.HTTPKeepAliveTimeout == nil {
+		defaults.HTTPKeepAliveTimeout = utils.PtrInt64(60000) // 1m
+	}
+	if defaults.LogFormat == "" {
+		defaults.LogFormat = "'%ci:%cp [%tr] %ft %b/%s %TR/%Tw/%Tc/%Tr/%Ta %ST %B %CC %CS %tsc %ac/%fc/%bc/%sc/%rc %sq/%bq %hr %hs \"%HM %[var(txn.base)] %HV\"'"
 	}
 }

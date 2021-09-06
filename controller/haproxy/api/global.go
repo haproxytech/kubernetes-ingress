@@ -16,8 +16,8 @@ func (c *clientNative) DefaultsGetConfiguration() (defaults *models.Defaults, er
 	return
 }
 
-func (c *clientNative) DefaultsPushConfiguration(defaults *models.Defaults) (err error) {
-	err = c.nativeAPI.Configuration.PushDefaultsConfiguration(defaults, c.activeTransaction, 0)
+func (c *clientNative) DefaultsPushConfiguration(defaults models.Defaults) (err error) {
+	err = c.nativeAPI.Configuration.PushDefaultsConfiguration(&defaults, c.activeTransaction, 0)
 	if err != nil {
 		return fmt.Errorf("unable to update HAProxy's defaults section: %w", err)
 	}

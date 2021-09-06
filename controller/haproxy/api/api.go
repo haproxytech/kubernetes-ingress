@@ -28,7 +28,7 @@ type HAProxyClient interface {
 	BackendSwitchingRuleCreate(frontend string, rule models.BackendSwitchingRule) error
 	BackendSwitchingRuleDeleteAll(frontend string)
 	DefaultsGetConfiguration() (*models.Defaults, error)
-	DefaultsPushConfiguration(*models.Defaults) error
+	DefaultsPushConfiguration(models.Defaults) error
 	ExecuteRaw(command string) (result []string, err error)
 	FrontendCfgSnippetSet(frontendName string, value []string) error
 	FrontendCreate(frontend models.Frontend) error

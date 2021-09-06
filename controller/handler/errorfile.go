@@ -87,7 +87,7 @@ func (h ErrorFile) Update(k store.K8s, cfg *config.ControllerCfg, api api.HAProx
 			return reload, err
 		}
 		defaults.ErrorFiles = apiInput
-		if err = api.DefaultsPushConfiguration(defaults); err != nil {
+		if err = api.DefaultsPushConfiguration(*defaults); err != nil {
 			logger.Error(err)
 			return reload, err
 		}
