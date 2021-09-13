@@ -28,3 +28,9 @@ nodes:
         containerPort: 32766
       - hostPort: 32767
         containerPort: 32767
+    kubeadmConfigPatches:
+    - |
+      kind: ClusterConfiguration
+      controllerManager:
+          extraArgs:
+            max-endpoints-per-slice: "5"
