@@ -28,15 +28,15 @@ import (
 )
 
 func (c *HAProxyController) handleGlobalConfig() (reload, restart bool) {
-	restart = c.globalCfg()
-	reload = c.defaultsCfg()
+	reload, restart = c.globalCfg()
+	reload = c.defaultsCfg() || reload
 	c.handleDefaultCert()
 	reload = c.handleDefaultService() || reload
 	_ = c.handleIngressAnnotations(store.Ingress{})
 	return reload, restart
 }
 
-func (c *HAProxyController) globalCfg() (restart bool) {
+func (c *HAProxyController) globalCfg() (reload, restart bool) {
 	var newGlobal, global *models.Global
 	var newLg models.LogTargets
 	var err error
@@ -77,12 +77,18 @@ func (c *HAProxyController) globalCfg() (restart bool) {
 		logger.Debugf("Syslog servers updated: %s\nRestart required", updated)
 		restart = true
 	}
-	change, errSnipp := annotations.UpdateGlobalCfgSnippet(c.Client)
+	updatedSnipp, errSnipp := annotations.UpdateGlobalCfgSnippet(c.Client)
 	logger.Error(errSnipp)
-	restart = restart || change
-	change, errSnipp = annotations.UpdateFrontendCfgSnippet(c.Client, "http", "https", "stats")
+	if updatedSnipp {
+		logger.Debugf("Global config-snippet updated: %s\nRestart required", updated)
+		restart = true
+	}
+	updatedSnipp, errSnipp = annotations.UpdateFrontendCfgSnippet(c.Client, "http", "https", "stats")
 	logger.Error(errSnipp)
-	restart = restart || change
+	if updatedSnipp {
+		logger.Debugf("Frontend config-snippet updated: %s\nReload required", updated)
+		reload = true
+	}
 	return
 }
 
