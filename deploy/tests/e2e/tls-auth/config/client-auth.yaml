@@ -9,6 +9,7 @@ data:
   client-ca: e2e-tests-tls-auth/client-ca
   syslog-server: |
     address: stdout, format: raw, facility:daemon
+  maxconn: "1000"
   server-slots: "4"
   timeout-client: 50s
   timeout-connect: 5s
