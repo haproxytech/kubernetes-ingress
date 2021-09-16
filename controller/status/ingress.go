@@ -79,7 +79,7 @@ func getServiceAddresses(service *corev1.Service, curAddr *[]string) (updated bo
 }
 
 func updateIngressStatus(client *kubernetes.Clientset, ingress *store.Ingress, addresses []string) (err error) {
-	logger.Trace("Updating status of Ingress %s/%s", ingress.Namespace, ingress.Name)
+	logger.Tracef("Updating status of Ingress %s/%s", ingress.Namespace, ingress.Name)
 	var lbi []corev1.LoadBalancerIngress
 	for _, addr := range addresses {
 		if net.ParseIP(addr) == nil {
