@@ -155,4 +155,5 @@ var defaultValues = map[string]string{
 	"scale-server-slots":     "42",
 	"syslog-server":          "address:127.0.0.1, facility: local0, level: notice",
 	"client-crt-optional":    "false",
+	"tls-alpn":               "h2,http/1.1",
 }
