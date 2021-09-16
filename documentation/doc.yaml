@@ -452,8 +452,8 @@ annotations:
       - ingress
     version_min: "1.5"
     example:
-      - 'auth-type: basic-auth'
-      - 'auth-secret: default/haproxy-credentials'
+      - "auth-type: basic-auth"
+      - "auth-secret: default/haproxy-credentials"
   - title: auth-secret
     type: string
     group: authentication
@@ -487,8 +487,8 @@ annotations:
       - ingress
     version_min: "1.5"
     example:
-      - 'auth-type: basic-auth'
-      - 'auth-secret: default/haproxy-credentials'
+      - "auth-type: basic-auth"
+      - "auth-secret: default/haproxy-credentials"
   - title: auth-realm
     type: string
     group: authentication
@@ -503,20 +503,20 @@ annotations:
       - configmap
       - ingress
     version_min: "1.5"
-    example: ['auth-realm: Admin Area']
+    example: ["auth-realm: Admin Area"]
   - title: blacklist
     type: IPs or CIDRs
     group: access-control
     dependencies: ""
     default: ""
     description:
-    - Blocks given IP addresses and/or IP address ranges.
+      - Blocks given IP addresses and/or IP address ranges.
     tip: []
     values:
-    - Comma-separated list of IP addresses and/or CIDR ranges
+      - Comma-separated list of IP addresses and/or CIDR ranges
     applies_to:
-    - configmap
-    - ingress
+      - configmap
+      - ingress
     version_min: "1.4"
     example: ['blacklist: "192.168.1.0/24, 192.168.2.100"']
   - title: check
@@ -525,15 +525,15 @@ annotations:
     dependencies: ""
     default: "true"
     description:
-    - Enables TCP level health checks on pods and attempts a TCP connection periodically.
+      - Enables TCP level health checks on pods and attempts a TCP connection periodically.
     tip: []
     values:
-    - "true"
-    - "false"
+      - "true"
+      - "false"
     applies_to:
-    - configmap
-    - ingress
-    - service
+      - configmap
+      - ingress
+      - service
     version_min: "1.4"
     example: ['check: "true"']
   - title: check-http
@@ -542,211 +542,211 @@ annotations:
     dependencies: check
     default: ""
     description:
-    - Enables HTTP level health checks on pods and sends an HTTP request periodically.
-      The `check` setting must be true.
+      - Enables HTTP level health checks on pods and sends an HTTP request periodically.
+        The `check` setting must be true.
     tip: []
     values:
-    - URI to make HTTP requests to, e.g. `/health`
-    - URI with method, e.g. `HEAD /health`
-    - URI, method and HTTP version, e.g. `HEAD /health HTTP/1.1`
+      - URI to make HTTP requests to, e.g. `/health`
+      - URI with method, e.g. `HEAD /health`
+      - URI, method and HTTP version, e.g. `HEAD /health HTTP/1.1`
     applies_to:
-    - configmap
-    - ingress
-    - service
+      - configmap
+      - ingress
+      - service
     version_min: "1.4"
     example:
-    - 'check: "true"'
-    - 'check-http: "/health"'
+      - 'check: "true"'
+      - 'check-http: "/health"'
   - title: check-interval
-    type: '[time](#time)'
+    type: "[time](#time)"
     group: backend-checks
     dependencies: check
     default: ""
     description:
-    - Sets the interval between health checks when `check` is enabled.
+      - Sets the interval between health checks when `check` is enabled.
     tip: []
     values:
-    - Integer with time unit suffix (1m = 1 minute, 10s = 10 seconds)
+      - Integer with time unit suffix (1m = 1 minute, 10s = 10 seconds)
     applies_to:
-    - configmap
-    - ingress
-    - service
+      - configmap
+      - ingress
+      - service
     version_min: "1.4"
     example:
-    - 'check: "true"'
-    - 'check-interval: "1m"'
+      - 'check: "true"'
+      - 'check-interval: "1m"'
   - title: clean-certs
     type: bool
     group:
     dependencies:
     default: "true"
     description:
-    - Switches certificates clean up.
-    - By default controller cleans up unused certificates in haproxy cert directory.
-    - In the case where certificates may be handled by a side-car container, it is useful not to remove certificates unkown to controller.
+      - Switches certificates clean up.
+      - By default controller cleans up unused certificates in haproxy cert directory.
+      - In the case where certificates may be handled by a side-car container, it is useful not to remove certificates unkown to controller.
     tip: []
     values:
-    - "true"
-    - "false"
+      - "true"
+      - "false"
     applies_to:
-    - configmap
+      - configmap
     version_min: "1.6"
     example:
-    - 'clean-certs: "false"'
+      - 'clean-certs: "false"'
   - title: client-ca
     type: string
     group: authentication
     dependencies: ssl-offloading
     default: ""
     description:
-    - Sets the client certificate authority enabling HAProxy to check clients certificate (TLS authentication), thus enabling client *mTLS*.
+      - Sets the client certificate authority enabling HAProxy to check clients certificate (TLS authentication), thus enabling client *mTLS*.
     tip:
       - NB, [ssl-offloading](#ssl-offloading) **should be enabled** for TLS authentication to work.
     values:
-    - secret path in "namespace/name" format.
+      - secret path in "namespace/name" format.
     applies_to:
-    - configmap
+      - configmap
     version_min: "1.6"
     example:
-    - 'client-ca: exp/client-ca.crt'
+      - "client-ca: exp/client-ca.crt"
   - title: client-crt-optional
     type: bool
     group: authentication
     dependencies: client-ca
     default: "false"
     description:
-    - If enabled, certificate verification will be optional which means haproxy will still accept the client connection even if the certificate verification fails.
-    - If disabled haproxy will enforce verification of client certificates and only accepts client with valid certificate.
+      - If enabled, certificate verification will be optional which means haproxy will still accept the client connection even if the certificate verification fails.
+      - If disabled haproxy will enforce verification of client certificates and only accepts client with valid certificate.
     tip:
       - NB, [client-ca](#client-ca) **should be enabled** for certificate verification to work.
     values:
-    -  "true"
-    -  "false"
+      - "true"
+      - "false"
     applies_to:
-    - configmap
+      - configmap
     version_min: "1.6"
     example:
-    - 'client-crt-optional: true'
+      - "client-crt-optional: true"
   - title: cors-enable
     type: bool
     group: CORS
     dependencies: ""
     default: "false"
     description:
-    - Enables CORS rules for corresponding Ingress traffic.
+      - Enables CORS rules for corresponding Ingress traffic.
     tip: []
     values:
-    - "true"
-    - "false"
+      - "true"
+      - "false"
     applies_to:
-    - configmap
-    - ingress
+      - configmap
+      - ingress
     version_min: "1.5"
     example:
-    - 'cors-enable: "true"'
+      - 'cors-enable: "true"'
   - title: cors-allow-origin
     type: string
     group: CORS
     dependencies: cors-enable
     default: "*"
     description:
-    - Sets the `Access-Control-Allow-Origin` response header to tell browsers which origin is allowed to access the requested resource.
+      - Sets the `Access-Control-Allow-Origin` response header to tell browsers which origin is allowed to access the requested resource.
     tip:
-    - With "regex" value, it is possible to allow a list of origins. If one of them matches the request Origin header it will be returned to the client.
+      - With "regex" value, it is possible to allow a list of origins. If one of them matches the request Origin header it will be returned to the client.
     values:
-    - Wildcard `*`, allow access form any origin.
-    - Regex, regex should match an origin (request Origin header) in the format `<scheme> "://" <hostname> [ ":" <port> ]` if the origin is matched then it will be the value of `Access-Control-Allow-Origin`.
+      - Wildcard `*`, allow access form any origin.
+      - Regex, regex should match an origin (request Origin header) in the format `<scheme> "://" <hostname> [ ":" <port> ]` if the origin is matched then it will be the value of `Access-Control-Allow-Origin`.
     applies_to:
-    - configmap
-    - ingress
+      - configmap
+      - ingress
     version_min: "1.5"
     example:
-    - 'cors-allow-origin: "*"'
-    - 'cors-allow-origin: "https://example.com"'
-    - 'cors-allow-origin: "^https://(.+\.)?(example-1\.com|example-2\.com)(:\d{1,5})?$"'
+      - 'cors-allow-origin: "*"'
+      - 'cors-allow-origin: "https://example.com"'
+      - 'cors-allow-origin: "^https://(.+\.)?(example-1\.com|example-2\.com)(:\d{1,5})?$"'
   - title: cors-allow-methods
     type: string
     group: CORS
     dependencies: cors-enable
     default: "*"
     description:
-    - Sets the `Access-Control-Allow-Methods` response header to tell browsers the HTTP methods allowed when accessing the request resource.
+      - Sets the `Access-Control-Allow-Methods` response header to tell browsers the HTTP methods allowed when accessing the request resource.
     tip: []
     values:
-    - Wildcard `*`, allow access for all HTTP methods.
-    - A comma-separated list of HTTP methods
+      - Wildcard `*`, allow access for all HTTP methods.
+      - A comma-separated list of HTTP methods
     applies_to:
-    - configmap
-    - ingress
+      - configmap
+      - ingress
     version_min: "1.5"
     example:
-    - 'cors-allow-methods: "*"'
-    - 'cors-allow-methods: "GET"'
-    - 'cors-allow-methods: "GET, POST"'
+      - 'cors-allow-methods: "*"'
+      - 'cors-allow-methods: "GET"'
+      - 'cors-allow-methods: "GET, POST"'
   - title: cors-allow-credentials
     type: bool
     group: CORS
     dependencies: cors-enable
     default: "false"
     description:
-    - Sets the `Access-Control-Allow-Credentials` response header to tell browsers if credentials can be used to access the requested resource.
+      - Sets the `Access-Control-Allow-Credentials` response header to tell browsers if credentials can be used to access the requested resource.
     tip: []
     values:
-    - "true"
-    - "false"
+      - "true"
+      - "false"
     applies_to:
-    - configmap
-    - ingress
+      - configmap
+      - ingress
     version_min: "1.5"
     example:
-    - 'cors-allow-credentials: "true"'
+      - 'cors-allow-credentials: "true"'
   - title: cors-allow-headers
     type: string
     group: CORS
     dependencies: cors-enable
     default: "*"
     description:
-    - Sets the `Access-Control-Allow-Headers` response header to tell browsers which HTTP headers can be used when accessing the request resource.
+      - Sets the `Access-Control-Allow-Headers` response header to tell browsers which HTTP headers can be used when accessing the request resource.
     tip: []
     values:
-    - Wildcard `*`, allow access for all HTTP headers.
-    - A comma-separated list of HTTP headers
+      - Wildcard `*`, allow access for all HTTP headers.
+      - A comma-separated list of HTTP headers
     applies_to:
-    - configmap
-    - ingress
+      - configmap
+      - ingress
     version_min: "1.5"
     example:
-    - 'cors-allow-headers: "*"'
-    - 'cors-allow-headers: "X-Custom-Header"'
-    - 'cors-allow-headers: "X-Custom-Header, Upgrade-Insecure-Requests"'
+      - 'cors-allow-headers: "*"'
+      - 'cors-allow-headers: "X-Custom-Header"'
+      - 'cors-allow-headers: "X-Custom-Header, Upgrade-Insecure-Requests"'
   - title: cors-max-age
-    type: '[time](#time)'
+    type: "[time](#time)"
     group: CORS
     dependencies: cors-enable
     default: "5s"
     description:
-    - Sets the `Access-Control-Allow-Age` response header to tell browsers how long the result of a preflight request can be cached.
+      - Sets the `Access-Control-Allow-Age` response header to tell browsers how long the result of a preflight request can be cached.
     tip: []
     values:
-    - A [time](#time) duration
+      - A [time](#time) duration
     applies_to:
-    - configmap
-    - ingress
+      - configmap
+      - ingress
     version_min: "1.5"
     example:
-    - 'cors-max-age: "1m"'
+      - 'cors-max-age: "1m"'
   - title: global-config-snippet
     type: string
     group: config-snippet
     dependencies: ""
     default: ""
     description:
-    - Defines a group of configuration directives to insert the HAProxy global section.
+      - Defines a group of configuration directives to insert the HAProxy global section.
     tip: []
     values:
-    - One or more valid HAProxy directives
+      - One or more valid HAProxy directives
     applies_to:
-    - configmap
+      - configmap
     version_min: "1.5"
     example_configmap: |-
       global-config-snippet: |
@@ -760,15 +760,15 @@ annotations:
     dependencies: ""
     default: ""
     description:
-    - Defines a group of configuration directives to insert in the main HTTP/HTTPS frontends.
+      - Defines a group of configuration directives to insert in the main HTTP/HTTPS frontends.
     tip:
-    - Because frontend-config-snippet is inserted in the main http/https frontends it will apply to all traffic. To apply configuration by Ingress, annotations should be privileged.
-    - Ingress Controller logic is inserted in the main frontends before any config-snippet configuration so controller configuration will be **evaluated first**.
-    - It is safer to privilege [backend-config-snippet](#backend-config-snippet) when possible to avoid conflicts with controller configuration.
+      - Because frontend-config-snippet is inserted in the main http/https frontends it will apply to all traffic. To apply configuration by Ingress, annotations should be privileged.
+      - Ingress Controller logic is inserted in the main frontends before any config-snippet configuration so controller configuration will be **evaluated first**.
+      - It is safer to privilege [backend-config-snippet](#backend-config-snippet) when possible to avoid conflicts with controller configuration.
     values:
-    - One or more valid HAProxy directives
+      - One or more valid HAProxy directives
     applies_to:
-    - configmap
+      - configmap
     version_min: "1.6"
     example_configmap: |-
       frontend-config-snippet: |
@@ -780,12 +780,12 @@ annotations:
     dependencies: ""
     default: ""
     description:
-    - Defines a group of configuration directives to insert in the stats frontend.
+      - Defines a group of configuration directives to insert in the stats frontend.
     tip: []
     values:
-    - One or more valid HAProxy directives
+      - One or more valid HAProxy directives
     applies_to:
-    - configmap
+      - configmap
     version_min: "1.6"
     example_configmap: |-
       stats-config-snippet: |
@@ -796,38 +796,38 @@ annotations:
     dependencies: ""
     default: ""
     description:
-    - Defines a group of configuration directives to add directly to a HAProxy backend section.
+      - Defines a group of configuration directives to add directly to a HAProxy backend section.
     tip: []
     values:
-    - One or more valid HAProxy directives
+      - One or more valid HAProxy directives
     applies_to:
-    - configmap
-    - ingress
-    - service
+      - configmap
+      - ingress
+      - service
     version_min: "1.5"
     example:
-    - |-
-      backend-config-snippet: |
-            http-send-name-header x-dst-server
-            stick-table type string len 32 size 100k expire 30m
-            stick on req.cook(sessionid)
+      - |-
+        backend-config-snippet: |
+              http-send-name-header x-dst-server
+              stick-table type string len 32 size 100k expire 30m
+              stick on req.cook(sessionid)
   - title: cookie-persistence
     type: string
     group: cookie-persistence
     dependencies: ""
     default: ""
     description:
-    - Enables persistent connections between a client and a pod by inserting a cookie
-      into the client's browser that is used to remember which backend pod they connected
-      to before.
+      - Enables persistent connections between a client and a pod by inserting a cookie
+        into the client's browser that is used to remember which backend pod they connected
+        to before.
     tip:
-    - This will insert the following cookie configuration in the corresponding backend `cookie <cookie-name> insert indirect nocache` with `<cookie-name>` the value of this annotation.
+      - This will insert the following cookie configuration in the corresponding backend `cookie <cookie-name> insert indirect nocache` with `<cookie-name>` the value of this annotation.
     values:
-    - A name for the cookie
+      - A name for the cookie
     applies_to:
-    - configmap
-    - ingress
-    - service
+      - configmap
+      - ingress
+      - service
     version_min: "1.4"
     example: ['cookie-persistence: "mycookie"']
   - title: dontlognull
@@ -836,13 +836,13 @@ annotations:
     dependencies: ""
     default: "true"
     description:
-    - Do not log connections that sends no data, which can happen with monitoring systems.
+      - Do not log connections that sends no data, which can happen with monitoring systems.
     tip: []
     values:
-    - "true"
-    - "false"
+      - "true"
+      - "false"
     applies_to:
-    - configmap
+      - configmap
     version_min: "1.4"
     example: ['dontlognull: "true"']
   - title: src-ip-header
@@ -866,46 +866,46 @@ annotations:
     dependencies: ""
     default: "true"
     description:
-    - Adds the X-Forwarded-For HTTP header to requests to capture and relay the client's
-      source IP address to backend pods.
+      - Adds the X-Forwarded-For HTTP header to requests to capture and relay the client's
+        source IP address to backend pods.
     tip: []
     values:
-    - "true"
-    - "false"
+      - "true"
+      - "false"
     applies_to:
-    - configmap
-    - ingress
-    - service
+      - configmap
+      - ingress
+      - service
     version_min: "1.4"
     example: ['forwarded-for: "true"']
   - title: hard-stop-after
-    type: '[time](#time)'
+    type: "[time](#time)"
     group: hard-stop-after
     dependencies: ""
     default: "1h"
     description:
-    - Defines the maximum time allowed to perform a clean soft-stop.
+      - Defines the maximum time allowed to perform a clean soft-stop.
     tip: []
     values:
-    - An integer with a unit of time (1 second = 1s, 1 minute = 1m, 1h = 1 hour)
+      - An integer with a unit of time (1 second = 1s, 1 minute = 1m, 1h = 1 hour)
     applies_to:
-    - configmap
+      - configmap
     version_min: "1.4"
-    example: ['hard-stop-after: 30s']
+    example: ["hard-stop-after: 30s"]
   - title: http-keep-alive
     type: bool
     group: http-options
     dependencies: ""
     default: "true"
     description:
-    - Enables HTTP Keep-Alive both from the client to HAProxy and from HAProxy to the
-      backend.
+      - Enables HTTP Keep-Alive both from the client to HAProxy and from HAProxy to the
+        backend.
     tip: []
     values:
-    - "true"
-    - "false"
+      - "true"
+      - "false"
     applies_to:
-    - configmap
+      - configmap
     version_min: "1.4"
     example: ['http-keep-alive: "true"']
   - title: http-server-close
@@ -914,14 +914,14 @@ annotations:
     dependencies: ""
     default: "false"
     description:
-    - Disables HTTP Keep-Alive between HAProxy and the backend, while allowing it to
-      stay enabled from the client to HAProxy.
+      - Disables HTTP Keep-Alive between HAProxy and the backend, while allowing it to
+        stay enabled from the client to HAProxy.
     tip: []
     values:
-    - "true"
-    - "false"
+      - "true"
+      - "false"
     applies_to:
-    - configmap
+      - configmap
     version_min: "1.4"
     example: ['http-server-close: "true"']
   - title: ingress.class
@@ -930,14 +930,14 @@ annotations:
     dependencies: ""
     default: ""
     description:
-    - Identifies the ingress controller to be used. If this value is the same as the [--ingress.class](./controller.md#--ingressclass) controller arg, the ingress resource will be processed.
-    - Starting from kubernetes 1.18, a new `ingressClassName` field has been added to the Ingress spec resource. This fields should reference an `IngressClass` and HAProxy Ingress controller will process the Ingress resource if the controller value of the referenced `IngressClass` is `haproxy.org/ingress-controller`. More About how IngressClass mechanism can be found in official kubernetes [documentation](https://kubernetes.io/docs/concepts/services-networking/ingress/#ingress-class).
+      - Identifies the ingress controller to be used. If this value is the same as the [--ingress.class](./controller.md#--ingressclass) controller arg, the ingress resource will be processed.
+      - Starting from kubernetes 1.18, a new `ingressClassName` field has been added to the Ingress spec resource. This fields should reference an `IngressClass` and HAProxy Ingress controller will process the Ingress resource if the controller value of the referenced `IngressClass` is `haproxy.org/ingress-controller`. More About how IngressClass mechanism can be found in official kubernetes [documentation](https://kubernetes.io/docs/concepts/services-networking/ingress/#ingress-class).
     tip:
-    - In case both `ingress.class` annotation and `ingressClassName` are used, `ingress.class` will have precedence.
+      - In case both `ingress.class` annotation and `ingressClassName` are used, `ingress.class` will have precedence.
     values:
-    - The ingress class name
+      - The ingress class name
     applies_to:
-    - ingress
+      - ingress
     version_min: "1.4"
     example: ['ingress.class: "haproxy"']
   - title: load-balance
@@ -946,25 +946,25 @@ annotations:
     dependencies: ""
     default: roundrobin
     description:
-    - Sets the load-balancing algorithm to use.
+      - Sets the load-balancing algorithm to use.
     tip: []
     values:
-    - roundrobin
-    - static-rr
-    - leastconn
-    - first
-    - source
-    - uri
-    - url_param
-    - hdr([name])
-    - random
-    - random([draws])
-    - rdp-cookie
-    - rdp-cookie([name])
+      - roundrobin
+      - static-rr
+      - leastconn
+      - first
+      - source
+      - uri
+      - url_param
+      - hdr([name])
+      - random
+      - random([draws])
+      - rdp-cookie
+      - rdp-cookie([name])
     applies_to:
-    - configmap
-    - ingress
-    - service
+      - configmap
+      - ingress
+      - service
     version_min: "1.4"
     example: ['load-balance: "leastconn"']
   - title: log-format
@@ -973,33 +973,36 @@ annotations:
     dependencies: ""
     default: ""
     description:
-    - Sets the log format string to use for HTTP traffic.
+      - Sets the log format string to use for HTTP traffic.
     tip:
-    - 'Default log-format is: `%ci:%cp [%tr] %ft %b/%s %TR/%Tw/%Tc/%Tr/%Ta %ST %B %CC
-      %CS %tsc %ac/%fc/%bc/%sc/%rc %sq/%bq %hr %hs \"%HM %[var(txn.base)] %HV\"` Which
-      will look like this: `10.244.0.1:5793 [10/Apr/2020:10:32:50.132] https~ test-echo1-8080/SRV_TFW8V
-      0/0/1/2/3 200 653 - - ---- 1/1/0/0/0 0/0 "GET test.k8s.local/ HTTP/2.0`'
+      - 'Default log-format is: `%ci:%cp [%tr] %ft %b/%s %TR/%Tw/%Tc/%Tr/%Ta %ST %B %CC
+        %CS %tsc %ac/%fc/%bc/%sc/%rc %sq/%bq %hr %hs \"%HM %[var(txn.base)] %HV\"` Which
+        will look like this: `10.244.0.1:5793 [10/Apr/2020:10:32:50.132] https~ test-echo1-8080/SRV_TFW8V
+        0/0/1/2/3 200 653 - - ---- 1/1/0/0/0 0/0 "GET test.k8s.local/ HTTP/2.0`'
     values:
-    - Log format string. More information in [HAProxy documentation](https://cbonte.github.io/haproxy-dconv/2.0/configuration.html#8.2.3)
+      - Log format string. More information in [HAProxy documentation](https://cbonte.github.io/haproxy-dconv/2.0/configuration.html#8.2.3)
     applies_to:
-    - configmap
+      - configmap
     version_min: "1.4"
-    example: ['log-format: "%ci:%cp [%tr] %ft %b/%s %TR/%Tw/%Tc/%Tr/%Ta %ST %B %CC %CS %tsc %ac/%fc/%bc/%sc/%rc %sq/%bq %hr %hs \"%HM %[var(txn.base)] %HV\""']
+    example:
+      [
+        'log-format: "%ci:%cp [%tr] %ft %b/%s %TR/%Tw/%Tc/%Tr/%Ta %ST %B %CC %CS %tsc %ac/%fc/%bc/%sc/%rc %sq/%bq %hr %hs \"%HM %[var(txn.base)] %HV\""',
+      ]
   - title: logasap
     type: bool
     group: logging
     dependencies: ""
     default: "false"
     description:
-    - Logs request and response data as soon as the server returns a complete set of
-      HTTP response headers, instead of waiting for the response to finish sending all
-      data.
+      - Logs request and response data as soon as the server returns a complete set of
+        HTTP response headers, instead of waiting for the response to finish sending all
+        data.
     tip: []
     values:
-    - "true"
-    - "false"
+      - "true"
+      - "false"
     applies_to:
-    - configmap
+      - configmap
     version_min: "1.4"
     example: ['logasap: "true"']
   - title: maxconn
@@ -1008,12 +1011,12 @@ annotations:
     dependencies: ""
     default: ""
     description:
-    - Sets the maximum number of concurrent connections that HAProxy will accept.
+      - Sets the maximum number of concurrent connections that HAProxy will accept.
     tip: []
     values:
-    - An integer setting the allowed number of concurrent connections
+      - An integer setting the allowed number of concurrent connections
     applies_to:
-    - configmap
+      - configmap
     version_min: "1.4"
     example: ['maxconn: "2000"']
   - title: nbthread
@@ -1022,13 +1025,13 @@ annotations:
     dependencies: ""
     default: ""
     description:
-    - Sets the number of worker threads that the HAProxy process will start. If not
-      set, HAProxy will create a thread for each available processor.
+      - Sets the number of worker threads that the HAProxy process will start. If not
+        set, HAProxy will create a thread for each available processor.
     tip: []
     values:
-    - An integer setting the number of worker threads
+      - An integer setting the number of worker threads
     applies_to:
-    - configmap
+      - configmap
     version_min: "1.4"
     example: ['nbthread: "8"']
   - title: path-rewrite
@@ -1037,71 +1040,71 @@ annotations:
     dependencies: ""
     default: ""
     description:
-    - Replaces the entire URL path with the given value.
+      - Replaces the entire URL path with the given value.
     tip: []
     values:
-    - A single path, such as "/", to turn any path into "/"
-    - Two parameters. A regular expression to match and a path to replace it with.
+      - A single path, such as "/", to turn any path into "/"
+      - Two parameters. A regular expression to match and a path to replace it with.
     applies_to:
-    - configmap
-    - ingress
+      - configmap
+      - ingress
     version_min: "1.4"
     example:
-    - 'path-rewrite: "/"                        # replace all paths with /'
-    - 'path-rewrite: (.*) /foo\1                # add the prefix /foo... "/bar?q=1" into "/foo/bar?q=1"'
-    - 'path-rewrite: ([^?]*)(\?(.*))? \1/foo\2  # add the suffix /foo ... "/bar?q=1" into "/bar/foo?q=1"'
-    - 'path-rewrite: /foo/(.*) /\1              # strip /foo ... "/foo/bar?q=1" into "/bar?q=1"'
+      - 'path-rewrite: "/"                        # replace all paths with /'
+      - 'path-rewrite: (.*) /foo\1                # add the prefix /foo... "/bar?q=1" into "/foo/bar?q=1"'
+      - 'path-rewrite: ([^?]*)(\?(.*))? \1/foo\2  # add the suffix /foo ... "/bar?q=1" into "/bar/foo?q=1"'
+      - 'path-rewrite: /foo/(.*) /\1              # strip /foo ... "/foo/bar?q=1" into "/bar?q=1"'
   - title: pod-maxconn
     type: number
     group: maximum-concurrent-backend-connections
     dependencies: ""
     default: ""
     description:
-    - Sets the maximum number of concurrent backend connections allowed.
+      - Sets the maximum number of concurrent backend connections allowed.
     tip: []
     values:
-    - An integer setting the maximum number of concurrent backend connections
+      - An integer setting the maximum number of concurrent backend connections
     applies_to:
-    - service
-    - ingress
-    - configmap
+      - service
+      - ingress
+      - configmap
     version_min: "1.4"
-    example: ['pod-maxconn: 30']
+    example: ["pod-maxconn: 30"]
   - title: proxy-protocol
     type: IPs or CIDRs
     group: proxy-protocol
     dependencies: ""
     default: ""
     description:
-    - Enables Proxy Protocol on client side for a comma-delimited list of IP addresses and/or CIDR ranges.
-    - The `0.0.0.0/0` CIDR will enable Proxy Protocol for all incoming traffic.
+      - Enables Proxy Protocol on client side for a comma-delimited list of IP addresses and/or CIDR ranges.
+      - The `0.0.0.0/0` CIDR will enable Proxy Protocol for all incoming traffic.
     tip:
-    - Connection will fail with 400 Bad Request if source IP is in annotation list but
-      no Proxy Protocol data is sent.
+      - Connection will fail with 400 Bad Request if source IP is in annotation list but
+        no Proxy Protocol data is sent.
     values:
-    - A list of IP addresses and/or CIDR ranges
+      - A list of IP addresses and/or CIDR ranges
     applies_to:
-    - configmap
+      - configmap
     version_min: "1.4"
     example: ['proxy-protocol: "192.168.1.0/24, 192.168.2.100"']
   - title: rate-limit-period
-    type: '[time](#time)'
+    type: "[time](#time)"
     group: rate-limit
     dependencies: ""
     default: 1s
     description:
-    - Sets the period of time over which requests are tracked for a given source IP
-      address.
+      - Sets the period of time over which requests are tracked for a given source IP
+        address.
     tip: []
     values:
-    - Integer with unit of time (1s = 1 second, 1m = 1 minute); Defaults to 1 second
+      - Integer with unit of time (1s = 1 second, 1m = 1 minute); Defaults to 1 second
     applies_to:
-    - configmap
-    - ingress
+      - configmap
+      - ingress
     version_min: "1.4"
     example: ['rate-limit-period: "1m"']
   - title: rate-limit-status-code
-    type: 'string'
+    type: "string"
     group: rate-limit
     dependencies: ""
     default: 403
@@ -1121,55 +1124,55 @@ annotations:
     dependencies: ""
     default: ""
     description:
-    - Sets the maximum number of requests that will be accepted from a source IP address during the `rate-limit-period`.
+      - Sets the maximum number of requests that will be accepted from a source IP address during the `rate-limit-period`.
     tip:
-    - If this number is exceeded, HAProxy will deny requests with 403 status code.
-    - To track the http requests rate, a stick-table named "Ratelimit-<period-in-ms>" will be created. For example, if the `rate-limit-period` is set to *2s*, the name of the table will be *Ratelimit-2000*.
+      - If this number is exceeded, HAProxy will deny requests with 403 status code.
+      - To track the http requests rate, a stick-table named "Ratelimit-<period-in-ms>" will be created. For example, if the `rate-limit-period` is set to *2s*, the name of the table will be *Ratelimit-2000*.
     values:
-    - An integer representing the maximum number of requests to accept
+      - An integer representing the maximum number of requests to accept
     applies_to:
-    - configmap
-    - ingress
+      - configmap
+      - ingress
     version_min: "1.4"
-    example: ['rate-limit-requests: 15']
+    example: ["rate-limit-requests: 15"]
   - title: rate-limit-size
     type: string
     group: rate-limit
     dependencies: rate-limit
     default: 100k
     description:
-    - Sets how many source IP addresses to track, after which older entries are replaced
-      by new entries.
+      - Sets how many source IP addresses to track, after which older entries are replaced
+        by new entries.
     tip:
-    - If this number is exceeded, older entries will be dropped as new ones come
+      - If this number is exceeded, older entries will be dropped as new ones come
     values:
-    - An integer defining how many IP addresses to track for rate limiting; Defaults
-      to 100,000
+      - An integer defining how many IP addresses to track for rate limiting; Defaults
+        to 100,000
     applies_to:
-    - configmap
-    - ingress
+      - configmap
+      - ingress
     version_min: "1.4"
-    example: ['rate-limit-size: 1000000']
+    example: ["rate-limit-size: 1000000"]
   - title: request-capture
-    type: '[sample expression](#sample-expression)'
+    type: "[sample expression](#sample-expression)"
     group: request-capture
     dependencies: ""
     default: ""
     description:
-    - When you include *%hr* in the `log-format` string, which is included in
-      the default log format, it captures custom information in the logs, which you
-      define with this field. For example, you can capture specific cookie values or
-      HTTP header values.
+      - When you include *%hr* in the `log-format` string, which is included in
+        the default log format, it captures custom information in the logs, which you
+        define with this field. For example, you can capture specific cookie values or
+        HTTP header values.
     tip:
-    - Captures samples of the request using [sample expression](#sample-expression)
-      and log them in HAProxy traffic logs.
+      - Captures samples of the request using [sample expression](#sample-expression)
+        and log them in HAProxy traffic logs.
     values:
-    - A header value, e.g. `hdr(header-name)`
-    - A cookie value, e.g. `cookie(cookie-name)`
-    - Multiple expressions by using a multiline YAML string
+      - A header value, e.g. `hdr(header-name)`
+      - A cookie value, e.g. `cookie(cookie-name)`
+      - Multiple expressions by using a multiline YAML string
     applies_to:
-    - configmap
-    - ingress
+      - configmap
+      - ingress
     version_min: "1.4"
     example_configmap: |-
       # capture a single value
@@ -1195,36 +1198,36 @@ annotations:
     dependencies: ""
     default: "128"
     description:
-    - Sets how many characters to allocate for fields captured by `request-capture`.
+      - Sets how many characters to allocate for fields captured by `request-capture`.
     tip: []
     values:
-    - An integer representing the number of characters for captured fields; Defaults
-      to 128
+      - An integer representing the number of characters for captured fields; Defaults
+        to 128
     applies_to:
-    - configmap
-    - ingress
+      - configmap
+      - ingress
     version_min: "1.4"
     example:
-    - 'request-capture: cookie(my-cookie)'
-    - 'request-capture-len: 350'
+      - "request-capture: cookie(my-cookie)"
+      - "request-capture-len: 350"
   - title: request-set-header
     type: string
     group: request-set-header
     dependencies: ""
     default: ""
     description:
-    - Sets an HTTP header in the request before it is passed to the backend service.
+      - Sets an HTTP header in the request before it is passed to the backend service.
     tip:
-    - This sets header before HAProxy does any service/backend dispatch. So in the case
-      you want to change the Host header this will impact HAProxy decision on which
-      service/backend to use (based on matching Host against ingress rules). In order
-      to set the Host header after service selection, use [set-host](#set-host) annotation.
+      - This sets header before HAProxy does any service/backend dispatch. So in the case
+        you want to change the Host header this will impact HAProxy decision on which
+        service/backend to use (based on matching Host against ingress rules). In order
+        to set the Host header after service selection, use [set-host](#set-host) annotation.
     values:
-    - The name of the field, following by its value, e.g. Ingress-ID abcd123
-    - Multiple headers can be set using a multiline YAML string
+      - The name of the field, following by its value, e.g. Ingress-ID abcd123
+      - Multiple headers can be set using a multiline YAML string
     applies_to:
-    - configmap
-    - ingress
+      - configmap
+      - ingress
     version_min: "1.4"
     example_configmap: |-
       # single header
@@ -1248,31 +1251,32 @@ annotations:
     dependencies: ""
     default: ""
     description:
-    - Enables HTTP request redirection based on host and port substitution in original request.
+      - Enables HTTP request redirection based on host and port substitution in original request.
     tip:
-    - HTTP redirection code is settable with `request-redirect-code` annotation.
-    - Port alone is not allowed.
+      - HTTP redirection code is settable with `request-redirect-code` annotation.
+      - Port alone is not allowed.
     values:
-    - host
-    - host:port
+      - host
+      - host:port
     applies_to:
-    - configmap
-    - ingress
+      - configmap
+      - ingress
     version_min: "1.5"
-    example: ["request-redirect: example.com","request-redirect: example.com:8888"]
+    example:
+      ["request-redirect: example.com", "request-redirect: example.com:8888"]
   - title: request-redirect-code
     type: number
     group: request-redirect
     dependencies: "request-redirect"
     default: "302"
     description:
-    - Defines the HTTP redirection code used in redirection set with request-redirect.
+      - Defines the HTTP redirection code used in redirection set with request-redirect.
     tip: []
     values:
-    - Integer value.
+      - Integer value.
     applies_to:
-    - configmap
-    - ingress
+      - configmap
+      - ingress
     version_min: "1.5"
     example: ['request-redirect-code: "303"']
   - title: response-set-header
@@ -1281,14 +1285,14 @@ annotations:
     dependencies: ""
     default: ""
     description:
-    - Sets an HTTP header in the response before it is passed to the client.
+      - Sets an HTTP header in the response before it is passed to the client.
     tip: []
     values:
-    - The name of the field, following by its value, e.g. Cache-Control "no-store,no-cache,private"
-    - Multiple headers can be set using a multiline YAML string
+      - The name of the field, following by its value, e.g. Cache-Control "no-store,no-cache,private"
+      - Multiple headers can be set using a multiline YAML string
     applies_to:
-    - configmap
-    - ingress
+      - configmap
+      - ingress
     version_min: "1.4"
     example_configmap: |-
       # single header
@@ -1312,51 +1316,51 @@ annotations:
     dependencies: ""
     default: ""
     description:
-    - Insert a custom route (use_backend rule) to route ingress traffic to the annotated service based on the provided ACL.
+      - Insert a custom route (use_backend rule) to route ingress traffic to the annotated service based on the provided ACL.
     tip:
-    - In order for the service to be handled by the Ingress Controller, it is still mandatory to put it in an ingress rule. Using only `route-acl` won't be enough.
+      - In order for the service to be handled by the Ingress Controller, it is still mandatory to put it in an ingress rule. Using only `route-acl` won't be enough.
     values:
-    - A string describing an in-line [HAProxy ACL](https://www.haproxy.com/blog/introduction-to-haproxy-acls/).
+      - A string describing an in-line [HAProxy ACL](https://www.haproxy.com/blog/introduction-to-haproxy-acls/).
     applies_to:
-    - service
+      - service
     version_min: "1.6"
-    example: ['route-acl: cookie(staging) -m found']
+    example: ["route-acl: cookie(staging) -m found"]
   - title: send-proxy-protocol
     type: '["proxy", "proxy-v1", "proxy-v2", "proxy-v2-ssl", "proxy-v2-ssl-cn"]'
     group: send-proxy-protocol
     dependencies: ""
     default: ""
     description:
-    - Uses the PROXY Protocol when connecting to backend servers.
+      - Uses the PROXY Protocol when connecting to backend servers.
     tip: []
     values:
-    - proxy - Uses PROXY v1
-    - proxy-v1 - Uses PROXY v1
-    - proxy-v2 - Uses PROXY v2
-    - proxy-v2-ssl Uses PROXY v2 with SSL information extension
-    - proxy-v2-ssl-cn Uses PROXY v2 with SSL and Common Name information extension
+      - proxy - Uses PROXY v1
+      - proxy-v1 - Uses PROXY v1
+      - proxy-v2 - Uses PROXY v2
+      - proxy-v2-ssl Uses PROXY v2 with SSL information extension
+      - proxy-v2-ssl-cn Uses PROXY v2 with SSL and Common Name information extension
     applies_to:
-    - service
-    - ingress
-    - configmap
+      - service
+      - ingress
+      - configmap
     version_min: "1.5"
-    example: ['send-proxy-protocol: proxy-v2']
+    example: ["send-proxy-protocol: proxy-v2"]
   - title: server-ca
     type: string
     group: authentication
     dependencies: ""
     default: ""
     description:
-    - Sets the certificate authority for backend servers enabling HAProxy to check backend certificates (TLS authentication) when sending encrypted traffic to the kubernetes applications.
+      - Sets the certificate authority for backend servers enabling HAProxy to check backend certificates (TLS authentication) when sending encrypted traffic to the kubernetes applications.
     tip:
       - When used with [server-crt](#server-crt) resulting configuration provides  mutual TLS authentication (mTLS).
       - The secret must use 'tls.crt' key.
     values:
-    - Secret path following namespace/secretname format.
+      - Secret path following namespace/secretname format.
     applies_to:
-    - service
-    - configmap
-    - ingress
+      - service
+      - configmap
+      - ingress
     version_min: "1.5"
     example: ['server-ca: "ns1/ca"']
   - title: server-crt
@@ -1365,16 +1369,16 @@ annotations:
     dependencies: ""
     default: ""
     description:
-    - Specifies the path of a secret containing a certificate that HAProxy can provide during TLS communication with the backend servers.
+      - Specifies the path of a secret containing a certificate that HAProxy can provide during TLS communication with the backend servers.
     tip:
-       - The secret must use 'tls.key' and 'tls.crt' keys.
-       - When used with [server-ca](#server-ca) resulting configuration provides mutual TLS authentication (mTLS).
+      - The secret must use 'tls.key' and 'tls.crt' keys.
+      - When used with [server-ca](#server-ca) resulting configuration provides mutual TLS authentication (mTLS).
     values:
-    - Secret path following namespace/secretname format.
+      - Secret path following namespace/secretname format.
     applies_to:
-    - service
-    - configmap
-    - ingress
+      - service
+      - configmap
+      - ingress
     version_min: "1.5"
     example: ['server-crt: "ns1/client"']
   - title: server-proto
@@ -1383,19 +1387,19 @@ annotations:
     dependencies: ""
     default: ""
     description:
-    - HTTP/1.1 is the default protocol for backend servers communication.
-      Currently, the `server-proto` annotation supports only "h2" as a value (supporting
-      fcgi is also planned) which transmits HTTP/2 messages in the clear to the backend
-      servers.
-    - However, when SSL is enabled on the backend, `server-proto` is ignored and both
-      HTTP/1.1 and HTTP/2 are advertised via ALPN and transmitted as encrypted messages.
+      - HTTP/1.1 is the default protocol for backend servers communication.
+        Currently, the `server-proto` annotation supports only "h2" as a value (supporting
+        fcgi is also planned) which transmits HTTP/2 messages in the clear to the backend
+        servers.
+      - However, when SSL is enabled on the backend, `server-proto` is ignored and both
+        HTTP/1.1 and HTTP/2 are advertised via ALPN and transmitted as encrypted messages.
     tip: []
     values:
-    - "h2"
+      - "h2"
     applies_to:
-    - service
-    - configmap
-    - ingress
+      - service
+      - configmap
+      - ingress
     version_min: "1.5"
     example: ['server-proto: "h2"']
   - title: server-ssl
@@ -1404,16 +1408,16 @@ annotations:
     dependencies: ""
     default: "false"
     description:
-    - Enables SSL to pods.
+      - Enables SSL to pods.
     tip:
-    - Enable HTTP/2 support for backend severs.
+      - Enable HTTP/2 support for backend severs.
     values:
-    - "true"
-    - "false"
+      - "true"
+      - "false"
     applies_to:
-    - configmap
-    - ingress
-    - service
+      - configmap
+      - ingress
+      - service
     version_min: "1.4"
     example: ['server-ssl: "true"']
   - title: set-host
@@ -1422,13 +1426,13 @@ annotations:
     dependencies: ""
     default: ""
     description:
-    - Sets the Host header to send to backend services.
+      - Sets the Host header to send to backend services.
     tip: []
     values:
-    - The value of the Host header
+      - The value of the Host header
     applies_to:
-    - configmap
-    - ingress
+      - configmap
+      - ingress
     version_min: "1.4"
     example: ['set-host: "example.local"']
   - title: scale-server-slots
@@ -1437,33 +1441,33 @@ annotations:
     dependencies: ""
     default: "42"
     description:
-    - Sets the number of server slots to provision in order for HAProxy to scale
-      dynamically with no reload.
-      If this number is greater than the available endpoints/addresses, the remaining
-      slots will be disabled (put on stand-by) and ready to be used.
-      If this number is lower, the remaining endpoints/addresses will be added after
-      scaling the HAProxy backend with a reload.
+      - Sets the number of server slots to provision in order for HAProxy to scale
+        dynamically with no reload.
+        If this number is greater than the available endpoints/addresses, the remaining
+        slots will be disabled (put on stand-by) and ready to be used.
+        If this number is lower, the remaining endpoints/addresses will be added after
+        scaling the HAProxy backend with a reload.
     tip:
       - Equivalent old annotations are `servers-increment` and `server-slots`
     values:
-    - Integer value indicating the number of backend servers to provision. Defaults to 42.
+      - Integer value indicating the number of backend servers to provision. Defaults to 42.
     applies_to:
-    - configmap
+      - configmap
     version_min: "1.4"
-    example: ['server-slots: 75']
+    example: ["server-slots: 75"]
   - title: ssl-certificate
     type: string
     group: ssl-offloading
     dependencies: ""
     default: ""
     description:
-    - Sets the name of the Kubernetes secret that contains both the TLS key and certificate.
+      - Sets the name of the Kubernetes secret that contains both the TLS key and certificate.
     tip:
-    - this replaces default certificate
+      - this replaces default certificate
     values:
-    - Name of Kubernetes secret
+      - Name of Kubernetes secret
     applies_to:
-    - configmap
+      - configmap
     version_min: "1.4"
     example: ['ssl-certificate: "default/tls-secret"']
   - title: ssl-passthrough
@@ -1472,18 +1476,18 @@ annotations:
     dependencies: ""
     default: "false"
     description:
-    - Passes SSL/TLS traffic through at Layer 4 directly to the backend service without
-      Layer 7 inspection.
+      - Passes SSL/TLS traffic through at Layer 4 directly to the backend service without
+        Layer 7 inspection.
     tip:
-    - Traffic is proxied in TCP mode which makes unavailable a number of the controller
-      annotations (requiring HTTP mode).
+      - Traffic is proxied in TCP mode which makes unavailable a number of the controller
+        annotations (requiring HTTP mode).
     values:
-    - "true"
-    - "false"
+      - "true"
+      - "false"
     applies_to:
-    - configmap
-    - ingress
-    - service
+      - configmap
+      - ingress
+      - service
     version_min: "1.4"
     example: ['ssl-passthrough: "true"']
   - title: ssl-redirect
@@ -1492,88 +1496,88 @@ annotations:
     dependencies: https
     default: "false"
     description:
-    - Sets whether to redirect traffic from HTTP to HTTPS.
+      - Sets whether to redirect traffic from HTTP to HTTPS.
     tip:
-    - SSL redirection is enabled by default for any ingress resource defined with a TLS section `spec.tls[].secretName`.
-    - Automatic redirects for ingress resources with TLS enabled, can be disabled by setting annotation to
-      "false" in configmap
+      - SSL redirection is enabled by default for any ingress resource defined with a TLS section `spec.tls[].secretName`.
+      - Automatic redirects for ingress resources with TLS enabled, can be disabled by setting annotation to
+        "false" in configmap
     values:
-    - "true"
-    - "false"
+      - "true"
+      - "false"
     applies_to:
-    - configmap
-    - ingress
+      - configmap
+      - ingress
     version_min: "1.4"
     example:
-    - 'ssl-redirect: "false"'
-    - 'ssl-certificate: "default/tls-secret"'
+      - 'ssl-redirect: "false"'
+      - 'ssl-certificate: "default/tls-secret"'
   - title: ssl-redirect-code
-    type: '[301, 302, 303]'
+    type: "[301, 302, 303]"
     group: https
     dependencies: ssl-redirect
     default: "302"
     description:
-    - Sets the HTTP status code to use when `ssl-redirect` is true.
+      - Sets the HTTP status code to use when `ssl-redirect` is true.
     tip: []
     values:
-    - "301"
-    - "302"
-    - "303"
+      - "301"
+      - "302"
+      - "303"
     applies_to:
-    - configmap
-    - ingress
+      - configmap
+      - ingress
     version_min: "1.4"
     example:
-    - 'ssl-redirect: "true"'
-    - 'ssl-certificate: "default/tls-secret"'
-    - 'ssl-redirect-code: "301"'
+      - 'ssl-redirect: "true"'
+      - 'ssl-certificate: "default/tls-secret"'
+      - 'ssl-redirect-code: "301"'
   - title: ssl-redirect-port
     type: number
     group: https
     dependencies: ssl-redirect
     default: "443"
     description:
-    - Sets the HTTPS port to redirect to when HTTP to HTTPS traffic redirection is enabled  when `ssl-redirect` is true.
+      - Sets the HTTPS port to redirect to when HTTP to HTTPS traffic redirection is enabled  when `ssl-redirect` is true.
     tip:
-    - When setting the HTTPS port value, keep in mind that this is the HTTPS port as seen by the client, not as set on the Ingress Controller. The reason for this distinction lies in the fact that there will probably be some middleware with its own ports mapping between the client and the Ingress Controller. As a consequence, it must be set with a distinct consideration of how the HTTPS port is set on Ingress Controller with the `https-bind-port` command line option.
+      - When setting the HTTPS port value, keep in mind that this is the HTTPS port as seen by the client, not as set on the Ingress Controller. The reason for this distinction lies in the fact that there will probably be some middleware with its own ports mapping between the client and the Ingress Controller. As a consequence, it must be set with a distinct consideration of how the HTTPS port is set on Ingress Controller with the `https-bind-port` command line option.
     values:
-    - Integer HTTPS port number
+      - Integer HTTPS port number
     applies_to:
-    - configmap
-    - ingress
+      - configmap
+      - ingress
     version_min: "1.5"
     example:
-    - 'ssl-redirect: "true"'
-    - 'ssl-redirect-port: 8443'
+      - 'ssl-redirect: "true"'
+      - "ssl-redirect-port: 8443"
   - title: syslog-server
-    type: '[syslog](#syslog-fields)'
+    type: "[syslog](#syslog-fields)"
     group: logging
     dependencies: ""
-    default: 'address:127.0.0.1, facility: local0, level: notice'
+    default: "address:127.0.0.1, facility: local0, level: notice"
     description:
-    - Sets one or more Syslog servers where logs should be forwarded. Each server is
-      placed onto its own line. A line supports the following arguments, which are separated
-      by commas
+      - Sets one or more Syslog servers where logs should be forwarded. Each server is
+        placed onto its own line. A line supports the following arguments, which are separated
+        by commas
     tip:
-    - More information can be found in the [HAProxy documentation](https://cbonte.github.io/haproxy-dconv/2.0/configuration.html#3.1-log)
+      - More information can be found in the [HAProxy documentation](https://cbonte.github.io/haproxy-dconv/2.0/configuration.html#3.1-log)
     values:
-    - address - **Required** - IP address where the syslog server is listening.
-    - facility - **Required** - One of the 24 syslog facilities (kern, user, mail, daemon, auth, syslog,
-      lpr, news, uucp, cron, auth2, ftp, ntp, audit, alert, con2, local0, local1, local2,
-      local3, local4, local5, local6, local7); In general, you will want to use one
-      of the localX values, since the others are registered for specific types of applications.
-    - format - Syslog format, one of the following - rfc3164, rfc5424, short, raw.
-      to rfc3164. HAProxy **default** is rfc3164
-    - length -  Maximum syslog line length. HAProxy **default** is 1024.
-    - level - Maximum verbosity level to filter outgoing messages; Only messages with
-      a severity at least as important as this level will be sent; Use one of the following
-      (emerg, alert, crit, err, warning, notice, info, debug); Traffic logs are emitted at "info" or higher severity.
-      Haproxy **default** is to send all messages.
-    - minlevel - Minimum verbosity level. Logs emitted with a more severe level than
-      this one will be capped to this level. HAProxy **default** does not set a minlevel.
-    - port - Port number where the syslog server is listening. HAProxy **default** is 514.
+      - address - **Required** - IP address where the syslog server is listening.
+      - facility - **Required** - One of the 24 syslog facilities (kern, user, mail, daemon, auth, syslog,
+        lpr, news, uucp, cron, auth2, ftp, ntp, audit, alert, con2, local0, local1, local2,
+        local3, local4, local5, local6, local7); In general, you will want to use one
+        of the localX values, since the others are registered for specific types of applications.
+      - format - Syslog format, one of the following - rfc3164, rfc5424, short, raw.
+        to rfc3164. HAProxy **default** is rfc3164
+      - length -  Maximum syslog line length. HAProxy **default** is 1024.
+      - level - Maximum verbosity level to filter outgoing messages; Only messages with
+        a severity at least as important as this level will be sent; Use one of the following
+        (emerg, alert, crit, err, warning, notice, info, debug); Traffic logs are emitted at "info" or higher severity.
+        Haproxy **default** is to send all messages.
+      - minlevel - Minimum verbosity level. Logs emitted with a more severe level than
+        this one will be capped to this level. HAProxy **default** does not set a minlevel.
+      - port - Port number where the syslog server is listening. HAProxy **default** is 514.
     applies_to:
-    - configmap
+      - configmap
     version_min: "1.4"
     example_configmap: |-
       # a single entry
@@ -1587,167 +1591,183 @@ annotations:
         address:127.0.0.1, port:514, facility:local0
         address:192.168.1.1, port:514, facility:local1
   - title: timeout-check
-    type: '[time](#time)'
+    type: "[time](#time)"
     group: timeouts
     dependencies: ""
     default: ""
     description:
-    - Sets an additional check timeout, but only after a connection has been already
-      established.
+      - Sets an additional check timeout, but only after a connection has been already
+        established.
     tip: []
     values:
-    - An integer with a unit of time (1 second = 1s, 1 minute = 1m, 1h = 1 hour)
+      - An integer with a unit of time (1 second = 1s, 1 minute = 1m, 1h = 1 hour)
     applies_to:
-    - configmap
-    - ingress
-    - service
+      - configmap
+      - ingress
+      - service
     version_min: "1.4"
-    example: ['timeout-check: 5s']
+    example: ["timeout-check: 5s"]
   - title: timeout-client
-    type: '[time](#time)'
+    type: "[time](#time)"
     group: timeouts
     dependencies: ""
     default: 50s
     description:
-    - Set the maximum inactivity time on the client side.
+      - Set the maximum inactivity time on the client side.
     tip: []
     values:
-    - An integer with a unit of time (1 second = 1s, 1 minute = 1m, 1h = 1 hour); Defaults
-      to 50s
+      - An integer with a unit of time (1 second = 1s, 1 minute = 1m, 1h = 1 hour); Defaults
+        to 50s
     applies_to:
-    - configmap
+      - configmap
     version_min: "1.4"
-    example: ['timeout-client: 5s']
+    example: ["timeout-client: 5s"]
   - title: timeout-client-fin
-    type: '[time](#time)'
+    type: "[time](#time)"
     group: timeouts
     dependencies: ""
     default: ""
     description:
-    - Sets the inactivity timeout on the client side for half-closed connections.
+      - Sets the inactivity timeout on the client side for half-closed connections.
     tip: []
     values:
-    - An integer with a unit of time (1 second = 1s, 1 minute = 1m, 1h = 1 hour)
+      - An integer with a unit of time (1 second = 1s, 1 minute = 1m, 1h = 1 hour)
     applies_to:
-    - configmap
+      - configmap
     version_min: "1.4"
-    example: ['timeout-client-fin: 5s']
+    example: ["timeout-client-fin: 5s"]
   - title: timeout-connect
-    type: '[time](#time)'
+    type: "[time](#time)"
     group: timeouts
     dependencies: ""
     default: 5s
     description:
-    - Sets the maximum time to wait for a connection attempt to a server to succeed.
+      - Sets the maximum time to wait for a connection attempt to a server to succeed.
     tip: []
     values:
-    - An integer with a unit of time (1 second = 1s, 1 minute = 1m, 1h = 1 hour); Defaults
-      to 5s
+      - An integer with a unit of time (1 second = 1s, 1 minute = 1m, 1h = 1 hour); Defaults
+        to 5s
     applies_to:
-    - configmap
+      - configmap
     version_min: "1.4"
-    example: ['timeout-connect: 5s']
+    example: ["timeout-connect: 5s"]
   - title: timeout-http-request
-    type: '[time](#time)'
+    type: "[time](#time)"
     group: timeouts
     dependencies: ""
     default: 5s
     description:
-    - Sets the maximum allowed time to wait for a complete HTTP request.
+      - Sets the maximum allowed time to wait for a complete HTTP request.
     tip: []
     values:
-    - An integer with a unit of time (1 second = 1s, 1 minute = 1m, 1h = 1 hour); Defaults
-      to 5s
+      - An integer with a unit of time (1 second = 1s, 1 minute = 1m, 1h = 1 hour); Defaults
+        to 5s
     applies_to:
-    - configmap
+      - configmap
     version_min: "1.4"
-    example: ['timeout-http-request: 5s']
+    example: ["timeout-http-request: 5s"]
   - title: timeout-http-keep-alive
-    type: '[time](#time)'
+    type: "[time](#time)"
     group: timeouts
     dependencies: ""
     default: 1m
     description:
-    - Sets the maximum allowed time to wait for a new HTTP request to appear.
+      - Sets the maximum allowed time to wait for a new HTTP request to appear.
     tip: []
     values:
-    - An integer with a unit of time (1 second = 1s, 1 minute = 1m, 1h = 1 hour); Defaults
-      to 1m
+      - An integer with a unit of time (1 second = 1s, 1 minute = 1m, 1h = 1 hour); Defaults
+        to 1m
     applies_to:
-    - configmap
+      - configmap
     version_min: "1.4"
-    example: ['timeout-http-keep-alive: 5s']
+    example: ["timeout-http-keep-alive: 5s"]
   - title: timeout-queue
-    type: '[time](#time)'
+    type: "[time](#time)"
     group: timeouts
     dependencies: ""
     default: 5s
     description:
-    - Sets the maximum time to wait in the queue for a connection slot to be free.
+      - Sets the maximum time to wait in the queue for a connection slot to be free.
     tip: []
     values:
-    - An integer with a unit of time (1 second = 1s, 1 minute = 1m, 1h = 1 hour); Defaults
-      to 5s
+      - An integer with a unit of time (1 second = 1s, 1 minute = 1m, 1h = 1 hour); Defaults
+        to 5s
     applies_to:
-    - configmap
+      - configmap
     version_min: "1.4"
-    example: ['timeout-queue: 5s']
+    example: ["timeout-queue: 5s"]
   - title: timeout-server
-    type: '[time](#time)'
+    type: "[time](#time)"
     group: timeouts
     dependencies: ""
     default: 50s
     description:
-    - Sets the maximum inactivity time on the server side.
+      - Sets the maximum inactivity time on the server side.
     tip: []
     values:
-    - An integer with a unit of time (1 second = 1s, 1 minute = 1m, 1h = 1 hour); Defaults
-      to 50s
+      - An integer with a unit of time (1 second = 1s, 1 minute = 1m, 1h = 1 hour); Defaults
+        to 50s
     applies_to:
-    - configmap
+      - configmap
     version_min: "1.4"
-    example: ['timeout-server: 5s']
+    example: ["timeout-server: 5s"]
   - title: timeout-server-fin
-    type: '[time](#time)'
+    type: "[time](#time)"
     group: timeouts
     dependencies: ""
     default: ""
     description:
-    - Sets the inactivity timeout on the server side for half-closed connections.
+      - Sets the inactivity timeout on the server side for half-closed connections.
     tip: []
     values:
-    - An integer with a unit of time (1 second = 1s, 1 minute = 1m, 1h = 1 hour)
+      - An integer with a unit of time (1 second = 1s, 1 minute = 1m, 1h = 1 hour)
     applies_to:
-    - configmap
+      - configmap
     version_min: "1.4"
-    example: ['timeout-server-fin: 5s']
+    example: ["timeout-server-fin: 5s"]
   - title: timeout-tunnel
-    type: '[time](#time)'
+    type: "[time](#time)"
     group: timeouts
     dependencies: ""
     default: 1h
     description:
-    - Set the maximum inactivity time on the client and server side for tunnels.
+      - Set the maximum inactivity time on the client and server side for tunnels.
     tip: []
     values:
-    - An integer with a unit of time (1 second = 1s, 1 minute = 1m, 1h = 1 hour); Defaults
-      to 1h
+      - An integer with a unit of time (1 second = 1s, 1 minute = 1m, 1h = 1 hour); Defaults
+        to 1h
     applies_to:
-    - configmap
+      - configmap
     version_min: "1.4"
-    example: ['timeout-tunnel: 30m']
+    example: ["timeout-tunnel: 30m"]
   - title: whitelist
     type: IPs or CIDRs
     group: access-control
     dependencies: ""
     default: ""
     description:
-    - Blocks all IP addresses except the whitelisted ones (annotation value).
+      - Blocks all IP addresses except the whitelisted ones (annotation value).
     tip: []
     values:
-    - Comma-separated list of IP addresses and/or CIDR ranges
+      - Comma-separated list of IP addresses and/or CIDR ranges
     applies_to:
-    - configmap
-    - ingress
+      - configmap
+      - ingress
     version_min: "1.4"
     example: ['whitelist: "192.168.1.0/24, 192.168.2.100"']
+  - title: tls-alpn
+    type: string
+    group: https
+    dependencies: ""
+    default: "h2,http/1.1"
+    description:
+      - Define the TLS ALPN extension advertisement. This will change the alpn advertisement for the https frontend when ssl is enabled.
+    tip:
+      - To disable HTTP/2 over https, simply use a value like "http/1.1" for this annotation
+    values:
+      - Comma-separated list of protocol names to advertise as supported on top of ALPN
+    applies_to:
+      - configmap
+    version_min: "1.6"
+    example:
+      - "tls-alpn: http/1.1"
