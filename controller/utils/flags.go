@@ -94,6 +94,9 @@ type OSArgs struct { //nolint:maligned
 	HTTPSBindPort              int64          `long:"https-bind-port" default:"443" description:"port to listen on for HTTPS traffic"`
 	IPV4BindAddr               string         `long:"ipv4-bind-address" default:"0.0.0.0" description:"IPv4 address the Ingress Controller listens on (if enabled)"`
 	IPV6BindAddr               string         `long:"ipv6-bind-address" default:"::" description:"IPv6 address the Ingress Controller listens on (if enabled)"`
+	HealthzBindPort            int64          `long:"healthz-bind-port" default:"1042" description:"port to listen on for probes"`
+	StatsBindPort              int64          `long:"stats-bind-port" default:"1024" description:"port to listen on for stats page"`
+	LocalPeerPort              int64          `long:"localpeer-port" default:"10000" description:"port to listen on for local peer"`
 	Program                    string         `long:"program" description:"path to HAProxy program. NOTE: works only with External mode"`
 	CfgDir                     string         `long:"config-dir" description:"path to HAProxy configuration directory. NOTE: works only in External mode"`
 	RuntimeDir                 string         `long:"runtime-dir" description:"path to HAProxy runtime directory. NOTE: works only in External mode"`

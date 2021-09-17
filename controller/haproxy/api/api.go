@@ -59,6 +59,7 @@ type HAProxyClient interface {
 	PIDFile(value *types.StringC) error
 	RuntimeSocket(value *types.Socket) error
 	GetMap(mapFile string) (*models.Map, error)
+	PeerEntryEdit(name string, peerSection string, peer models.PeerEntry) error
 	SetMapContent(mapFile string, payload string) error
 	ServerStateBase(value *types.StringC) error
 	SetServerAddr(backendName string, serverName string, ip string, port int) error
