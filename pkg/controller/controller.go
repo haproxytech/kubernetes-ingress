@@ -174,13 +174,14 @@ func (c *HAProxyController) updateHAProxy() {
 
 // setToRready exposes readiness endpoint
 func (c *HAProxyController) setToReady() {
+	healthzPort := c.osArgs.HealthzBindPort
 	logger.Panic(c.clientAPIClosure(func() error {
 		return c.haproxy.FrontendBindEdit("healthz",
 			models.Bind{
 				BindParams: models.BindParams{
 					Name: "v4",
 				},
-				Address: "0.0.0.0:1042",
+				Address: fmt.Sprintf("0.0.0.0:%d", healthzPort),
 			})
 	}))
 	if !c.osArgs.DisableIPV6 {
@@ -191,10 +192,33 @@ func (c *HAProxyController) setToReady() {
 						Name: "v6",
 						V4v6: true,
 					},
-					Address: ":::1042",
+					Address: fmt.Sprintf(":::%d", healthzPort),
 				})
 		}))
 	}
+
+	logger.Panic(c.clientAPIClosure(func() error {
+		ip := "127.0.0.1"
+		return c.haproxy.PeerEntryEdit("localinstance",
+			models.PeerEntry{
+				Name:    "local",
+				Address: &ip,
+				Port:    &c.osArgs.LocalPeerPort,
+			},
+		)
+	}))
+
+	logger.Panic(c.clientAPIClosure(func() error {
+		return c.haproxy.FrontendBindEdit("stats",
+			models.Bind{
+				BindParams: models.BindParams{
+					Name: "stats",
+				},
+				Address: fmt.Sprintf("*:%d", c.osArgs.StatsBindPort),
+			},
+		)
+	}))
+
 	logger.Debugf("healthz frontend exposed for readiness probe")
 	cm := c.store.ConfigMaps.Main
 	if cm.Name != "" && !cm.Loaded {

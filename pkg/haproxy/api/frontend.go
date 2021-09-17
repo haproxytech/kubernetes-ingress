@@ -224,3 +224,12 @@ func (c *clientNative) FrontendRuleDeleteAll(frontend string) {
 	}
 	// No usage of TCPResponseRules yet.
 }
+
+func (c *clientNative) PeerEntryEdit(peerSection string, peerEntry models.PeerEntry) error {
+	configuration, err := c.nativeAPI.Configuration()
+	if err != nil {
+		return err
+	}
+	c.activeTransactionHasChanges = true
+	return configuration.EditPeerEntry(peerEntry.Name, peerSection, &peerEntry, c.activeTransaction, 0)
+}
