@@ -15,6 +15,7 @@
 package controller
 
 import (
+	"fmt"
 	"path/filepath"
 	"strings"
 
@@ -221,11 +222,12 @@ func (c *HAProxyController) updateHAProxy() {
 
 // setToRready exposes readiness endpoint
 func (c *HAProxyController) setToReady() {
+	healthzPort := c.OSArgs.HealthzBindPort
 	logger.Panic(c.clientAPIClosure(func() error {
 		return c.Client.FrontendBindEdit("healthz",
 			models.Bind{
 				Name:    "v4",
-				Address: "0.0.0.0:1042",
+				Address: fmt.Sprintf("0.0.0.0:%d", healthzPort),
 			})
 	}))
 	if !c.OSArgs.DisableIPV6 {
@@ -233,12 +235,33 @@ func (c *HAProxyController) setToReady() {
 			return c.Client.FrontendBindCreate("healthz",
 				models.Bind{
 					Name:    "v6",
-					Address: ":::1042",
+					Address: fmt.Sprintf(":::%d", healthzPort),
 					V4v6:    true,
 				})
 		}))
 	}
 	logger.Debugf("healthz frontend exposed for readiness probe")
+
+	logger.Panic(c.clientAPIClosure(func() error {
+		ip := "127.0.0.1"
+		return c.Client.PeerEntryEdit("local", "localinstance",
+			models.PeerEntry{
+				Name:    "local",
+				Address: &ip,
+				Port:    &c.OSArgs.LocalPeerPort,
+			},
+		)
+	}))
+
+	logger.Panic(c.clientAPIClosure(func() error {
+		return c.Client.FrontendBindEdit("stats",
+			models.Bind{
+				Name:    "stats",
+				Address: fmt.Sprintf("*:%d", c.OSArgs.StatsBindPort),
+			},
+		)
+	}))
+
 	cm := c.Store.ConfigMaps.Main
 	if cm.Name != "" && !cm.Loaded {
 		logger.Warningf("Main configmap '%s/%s' not found", cm.Namespace, cm.Name)

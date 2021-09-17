@@ -52,6 +52,7 @@ type HAProxyClient interface {
 	GlobalPushConfiguration(models.Global) error
 	GlobalCfgSnippet(snippet []string) error
 	GetMap(mapFile string) (*models.Map, error)
+	PeerEntryEdit(name string, peerSection string, peer models.PeerEntry) error
 	SetMapContent(mapFile string, payload string) error
 	SetServerAddr(backendName string, serverName string, ip string, port int) error
 	SetServerState(backendName string, serverName string, state string) error
