@@ -14,7 +14,6 @@
 
 FROM golang:1.17-alpine AS builder
 
-RUN go env -w "GONOSUMDB=gitlab.int.haproxy.com/*" "GOPROXY=http://goproxy.int.haproxy.com"
 RUN apk --no-cache add git openssh
 
 COPY /go.mod /src/go.mod
