@@ -1454,7 +1454,7 @@ annotations:
     applies_to:
       - configmap
     version_min: "1.4"
-    example: ["server-slots: 75"]
+    example: ['scale-server-slots: "75"']
   - title: ssl-certificate
     type: string
     group: ssl-offloading
