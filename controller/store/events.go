@@ -227,7 +227,12 @@ func (k *K8s) EventEndpoints(ns *Namespace, data *Endpoints, syncHAproxySrvs fun
 			}
 			portHAProxySrvs := *ns.HAProxyConfig[data.Service].HAProxySrvs[portName]
 			backendName := ns.HAProxyConfig[data.Service].BackendName[portName]
-			logger.Warning(syncHAproxySrvs(backendName, portHAProxySrvs, portAddresses))
+
+			err := syncHAproxySrvs(backendName, portHAProxySrvs, portAddresses)
+			if err != nil {
+				logger.Warning(err)
+				ns.HAProxyConfig[data.Service].DynUpdateFailed[portName] = true
+			}
 		}
 
 		return true

@@ -60,6 +60,12 @@ func (s *SvcContext) HandleEndpoints(client api.HAProxyClient, k8sStore store.K8
 			s.updateHAProxySrv(client, srv, *srvSlot, srvSlot.Port)
 		}
 	}
+
+	if ns.HAProxyConfig[s.service.Name].DynUpdateFailed[sp.Name] {
+		ns.HAProxyConfig[s.service.Name].DynUpdateFailed[sp.Name] = false
+		return true
+	}
+
 	return srvsScaled || srvsActiveAnn
 }
 

@@ -70,9 +70,10 @@ type Address struct {
 
 // Auxiliary data about the state of the HAProxy for a service
 type HAProxyConfig struct {
-	HAProxySrvs  map[string]*[]*HAProxySrv      // port -> slice of HAProxySrvs
-	NewAddresses map[string]map[string]*Address // port -> set of Addresses
-	BackendName  map[string]string              // port -> for runtime operations
+	HAProxySrvs     map[string]*[]*HAProxySrv      // port -> slice of HAProxySrvs
+	NewAddresses    map[string]map[string]*Address // port -> set of Addresses
+	BackendName     map[string]string              // port -> for runtime operations
+	DynUpdateFailed map[string]bool
 }
 
 // Namespace is useful data from k8s structures about namespace
