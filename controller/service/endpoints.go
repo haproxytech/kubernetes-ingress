@@ -44,6 +44,10 @@ func (s *SvcContext) HandleHAProxySrvs(client api.HAProxyClient, store store.K8s
 			s.updateHAProxySrv(client, *srvSlot, backend.Endpoints.Port)
 		}
 	}
+	if backend.DynUpdateFailed {
+		backend.DynUpdateFailed = false
+		return true
+	}
 	return srvsScaled
 }
 
