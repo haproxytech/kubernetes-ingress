@@ -32,8 +32,9 @@ type K8s struct {
 }
 
 type CustomResources struct {
-	Global   *models.Global
-	Defaults *models.Defaults
+	Global     *models.Global
+	Defaults   *models.Defaults
+	LogTargets models.LogTargets
 }
 
 type NamespacesWatch struct {

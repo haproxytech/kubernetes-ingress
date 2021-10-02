@@ -14,13 +14,12 @@ import (
 
 type SyslogServers struct {
 	name       string
-	global     *models.Global
 	logTargets *models.LogTargets
 	stdout     bool
 }
 
-func NewSyslogServers(n string, g *models.Global, l *models.LogTargets) *SyslogServers {
-	return &SyslogServers{name: n, global: g, logTargets: l}
+func NewSyslogServers(n string, l *models.LogTargets) *SyslogServers {
+	return &SyslogServers{name: n, logTargets: l}
 }
 
 func (a *SyslogServers) GetName() string {
@@ -90,19 +89,6 @@ func (a *SyslogServers) Process(k store.K8s, annotations ...map[string]string) e
 			}
 		}
 		*(a.logTargets) = append(*(a.logTargets), &logTarget)
-	}
-
-	// stdout logging won't work with daemon mode
-	var daemonMode bool
-	if a.global.Daemon == "enabled" {
-		daemonMode = true
-	}
-	if a.stdout {
-		if daemonMode {
-			a.global.Daemon = "disabled"
-		}
-	} else if !daemonMode {
-		a.global.Daemon = "enabled"
 	}
 	return nil
 }

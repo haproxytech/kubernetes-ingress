@@ -26,7 +26,7 @@ func Global(g *models.Global, l *models.LogTargets) []Annotation {
 		NewFrontendCfgSnippet("frontend-config-snippet", "http"),
 		NewFrontendCfgSnippet("frontend-config-snippet", "https"),
 		NewFrontendCfgSnippet("stats-config-snippet", "stats"),
-		global.NewSyslogServers("syslog-server", g, l),
+		global.NewSyslogServers("syslog-server", l),
 		global.NewNbthread("nbthread", g),
 		global.NewMaxconn("maxconn", g),
 		global.NewHardStopAfter("hard-stop-after", g),

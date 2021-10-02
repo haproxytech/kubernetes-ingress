@@ -19,8 +19,6 @@ spec:
           properties:
             spec:
               type: object
-              required: 
-                - config
               properties: 
                 config: 
                   title: Global
@@ -129,3 +127,75 @@ spec:
                         param:
                           type: string
                           pattern: '^[^\s]+$'
+                log_targets:
+                  type: array
+                  items:
+                    type: object
+                    required:
+                      - address
+                      - facility
+                    properties:
+                      index:
+                        type: integer
+                        nullable: true
+                      address:
+                        type: string
+                        pattern: ^[^\s]+$
+                      length:
+                        type: integer
+                      format:
+                        type: string
+                        enum:
+                          - rfc3164
+                          - rfc5424
+                          - short
+                          - raw
+                      facility:
+                        type: string
+                        enum:
+                          - kern
+                          - user
+                          - mail
+                          - daemon
+                          - auth
+                          - syslog
+                          - lpr
+                          - news
+                          - uucp
+                          - cron
+                          - auth2
+                          - ftp
+                          - ntp
+                          - audit
+                          - alert
+                          - cron2
+                          - local0
+                          - local1
+                          - local2
+                          - local3
+                          - local4
+                          - local5
+                          - local6
+                          - local7
+                      level:
+                        type: string
+                        enum:
+                          - emerg
+                          - alert
+                          - crit
+                          - err
+                          - warning
+                          - notice
+                          - info
+                          - debug
+                      minlevel:
+                        type: string
+                        enum:
+                          - emerg
+                          - alert
+                          - crit
+                          - err
+                          - warning
+                          - notice
+                          - info
+                          - debug

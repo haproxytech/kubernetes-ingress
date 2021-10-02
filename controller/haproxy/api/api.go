@@ -46,8 +46,7 @@ type HAProxyClient interface {
 	FrontendTCPRequestRuleCreate(frontend string, rule models.TCPRequestRule, ingressACL string) error
 	FrontendRuleDeleteAll(frontend string)
 	GlobalGetLogTargets() (models.LogTargets, error)
-	GlobalCreateLogTargets(models.LogTargets) error
-	GlobalDeleteLogTargets()
+	GlobalPushLogTargets(models.LogTargets) error
 	GlobalGetConfiguration() (*models.Global, error)
 	GlobalPushConfiguration(models.Global) error
 	GlobalCfgSnippet(snippet []string) error

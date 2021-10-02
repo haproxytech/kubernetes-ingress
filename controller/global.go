@@ -52,6 +52,7 @@ func (c *HAProxyController) globalCfg() (reload, restart bool) {
 	newGlobal = &models.Global{}
 	if c.Store.CR.Global != nil {
 		newGlobal = c.Store.CR.Global
+		newLg = c.Store.CR.LogTargets
 	} else {
 		for _, a := range annotations.Global(newGlobal, &newLg) {
 			err = a.Process(c.Store, c.Store.ConfigMaps.Main.Annotations)
@@ -60,7 +61,7 @@ func (c *HAProxyController) globalCfg() (reload, restart bool) {
 			}
 		}
 	}
-	configuration.SetGlobal(newGlobal, c.Cfg.Env)
+	configuration.SetGlobal(newGlobal, &newLg, c.Cfg.Env)
 	updated = deep.Equal(newGlobal, global)
 	if len(updated) != 0 {
 		logger.Error(c.Client.GlobalPushConfiguration(*newGlobal))
@@ -69,9 +70,8 @@ func (c *HAProxyController) globalCfg() (reload, restart bool) {
 	}
 	updated = deep.Equal(newLg, lg)
 	if len(updated) != 0 {
-		c.Client.GlobalDeleteLogTargets()
-		logger.Error(c.Client.GlobalCreateLogTargets(newLg))
-		logger.Debugf("Syslog servers updated: %s\nRestart required", updated)
+		logger.Error(c.Client.GlobalPushLogTargets(newLg))
+		logger.Debugf("Global log targets updated: %s\nRestart required", updated)
 		restart = true
 	}
 	updatedSnipp, errSnipp := annotations.UpdateGlobalCfgSnippet(c.Client)

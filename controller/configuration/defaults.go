@@ -7,7 +7,7 @@ import (
 )
 
 // SetGlobal will set default values for Global section config.
-func SetGlobal(global *models.Global, env Env) {
+func SetGlobal(global *models.Global, logTargets *models.LogTargets, env Env) {
 	// Enforced values
 	global.MasterWorker = true
 	global.Pidfile = env.PIDFile
@@ -39,6 +39,22 @@ func SetGlobal(global *models.Global, env Env) {
 	}
 	if global.SslDefaultBindOptions == "" {
 		global.SslDefaultBindOptions = "no-sslv3 no-tls-tickets no-tlsv10"
+	}
+	if len(*logTargets) == 0 {
+		*logTargets = []*models.LogTarget{{
+			Index:    utils.PtrInt64(0),
+			Address:  "127.0.0.1",
+			Facility: "local0",
+			Level:    "notice",
+		}}
+	} else {
+		for i, v := range *logTargets {
+			v.Index = utils.PtrInt64(int64(i))
+			if v.Address == "stdout" {
+				global.Daemon = ""
+				break
+			}
+		}
 	}
 }
 

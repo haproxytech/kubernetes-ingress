@@ -27,12 +27,17 @@ type GlobalCfg struct {
 
 func (h GlobalCfg) Update(k store.K8s, cfg *config.ControllerCfg, api api.HAProxyClient) (reload bool, err error) {
 	global := &models.Global{}
-	defaults := &models.Defaults{}
-	config.SetGlobal(global, cfg.Env)
+	logTargets := &models.LogTargets{}
+	config.SetGlobal(global, logTargets, cfg.Env)
 	err = api.GlobalPushConfiguration(*global)
 	if err != nil {
 		return
 	}
+	err = api.GlobalPushLogTargets(*logTargets)
+	if err != nil {
+		return
+	}
+	defaults := &models.Defaults{}
 	config.SetDefaults(defaults)
 	err = api.DefaultsPushConfiguration(*defaults)
 	if err != nil {

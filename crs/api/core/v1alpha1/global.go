@@ -33,15 +33,22 @@ type Global struct {
 
 // GlobalSpec defines the desired state of Global
 type GlobalSpec struct {
-	Config *models.Global `json:"config"`
+	Config     *models.Global    `json:"config"`
+	LogTargets models.LogTargets `json:"log_targets"`
 }
 
 // DeepCopyInto deepcopying  the receiver into out. in must be non-nil.
 func (in *GlobalSpec) DeepCopyInto(out *GlobalSpec) {
-	*out = *in
 	if in.Config != nil {
 		b, _ := in.Config.MarshalBinary()
 		_ = out.Config.UnmarshalBinary(b)
+	}
+	if in.LogTargets != nil {
+		out.LogTargets = make([]*models.LogTarget, len(in.LogTargets))
+		for i, v := range in.LogTargets {
+			b, _ := v.MarshalBinary()
+			_ = out.LogTargets[i].UnmarshalBinary(b)
+		}
 	}
 }
 

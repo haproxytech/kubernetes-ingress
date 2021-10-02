@@ -70,6 +70,7 @@ func (c GlobalCR) GetInformer(eventChan chan SyncDataEvent, factory informers.Sh
 func (c GlobalCR) ProcessEvent(s *store.K8s, job SyncDataEvent) bool {
 	if job.Data == nil {
 		s.CR.Global = nil
+		s.CR.LogTargets = nil
 		return true
 	}
 	data, ok := job.Data.(*corev1alpha1.Global)
@@ -78,6 +79,7 @@ func (c GlobalCR) ProcessEvent(s *store.K8s, job SyncDataEvent) bool {
 		return false
 	}
 	s.CR.Global = data.Spec.Config
+	s.CR.LogTargets = data.Spec.LogTargets
 	return true
 }
 

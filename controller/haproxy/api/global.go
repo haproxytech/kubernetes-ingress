@@ -6,6 +6,8 @@ import (
 	"github.com/haproxytech/client-native/v2/models"
 	parser "github.com/haproxytech/config-parser/v4"
 	"github.com/haproxytech/config-parser/v4/types"
+
+	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 )
 
 func (c *clientNative) DefaultsGetConfiguration() (defaults *models.Defaults, err error) {
@@ -50,9 +52,15 @@ func (c *clientNative) GlobalGetLogTargets() (lg models.LogTargets, err error) {
 	return
 }
 
-func (c *clientNative) GlobalCreateLogTargets(logTargets models.LogTargets) error {
+func (c *clientNative) GlobalPushLogTargets(logTargets models.LogTargets) error {
 	var err error
 	c.activeTransactionHasChanges = true
+	for {
+		err = c.nativeAPI.Configuration.DeleteLogTarget(0, "global", parser.GlobalSectionName, c.activeTransaction, 0)
+		if err != nil {
+			break
+		}
+	}
 	for _, log := range logTargets {
 		err = c.nativeAPI.Configuration.CreateLogTarget(string(parser.Global), parser.GlobalSectionName, log, c.activeTransaction, 0)
 		if err != nil {
@@ -60,16 +68,6 @@ func (c *clientNative) GlobalCreateLogTargets(logTargets models.LogTargets) erro
 		}
 	}
 	return nil
-}
-
-func (c *clientNative) GlobalDeleteLogTargets() {
-	c.activeTransactionHasChanges = true
-	for {
-		err := c.nativeAPI.Configuration.DeleteLogTarget(0, "global", parser.GlobalSectionName, c.activeTransaction, 0)
-		if err != nil {
-			break
-		}
-	}
 }
 
 func (c *clientNative) GlobalGetConfiguration() (*models.Global, error) {
