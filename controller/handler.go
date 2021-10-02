@@ -61,6 +61,7 @@ func (c *HAProxyController) initHandlers() {
 
 func (c *HAProxyController) startupHandlers() error {
 	handlers := []UpdateHandler{
+		handler.GlobalCfg{},
 		handler.HTTPBind{
 			HTTP:      !c.OSArgs.DisableHTTP,
 			HTTPS:     !c.OSArgs.DisableHTTPS,
@@ -71,9 +72,6 @@ func (c *HAProxyController) startupHandlers() error {
 			IPv4Addr:  c.OSArgs.IPV4BindAddr,
 			IPv6Addr:  c.OSArgs.IPV6BindAddr,
 		}}
-	if c.OSArgs.External {
-		handlers = append(handlers, handler.GlobalCfg{})
-	}
 	for _, handler := range handlers {
 		_, err := handler.Update(c.Store, &c.Cfg, c.Client)
 		if err != nil {
