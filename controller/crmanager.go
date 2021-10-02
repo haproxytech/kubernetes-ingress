@@ -64,20 +64,16 @@ func NewCRManager(s *store.K8s, restCfg *rest.Config, cacheResync time.Duration,
 func (m CRManager) RegisterCoreCR(cr CR) {
 	resources, err := m.client.DiscoveryClient.ServerResourcesForGroupVersion(CoreGroupVersion)
 	if err != nil {
-		logger.Warning("Custom API core.haproxy.org not available in cluster")
 		return
 	}
+	logger.Debugf("Custom API core.haproxy.org available")
 	kindName := cr.GetKind()
-	defined := false
 	for _, resource := range resources.APIResources {
 		if resource.Kind == kindName {
 			m.crs[kindName] = cr
-			defined = true
+			logger.Infof("%s CR defined in API core.haproxy.org", kindName)
 			break
 		}
-	}
-	if !defined {
-		logger.Warningf("%s Kind not defined in API core.haproxy.org", kindName)
 	}
 }
 
