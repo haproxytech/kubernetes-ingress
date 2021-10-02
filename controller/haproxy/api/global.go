@@ -23,6 +23,12 @@ func (c *clientNative) DefaultsPushConfiguration(defaults models.Defaults) (err 
 	if err != nil {
 		return fmt.Errorf("unable to update HAProxy's defaults section: %w", err)
 	}
+	// Force defaults log directive to "log global"
+	_ = c.nativeAPI.Configuration.DeleteLogTarget(0, string(parser.Defaults), parser.DefaultSectionName, c.activeTransaction, 0)
+	err = c.nativeAPI.Configuration.CreateLogTarget(string(parser.Defaults), parser.DefaultSectionName, &models.LogTarget{Index: utils.PtrInt64(0), Global: true}, c.activeTransaction, 0)
+	if err != nil {
+		return fmt.Errorf("unable to set 'log global' directive in defaults section: %w", err)
+	}
 	return
 }
 

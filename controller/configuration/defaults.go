@@ -60,6 +60,11 @@ func SetGlobal(global *models.Global, logTargets *models.LogTargets, env Env) {
 
 // SetDefaults will set default values for Defaults section config.
 func SetDefaults(defaults *models.Defaults) {
+	// Enforced values
+	// Logging is enforced in DefaultsPushConfiguration method
+	defaults.LoadServerStateFromFile = "global"
+
+	// Default values
 	enabled := "enabled"
 	if defaults.Redispatch == nil {
 		defaults.Redispatch = &models.Redispatch{Enabled: &enabled}
