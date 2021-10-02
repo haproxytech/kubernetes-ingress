@@ -14,11 +14,16 @@ func SetGlobal(global *models.Global, env Env) {
 	global.Localpeer = "local"
 	global.ServerStateBase = env.StateDir
 	global.ServerStateFile = "global"
-	global.RuntimeAPIs = append(global.RuntimeAPIs, &models.RuntimeAPI{
+	runtimeAPIs := []*models.RuntimeAPI{{
 		Address:           &env.RuntimeSocket,
 		ExposeFdListeners: true,
 		Level:             "admin",
-	})
+	}}
+	if len(global.RuntimeAPIs) == 0 {
+		global.RuntimeAPIs = runtimeAPIs
+	} else if *(global.RuntimeAPIs[0].Address) != env.RuntimeSocket {
+		global.RuntimeAPIs = append(runtimeAPIs, global.RuntimeAPIs...)
+	}
 	// Default values
 	if global.Daemon == "" {
 		global.Daemon = "enabled"
