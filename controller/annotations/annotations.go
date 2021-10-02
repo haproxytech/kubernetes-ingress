@@ -15,7 +15,7 @@ type Annotation interface {
 	Process(value string) error
 }
 
-func GetGlobalAnnotations(g *models.Global, l *models.LogTargets) []Annotation {
+func Global(g *models.Global, l *models.LogTargets) []Annotation {
 	return []Annotation{
 		NewGlobalCfgSnippet("global-config-snippet"),
 		NewFrontendCfgSnippet("frontend-config-snippet", "http"),
@@ -28,7 +28,7 @@ func GetGlobalAnnotations(g *models.Global, l *models.LogTargets) []Annotation {
 	}
 }
 
-func GetDefaultsAnnotations(d *models.Defaults) []Annotation {
+func Defaults(d *models.Defaults) []Annotation {
 	return []Annotation{
 		global.NewOption("http-server-close", d),
 		global.NewOption("http-keep-alive", d),
@@ -47,7 +47,7 @@ func GetDefaultsAnnotations(d *models.Defaults) []Annotation {
 	}
 }
 
-func GetFrontendAnnotations(i store.Ingress, r *haproxy.Rules, m haproxy.Maps, k store.K8s) []Annotation {
+func Frontend(i store.Ingress, r *haproxy.Rules, m haproxy.Maps, k store.K8s) []Annotation {
 	reqRateLimit := ingress.NewReqRateLimit(r)
 	httpsRedirect := ingress.NewHTTPSRedirect(r, i)
 	hostRedirect := ingress.NewHostRedirect(r)
@@ -85,7 +85,7 @@ func GetFrontendAnnotations(i store.Ingress, r *haproxy.Rules, m haproxy.Maps, k
 	}
 }
 
-func GetBackendAnnotations(b *models.Backend) []Annotation {
+func Backend(b *models.Backend) []Annotation {
 	annotations := []Annotation{
 		NewBackendCfgSnippet("backend-config-snippet", b.Name),
 		service.NewAbortOnClose("abortonclose", b),
@@ -101,7 +101,7 @@ func GetBackendAnnotations(b *models.Backend) []Annotation {
 	return annotations
 }
 
-func GetServerAnnotations(s *models.Server, k8sStore store.K8s, certs *haproxy.Certificates) []Annotation {
+func Server(s *models.Server, k8sStore store.K8s, certs *haproxy.Certificates) []Annotation {
 	return []Annotation{
 		service.NewCheck("check", s),
 		service.NewCheckInter("check-interval", s),

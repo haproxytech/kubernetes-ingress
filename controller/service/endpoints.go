@@ -56,7 +56,7 @@ func (s *SvcContext) HandleEndpoints(client api.HAProxyClient, store store.K8s, 
 func (s *SvcContext) handleSrvAnnotations(srv *models.Server, store store.K8s, certs *haproxy.Certificates) bool {
 	var err error
 	oldSrv := *srv
-	for _, a := range annotations.GetServerAnnotations(srv, store, certs) {
+	for _, a := range annotations.Server(srv, store, certs) {
 		annValue := annotations.GetValue(a.GetName(), s.service.Annotations, s.ingress.Annotations, s.store.ConfigMaps.Main.Annotations)
 		err = a.Process(annValue)
 		if err != nil {

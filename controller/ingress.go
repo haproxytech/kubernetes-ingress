@@ -195,7 +195,7 @@ func (c *HAProxyController) handleIngressAnnotations(ingress store.Ingress) []ha
 	ids := []haproxy.RuleID{}
 	frontends := []string{c.Cfg.FrontHTTP, c.Cfg.FrontHTTPS}
 	result := haproxy.Rules{}
-	for _, a := range annotations.GetFrontendAnnotations(ingress, &result, *c.Cfg.MapFiles, c.Store) {
+	for _, a := range annotations.Frontend(ingress, &result, *c.Cfg.MapFiles, c.Store) {
 		annValue = annotations.GetValue(a.GetName(), annList)
 		err = a.Process(annValue)
 		if err != nil {

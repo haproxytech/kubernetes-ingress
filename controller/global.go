@@ -55,7 +55,7 @@ func (c *HAProxyController) globalCfg() (reload, restart bool) {
 	if c.Store.CR.Global != nil {
 		newGlobal = c.Store.CR.Global
 	} else {
-		for _, a := range annotations.GetGlobalAnnotations(newGlobal, &newLg) {
+		for _, a := range annotations.Global(newGlobal, &newLg) {
 			annValue := annotations.GetValue(a.GetName(), c.Store.ConfigMaps.Main.Annotations)
 			err = a.Process(annValue)
 			if err != nil {
@@ -103,7 +103,7 @@ func (c *HAProxyController) defaultsCfg() (reload bool) {
 	if c.Store.CR.Defaults != nil {
 		newDefaults = c.Store.CR.Defaults
 	} else {
-		for _, a := range annotations.GetDefaultsAnnotations(newDefaults) {
+		for _, a := range annotations.Defaults(newDefaults) {
 			annValue := annotations.GetValue(a.GetName(), c.Store.ConfigMaps.Main.Annotations)
 			logger.Error(a.Process(annValue))
 		}

@@ -125,7 +125,7 @@ func (s *SvcContext) HandleBackend(client api.HAProxyClient, store store.K8s) (r
 		reload = true
 		logger.Debugf("Ingress '%s/%s': new backend '%s', reload required", s.ingress.Namespace, s.ingress.Name, backendName)
 	}
-	for _, a := range annotations.GetBackendAnnotations(backend) {
+	for _, a := range annotations.Backend(backend) {
 		annValue := annotations.GetValue(a.GetName(), s.service.Annotations, s.ingress.Annotations, store.ConfigMaps.Main.Annotations)
 		err = a.Process(annValue)
 		if err != nil {
