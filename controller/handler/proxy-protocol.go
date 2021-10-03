@@ -21,6 +21,7 @@ import (
 	"github.com/haproxytech/kubernetes-ingress/controller/annotations"
 	config "github.com/haproxytech/kubernetes-ingress/controller/configuration"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/api"
+	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/maps"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/rules"
 	"github.com/haproxytech/kubernetes-ingress/controller/store"
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
@@ -35,7 +36,7 @@ func (p ProxyProtocol) Update(k store.K8s, cfg *config.ControllerCfg, api api.HA
 		return false, nil
 	}
 	// Validate annotation
-	mapName := "proxy-protocol-" + utils.Hash([]byte(annProxyProtocol))
+	mapName := maps.Name("proxy-protocol-" + utils.Hash([]byte(annProxyProtocol)))
 	if !cfg.MapFiles.Exists(mapName) {
 		for _, address := range strings.Split(annProxyProtocol, ",") {
 			address = strings.TrimSpace(address)
@@ -55,7 +56,7 @@ func (p ProxyProtocol) Update(k store.K8s, cfg *config.ControllerCfg, api api.HA
 		frontends = []string{cfg.FrontHTTP, cfg.FrontSSL}
 	}
 	for _, frontend := range frontends {
-		err = cfg.HAProxyRules.AddRule(rules.ReqProxyProtocol{SrcIPsMap: mapName}, false, frontend)
+		err = cfg.HAProxyRules.AddRule(rules.ReqProxyProtocol{SrcIPsMap: maps.GetPath(mapName)}, false, frontend)
 		if err != nil {
 			return
 		}

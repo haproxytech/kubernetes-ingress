@@ -24,6 +24,7 @@ import (
 	config "github.com/haproxytech/kubernetes-ingress/controller/configuration"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/api"
+	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/maps"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/rules"
 	"github.com/haproxytech/kubernetes-ingress/controller/store"
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
@@ -195,7 +196,7 @@ func (h HTTPS) enableSSLPassthrough(cfg *config.ControllerCfg, api api.HAProxyCl
 	frontend := models.Frontend{
 		Name:           cfg.FrontSSL,
 		Mode:           "tcp",
-		LogFormat:      "'%ci:%cp [%t] %ft %b/%s %Tw/%Tc/%Tt %B %ts %ac/%fc/%bc/%sc/%rc %sq/%bq %hr %hs haproxy.MAP_SNI: %[var(sess.sni)]'",
+		LogFormat:      "'%ci:%cp [%t] %ft %b/%s %Tw/%Tc/%Tt %B %ts %ac/%fc/%bc/%sc/%rc %sq/%bq %hr %hs SNI: %[var(sess.sni)]'",
 		DefaultBackend: cfg.BackSSL,
 	}
 	err = api.FrontendCreate(frontend)
@@ -276,12 +277,12 @@ func (h HTTPS) sslPassthroughRules(k store.K8s, cfg *config.ControllerCfg) error
 		cfg.HAProxyRules.AddRule(rules.ReqSetVar{
 			Name:       "sni_match",
 			Scope:      "txn",
-			Expression: fmt.Sprintf("req_ssl_sni,map(%s)", haproxy.GetMapPath(haproxy.MAP_SNI)),
+			Expression: fmt.Sprintf("req_ssl_sni,map(%s)", maps.GetPath(maps.SNI)),
 		}, false, cfg.FrontSSL),
 		cfg.HAProxyRules.AddRule(rules.ReqSetVar{
 			Name:       "sni_match",
 			Scope:      "txn",
-			Expression: fmt.Sprintf("req_ssl_sni,regsub(^[^.]*,,),map(%s)", haproxy.GetMapPath(haproxy.MAP_SNI)),
+			Expression: fmt.Sprintf("req_ssl_sni,regsub(^[^.]*,,),map(%s)", maps.GetPath(maps.SNI)),
 			CondTest:   "!{ var(txn.sni_match) -m found }",
 		}, false, cfg.FrontSSL),
 	)

@@ -1,4 +1,4 @@
-// Copyright 2019 HAProxy Technologies LLC
+// CopyriFiles 2019 HAProxy Technologies LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package haproxy
+package maps
 
 import (
 	"hash/fnv"
@@ -22,18 +22,26 @@ import (
 	"strings"
 
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/api"
+	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 )
 
-type Maps map[string]*mapFile
+type MapFiles map[Name]*mapFile
+
+type Name string
+
+type Path string
+
+// module logger
+var logger = utils.GetLogger()
 
 var mapDir string
 
 //nolint:golint,stylecheck
 const (
-	MAP_SNI         = "sni"
-	MAP_HOST        = "host"
-	MAP_PATH_EXACT  = "path-exact"
-	MAP_PATH_PREFIX = "path-prefix"
+	SNI         Name = "sni"
+	HOST        Name = "host"
+	PATH_EXACT  Name = "path-exact"
+	PATH_PREFIX Name = "path-prefix"
 )
 
 type mapFile struct {
@@ -55,24 +63,24 @@ func (mf *mapFile) getContent() (string, uint64) {
 	return content, h.Sum64()
 }
 
-func NewMapFiles(path string) *Maps {
+func New(path string) *MapFiles {
 	mapDir = path
-	var maps Maps = map[string]*mapFile{
+	var maps MapFiles = map[Name]*mapFile{
 		// Map files required for HAProxy Rules
-		MAP_SNI:         {preserve: true},
-		MAP_HOST:        {preserve: true},
-		MAP_PATH_EXACT:  {preserve: true},
-		MAP_PATH_PREFIX: {preserve: true},
+		SNI:         {preserve: true},
+		HOST:        {preserve: true},
+		PATH_EXACT:  {preserve: true},
+		PATH_PREFIX: {preserve: true},
 	}
 	return &maps
 }
 
-func (m Maps) Exists(name string) bool {
+func (m MapFiles) Exists(name Name) bool {
 	return m[name] != nil && len(m[name].rows) != 0
 }
 
 // AppendRow appends row to mapFile
-func (m Maps) AppendRow(name string, row string) {
+func (m MapFiles) AppendRow(name Name, row string) {
 	if row == "" {
 		return
 	}
@@ -82,13 +90,13 @@ func (m Maps) AppendRow(name string, row string) {
 	m[name].rows = append(m[name].rows, row)
 }
 
-func (m Maps) Clean() {
+func (m MapFiles) Clean() {
 	for _, mapFile := range m {
 		mapFile.rows = []string{}
 	}
 }
 
-func (m Maps) Refresh(client api.HAProxyClient) (reload bool) {
+func (m MapFiles) Refresh(client api.HAProxyClient) (reload bool) {
 	for name, mapFile := range m {
 		content, hash := mapFile.getContent()
 		if mapFile.hash == hash {
@@ -97,12 +105,12 @@ func (m Maps) Refresh(client api.HAProxyClient) (reload bool) {
 		mapFile.hash = hash
 		var f *os.File
 		var err error
-		filename := GetMapPath(name)
+		filename := GetPath(name)
 		if content == "" && !mapFile.preserve {
-			logger.Error(os.Remove(filename))
+			logger.Error(os.Remove(string(filename)))
 			delete(m, name)
 			continue
-		} else if f, err = os.Create(filename); err != nil {
+		} else if f, err = os.Create(string(filename)); err != nil {
 			logger.Error(err)
 			continue
 		}
@@ -126,6 +134,6 @@ func (m Maps) Refresh(client api.HAProxyClient) (reload bool) {
 	return reload
 }
 
-func GetMapPath(name string) string {
-	return path.Join(mapDir, name) + ".map"
+func GetPath(name Name) Path {
+	return Path(path.Join(mapDir, string(name)) + ".map")
 }

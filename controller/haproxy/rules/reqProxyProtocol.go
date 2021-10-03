@@ -7,11 +7,12 @@ import (
 
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/api"
+	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/maps"
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 )
 
 type ReqProxyProtocol struct {
-	SrcIPsMap string
+	SrcIPsMap maps.Path
 }
 
 func (r ReqProxyProtocol) GetType() haproxy.RuleType {
@@ -24,7 +25,7 @@ func (r ReqProxyProtocol) Create(client api.HAProxyClient, frontend *models.Fron
 		Type:     "connection",
 		Action:   models.TCPRequestRuleActionExpectProxy,
 		Cond:     "if",
-		CondTest: fmt.Sprintf("{ src -f %s }", haproxy.GetMapPath(r.SrcIPsMap)),
+		CondTest: fmt.Sprintf("{ src -f %s }", r.SrcIPsMap),
 	}
 	return client.FrontendTCPRequestRuleCreate(frontend.Name, tcpRule, ingressACL)
 }

@@ -20,12 +20,13 @@ import (
 	"path/filepath"
 
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy"
+	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/maps"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/rules"
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 )
 
 type ControllerCfg struct {
-	MapFiles        *haproxy.Maps
+	MapFiles        *maps.MapFiles
 	HAProxyRules    haproxy.SectionRules
 	Certificates    *haproxy.Certificates
 	ActiveBackends  map[string]struct{}
@@ -68,7 +69,7 @@ func (c *ControllerCfg) Init() (err error) {
 	if err = c.envInit(); err != nil {
 		return err
 	}
-	c.MapFiles = haproxy.NewMapFiles(c.Env.MapDir)
+	c.MapFiles = maps.New(c.Env.MapDir)
 	if err := c.haproxyRulesInit(); err != nil {
 		return err
 	}
@@ -112,23 +113,23 @@ func (c *ControllerCfg) haproxyRulesInit() error {
 			c.HAProxyRules.AddRule(rules.ReqSetVar{
 				Name:       "host_match",
 				Scope:      "txn",
-				Expression: fmt.Sprintf("var(txn.host),map(%s)", haproxy.GetMapPath(haproxy.MAP_HOST)),
+				Expression: fmt.Sprintf("var(txn.host),map(%s)", maps.GetPath(maps.HOST)),
 			}, false, frontend),
 			c.HAProxyRules.AddRule(rules.ReqSetVar{
 				Name:       "host_match",
 				Scope:      "txn",
-				Expression: fmt.Sprintf("var(txn.host),regsub(^[^.]*,,),map(%s,'')", haproxy.GetMapPath(haproxy.MAP_HOST)),
+				Expression: fmt.Sprintf("var(txn.host),regsub(^[^.]*,,),map(%s,'')", maps.GetPath(maps.HOST)),
 				CondTest:   "!{ var(txn.host_match) -m found }",
 			}, false, frontend),
 			c.HAProxyRules.AddRule(rules.ReqSetVar{
 				Name:       "path_match",
 				Scope:      "txn",
-				Expression: fmt.Sprintf("var(txn.host_match),concat(,txn.path,),map(%s)", haproxy.GetMapPath(haproxy.MAP_PATH_EXACT)),
+				Expression: fmt.Sprintf("var(txn.host_match),concat(,txn.path,),map(%s)", maps.GetPath(maps.PATH_EXACT)),
 			}, false, frontend),
 			c.HAProxyRules.AddRule(rules.ReqSetVar{
 				Name:       "path_match",
 				Scope:      "txn",
-				Expression: fmt.Sprintf("var(txn.host_match),concat(,txn.path,),map_beg(%s)", haproxy.GetMapPath(haproxy.MAP_PATH_PREFIX)),
+				Expression: fmt.Sprintf("var(txn.host_match),concat(,txn.path,),map_beg(%s)", maps.GetPath(maps.PATH_PREFIX)),
 				CondTest:   "!{ var(txn.path_match) -m found }",
 			}, false, frontend),
 		)
