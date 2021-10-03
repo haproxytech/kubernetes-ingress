@@ -5,14 +5,13 @@ import (
 	"strings"
 
 	"github.com/haproxytech/kubernetes-ingress/controller/annotations/common"
-	"github.com/haproxytech/kubernetes-ingress/controller/haproxy"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/rules"
 	"github.com/haproxytech/kubernetes-ingress/controller/store"
 )
 
 type ReqAuth struct {
 	authRule *rules.ReqBasicAuth
-	rules    *haproxy.Rules
+	rules    *rules.Rules
 	ingress  store.Ingress
 }
 
@@ -21,8 +20,8 @@ type ReqAuthAnn struct {
 	parent *ReqAuth
 }
 
-func NewReqAuth(rules *haproxy.Rules, i store.Ingress) *ReqAuth {
-	return &ReqAuth{rules: rules, ingress: i}
+func NewReqAuth(r *rules.Rules, i store.Ingress) *ReqAuth {
+	return &ReqAuth{rules: r, ingress: i}
 }
 
 func (p *ReqAuth) NewAnnotation(n string) ReqAuthAnn {

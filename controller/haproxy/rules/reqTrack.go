@@ -5,7 +5,6 @@ import (
 
 	"github.com/haproxytech/client-native/v2/models"
 
-	"github.com/haproxytech/kubernetes-ingress/controller/haproxy"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/api"
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 )
@@ -17,8 +16,8 @@ type ReqTrack struct {
 	TrackKey    string
 }
 
-func (r ReqTrack) GetType() haproxy.RuleType {
-	return haproxy.REQ_TRACK
+func (r ReqTrack) GetType() Type {
+	return REQ_TRACK
 }
 
 func (r ReqTrack) Create(client api.HAProxyClient, frontend *models.Frontend, ingressACL string) error {

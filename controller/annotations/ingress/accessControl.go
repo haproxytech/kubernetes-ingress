@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/haproxytech/kubernetes-ingress/controller/annotations/common"
-	"github.com/haproxytech/kubernetes-ingress/controller/haproxy"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/maps"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/rules"
 	"github.com/haproxytech/kubernetes-ingress/controller/store"
@@ -15,17 +14,17 @@ import (
 
 type AccessControl struct {
 	name      string
-	rules     *haproxy.Rules
+	rules     *rules.Rules
 	maps      maps.MapFiles
 	whitelist bool
 }
 
-func NewBlackList(n string, rules *haproxy.Rules, m maps.MapFiles) *AccessControl {
-	return &AccessControl{name: n, rules: rules, maps: m}
+func NewBlackList(n string, r *rules.Rules, m maps.MapFiles) *AccessControl {
+	return &AccessControl{name: n, rules: r, maps: m}
 }
 
-func NewWhiteList(n string, rules *haproxy.Rules, m maps.MapFiles) *AccessControl {
-	return &AccessControl{name: n, rules: rules, maps: m, whitelist: true}
+func NewWhiteList(n string, r *rules.Rules, m maps.MapFiles) *AccessControl {
+	return &AccessControl{name: n, rules: r, maps: m, whitelist: true}
 }
 
 func (a *AccessControl) GetName() string {

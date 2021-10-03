@@ -2,18 +2,17 @@ package ingress
 
 import (
 	"github.com/haproxytech/kubernetes-ingress/controller/annotations/common"
-	"github.com/haproxytech/kubernetes-ingress/controller/haproxy"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/rules"
 	"github.com/haproxytech/kubernetes-ingress/controller/store"
 )
 
 type ReqSetHost struct {
 	name  string
-	rules *haproxy.Rules
+	rules *rules.Rules
 }
 
-func NewReqSetHost(n string, rules *haproxy.Rules) *ReqSetHost {
-	return &ReqSetHost{name: n, rules: rules}
+func NewReqSetHost(n string, r *rules.Rules) *ReqSetHost {
+	return &ReqSetHost{name: n, rules: r}
 }
 
 func (a *ReqSetHost) GetName() string {

@@ -5,7 +5,6 @@ import (
 
 	"github.com/haproxytech/client-native/v2/models"
 
-	"github.com/haproxytech/kubernetes-ingress/controller/haproxy"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/api"
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 )
@@ -16,8 +15,8 @@ type ReqRateLimit struct {
 	DenyStatusCode int64
 }
 
-func (r ReqRateLimit) GetType() haproxy.RuleType {
-	return haproxy.REQ_RATELIMIT
+func (r ReqRateLimit) GetType() Type {
+	return REQ_RATELIMIT
 }
 
 func (r ReqRateLimit) Create(client api.HAProxyClient, frontend *models.Frontend, ingressACL string) error {

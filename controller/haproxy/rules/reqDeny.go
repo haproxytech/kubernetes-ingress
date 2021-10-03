@@ -5,7 +5,6 @@ import (
 
 	"github.com/haproxytech/client-native/v2/models"
 
-	"github.com/haproxytech/kubernetes-ingress/controller/haproxy"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/api"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/maps"
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
@@ -16,8 +15,8 @@ type ReqDeny struct {
 	Whitelist bool
 }
 
-func (r ReqDeny) GetType() haproxy.RuleType {
-	return haproxy.REQ_DENY
+func (r ReqDeny) GetType() Type {
+	return REQ_DENY
 }
 
 func (r ReqDeny) Create(client api.HAProxyClient, frontend *models.Frontend, ingressACL string) error {

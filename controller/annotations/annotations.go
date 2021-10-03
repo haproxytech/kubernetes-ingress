@@ -12,6 +12,7 @@ import (
 	"github.com/haproxytech/kubernetes-ingress/controller/annotations/service"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/maps"
+	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/rules"
 	"github.com/haproxytech/kubernetes-ingress/controller/store"
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 )
@@ -58,7 +59,7 @@ func Defaults(d *models.Defaults) []Annotation {
 	}
 }
 
-func Frontend(i store.Ingress, r *haproxy.Rules, m maps.MapFiles) []Annotation {
+func Frontend(i store.Ingress, r *rules.Rules, m maps.MapFiles) []Annotation {
 	reqRateLimit := ingress.NewReqRateLimit(r)
 	httpsRedirect := ingress.NewHTTPSRedirect(r, i)
 	hostRedirect := ingress.NewHostRedirect(r)
