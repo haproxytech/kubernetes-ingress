@@ -9,12 +9,12 @@ import (
 )
 
 type CheckInter struct {
-	name   string
-	server *models.Server
+	name    string
+	backend *models.Backend
 }
 
-func NewCheckInter(n string, s *models.Server) *CheckInter {
-	return &CheckInter{name: n, server: s}
+func NewCheckInter(n string, b *models.Backend) *CheckInter {
+	return &CheckInter{name: n, backend: b}
 }
 
 func (a *CheckInter) GetName() string {
@@ -24,13 +24,13 @@ func (a *CheckInter) GetName() string {
 func (a *CheckInter) Process(k store.K8s, annotations ...map[string]string) error {
 	input := common.GetValue(a.GetName(), annotations...)
 	if input == "" {
-		a.server.Inter = nil
+		a.backend.DefaultServer.Inter = nil
 		return nil
 	}
 	value, err := utils.ParseTime(input)
 	if err != nil {
 		return err
 	}
-	a.server.Inter = value
+	a.backend.DefaultServer.Inter = value
 	return nil
 }

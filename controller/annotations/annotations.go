@@ -90,12 +90,22 @@ func Frontend(i store.Ingress, r *haproxy.Rules, m haproxy.Maps) []Annotation {
 	}
 }
 
-func Backend(b *models.Backend) []Annotation {
+func Backend(b *models.Backend, s store.K8s, certs *haproxy.Certificates) []Annotation {
 	annotations := []Annotation{
 		NewBackendCfgSnippet("backend-config-snippet", b.Name),
 		service.NewAbortOnClose("abortonclose", b),
 		service.NewTimeoutCheck("timeout-check", b),
 		service.NewLoadBalance("load-balance", b),
+		service.NewCheck("check", b),
+		service.NewCheckInter("check-interval", b),
+		service.NewCookie("cookie-persistence", b),
+		service.NewMaxconn("pod-maxconn", b),
+		service.NewSendProxy("send-proxy-protocol", b),
+		// Order is important for ssl annotations so they don't conflict
+		service.NewSSL("server-ssl", b),
+		service.NewCrt("server-crt", certs, b),
+		service.NewCA("server-ca", certs, b),
+		service.NewProto("server-proto", b),
 	}
 	if b.Mode == "http" {
 		annotations = append(annotations,
@@ -104,21 +114,6 @@ func Backend(b *models.Backend) []Annotation {
 		)
 	}
 	return annotations
-}
-
-func Server(s *models.Server, certs *haproxy.Certificates) []Annotation {
-	return []Annotation{
-		service.NewCheck("check", s),
-		service.NewCheckInter("check-interval", s),
-		service.NewCookie("cookie-persistence", nil, s),
-		service.NewMaxconn("pod-maxconn", s),
-		service.NewSendProxy("send-proxy-protocol", s),
-		// Order is important for ssl annotations so they don't conflict
-		service.NewSSL("server-ssl", s),
-		service.NewCrt("server-crt", certs, s),
-		service.NewCA("server-ca", certs, s),
-		service.NewProto("server-proto", s),
-	}
 }
 
 func SetDefaultValue(annotation, value string) {

@@ -18,82 +18,62 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/go-test/deep"
-
 	"github.com/haproxytech/client-native/v2/models"
 
 	"github.com/haproxytech/kubernetes-ingress/controller/annotations"
-	"github.com/haproxytech/kubernetes-ingress/controller/haproxy"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/api"
 	"github.com/haproxytech/kubernetes-ingress/controller/store"
 )
 
 // HandleEndpoints lookups the IngressPath related endpoints and handles corresponding backend servers configuration in HAProxy
-func (s *SvcContext) HandleEndpoints(client api.HAProxyClient, store store.K8s, certs *haproxy.Certificates) (reload bool) {
-	var srvsScaled, srvsActiveAnn bool
+func (s *SvcContext) HandleEndpoints(client api.HAProxyClient, store store.K8s) (reload bool) {
+	var srvsScaled bool
 	endpoints, err := s.getEndpoints(store)
 	if err != nil {
 		logger.Warningf("Ingress '%s/%s': %s", s.ingress.Namespace, s.ingress.Name, err)
 		return
 	}
-	endpoints.BackendName = s.backendName // set backendName in store.PortEndpoints for runtime updates.
+	endpoints.BackendName = s.backend.Name // set backendName in store.PortEndpoints for runtime updates.
 	// scale servers
 	if s.service.DNS == "" {
 		srvsScaled = s.scaleHAProxySrvs(endpoints, store)
 	}
 	// update servers
-	srv, _ := client.ServerGet("SRV_1", s.backendName)
-	srvsActiveAnn = s.handleSrvAnnotations(&srv, store, certs)
 	for _, srvSlot := range endpoints.HAProxySrvs {
-		if srvSlot.Modified || srvsActiveAnn {
-			s.updateHAProxySrv(client, srv, *srvSlot, endpoints.Port)
+		if srvSlot.Modified || s.newBackend {
+			s.updateHAProxySrv(client, *srvSlot, endpoints.Port)
 		}
 	}
-	return srvsScaled || srvsActiveAnn
-}
-
-func (s *SvcContext) handleSrvAnnotations(srv *models.Server, store store.K8s, certs *haproxy.Certificates) bool {
-	var err error
-	oldSrv := *srv
-	for _, a := range annotations.Server(srv, certs) {
-		err = a.Process(store, s.service.Annotations, s.ingress.Annotations, s.store.ConfigMaps.Main.Annotations)
-		if err != nil {
-			logger.Errorf("service %s/%s: annotation '%s': %s", s.service.Namespace, s.service.Name, a.GetName(), err)
-		}
-	}
-	if s.newBackend {
-		return true
-	}
-	result := deep.Equal(&oldSrv, srv)
-	if len(result) != 0 {
-		logger.Debugf("Ingress '%s/%s': server options for backend '%s' were updated:%s\nReload required", s.ingress.Namespace, s.ingress.Name, s.backendName, result)
-		return true
-	}
-	return false
+	return srvsScaled
 }
 
 // updateHAProxySrv updates corresponding HAProxy backend server or creates one if it does not exist
-func (s *SvcContext) updateHAProxySrv(client api.HAProxyClient, srv models.Server, srvSlot store.HAProxySrv, port int64) {
-	srv.Name = srvSlot.Name
-	srv.Port = &port
-	// Enabled/Disabled
-	if srvSlot.Address == "" {
-		srv.Address = "127.0.0.1"
-		srv.Maintenance = "enabled"
-	} else {
+func (s *SvcContext) updateHAProxySrv(client api.HAProxyClient, srvSlot store.HAProxySrv, port int64) {
+	srv := models.Server{
+		Name:        srvSlot.Name,
+		Port:        &port,
+		Address:     "127.0.0.1",
+		Maintenance: "enabled",
+	}
+	// Enable Server
+	if srvSlot.Address != "" {
 		srv.Address = srvSlot.Address
 		srv.Maintenance = "disabled"
 	}
+	// Cookie/Session persistence
+	if s.backend.Cookie != nil && s.backend.Cookie.Type == "insert" {
+		srv.Cookie = srv.Name
+	}
 	// Update server
-	errAPI := client.BackendServerEdit(s.backendName, srv)
+	errAPI := client.BackendServerEdit(s.backend.Name, srv)
 	if errAPI == nil {
-		logger.Tracef("Updating server '%s/%s'", s.backendName, srv.Name)
+		logger.Tracef("Updating server '%s/%s'", s.backend.Name, srv.Name)
 		return
 	}
 	// Create server
 	if strings.Contains(errAPI.Error(), "does not exist") {
-		logger.Tracef("Creating server '%s/%s'", s.backendName, srv.Name)
-		logger.Error(client.BackendServerCreate(s.backendName, srv))
+		logger.Tracef("Creating server '%s/%s'", s.backend.Name, srv.Name)
+		logger.Error(client.BackendServerCreate(s.backend.Name, srv))
 	}
 }
 
@@ -128,7 +108,7 @@ func (s *SvcContext) scaleHAProxySrvs(endpoints *store.PortEndpoints, k8sStore s
 	}
 	if flag {
 		reload = true
-		logger.Debugf("Server slots in backend '%s' scaled to match scale-server-slots value: %d, reload required", s.backendName, srvSlots)
+		logger.Debugf("Server slots in backend '%s' scaled to match scale-server-slots value: %d, reload required", s.backend.Name, srvSlots)
 	}
 	// Configure remaining addresses in available HAProxySrvs
 	flag = false
@@ -150,7 +130,7 @@ func (s *SvcContext) scaleHAProxySrvs(endpoints *store.PortEndpoints, k8sStore s
 	}
 	if flag {
 		reload = true
-		logger.Debugf("Server slots in backend '%s' scaled to match available endpoints, reload required", s.backendName)
+		logger.Debugf("Server slots in backend '%s' scaled to match available endpoints, reload required", s.backend.Name)
 	}
 	return reload
 }

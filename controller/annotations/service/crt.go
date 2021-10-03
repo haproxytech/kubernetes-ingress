@@ -11,14 +11,14 @@ import (
 type Crt struct {
 	name         string
 	haproxyCerts *haproxy.Certificates
-	server       *models.Server
+	backend      *models.Backend
 }
 
-func NewCrt(n string, c *haproxy.Certificates, s *models.Server) *Crt {
+func NewCrt(n string, c *haproxy.Certificates, b *models.Backend) *Crt {
 	return &Crt{
 		name:         n,
 		haproxyCerts: c,
-		server:       s,
+		backend:      b,
 	}
 }
 
@@ -35,7 +35,7 @@ func (a *Crt) Process(k store.K8s, annotations ...map[string]string) error {
 	}
 	secret, _ = k.GetSecret(ns, name)
 	if secret == nil {
-		a.server.SslCertificate = ""
+		a.backend.DefaultServer.SslCertificate = ""
 		// Other values from serverSSL annotation are kept
 		return nil
 	}
@@ -43,9 +43,9 @@ func (a *Crt) Process(k store.K8s, annotations ...map[string]string) error {
 	if err != nil {
 		return err
 	}
-	a.server.Ssl = "enabled"
-	a.server.Alpn = "h2,http/1.1"
-	a.server.Verify = "none"
-	a.server.SslCertificate = crtFile
+	a.backend.DefaultServer.Ssl = "enabled"
+	a.backend.DefaultServer.Alpn = "h2,http/1.1"
+	a.backend.DefaultServer.Verify = "none"
+	a.backend.DefaultServer.SslCertificate = crtFile
 	return nil
 }

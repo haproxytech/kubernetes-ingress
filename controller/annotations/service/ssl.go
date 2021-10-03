@@ -9,12 +9,12 @@ import (
 )
 
 type SSL struct {
-	name   string
-	server *models.Server
+	name    string
+	backend *models.Backend
 }
 
-func NewSSL(n string, s *models.Server) *SSL {
-	return &SSL{name: n, server: s}
+func NewSSL(n string, b *models.Backend) *SSL {
+	return &SSL{name: n, backend: b}
 }
 
 func (a *SSL) GetName() string {
@@ -32,13 +32,13 @@ func (a *SSL) Process(k store.K8s, annotations ...map[string]string) error {
 		}
 	}
 	if enabled {
-		a.server.Ssl = "enabled"
-		a.server.Alpn = "h2,http/1.1"
-		a.server.Verify = "none"
+		a.backend.DefaultServer.Ssl = "enabled"
+		a.backend.DefaultServer.Alpn = "h2,http/1.1"
+		a.backend.DefaultServer.Verify = "none"
 	} else {
-		a.server.Ssl = ""
-		a.server.Alpn = ""
-		a.server.Verify = ""
+		a.backend.DefaultServer.Ssl = ""
+		a.backend.DefaultServer.Alpn = ""
+		a.backend.DefaultServer.Verify = ""
 	}
 	return nil
 }

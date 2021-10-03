@@ -11,14 +11,14 @@ import (
 type CA struct {
 	name         string
 	haproxyCerts *haproxy.Certificates
-	server       *models.Server
+	backend      *models.Backend
 }
 
-func NewCA(n string, c *haproxy.Certificates, s *models.Server) *CA {
+func NewCA(n string, c *haproxy.Certificates, b *models.Backend) *CA {
 	return &CA{
 		name:         n,
 		haproxyCerts: c,
-		server:       s,
+		backend:      b,
 	}
 }
 
@@ -35,7 +35,7 @@ func (a *CA) Process(k store.K8s, annotations ...map[string]string) error {
 	}
 	secret, _ = k.GetSecret(ns, name)
 	if secret == nil {
-		a.server.SslCafile = ""
+		a.backend.DefaultServer.CaFile = ""
 		// Other values from serverSSL annotation are kept
 		return nil
 	}
@@ -43,9 +43,9 @@ func (a *CA) Process(k store.K8s, annotations ...map[string]string) error {
 	if err != nil {
 		return err
 	}
-	a.server.Ssl = "enabled"
-	a.server.Alpn = "h2,http/1.1"
-	a.server.Verify = "required"
-	a.server.SslCafile = caFile
+	a.backend.DefaultServer.Ssl = "enabled"
+	a.backend.DefaultServer.Alpn = "h2,http/1.1"
+	a.backend.DefaultServer.Verify = "required"
+	a.backend.DefaultServer.CaFile = caFile
 	return nil
 }

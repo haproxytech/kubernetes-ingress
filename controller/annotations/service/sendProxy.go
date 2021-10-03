@@ -11,12 +11,12 @@ import (
 )
 
 type SendProxy struct {
-	name   string
-	server *models.Server
+	name    string
+	backend *models.Backend
 }
 
-func NewSendProxy(n string, s *models.Server) *SendProxy {
-	return &SendProxy{name: n, server: s}
+func NewSendProxy(n string, b *models.Backend) *SendProxy {
+	return &SendProxy{name: n, backend: b}
 }
 
 func (a *SendProxy) GetName() string {
@@ -29,20 +29,20 @@ func (a *SendProxy) Process(k store.K8s, annotations ...map[string]string) error
 	v := strings.ToLower(input)
 	switch v {
 	case "proxy":
-		a.server.SendProxy = "enabled"
+		a.backend.DefaultServer.SendProxy = "enabled"
 	case "proxy-v1":
-		a.server.SendProxy = "enabled"
+		a.backend.DefaultServer.SendProxy = "enabled"
 	case "proxy-v2":
-		a.server.SendProxyV2 = "enabled"
+		a.backend.DefaultServer.SendProxyV2 = "enabled"
 	case "proxy-v2-ssl":
-		a.server.SendProxyV2Ssl = "enabled"
+		a.backend.DefaultServer.SendProxyV2Ssl = "enabled"
 	case "proxy-v2-ssl-cn":
-		a.server.SendProxyV2SslCn = "enabled"
+		a.backend.DefaultServer.SendProxyV2SslCn = "enabled"
 	case "":
-		a.server.SendProxy = ""
-		a.server.SendProxyV2 = ""
-		a.server.SendProxyV2Ssl = ""
-		a.server.SendProxyV2SslCn = ""
+		a.backend.DefaultServer.SendProxy = ""
+		a.backend.DefaultServer.SendProxyV2 = ""
+		a.backend.DefaultServer.SendProxyV2Ssl = ""
+		a.backend.DefaultServer.SendProxyV2SslCn = ""
 	default:
 		return fmt.Errorf("%s is an unknown enum", proxyPorto)
 	}

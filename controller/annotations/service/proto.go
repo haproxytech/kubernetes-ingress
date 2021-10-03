@@ -10,12 +10,12 @@ import (
 )
 
 type Proto struct {
-	name   string
-	server *models.Server
+	name    string
+	backend *models.Backend
 }
 
-func NewProto(n string, s *models.Server) *Proto {
-	return &Proto{name: n, server: s}
+func NewProto(n string, b *models.Backend) *Proto {
+	return &Proto{name: n, backend: b}
 }
 
 func (a *Proto) GetName() string {
@@ -26,13 +26,13 @@ func (a *Proto) Process(k store.K8s, annotations ...map[string]string) error {
 	input := common.GetValue(a.GetName(), annotations...)
 	switch input {
 	case "":
-		a.server.Proto = ""
+		a.backend.DefaultServer.Proto = ""
 	case "h1":
 		// Forces H1 even when SSL is enabled
-		a.server.Alpn = ""
-		a.server.Proto = ""
+		a.backend.DefaultServer.Alpn = ""
+		a.backend.DefaultServer.Proto = ""
 	case "h2":
-		a.server.Proto = "h2"
+		a.backend.DefaultServer.Proto = "h2"
 	default:
 		return fmt.Errorf("unknown proto %s", input)
 	}

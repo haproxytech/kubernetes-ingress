@@ -61,7 +61,7 @@ func (c *HAProxyController) igClassIsSupported(ingress *store.Ingress) bool {
 
 func (c *HAProxyController) handleIngressPath(ingress *store.Ingress, host string, path *store.IngressPath, ruleIDs []haproxy.RuleID) (reload bool, err error) {
 	sslPassthrough := c.sslPassthroughEnabled(*ingress, path)
-	svc, err := service.NewCtx(c.Store, ingress, path, sslPassthrough)
+	svc, err := service.NewCtx(c.Store, ingress, path, c.Cfg.Certificates, sslPassthrough)
 	if err != nil {
 		return
 	}
@@ -69,7 +69,7 @@ func (c *HAProxyController) handleIngressPath(ingress *store.Ingress, host strin
 		return
 	}
 	// Backend
-	backendReload, backendName, err := svc.HandleBackend(c.Client, c.Store)
+	backend, backendReload, err := svc.HandleBackend(c.Client, c.Store)
 	if err != nil {
 		return
 	}
@@ -79,15 +79,15 @@ func (c *HAProxyController) handleIngressPath(ingress *store.Ingress, host strin
 		Host:           host,
 		Path:           path,
 		HAProxyRules:   ruleIDs,
-		BackendName:    backendName,
+		BackendName:    backend.Name,
 		SSLPassthrough: sslPassthrough,
 	}
 
 	routeACLAnn := annotations.String("route-acl", svc.GetService().Annotations)
 	if routeACLAnn == "" {
-		if _, ok := route.CustomRoutes[backendName]; ok {
-			delete(route.CustomRoutes, backendName)
-			logger.Debugf("Custom Route to backend '%s' deleted, reload required", backendName)
+		if _, ok := route.CustomRoutes[backend.Name]; ok {
+			delete(route.CustomRoutes, backend.Name)
+			logger.Debugf("Custom Route to backend '%s' deleted, reload required", backend.Name)
 			routeReload = true
 		}
 		err = route.AddHostPathRoute(ingRoute, c.Cfg.MapFiles)
@@ -97,9 +97,9 @@ func (c *HAProxyController) handleIngressPath(ingress *store.Ingress, host strin
 	if err != nil {
 		return
 	}
-	c.Cfg.ActiveBackends[backendName] = struct{}{}
+	c.Cfg.ActiveBackends[backend.Name] = struct{}{}
 	// Endpoints
-	endpointsReload := svc.HandleEndpoints(c.Client, c.Store, c.Cfg.Certificates)
+	endpointsReload := svc.HandleEndpoints(c.Client, c.Store)
 	return backendReload || endpointsReload || routeReload, err
 }
 
@@ -114,34 +114,34 @@ func (c *HAProxyController) setDefaultService(ingress *store.Ingress, frontends 
 	if frontend.Mode == "tcp" {
 		tcpService = true
 	}
-	svc, err := service.NewCtx(c.Store, ingress, ingress.DefaultBackend, tcpService)
+	svc, err := service.NewCtx(c.Store, ingress, ingress.DefaultBackend, c.Cfg.Certificates, tcpService)
 	if err != nil {
 		return
 	}
 	if svc.GetStatus() == DELETED {
 		return
 	}
-	bdReload, backendName, err := svc.HandleBackend(c.Client, c.Store)
+	backend, bdReload, err := svc.HandleBackend(c.Client, c.Store)
 	if err != nil {
 		return
 	}
-	if frontend.DefaultBackend != backendName {
+	if frontend.DefaultBackend != backend.Name {
 		if frontend.Name == c.Cfg.FrontHTTP {
-			logger.Infof("Setting http default backend to '%s'", backendName)
+			logger.Infof("Setting http default backend to '%s'", backend.Name)
 		}
 		for _, frontendName := range frontends {
 			frontend, _ := c.Client.FrontendGet(frontendName)
-			frontend.DefaultBackend = backendName
+			frontend.DefaultBackend = backend.Name
 			err = c.Client.FrontendEdit(frontend)
 			if err != nil {
 				return
 			}
 			ftReload = true
-			logger.Debugf("Setting '%s' default backend to '%s'", frontendName, backendName)
+			logger.Debugf("Setting '%s' default backend to '%s'", frontendName, backend.Name)
 		}
 	}
-	c.Cfg.ActiveBackends[backendName] = struct{}{}
-	endpointsReload := svc.HandleEndpoints(c.Client, c.Store, c.Cfg.Certificates)
+	c.Cfg.ActiveBackends[backend.Name] = struct{}{}
+	endpointsReload := svc.HandleEndpoints(c.Client, c.Store)
 	reload = bdReload || ftReload || endpointsReload
 	return reload, err
 }

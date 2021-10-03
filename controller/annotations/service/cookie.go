@@ -12,11 +12,10 @@ import (
 type Cookie struct {
 	name    string
 	backend *models.Backend
-	server  *models.Server
 }
 
-func NewCookie(n string, b *models.Backend, s *models.Server) *Cookie {
-	return &Cookie{name: n, backend: b, server: s}
+func NewCookie(n string, b *models.Backend) *Cookie {
+	return &Cookie{name: n, backend: b}
 }
 
 func (a *Cookie) GetName() string {
@@ -27,26 +26,15 @@ func (a *Cookie) Process(k store.K8s, annotations ...map[string]string) error {
 	input := common.GetValue(a.GetName(), annotations...)
 	params := strings.Fields(input)
 	if len(params) == 0 {
-		switch {
-		case a.backend != nil:
-			a.backend.Cookie = nil
-		case a.server != nil:
-			a.server.Cookie = ""
-		}
+		a.backend.Cookie = nil
 		return nil
 	}
-	switch {
-	case a.backend != nil:
-		cookieName := params[0]
-		cookie := models.Cookie{
-			Name:     &cookieName,
-			Type:     "insert",
-			Nocache:  true,
-			Indirect: true,
-		}
-		a.backend.Cookie = &cookie
-	case a.server != nil:
-		a.server.Cookie = a.server.Name
+	cookieName := params[0]
+	a.backend.Cookie = &models.Cookie{
+		Name:     &cookieName,
+		Type:     "insert",
+		Nocache:  true,
+		Indirect: true,
 	}
 	return nil
 }

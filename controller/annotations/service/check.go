@@ -9,12 +9,12 @@ import (
 )
 
 type Check struct {
-	name   string
-	server *models.Server
+	name    string
+	backend *models.Backend
 }
 
-func NewCheck(n string, s *models.Server) *Check {
-	return &Check{name: n, server: s}
+func NewCheck(n string, b *models.Backend) *Check {
+	return &Check{name: n, backend: b}
 }
 
 func (a *Check) GetName() string {
@@ -24,7 +24,7 @@ func (a *Check) GetName() string {
 func (a *Check) Process(k store.K8s, annotations ...map[string]string) error {
 	input := common.GetValue(a.GetName(), annotations...)
 	if input == "" {
-		a.server.Check = ""
+		a.backend.DefaultServer.Check = ""
 		return nil
 	}
 	enabled, err := utils.GetBoolValue(input, "check")
@@ -32,9 +32,9 @@ func (a *Check) Process(k store.K8s, annotations ...map[string]string) error {
 		return err
 	}
 	if enabled {
-		a.server.Check = "enabled"
+		a.backend.DefaultServer.Check = "enabled"
 	} else {
-		a.server.Check = "disabled"
+		a.backend.DefaultServer.Check = "disabled"
 	}
 	return nil
 }

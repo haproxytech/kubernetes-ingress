@@ -10,12 +10,12 @@ import (
 )
 
 type Maxconn struct {
-	name   string
-	server *models.Server
+	name    string
+	backend *models.Backend
 }
 
-func NewMaxconn(n string, s *models.Server) *Maxconn {
-	return &Maxconn{name: n, server: s}
+func NewMaxconn(n string, b *models.Backend) *Maxconn {
+	return &Maxconn{name: n, backend: b}
 }
 
 func (a *Maxconn) GetName() string {
@@ -25,7 +25,7 @@ func (a *Maxconn) GetName() string {
 func (a *Maxconn) Process(k store.K8s, annotations ...map[string]string) error {
 	input := common.GetValue(a.GetName(), annotations...)
 	if input == "" {
-		a.server.Maxconn = nil
+		a.backend.DefaultServer.Maxconn = nil
 		return nil
 	}
 	v, err := strconv.ParseInt(input, 10, 64)
@@ -36,6 +36,6 @@ func (a *Maxconn) Process(k store.K8s, annotations ...map[string]string) error {
 	if k.NbrHAProxyInst != 0 {
 		v /= k.NbrHAProxyInst
 	}
-	a.server.Maxconn = &v
+	a.backend.DefaultServer.Maxconn = &v
 	return nil
 }
