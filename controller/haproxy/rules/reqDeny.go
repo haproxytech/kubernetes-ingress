@@ -7,11 +7,12 @@ import (
 
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/api"
+	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/maps"
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 )
 
 type ReqDeny struct {
-	SrcIPsMap string
+	SrcIPsMap maps.Path
 	Whitelist bool
 }
 
@@ -20,7 +21,6 @@ func (r ReqDeny) GetType() haproxy.RuleType {
 }
 
 func (r ReqDeny) Create(client api.HAProxyClient, frontend *models.Frontend, ingressACL string) error {
-	srcIpsMap := haproxy.GetMapPath(r.SrcIPsMap)
 	not := ""
 	if r.Whitelist {
 		not = "!"
@@ -31,7 +31,7 @@ func (r ReqDeny) Create(client api.HAProxyClient, frontend *models.Frontend, ing
 			Type:     "content",
 			Action:   "reject",
 			Cond:     "if",
-			CondTest: fmt.Sprintf("%s{ src -f %s }", not, srcIpsMap),
+			CondTest: fmt.Sprintf("%s{ src -f %s }", not, r.SrcIPsMap),
 		}
 		return client.FrontendTCPRequestRuleCreate(frontend.Name, tcpRule, ingressACL)
 	}
@@ -40,7 +40,7 @@ func (r ReqDeny) Create(client api.HAProxyClient, frontend *models.Frontend, ing
 		Type:       "deny",
 		DenyStatus: utils.PtrInt64(403),
 		Cond:       "if",
-		CondTest:   fmt.Sprintf("%s{ src -f %s }", not, srcIpsMap),
+		CondTest:   fmt.Sprintf("%s{ src -f %s }", not, r.SrcIPsMap),
 	}
 	return client.FrontendHTTPRequestRuleCreate(frontend.Name, httpRule, ingressACL)
 }

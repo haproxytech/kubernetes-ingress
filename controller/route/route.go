@@ -22,6 +22,7 @@ import (
 
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/api"
+	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/maps"
 	"github.com/haproxytech/kubernetes-ingress/controller/store"
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 )
@@ -45,7 +46,7 @@ type Route struct {
 }
 
 // AddHostPathRoute adds Host/Path ingress route to haproxy Map files used for backend switching.
-func AddHostPathRoute(route Route, mapFiles *haproxy.Maps) error {
+func AddHostPathRoute(route Route, mapFiles *maps.MapFiles) error {
 	if route.BackendName == "" {
 		return fmt.Errorf("backendName missing")
 	}
@@ -60,14 +61,14 @@ func AddHostPathRoute(route Route, mapFiles *haproxy.Maps) error {
 	// SSLPassthrough
 	if route.SSLPassthrough {
 		if route.Host == "" {
-			return fmt.Errorf("empty haproxy.MAP_SNI for backend %s,", route.BackendName)
+			return fmt.Errorf("empty SNI for backend %s,", route.BackendName)
 		}
-		mapFiles.AppendRow(haproxy.MAP_SNI, route.Host+"\t\t\t"+value)
+		mapFiles.AppendRow(maps.SNI, route.Host+"\t\t\t"+value)
 		return nil
 	}
 	// HTTP
 	if route.Host != "" {
-		mapFiles.AppendRow(haproxy.MAP_HOST, route.Host+"\t\t\t"+route.Host)
+		mapFiles.AppendRow(maps.HOST, route.Host+"\t\t\t"+route.Host)
 	} else if route.Path.Path == "" {
 		return fmt.Errorf("neither Host nor Path are provided for backend %v,", route.BackendName)
 	}
@@ -75,17 +76,17 @@ func AddHostPathRoute(route Route, mapFiles *haproxy.Maps) error {
 	path := route.Path.Path
 	switch {
 	case route.Path.PathTypeMatch == store.PATH_TYPE_EXACT:
-		mapFiles.AppendRow(haproxy.MAP_PATH_EXACT, route.Host+path+"\t\t\t"+value)
+		mapFiles.AppendRow(maps.PATH_EXACT, route.Host+path+"\t\t\t"+value)
 	case path == "" || path == "/":
-		mapFiles.AppendRow(haproxy.MAP_PATH_PREFIX, route.Host+"/"+"\t\t\t"+value)
+		mapFiles.AppendRow(maps.PATH_PREFIX, route.Host+"/"+"\t\t\t"+value)
 	case route.Path.PathTypeMatch == store.PATH_TYPE_PREFIX:
 		path = strings.TrimSuffix(path, "/")
-		mapFiles.AppendRow(haproxy.MAP_PATH_EXACT, route.Host+path+"\t\t\t"+value)
-		mapFiles.AppendRow(haproxy.MAP_PATH_PREFIX, route.Host+path+"/"+"\t\t\t"+value)
+		mapFiles.AppendRow(maps.PATH_EXACT, route.Host+path+"\t\t\t"+value)
+		mapFiles.AppendRow(maps.PATH_PREFIX, route.Host+path+"/"+"\t\t\t"+value)
 	case route.Path.PathTypeMatch == store.PATH_TYPE_IMPLEMENTATION_SPECIFIC:
 		path = strings.TrimSuffix(path, "/")
-		mapFiles.AppendRow(haproxy.MAP_PATH_EXACT, route.Host+path+"\t\t\t"+value)
-		mapFiles.AppendRow(haproxy.MAP_PATH_PREFIX, route.Host+path+"\t\t\t"+value)
+		mapFiles.AppendRow(maps.PATH_EXACT, route.Host+path+"\t\t\t"+value)
+		mapFiles.AppendRow(maps.PATH_PREFIX, route.Host+path+"\t\t\t"+value)
 	default:
 		return fmt.Errorf("unknown path type '%s' with backend '%s'", route.Path.PathTypeMatch, route.BackendName)
 	}

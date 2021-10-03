@@ -7,6 +7,7 @@ import (
 
 	"github.com/haproxytech/kubernetes-ingress/controller/annotations/common"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy"
+	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/maps"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/rules"
 	"github.com/haproxytech/kubernetes-ingress/controller/store"
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
@@ -15,15 +16,15 @@ import (
 type AccessControl struct {
 	name      string
 	rules     *haproxy.Rules
-	maps      haproxy.Maps
+	maps      maps.MapFiles
 	whitelist bool
 }
 
-func NewBlackList(n string, rules *haproxy.Rules, m haproxy.Maps) *AccessControl {
+func NewBlackList(n string, rules *haproxy.Rules, m maps.MapFiles) *AccessControl {
 	return &AccessControl{name: n, rules: rules, maps: m}
 }
 
-func NewWhiteList(n string, rules *haproxy.Rules, m haproxy.Maps) *AccessControl {
+func NewWhiteList(n string, rules *haproxy.Rules, m maps.MapFiles) *AccessControl {
 	return &AccessControl{name: n, rules: rules, maps: m, whitelist: true}
 }
 
@@ -36,13 +37,13 @@ func (a *AccessControl) Process(k store.K8s, annotations ...map[string]string) (
 	if input == "" {
 		return
 	}
-	var mapName string
+	var mapName maps.Name
 	var whitelist bool
 	if a.whitelist {
-		mapName = "whitelist-" + utils.Hash([]byte(input))
+		mapName = maps.Name("whitelist-" + utils.Hash([]byte(input)))
 		whitelist = true
 	} else {
-		mapName = "blacklist-" + utils.Hash([]byte(input))
+		mapName = maps.Name("blacklist-" + utils.Hash([]byte(input)))
 	}
 	if !a.maps.Exists(mapName) {
 		for _, address := range strings.Split(input, ",") {
@@ -56,7 +57,7 @@ func (a *AccessControl) Process(k store.K8s, annotations ...map[string]string) (
 		}
 	}
 	a.rules.Add(&rules.ReqDeny{
-		SrcIPsMap: mapName,
+		SrcIPsMap: maps.GetPath(mapName),
 		Whitelist: whitelist,
 	})
 	return
