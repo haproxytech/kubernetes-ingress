@@ -5,7 +5,6 @@ import (
 
 	"github.com/haproxytech/client-native/v2/models"
 
-	"github.com/haproxytech/kubernetes-ingress/controller/haproxy"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/api"
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 )
@@ -15,18 +14,18 @@ type SetHdr struct {
 	ForwardedProto bool
 	HdrName        string
 	HdrFormat      string
-	Type           haproxy.RuleType
+	Type           Type
 	CondTest       string
 }
 
-func (r SetHdr) GetType() haproxy.RuleType {
+func (r SetHdr) GetType() Type {
 	if r.ForwardedProto {
-		return haproxy.REQ_FORWARDED_PROTO
+		return REQ_FORWARDED_PROTO
 	}
 	if r.Response {
-		return haproxy.RES_SET_HEADER
+		return RES_SET_HEADER
 	}
-	return haproxy.REQ_SET_HEADER
+	return REQ_SET_HEADER
 }
 
 func (r SetHdr) Create(client api.HAProxyClient, frontend *models.Frontend, ingressACL string) error {

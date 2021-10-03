@@ -3,7 +3,6 @@ package rules
 import (
 	"github.com/haproxytech/client-native/v2/models"
 
-	"github.com/haproxytech/kubernetes-ingress/controller/haproxy"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/api"
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 )
@@ -13,8 +12,8 @@ type ReqCapture struct {
 	CaptureLen int64
 }
 
-func (r ReqCapture) GetType() haproxy.RuleType {
-	return haproxy.REQ_CAPTURE
+func (r ReqCapture) GetType() Type {
+	return REQ_CAPTURE
 }
 
 func (r ReqCapture) Create(client api.HAProxyClient, frontend *models.Frontend, ingressACL string) error {

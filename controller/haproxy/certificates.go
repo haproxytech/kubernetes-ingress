@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/haproxytech/kubernetes-ingress/controller/store"
+	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 )
 
 type Certificates struct {
@@ -25,6 +26,9 @@ type cert struct {
 }
 
 type SecretType int
+
+// module logger
+var logger = utils.GetLogger()
 
 //nolint:golint,stylecheck
 const (

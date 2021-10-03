@@ -5,7 +5,6 @@ import (
 	"strconv"
 
 	"github.com/haproxytech/kubernetes-ingress/controller/annotations/common"
-	"github.com/haproxytech/kubernetes-ingress/controller/haproxy"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/rules"
 	"github.com/haproxytech/kubernetes-ingress/controller/store"
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
@@ -14,7 +13,7 @@ import (
 type ReqRateLimit struct {
 	limit *rules.ReqRateLimit
 	track *rules.ReqTrack
-	rules *haproxy.Rules
+	rules *rules.Rules
 }
 
 type ReqRateLimitAnn struct {
@@ -22,8 +21,8 @@ type ReqRateLimitAnn struct {
 	parent *ReqRateLimit
 }
 
-func NewReqRateLimit(rules *haproxy.Rules) *ReqRateLimit {
-	return &ReqRateLimit{rules: rules}
+func NewReqRateLimit(r *rules.Rules) *ReqRateLimit {
+	return &ReqRateLimit{rules: r}
 }
 
 func (p *ReqRateLimit) NewAnnotation(n string) ReqRateLimitAnn {

@@ -6,14 +6,13 @@ import (
 	"strings"
 
 	"github.com/haproxytech/kubernetes-ingress/controller/annotations/common"
-	"github.com/haproxytech/kubernetes-ingress/controller/haproxy"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/rules"
 	"github.com/haproxytech/kubernetes-ingress/controller/store"
 )
 
 type ReqCapture struct {
 	capture []*rules.ReqCapture
-	rules   *haproxy.Rules
+	rules   *rules.Rules
 }
 
 type ReqCaptureAnn struct {
@@ -21,8 +20,8 @@ type ReqCaptureAnn struct {
 	parent *ReqCapture
 }
 
-func NewReqCapture(rules *haproxy.Rules) *ReqCapture {
-	return &ReqCapture{rules: rules}
+func NewReqCapture(r *rules.Rules) *ReqCapture {
+	return &ReqCapture{rules: r}
 }
 
 func (p *ReqCapture) NewAnnotation(n string) ReqCaptureAnn {

@@ -5,7 +5,6 @@ import (
 
 	"github.com/haproxytech/client-native/v2/models"
 
-	"github.com/haproxytech/kubernetes-ingress/controller/haproxy"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/api"
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 )
@@ -18,8 +17,8 @@ type RequestRedirect struct {
 	SSLRedirect  bool
 }
 
-func (r RequestRedirect) GetType() haproxy.RuleType {
-	return haproxy.REQ_REDIRECT
+func (r RequestRedirect) GetType() Type {
+	return REQ_REDIRECT
 }
 
 func (r RequestRedirect) Create(client api.HAProxyClient, frontend *models.Frontend, ingressACL string) error {

@@ -5,7 +5,6 @@ import (
 
 	"github.com/haproxytech/client-native/v2/models"
 
-	"github.com/haproxytech/kubernetes-ingress/controller/haproxy"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/api"
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 )
@@ -15,8 +14,8 @@ type ReqPathRewrite struct {
 	PathFmt   string
 }
 
-func (r ReqPathRewrite) GetType() haproxy.RuleType {
-	return haproxy.REQ_PATH_REWRITE
+func (r ReqPathRewrite) GetType() Type {
+	return REQ_PATH_REWRITE
 }
 
 func (r ReqPathRewrite) Create(client api.HAProxyClient, frontend *models.Frontend, ingressACL string) error {

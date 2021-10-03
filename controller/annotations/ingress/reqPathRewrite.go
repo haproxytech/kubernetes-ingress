@@ -5,18 +5,17 @@ import (
 	"strings"
 
 	"github.com/haproxytech/kubernetes-ingress/controller/annotations/common"
-	"github.com/haproxytech/kubernetes-ingress/controller/haproxy"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/rules"
 	"github.com/haproxytech/kubernetes-ingress/controller/store"
 )
 
 type ReqPathRewrite struct {
 	name  string
-	rules *haproxy.Rules
+	rules *rules.Rules
 }
 
-func NewReqPathRewrite(n string, rules *haproxy.Rules) *ReqPathRewrite {
-	return &ReqPathRewrite{name: n, rules: rules}
+func NewReqPathRewrite(n string, r *rules.Rules) *ReqPathRewrite {
+	return &ReqPathRewrite{name: n, rules: r}
 }
 
 func (a *ReqPathRewrite) GetName() string {

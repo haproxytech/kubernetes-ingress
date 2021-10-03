@@ -20,9 +20,9 @@ import (
 
 	"github.com/haproxytech/client-native/v2/models"
 
-	"github.com/haproxytech/kubernetes-ingress/controller/haproxy"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/api"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/maps"
+	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/rules"
 	"github.com/haproxytech/kubernetes-ingress/controller/store"
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 )
@@ -40,7 +40,7 @@ var logger = utils.GetLogger()
 type Route struct {
 	Host           string
 	Path           *store.IngressPath
-	HAProxyRules   []haproxy.RuleID
+	HAProxyRules   []rules.RuleID
 	BackendName    string
 	SSLPassthrough bool
 }

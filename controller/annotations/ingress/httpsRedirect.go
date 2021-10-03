@@ -5,7 +5,6 @@ import (
 	"strconv"
 
 	"github.com/haproxytech/kubernetes-ingress/controller/annotations/common"
-	"github.com/haproxytech/kubernetes-ingress/controller/haproxy"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/rules"
 	"github.com/haproxytech/kubernetes-ingress/controller/store"
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
@@ -13,7 +12,7 @@ import (
 
 type HTTPSRedirect struct {
 	redirect *rules.RequestRedirect
-	rules    *haproxy.Rules
+	rules    *rules.Rules
 	ingress  store.Ingress
 }
 
@@ -22,8 +21,8 @@ type HTTPSRedirectAnn struct {
 	parent *HTTPSRedirect
 }
 
-func NewHTTPSRedirect(rules *haproxy.Rules, i store.Ingress) *HTTPSRedirect {
-	return &HTTPSRedirect{rules: rules, ingress: i}
+func NewHTTPSRedirect(r *rules.Rules, i store.Ingress) *HTTPSRedirect {
+	return &HTTPSRedirect{rules: r, ingress: i}
 }
 
 func (p *HTTPSRedirect) NewAnnotation(n string) HTTPSRedirectAnn {

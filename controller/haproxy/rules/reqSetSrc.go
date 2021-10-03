@@ -5,7 +5,6 @@ import (
 
 	"github.com/haproxytech/client-native/v2/models"
 
-	"github.com/haproxytech/kubernetes-ingress/controller/haproxy"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/api"
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 )
@@ -14,8 +13,8 @@ type ReqSetSrc struct {
 	HeaderName string
 }
 
-func (r ReqSetSrc) GetType() haproxy.RuleType {
-	return haproxy.REQ_SET_SRC
+func (r ReqSetSrc) GetType() Type {
+	return REQ_SET_SRC
 }
 
 func (r ReqSetSrc) Create(client api.HAProxyClient, frontend *models.Frontend, ingressACL string) error {

@@ -5,7 +5,6 @@ import (
 
 	"github.com/haproxytech/client-native/v2/models"
 
-	"github.com/haproxytech/kubernetes-ingress/controller/haproxy"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/api"
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 )
@@ -16,8 +15,8 @@ type ReqBasicAuth struct {
 	Credentials map[string][]byte
 }
 
-func (r ReqBasicAuth) GetType() haproxy.RuleType {
-	return haproxy.REQ_AUTH
+func (r ReqBasicAuth) GetType() Type {
+	return REQ_AUTH
 }
 
 func (r ReqBasicAuth) Create(client api.HAProxyClient, frontend *models.Frontend, ingressACL string) (err error) {

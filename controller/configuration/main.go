@@ -27,7 +27,7 @@ import (
 
 type ControllerCfg struct {
 	MapFiles        *maps.MapFiles
-	HAProxyRules    haproxy.SectionRules
+	HAProxyRules    *rules.SectionRules
 	Certificates    *haproxy.Certificates
 	ActiveBackends  map[string]struct{}
 	RateLimitTables []string
@@ -80,7 +80,7 @@ func (c *ControllerCfg) Init() (err error) {
 
 func (c *ControllerCfg) haproxyRulesInit() error {
 	if c.HAProxyRules == nil {
-		c.HAProxyRules = haproxy.NewRules()
+		c.HAProxyRules = rules.New()
 	} else {
 		c.HAProxyRules.Clean(c.FrontHTTP, c.FrontHTTPS, c.FrontSSL)
 	}

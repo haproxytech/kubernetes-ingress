@@ -5,23 +5,22 @@ import (
 	"strings"
 
 	"github.com/haproxytech/kubernetes-ingress/controller/annotations/common"
-	"github.com/haproxytech/kubernetes-ingress/controller/haproxy"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/rules"
 	"github.com/haproxytech/kubernetes-ingress/controller/store"
 )
 
 type SetHdr struct {
 	name     string
-	rules    *haproxy.Rules
+	rules    *rules.Rules
 	response bool
 }
 
-func NewReqSetHdr(n string, rules *haproxy.Rules) *SetHdr {
-	return &SetHdr{name: n, rules: rules}
+func NewReqSetHdr(n string, r *rules.Rules) *SetHdr {
+	return &SetHdr{name: n, rules: r}
 }
 
-func NewResSetHdr(n string, rules *haproxy.Rules) *SetHdr {
-	return &SetHdr{name: n, rules: rules, response: true}
+func NewResSetHdr(n string, r *rules.Rules) *SetHdr {
+	return &SetHdr{name: n, rules: r, response: true}
 }
 
 func (a *SetHdr) GetName() string {

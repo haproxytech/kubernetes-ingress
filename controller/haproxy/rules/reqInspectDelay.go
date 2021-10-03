@@ -5,7 +5,6 @@ import (
 
 	"github.com/haproxytech/client-native/v2/models"
 
-	"github.com/haproxytech/kubernetes-ingress/controller/haproxy"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/api"
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 )
@@ -14,8 +13,8 @@ type ReqInspectDelay struct {
 	Timeout *int64
 }
 
-func (r ReqInspectDelay) GetType() haproxy.RuleType {
-	return haproxy.REQ_INSPECT_DELAY
+func (r ReqInspectDelay) GetType() Type {
+	return REQ_INSPECT_DELAY
 }
 
 func (r ReqInspectDelay) Create(client api.HAProxyClient, frontend *models.Frontend, ingressACL string) error {

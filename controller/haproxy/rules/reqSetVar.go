@@ -3,7 +3,6 @@ package rules
 import (
 	"github.com/haproxytech/client-native/v2/models"
 
-	"github.com/haproxytech/kubernetes-ingress/controller/haproxy"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/api"
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 )
@@ -15,8 +14,8 @@ type ReqSetVar struct {
 	CondTest   string
 }
 
-func (r ReqSetVar) GetType() haproxy.RuleType {
-	return haproxy.REQ_SET_VAR
+func (r ReqSetVar) GetType() Type {
+	return REQ_SET_VAR
 }
 
 func (r ReqSetVar) Create(client api.HAProxyClient, frontend *models.Frontend, ingressACL string) error {

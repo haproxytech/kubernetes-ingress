@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	"github.com/haproxytech/kubernetes-ingress/controller/annotations/common"
-	"github.com/haproxytech/kubernetes-ingress/controller/haproxy"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/rules"
 	"github.com/haproxytech/kubernetes-ingress/controller/store"
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
@@ -14,7 +13,7 @@ import (
 const corsVarName = "cors-origin"
 
 type ResSetCORS struct {
-	rules   *haproxy.Rules
+	rules   *rules.Rules
 	acl     string
 	methods map[string]struct{}
 }
@@ -24,9 +23,9 @@ type ResSetCORSAnn struct {
 	parent *ResSetCORS
 }
 
-func NewResSetCORS(rules *haproxy.Rules) *ResSetCORS {
+func NewResSetCORS(r *rules.Rules) *ResSetCORS {
 	return &ResSetCORS{
-		rules:   rules,
+		rules:   r,
 		methods: map[string]struct{}{"GET": {}, "POST": {}, "PUT": {}, "DELETE": {}, "HEAD": {}, "CONNECT": {}, "OPTIONS": {}, "TRACE": {}, "PATCH": {}},
 	}
 }

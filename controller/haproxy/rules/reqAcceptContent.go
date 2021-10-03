@@ -5,7 +5,6 @@ import (
 
 	"github.com/haproxytech/client-native/v2/models"
 
-	"github.com/haproxytech/kubernetes-ingress/controller/haproxy"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/api"
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 )
@@ -13,8 +12,8 @@ import (
 type ReqAcceptContent struct {
 }
 
-func (r ReqAcceptContent) GetType() haproxy.RuleType {
-	return haproxy.REQ_ACCEPT_CONTENT
+func (r ReqAcceptContent) GetType() Type {
+	return REQ_ACCEPT_CONTENT
 }
 
 func (r ReqAcceptContent) Create(client api.HAProxyClient, frontend *models.Frontend, ingressACL string) error {

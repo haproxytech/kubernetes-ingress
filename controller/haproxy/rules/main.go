@@ -1,4 +1,4 @@
-package haproxy
+package rules
 
 import (
 	"encoding/json"
@@ -12,13 +12,13 @@ import (
 
 type Rule interface {
 	Create(client api.HAProxyClient, frontend *models.Frontend, ingressACL string) error
-	GetType() RuleType
+	GetType() Type
 }
 
 type Rules []Rule
 
-func (r *Rules) Add(rule Rule) {
-	*r = append(*r, rule)
+func (rules *Rules) Add(rule Rule) {
+	*rules = append(*rules, rule)
 }
 
 // HTTPACLVar used to match against RuleID in haproxy http frontend
@@ -29,11 +29,11 @@ var TCPACLVar = "txn.sni_match"
 
 // Order matters !
 // Rules will be evaluated by HAProxy in the defined order.
-type RuleType int
+type Type int
 
 //nolint: golint,stylecheck
 const (
-	REQ_ACCEPT_CONTENT RuleType = iota
+	REQ_ACCEPT_CONTENT Type = iota
 	REQ_INSPECT_DELAY
 	REQ_PROXY_PROTOCOL
 	REQ_SET_VAR
@@ -51,7 +51,7 @@ const (
 	RES_SET_HEADER
 )
 
-var constLookup = map[RuleType]string{
+var constLookup = map[Type]string{
 	REQ_ACCEPT_CONTENT:  "REQ_ACCEPT_CONTENT",
 	REQ_INSPECT_DELAY:   "REQ_INSPECT_DELAY",
 	REQ_PROXY_PROTOCOL:  "REQ_PROXY_PROTOCOL",
@@ -78,7 +78,7 @@ type SectionRules map[string]*ruleset
 type ruleset struct {
 	// rules is a map of HAProxy rules
 	// grouped by rule types
-	rules map[RuleType][]Rule
+	rules map[Type]Rules
 	// meta is a map of RuleIDs and
 	// the corresponding ruleInfo
 	meta map[RuleID]*ruleInfo
@@ -103,8 +103,8 @@ const (
 // module logger
 var logger = utils.GetLogger()
 
-func NewRules() SectionRules {
-	return make(map[string]*ruleset)
+func New() *SectionRules {
+	return &SectionRules{}
 }
 
 func (r SectionRules) AddRule(rule Rule, ingressRule bool, frontend string) error {
@@ -115,7 +115,7 @@ func (r SectionRules) AddRule(rule Rule, ingressRule bool, frontend string) erro
 	ftRuleSet, ok := r[frontend]
 	if !ok {
 		ftRuleSet = &ruleset{
-			rules: make(map[RuleType][]Rule),
+			rules: make(map[Type]Rules),
 			meta:  make(map[RuleID]*ruleInfo),
 		}
 		r[frontend] = ftRuleSet
@@ -154,15 +154,11 @@ func (r SectionRules) Clean(frontends ...string) {
 
 func (r SectionRules) Refresh(client api.HAProxyClient) (reload bool) {
 	logger.Error(client.UserListDeleteAll())
-	for feName, ftRuleSet := range r {
+	for feName := range r {
 		fe, err := client.FrontendGet(feName)
 		if err != nil {
 			logger.Error(err)
 			continue
-		}
-		aclVar := HTTPACLVar
-		if fe.Mode == "tcp" {
-			aclVar = TCPACLVar
 		}
 		client.FrontendRuleDeleteAll(feName)
 		// All rules are created with Index 0,
@@ -170,35 +166,44 @@ func (r SectionRules) Refresh(client api.HAProxyClient) (reload bool) {
 		// Thus iteration is done in reverse to preserve order between the defined rules in
 		// controller and the resulting order in HAProxy configuration.
 		for ruleType := RES_SET_HEADER; ruleType >= REQ_ACCEPT_CONTENT; ruleType-- {
-			rules := ftRuleSet.rules[ruleType]
-			for i := len(rules) - 1; i >= 0; i-- {
-				id := GetID(rules[i])
-				// Delete HAProxy Rule
-				if ftRuleSet.meta[id].state == TO_DELETE {
-					delete(ftRuleSet.meta, id)
-					rules = append(rules[:i], rules[i+1:]...)
-					logger.Debugf("HAProxy rule '%s' deleted", constLookup[ruleType])
-					continue
-				}
-				// Create HAProxy Rule
-				ingressACL := ""
-				if ftRuleSet.meta[id].ingress {
-					ingressACL = fmt.Sprintf("{ var(%s) -m dom %s }", aclVar, id)
-				}
-				err := rules[i].Create(client, &fe, ingressACL)
-				if err != nil {
-					logger.Errorf("failed to create a %s rule: %s", constLookup[ruleType], err)
-					continue
-				}
-				if ftRuleSet.meta[id].state == TO_CREATE {
-					reload = true
-					logger.Debugf("New HAProxy rule '%s' created, reload required", constLookup[ruleType])
-				}
+			for i := len(r[feName].rules[ruleType]) - 1; i >= 0; i-- {
+				reload = r.refreshRule(client, ruleType, i, &fe) || reload
 			}
-			ftRuleSet.rules[ruleType] = rules
 		}
 	}
 	return reload
+}
+
+func (r SectionRules) refreshRule(client api.HAProxyClient, ruleType Type, i int, frontend *models.Frontend) (reload bool) {
+	aclVar := HTTPACLVar
+	if frontend.Mode == "tcp" {
+		aclVar = TCPACLVar
+	}
+	frontendRuleSet := r[frontend.Name]
+	rules := frontendRuleSet.rules[ruleType]
+	id := GetID(rules[i])
+	// Delete HAProxy Rule
+	if frontendRuleSet.meta[id].state == TO_DELETE {
+		delete(frontendRuleSet.meta, id)
+		frontendRuleSet.rules[ruleType] = append(rules[:i], rules[i+1:]...)
+		logger.Debugf("HAProxy rule '%s' deleted", constLookup[ruleType])
+		return
+	}
+	// Create HAProxy Rule
+	ingressACL := ""
+	if frontendRuleSet.meta[id].ingress {
+		ingressACL = fmt.Sprintf("{ var(%s) -m dom %s }", aclVar, id)
+	}
+	err := rules[i].Create(client, frontend, ingressACL)
+	if err != nil {
+		logger.Errorf("failed to create a %s rule: %s", constLookup[ruleType], err)
+		return
+	}
+	if frontendRuleSet.meta[id].state == TO_CREATE {
+		reload = true
+		logger.Debugf("New HAProxy rule '%s' created, reload required", constLookup[ruleType])
+	}
+	return
 }
 
 func GetID(rule Rule) RuleID {

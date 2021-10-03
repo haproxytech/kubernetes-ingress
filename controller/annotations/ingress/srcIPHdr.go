@@ -2,18 +2,17 @@ package ingress
 
 import (
 	"github.com/haproxytech/kubernetes-ingress/controller/annotations/common"
-	"github.com/haproxytech/kubernetes-ingress/controller/haproxy"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/rules"
 	"github.com/haproxytech/kubernetes-ingress/controller/store"
 )
 
 type SrcIPHdr struct {
 	name  string
-	rules *haproxy.Rules
+	rules *rules.Rules
 }
 
-func NewSrcIPHdr(n string, rules *haproxy.Rules) *SrcIPHdr {
-	return &SrcIPHdr{name: n, rules: rules}
+func NewSrcIPHdr(n string, r *rules.Rules) *SrcIPHdr {
+	return &SrcIPHdr{name: n, rules: r}
 }
 
 func (a *SrcIPHdr) GetName() string {
