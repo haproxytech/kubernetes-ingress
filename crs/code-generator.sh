@@ -15,9 +15,11 @@ API_PKGS=$(find ${CR_DIR}/api -mindepth 2 -type d -printf "$CR_PKG/api/%P,")
 API_PKGS=${API_PKGS::-1} # remove trailing ","
 
 # Install Kubernetes Code Generators from k8s.io/code-generator
-go install k8s.io/code-generator/cmd/{deepcopy-gen,register-gen,client-gen,lister-gen,informer-gen,defaulter-gen}@v0.21.4
+
+VERSION=$(go list -m  k8s.io/api  | cut -d ' ' -f2)
 GOBIN="$(go env GOBIN)"
 gobin="${GOBIN:-$(go env GOPATH)/bin}"
+go install k8s.io/code-generator/cmd/{deepcopy-gen,register-gen,client-gen,lister-gen,informer-gen,defaulter-gen}@$VERSION
 
 
 # Generate Code
