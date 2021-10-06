@@ -84,6 +84,7 @@ type CustomResources struct {
 	Global     map[string]*models.Global
 	Defaults   map[string]*models.Defaults
 	LogTargets map[string]models.LogTargets
+	Backends   map[string]*models.Backend
 }
 
 type IngressClass struct {

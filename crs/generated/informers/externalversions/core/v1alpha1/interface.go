@@ -23,6 +23,8 @@ import (
 
 // Interface provides access to all the informers in this group version.
 type Interface interface {
+	// Backends returns a BackendInformer.
+	Backends() BackendInformer
 	// Defaults returns a DefaultsInformer.
 	Defaults() DefaultsInformer
 	// Globals returns a GlobalInformer.
@@ -38,6 +40,11 @@ type version struct {
 // New returns a new Interface.
 func New(f internalinterfaces.SharedInformerFactory, namespace string, tweakListOptions internalinterfaces.TweakListOptionsFunc) Interface {
 	return &version{factory: f, namespace: namespace, tweakListOptions: tweakListOptions}
+}
+
+// Backends returns a BackendInformer.
+func (v *version) Backends() BackendInformer {
+	return &backendInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }
 
 // Defaults returns a DefaultsInformer.

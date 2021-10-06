@@ -69,25 +69,26 @@ func (c *HAProxyController) handleIngressPath(ingress *store.Ingress, host strin
 		return
 	}
 	// Backend
-	backend, backendReload, err := svc.HandleBackend(c.Client, c.Store)
+	backendReload, err := svc.HandleBackend(c.Client, c.Store)
 	if err != nil {
 		return
 	}
+	backendName, _ := svc.GetBackendName()
 	// Route
 	var routeReload bool
 	ingRoute := route.Route{
 		Host:           host,
 		Path:           path,
 		HAProxyRules:   ruleIDs,
-		BackendName:    backend.Name,
+		BackendName:    backendName,
 		SSLPassthrough: sslPassthrough,
 	}
 
 	routeACLAnn := annotations.String("route-acl", svc.GetService().Annotations)
 	if routeACLAnn == "" {
-		if _, ok := route.CustomRoutes[backend.Name]; ok {
-			delete(route.CustomRoutes, backend.Name)
-			logger.Debugf("Custom Route to backend '%s' deleted, reload required", backend.Name)
+		if _, ok := route.CustomRoutes[backendName]; ok {
+			delete(route.CustomRoutes, backendName)
+			logger.Debugf("Custom Route to backend '%s' deleted, reload required", backendName)
 			routeReload = true
 		}
 		err = route.AddHostPathRoute(ingRoute, c.Cfg.MapFiles)
@@ -97,7 +98,7 @@ func (c *HAProxyController) handleIngressPath(ingress *store.Ingress, host strin
 	if err != nil {
 		return
 	}
-	c.Cfg.ActiveBackends[backend.Name] = struct{}{}
+	c.Cfg.ActiveBackends[backendName] = struct{}{}
 	// Endpoints
 	endpointsReload := svc.HandleEndpoints(c.Client, c.Store)
 	return backendReload || endpointsReload || routeReload, err
@@ -121,26 +122,27 @@ func (c *HAProxyController) setDefaultService(ingress *store.Ingress, frontends 
 	if svc.GetStatus() == DELETED {
 		return
 	}
-	backend, bdReload, err := svc.HandleBackend(c.Client, c.Store)
+	bdReload, err := svc.HandleBackend(c.Client, c.Store)
 	if err != nil {
 		return
 	}
-	if frontend.DefaultBackend != backend.Name {
+	backendName, _ := svc.GetBackendName()
+	if frontend.DefaultBackend != backendName {
 		if frontend.Name == c.Cfg.FrontHTTP {
-			logger.Infof("Setting http default backend to '%s'", backend.Name)
+			logger.Infof("Setting http default backend to '%s'", backendName)
 		}
 		for _, frontendName := range frontends {
 			frontend, _ := c.Client.FrontendGet(frontendName)
-			frontend.DefaultBackend = backend.Name
+			frontend.DefaultBackend = backendName
 			err = c.Client.FrontendEdit(frontend)
 			if err != nil {
 				return
 			}
 			ftReload = true
-			logger.Debugf("Setting '%s' default backend to '%s'", frontendName, backend.Name)
+			logger.Debugf("Setting '%s' default backend to '%s'", frontendName, backendName)
 		}
 	}
-	c.Cfg.ActiveBackends[backend.Name] = struct{}{}
+	c.Cfg.ActiveBackends[backendName] = struct{}{}
 	endpointsReload := svc.HandleEndpoints(c.Client, c.Store)
 	reload = bdReload || ftReload || endpointsReload
 	return reload, err

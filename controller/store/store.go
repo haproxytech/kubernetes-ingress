@@ -173,6 +173,7 @@ func (k K8s) GetNamespace(name string) *Namespace {
 			Global:     make(map[string]*models.Global),
 			Defaults:   make(map[string]*models.Defaults),
 			LogTargets: make(map[string]models.LogTargets),
+			Backends:   make(map[string]*models.Backend),
 		},
 		Status: ADDED,
 	}

@@ -17,6 +17,14 @@
 
 package v1alpha1
 
+// BackendListerExpansion allows custom methods to be added to
+// BackendLister.
+type BackendListerExpansion interface{}
+
+// BackendNamespaceListerExpansion allows custom methods to be added to
+// BackendNamespaceLister.
+type BackendNamespaceListerExpansion interface{}
+
 // DefaultsListerExpansion allows custom methods to be added to
 // DefaultsLister.
 type DefaultsListerExpansion interface{}

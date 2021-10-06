@@ -25,6 +25,7 @@ import (
 
 type CoreV1alpha1Interface interface {
 	RESTClient() rest.Interface
+	BackendsGetter
 	DefaultsGetter
 	GlobalsGetter
 }
@@ -32,6 +33,10 @@ type CoreV1alpha1Interface interface {
 // CoreV1alpha1Client is used to interact with features provided by the core.haproxy.org group.
 type CoreV1alpha1Client struct {
 	restClient rest.Interface
+}
+
+func (c *CoreV1alpha1Client) Backends(namespace string) BackendInterface {
+	return newBackends(c, namespace)
 }
 
 func (c *CoreV1alpha1Client) Defaults(namespace string) DefaultsInterface {

@@ -28,12 +28,19 @@ type GlobalCR struct {
 type DefaultsCR struct {
 }
 
+type BackendCR struct {
+}
+
 func NewGlobalCR() GlobalCR {
 	return GlobalCR{}
 }
 
 func NewDefaultsCR() DefaultsCR {
 	return DefaultsCR{}
+}
+
+func NewBackendCR() BackendCR {
+	return BackendCR{}
 }
 
 func (c GlobalCR) GetKind() string {
@@ -127,5 +134,51 @@ func (c DefaultsCR) ProcessEvent(s *store.K8s, job SyncDataEvent) bool {
 		return false
 	}
 	ns.CRs.Defaults[job.Name] = data.Spec.Config
+	return true
+}
+
+func (c BackendCR) GetKind() string {
+	return "Backend"
+}
+
+func (c BackendCR) GetInformer(eventChan chan SyncDataEvent, factory informers.SharedInformerFactory) cache.SharedIndexInformer {
+	informer := factory.Core().V1alpha1().Backends().Informer()
+
+	sendToChannel := func(eventChan chan SyncDataEvent, object interface{}, status store.Status) {
+		data := object.(*corev1alpha1.Backend)
+		logger.Debugf("%s %s: %s", data.GetNamespace(), status, data.GetName())
+		if status == DELETED {
+			eventChan <- SyncDataEvent{SyncType: CUSTOM_RESOURCE, CRKind: c.GetKind(), Namespace: data.GetNamespace(), Name: data.GetName(), Data: nil}
+			return
+		}
+		eventChan <- SyncDataEvent{SyncType: CUSTOM_RESOURCE, CRKind: c.GetKind(), Namespace: data.GetNamespace(), Name: data.GetName(), Data: data}
+	}
+
+	informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc: func(obj interface{}) {
+			sendToChannel(eventChan, obj, store.ADDED)
+		},
+		UpdateFunc: func(oldObj, newObj interface{}) {
+			sendToChannel(eventChan, newObj, store.MODIFIED)
+		},
+		DeleteFunc: func(obj interface{}) {
+			sendToChannel(eventChan, obj, store.DELETED)
+		},
+	})
+	return informer
+}
+
+func (c BackendCR) ProcessEvent(s *store.K8s, job SyncDataEvent) bool {
+	ns := s.GetNamespace(job.Namespace)
+	if job.Data == nil {
+		delete(ns.CRs.Backends, job.Name)
+		return true
+	}
+	data, ok := job.Data.(*corev1alpha1.Backend)
+	if !ok {
+		logger.Warning(CoreGroupVersion + ": type mismatch with Backend kind")
+		return false
+	}
+	ns.CRs.Backends[job.Name] = data.Spec.Config
 	return true
 }

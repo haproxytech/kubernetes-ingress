@@ -58,6 +58,7 @@ func NewCRManager(s *store.K8s, restCfg *rest.Config, cacheResync time.Duration,
 	}
 	manager.RegisterCoreCR(NewGlobalCR())
 	manager.RegisterCoreCR(NewDefaultsCR())
+	manager.RegisterCoreCR(NewBackendCR())
 	return manager
 }
 

@@ -27,6 +27,10 @@ type FakeCoreV1alpha1 struct {
 	*testing.Fake
 }
 
+func (c *FakeCoreV1alpha1) Backends(namespace string) v1alpha1.BackendInterface {
+	return &FakeBackends{c, namespace}
+}
+
 func (c *FakeCoreV1alpha1) Defaults(namespace string) v1alpha1.DefaultsInterface {
 	return &FakeDefaults{c, namespace}
 }

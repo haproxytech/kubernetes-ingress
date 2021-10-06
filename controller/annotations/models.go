@@ -9,6 +9,19 @@ import (
 	"github.com/haproxytech/kubernetes-ingress/controller/store"
 )
 
+// ModelBackend takes an annotation holding the path of a backend cr and returns corresponding Backend model
+func ModelBackend(name, defaultNS string, k store.K8s, annotations ...map[string]string) (backend *models.Backend, err error) {
+	b, modelErr := model(name, defaultNS, 3, k, annotations...)
+	if modelErr != nil {
+		err = modelErr
+		return
+	}
+	if b != nil {
+		backend = b.(*models.Backend)
+	}
+	return
+}
+
 // ModelDefaults takes an annotation holding the path of a defaults cr and returns corresponding Defaults model
 func ModelDefaults(name, defaultNS string, k store.K8s, annotations ...map[string]string) (defaults *models.Defaults, err error) {
 	d, modelErr := model(name, defaultNS, 2, k, annotations...)
@@ -84,6 +97,12 @@ func model(name, defaultNS string, crType int, k store.K8s, annotations ...map[s
 			return nil, fmt.Errorf("annotation %s: custom resource '%s/%s' doest not exist", name, crNS, crName)
 		}
 		return defaults, nil
+	case 3:
+		backend, backendOk := ns.CRs.Backends[crName]
+		if !backendOk {
+			return nil, fmt.Errorf("annotation %s: custom resource '%s/%s' doest not exist", name, crNS, crName)
+		}
+		return backend, nil
 	}
 	return nil, nil
 }

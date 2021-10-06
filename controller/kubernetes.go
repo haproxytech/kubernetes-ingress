@@ -129,6 +129,7 @@ func (k *K8s) EventsNamespaces(channel chan SyncDataEvent, stop chan struct{}, i
 						Global:     make(map[string]*models.Global),
 						Defaults:   make(map[string]*models.Defaults),
 						LogTargets: make(map[string]models.LogTargets),
+						Backends:   make(map[string]*models.Backend),
 					},
 					Status: status,
 				}
@@ -152,6 +153,7 @@ func (k *K8s) EventsNamespaces(channel chan SyncDataEvent, stop chan struct{}, i
 						Global:     make(map[string]*models.Global),
 						Defaults:   make(map[string]*models.Defaults),
 						LogTargets: make(map[string]models.LogTargets),
+						Backends:   make(map[string]*models.Backend),
 					},
 					Status: status,
 				}

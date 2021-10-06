@@ -17,6 +17,8 @@
 
 package v1alpha1
 
+type BackendExpansion interface{}
+
 type DefaultsExpansion interface{}
 
 type GlobalExpansion interface{}
