@@ -1,8 +1,9 @@
 package annotations
 
 import (
-	"reflect"
 	"strings"
+
+	"github.com/go-test/deep"
 
 	"github.com/haproxytech/kubernetes-ingress/controller/annotations/common"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/api"
@@ -16,8 +17,8 @@ type CfgSnippet struct {
 }
 
 type cfgData struct {
-	value    []string
-	toUpdate bool
+	value   []string
+	updated []string
 }
 
 var cfgSnippet struct {
@@ -50,8 +51,8 @@ func (a *CfgSnippet) GetName() string {
 }
 
 func (a *CfgSnippet) Process(k store.K8s, annotations ...map[string]string) error {
+	var data []string
 	input := common.GetValue(a.GetName(), annotations...)
-	data := []string{}
 	if input != "" {
 		data = strings.Split(strings.Trim(input, "\n"), "\n")
 	}
@@ -61,74 +62,78 @@ func (a *CfgSnippet) Process(k store.K8s, annotations ...map[string]string) erro
 		if !ok {
 			cfgSnippet.frontends[a.frontend] = &cfgData{}
 		}
-		if !reflect.DeepEqual(cfgSnippet.frontends[a.frontend].value, data) {
+		updated := deep.Equal(cfgSnippet.frontends[a.frontend].value, data)
+		if len(updated) != 0 {
 			cfgSnippet.frontends[a.frontend].value = data
-			cfgSnippet.frontends[a.frontend].toUpdate = true
+			cfgSnippet.frontends[a.frontend].updated = updated
 		}
 	case a.backend != "":
 		_, ok := cfgSnippet.backends[a.backend]
 		if !ok {
 			cfgSnippet.backends[a.backend] = &cfgData{}
 		}
-		if !reflect.DeepEqual(cfgSnippet.backends[a.backend].value, data) {
+		updated := deep.Equal(cfgSnippet.backends[a.backend].value, data)
+		if len(updated) != 0 {
 			cfgSnippet.backends[a.backend].value = data
-			cfgSnippet.backends[a.backend].toUpdate = true
+			cfgSnippet.backends[a.backend].updated = updated
 		}
 	default:
-		if !reflect.DeepEqual(cfgSnippet.global.value, data) {
+		updated := deep.Equal(cfgSnippet.global.value, data)
+		if len(updated) != 0 {
 			cfgSnippet.global.value = data
-			cfgSnippet.global.toUpdate = true
+			cfgSnippet.global.updated = updated
 		}
 	}
 	return nil
 }
 
-func UpdateGlobalCfgSnippet(api api.HAProxyClient) (updated bool, err error) {
-	if !cfgSnippet.global.toUpdate {
+func UpdateGlobalCfgSnippet(api api.HAProxyClient) (updated []string, err error) {
+	if len(cfgSnippet.global.updated) == 0 {
 		return
 	}
 	err = api.GlobalCfgSnippet(cfgSnippet.global.value)
 	if err != nil {
 		return
 	}
-	updated = true
-	cfgSnippet.global.toUpdate = false
+	updated = cfgSnippet.global.updated
+	cfgSnippet.global.updated = nil
 	return
 }
 
-func UpdateFrontendCfgSnippet(api api.HAProxyClient, frontends ...string) (updated bool, err error) {
+func UpdateFrontendCfgSnippet(api api.HAProxyClient, frontends ...string) (updated []string, err error) {
 	for _, ft := range frontends {
 		data, ok := cfgSnippet.frontends[ft]
 		if !ok {
 			continue
 		}
-		if !data.toUpdate {
+		if len(data.updated) == 0 {
 			continue
 		}
 		err = api.FrontendCfgSnippetSet(ft, data.value)
 		if err != nil {
 			return
 		}
-		updated = true
-		data.toUpdate = false
+		updated = data.updated
+		data.updated = nil
+		cfgSnippet.frontends[ft] = data
 	}
 	return
 }
 
-func UpdateBackendCfgSnippet(api api.HAProxyClient, backend string) (updated bool, err error) {
+func UpdateBackendCfgSnippet(api api.HAProxyClient, backend string) (updated []string, err error) {
 	data, ok := cfgSnippet.backends[backend]
 	if !ok {
 		return
 	}
-	if !data.toUpdate {
+	if len(data.updated) == 0 {
 		return
 	}
 	err = api.BackendCfgSnippetSet(backend, data.value)
 	if err != nil {
 		return
 	}
-	updated = true
-	data.toUpdate = false
+	updated = data.updated
+	data.updated = nil
 	cfgSnippet.backends[backend] = data
 	return
 }

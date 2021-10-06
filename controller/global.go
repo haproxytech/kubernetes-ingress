@@ -76,14 +76,14 @@ func (c *HAProxyController) globalCfg() (reload, restart bool) {
 	}
 	updatedSnipp, errSnipp := annotations.UpdateGlobalCfgSnippet(c.Client)
 	logger.Error(errSnipp)
-	if updatedSnipp {
-		logger.Debugf("Global config-snippet updated: %s\nRestart required", updated)
+	if len(updatedSnipp) != 0 {
+		logger.Debugf("Global config-snippet updated: %s\nRestart required", updatedSnipp)
 		restart = true
 	}
 	updatedSnipp, errSnipp = annotations.UpdateFrontendCfgSnippet(c.Client, "http", "https", "stats")
 	logger.Error(errSnipp)
-	if updatedSnipp {
-		logger.Debugf("Frontend config-snippet updated: %s\nReload required", updated)
+	if len(updatedSnipp) != 0 {
+		logger.Debugf("Frontend config-snippet updated: %s\nReload required", updatedSnipp)
 		reload = true
 	}
 	return
