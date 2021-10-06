@@ -66,6 +66,15 @@ rules:
      - list
      - watch
      - update
+ - apiGroups:
+    - core.haproxy.org
+   resources:
+     - '*'
+   verbs:
+     - get
+     - list
+     - watch
+     - update
 ---
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
