@@ -13,10 +13,15 @@ You can also find in this repository a list of all available [Ingress annotation
 
 Docker image is available on Docker Hub: [haproxytech/kubernetes-ingress](https://hub.docker.com/r/haproxytech/kubernetes-ingress)
 
-If you prefer to build it from source use (change to appropriate platform if needed with TARGETPLATFORM)
+If you prefer to build it from source use (change to appropriate platform if needed with TARGETPLATFORM, default platform is linux/amd64)
 
 ```bash
-docker build --build-arg TARGETPLATFORM="linux/amd64" -t haproxytech/kubernetes-ingress -f build/Dockerfile .
+make build
+```
+With non default platform add appropriate TARGETPLATFORM
+
+```bash
+make build TARGETPLATFORM=linux/arm/v6
 ```
 
 Example environment can be created with

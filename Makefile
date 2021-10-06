@@ -1,4 +1,5 @@
 PROJECT_PATH=${PWD}
+TARGETPLATFORM?=linux/amd64
 
 .PHONY: test
 test:
@@ -36,7 +37,7 @@ example-remove:
 
 .PHONY: build
 build:
-	docker build -t haproxytech/kubernetes-ingress -f build/Dockerfile .
+	docker build -t haproxytech/kubernetes-ingress --build-arg TARGETPLATFORM=$(TARGETPLATFORM) -f build/Dockerfile .
 
 .PHONY: publish
 publish:
