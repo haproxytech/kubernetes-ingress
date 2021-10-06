@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/haproxytech/kubernetes-ingress/controller/annotations/common"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/rules"
 	"github.com/haproxytech/kubernetes-ingress/controller/store"
@@ -12,7 +13,6 @@ import (
 type ReqAuth struct {
 	authRule *rules.ReqBasicAuth
 	rules    *haproxy.Rules
-	k8s      store.K8s
 	ingress  store.Ingress
 }
 
@@ -21,8 +21,8 @@ type ReqAuthAnn struct {
 	parent *ReqAuth
 }
 
-func NewReqAuth(rules *haproxy.Rules, i store.Ingress, k store.K8s) *ReqAuth {
-	return &ReqAuth{rules: rules, ingress: i, k8s: k}
+func NewReqAuth(rules *haproxy.Rules, i store.Ingress) *ReqAuth {
+	return &ReqAuth{rules: rules, ingress: i}
 }
 
 func (p *ReqAuth) NewAnnotation(n string) ReqAuthAnn {
@@ -33,7 +33,8 @@ func (a ReqAuthAnn) GetName() string {
 	return a.name
 }
 
-func (a ReqAuthAnn) Process(input string) (err error) {
+func (a ReqAuthAnn) Process(k store.K8s, annotations ...map[string]string) (err error) {
+	input := common.GetValue(a.GetName(), annotations...)
 	if input == "" {
 		return
 	}
@@ -62,11 +63,16 @@ func (a ReqAuthAnn) Process(input string) (err error) {
 			return
 		}
 		var secret *store.Secret
-		secret, err = a.parent.k8s.FetchSecret(input, a.parent.ingress.Namespace)
-		if err != nil {
-			return err
+		ns, name, errAnn := common.GetK8sPath(a.name, annotations...)
+		if errAnn != nil {
+			err = errAnn
+			return
 		}
-		if secret.Status == store.DELETED {
+		if ns == "" {
+			ns = a.parent.ingress.Namespace
+		}
+		secret, _ = k.GetSecret(ns, name)
+		if secret == nil {
 			return
 		}
 		a.parent.authRule.Credentials = make(map[string][]byte)

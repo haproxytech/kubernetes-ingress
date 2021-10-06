@@ -16,7 +16,6 @@ package store
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/haproxytech/client-native/v2/models"
 
@@ -41,6 +40,8 @@ type NamespacesWatch struct {
 	Whitelist map[string]struct{}
 	Blacklist map[string]struct{}
 }
+
+type ErrNotFound error
 
 var logger = utils.GetLogger()
 
@@ -181,27 +182,34 @@ func (k K8s) GetNamespace(name string) *Namespace {
 	return newNamespace
 }
 
-// FetchSecret fetches secret with secretPath format "namespace/secretName"
-// if format is just "secretName" defaultNs param will be used.
-func (k K8s) FetchSecret(secretPath, defaultNs string) (*Secret, error) {
-	secretName := ""
-	secretNamespace := defaultNs
-	parts := strings.Split(secretPath, "/")
-	if len(parts) > 1 {
-		secretNamespace = parts[0]
-		secretName = parts[1]
-	} else {
-		secretName = parts[0] // only secretname is here
+func (k K8s) GetSecret(namespace, name string) (*Secret, error) {
+	ns, ok := k.Namespaces[namespace]
+	if !ok {
+		return nil, fmt.Errorf("secret '%s/%s', namespace '%s' does not exist", namespace, name, namespace)
 	}
-	ns, namespaceOK := k.Namespaces[secretNamespace]
-	if !namespaceOK {
-		return nil, fmt.Errorf("namespace '%s' does not exist", secretNamespace)
-	}
-	secret, secretOK := ns.Secret[secretName]
+	secret, secretOK := ns.Secret[name]
 	if !secretOK {
-		return nil, fmt.Errorf("secret '%s/%s' does not exist", secretNamespace, secretName)
+		return nil, ErrNotFound(fmt.Errorf("secret '%s/%s' does not exist", namespace, name))
+	}
+	if secret.Status == DELETED {
+		return nil, ErrNotFound(fmt.Errorf("secret '%s/%s' deleted", namespace, name))
 	}
 	return secret, nil
+}
+
+func (k K8s) GetService(namespace, name string) (*Service, error) {
+	ns, nsOk := k.Namespaces[namespace]
+	if !nsOk {
+		return nil, fmt.Errorf("service '%s/%s', namespace '%s' does not exist", namespace, name, namespace)
+	}
+	svc, svcOk := ns.Services[name]
+	if !svcOk {
+		return nil, ErrNotFound(fmt.Errorf("service '%s/%s' does not exist", namespace, name))
+	}
+	if svc.Status == DELETED {
+		return nil, ErrNotFound(fmt.Errorf("service '%s/%s' deleted", namespace, name))
+	}
+	return svc, nil
 }
 
 func (k K8s) isRelevantNamespace(namespace string) bool {

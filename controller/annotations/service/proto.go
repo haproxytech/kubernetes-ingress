@@ -4,6 +4,9 @@ import (
 	"fmt"
 
 	"github.com/haproxytech/client-native/v2/models"
+
+	"github.com/haproxytech/kubernetes-ingress/controller/annotations/common"
+	"github.com/haproxytech/kubernetes-ingress/controller/store"
 )
 
 type Proto struct {
@@ -19,7 +22,8 @@ func (a *Proto) GetName() string {
 	return a.name
 }
 
-func (a *Proto) Process(input string) error {
+func (a *Proto) Process(k store.K8s, annotations ...map[string]string) error {
+	input := common.GetValue(a.GetName(), annotations...)
 	switch input {
 	case "":
 		a.server.Proto = ""

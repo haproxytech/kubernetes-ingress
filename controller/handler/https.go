@@ -74,41 +74,48 @@ func (h HTTPS) bindList(passhthrough bool) (binds []models.Bind) {
 }
 
 func (h HTTPS) handleClientTLSAuth(k store.K8s, cfg *config.ControllerCfg, api api.HAProxyClient) (reload bool, err error) {
-	annTLSAuth := annotations.GetValue("client-ca", k.ConfigMaps.Main.Annotations)
-	annTLSVerify := annotations.GetValue("client-crt-optional", k.ConfigMaps.Main.Annotations)
-	if annTLSAuth == "" {
-		return false, nil
-	}
-	binds, err := api.FrontendBindsGet(cfg.FrontHTTPS)
-	if err != nil {
-		return
-	}
-	// Parsing annotations
+	// Parsing
 	var caFile string
-	caFile, err = cfg.Certificates.HandleTLSSecret(k, haproxy.SecretCtx{
-		DefaultNS:  "",
-		SecretPath: annTLSAuth,
-		SecretType: haproxy.CA_CERT,
-	})
-	if err != nil {
-		if errors.Is(err, haproxy.ErrCertNotFound) {
-			logger.Warningf("unable to configure TLS authentication secret '%s' not found", annTLSAuth)
-			err = nil
+	var notFound store.ErrNotFound
+	secret, annErr := annotations.Secret("client-ca", "", k, k.ConfigMaps.Main.Annotations)
+	if annErr != nil {
+		if errors.Is(annErr, notFound) {
+			logger.Warningf("client TLS Auth: %s", annErr)
+		} else {
+			err = fmt.Errorf("client TLS Auth: %w", annErr)
+			return
 		}
 	}
+	if secret == nil {
+		return
+	}
+	caFile, err = cfg.Certificates.HandleTLSSecret(secret, haproxy.CA_CERT)
+	if err != nil {
+		err = fmt.Errorf("client TLS Auth: %w", err)
+		return
+	}
+
+	binds, bindsErr := api.FrontendBindsGet(cfg.FrontHTTPS)
+	if bindsErr != nil {
+		err = fmt.Errorf("client TLS Auth: %w", bindsErr)
+		return
+	}
+
+	var enabled bool
 	verify := "required"
-	enabled, annErr := utils.GetBoolValue(annTLSVerify, "client-crt-optional")
+	enabled, annErr = annotations.Bool("client-crt-optional", k.ConfigMaps.Main.Annotations)
 	logger.Error(annErr)
 	if enabled {
 		verify = "optional"
 	}
+
 	// No changes
 	if binds[0].SslCafile == caFile && binds[0].Verify == verify {
 		return
 	}
 	// Removing config
 	if caFile == "" {
-		logger.Infof("removing client TLS authentication")
+		logger.Info("removing client TLS authentication")
 		for i := range binds {
 			binds[i].SslCafile = ""
 			binds[i].Verify = ""
@@ -120,7 +127,7 @@ func (h HTTPS) handleClientTLSAuth(k store.K8s, cfg *config.ControllerCfg, api a
 		return
 	}
 	// Updating config
-	logger.Infof("configuring client TLS authentication")
+	logger.Info("configuring client TLS authentication")
 	for i := range binds {
 		binds[i].SslCafile = caFile
 		binds[i].Verify = verify
@@ -134,12 +141,12 @@ func (h HTTPS) handleClientTLSAuth(k store.K8s, cfg *config.ControllerCfg, api a
 
 func (h HTTPS) Update(k store.K8s, cfg *config.ControllerCfg, api api.HAProxyClient) (reload bool, err error) {
 	if !h.Enabled {
-		logger.Debugf("Cannot proceed with SSL Passthrough update, HTTPS is disabled")
+		logger.Debug("Cannot proceed with SSL Passthrough update, HTTPS is disabled")
 		return false, nil
 	}
 
 	// Fetch tls-alpn value for when SSL offloading is enabled
-	h.Alpn = annotations.GetValue("tls-alpn", k.ConfigMaps.Main.Annotations)
+	h.Alpn = annotations.String("tls-alpn", k.ConfigMaps.Main.Annotations)
 
 	// ssl-offload
 	if cfg.Certificates.FrontendCertsEnabled() {
@@ -251,14 +258,10 @@ func (h HTTPS) toggleSSLPassthrough(passthrough bool, cfg *config.ControllerCfg,
 }
 
 func (h HTTPS) sslPassthroughRules(k store.K8s, cfg *config.ControllerCfg) error {
-	inspectTimeout := utils.PtrInt64(5000)
-	annTimeout := annotations.GetValue("timeout-client", k.ConfigMaps.Main.Annotations)
-	if annTimeout != "" {
-		if value, errParse := utils.ParseTime(annTimeout); errParse == nil {
-			inspectTimeout = value
-		} else {
-			logger.Error(errParse)
-		}
+	inspectTimeout, err := annotations.Timeout("timeout-client", k.ConfigMaps.Main.Annotations)
+	if err != nil {
+		logger.Errorf("SSL Passthrough: %s", err)
+		inspectTimeout = utils.PtrInt64(5000)
 	}
 	errors := utils.Errors{}
 	errors.Add(cfg.HAProxyRules.AddRule(rules.ReqAcceptContent{}, false, cfg.FrontSSL),

@@ -4,26 +4,26 @@ import (
 	"strconv"
 
 	"github.com/haproxytech/client-native/v2/models"
+
+	"github.com/haproxytech/kubernetes-ingress/controller/annotations/common"
+	"github.com/haproxytech/kubernetes-ingress/controller/store"
 )
 
 type Maxconn struct {
 	name   string
-	pods   int64 // haproxy pods
 	server *models.Server
 }
 
-func NewMaxconn(n string, s *models.Server, pods int64) *Maxconn {
-	if pods == 0 {
-		pods = 1
-	}
-	return &Maxconn{name: n, pods: pods, server: s}
+func NewMaxconn(n string, s *models.Server) *Maxconn {
+	return &Maxconn{name: n, server: s}
 }
 
 func (a *Maxconn) GetName() string {
 	return a.name
 }
 
-func (a *Maxconn) Process(input string) error {
+func (a *Maxconn) Process(k store.K8s, annotations ...map[string]string) error {
+	input := common.GetValue(a.GetName(), annotations...)
 	if input == "" {
 		a.server.Maxconn = nil
 		return nil
@@ -32,7 +32,10 @@ func (a *Maxconn) Process(input string) error {
 	if err != nil {
 		return err
 	}
-	v /= a.pods
+	// adjust backend maxconn when using multiple HAProxy Instances
+	if k.NbrHAProxyInst != 0 {
+		v /= k.NbrHAProxyInst
+	}
 	a.server.Maxconn = &v
 	return nil
 }

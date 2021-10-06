@@ -1,0 +1,65 @@
+package common
+
+import (
+	"errors"
+	"strings"
+)
+
+// GetValue returns value by checking in multiple annotations.
+func GetValue(annotationName string, annotations ...map[string]string) string {
+	for _, a := range annotations {
+		val, ok := a[annotationName]
+		if ok {
+			return val
+		}
+	}
+	return DefaultValues[annotationName]
+}
+
+func GetK8sPath(annotationName string, annotations ...map[string]string) (ns, name string, err error) {
+	a := GetValue(annotationName, annotations...)
+	if a == "" {
+		return
+	}
+	parts := strings.Split(a, "/")
+	switch len(parts) {
+	case 1:
+		name = parts[0]
+	case 2:
+		ns = parts[0]
+		name = parts[1]
+		if ns == "" {
+			err = errors.New("invalid format")
+		}
+	}
+	if name == "" {
+		err = errors.New("invalid format")
+	}
+	return
+}
+
+var DefaultValues = map[string]string{
+	"auth-realm":             "Protected Content",
+	"check":                  "true",
+	"cors-allow-origin":      "*",
+	"cors-allow-methods":     "*",
+	"cors-allow-headers":     "*",
+	"cors-max-age":           "5s",
+	"cookie-indirect":        "true",
+	"cookie-nocache":         "true",
+	"cookie-type":            "insert",
+	"forwarded-for":          "true",
+	"load-balance":           "roundrobin",
+	"rate-limit-size":        "100k",
+	"rate-limit-period":      "1s",
+	"rate-limit-status-code": "403",
+	"request-capture-len":    "128",
+	"ssl-redirect-code":      "302",
+	"request-redirect-code":  "302",
+	"ssl-redirect-port":      "443",
+	"ssl-passthrough":        "false",
+	"server-ssl":             "false",
+	"scale-server-slots":     "42",
+	"client-crt-optional":    "false",
+	"tls-alpn":               "h2,http/1.1",
+}

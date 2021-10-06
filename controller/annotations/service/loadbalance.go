@@ -7,6 +7,9 @@ import (
 	"strings"
 
 	"github.com/haproxytech/client-native/v2/models"
+
+	"github.com/haproxytech/kubernetes-ingress/controller/annotations/common"
+	"github.com/haproxytech/kubernetes-ingress/controller/store"
 )
 
 type LoadBalance struct {
@@ -22,7 +25,8 @@ func (a *LoadBalance) GetName() string {
 	return a.name
 }
 
-func (a *LoadBalance) Process(input string) error {
+func (a *LoadBalance) Process(k store.K8s, annotations ...map[string]string) error {
+	input := common.GetValue(a.GetName(), annotations...)
 	if input == "" {
 		a.backend.Balance = nil
 		return nil

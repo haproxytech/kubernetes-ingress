@@ -25,7 +25,6 @@ import (
 	"github.com/haproxytech/kubernetes-ingress/controller/route"
 	"github.com/haproxytech/kubernetes-ingress/controller/service"
 	"github.com/haproxytech/kubernetes-ingress/controller/store"
-	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 )
 
 // igClassIsSupported verifies if the IngressClass matches the ControllerClass
@@ -35,9 +34,8 @@ import (
 // ingress.class annotation should have precedence over the IngressClass mechanism implemented
 // in "networking.k8s.io".
 func (c *HAProxyController) igClassIsSupported(ingress *store.Ingress) bool {
-	var igClassAnn string
 	var igClass *store.IngressClass
-	igClassAnn = annotations.GetValue("ingress.class", ingress.Annotations)
+	igClassAnn := annotations.String("ingress.class", ingress.Annotations)
 
 	// If ingress class is unassigned and the controller is controlling any resource without explicit ingress class then support it.
 	if igClassAnn == "" && c.OSArgs.EmptyIngressClass {
@@ -84,7 +82,8 @@ func (c *HAProxyController) handleIngressPath(ingress *store.Ingress, host strin
 		BackendName:    backendName,
 		SSLPassthrough: sslPassthrough,
 	}
-	routeACLAnn := annotations.GetValue("route-acl", svc.GetService().Annotations)
+
+	routeACLAnn := annotations.String("route-acl", svc.GetService().Annotations)
 	if routeACLAnn == "" {
 		if _, ok := route.CustomRoutes[backendName]; ok {
 			delete(route.CustomRoutes, backendName)
@@ -148,23 +147,20 @@ func (c *HAProxyController) setDefaultService(ingress *store.Ingress, frontends 
 }
 
 func (c *HAProxyController) sslPassthroughEnabled(ingress store.Ingress, path *store.IngressPath) bool {
-	var annSSLPassthrough string
+	var enabled bool
+	var err error
 	var service *store.Service
 	ok := false
 	if path != nil {
 		service, ok = c.Store.Namespaces[ingress.Namespace].Services[path.SvcName]
 	}
 	if ok {
-		annSSLPassthrough = annotations.GetValue("ssl-passthrough", service.Annotations, ingress.Annotations, c.Store.ConfigMaps.Main.Annotations)
+		enabled, err = annotations.Bool("ssl-passthrough", service.Annotations, ingress.Annotations, c.Store.ConfigMaps.Main.Annotations)
 	} else {
-		annSSLPassthrough = annotations.GetValue("ssl-passthrough", ingress.Annotations, c.Store.ConfigMaps.Main.Annotations)
+		enabled, err = annotations.Bool("ssl-passthrough", ingress.Annotations, c.Store.ConfigMaps.Main.Annotations)
 	}
-	if annSSLPassthrough == "" {
-		return false
-	}
-	enabled, err := utils.GetBoolValue(annSSLPassthrough, "ssl-passthrough")
 	if err != nil {
-		logger.Errorf("ssl-passthrough annotation: %s", err)
+		logger.Error("SSL Passthrough parsing: %s", err)
 		return false
 	}
 	if enabled {
@@ -181,7 +177,7 @@ func (c *HAProxyController) sslPassthroughEnabled(ingress store.Ingress, path *s
 func (c *HAProxyController) handleIngressAnnotations(ingress store.Ingress) []haproxy.RuleID {
 	var err error
 	var ingressRule bool
-	var annValue, annSource string
+	var annSource string
 	var annList map[string]string
 	if ingress.Equal(&store.Ingress{}) {
 		annSource = "ConfigMap"
@@ -195,9 +191,8 @@ func (c *HAProxyController) handleIngressAnnotations(ingress store.Ingress) []ha
 	ids := []haproxy.RuleID{}
 	frontends := []string{c.Cfg.FrontHTTP, c.Cfg.FrontHTTPS}
 	result := haproxy.Rules{}
-	for _, a := range annotations.Frontend(ingress, &result, *c.Cfg.MapFiles, c.Store) {
-		annValue = annotations.GetValue(a.GetName(), annList)
-		err = a.Process(annValue)
+	for _, a := range annotations.Frontend(ingress, &result, *c.Cfg.MapFiles) {
+		err = a.Process(c.Store, annList)
 		if err != nil {
 			logger.Errorf("%s: annotation %s: %s", annSource, a.GetName(), err)
 		}

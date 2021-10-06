@@ -5,6 +5,9 @@ import (
 	"strings"
 
 	"github.com/haproxytech/client-native/v2/models"
+
+	"github.com/haproxytech/kubernetes-ingress/controller/annotations/common"
+	"github.com/haproxytech/kubernetes-ingress/controller/store"
 )
 
 type CheckHTTP struct {
@@ -20,7 +23,8 @@ func (a *CheckHTTP) GetName() string {
 	return a.name
 }
 
-func (a *CheckHTTP) Process(input string) error {
+func (a *CheckHTTP) Process(k store.K8s, annotations ...map[string]string) error {
+	input := common.GetValue(a.GetName(), annotations...)
 	if input == "" {
 		a.backend.AdvCheck = ""
 		a.backend.HttpchkParams = nil

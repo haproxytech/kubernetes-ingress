@@ -16,7 +16,6 @@ package service
 
 import (
 	"fmt"
-	"strconv"
 	"strings"
 
 	"github.com/go-test/deep"
@@ -56,9 +55,8 @@ func (s *SvcContext) HandleEndpoints(client api.HAProxyClient, store store.K8s, 
 func (s *SvcContext) handleSrvAnnotations(srv *models.Server, store store.K8s, certs *haproxy.Certificates) bool {
 	var err error
 	oldSrv := *srv
-	for _, a := range annotations.Server(srv, store, certs) {
-		annValue := annotations.GetValue(a.GetName(), s.service.Annotations, s.ingress.Annotations, s.store.ConfigMaps.Main.Annotations)
-		err = a.Process(annValue)
+	for _, a := range annotations.Server(srv, certs) {
+		err = a.Process(store, s.service.Annotations, s.ingress.Annotations, s.store.ConfigMaps.Main.Annotations)
 		if err != nil {
 			logger.Errorf("service %s/%s: annotation '%s': %s", s.service.Namespace, s.service.Name, a.GetName(), err)
 		}
@@ -102,20 +100,20 @@ func (s *SvcContext) updateHAProxySrv(client api.HAProxyClient, srv models.Serve
 // scaleHAproxySrvs adds servers to match available addresses
 func (s *SvcContext) scaleHAProxySrvs(endpoints *store.PortEndpoints, k8sStore store.K8s) (reload bool) {
 	var flag bool
-	var srvSlots int
 	var disabled []*store.HAProxySrv
+	var annVal int
+	var annErr error
 	// Add disabled HAProxySrvs to match "scale-server-slots"
 	// scale-server-slots has a default value in defaultAnnotations
 	// "servers-increment", "server-slots" are legacy annotations
+	srvSlots := 42
 	for _, annotation := range []string{"servers-increment", "server-slots", "scale-server-slots"} {
-		annServerSlots := annotations.GetValue(annotation, k8sStore.ConfigMaps.Main.Annotations)
-		if annServerSlots != "" {
-			if value, err := strconv.Atoi(annServerSlots); err == nil {
-				srvSlots = value
-				break
-			} else {
-				logger.Error(err)
-			}
+		annVal, annErr = annotations.Int(annotation, k8sStore.ConfigMaps.Main.Annotations)
+		if annErr != nil {
+			logger.Errorf("Scale HAProxy servers: %s", annErr)
+		} else if annVal != 0 {
+			srvSlots = annVal
+			break
 		}
 	}
 	for len(endpoints.HAProxySrvs) < srvSlots {

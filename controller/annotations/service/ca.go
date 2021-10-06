@@ -1,10 +1,9 @@
 package service
 
 import (
-	"errors"
-
 	"github.com/haproxytech/client-native/v2/models"
 
+	"github.com/haproxytech/kubernetes-ingress/controller/annotations/common"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy"
 	"github.com/haproxytech/kubernetes-ingress/controller/store"
 )
@@ -12,14 +11,12 @@ import (
 type CA struct {
 	name         string
 	haproxyCerts *haproxy.Certificates
-	k8sStore     store.K8s
 	server       *models.Server
 }
 
-func NewCA(n string, k store.K8s, c *haproxy.Certificates, s *models.Server) *CA {
+func NewCA(n string, c *haproxy.Certificates, s *models.Server) *CA {
 	return &CA{
 		name:         n,
-		k8sStore:     k,
 		haproxyCerts: c,
 		server:       s,
 	}
@@ -29,18 +26,21 @@ func (a *CA) GetName() string {
 	return a.name
 }
 
-func (a *CA) Process(input string) error {
-	if input == "" {
+func (a *CA) Process(k store.K8s, annotations ...map[string]string) error {
+	var secret *store.Secret
+	var caFile string
+	ns, name, err := common.GetK8sPath(a.name, annotations...)
+	if err != nil {
+		return err
+	}
+	secret, _ = k.GetSecret(ns, name)
+	if secret == nil {
 		a.server.SslCafile = ""
 		// Other values from serverSSL annotation are kept
 		return nil
 	}
-	caFile, err := a.haproxyCerts.HandleTLSSecret(a.k8sStore, haproxy.SecretCtx{
-		DefaultNS:  a.server.Namespace,
-		SecretPath: input,
-		SecretType: haproxy.CA_CERT,
-	})
-	if err != nil && !errors.Is(err, haproxy.ErrCertNotFound) {
+	caFile, err = a.haproxyCerts.HandleTLSSecret(secret, haproxy.CA_CERT)
+	if err != nil {
 		return err
 	}
 	a.server.Ssl = "enabled"

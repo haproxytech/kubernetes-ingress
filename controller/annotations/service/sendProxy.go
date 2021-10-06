@@ -5,6 +5,9 @@ import (
 	"strings"
 
 	"github.com/haproxytech/client-native/v2/models"
+
+	"github.com/haproxytech/kubernetes-ingress/controller/annotations/common"
+	"github.com/haproxytech/kubernetes-ingress/controller/store"
 )
 
 type SendProxy struct {
@@ -20,7 +23,8 @@ func (a *SendProxy) GetName() string {
 	return a.name
 }
 
-func (a *SendProxy) Process(input string) error {
+func (a *SendProxy) Process(k store.K8s, annotations ...map[string]string) error {
+	input := common.GetValue(a.GetName(), annotations...)
 	var proxyPorto string
 	v := strings.ToLower(input)
 	switch v {

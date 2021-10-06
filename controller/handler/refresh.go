@@ -19,15 +19,15 @@ import (
 	config "github.com/haproxytech/kubernetes-ingress/controller/configuration"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/api"
 	"github.com/haproxytech/kubernetes-ingress/controller/store"
-	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 )
 
 type Refresh struct{}
 
 func (h Refresh) Update(k store.K8s, cfg *config.ControllerCfg, api api.HAProxyClient) (reload bool, err error) {
-	cleanCrts := true
-	if cleanCrtAnn := annotations.GetValue("clean-certs", k.ConfigMaps.Main.Annotations); cleanCrtAnn != "" {
-		cleanCrts, err = utils.GetBoolValue(cleanCrtAnn, "clean-certs")
+	var cleanCrts bool
+	cleanCrts, err = annotations.Bool("clean-certs", k.ConfigMaps.Main.Annotations)
+	if err != nil {
+		cleanCrts = true
 	}
 	if cleanCrts {
 		reload = cfg.Certificates.Refresh() || reload

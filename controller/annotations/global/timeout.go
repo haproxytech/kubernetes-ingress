@@ -5,6 +5,8 @@ import (
 
 	"github.com/haproxytech/client-native/v2/models"
 
+	"github.com/haproxytech/kubernetes-ingress/controller/annotations/common"
+	"github.com/haproxytech/kubernetes-ingress/controller/store"
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 )
 
@@ -21,7 +23,8 @@ func (a *Timeout) GetName() string {
 	return a.name
 }
 
-func (a *Timeout) Process(input string) error {
+func (a *Timeout) Process(k store.K8s, annotations ...map[string]string) error {
+	input := common.GetValue(a.GetName(), annotations...)
 	var timeout *int64
 	var err error
 	if input != "" {

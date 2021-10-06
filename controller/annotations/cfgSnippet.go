@@ -4,7 +4,9 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/haproxytech/kubernetes-ingress/controller/annotations/common"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/api"
+	"github.com/haproxytech/kubernetes-ingress/controller/store"
 )
 
 type CfgSnippet struct {
@@ -47,7 +49,8 @@ func (a *CfgSnippet) GetName() string {
 	return a.name
 }
 
-func (a *CfgSnippet) Process(input string) error {
+func (a *CfgSnippet) Process(k store.K8s, annotations ...map[string]string) error {
+	input := common.GetValue(a.GetName(), annotations...)
 	data := []string{}
 	if input != "" {
 		data = strings.Split(strings.Trim(input, "\n"), "\n")

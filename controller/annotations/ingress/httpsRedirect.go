@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/haproxytech/kubernetes-ingress/controller/annotations/common"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/rules"
 	"github.com/haproxytech/kubernetes-ingress/controller/store"
@@ -36,7 +37,8 @@ func (a HTTPSRedirectAnn) GetName() string {
 	return a.name
 }
 
-func (a HTTPSRedirectAnn) Process(input string) (err error) {
+func (a HTTPSRedirectAnn) Process(k store.K8s, annotations ...map[string]string) (err error) {
+	input := common.GetValue(a.GetName(), annotations...)
 	if input == "" {
 		if a.name == "ssl-redirect" && tlsEnabled(a.parent.ingress) {
 			// Enable HTTPS redirect automatically when ingress resource has TLS secrets

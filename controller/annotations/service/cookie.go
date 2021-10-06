@@ -4,6 +4,9 @@ import (
 	"strings"
 
 	"github.com/haproxytech/client-native/v2/models"
+
+	"github.com/haproxytech/kubernetes-ingress/controller/annotations/common"
+	"github.com/haproxytech/kubernetes-ingress/controller/store"
 )
 
 type Cookie struct {
@@ -20,7 +23,8 @@ func (a *Cookie) GetName() string {
 	return a.name
 }
 
-func (a *Cookie) Process(input string) error {
+func (a *Cookie) Process(k store.K8s, annotations ...map[string]string) error {
+	input := common.GetValue(a.GetName(), annotations...)
 	params := strings.Fields(input)
 	if len(params) == 0 {
 		switch {

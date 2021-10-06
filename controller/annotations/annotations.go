@@ -1,18 +1,23 @@
 package annotations
 
 import (
+	"fmt"
+	"strconv"
+
 	"github.com/haproxytech/client-native/v2/models"
 
+	"github.com/haproxytech/kubernetes-ingress/controller/annotations/common"
 	"github.com/haproxytech/kubernetes-ingress/controller/annotations/global"
 	"github.com/haproxytech/kubernetes-ingress/controller/annotations/ingress"
 	"github.com/haproxytech/kubernetes-ingress/controller/annotations/service"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy"
 	"github.com/haproxytech/kubernetes-ingress/controller/store"
+	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 )
 
 type Annotation interface {
 	GetName() string
-	Process(value string) error
+	Process(k store.K8s, annotations ...map[string]string) error
 }
 
 func Global(g *models.Global, l *models.LogTargets) []Annotation {
@@ -47,11 +52,11 @@ func Defaults(d *models.Defaults) []Annotation {
 	}
 }
 
-func Frontend(i store.Ingress, r *haproxy.Rules, m haproxy.Maps, k store.K8s) []Annotation {
+func Frontend(i store.Ingress, r *haproxy.Rules, m haproxy.Maps) []Annotation {
 	reqRateLimit := ingress.NewReqRateLimit(r)
 	httpsRedirect := ingress.NewHTTPSRedirect(r, i)
 	hostRedirect := ingress.NewHostRedirect(r)
-	reqAuth := ingress.NewReqAuth(r, i, k)
+	reqAuth := ingress.NewReqAuth(r, i)
 	reqCapture := ingress.NewReqCapture(r)
 	resSetCORS := ingress.NewResSetCORS(r)
 	return []Annotation{
@@ -101,59 +106,106 @@ func Backend(b *models.Backend) []Annotation {
 	return annotations
 }
 
-func Server(s *models.Server, k8sStore store.K8s, certs *haproxy.Certificates) []Annotation {
+func Server(s *models.Server, certs *haproxy.Certificates) []Annotation {
 	return []Annotation{
 		service.NewCheck("check", s),
 		service.NewCheckInter("check-interval", s),
 		service.NewCookie("cookie-persistence", nil, s),
-		service.NewMaxconn("pod-maxconn", s, k8sStore.NbrHAProxyInst),
+		service.NewMaxconn("pod-maxconn", s),
 		service.NewSendProxy("send-proxy-protocol", s),
 		// Order is important for ssl annotations so they don't conflict
 		service.NewSSL("server-ssl", s),
-		service.NewCrt("server-crt", k8sStore, certs, s),
-		service.NewCA("server-ca", k8sStore, certs, s),
+		service.NewCrt("server-crt", certs, s),
+		service.NewCA("server-ca", certs, s),
 		service.NewProto("server-proto", s),
 	}
 }
 
-// GetValue returns value by checking in multiple annotations.
-func GetValue(annotationName string, annotations ...map[string]string) string {
-	for _, a := range annotations {
-		val, ok := a[annotationName]
-		if ok {
-			return val
-		}
-	}
-	return defaultValues[annotationName]
-}
-
 func SetDefaultValue(annotation, value string) {
-	defaultValues[annotation] = value
+	common.DefaultValues[annotation] = value
 }
 
-var defaultValues = map[string]string{
-	"auth-realm":             "Protected Content",
-	"check":                  "true",
-	"cors-allow-origin":      "*",
-	"cors-allow-methods":     "*",
-	"cors-allow-headers":     "*",
-	"cors-max-age":           "5s",
-	"cookie-indirect":        "true",
-	"cookie-nocache":         "true",
-	"cookie-type":            "insert",
-	"forwarded-for":          "true",
-	"load-balance":           "roundrobin",
-	"rate-limit-size":        "100k",
-	"rate-limit-period":      "1s",
-	"rate-limit-status-code": "403",
-	"request-capture-len":    "128",
-	"ssl-redirect-code":      "302",
-	"request-redirect-code":  "302",
-	"ssl-redirect-port":      "443",
-	"ssl-passthrough":        "false",
-	"server-ssl":             "false",
-	"scale-server-slots":     "42",
-	"syslog-server":          "address:127.0.0.1, facility: local0, level: notice",
-	"client-crt-optional":    "false",
-	"tls-alpn":               "h2,http/1.1",
+func Bool(name string, annotations ...map[string]string) (out bool, err error) {
+	input := common.GetValue(name, annotations...)
+	if input == "" {
+		return
+	}
+	out, err = utils.GetBoolValue(input, name)
+	if err != nil {
+		err = fmt.Errorf("%s annotation: %w", name, err)
+		return
+	}
+	return
+}
+
+func Int(name string, annotations ...map[string]string) (out int, err error) {
+	input := common.GetValue(name, annotations...)
+	if input == "" {
+		return
+	}
+	out, err = strconv.Atoi(input)
+	if err != nil {
+		err = fmt.Errorf("annotation '%s': %w", name, err)
+		return
+	}
+	return
+}
+
+func Secret(name, defaultNs string, k store.K8s, annotations ...map[string]string) (secret *store.Secret, err error) {
+	var secNs, secName string
+	secNs, secName, err = common.GetK8sPath(name, annotations...)
+	if err != nil {
+		err = fmt.Errorf("annotation '%s': %w", name, err)
+		return
+	}
+	if secName == "" {
+		return
+	}
+	if secNs == "" {
+		secNs = defaultNs
+	}
+	secret, err = k.GetSecret(secNs, secName)
+	if err != nil {
+		err = fmt.Errorf("annotation '%s': %w", name, err)
+		return
+	}
+	return
+}
+
+func Service(name, defaultNs string, k store.K8s, annotations ...map[string]string) (service *store.Service, err error) {
+	var svcNs, svcName string
+	svcNs, svcName, err = common.GetK8sPath(name, annotations...)
+	if err != nil {
+		err = fmt.Errorf("annotation '%s': %w", name, err)
+		return
+	}
+	if svcName == "" {
+		return
+	}
+	if svcNs == "" {
+		svcNs = defaultNs
+	}
+	service, err = k.GetService(svcNs, svcName)
+	if err != nil {
+		err = fmt.Errorf("annotation '%s': %w", name, err)
+		return
+	}
+	return
+}
+
+func String(name string, annotations ...map[string]string) string {
+	return common.GetValue(name, annotations...)
+}
+
+func Timeout(name string, annotations ...map[string]string) (out *int64, err error) {
+	input := common.GetValue(name, annotations...)
+	if input == "" {
+		return
+	}
+	out, err = utils.ParseTime(input)
+	if err != nil {
+		err = fmt.Errorf("annotation '%s': %w", name, err)
+		return
+	}
+	return
 }

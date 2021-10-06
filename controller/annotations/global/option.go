@@ -5,6 +5,8 @@ import (
 
 	"github.com/haproxytech/client-native/v2/models"
 
+	"github.com/haproxytech/kubernetes-ingress/controller/annotations/common"
+	"github.com/haproxytech/kubernetes-ingress/controller/store"
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 )
 
@@ -24,7 +26,8 @@ func (a *Option) GetName() string {
 	return a.name
 }
 
-func (a *Option) Process(input string) error {
+func (a *Option) Process(k store.K8s, annotations ...map[string]string) error {
+	input := common.GetValue(a.GetName(), annotations...)
 	if input == "" {
 		switch a.name {
 		case "http-server-close", "http-keep-alive":

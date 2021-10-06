@@ -3,6 +3,8 @@ package service
 import (
 	"github.com/haproxytech/client-native/v2/models"
 
+	"github.com/haproxytech/kubernetes-ingress/controller/annotations/common"
+	"github.com/haproxytech/kubernetes-ingress/controller/store"
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 )
 
@@ -19,7 +21,8 @@ func (a *SSL) GetName() string {
 	return a.name
 }
 
-func (a *SSL) Process(input string) error {
+func (a *SSL) Process(k store.K8s, annotations ...map[string]string) error {
+	input := common.GetValue(a.GetName(), annotations...)
 	var enabled bool
 	var err error
 	if input != "" {

@@ -7,6 +7,8 @@ import (
 
 	"github.com/haproxytech/client-native/v2/models"
 
+	"github.com/haproxytech/kubernetes-ingress/controller/annotations/common"
+	"github.com/haproxytech/kubernetes-ingress/controller/store"
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 )
 
@@ -31,7 +33,8 @@ func (a *SyslogServers) GetName() string {
 //  syslog-server: |
 //    address:127.0.0.1, port:514, facility:local0
 //    address:192.168.1.1, port:514, facility:local1
-func (a *SyslogServers) Process(input string) error {
+func (a *SyslogServers) Process(k store.K8s, annotations ...map[string]string) error {
+	input := common.GetValue(a.GetName(), annotations...)
 	a.stdout = false
 	for _, syslogLine := range strings.Split(input, "\n") {
 		if syslogLine == "" {

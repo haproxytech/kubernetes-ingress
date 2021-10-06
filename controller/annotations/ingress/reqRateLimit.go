@@ -4,8 +4,10 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/haproxytech/kubernetes-ingress/controller/annotations/common"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/rules"
+	"github.com/haproxytech/kubernetes-ingress/controller/store"
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 )
 
@@ -35,7 +37,8 @@ func (a ReqRateLimitAnn) GetName() string {
 	return a.name
 }
 
-func (a ReqRateLimitAnn) Process(input string) (err error) {
+func (a ReqRateLimitAnn) Process(k store.K8s, annotations ...map[string]string) (err error) {
+	input := common.GetValue(a.GetName(), annotations...)
 	if input == "" {
 		return nil
 	}

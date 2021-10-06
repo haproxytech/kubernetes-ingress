@@ -187,11 +187,12 @@ func (c *HAProxyController) updateHAProxy() {
 				if tls.Status == store.DELETED {
 					continue
 				}
-				_, err = c.Cfg.Certificates.HandleTLSSecret(c.Store, haproxy.SecretCtx{
-					DefaultNS:  ingress.Namespace,
-					SecretPath: tls.SecretName,
-					SecretType: haproxy.FT_CERT,
-				})
+				secret, secErr := c.Store.GetSecret(ingress.Namespace, tls.SecretName)
+				if secErr != nil {
+					logger.Warningf("ingress '%s/%s': %s", ingress.Namespace, ingress.Name, secErr)
+					continue
+				}
+				_, err = c.Cfg.Certificates.HandleTLSSecret(secret, haproxy.FT_CERT)
 				logger.Error(err)
 			}
 			// Ingress annotations

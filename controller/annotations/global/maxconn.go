@@ -4,6 +4,9 @@ import (
 	"strconv"
 
 	"github.com/haproxytech/client-native/v2/models"
+
+	"github.com/haproxytech/kubernetes-ingress/controller/annotations/common"
+	"github.com/haproxytech/kubernetes-ingress/controller/store"
 )
 
 type Maxconn struct {
@@ -19,7 +22,8 @@ func (a *Maxconn) GetName() string {
 	return a.name
 }
 
-func (a *Maxconn) Process(input string) error {
+func (a *Maxconn) Process(k store.K8s, annotations ...map[string]string) error {
+	input := common.GetValue(a.GetName(), annotations...)
 	if input == "" {
 		a.global.Maxconn = 0
 		return nil

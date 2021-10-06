@@ -15,8 +15,6 @@
 package controller
 
 import (
-	"strings"
-
 	"github.com/go-test/deep"
 
 	"github.com/haproxytech/client-native/v2/models"
@@ -56,8 +54,7 @@ func (c *HAProxyController) globalCfg() (reload, restart bool) {
 		newGlobal = c.Store.CR.Global
 	} else {
 		for _, a := range annotations.Global(newGlobal, &newLg) {
-			annValue := annotations.GetValue(a.GetName(), c.Store.ConfigMaps.Main.Annotations)
-			err = a.Process(annValue)
+			err = a.Process(c.Store, c.Store.ConfigMaps.Main.Annotations)
 			if err != nil {
 				logger.Errorf("annotation %s: %s", a.GetName(), err)
 			}
@@ -104,8 +101,7 @@ func (c *HAProxyController) defaultsCfg() (reload bool) {
 		newDefaults = c.Store.CR.Defaults
 	} else {
 		for _, a := range annotations.Defaults(newDefaults) {
-			annValue := annotations.GetValue(a.GetName(), c.Store.ConfigMaps.Main.Annotations)
-			logger.Error(a.Process(annValue))
+			logger.Error(a.Process(c.Store, c.Store.ConfigMaps.Main.Annotations))
 		}
 	}
 	configuration.SetDefaults(newDefaults)
@@ -123,31 +119,17 @@ func (c *HAProxyController) defaultsCfg() (reload bool) {
 
 // handleDefaultService configures HAProy default backend provided via cli param "default-backend-service"
 func (c *HAProxyController) handleDefaultService() (reload bool) {
-	dsvcData := annotations.GetValue("default-backend-service")
-	if dsvcData == "" {
+	service, err := annotations.Service("default-backend-service", c.PodNamespace, c.Store, c.Store.ConfigMaps.Main.Annotations)
+	if err != nil {
+		logger.Errorf("default service: %s", err)
 		return
 	}
-	dsvc := strings.Split(dsvcData, "/")
+	if service == nil {
+		return
+	}
 
-	if len(dsvc) != 2 {
-		logger.Errorf("default service '%s': invalid format", dsvcData)
-		return
-	}
-	if dsvc[0] == "" || dsvc[1] == "" {
-		return
-	}
-	namespace, ok := c.Store.Namespaces[dsvc[0]]
-	if !ok {
-		logger.Errorf("default service '%s': namespace not found" + dsvc[0])
-		return
-	}
-	service, ok := namespace.Services[dsvc[1]]
-	if !ok {
-		logger.Errorf("default service '%s': service name not found" + dsvc[1])
-		return
-	}
 	ingress := &store.Ingress{
-		Namespace:   namespace.Name,
+		Namespace:   service.Namespace,
 		Name:        "DefaultService",
 		Annotations: map[string]string{},
 		DefaultBackend: &store.IngressPath{
@@ -156,9 +138,9 @@ func (c *HAProxyController) handleDefaultService() (reload bool) {
 			IsDefaultBackend: true,
 		},
 	}
-	reload, err := c.setDefaultService(ingress, []string{c.Cfg.FrontHTTP, c.Cfg.FrontHTTPS})
+	reload, err = c.setDefaultService(ingress, []string{c.Cfg.FrontHTTP, c.Cfg.FrontHTTPS})
 	if err != nil {
-		logger.Errorf("default service '%s/%s': %s", namespace.Name, service.Name, err)
+		logger.Errorf("default service: %s", err)
 		return
 	}
 	return reload
@@ -166,13 +148,14 @@ func (c *HAProxyController) handleDefaultService() (reload bool) {
 
 // handleDefaultCert configures default/fallback HAProxy certificate to use for client HTTPS requests.
 func (c *HAProxyController) handleDefaultCert() {
-	secretAnn := annotations.GetValue("ssl-certificate", c.Store.ConfigMaps.Main.Annotations)
-	if secretAnn == "" {
+	secret, err := annotations.Secret("ssl-certificate", c.PodNamespace, c.Store, c.Store.ConfigMaps.Main.Annotations)
+	if err != nil {
+		logger.Errorf("default certificate: %s", err)
 		return
 	}
-	_, err := c.Cfg.Certificates.HandleTLSSecret(c.Store, haproxy.SecretCtx{
-		SecretPath: secretAnn,
-		SecretType: haproxy.FT_DEFAULT_CERT,
-	})
+	if secret == nil {
+		return
+	}
+	_, err = c.Cfg.Certificates.HandleTLSSecret(secret, haproxy.FT_DEFAULT_CERT)
 	logger.Error(err)
 }

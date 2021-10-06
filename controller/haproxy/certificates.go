@@ -36,12 +36,11 @@ const (
 )
 
 type SecretCtx struct {
-	DefaultNS  string
-	SecretPath string
+	Namespace  string
+	Name       string
 	SecretType SecretType
 }
 
-var ErrCertNotFound = errors.New("notFound")
 var frontendCertDir string
 var backendCertDir string
 var caCertDir string
@@ -57,18 +56,17 @@ func NewCertificates(caDir, ftDir, bdDir string) *Certificates {
 	}
 }
 
-func (c *Certificates) HandleTLSSecret(k8s store.K8s, secretCtx SecretCtx) (certPath string, err error) {
-	secret, err := k8s.FetchSecret(secretCtx.SecretPath, secretCtx.DefaultNS)
-	if secret == nil || secret.Status == store.DELETED {
-		logger.Warning(err)
-		return "", ErrCertNotFound
+func (c *Certificates) HandleTLSSecret(secret *store.Secret, secretType SecretType) (certPath string, err error) {
+	if secret == nil {
+		err = errors.New("nil secret")
+		return
 	}
 
 	var certs map[string]*cert
 	var crt *cert
 	var crtOk, privateKeyNull bool
 	var certName string
-	switch secretCtx.SecretType {
+	switch secretType {
 	case FT_DEFAULT_CERT:
 		// starting filename with "0" makes it first cert to be picked by HAProxy when no SNI matches.
 		certName = fmt.Sprintf("0_%s_%s", secret.Namespace, secret.Name)
