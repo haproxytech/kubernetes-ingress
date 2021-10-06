@@ -1,0 +1,43 @@
+HelpText: "Please refer to https://github.com/haproxy/haproxy/blob/master/CONTRIBUTING#L632"
+PatchScopes:
+  HAProxy Standard Scope:
+    - MINOR
+    - MEDIUM
+    - MAJOR
+    - CRITICAL
+PatchTypes:
+  HAProxy Standard Patch:
+    Values:
+      - BUG
+      - BUILD
+      - CLEANUP
+      - DOC
+      - LICENSE
+      - OPTIM
+      - RELEASE
+      - REORG
+      - TEST
+      - REVERT
+    Scope: HAProxy Standard Scope
+  HAProxy Standard Feature Commit:
+    Values:
+      - MINOR
+      - MEDIUM
+      - MAJOR
+      - CRITICAL
+  Custom Resource patch:
+    Values:
+      - CR
+  Continuous Integration patch:
+    Values:
+      - CI
+TagOrder:
+  - PatchTypes:
+      - HAProxy Standard Patch
+      - HAProxy Standard Feature Commit
+  - PatchTypes:
+      - Custom Resource patch
+    Optional: true
+  - PatchTypes:
+      - Continuous Integration patch
+    Optional: true
