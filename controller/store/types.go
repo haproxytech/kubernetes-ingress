@@ -14,6 +14,10 @@
 
 package store
 
+import (
+	"github.com/haproxytech/client-native/v2/models"
+)
+
 // ServicePort describes port of a service
 type ServicePort struct {
 	Name     string
@@ -72,7 +76,14 @@ type Namespace struct {
 	Endpoints map[string]*Endpoints
 	Services  map[string]*Service
 	Secret    map[string]*Secret
+	CRs       *CustomResources
 	Status    Status
+}
+
+type CustomResources struct {
+	Global     map[string]*models.Global
+	Defaults   map[string]*models.Defaults
+	LogTargets map[string]models.LogTargets
 }
 
 type IngressClass struct {

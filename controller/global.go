@@ -49,11 +49,16 @@ func (c *HAProxyController) globalCfg() (reload, restart bool) {
 		logger.Error(errL)
 		return
 	}
-	newGlobal = &models.Global{}
-	if c.Store.CR.Global != nil {
-		newGlobal = c.Store.CR.Global
-		newLg = c.Store.CR.LogTargets
-	} else {
+	newGlobal, err = annotations.ModelGlobal("cr-global", c.PodNamespace, c.Store, c.Store.ConfigMaps.Main.Annotations)
+	if err != nil {
+		logger.Errorf("Global config: %s", err)
+	}
+	newLg, err = annotations.ModelLog("cr-global", c.PodNamespace, c.Store, c.Store.ConfigMaps.Main.Annotations)
+	if err != nil {
+		logger.Errorf("Global logging: %s", err)
+	}
+	if newGlobal == nil {
+		newGlobal = &models.Global{}
 		for _, a := range annotations.Global(newGlobal, &newLg) {
 			err = a.Process(c.Store, c.Store.ConfigMaps.Main.Annotations)
 			if err != nil {
@@ -96,10 +101,12 @@ func (c *HAProxyController) defaultsCfg() (reload bool) {
 		logger.Error(err)
 		return
 	}
-	newDefaults = &models.Defaults{}
-	if c.Store.CR.Defaults != nil {
-		newDefaults = c.Store.CR.Defaults
-	} else {
+	newDefaults, err = annotations.ModelDefaults("cr-defaults", c.PodNamespace, c.Store, c.Store.ConfigMaps.Main.Annotations)
+	if err != nil {
+		logger.Errorf("Defaults config: %s", err)
+	}
+	if newDefaults == nil {
+		newDefaults = &models.Defaults{}
 		for _, a := range annotations.Defaults(newDefaults) {
 			logger.Error(a.Process(c.Store, c.Store.ConfigMaps.Main.Annotations))
 		}

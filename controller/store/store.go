@@ -28,13 +28,6 @@ type K8s struct {
 	IngressClasses   map[string]*IngressClass
 	NamespacesAccess NamespacesWatch
 	ConfigMaps       ConfigMaps
-	CR               CustomResources
-}
-
-type CustomResources struct {
-	Global     *models.Global
-	Defaults   *models.Defaults
-	LogTargets models.LogTargets
 }
 
 type NamespacesWatch struct {
@@ -72,7 +65,6 @@ func NewK8sStore(args utils.OSArgs) K8s {
 				Name:      args.ConfigMapPatternFiles.Name,
 			},
 		},
-		CR: CustomResources{},
 	}
 }
 
@@ -177,7 +169,12 @@ func (k K8s) GetNamespace(name string) *Namespace {
 		Services:  make(map[string]*Service),
 		Ingresses: make(map[string]*Ingress),
 		Secret:    make(map[string]*Secret),
-		Status:    ADDED,
+		CRs: &CustomResources{
+			Global:     make(map[string]*models.Global),
+			Defaults:   make(map[string]*models.Defaults),
+			LogTargets: make(map[string]models.LogTargets),
+		},
+		Status: ADDED,
 	}
 	k.Namespaces[name] = newNamespace
 	return newNamespace

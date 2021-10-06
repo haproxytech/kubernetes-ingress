@@ -68,9 +68,10 @@ func (c GlobalCR) GetInformer(eventChan chan SyncDataEvent, factory informers.Sh
 }
 
 func (c GlobalCR) ProcessEvent(s *store.K8s, job SyncDataEvent) bool {
+	ns := s.GetNamespace(job.Namespace)
 	if job.Data == nil {
-		s.CR.Global = nil
-		s.CR.LogTargets = nil
+		delete(ns.CRs.Global, job.Name)
+		delete(ns.CRs.LogTargets, job.Name)
 		return true
 	}
 	data, ok := job.Data.(*corev1alpha1.Global)
@@ -78,8 +79,8 @@ func (c GlobalCR) ProcessEvent(s *store.K8s, job SyncDataEvent) bool {
 		logger.Warning(CoreGroupVersion + ": type mismatch with Global kind")
 		return false
 	}
-	s.CR.Global = data.Spec.Config
-	s.CR.LogTargets = data.Spec.LogTargets
+	ns.CRs.Global[job.Name] = data.Spec.Config
+	ns.CRs.LogTargets[job.Name] = data.Spec.LogTargets
 	return true
 }
 
@@ -115,8 +116,9 @@ func (c DefaultsCR) GetInformer(eventChan chan SyncDataEvent, factory informers.
 }
 
 func (c DefaultsCR) ProcessEvent(s *store.K8s, job SyncDataEvent) bool {
+	ns := s.GetNamespace(job.Namespace)
 	if job.Data == nil {
-		s.CR.Defaults = nil
+		delete(ns.CRs.Defaults, job.Name)
 		return true
 	}
 	data, ok := job.Data.(*corev1alpha1.Defaults)
@@ -124,6 +126,6 @@ func (c DefaultsCR) ProcessEvent(s *store.K8s, job SyncDataEvent) bool {
 		logger.Warning(CoreGroupVersion + ": type mismatch with Defaults kind")
 		return false
 	}
-	s.CR.Defaults = data.Spec.Config
+	ns.CRs.Defaults[job.Name] = data.Spec.Config
 	return true
 }

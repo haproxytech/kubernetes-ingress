@@ -29,6 +29,8 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/clientcmd"
 
+	"github.com/haproxytech/client-native/v2/models"
+
 	ingstatus "github.com/haproxytech/kubernetes-ingress/controller/status"
 	"github.com/haproxytech/kubernetes-ingress/controller/store"
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
@@ -123,7 +125,12 @@ func (k *K8s) EventsNamespaces(channel chan SyncDataEvent, stop chan struct{}, i
 					Services:  make(map[string]*store.Service),
 					Ingresses: make(map[string]*store.Ingress),
 					Secret:    make(map[string]*store.Secret),
-					Status:    status,
+					CRs: &store.CustomResources{
+						Global:     make(map[string]*models.Global),
+						Defaults:   make(map[string]*models.Defaults),
+						LogTargets: make(map[string]models.LogTargets),
+					},
+					Status: status,
 				}
 				k.Logger.Tracef("%s %s: %s", NAMESPACE, item.Status, item.Name)
 				channel <- SyncDataEvent{SyncType: NAMESPACE, Namespace: item.Name, Data: item}
@@ -141,7 +148,12 @@ func (k *K8s) EventsNamespaces(channel chan SyncDataEvent, stop chan struct{}, i
 					Services:  make(map[string]*store.Service),
 					Ingresses: make(map[string]*store.Ingress),
 					Secret:    make(map[string]*store.Secret),
-					Status:    status,
+					CRs: &store.CustomResources{
+						Global:     make(map[string]*models.Global),
+						Defaults:   make(map[string]*models.Defaults),
+						LogTargets: make(map[string]models.LogTargets),
+					},
+					Status: status,
 				}
 				k.Logger.Tracef("%s %s: %s", NAMESPACE, item.Status, item.Name)
 				channel <- SyncDataEvent{SyncType: NAMESPACE, Namespace: item.Name, Data: item}
