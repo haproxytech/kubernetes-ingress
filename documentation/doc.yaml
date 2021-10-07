@@ -1769,6 +1769,6 @@ annotations:
       - Comma-separated list of protocol names to advertise as supported on top of ALPN
     applies_to:
       - configmap
-    version_min: "1.6"
+    version_min: "1.7"
     example:
       - "tls-alpn: http/1.1"
