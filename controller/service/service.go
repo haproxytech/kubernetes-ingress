@@ -148,12 +148,21 @@ func (s *SvcContext) HandleBackend(client api.HAProxyClient, store store.K8s) (r
 func (s *SvcContext) getBackendModel(store store.K8s) (*models.Backend, error) {
 	var backend *models.Backend
 	var err error
+	var cookieKey = "ohph7OoGhong"
 	crInuse := true
 	backend, err = annotations.ModelBackend("cr-backend", s.service.Namespace, store, s.service.Annotations, s.ingress.Annotations, store.ConfigMaps.Main.Annotations)
 	logger.Warning(err)
 	if backend == nil {
 		backend = &models.Backend{DefaultServer: &models.DefaultServer{}}
 		crInuse = false
+	}
+	if !crInuse {
+		for _, a := range annotations.Backend(backend, store, s.certs) {
+			err = a.Process(store, s.service.Annotations, s.ingress.Annotations, store.ConfigMaps.Main.Annotations)
+			if err != nil {
+				logger.Errorf("service '%s/%s': annotation '%s': %s", s.service.Namespace, s.service.Name, a.GetName(), err)
+			}
+		}
 	}
 	if s.modeTCP {
 		backend.Mode = "tcp"
@@ -166,14 +175,8 @@ func (s *SvcContext) getBackendModel(store store.K8s) (*models.Backend, error) {
 	if s.service.DNS != "" {
 		backend.DefaultServer = &models.DefaultServer{InitAddr: "last,libc,none"}
 	}
-	if crInuse {
-		return backend, nil
-	}
-	for _, a := range annotations.Backend(backend, store, s.certs) {
-		err = a.Process(store, s.service.Annotations, s.ingress.Annotations, store.ConfigMaps.Main.Annotations)
-		if err != nil {
-			logger.Errorf("service '%s/%s': annotation '%s': %s", s.service.Namespace, s.service.Name, a.GetName(), err)
-		}
+	if backend.Cookie != nil && backend.Cookie.Dynamic && backend.DynamicCookieKey == "" {
+		backend.DynamicCookieKey = cookieKey
 	}
 	return backend, nil
 }
