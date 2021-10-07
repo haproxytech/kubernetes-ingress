@@ -79,6 +79,19 @@ func (c *HAProxyController) globalCfg() (reload, restart bool) {
 		logger.Debugf("Global log targets updated: %s\nRestart required", updated)
 		restart = true
 	}
+	reload, res := c.globalCfgSnipp()
+	restart = restart || res
+	return
+}
+
+func (c *HAProxyController) globalCfgSnipp() (reload, restart bool) {
+	var err error
+	for _, a := range annotations.GlobalCfgSnipp() {
+		err = a.Process(c.Store, c.Store.ConfigMaps.Main.Annotations)
+		if err != nil {
+			logger.Errorf("annotation %s: %s", a.GetName(), err)
+		}
+	}
 	updatedSnipp, errSnipp := annotations.UpdateGlobalCfgSnippet(c.Client)
 	logger.Error(errSnipp)
 	if len(updatedSnipp) != 0 {

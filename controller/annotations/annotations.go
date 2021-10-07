@@ -20,12 +20,17 @@ type Annotation interface {
 	Process(k store.K8s, annotations ...map[string]string) error
 }
 
-func Global(g *models.Global, l *models.LogTargets) []Annotation {
+func GlobalCfgSnipp() []Annotation {
 	return []Annotation{
 		NewGlobalCfgSnippet("global-config-snippet"),
 		NewFrontendCfgSnippet("frontend-config-snippet", "http"),
 		NewFrontendCfgSnippet("frontend-config-snippet", "https"),
 		NewFrontendCfgSnippet("stats-config-snippet", "stats"),
+	}
+}
+
+func Global(g *models.Global, l *models.LogTargets) []Annotation {
+	return []Annotation{
 		global.NewSyslogServers("syslog-server", l),
 		global.NewNbthread("nbthread", g),
 		global.NewMaxconn("maxconn", g),
@@ -92,7 +97,6 @@ func Frontend(i store.Ingress, r *haproxy.Rules, m haproxy.Maps) []Annotation {
 
 func Backend(b *models.Backend, s store.K8s, certs *haproxy.Certificates) []Annotation {
 	annotations := []Annotation{
-		NewBackendCfgSnippet("backend-config-snippet", b.Name),
 		service.NewAbortOnClose("abortonclose", b),
 		service.NewTimeoutCheck("timeout-check", b),
 		service.NewLoadBalance("load-balance", b),
