@@ -20,8 +20,11 @@ import (
 	"github.com/haproxytech/client-native/v2/models"
 
 	"github.com/haproxytech/kubernetes-ingress/controller/annotations"
+	"github.com/haproxytech/kubernetes-ingress/controller/annotations/common"
 	"github.com/haproxytech/kubernetes-ingress/controller/configuration"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/certs"
+	"github.com/haproxytech/kubernetes-ingress/controller/ingress"
+	"github.com/haproxytech/kubernetes-ingress/controller/service"
 	"github.com/haproxytech/kubernetes-ingress/controller/store"
 )
 
@@ -30,7 +33,7 @@ func (c *HAProxyController) handleGlobalConfig() (reload, restart bool) {
 	reload = c.defaultsCfg() || reload
 	c.handleDefaultCert()
 	reload = c.handleDefaultService() || reload
-	_ = c.handleIngressAnnotations(store.Ingress{})
+	(&ingress.Ingress{}).HandleAnnotations(c.Store, &c.Cfg)
 	return reload, restart
 }
 
@@ -139,31 +142,23 @@ func (c *HAProxyController) defaultsCfg() (reload bool) {
 
 // handleDefaultService configures HAProy default backend provided via cli param "default-backend-service"
 func (c *HAProxyController) handleDefaultService() (reload bool) {
-	service, err := annotations.Service("default-backend-service", c.PodNamespace, c.Store, c.Store.ConfigMaps.Main.Annotations)
+	var svc *service.Service
+	ns, name, err := common.GetK8sPath("default-backend-service", c.Store.ConfigMaps.Main.Annotations)
 	if err != nil {
 		logger.Errorf("default service: %s", err)
-		return
 	}
-	if service == nil {
-		return
+	ingressPath := &store.IngressPath{
+		SvcNamespace:     ns,
+		SvcName:          name,
+		IsDefaultBackend: true,
 	}
-
-	ingress := &store.Ingress{
-		Namespace:   service.Namespace,
-		Name:        "DefaultService",
-		Annotations: map[string]string{},
-		DefaultBackend: &store.IngressPath{
-			SvcName:          service.Name,
-			SvcPortInt:       service.Ports[0].Port,
-			IsDefaultBackend: true,
-		},
+	if svc, err = service.New(c.Store, ingressPath, nil, false, c.Store.ConfigMaps.Main.Annotations); err == nil {
+		reload, err = svc.SetDefaultBackend(c.Store, &c.Cfg, c.Client, []string{c.Cfg.FrontHTTP, c.Cfg.FrontHTTPS})
 	}
-	reload, err = c.setDefaultService(ingress, []string{c.Cfg.FrontHTTP, c.Cfg.FrontHTTPS})
 	if err != nil {
 		logger.Errorf("default service: %s", err)
-		return
 	}
-	return reload
+	return
 }
 
 // handleDefaultCert configures default/fallback HAProxy certificate to use for client HTTPS requests.

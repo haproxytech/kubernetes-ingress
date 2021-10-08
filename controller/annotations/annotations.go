@@ -59,7 +59,7 @@ func Defaults(d *models.Defaults) []Annotation {
 	}
 }
 
-func Frontend(i store.Ingress, r *rules.Rules, m maps.MapFiles) []Annotation {
+func Frontend(i *store.Ingress, r *rules.Rules, m maps.MapFiles) []Annotation {
 	reqRateLimit := ingress.NewReqRateLimit(r)
 	httpsRedirect := ingress.NewHTTPSRedirect(r, i)
 	hostRedirect := ingress.NewHostRedirect(r)

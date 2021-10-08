@@ -191,7 +191,7 @@ func (k K8s) GetNamespace(name string) *Namespace {
 func (k K8s) GetSecret(namespace, name string) (*Secret, error) {
 	ns, ok := k.Namespaces[namespace]
 	if !ok {
-		return nil, fmt.Errorf("secret '%s/%s', namespace '%s' does not exist", namespace, name, namespace)
+		return nil, fmt.Errorf("secret '%s/%s' does not exist, namespace not found", namespace, name)
 	}
 	secret, secretOK := ns.Secret[name]
 	if !secretOK {
@@ -206,7 +206,7 @@ func (k K8s) GetSecret(namespace, name string) (*Secret, error) {
 func (k K8s) GetService(namespace, name string) (*Service, error) {
 	ns, nsOk := k.Namespaces[namespace]
 	if !nsOk {
-		return nil, fmt.Errorf("service '%s/%s', namespace '%s' does not exist", namespace, name, namespace)
+		return nil, fmt.Errorf("service '%s/%s' does not exist, namespace not found", namespace, name)
 	}
 	svc, svcOk := ns.Services[name]
 	if !svcOk {

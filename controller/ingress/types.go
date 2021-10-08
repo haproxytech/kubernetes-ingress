@@ -1,4 +1,4 @@
-package status
+package ingress
 
 import (
 	"github.com/haproxytech/kubernetes-ingress/controller/store"
@@ -6,9 +6,12 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
+//nolint:golint,stylecheck
+const CONTROLLER_CLASS = "haproxy.org/ingress-controller"
+
 var logger = utils.GetLogger()
 
-type SyncIngress struct {
+type Sync struct {
 	Service *corev1.Service
 	Ingress *store.Ingress
 }

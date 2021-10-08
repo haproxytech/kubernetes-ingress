@@ -13,7 +13,7 @@ import (
 type HTTPSRedirect struct {
 	redirect *rules.RequestRedirect
 	rules    *rules.Rules
-	ingress  store.Ingress
+	ingress  *store.Ingress
 }
 
 type HTTPSRedirectAnn struct {
@@ -21,8 +21,8 @@ type HTTPSRedirectAnn struct {
 	parent *HTTPSRedirect
 }
 
-func NewHTTPSRedirect(r *rules.Rules, i store.Ingress) *HTTPSRedirect {
-	return &HTTPSRedirect{rules: r, ingress: i}
+func NewHTTPSRedirect(rules *rules.Rules, i *store.Ingress) *HTTPSRedirect {
+	return &HTTPSRedirect{rules: rules, ingress: i}
 }
 
 func (p *HTTPSRedirect) NewAnnotation(n string) HTTPSRedirectAnn {
@@ -86,7 +86,10 @@ func (a HTTPSRedirectAnn) Process(k store.K8s, annotations ...map[string]string)
 	return
 }
 
-func tlsEnabled(ingress store.Ingress) bool {
+func tlsEnabled(ingress *store.Ingress) bool {
+	if ingress == nil {
+		return false
+	}
 	for _, tls := range ingress.TLS {
 		if tls.Status != store.DELETED {
 			return true

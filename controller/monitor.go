@@ -46,7 +46,7 @@ func (c *HAProxyController) monitorChanges() {
 		}
 
 		svci := factory.Core().V1().Services().Informer()
-		c.k8s.EventsServices(c.eventChan, c.statusChan, stop, svci, c.PublishService)
+		c.k8s.EventsServices(c.eventChan, c.ingressChan, stop, svci, c.PublishService)
 
 		nsi := factory.Core().V1().Namespaces().Informer()
 		c.k8s.EventsNamespaces(c.eventChan, stop, nsi)
