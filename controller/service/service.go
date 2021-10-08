@@ -98,9 +98,9 @@ func (s *SvcContext) GetBackendName() (name string, err error) {
 	}
 	s.path.SvcPortResolved = &svcPort
 	if svcPort.Name != "" {
-		name = fmt.Sprintf("%s-%s-%s", s.service.Namespace, s.service.Name, svcPort.Name)
+		name = fmt.Sprintf("%s_%s_%s", s.service.Namespace, s.service.Name, svcPort.Name)
 	} else {
-		name = fmt.Sprintf("%s-%s-%s", s.service.Namespace, s.service.Name, strconv.Itoa(int(svcPort.Port)))
+		name = fmt.Sprintf("%s_%s_%s", s.service.Namespace, s.service.Name, strconv.Itoa(int(svcPort.Port)))
 	}
 	return
 }
