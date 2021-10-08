@@ -1,4 +1,4 @@
-package status
+package ingress
 
 import (
 	"context"
@@ -16,20 +16,20 @@ import (
 	"github.com/haproxytech/kubernetes-ingress/controller/store"
 )
 
-func UpdateIngress(client *kubernetes.Clientset, k store.K8s, channel chan SyncIngress) {
+func UpdateStatus(client *kubernetes.Clientset, k store.K8s, class string, emptyClass bool, channel chan Sync) {
 	addresses := []string{}
-	for status := range channel {
+	for sync := range channel {
 		// Published Service updated: Update all Ingresses
-		if status.Service != nil && getServiceAddresses(status.Service, &addresses) {
+		if sync.Service != nil && getServiceAddresses(sync.Service, &addresses) {
 			logger.Debug("Addresses of Ingress Controller service changed, status of all ingress resources are going to be updated")
 			for _, ns := range k.Namespaces {
 				for _, ingress := range k.Namespaces[ns.Name].Ingresses {
-					logger.Error(updateIngressStatus(client, ingress, addresses))
+					logger.Error(New(ingress, class, emptyClass).updateStatus(client, addresses))
 				}
 			}
-		}
-		if status.Ingress != nil {
-			logger.Error(updateIngressStatus(client, status.Ingress, addresses))
+		} else if sync.Ingress != nil {
+			// Update single Ingress
+			logger.Error(New(sync.Ingress, class, emptyClass).updateStatus(client, addresses))
 		}
 	}
 }
@@ -78,8 +78,8 @@ func getServiceAddresses(service *corev1.Service, curAddr *[]string) (updated bo
 	return
 }
 
-func updateIngressStatus(client *kubernetes.Clientset, ingress *store.Ingress, addresses []string) (err error) {
-	logger.Tracef("Updating status of Ingress %s/%s", ingress.Namespace, ingress.Name)
+func (i *Ingress) updateStatus(client *kubernetes.Clientset, addresses []string) (err error) {
+	logger.Tracef("Updating status of Ingress %s/%s", i.resource.Namespace, i.resource.Name)
 	var lbi []corev1.LoadBalancerIngress
 	for _, addr := range addresses {
 		if net.ParseIP(addr) == nil {
@@ -89,45 +89,45 @@ func updateIngressStatus(client *kubernetes.Clientset, ingress *store.Ingress, a
 		}
 	}
 
-	switch ingress.APIVersion {
+	switch i.resource.APIVersion {
 	// Required for Kubernetes < 1.14
 	case "extensions/v1beta1":
 		var ingSource *extensionsv1beta1.Ingress
-		ingSource, err = client.ExtensionsV1beta1().Ingresses(ingress.Namespace).Get(context.Background(), ingress.Name, metav1.GetOptions{})
+		ingSource, err = client.ExtensionsV1beta1().Ingresses(i.resource.Namespace).Get(context.Background(), i.resource.Name, metav1.GetOptions{})
 		if err != nil {
 			break
 		}
 		ingCopy := ingSource.DeepCopy()
 		ingCopy.Status = extensionsv1beta1.IngressStatus{LoadBalancer: corev1.LoadBalancerStatus{Ingress: lbi}}
-		_, err = client.ExtensionsV1beta1().Ingresses(ingress.Namespace).UpdateStatus(context.Background(), ingCopy, metav1.UpdateOptions{})
+		_, err = client.ExtensionsV1beta1().Ingresses(i.resource.Namespace).UpdateStatus(context.Background(), ingCopy, metav1.UpdateOptions{})
 		// Required for Kubernetes < 1.19
 	case "networking.k8s.io/v1beta1":
 		var ingSource *networkingv1beta.Ingress
-		ingSource, err = client.NetworkingV1beta1().Ingresses(ingress.Namespace).Get(context.Background(), ingress.Name, metav1.GetOptions{})
+		ingSource, err = client.NetworkingV1beta1().Ingresses(i.resource.Namespace).Get(context.Background(), i.resource.Name, metav1.GetOptions{})
 		if err != nil {
 			break
 		}
 		ingCopy := ingSource.DeepCopy()
 		ingCopy.Status = networkingv1beta.IngressStatus{LoadBalancer: corev1.LoadBalancerStatus{Ingress: lbi}}
-		_, err = client.NetworkingV1beta1().Ingresses(ingress.Namespace).UpdateStatus(context.Background(), ingCopy, metav1.UpdateOptions{})
+		_, err = client.NetworkingV1beta1().Ingresses(i.resource.Namespace).UpdateStatus(context.Background(), ingCopy, metav1.UpdateOptions{})
 	case "networking.k8s.io/v1":
 		var ingSource *networkingv1.Ingress
-		ingSource, err = client.NetworkingV1().Ingresses(ingress.Namespace).Get(context.Background(), ingress.Name, metav1.GetOptions{})
+		ingSource, err = client.NetworkingV1().Ingresses(i.resource.Namespace).Get(context.Background(), i.resource.Name, metav1.GetOptions{})
 		if err != nil {
 			break
 		}
 		ingCopy := ingSource.DeepCopy()
 		ingCopy.Status = networkingv1.IngressStatus{LoadBalancer: corev1.LoadBalancerStatus{Ingress: lbi}}
-		_, err = client.NetworkingV1().Ingresses(ingress.Namespace).UpdateStatus(context.Background(), ingCopy, metav1.UpdateOptions{})
+		_, err = client.NetworkingV1().Ingresses(i.resource.Namespace).UpdateStatus(context.Background(), ingCopy, metav1.UpdateOptions{})
 	}
 
 	if k8serror.IsNotFound(err) {
-		return fmt.Errorf("update ingress status: failed to get ingress %s/%s: %w", ingress.Namespace, ingress.Name, err)
+		return fmt.Errorf("update ingress status: failed to get ingress %s/%s: %w", i.resource.Namespace, i.resource.Name, err)
 	}
 	if err != nil {
-		return fmt.Errorf("failed to update LoadBalancer status of ingress %s/%s: %w", ingress.Namespace, ingress.Name, err)
+		return fmt.Errorf("failed to update LoadBalancer status of ingress %s/%s: %w", i.resource.Namespace, i.resource.Name, err)
 	}
-	logger.Tracef("Successful update of LoadBalancer status in ingress %s/%s", ingress.Namespace, ingress.Name)
+	logger.Tracef("Successful update of LoadBalancer status in ingress %s/%s", i.resource.Namespace, i.resource.Name)
 
 	return nil
 }

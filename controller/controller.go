@@ -21,10 +21,9 @@ import (
 	"github.com/haproxytech/client-native/v2/models"
 	config "github.com/haproxytech/kubernetes-ingress/controller/configuration"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/api"
-	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/certs"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/process"
+	"github.com/haproxytech/kubernetes-ingress/controller/ingress"
 	"github.com/haproxytech/kubernetes-ingress/controller/route"
-	"github.com/haproxytech/kubernetes-ingress/controller/status"
 	"github.com/haproxytech/kubernetes-ingress/controller/store"
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 	"k8s.io/apimachinery/pkg/watch"
@@ -40,7 +39,7 @@ type HAProxyController struct {
 	PublishService *utils.NamespaceValue
 	AuxCfgModTime  int64
 	eventChan      chan SyncDataEvent
-	statusChan     chan status.SyncIngress
+	ingressChan    chan ingress.Sync
 	k8s            *K8s
 	ready          bool
 	reload         bool
@@ -122,8 +121,8 @@ func (c *HAProxyController) Start() {
 	go c.monitorChanges()
 	if c.PublishService != nil {
 		// Update Ingress status
-		c.statusChan = make(chan status.SyncIngress, watch.DefaultChanSize*6)
-		go status.UpdateIngress(c.k8s.API, c.Store, c.statusChan)
+		c.ingressChan = make(chan ingress.Sync, watch.DefaultChanSize*6)
+		go ingress.UpdateStatus(c.k8s.API, c.Store, c.OSArgs.IngressClass, c.OSArgs.EmptyIngressClass, c.ingressChan)
 	}
 }
 
@@ -160,60 +159,23 @@ func (c *HAProxyController) updateHAProxy() {
 		if !namespace.Relevant {
 			continue
 		}
-		for _, ingress := range namespace.Ingresses {
-			if ingress.Status == DELETED {
+		for _, ingResource := range namespace.Ingresses {
+			if ingResource.Status == DELETED {
 				continue
 			}
-			if !c.igClassIsSupported(ingress) {
-				logger.Debugf("ingress '%s/%s' ignored: no matching IngressClass", ingress.Namespace, ingress.Name)
+			i := ingress.New(ingResource, c.OSArgs.IngressClass, c.OSArgs.EmptyIngressClass)
+			if !i.Supported(c.Store) {
+				logger.Debugf("ingress '%s/%s' ignored: no matching IngressClass", ingResource.Namespace, ingResource.Name)
 				continue
 			}
-			if c.PublishService != nil && ingress.Status == ADDED {
+			if c.PublishService != nil && ingResource.Status == ADDED {
 				select {
-				case c.statusChan <- status.SyncIngress{Ingress: ingress}:
+				case c.ingressChan <- ingress.Sync{Ingress: ingResource}:
 				default:
-					logger.Errorf("Ingress %s/%s: unable to sync status: sync channel full", ingress.Namespace, ingress.Name)
+					logger.Errorf("Ingress %s/%s: unable to sync status: sync channel full", ingResource.Namespace, ingResource.Name)
 				}
 			}
-			if ingress.DefaultBackend != nil {
-				if reload, err = c.setDefaultService(ingress, []string{c.Cfg.FrontHTTP, c.Cfg.FrontHTTPS}); err != nil {
-					logger.Errorf("Ingress '%s/%s': default backend: %s", ingress.Namespace, ingress.Name, err)
-				} else {
-					c.reload = c.reload || reload
-				}
-			}
-			// Ingress secrets
-			logger.Tracef("ingress '%s/%s': processing secrets...", ingress.Namespace, ingress.Name)
-			for _, tls := range ingress.TLS {
-				if tls.Status == store.DELETED {
-					continue
-				}
-				secret, secErr := c.Store.GetSecret(ingress.Namespace, tls.SecretName)
-				if secErr != nil {
-					logger.Warningf("ingress '%s/%s': %s", ingress.Namespace, ingress.Name, secErr)
-					continue
-				}
-				_, err = c.Cfg.Certificates.HandleTLSSecret(secret, certs.FT_CERT)
-				logger.Error(err)
-			}
-			// Ingress annotations
-			logger.Tracef("ingress '%s/%s': processing annotations...", ingress.Namespace, ingress.Name)
-			if len(ingress.Rules) == 0 {
-				logger.Debugf("Ingress %s/%s: no rules defined", ingress.Namespace, ingress.Name)
-				continue
-			}
-			ruleIDs := c.handleIngressAnnotations(*ingress)
-			// Ingress rules
-			logger.Tracef("ingress '%s/%s': processing rules...", ingress.Namespace, ingress.Name)
-			for _, rule := range ingress.Rules {
-				for _, path := range rule.Paths {
-					if reload, err = c.handleIngressPath(ingress, rule.Host, path, ruleIDs); err != nil {
-						logger.Errorf("Ingress '%s/%s': %s", ingress.Namespace, ingress.Name, err)
-					} else {
-						c.reload = c.reload || reload
-					}
-				}
-			}
+			c.reload = i.Update(c.Store, &c.Cfg, c.Client) || c.reload
 		}
 	}
 

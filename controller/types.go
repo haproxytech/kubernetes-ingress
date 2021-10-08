@@ -36,7 +36,6 @@ type Mode string
 
 //nolint:golint,stylecheck
 const (
-	CONTROLLER_CLASS = "haproxy.org/ingress-controller"
 	// SyncType values
 	COMMAND         SyncType = "COMMAND"
 	CONFIGMAP       SyncType = "CONFIGMAP"

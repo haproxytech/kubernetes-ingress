@@ -23,6 +23,7 @@ import (
 	"github.com/haproxytech/client-native/v2/models"
 
 	"github.com/haproxytech/kubernetes-ingress/controller/annotations"
+	"github.com/haproxytech/kubernetes-ingress/controller/configuration"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/api"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/certs"
 	"github.com/haproxytech/kubernetes-ingress/controller/store"
@@ -172,4 +173,45 @@ func (s *Service) getBackendModel(store store.K8s) (*models.Backend, error) {
 		backend.DynamicCookieKey = cookieKey
 	}
 	return backend, nil
+}
+
+// SetDefaultBackend configures the default service in kubernetes ingress resource as haproxy default backend of the frontends in params.
+func (s *Service) SetDefaultBackend(k store.K8s, cfg *configuration.ControllerCfg, api api.HAProxyClient, frontends []string) (reload bool, err error) {
+	if !s.path.IsDefaultBackend {
+		err = fmt.Errorf("service '%s/%s' is not marked as default backend", s.resource.Namespace, s.resource.Name)
+		return
+	}
+	var frontend models.Frontend
+	var ftReload bool
+	frontend, err = api.FrontendGet(frontends[0])
+	if err != nil {
+		return
+	}
+	if frontend.Mode == "tcp" {
+		s.modeTCP = true
+	}
+	// If port is not set in Ingress Path, use the first available port in service.
+	if s.path.SvcPortInt == 0 && s.path.SvcPortString == "" {
+		s.path.SvcPortString = s.resource.Ports[0].Name
+	}
+	bdReload, err := s.HandleBackend(api, k)
+	if err != nil {
+		return
+	}
+	backendName, _ := s.GetBackendName()
+	if frontend.DefaultBackend != backendName {
+		for _, frontendName := range frontends {
+			frontend, _ := api.FrontendGet(frontendName)
+			frontend.DefaultBackend = backendName
+			err = api.FrontendEdit(frontend)
+			if err != nil {
+				return
+			}
+			ftReload = true
+		}
+	}
+	cfg.ActiveBackends[backendName] = struct{}{}
+	endpointsReload := s.HandleHAProxySrvs(api, k)
+	reload = bdReload || ftReload || endpointsReload
+	return reload, err
 }

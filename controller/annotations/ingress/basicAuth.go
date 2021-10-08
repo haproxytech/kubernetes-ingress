@@ -12,7 +12,7 @@ import (
 type ReqAuth struct {
 	authRule *rules.ReqBasicAuth
 	rules    *rules.Rules
-	ingress  store.Ingress
+	ingress  *store.Ingress
 }
 
 type ReqAuthAnn struct {
@@ -20,8 +20,8 @@ type ReqAuthAnn struct {
 	parent *ReqAuth
 }
 
-func NewReqAuth(r *rules.Rules, i store.Ingress) *ReqAuth {
-	return &ReqAuth{rules: r, ingress: i}
+func NewReqAuth(rules *rules.Rules, i *store.Ingress) *ReqAuth {
+	return &ReqAuth{rules: rules, ingress: i}
 }
 
 func (p *ReqAuth) NewAnnotation(n string) ReqAuthAnn {
@@ -44,7 +44,7 @@ func (a ReqAuthAnn) Process(k store.K8s, annotations ...map[string]string) (err 
 			return fmt.Errorf("incorrect auth-type value '%s'. Only 'basic-auth' value is currently supported", input)
 		}
 		authGroup := "Global"
-		if a.parent.ingress.Namespace != "" {
+		if a.parent.ingress != nil {
 			authGroup = fmt.Sprintf("%s-%s", a.parent.ingress.Namespace, a.parent.ingress.Name)
 		}
 		a.parent.authRule = &rules.ReqBasicAuth{

@@ -8,17 +8,17 @@ import (
 	"github.com/haproxytech/client-native/v2/models"
 	config "github.com/haproxytech/kubernetes-ingress/controller/configuration"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/api"
+	"github.com/haproxytech/kubernetes-ingress/controller/service"
 	"github.com/haproxytech/kubernetes-ingress/controller/store"
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 )
 
 type TCPServices struct {
-	SetDefaultService func(ingress *store.Ingress, frontends []string) (reload bool, err error)
-	IPv4              bool
-	IPv6              bool
-	CertDir           string
-	AddrIPv4          string
-	AddrIPv6          string
+	IPv4     bool
+	IPv6     bool
+	CertDir  string
+	AddrIPv4 string
+	AddrIPv6 string
 }
 
 type tcpSvcParser struct {
@@ -50,7 +50,7 @@ func (t TCPServices) Update(k store.K8s, cfg *config.ControllerCfg, api api.HAPr
 			}
 		}
 		// Update  Frontend
-		reload, err = t.updateTCPFrontend(api, frontend, p)
+		reload, err = t.updateTCPFrontend(k, cfg, api, frontend, p)
 		if err != nil {
 			logger.Errorf("TCP frontend '%s': update failed: %s", frontendName, err)
 		}
@@ -152,7 +152,7 @@ func (t TCPServices) createTCPFrontend(api api.HAProxyClient, frontendName, bind
 	return frontend, true, nil
 }
 
-func (t TCPServices) updateTCPFrontend(api api.HAProxyClient, frontend models.Frontend, p tcpSvcParser) (reload bool, err error) {
+func (t TCPServices) updateTCPFrontend(k store.K8s, cfg *config.ControllerCfg, api api.HAProxyClient, frontend models.Frontend, p tcpSvcParser) (reload bool, err error) {
 	binds, err := api.FrontendBindsGet(frontend.Name)
 	if err != nil {
 		err = fmt.Errorf("failed to get bind lines: %w", err)
@@ -182,18 +182,17 @@ func (t TCPServices) updateTCPFrontend(api api.HAProxyClient, frontend models.Fr
 		reload = true
 		return
 	}
-	ingress := &store.Ingress{
-		Namespace:   p.service.Namespace,
-		Annotations: make(map[string]string),
-		DefaultBackend: &store.IngressPath{
-			SvcName:    p.service.Name,
-			SvcPortInt: p.port,
-		},
-	}
-	r, err := t.SetDefaultService(ingress, []string{frontend.Name})
-	if err != nil {
-		return
-	}
 
+	var svc *service.Service
+	var r bool
+	path := &store.IngressPath{
+		SvcNamespace:     p.service.Namespace,
+		SvcName:          p.service.Name,
+		SvcPortInt:       p.port,
+		IsDefaultBackend: true,
+	}
+	if svc, err = service.New(k, path, nil, true); err == nil {
+		r, err = svc.SetDefaultBackend(k, cfg, api, []string{frontend.Name})
+	}
 	return reload || r, err
 }

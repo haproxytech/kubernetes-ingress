@@ -204,6 +204,7 @@ func (e ingressExtensionsStrategy) ConvertIngress() *Ingress {
 					paths[prefix+"-"+k8sPath.Path] = &IngressPath{
 						Path:          k8sPath.Path,
 						PathTypeMatch: string(*k8sPath.PathType),
+						SvcNamespace:  e.ig.GetNamespace(),
 						SvcName:       k8sPath.Backend.ServiceName,
 						SvcPortInt:    int64(k8sPath.Backend.ServicePort.IntValue()),
 						SvcPortString: k8sPath.Backend.ServicePort.StrVal,
@@ -229,6 +230,7 @@ func (e ingressExtensionsStrategy) ConvertIngress() *Ingress {
 				return nil
 			}
 			return &IngressPath{
+				SvcNamespace:     e.ig.GetNamespace(),
 				SvcName:          ingressBackend.ServiceName,
 				SvcPortInt:       int64(ingressBackend.ServicePort.IntValue()),
 				SvcPortString:    ingressBackend.ServicePort.StrVal,
@@ -288,6 +290,7 @@ func (n ingressNetworkingV1Strategy) ConvertIngress() *Ingress {
 					paths[prefix+"-"+k8sPath.Path] = &IngressPath{
 						Path:          k8sPath.Path,
 						PathTypeMatch: string(*k8sPath.PathType),
+						SvcNamespace:  n.ig.GetNamespace(),
 						SvcName:       k8sPath.Backend.Service.Name,
 						SvcPortInt:    int64(k8sPath.Backend.Service.Port.Number),
 						SvcPortString: k8sPath.Backend.Service.Port.Name,
@@ -313,6 +316,7 @@ func (n ingressNetworkingV1Strategy) ConvertIngress() *Ingress {
 				return nil
 			}
 			return &IngressPath{
+				SvcNamespace:     n.ig.GetNamespace(),
 				SvcName:          ingressBackend.Service.Name,
 				SvcPortInt:       int64(ingressBackend.Service.Port.Number),
 				SvcPortString:    ingressBackend.Service.Port.Name,
