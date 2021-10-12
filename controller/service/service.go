@@ -31,56 +31,49 @@ import (
 
 var logger = utils.GetLogger()
 
-type SvcContext struct {
-	store      store.K8s
-	ingress    *store.Ingress
-	path       *store.IngressPath
-	service    *store.Service
-	backend    *models.Backend
-	certs      *certs.Certificates
-	modeTCP    bool
-	newBackend bool
+type Service struct {
+	path        *store.IngressPath
+	resource    *store.Service
+	backend     *models.Backend
+	certs       *certs.Certificates
+	annotations []map[string]string
+	modeTCP     bool
+	newBackend  bool
 }
 
-func NewCtx(k8s store.K8s, ingress *store.Ingress, path *store.IngressPath, certs *certs.Certificates, tcpService bool) (*SvcContext, error) {
-	service, err := getService(k8s, ingress.Namespace, path.SvcName)
+// New returns a Service instance to handle the k8s IngressPath resource given in params.
+// An error will be returned if there is no k8s Service resource corresponding to the service description in IngressPath.
+func New(k store.K8s, path *store.IngressPath, certs *certs.Certificates, tcpService bool, annList ...map[string]string) (*Service, error) {
+	service, err := k.GetService(path.SvcNamespace, path.SvcName)
 	if err != nil {
 		return nil, err
 	}
-	return &SvcContext{
-		store:   k8s,
-		ingress: ingress,
-		path:    path,
-		service: service,
-		certs:   certs,
-		modeTCP: tcpService,
+	a := make([]map[string]string, 1, 3)
+	a[0] = service.Annotations
+	a = append(a, annList...)
+	return &Service{
+		path:        path,
+		resource:    service,
+		certs:       certs,
+		annotations: a,
+		modeTCP:     tcpService,
 	}, nil
 }
 
-func (s *SvcContext) GetStatus() store.Status {
-	if s.path.Status == store.DELETED || s.service.Status == store.DELETED {
-		return store.DELETED
-	}
-	if s.path.Status == store.EMPTY {
-		return s.service.Status
-	}
-	return s.path.Status
-}
-
-func (s *SvcContext) GetService() *store.Service {
-	return s.service
+func (s *Service) GetResource() *store.Service {
+	return s.resource
 }
 
 // GetBackendName checks if servicePort provided in IngressPath exists and construct corresponding backend name
-// Backend name is in format "ServiceNS-ServiceName-PortName"
-func (s *SvcContext) GetBackendName() (name string, err error) {
+// Backend name is in format "ServiceNS_ServiceName_PortName"
+func (s *Service) GetBackendName() (name string, err error) {
 	if s.backend != nil && s.backend.Name != "" {
 		name = s.backend.Name
 		return
 	}
 	var svcPort store.ServicePort
 	found := false
-	for _, sp := range s.service.Ports {
+	for _, sp := range s.resource.Ports {
 		if (sp.Port == s.path.SvcPortInt) ||
 			(sp.Name != "" && sp.Name == s.path.SvcPortString) {
 			svcPort = sp
@@ -90,23 +83,23 @@ func (s *SvcContext) GetBackendName() (name string, err error) {
 	}
 	if !found {
 		if s.path.SvcPortString != "" {
-			err = fmt.Errorf("service %s: no service port matching '%s'", s.service.Name, s.path.SvcPortString)
+			err = fmt.Errorf("service %s: no service port matching '%s'", s.resource.Name, s.path.SvcPortString)
 		} else {
-			err = fmt.Errorf("service %s: no service port matching '%d'", s.service.Name, s.path.SvcPortInt)
+			err = fmt.Errorf("service %s: no service port matching '%d'", s.resource.Name, s.path.SvcPortInt)
 		}
 		return
 	}
 	s.path.SvcPortResolved = &svcPort
 	if svcPort.Name != "" {
-		name = fmt.Sprintf("%s_%s_%s", s.service.Namespace, s.service.Name, svcPort.Name)
+		name = fmt.Sprintf("%s_%s_%s", s.resource.Namespace, s.resource.Name, svcPort.Name)
 	} else {
-		name = fmt.Sprintf("%s_%s_%s", s.service.Namespace, s.service.Name, strconv.Itoa(int(svcPort.Port)))
+		name = fmt.Sprintf("%s_%s_%s", s.resource.Namespace, s.resource.Name, strconv.Itoa(int(svcPort.Port)))
 	}
 	return
 }
 
-// HandleBackend processes a Service Context and creates/updates corresponding backend configuration in HAProxy
-func (s *SvcContext) HandleBackend(client api.HAProxyClient, store store.K8s) (reload bool, err error) {
+// HandleBackend processes a Service and creates/updates corresponding backend configuration in HAProxy
+func (s *Service) HandleBackend(client api.HAProxyClient, store store.K8s) (reload bool, err error) {
 	var backend, newBackend *models.Backend
 	newBackend, err = s.getBackendModel(store)
 	s.backend = newBackend
@@ -123,7 +116,7 @@ func (s *SvcContext) HandleBackend(client api.HAProxyClient, store store.K8s) (r
 				return
 			}
 			reload = true
-			logger.Debugf("Ingress '%s/%s': backend '%s' updated: %s\nReload required", s.ingress.Namespace, s.ingress.Name, newBackend.Name, result)
+			logger.Debugf("Service '%s/%s': backend '%s' updated: %s\nReload required", s.resource.Namespace, s.resource.Name, newBackend.Name, result)
 		}
 	} else {
 		if err = client.BackendCreate(*newBackend); err != nil {
@@ -131,26 +124,26 @@ func (s *SvcContext) HandleBackend(client api.HAProxyClient, store store.K8s) (r
 		}
 		s.newBackend = true
 		reload = true
-		logger.Debugf("Ingress '%s/%s': new backend '%s', reload required", s.ingress.Namespace, s.ingress.Name, newBackend.Name)
+		logger.Debugf("Service '%s/%s': new backend '%s', reload required", s.resource.Namespace, s.resource.Name, newBackend.Name)
 	}
 	// config-snippet
-	logger.Error(annotations.NewBackendCfgSnippet("backend-config-snippet", newBackend.Name).Process(store, s.service.Annotations, s.ingress.Annotations, store.ConfigMaps.Main.Annotations))
+	logger.Error(annotations.NewBackendCfgSnippet("backend-config-snippet", newBackend.Name).Process(store, s.annotations...))
 	change, errSnipp := annotations.UpdateBackendCfgSnippet(client, newBackend.Name)
 	logger.Error(errSnipp)
 	if len(change) != 0 {
 		reload = true
-		logger.Debugf("Ingress '%s/%s': backend '%s' updated: %s\nReload required", s.ingress.Namespace, s.ingress.Name, newBackend.Name, change)
+		logger.Debugf("Service '%s/%s': backend '%s' config-snippet updated: %s\nReload required", s.resource.Namespace, s.resource.Name, newBackend.Name, change)
 	}
 	return
 }
 
 // getBackendModel checks for a corresponding custom resource before falling back to annoations
-func (s *SvcContext) getBackendModel(store store.K8s) (*models.Backend, error) {
+func (s *Service) getBackendModel(store store.K8s) (*models.Backend, error) {
 	var backend *models.Backend
 	var err error
 	var cookieKey = "ohph7OoGhong"
 	crInuse := true
-	backend, err = annotations.ModelBackend("cr-backend", s.service.Namespace, store, s.service.Annotations, s.ingress.Annotations, store.ConfigMaps.Main.Annotations)
+	backend, err = annotations.ModelBackend("cr-backend", s.resource.Namespace, store, s.annotations...)
 	logger.Warning(err)
 	if backend == nil {
 		backend = &models.Backend{DefaultServer: &models.DefaultServer{}}
@@ -158,9 +151,9 @@ func (s *SvcContext) getBackendModel(store store.K8s) (*models.Backend, error) {
 	}
 	if !crInuse {
 		for _, a := range annotations.Backend(backend, store, s.certs) {
-			err = a.Process(store, s.service.Annotations, s.ingress.Annotations, store.ConfigMaps.Main.Annotations)
+			err = a.Process(store, s.annotations...)
 			if err != nil {
-				logger.Errorf("service '%s/%s': annotation '%s': %s", s.service.Namespace, s.service.Name, a.GetName(), err)
+				logger.Errorf("service '%s/%s': annotation '%s': %s", s.resource.Namespace, s.resource.Name, a.GetName(), err)
 			}
 		}
 	}
@@ -172,24 +165,11 @@ func (s *SvcContext) getBackendModel(store store.K8s) (*models.Backend, error) {
 	if backend.Name, err = s.GetBackendName(); err != nil {
 		return nil, err
 	}
-	if s.service.DNS != "" {
+	if s.resource.DNS != "" {
 		backend.DefaultServer = &models.DefaultServer{InitAddr: "last,libc,none"}
 	}
 	if backend.Cookie != nil && backend.Cookie.Dynamic && backend.DynamicCookieKey == "" {
 		backend.DynamicCookieKey = cookieKey
 	}
 	return backend, nil
-}
-
-func getService(k8s store.K8s, namespace, name string) (*store.Service, error) {
-	var service *store.Service
-	ns, ok := k8s.Namespaces[namespace]
-	if !ok {
-		return nil, fmt.Errorf("service '%s/%s' namespace not found", namespace, name)
-	}
-	service, ok = ns.Services[name]
-	if !ok {
-		return nil, fmt.Errorf("service '%s/%s' not found", namespace, name)
-	}
-	return service, nil
 }

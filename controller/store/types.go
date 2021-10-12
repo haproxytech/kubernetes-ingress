@@ -103,6 +103,7 @@ type IngressClass struct {
 
 // IngressPath is useful data from k8s structures about ingress path
 type IngressPath struct {
+	SvcNamespace     string
 	SvcName          string
 	SvcPortInt       int64
 	SvcPortString    string

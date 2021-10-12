@@ -60,11 +60,11 @@ func (c *HAProxyController) igClassIsSupported(ingress *store.Ingress) bool {
 
 func (c *HAProxyController) handleIngressPath(ingress *store.Ingress, host string, path *store.IngressPath, ruleIDs []rules.RuleID) (reload bool, err error) {
 	sslPassthrough := c.sslPassthroughEnabled(*ingress, path)
-	svc, err := service.NewCtx(c.Store, ingress, path, c.Cfg.Certificates, sslPassthrough)
+	svc, err := service.New(c.Store, path, c.Cfg.Certificates, sslPassthrough, ingress.Annotations, c.Store.ConfigMaps.Main.Annotations)
 	if err != nil {
 		return
 	}
-	if svc.GetStatus() == DELETED {
+	if path.Status == DELETED {
 		return
 	}
 	// Backend
@@ -83,7 +83,7 @@ func (c *HAProxyController) handleIngressPath(ingress *store.Ingress, host strin
 		SSLPassthrough: sslPassthrough,
 	}
 
-	routeACLAnn := annotations.String("route-acl", svc.GetService().Annotations)
+	routeACLAnn := annotations.String("route-acl", svc.GetResource().Annotations)
 	if routeACLAnn == "" {
 		if _, ok := route.CustomRoutes[backendName]; ok {
 			delete(route.CustomRoutes, backendName)
@@ -114,11 +114,11 @@ func (c *HAProxyController) setDefaultService(ingress *store.Ingress, frontends 
 	if frontend.Mode == "tcp" {
 		tcpService = true
 	}
-	svc, err := service.NewCtx(c.Store, ingress, ingress.DefaultBackend, c.Cfg.Certificates, tcpService)
+	svc, err := service.New(c.Store, ingress.DefaultBackend, c.Cfg.Certificates, tcpService, ingress.Annotations, c.Store.ConfigMaps.Main.Annotations)
 	if err != nil {
 		return
 	}
-	if svc.GetStatus() == DELETED {
+	if ingress.DefaultBackend.Status == DELETED {
 		return
 	}
 	bdReload, err := svc.HandleBackend(c.Client, c.Store)
