@@ -35,17 +35,24 @@ type Ingress struct {
 	sslPassthrough bool
 }
 
-func New(i *store.Ingress, class string, emptyClass bool) *Ingress {
-	return &Ingress{resource: i, class: class, emptyClass: emptyClass}
+// New returns an Ingress instance to handle the k8s ingress resource given in params.
+// If the k8s ingress resource is not assigned to the controller (no matching IngressClass)
+// then New will return nil
+func New(k store.K8s, resource *store.Ingress, class string, emptyClass bool) *Ingress {
+	i := &Ingress{resource: resource, class: class, emptyClass: emptyClass}
+	if i.resource == nil || !i.supported(k) {
+		return nil
+	}
+	return i
 }
 
-// Supported verifies if the IngressClass matches the ControllerClass
+// supported verifies if the IngressClass matches the ControllerClass
 // and in such case returns true otherwise false
 //
 // According to https://github.com/kubernetes/api/blob/master/networking/v1/types.go#L257
 // ingress.class annotation should have precedence over the IngressClass mechanism implemented
 // in "networking.k8s.io".
-func (i Ingress) Supported(k8s store.K8s) bool {
+func (i Ingress) supported(k8s store.K8s) bool {
 	var igClass *store.IngressClass
 	igClassAnn := annotations.String("ingress.class", i.resource.Annotations)
 

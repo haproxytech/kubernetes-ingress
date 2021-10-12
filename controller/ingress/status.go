@@ -17,19 +17,25 @@ import (
 )
 
 func UpdateStatus(client *kubernetes.Clientset, k store.K8s, class string, emptyClass bool, channel chan Sync) {
+	var i *Ingress
 	addresses := []string{}
 	for sync := range channel {
 		// Published Service updated: Update all Ingresses
 		if sync.Service != nil && getServiceAddresses(sync.Service, &addresses) {
 			logger.Debug("Addresses of Ingress Controller service changed, status of all ingress resources are going to be updated")
 			for _, ns := range k.Namespaces {
+				if !ns.Relevant {
+					continue
+				}
 				for _, ingress := range k.Namespaces[ns.Name].Ingresses {
-					logger.Error(New(ingress, class, emptyClass).updateStatus(client, addresses))
+					if i = New(k, ingress, class, emptyClass); i != nil {
+						logger.Error(i.updateStatus(client, addresses))
+					}
 				}
 			}
-		} else if sync.Ingress != nil {
+		} else if i = New(k, sync.Ingress, class, emptyClass); i != nil {
 			// Update single Ingress
-			logger.Error(New(sync.Ingress, class, emptyClass).updateStatus(client, addresses))
+			logger.Error(i.updateStatus(client, addresses))
 		}
 	}
 }
