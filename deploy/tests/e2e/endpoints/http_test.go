@@ -50,14 +50,13 @@ func (suite *EndpointsSuite) Test_HTTP_Reach() {
 					}()
 				}
 				switch replicas {
-				case 8:
+				case 8, 3:
 					// HAProxy reloaded due to scale up
 					pid = suite.getPID()
 				case 0:
 					if len(counter) > 0 {
 						return false
 					}
-					fallthrough
 				default:
 					if pid != suite.getPID() {
 						suite.Error(fmt.Errorf("Uncessary reload of HAproxy"))

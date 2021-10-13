@@ -31,6 +31,9 @@ func (s *SvcContext) HandleHAProxySrvs(client api.HAProxyClient, store store.K8s
 	backend, err := s.getRuntimeBackend(store)
 	if err != nil {
 		logger.Warningf("Ingress '%s/%s': %s", s.ingress.Namespace, s.ingress.Name, err)
+		if servers, _ := client.BackendServersGet(s.backend.Name); servers != nil {
+			client.BackendServerDeleteAll(s.backend.Name)
+		}
 		return
 	}
 	backend.Name = s.backend.Name // set backendName in store.PortEndpoints for runtime updates.
