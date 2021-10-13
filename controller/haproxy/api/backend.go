@@ -107,3 +107,11 @@ func (c *clientNative) ServerGet(serverName, backendName string) (models.Server,
 	}
 	return *server, nil
 }
+
+func (c *clientNative) BackendServersGet(backendName string) (models.Servers, error) {
+	_, servers, err := c.nativeAPI.Configuration.GetServers(backendName, c.activeTransaction)
+	if err != nil {
+		return nil, err
+	}
+	return servers, nil
+}
