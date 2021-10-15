@@ -1,11 +1,16 @@
 package api
 
 import (
+	"fmt"
+	"strings"
+
 	"github.com/haproxytech/client-native/v3/models"
 
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
 )
+
+var ErrMapNotFound = fmt.Errorf("map not found")
 
 func (c *clientNative) ExecuteRaw(command string) (result []string, err error) {
 	runtime, err := c.nativeAPI.Runtime()
@@ -31,16 +36,37 @@ func (c *clientNative) SetServerState(backendName string, serverName string, sta
 	return runtime.SetServerState(backendName, serverName, state)
 }
 
-func (c *clientNative) SetMapContent(mapFile string, payload string) error {
+func (c *clientNative) SetMapContent(mapFile string, payload []string) error {
+	var mapVer, mapPath string
 	runtime, err := c.nativeAPI.Runtime()
 	if err != nil {
 		return err
 	}
-	err = runtime.ClearMap(mapFile, false)
+	mapVer, err = runtime.PrepareMap(mapFile)
 	if err != nil {
+		if strings.HasPrefix(err.Error(), "maps dir doesn't exists") {
+			err = ErrMapNotFound
+		}
+		err = fmt.Errorf("error preparing map file: %w", err)
 		return err
 	}
-	return runtime.AddMapPayload(mapFile, payload)
+	mapPath, err = runtime.GetMapsPath(mapFile)
+	if err != nil {
+		err = fmt.Errorf("error getting map path: %w", err)
+		return err
+	}
+	for i := 0; i < len(payload); i++ {
+		_, err = runtime.ExecuteRaw(fmt.Sprintf("add map @%s %s <<\n%s\n", mapVer, mapPath, payload[i]))
+		if err != nil {
+			err = fmt.Errorf("error loading map payload: %w", err)
+			return err
+		}
+	}
+	err = runtime.CommitMap(mapVer, mapFile)
+	if err != nil {
+		err = fmt.Errorf("error committing map file: %w", err)
+	}
+	return err
 }
 
 func (c *clientNative) GetMap(mapFile string) (*models.Map, error) {

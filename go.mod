@@ -5,7 +5,7 @@ go 1.17
 require (
 	github.com/go-test/deep v1.0.7
 	github.com/google/renameio v1.0.1
-	github.com/haproxytech/client-native/v3 v3.1.1-0.20220510114028-57f50c20a1bf
+	github.com/haproxytech/client-native/v3 v3.1.1-0.20220520145135-9afaaf96bc7f
 	github.com/haproxytech/config-parser/v4 v4.0.0-rc2.0.20220428133329-7d0ec01198d4
 	github.com/jessevdk/go-flags v1.4.0
 	github.com/pires/go-proxyproto v0.6.1

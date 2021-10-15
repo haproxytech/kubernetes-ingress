@@ -15,6 +15,7 @@
 package maps
 
 import (
+	"errors"
 	"fmt"
 	"hash/fnv"
 	"os"
@@ -48,6 +49,10 @@ var logger = utils.GetLogger()
 
 var mapDir string
 
+// bufsize is the default value of HAproxy tune.bufsize.
+// Map payload cannot be bigger than tune.bufsize
+const bufSize = 16000
+
 type mapFile struct {
 	rows       []string
 	hash       uint64
@@ -56,17 +61,25 @@ type mapFile struct {
 	// because it is always referenced in a haproxy rule.
 }
 
-func (mf *mapFile) getContent() (string, uint64) {
-	var b strings.Builder
+// getContent returns the content of a haproxy map file in a list of chunks
+// where each chunk is <= bufsie. It also returns a hash of the map content
+func (mf *mapFile) getContent() (result []string, hash uint64) {
+	var chunk strings.Builder
 	sort.Strings(mf.rows)
-	for _, r := range mf.rows {
-		b.WriteString(r)
-		b.WriteRune('\n')
-	}
-	content := b.String()
 	h := fnv.New64a()
-	_, _ = h.Write([]byte(content))
-	return content, h.Sum64()
+	for _, r := range mf.rows {
+		if chunk.Len()+len(r) >= bufSize {
+			result = append(result, chunk.String())
+			chunk.Reset()
+		}
+		chunk.WriteString(r)
+		chunk.WriteRune('\n')
+		_, _ = h.Write([]byte(r))
+	}
+	if chunk.Len() > 0 {
+		result = append(result, chunk.String())
+	}
+	return result, h.Sum64()
 }
 
 func New(dir string, persistentMaps []Name) (Maps, error) {
@@ -111,7 +124,7 @@ func (m mapFiles) RefreshMaps(client api.HAProxyClient) (reload bool) {
 		var f *os.File
 		var err error
 		filename := GetPath(name)
-		if content == "" && !mapFile.persistent {
+		if len(content) == 0 && !mapFile.persistent {
 			logger.Error(os.Remove(string(filename)))
 			delete(m, name)
 			continue
@@ -120,21 +133,21 @@ func (m mapFiles) RefreshMaps(client api.HAProxyClient) (reload bool) {
 			continue
 		}
 		defer f.Close()
-		if _, err = f.WriteString(content); err != nil {
-			logger.Error(err)
-			continue
+		for _, d := range content {
+			if _, err = f.WriteString(d); err != nil {
+				logger.Error(err)
+				return
+			}
 		}
 		logger.Error(f.Sync())
-		reload = true
-		logger.Debugf("Map file '%s' updated, reload required", name)
-		// if err = client.SetMapContent(name, content); err != nil {
-		// 	if strings.HasPrefix(err.Error(), "maps dir doesn't exists") {
-		// 		logger.Debugf("creating Map file %s", name)
-		// 	} else {
-		// 		logger.Warningf("dynamic update of '%s' Map file failed: %s", name, err.Error()[:200])
-		// 	}
-		// 	reload = true
-		// }
+		if err = client.SetMapContent(string(name), content); err != nil {
+			if errors.Is(err, api.ErrMapNotFound) {
+				logger.Debugf("Map file %s created, reload required", name)
+			} else {
+				logger.Debugf("Runtime update of map file '%s' failed, reload required: %s", name, err)
+			}
+			reload = true
+		}
 	}
 	return reload
 }
