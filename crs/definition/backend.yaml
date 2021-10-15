@@ -28,7 +28,6 @@ spec:
                     name:
                       type: string
                       pattern: ^[A-Za-z0-9-_.:]+$
-                      nullable: false
                     balance:
                       type: object
                       required:
@@ -66,7 +65,6 @@ spec:
                           type: boolean
                         random_draws:
                           type: integer
-                          nullable: false
                         rdp_cookie_name:
                           type: string
                           pattern: ^[^\s]+$
@@ -281,11 +279,9 @@ spec:
                         name:
                           type: string
                           pattern: ^[^\s]+$
-                          nullable: false
                         address:
                           type: string
                           pattern: ^[^\s]+$
-                          nullable: false
                         health_check_port:
                           type: integer
                           nullable: true
@@ -629,7 +625,6 @@ spec:
                             - disabled
                         interval:
                           type: integer
-                          nullable: false
                     server_timeout:
                       type: integer
                       nullable: true

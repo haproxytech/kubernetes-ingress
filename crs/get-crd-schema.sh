@@ -24,8 +24,12 @@ curl -sk https://raw.githubusercontent.com/haproxytech/client-native/$CN_COMMIT/
 		.[$MODEL] |  
 		walk(
 				if type == "object" then with_entries( 
-					if .key == "x-nullable" then 
-						.key = "nullable" 
+					if .key == "x-nullable" then
+						if .value == false then
+							empty
+						else
+							.key = "nullable"
+						end
 					elif (.key | contains("x-")) then 
 						empty 
 					else 
