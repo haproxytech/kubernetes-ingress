@@ -69,7 +69,6 @@ spec:
                           type: boolean
                         random_draws:
                           type: integer
-                          nullable: false
                         rdp_cookie_name:
                           type: string
                           pattern: ^[^\s]+$
@@ -329,7 +328,6 @@ spec:
                             - disabled
                         interval:
                           type: integer
-                          nullable: false
                     retries:
                       type: integer
                       nullable: true
@@ -409,11 +407,9 @@ spec:
                         name:
                           type: string
                           pattern: ^[^\s]+$
-                          nullable: false
                         address:
                           type: string
                           pattern: ^[^\s]+$
-                          nullable: false
                         health_check_port:
                           type: integer
                           nullable: true
