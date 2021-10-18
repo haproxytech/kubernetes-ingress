@@ -15,7 +15,7 @@ spec:
       secretName: haproxy-offload-test
     - hosts:
         -  default.haproxy
-      secretName: haproxy-offload-test # Another cert to make sure HAProxy picks the right one
+      secretName: haproxy-default # Another cert to make sure HAProxy picks the right one
 {{end}}    
   rules:
     - host: {{ .Host }}
