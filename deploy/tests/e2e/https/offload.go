@@ -17,16 +17,13 @@
 package https
 
 import (
-	"encoding/json"
-	"io/ioutil"
-
 	"github.com/haproxytech/kubernetes-ingress/deploy/tests/e2e"
 )
 
 func (suite *HTTPSSuite) Test_HTTPS_Offload() {
 	var err error
 	suite.NoError(suite.test.DeployYamlTemplate("config/ingress.yaml.tmpl", suite.test.GetNS(), suite.tmplData))
-	suite.client, err = e2e.NewHTTPSClient(suite.tmplData.Host, 0)
+	suite.client, err = e2e.NewHTTPSClient("offload-test.haproxy", 0)
 	suite.NoError(err)
 	suite.Eventually(func() bool {
 		res, cls, err := suite.client.Do()
@@ -35,22 +32,6 @@ func (suite *HTTPSSuite) Test_HTTPS_Offload() {
 			return false
 		}
 		defer cls()
-		body, err := ioutil.ReadAll(res.Body)
-		if err != nil {
-			return false
-		}
-		type echoServerResponse struct {
-			OS struct {
-				Hostname string `json:"hostname"`
-			} `json:"os"`
-		}
-
-		response := &echoServerResponse{}
-		err = json.Unmarshal(body, response)
-		if err != nil {
-			return false
-		}
-		//targetPod := strings.HasPrefix(response.OS.Hostname, "https-offload")
 		targetCrt := res.TLS.PeerCertificates[0].Subject.CommonName == "offload-test.haproxy"
 		return targetCrt
 	}, e2e.WaitDuration, e2e.TickDuration)
