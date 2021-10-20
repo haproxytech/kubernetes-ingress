@@ -2,6 +2,9 @@
 
 ## HAProxy Kubernetes Ingress Controller
 
+[![Contributors](https://img.shields.io/github/contributors/haproxytech/kubernetes-ingress?color=purple)](https://github.com/haproxy/haproxy/blob/master/CONTRIBUTING)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
+
 ### Description
 
 An ingress controller is a Kubernetes resource that routes traffic from outside your cluster to services within the cluster.
