@@ -22,8 +22,8 @@ import (
 
 	"github.com/haproxytech/kubernetes-ingress/controller/annotations"
 	config "github.com/haproxytech/kubernetes-ingress/controller/configuration"
-	"github.com/haproxytech/kubernetes-ingress/controller/haproxy"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/api"
+	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/certs"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/maps"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/rules"
 	"github.com/haproxytech/kubernetes-ingress/controller/store"
@@ -90,7 +90,7 @@ func (h HTTPS) handleClientTLSAuth(k store.K8s, cfg *config.ControllerCfg, api a
 	if secret == nil {
 		return
 	}
-	caFile, err = cfg.Certificates.HandleTLSSecret(secret, haproxy.CA_CERT)
+	caFile, err = cfg.Certificates.HandleTLSSecret(secret, certs.CA_CERT)
 	if err != nil {
 		err = fmt.Errorf("client TLS Auth: %w", err)
 		return

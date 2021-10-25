@@ -4,17 +4,17 @@ import (
 	"github.com/haproxytech/client-native/v2/models"
 
 	"github.com/haproxytech/kubernetes-ingress/controller/annotations/common"
-	"github.com/haproxytech/kubernetes-ingress/controller/haproxy"
+	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/certs"
 	"github.com/haproxytech/kubernetes-ingress/controller/store"
 )
 
 type Crt struct {
 	name         string
-	haproxyCerts *haproxy.Certificates
+	haproxyCerts *certs.Certificates
 	backend      *models.Backend
 }
 
-func NewCrt(n string, c *haproxy.Certificates, b *models.Backend) *Crt {
+func NewCrt(n string, c *certs.Certificates, b *models.Backend) *Crt {
 	return &Crt{
 		name:         n,
 		haproxyCerts: c,
@@ -39,7 +39,7 @@ func (a *Crt) Process(k store.K8s, annotations ...map[string]string) error {
 		// Other values from serverSSL annotation are kept
 		return nil
 	}
-	crtFile, err = a.haproxyCerts.HandleTLSSecret(secret, haproxy.BD_CERT)
+	crtFile, err = a.haproxyCerts.HandleTLSSecret(secret, certs.BD_CERT)
 	if err != nil {
 		return err
 	}
