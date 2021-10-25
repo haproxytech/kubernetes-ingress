@@ -23,8 +23,8 @@ import (
 	"github.com/haproxytech/client-native/v2/models"
 
 	"github.com/haproxytech/kubernetes-ingress/controller/annotations"
-	"github.com/haproxytech/kubernetes-ingress/controller/haproxy"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/api"
+	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/certs"
 	"github.com/haproxytech/kubernetes-ingress/controller/store"
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 )
@@ -37,12 +37,12 @@ type SvcContext struct {
 	path       *store.IngressPath
 	service    *store.Service
 	backend    *models.Backend
-	certs      *haproxy.Certificates
+	certs      *certs.Certificates
 	modeTCP    bool
 	newBackend bool
 }
 
-func NewCtx(k8s store.K8s, ingress *store.Ingress, path *store.IngressPath, certs *haproxy.Certificates, tcpService bool) (*SvcContext, error) {
+func NewCtx(k8s store.K8s, ingress *store.Ingress, path *store.IngressPath, certs *certs.Certificates, tcpService bool) (*SvcContext, error) {
 	service, err := getService(k8s, ingress.Namespace, path.SvcName)
 	if err != nil {
 		return nil, err

@@ -21,7 +21,7 @@ import (
 
 	"github.com/haproxytech/kubernetes-ingress/controller/annotations"
 	"github.com/haproxytech/kubernetes-ingress/controller/configuration"
-	"github.com/haproxytech/kubernetes-ingress/controller/haproxy"
+	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/certs"
 	"github.com/haproxytech/kubernetes-ingress/controller/store"
 )
 
@@ -176,6 +176,6 @@ func (c *HAProxyController) handleDefaultCert() {
 	if secret == nil {
 		return
 	}
-	_, err = c.Cfg.Certificates.HandleTLSSecret(secret, haproxy.FT_DEFAULT_CERT)
+	_, err = c.Cfg.Certificates.HandleTLSSecret(secret, certs.FT_DEFAULT_CERT)
 	logger.Error(err)
 }

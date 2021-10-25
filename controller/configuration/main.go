@@ -19,7 +19,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/haproxytech/kubernetes-ingress/controller/haproxy"
+	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/certs"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/maps"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/rules"
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
@@ -28,7 +28,7 @@ import (
 type ControllerCfg struct {
 	MapFiles        *maps.MapFiles
 	HAProxyRules    *rules.SectionRules
-	Certificates    *haproxy.Certificates
+	Certificates    *certs.Certificates
 	ActiveBackends  map[string]struct{}
 	RateLimitTables []string
 	FrontHTTP       string
@@ -73,7 +73,7 @@ func (c *ControllerCfg) Init() (err error) {
 	if err := c.haproxyRulesInit(); err != nil {
 		return err
 	}
-	c.Certificates = haproxy.NewCertificates(c.Env.CaCertDir, c.Env.FrontendCertDir, c.Env.BackendCertDir)
+	c.Certificates = certs.NewCertificates(c.Env.CaCertDir, c.Env.FrontendCertDir, c.Env.BackendCertDir)
 	c.ActiveBackends = make(map[string]struct{})
 	return nil
 }

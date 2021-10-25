@@ -20,8 +20,8 @@ import (
 
 	"github.com/haproxytech/client-native/v2/models"
 	config "github.com/haproxytech/kubernetes-ingress/controller/configuration"
-	"github.com/haproxytech/kubernetes-ingress/controller/haproxy"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/api"
+	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/certs"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/process"
 	"github.com/haproxytech/kubernetes-ingress/controller/route"
 	"github.com/haproxytech/kubernetes-ingress/controller/status"
@@ -192,7 +192,7 @@ func (c *HAProxyController) updateHAProxy() {
 					logger.Warningf("ingress '%s/%s': %s", ingress.Namespace, ingress.Name, secErr)
 					continue
 				}
-				_, err = c.Cfg.Certificates.HandleTLSSecret(secret, haproxy.FT_CERT)
+				_, err = c.Cfg.Certificates.HandleTLSSecret(secret, certs.FT_CERT)
 				logger.Error(err)
 			}
 			// Ingress annotations

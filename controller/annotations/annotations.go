@@ -10,7 +10,7 @@ import (
 	"github.com/haproxytech/kubernetes-ingress/controller/annotations/global"
 	"github.com/haproxytech/kubernetes-ingress/controller/annotations/ingress"
 	"github.com/haproxytech/kubernetes-ingress/controller/annotations/service"
-	"github.com/haproxytech/kubernetes-ingress/controller/haproxy"
+	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/certs"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/maps"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/rules"
 	"github.com/haproxytech/kubernetes-ingress/controller/store"
@@ -97,7 +97,7 @@ func Frontend(i store.Ingress, r *rules.Rules, m maps.MapFiles) []Annotation {
 	}
 }
 
-func Backend(b *models.Backend, s store.K8s, certs *haproxy.Certificates) []Annotation {
+func Backend(b *models.Backend, s store.K8s, c *certs.Certificates) []Annotation {
 	annotations := []Annotation{
 		service.NewAbortOnClose("abortonclose", b),
 		service.NewTimeoutCheck("timeout-check", b),
@@ -109,8 +109,8 @@ func Backend(b *models.Backend, s store.K8s, certs *haproxy.Certificates) []Anno
 		service.NewSendProxy("send-proxy-protocol", b),
 		// Order is important for ssl annotations so they don't conflict
 		service.NewSSL("server-ssl", b),
-		service.NewCrt("server-crt", certs, b),
-		service.NewCA("server-ca", certs, b),
+		service.NewCrt("server-crt", c, b),
+		service.NewCA("server-ca", c, b),
 		service.NewProto("server-proto", b),
 	}
 	if b.Mode == "http" {
