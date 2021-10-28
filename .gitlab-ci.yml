@@ -75,7 +75,7 @@ unit-tests:
     - branches
 .kind_deployment:
   stage: e2e-tests
-  image: docker:stable
+  image: $CI_REGISTRY_GO/docker:stable-go1.17
   services:
     - name: $CI_REGISTRY_GO/docker:18.09.7-dind
       alias: docker
@@ -84,7 +84,7 @@ unit-tests:
   before_script:
     - docker login -u gitlab-ci-token -p $CI_BUILD_TOKEN $CI_REGISTRY_GO
   script:
-    - apk add -U wget git go curl
+    - go version
     - wget -q -o /dev/null -O &> /dev/null /usr/local/bin/kind https://github.com/kubernetes-sigs/kind/releases/download/${KIND}/kind-linux-amd64
     - chmod +x /usr/local/bin/kind
     - wget -q -o /dev/null -O &> /dev/null /usr/local/bin/kubectl https://storage.googleapis.com/kubernetes-release/release/${KUBECTL}/bin/linux/amd64/kubectl
@@ -98,8 +98,8 @@ unit-tests:
     - sed -i -E -e "s/localhost|0\.0\.0\.0|127\.0\.0\.1/docker/g" "deploy/tests/e2e/client.go"
     - until kubectl get nodes -o wide;do sleep 2; done
     - CI_ENV=gitlab deploy/tests/create.sh
-    - KIND_URL=docker go test -v ./deploy/tests/e2e/... --tags=e2e_parallel
-    - KIND_URL=docker go test -v -p 1 ./deploy/tests/e2e/... --tags=e2e_sequential
+    - KIND_URL=docker CGO_ENABLED=0 go test -v ./deploy/tests/e2e/... --tags=e2e_parallel
+    - KIND_URL=docker CGO_ENABLED=0 go test -v -p 1 ./deploy/tests/e2e/... --tags=e2e_sequential
   after_script:
     - kind delete cluster --name=dev
   only:
