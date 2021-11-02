@@ -16,6 +16,7 @@ package ingress
 
 import (
 	"fmt"
+	"path/filepath"
 
 	"github.com/haproxytech/kubernetes-ingress/controller/annotations"
 	"github.com/haproxytech/kubernetes-ingress/controller/configuration"
@@ -28,18 +29,18 @@ import (
 )
 
 type Ingress struct {
-	resource       *store.Ingress
-	ruleIDs        []rules.RuleID
-	class          string
-	emptyClass     bool
-	sslPassthrough bool
+	resource        *store.Ingress
+	ruleIDs         []rules.RuleID
+	controllerClass string
+	allowEmptyClass bool
+	sslPassthrough  bool
 }
 
 // New returns an Ingress instance to handle the k8s ingress resource given in params.
 // If the k8s ingress resource is not assigned to the controller (no matching IngressClass)
 // then New will return nil
 func New(k store.K8s, resource *store.Ingress, class string, emptyClass bool) *Ingress {
-	i := &Ingress{resource: resource, class: class, emptyClass: emptyClass}
+	i := &Ingress{resource: resource, controllerClass: class, allowEmptyClass: emptyClass}
 	if i.resource == nil || !i.supported(k) {
 		return nil
 	}
@@ -52,28 +53,45 @@ func New(k store.K8s, resource *store.Ingress, class string, emptyClass bool) *I
 // According to https://github.com/kubernetes/api/blob/master/networking/v1/types.go#L257
 // ingress.class annotation should have precedence over the IngressClass mechanism implemented
 // in "networking.k8s.io".
-func (i Ingress) supported(k8s store.K8s) bool {
-	var igClass *store.IngressClass
-	igClassAnn := annotations.String("ingress.class", i.resource.Annotations)
-
-	// If ingress class is unassigned and the controller is controlling any resource without explicit ingress class then support it.
-	if igClassAnn == i.class {
-		return true
-	}
-	if igClassAnn == "" && i.emptyClass {
-		return true
+func (i Ingress) supported(k8s store.K8s) (supported bool) {
+	var igClassAnn, igClassSpec string
+	igClassAnn = annotations.String("ingress.class", i.resource.Annotations)
+	if igClassResource := k8s.IngressClasses[i.resource.Class]; igClassResource != nil && igClassResource.Status != store.DELETED {
+		igClassSpec = igClassResource.Controller
 	}
 
-	igClass = k8s.IngressClasses[i.resource.Class]
-	if igClass != nil && igClass.Status != store.DELETED && igClass.Controller == CONTROLLER_CLASS {
-		// Corresponding IngresClass was updated so Ingress resource should be re-processed
-		// This is particularly important if the Ingress was skipped due to mismatching ingrssClass
-		if igClass.Status != store.EMPTY {
-			i.resource.Status = store.MODIFIED
+	defer func() {
+		if supported && i.resource.Ignored {
+			i.resource.Status = store.ADDED
+			i.resource.Ignored = false
 		}
-		return true
+	}()
+
+	if i.controllerClass == "" {
+		if igClassAnn == "" && igClassSpec == "" {
+			supported = true
+			return
+		}
+		if igClassSpec == CONTROLLER {
+			supported = true
+			return
+		}
+	} else {
+		if igClassAnn == "" && igClassSpec == "" && i.allowEmptyClass {
+			supported = true
+			return
+		}
+		if igClassAnn == i.controllerClass {
+			supported = true
+			return
+		}
+		if igClassSpec == filepath.Join(CONTROLLER, i.controllerClass) {
+			supported = true
+			return
+		}
 	}
-	return false
+	i.resource.Ignored = true
+	return
 }
 
 func (i *Ingress) handlePath(k store.K8s, cfg *configuration.ControllerCfg, api api.HAProxyClient, host string, path *store.IngressPath) (reload bool, err error) {

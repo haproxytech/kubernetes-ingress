@@ -80,6 +80,7 @@ func (k *K8s) EventIngress(ns *Namespace, data *Ingress, controllerClass string)
 			newIngress.Status = ADDED
 			return k.EventIngress(ns, newIngress, controllerClass)
 		}
+		newIngress.Ignored = oldIngress.Ignored
 		if oldIngress.Equal(data) {
 			return false
 		}
