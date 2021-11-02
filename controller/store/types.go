@@ -132,6 +132,7 @@ type Ingress struct {
 	Rules          map[string]*IngressRule
 	DefaultBackend *IngressPath
 	TLS            map[string]*IngressTLS
+	Ignored        bool // true if resource ignored because of non matching Controller Class
 	Status         Status
 }
 

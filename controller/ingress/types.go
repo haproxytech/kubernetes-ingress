@@ -7,7 +7,7 @@ import (
 )
 
 //nolint:golint,stylecheck
-const CONTROLLER_CLASS = "haproxy.org/ingress-controller"
+const CONTROLLER = "haproxy.org/ingress-controller"
 
 var logger = utils.GetLogger()
 
