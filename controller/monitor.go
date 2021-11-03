@@ -94,8 +94,8 @@ func (c *HAProxyController) SyncData() {
 		change := false
 		switch job.SyncType {
 		case COMMAND:
-			c.reload = c.auxCfgUpdated()
-			if hadChanges || c.reload {
+			c.restart, c.reload = c.auxCfgManager()
+			if hadChanges || c.reload || c.restart {
 				c.updateHAProxy()
 				hadChanges = false
 				continue
@@ -199,28 +199,52 @@ func (c *HAProxyController) getWhitelistedNamespaces() []string {
 	return namespaces
 }
 
-// auxCfgUpdate returns true if auxiliary HAProxy config file was updated, false otherwise.
-func (c *HAProxyController) auxCfgUpdated() bool {
+// auxCfgManager returns restart or reload requirement based on state and transition of auxiliary configuration file.
+func (c *HAProxyController) auxCfgManager() (restart, reload bool) {
 	info, errStat := os.Stat(c.Cfg.Env.AuxCFGFile)
+	var (
+		modifTime  int64
+		auxCfgFile string = c.Cfg.Env.AuxCFGFile
+		useAuxFile bool
+	)
+
+	defer func() {
+		// Nothing changed
+		if c.AuxCfgModTime == modifTime {
+			return
+		}
+		// Apply decisions
+		c.Client.SetAuxCfgFile(auxCfgFile)
+		c.haproxyProcess.UseAuxFile(useAuxFile)
+		// The file exists now  (modifTime !=0 otherwise nothing changed case).
+		if c.AuxCfgModTime == 0 {
+			restart = true
+		} else {
+			// File already exists,
+			// already in command line parameters just need to reload for modifications.
+			reload = true
+		}
+		c.AuxCfgModTime = modifTime
+		if c.AuxCfgModTime != 0 {
+			logger.Infof("Auxiliary HAProxy config '%s' updated", auxCfgFile)
+		}
+	}()
+
 	// File does not exist
 	if errStat != nil {
+		// nullify it
+		auxCfgFile = ""
 		if c.AuxCfgModTime == 0 {
-			return false
+			// never existed before
+			return
 		}
 		logger.Infof("Auxiliary HAProxy config '%s' removed", c.Cfg.Env.AuxCFGFile)
-		c.AuxCfgModTime = 0
-		c.Client.SetAuxCfgFile("")
-		c.haproxyProcess.UseAuxFile(false)
-		return true
+		// but existed so need to restart
+		restart = true
+		return
 	}
-	// Check modification time
-	modifTime := info.ModTime().Unix()
-	if c.AuxCfgModTime == modifTime {
-		return false
-	}
-	logger.Infof("Auxiliary HAProxy config '%s' updated", c.Cfg.Env.AuxCFGFile)
-	c.AuxCfgModTime = modifTime
-	c.Client.SetAuxCfgFile(c.Cfg.Env.AuxCFGFile)
-	c.haproxyProcess.UseAuxFile(true)
-	return true
+	// File exists
+	useAuxFile = true
+	modifTime = info.ModTime().Unix()
+	return
 }

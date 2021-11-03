@@ -148,8 +148,9 @@ func (c *HAProxyController) updateHAProxy() {
 		c.Client.APIDisposeTransaction()
 	}()
 
-	reload, c.restart = c.handleGlobalConfig()
+	reload, restart := c.handleGlobalConfig()
 	c.reload = c.reload || reload
+	c.restart = c.restart || restart
 
 	if len(route.CustomRoutes) != 0 {
 		logger.Error(route.CustomRoutesReset(c.Client))
