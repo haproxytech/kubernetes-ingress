@@ -239,7 +239,7 @@ args:
 
   A name to assign to the ingress controller so that Ingress objects can target it apart from other running ingress controllers.
 
-  :information_source: Starting from kubernetes 1.18, a new `ingressClass` resource can be referenced by Ingress objects to target an Ingress Controller. HAProxy Ingress Controller will handle IngressClasses with controller value equal to `haproxy.org/ingress-controller`.  More About how IngressClass mechanism can be found in official kubernetes [documentation](https://kubernetes.io/docs/concepts/services-networking/ingress/#ingress-class).
+  :information_source: In kubernetes 1.18+, a new `IngressClass` resource can be referenced by Ingress objects to target an Ingress Controller. More details can be found in the [IngressClass doc entry](./ingressclass.md).
 
 Possible values:
 

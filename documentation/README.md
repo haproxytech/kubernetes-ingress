@@ -841,9 +841,10 @@ tls-alpn: http/1.1
 ##### `ingress.class`
 
   Identifies the ingress controller to be used. If this value is the same as the [--ingress.class](./controller.md#--ingressclass) controller arg, the ingress resource will be processed.
-  Starting from kubernetes 1.18, a new `ingressClassName` field has been added to the Ingress spec resource. This fields should reference an `IngressClass` and HAProxy Ingress controller will process the Ingress resource if the controller value of the referenced `IngressClass` is `haproxy.org/ingress-controller`. More About how IngressClass mechanism can be found in official kubernetes [documentation](https://kubernetes.io/docs/concepts/services-networking/ingress/#ingress-class).
 
   Available on:  `ingress`
+
+  :information_source: In kubernetes 1.18+, a new `IngressClass` resource can be referenced by Ingress objects to target an Ingress Controller. More details can be found in the [IngressClass doc entry](./ingressclass.md).
 
   :information_source: In case both `ingress.class` annotation and `ingressClassName` are used, `ingress.class` will have precedence.
 
