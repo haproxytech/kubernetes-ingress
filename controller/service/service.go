@@ -32,6 +32,8 @@ import (
 
 var logger = utils.GetLogger()
 
+const cookieKey = "ohph7OoGhong"
+
 type Service struct {
 	path        *store.IngressPath
 	resource    *store.Service
@@ -139,25 +141,16 @@ func (s *Service) HandleBackend(client api.HAProxyClient, store store.K8s) (relo
 }
 
 // getBackendModel checks for a corresponding custom resource before falling back to annoations
-func (s *Service) getBackendModel(store store.K8s) (*models.Backend, error) {
-	var backend *models.Backend
-	var err error
-	var cookieKey = "ohph7OoGhong"
-	crInuse := true
+func (s *Service) getBackendModel(store store.K8s) (backend *models.Backend, err error) {
+	var crInUse = true
+	// get/create backend Model
 	backend, err = annotations.ModelBackend("cr-backend", s.resource.Namespace, store, s.annotations...)
 	logger.Warning(err)
 	if backend == nil {
 		backend = &models.Backend{DefaultServer: &models.DefaultServer{}}
-		crInuse = false
+		crInUse = false
 	}
-	if !crInuse {
-		for _, a := range annotations.Backend(backend, store, s.certs) {
-			err = a.Process(store, s.annotations...)
-			if err != nil {
-				logger.Errorf("service '%s/%s': annotation '%s': %s", s.resource.Namespace, s.resource.Name, a.GetName(), err)
-			}
-		}
-	}
+	// configure backend model
 	if s.modeTCP {
 		backend.Mode = "tcp"
 	} else {
@@ -168,6 +161,14 @@ func (s *Service) getBackendModel(store store.K8s) (*models.Backend, error) {
 	}
 	if s.resource.DNS != "" {
 		backend.DefaultServer = &models.DefaultServer{InitAddr: "last,libc,none"}
+	}
+	if !crInUse {
+		for _, a := range annotations.Backend(backend, store, s.certs) {
+			err = a.Process(store, s.annotations...)
+			if err != nil {
+				logger.Errorf("service '%s/%s': annotation '%s': %s", s.resource.Namespace, s.resource.Name, a.GetName(), err)
+			}
+		}
 	}
 	if backend.Cookie != nil && backend.Cookie.Dynamic && backend.DynamicCookieKey == "" {
 		backend.DynamicCookieKey = cookieKey
