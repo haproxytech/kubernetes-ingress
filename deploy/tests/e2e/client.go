@@ -41,9 +41,12 @@ type GlobalHAProxyInfo struct {
 	Uptime  string
 }
 
-const HTTP_PORT = 30080
-const HTTPS_PORT = 30443
-const STATS_PORT = 31024
+//nolint:golint, stylecheck
+const (
+	HTTP_PORT  = 30080
+	HTTPS_PORT = 30443
+	STATS_PORT = 31024
+)
 
 func newClient(host string, port int, tls bool) (*Client, error) {
 	kindURL := os.Getenv("KIND_URL")
@@ -70,8 +73,7 @@ func newClient(host string, port int, tls bool) (*Client, error) {
 		Transport: &http.Transport{
 			DialContext: func(ctx context.Context, network, addr string) (conn net.Conn, e error) {
 				dialer := &net.Dialer{}
-				addr = fmt.Sprintf("%s:%d", kindURL, dstPort)
-				return dialer.DialContext(ctx, network, addr)
+				return dialer.DialContext(ctx, network, fmt.Sprintf("%s:%d", kindURL, dstPort))
 			},
 		},
 	}, nil
@@ -99,6 +101,7 @@ func NewHTTPSClient(host string, port ...int) (*Client, error) {
 		return nil, err
 	}
 	client.Transport.TLSClientConfig = &tls.Config{
+		//nolint:gosec // skipping TLS verify for testing purpose
 		InsecureSkipVerify: true,
 	}
 	return client, nil

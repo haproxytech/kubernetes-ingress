@@ -20,7 +20,7 @@ import (
 var WaitDuration = 60 * time.Second
 var TickDuration = 2 * time.Second
 
-var devModeFlag = flag.Bool("dev", false, "keep test environmnet after finishing")
+var devModeFlag = flag.Bool("dev", false, "keep test environment after finishing")
 var devMode bool
 
 type Test struct {
@@ -37,10 +37,13 @@ func NewTest() (test Test, err error) {
 	test = Test{}
 	// Namespace
 	if test.namespace, err = setupNamespace(); err != nil {
-		return test, fmt.Errorf("error setting test namespace %s:", err)
+		return test, fmt.Errorf("error setting test namespace: %w", err)
 	}
 	deleteNamespace(test.namespace, true)
-	test.execute("", "kubectl", "create", "ns", test.namespace)
+	_, err = test.execute("", "kubectl", "create", "ns", test.namespace)
+	if err != nil {
+		return test, fmt.Errorf("error creating test namespace : %w ", err)
+	}
 	// TearDownFuncs
 	test.tearDownFuncs = []TearDownFunc{func() error {
 		deleteNamespace(test.namespace, false)
@@ -49,7 +52,7 @@ func NewTest() (test Test, err error) {
 	// TemplateDir
 	test.templateDir, err = ioutil.TempDir("/tmp/", "haproxy-ic-test-tmpl")
 	if err != nil {
-		return test, fmt.Errorf("error creating template dir: %s ", err.Error())
+		return test, fmt.Errorf("error creating template dir: %w ", err)
 	}
 	return test, nil
 }
@@ -61,7 +64,7 @@ func (t *Test) GetNS() string {
 func (t *Test) DeployYaml(path string, namespace string) error {
 	yaml, err := ioutil.ReadFile(path)
 	if err != nil {
-		return fmt.Errorf("error reading yaml file: %s", err)
+		return fmt.Errorf("error reading yaml file: %w", err)
 	}
 	// kubectl -n $NS apply -f -
 	out, err := t.execute(string(yaml), "kubectl", "-n", namespace, "apply", "-f", "-")
@@ -74,18 +77,18 @@ func (t *Test) DeployYaml(path string, namespace string) error {
 func (t *Test) DeployYamlTemplate(path string, namespace string, data interface{}) error {
 	file, err := ioutil.ReadFile(path)
 	if err != nil {
-		return fmt.Errorf("error reading yaml template: %s", err)
+		return fmt.Errorf("error reading yaml template: %w", err)
 	}
 	var result bytes.Buffer
 	tmpl := template.Must(template.New("").Parse(string(file)))
 	err = tmpl.Execute(&result, data)
 	if err != nil {
-		return fmt.Errorf("error parsing yaml template: %s", err)
+		return fmt.Errorf("error parsing yaml template: %w", err)
 	}
 	yaml := filepath.Join(t.templateDir, t.namespace+time.Now().Format("2006-01-02-1504051111")+".yaml")
-	err = ioutil.WriteFile(yaml, result.Bytes(), 0644)
+	err = ioutil.WriteFile(yaml, result.Bytes(), 0600)
 	if err != nil {
-		return fmt.Errorf("error writing generated yaml template: %s", err)
+		return fmt.Errorf("error writing generated yaml template: %w", err)
 	}
 	return t.DeployYaml(yaml, namespace)
 }
@@ -124,7 +127,6 @@ func (t *Test) GetK8sVersion() (major, minor int, err error) {
 	major, _ = strconv.Atoi(version.Major)
 	minor, _ = strconv.Atoi(version.Minor)
 	return major, minor, nil
-
 }
 
 func (t *Test) execute(entry, command string, args ...string) (string, error) {
@@ -141,7 +143,7 @@ func deleteNamespace(namespace string, newSetup bool) {
 		return
 	}
 	deleteCmd := exec.Command("kubectl", "delete", "namespace", namespace)
-	deleteCmd.Run()
+	_ = deleteCmd.Run()
 }
 
 func setupNamespace() (string, error) {
