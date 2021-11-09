@@ -4,6 +4,7 @@
 
 [![Contributors](https://img.shields.io/github/contributors/haproxytech/kubernetes-ingress?color=purple)](https://github.com/haproxy/haproxy/blob/master/CONTRIBUTING)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
+[![Go Report Card](https://goreportcard.com/badge/github.com/haproxytech/kubernetes-ingress)](https://goreportcard.com/report/github.com/haproxytech/kubernetes-ingress)
 
 ### Description
 
