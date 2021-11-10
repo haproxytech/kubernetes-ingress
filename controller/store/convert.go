@@ -99,13 +99,13 @@ func (n ingressNetworkingV1Beta1Strategy) ConvertIngress() *Ingress {
 					continue
 				}
 				for _, k8sPath := range k8sRule.HTTP.Paths {
-					prefix := ""
+					var pathType string
 					if k8sPath.PathType != nil {
-						prefix = string(*k8sPath.PathType)
+						pathType = string(*k8sPath.PathType)
 					}
-					paths[prefix+"-"+k8sPath.Path] = &IngressPath{
+					paths[pathType+"-"+k8sPath.Path] = &IngressPath{
 						Path:          k8sPath.Path,
-						PathTypeMatch: string(*k8sPath.PathType),
+						PathTypeMatch: pathType,
 						SvcNamespace:  n.ig.GetNamespace(),
 						SvcName:       k8sPath.Backend.ServiceName,
 						SvcPortInt:    int64(k8sPath.Backend.ServicePort.IntValue()),
@@ -197,13 +197,13 @@ func (e ingressExtensionsStrategy) ConvertIngress() *Ingress {
 					continue
 				}
 				for _, k8sPath := range k8sRule.HTTP.Paths {
-					prefix := ""
+					var pathType string
 					if k8sPath.PathType != nil {
-						prefix = string(*k8sPath.PathType)
+						pathType = string(*k8sPath.PathType)
 					}
-					paths[prefix+"-"+k8sPath.Path] = &IngressPath{
+					paths[pathType+"-"+k8sPath.Path] = &IngressPath{
 						Path:          k8sPath.Path,
-						PathTypeMatch: string(*k8sPath.PathType),
+						PathTypeMatch: pathType,
 						SvcNamespace:  e.ig.GetNamespace(),
 						SvcName:       k8sPath.Backend.ServiceName,
 						SvcPortInt:    int64(k8sPath.Backend.ServicePort.IntValue()),
@@ -283,13 +283,13 @@ func (n ingressNetworkingV1Strategy) ConvertIngress() *Ingress {
 					continue
 				}
 				for _, k8sPath := range k8sRule.HTTP.Paths {
-					prefix := ""
+					var pathType string
 					if k8sPath.PathType != nil {
-						prefix = string(*k8sPath.PathType)
+						pathType = string(*k8sPath.PathType)
 					}
-					paths[prefix+"-"+k8sPath.Path] = &IngressPath{
+					paths[pathType+"-"+k8sPath.Path] = &IngressPath{
 						Path:          k8sPath.Path,
-						PathTypeMatch: string(*k8sPath.PathType),
+						PathTypeMatch: pathType,
 						SvcNamespace:  n.ig.GetNamespace(),
 						SvcName:       k8sPath.Backend.Service.Name,
 						SvcPortInt:    int64(k8sPath.Backend.Service.Port.Number),
