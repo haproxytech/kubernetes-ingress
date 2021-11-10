@@ -67,30 +67,18 @@ func (i Ingress) supported(k8s store.K8s) (supported bool) {
 		}
 	}()
 
+	emptyClass := igClassAnn == "" && i.resource.Class == ""
+
 	if i.controllerClass == "" {
-		if igClassAnn == "" && i.resource.Class == "" {
-			supported = true
-			return
-		}
-		if igClassSpec == CONTROLLER {
-			supported = true
-			return
-		}
+		supported = emptyClass || igClassSpec == CONTROLLER
 	} else {
-		if igClassAnn == "" && i.resource.Class == "" && i.allowEmptyClass {
-			supported = true
-			return
-		}
-		if igClassAnn == i.controllerClass {
-			supported = true
-			return
-		}
-		if igClassSpec == filepath.Join(CONTROLLER, i.controllerClass) {
-			supported = true
-			return
-		}
+		supported = (emptyClass && i.allowEmptyClass) ||
+			igClassAnn == i.controllerClass ||
+			igClassSpec == filepath.Join(CONTROLLER, i.controllerClass)
 	}
-	i.resource.Ignored = true
+	if !supported {
+		i.resource.Ignored = true
+	}
 	return
 }
 
