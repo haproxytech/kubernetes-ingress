@@ -68,7 +68,7 @@ func (i Ingress) supported(k8s store.K8s) (supported bool) {
 	}()
 
 	if i.controllerClass == "" {
-		if igClassAnn == "" && igClassSpec == "" {
+		if igClassAnn == "" && i.resource.Class == "" {
 			supported = true
 			return
 		}
@@ -77,7 +77,7 @@ func (i Ingress) supported(k8s store.K8s) (supported bool) {
 			return
 		}
 	} else {
-		if igClassAnn == "" && igClassSpec == "" && i.allowEmptyClass {
+		if igClassAnn == "" && i.resource.Class == "" && i.allowEmptyClass {
 			supported = true
 			return
 		}
