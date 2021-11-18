@@ -16,6 +16,7 @@ package controller
 
 import (
 	"os"
+	"strconv"
 	"time"
 
 	"k8s.io/client-go/informers"
@@ -31,19 +32,12 @@ func (c *HAProxyController) monitorChanges() {
 	stop := make(chan struct{})
 	crManager := NewCRManager(&c.Store, c.k8s.RestConfig, c.OSArgs.CacheResyncPeriod, c.eventChan, stop)
 	c.crManager = crManager
+	epMirror := c.endpointsMirroring()
 
 	c.k8s.EventPods(c.PodNamespace, c.PodPrefix, c.OSArgs.CacheResyncPeriod, c.eventChan)
 
 	for _, namespace := range c.getWhitelistedNamespaces() {
 		factory := informers.NewSharedInformerFactoryWithOptions(c.k8s.API, c.OSArgs.CacheResyncPeriod, informers.WithNamespace(namespace))
-
-		pi := c.getEndpointSlicesSharedInformer(factory)
-		if pi != nil {
-			c.k8s.EventsEndpointSlices(c.eventChan, stop, pi)
-		} else {
-			pi = factory.Core().V1().Endpoints().Informer()
-			c.k8s.EventsEndpoints(c.eventChan, stop, pi)
-		}
 
 		svci := factory.Core().V1().Services().Informer()
 		c.k8s.EventsServices(c.eventChan, c.ingressChan, stop, svci, c.PublishService)
@@ -59,17 +53,29 @@ func (c *HAProxyController) monitorChanges() {
 
 		var ii, ici cache.SharedIndexInformer
 		ii, ici = c.getIngressSharedInformers(factory)
+
 		if ii == nil {
 			logger.Panic("ingress resources not supported in this cluster")
 		}
 		c.k8s.EventsIngresses(c.eventChan, stop, ii)
 
-		informersSynced = []cache.InformerSynced{pi.HasSynced, svci.HasSynced, nsi.HasSynced, ii.HasSynced, si.HasSynced, ci.HasSynced}
+		informersSynced = []cache.InformerSynced{svci.HasSynced, nsi.HasSynced, ii.HasSynced, si.HasSynced, ci.HasSynced}
 		informersSynced = append(informersSynced, crManager.RunInformers(namespace)...)
 
 		if ici != nil {
 			c.k8s.EventsIngressClass(c.eventChan, stop, ici)
 			informersSynced = append(informersSynced, ici.HasSynced)
+		}
+
+		epsi := c.getEndpointSlicesSharedInformer(factory)
+		if epsi != nil {
+			c.k8s.EventsEndpointSlices(c.eventChan, stop, epsi)
+			informersSynced = append(informersSynced, epsi.HasSynced)
+		}
+		if epsi == nil || !epMirror {
+			epi := factory.Core().V1().Endpoints().Informer()
+			c.k8s.EventsEndpoints(c.eventChan, stop, epi)
+			informersSynced = append(informersSynced, epi.HasSynced)
 		}
 	}
 
@@ -197,6 +203,29 @@ func (c *HAProxyController) getWhitelistedNamespaces() []string {
 	}
 	logger.Infof("Whitelisted Namespaces: %s", namespaces)
 	return namespaces
+}
+
+// if EndpointSliceMirroring is supported we can just watch endpointSlices
+// Ref: https://github.com/kubernetes/enhancements/tree/master/keps/sig-network/0752-endpointslices#endpointslicemirroring-controller
+func (c *HAProxyController) endpointsMirroring() bool {
+	var major, minor int
+	var err error
+	version, _ := c.k8s.API.ServerVersion()
+	if version == nil {
+		return false
+	}
+	major, err = strconv.Atoi(version.Major)
+	if err != nil {
+		return false
+	}
+	minor, err = strconv.Atoi(version.Minor)
+	if err != nil {
+		return false
+	}
+	if major == 1 && minor < 19 {
+		return false
+	}
+	return true
 }
 
 // auxCfgManager returns restart or reload requirement based on state and transition of auxiliary configuration file.
