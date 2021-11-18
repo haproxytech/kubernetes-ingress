@@ -50,7 +50,7 @@ func (d *directControl) HaproxyService(action string) (err error) {
 		}
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
-		return cmd.Start()
+		return cmd.Run()
 	case "stop":
 		if processErr != nil {
 			logger.Error("haproxy already stopped")
