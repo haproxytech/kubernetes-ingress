@@ -30,15 +30,15 @@ func (c *HAProxyController) monitorChanges() {
 
 	informersSynced := []cache.InformerSynced{}
 	stop := make(chan struct{})
-	crManager := NewCRManager(&c.Store, c.k8s.RestConfig, c.OSArgs.CacheResyncPeriod, c.eventChan, stop)
-	c.crManager = crManager
 	epMirror := c.endpointsMirroring()
+	c.crManager = NewCRManager(&c.Store, c.k8s.RestConfig, c.OSArgs.CacheResyncPeriod, c.eventChan, stop)
 
 	c.k8s.EventPods(c.PodNamespace, c.PodPrefix, c.OSArgs.CacheResyncPeriod, c.eventChan)
 
 	for _, namespace := range c.getWhitelistedNamespaces() {
 		factory := informers.NewSharedInformerFactoryWithOptions(c.k8s.API, c.OSArgs.CacheResyncPeriod, informers.WithNamespace(namespace))
 
+		// Core.V1 Resources
 		svci := factory.Core().V1().Services().Informer()
 		c.k8s.EventsServices(c.eventChan, c.ingressChan, stop, svci, c.PublishService)
 
@@ -51,22 +51,21 @@ func (c *HAProxyController) monitorChanges() {
 		ci := factory.Core().V1().ConfigMaps().Informer()
 		c.k8s.EventsConfigfMaps(c.eventChan, stop, ci)
 
-		var ii, ici cache.SharedIndexInformer
-		ii, ici = c.getIngressSharedInformers(factory)
+		informersSynced = append(informersSynced, svci.HasSynced, nsi.HasSynced, si.HasSynced, ci.HasSynced)
 
+		// Ingress and IngressClass Resources
+		ii, ici := c.getIngressSharedInformers(factory)
 		if ii == nil {
-			logger.Panic("ingress resources not supported in this cluster")
+			logger.Panic("Ingress Resource not supported in this cluster")
 		}
 		c.k8s.EventsIngresses(c.eventChan, stop, ii)
-
-		informersSynced = []cache.InformerSynced{svci.HasSynced, nsi.HasSynced, ii.HasSynced, si.HasSynced, ci.HasSynced}
-		informersSynced = append(informersSynced, crManager.RunInformers(namespace)...)
-
+		informersSynced = append(informersSynced, ii.HasSynced)
 		if ici != nil {
 			c.k8s.EventsIngressClass(c.eventChan, stop, ici)
 			informersSynced = append(informersSynced, ici.HasSynced)
 		}
 
+		// Endpoints and EndpointSlices Resources
 		epsi := c.getEndpointSlicesSharedInformer(factory)
 		if epsi != nil {
 			c.k8s.EventsEndpointSlices(c.eventChan, stop, epsi)
@@ -77,6 +76,9 @@ func (c *HAProxyController) monitorChanges() {
 			c.k8s.EventsEndpoints(c.eventChan, stop, epi)
 			informersSynced = append(informersSynced, epi.HasSynced)
 		}
+
+		// Custom Resources
+		informersSynced = append(informersSynced, c.crManager.RunInformers(namespace)...)
 	}
 
 	if !cache.WaitForCacheSync(stop, informersSynced...) {
