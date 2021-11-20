@@ -173,7 +173,7 @@ func (c *ControllerCfg) envInit() (err error) {
 		c.Env.PatternDir = filepath.Join(c.Env.CfgDir, "patterns")
 	}
 	if c.Env.ErrFileDir == "" {
-		c.Env.ErrFileDir = filepath.Join(c.Env.CfgDir, "errors")
+		c.Env.ErrFileDir = filepath.Join(c.Env.CfgDir, "errorfiles")
 	}
 
 	for _, d := range []string{

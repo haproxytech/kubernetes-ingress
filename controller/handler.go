@@ -41,7 +41,7 @@ func (c *HAProxyController) initHandlers() {
 			Port:     c.OSArgs.HTTPSBindPort,
 		},
 		handler.ProxyProtocol{},
-		handler.ErrorFile{},
+		&handler.ErrorFile{},
 		handler.TCPServices{
 			CertDir:  c.Cfg.Env.FrontendCertDir,
 			IPv4:     !c.OSArgs.DisableIPV4,
@@ -49,7 +49,7 @@ func (c *HAProxyController) initHandlers() {
 			IPv6:     !c.OSArgs.DisableIPV6,
 			AddrIPv6: c.OSArgs.IPV6BindAddr,
 		},
-		handler.PatternFiles{},
+		&handler.PatternFiles{},
 		handler.Refresh{},
 	}
 	if c.OSArgs.PprofEnabled {
