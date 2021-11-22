@@ -18,7 +18,6 @@ package endpoints
 
 import (
 	"net/http"
-	"os/exec"
 	"testing"
 
 	"github.com/stretchr/testify/suite"
@@ -66,7 +65,7 @@ func (suite *EndpointsSuite) BeforeTest(suiteName, testName string) {
 	case "Test_HTTP_Reach":
 		suite.client, err = e2e.NewHTTPClient(suite.tmplData.Host)
 		suite.NoError(err)
-		suite.NoError(test.DeployYamlTemplate("config/endpoints.yaml.tmpl", test.GetNS(), suite.tmplData))
+		suite.NoError(test.Apply("config/endpoints.yaml.tmpl", test.GetNS(), suite.tmplData))
 		suite.Require().Eventually(func() bool {
 			res, cls, err := suite.client.Do()
 			if res == nil {
@@ -80,11 +79,10 @@ func (suite *EndpointsSuite) BeforeTest(suiteName, testName string) {
 		suite.client, err = e2e.NewHTTPSClient("tcp-service.test", 32766)
 		suite.NoError(err)
 		suite.tmplData.Replicas = 4
-		suite.NoError(test.DeployYamlTemplate("config/endpoints.yaml.tmpl", test.GetNS(), suite.tmplData))
-		suite.NoError(test.DeployYaml("config/tcp.yaml", "haproxy-controller"))
+		suite.NoError(test.Apply("config/endpoints.yaml.tmpl", test.GetNS(), suite.tmplData))
+		suite.NoError(test.Apply("config/tcp.yaml", "", nil))
 		test.AddTearDown(func() error {
-			cmd := exec.Command("kubectl", "-n", "haproxy-controller", "delete", "cm", "haproxy-configmap-tcp")
-			return cmd.Run()
+			return suite.test.Delete("config/tcp.yaml")
 		})
 		suite.Require().Eventually(func() bool {
 			res, cls, err := suite.client.Do()

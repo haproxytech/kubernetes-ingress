@@ -17,7 +17,6 @@
 package configsnippet
 
 import (
-	"os/exec"
 	"testing"
 
 	"github.com/stretchr/testify/suite"
@@ -43,7 +42,7 @@ func (suite *ConfigSnippetSuite) SetupSuite() {
 	suite.tmplData = tmplData{Host: suite.test.GetNS() + ".test"}
 	suite.client, err = e2e.NewHTTPClient(suite.tmplData.Host)
 	suite.NoError(err)
-	suite.NoError(suite.test.DeployYamlTemplate("config/deploy.yaml.tmpl", suite.test.GetNS(), suite.tmplData))
+	suite.NoError(suite.test.Apply("config/deploy.yaml.tmpl", suite.test.GetNS(), suite.tmplData))
 	suite.Require().Eventually(func() bool {
 		res, cls, err := suite.client.Do()
 		if res == nil {
@@ -54,8 +53,7 @@ func (suite *ConfigSnippetSuite) SetupSuite() {
 		return res.StatusCode == 200
 	}, e2e.WaitDuration, e2e.TickDuration)
 	suite.test.AddTearDown(func() error {
-		cmd := exec.Command("kubectl", "apply", "-f", "../../config/3.configmap.yaml")
-		return cmd.Run()
+		return suite.test.Apply("../../config/3.configmap.yaml", "", nil)
 	})
 }
 

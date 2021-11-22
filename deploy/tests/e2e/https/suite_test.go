@@ -59,7 +59,7 @@ func (suite *HTTPSSuite) SetupSuite() {
 	suite.test, err = e2e.NewTest()
 	suite.NoError(err)
 	suite.tmplData = tmplData{Host: suite.test.GetNS() + ".test"}
-	suite.NoError(suite.test.DeployYaml("config/deploy.yaml", suite.test.GetNS()))
+	suite.NoError(suite.test.Apply("config/deploy.yaml", suite.test.GetNS(), nil))
 }
 
 func (suite *HTTPSSuite) TearDownSuite() {

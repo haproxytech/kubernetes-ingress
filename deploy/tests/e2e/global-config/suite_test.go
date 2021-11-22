@@ -20,11 +20,20 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/suite"
+
+	"github.com/haproxytech/kubernetes-ingress/deploy/tests/e2e"
 )
 
 type GlobalConfigSuite struct {
 	suite.Suite
+	test    e2e.Test
 	maxconn string
+}
+
+func (suite *GlobalConfigSuite) SetupSuite() {
+	var err error
+	suite.test, err = e2e.NewTest()
+	suite.NoError(err)
 }
 
 func TestGlobalConfigSuite(t *testing.T) {

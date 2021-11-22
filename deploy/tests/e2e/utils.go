@@ -61,36 +61,49 @@ func (t *Test) GetNS() string {
 	return t.namespace
 }
 
-func (t *Test) DeployYaml(path string, namespace string) error {
-	yaml, err := ioutil.ReadFile(path)
-	if err != nil {
+func (t *Test) Apply(path string, namespace string, tmplData interface{}) error {
+	var err error
+	var file []byte
+	if tmplData != nil {
+		if path, err = t.processTemplate(path, tmplData); err != nil {
+			return err
+		}
+	}
+	if file, err = ioutil.ReadFile(path); err != nil {
 		return fmt.Errorf("error reading yaml file: %w", err)
 	}
 	// kubectl -n $NS apply -f -
-	out, err := t.execute(string(yaml), "kubectl", "-n", namespace, "apply", "-f", "-")
-	if err != nil {
+	if out, errApply := t.execute(string(file), "kubectl", "-n", namespace, "apply", "-f", "-"); errApply != nil {
 		return fmt.Errorf("error applying yaml file: %s", out)
 	}
 	return nil
 }
 
-func (t *Test) DeployYamlTemplate(path string, namespace string, data interface{}) error {
+func (t *Test) processTemplate(path string, tmplData interface{}) (string, error) {
 	file, err := ioutil.ReadFile(path)
 	if err != nil {
-		return fmt.Errorf("error reading yaml template: %w", err)
+		return "", fmt.Errorf("error reading yaml template: %w", err)
 	}
 	var result bytes.Buffer
 	tmpl := template.Must(template.New("").Parse(string(file)))
-	err = tmpl.Execute(&result, data)
+	err = tmpl.Execute(&result, tmplData)
 	if err != nil {
-		return fmt.Errorf("error parsing yaml template: %w", err)
+		return "", fmt.Errorf("error parsing yaml template: %w", err)
 	}
 	yaml := filepath.Join(t.templateDir, t.namespace+time.Now().Format("2006-01-02-1504051111")+".yaml")
-	err = ioutil.WriteFile(yaml, result.Bytes(), 0600)
-	if err != nil {
-		return fmt.Errorf("error writing generated yaml template: %w", err)
+	return yaml, ioutil.WriteFile(yaml, result.Bytes(), 0600)
+}
+
+func (t *Test) Delete(path string) error {
+	var err error
+	var file []byte
+	if file, err = ioutil.ReadFile(path); err != nil {
+		return fmt.Errorf("error reading yaml file: %w", err)
 	}
-	return t.DeployYaml(yaml, namespace)
+	if out, errApply := t.execute(string(file), "kubectl", "delete", "-f", "-"); errApply != nil {
+		err = fmt.Errorf("error applying yaml file: %s", out)
+	}
+	return err
 }
 
 func (t *Test) TearDown() error {

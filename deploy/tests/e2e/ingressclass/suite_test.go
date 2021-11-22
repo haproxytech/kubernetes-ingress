@@ -17,7 +17,6 @@
 package ingressclass
 
 import (
-	"os/exec"
 	"testing"
 
 	"github.com/stretchr/testify/suite"
@@ -49,10 +48,10 @@ func (suite *IngressClassSuite) SetupSuite() {
 	suite.tmplData = tmplData{Host: suite.test.GetNS() + ".test"}
 	suite.client, err = e2e.NewHTTPClient(suite.tmplData.Host)
 	suite.NoError(err)
-	suite.NoError(suite.test.DeployYaml("config/deploy.yaml", suite.test.GetNS()))
+	suite.NoError(suite.test.Apply("config/deploy.yaml", suite.test.GetNS(), nil))
+	suite.NoError(suite.test.Apply("config/ingressclass.yaml", "", nil))
 	suite.test.AddTearDown(func() error {
-		cmd := exec.Command("kubectl", "delete", "ingressclasses", "haproxy")
-		return cmd.Run()
+		return suite.test.Delete("config/ingressclass.yaml")
 	})
 }
 

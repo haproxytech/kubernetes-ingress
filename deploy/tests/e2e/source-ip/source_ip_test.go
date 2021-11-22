@@ -36,7 +36,7 @@ func (suite *SourceIPSuite) Test_Set_Source_Ip() {
 			{"blacklist", tc.IpValue},
 		}
 		suite.Run(tc.HeaderName, func() {
-			suite.NoError(suite.test.DeployYamlTemplate("config/deploy.yaml.tmpl", suite.test.GetNS(), suite.tmplData))
+			suite.NoError(suite.test.Apply("config/deploy.yaml.tmpl", suite.test.GetNS(), suite.tmplData))
 			suite.Eventually(func() bool {
 				suite.client.Req.Header = map[string][]string{
 					tc.HeaderName: {tc.IpValue},

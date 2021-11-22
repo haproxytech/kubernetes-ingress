@@ -49,8 +49,8 @@ func (suite *ServiceDiscoverySuite) SetupSuite() {
 	}
 	suite.client, err = e2e.NewHTTPClient(suite.tmplData.Host)
 	suite.NoError(err)
-	suite.NoError(suite.test.DeployYaml("config/deploy.yaml", suite.test.GetNS()))
-	suite.NoError(suite.test.DeployYamlTemplate("config/ingress.yaml.tmpl", suite.test.GetNS(), suite.tmplData))
+	suite.NoError(suite.test.Apply("config/deploy.yaml", suite.test.GetNS(), nil))
+	suite.NoError(suite.test.Apply("config/ingress.yaml.tmpl", suite.test.GetNS(), suite.tmplData))
 	suite.Require().Eventually(func() bool {
 		res, cls, err := suite.client.Do()
 		if res == nil {
