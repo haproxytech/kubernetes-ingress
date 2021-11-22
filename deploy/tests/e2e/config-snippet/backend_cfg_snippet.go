@@ -24,7 +24,7 @@ import (
 )
 
 func (suite *ConfigSnippetSuite) TestBackendCfgSnippet() {
-	suite.NoError(suite.test.DeployYaml("config/backend-cfg-snippet.yaml", suite.test.GetNS()))
+	suite.NoError(suite.test.Apply("config/backend-cfg-snippet.yaml", suite.test.GetNS(), nil))
 	suite.Eventually(func() bool {
 		res, cls, err := suite.client.Do()
 		if err != nil {

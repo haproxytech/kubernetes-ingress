@@ -18,7 +18,6 @@ package ingressclass
 
 import (
 	"net/http"
-	"os/exec"
 
 	"github.com/haproxytech/kubernetes-ingress/deploy/tests/e2e"
 )
@@ -26,7 +25,7 @@ import (
 func (suite *IngressClassSuite) Test_IngressClassName_Field() {
 	test := suite.test
 	suite.Run("Disabled", func() {
-		suite.NoError(test.DeployYamlTemplate("config/ingress.yaml.tmpl", test.GetNS(), suite.tmplData))
+		suite.NoError(test.Apply("config/ingress.yaml.tmpl", test.GetNS(), suite.tmplData))
 		suite.Eventually(func() bool {
 			res, cls, err := suite.client.Do()
 			if err != nil {
@@ -40,7 +39,7 @@ func (suite *IngressClassSuite) Test_IngressClassName_Field() {
 
 	suite.Run("Enabled", func() {
 		suite.tmplData.IngressClassName = "haproxy"
-		suite.NoError(test.DeployYamlTemplate("config/ingress.yaml.tmpl", test.GetNS(), suite.tmplData))
+		suite.NoError(test.Apply("config/ingress.yaml.tmpl", test.GetNS(), suite.tmplData))
 		suite.Eventually(func() bool {
 			res, cls, err := suite.client.Do()
 			if err != nil {
@@ -56,9 +55,7 @@ func (suite *IngressClassSuite) Test_IngressClassName_Field() {
 func (suite *IngressClassSuite) Test_IngressClassName_Resource() {
 	test := suite.test
 	suite.Run("Disabled", func() {
-		cmd := exec.Command("kubectl", "delete", "ingressclasses", "haproxy")
-		suite.NoError(cmd.Run())
-
+		suite.NoError(test.Delete("config/ingressclass.yaml"))
 		suite.Eventually(func() bool {
 			res, cls, err := suite.client.Do()
 			if err != nil {
@@ -71,7 +68,7 @@ func (suite *IngressClassSuite) Test_IngressClassName_Resource() {
 	})
 
 	suite.Run("Enabled", func() {
-		suite.NoError(test.DeployYaml("config/deploy.yaml", test.GetNS()))
+		suite.NoError(suite.test.Apply("config/ingressclass.yaml", "", nil))
 		suite.Eventually(func() bool {
 			res, cls, err := suite.client.Do()
 			if err != nil {

@@ -36,7 +36,7 @@ func (suite *SetHeaderSuite) Test_Request_Set_Header() {
 		suite.tmplData.IngAnnotations = []struct{ Key, Value string }{
 			{"request-set-header", tc.headerName + " " + tc.headerValue},
 		}
-		suite.Require().NoError(suite.test.DeployYamlTemplate("config/ingress.yaml.tmpl", suite.test.GetNS(), suite.tmplData))
+		suite.Require().NoError(suite.test.Apply("config/ingress.yaml.tmpl", suite.test.GetNS(), suite.tmplData))
 		suite.Eventually(func() bool {
 			res, cls, err := suite.client.Do()
 			if err != nil {
@@ -73,7 +73,7 @@ func (suite *SetHeaderSuite) Test_Response_Set_Header() {
 		suite.tmplData.IngAnnotations = []struct{ Key, Value string }{
 			{"response-set-header", tc.headerName + " " + tc.headerValue},
 		}
-		suite.Require().NoError(suite.test.DeployYamlTemplate("config/ingress.yaml.tmpl", suite.test.GetNS(), suite.tmplData))
+		suite.Require().NoError(suite.test.Apply("config/ingress.yaml.tmpl", suite.test.GetNS(), suite.tmplData))
 		suite.Eventually(func() bool {
 			r, cls, err := suite.client.Do()
 			if err != nil {

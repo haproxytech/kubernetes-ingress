@@ -44,7 +44,7 @@ func (suite *SourceIPSuite) SetupSuite() {
 	suite.tmplData = tmplData{Host: suite.test.GetNS() + ".test"}
 	suite.client, err = e2e.NewHTTPClient(suite.tmplData.Host)
 	suite.NoError(err)
-	suite.NoError(suite.test.DeployYamlTemplate("config/deploy.yaml.tmpl", suite.test.GetNS(), suite.tmplData))
+	suite.NoError(suite.test.Apply("config/deploy.yaml.tmpl", suite.test.GetNS(), suite.tmplData))
 	suite.Require().Eventually(func() bool {
 		res, cls, err := suite.client.Do()
 		if res == nil {

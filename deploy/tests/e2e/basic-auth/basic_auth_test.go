@@ -24,7 +24,7 @@ import (
 
 func (suite *HTTPBasicAuthSuite) Test_BasicAuth() {
 	suite.Run("Denied", func() {
-		suite.NoError(suite.test.DeployYamlTemplate("config/deploy.yaml.tmpl", suite.test.GetNS(), suite.tmplData))
+		suite.NoError(suite.test.Apply("config/deploy.yaml.tmpl", suite.test.GetNS(), suite.tmplData))
 		suite.Require().Eventually(func() bool {
 			res, cls, err := suite.client.Do()
 			if res == nil {

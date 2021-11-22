@@ -42,7 +42,7 @@ func (suite *ProxyProtocolSuite) SetupSuite() {
 	suite.tmplData = tmplData{Host: suite.test.GetNS() + ".test"}
 	suite.client, err = e2e.NewHTTPClient(suite.tmplData.Host)
 	suite.NoError(err)
-	suite.Require().NoError(suite.test.DeployYamlTemplate("config/deploy.yaml.tmpl", suite.test.GetNS(), suite.tmplData))
+	suite.Require().NoError(suite.test.Apply("config/deploy.yaml.tmpl", suite.test.GetNS(), suite.tmplData))
 }
 
 func (suite *ProxyProtocolSuite) TearDownSuite() {

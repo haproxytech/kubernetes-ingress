@@ -48,7 +48,7 @@ func (suite *CanaryDeploymentSuite) SetupSuite() {
 	}
 	suite.client, err = e2e.NewHTTPClient(suite.tmplData.Host)
 	suite.NoError(err)
-	suite.Require().NoError(suite.test.DeployYamlTemplate("config/deploy.yaml.tmpl", suite.test.GetNS(), suite.tmplData))
+	suite.Require().NoError(suite.test.Apply("config/deploy.yaml.tmpl", suite.test.GetNS(), suite.tmplData))
 	suite.Require().Eventually(func() bool {
 		res, cls, err := suite.client.Do()
 		if res == nil {

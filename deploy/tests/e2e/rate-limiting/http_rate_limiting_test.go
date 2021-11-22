@@ -40,7 +40,7 @@ func (suite *RateLimitingSuite) Test_Rate_Limiting() {
 				{"rate-limit-requests", fmt.Sprintf("%d", tc.limitRequests)},
 				{"rate-limit-status-code", fmt.Sprintf("%d", tc.customStatusCode)},
 			}
-			suite.Require().NoError(suite.test.DeployYamlTemplate("config/ingress.yaml.tmpl", suite.test.GetNS(), suite.tmplData))
+			suite.Require().NoError(suite.test.Apply("config/ingress.yaml.tmpl", suite.test.GetNS(), suite.tmplData))
 			suite.Require().Eventually(func() bool {
 				var counter, responseCode int
 				suite.client.Host = suite.tmplData.Host

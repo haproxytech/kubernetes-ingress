@@ -73,8 +73,8 @@ func (suite *IngressMatchSuite) Test_Http_MatchPath() {
 		suite.tmplData.Apps[i] = i + 1
 	}
 	suite.tmplData.Rules = ingressRules
-	suite.Require().NoError(suite.test.DeployYamlTemplate("config/deploy.yaml.tmpl", suite.test.GetNS(), suite.tmplData))
-	suite.Require().NoError(suite.test.DeployYamlTemplate("config/ingress.yaml.tmpl", suite.test.GetNS(), suite.tmplData))
+	suite.Require().NoError(suite.test.Apply("config/deploy.yaml.tmpl", suite.test.GetNS(), suite.tmplData))
+	suite.Require().NoError(suite.test.Apply("config/ingress.yaml.tmpl", suite.test.GetNS(), suite.tmplData))
 
 	for _, test := range tests {
 		for _, path := range test.paths {

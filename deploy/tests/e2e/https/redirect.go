@@ -21,7 +21,7 @@ import (
 )
 
 func (suite *HTTPSSuite) Test_HTTPS_Redirect() {
-	suite.NoError(suite.test.DeployYamlTemplate("config/ingress.yaml.tmpl", suite.test.GetNS(), suite.tmplData))
+	suite.NoError(suite.test.Apply("config/ingress.yaml.tmpl", suite.test.GetNS(), suite.tmplData))
 	suite.Require().Eventually(func() bool {
 		res, cls, err := suite.client.Do()
 		if res == nil {
@@ -34,7 +34,7 @@ func (suite *HTTPSSuite) Test_HTTPS_Redirect() {
 	suite.Run("implicit_via_TLS", func() {
 		suite.tmplData.TLSEnabled = true
 		suite.Eventually(func() bool {
-			suite.NoError(suite.test.DeployYamlTemplate("config/ingress.yaml.tmpl", suite.test.GetNS(), suite.tmplData))
+			suite.NoError(suite.test.Apply("config/ingress.yaml.tmpl", suite.test.GetNS(), suite.tmplData))
 			res, cls, err := suite.client.Do()
 			if res == nil {
 				suite.T().Log(err)
@@ -50,7 +50,7 @@ func (suite *HTTPSSuite) Test_HTTPS_Redirect() {
 			{"ssl-redirect", "'true'"},
 			{"ssl-redirect-code", "'301'"},
 		}
-		suite.NoError(suite.test.DeployYamlTemplate("config/ingress.yaml.tmpl", suite.test.GetNS(), suite.tmplData))
+		suite.NoError(suite.test.Apply("config/ingress.yaml.tmpl", suite.test.GetNS(), suite.tmplData))
 		suite.Eventually(func() bool {
 			res, cls, err := suite.client.Do()
 			if res == nil {
@@ -66,7 +66,7 @@ func (suite *HTTPSSuite) Test_HTTPS_Redirect() {
 		suite.tmplData.IngAnnotations = []struct{ Key, Value string }{
 			{"ssl-redirect", "'false'"},
 		}
-		suite.NoError(suite.test.DeployYamlTemplate("config/ingress.yaml.tmpl", suite.test.GetNS(), suite.tmplData))
+		suite.NoError(suite.test.Apply("config/ingress.yaml.tmpl", suite.test.GetNS(), suite.tmplData))
 		suite.Eventually(func() bool {
 			res, cls, err := suite.client.Do()
 			if res == nil {

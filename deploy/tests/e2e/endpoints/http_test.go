@@ -31,7 +31,7 @@ func (suite *EndpointsSuite) Test_HTTP_Reach() {
 	for _, replicas := range []int{4, 8, 2, 0, 3} {
 		suite.Run(fmt.Sprintf("%d-replicas", replicas), func() {
 			suite.tmplData.Replicas = replicas
-			suite.NoError(suite.test.DeployYamlTemplate("config/endpoints.yaml.tmpl", suite.test.GetNS(), suite.tmplData))
+			suite.NoError(suite.test.Apply("config/endpoints.yaml.tmpl", suite.test.GetNS(), suite.tmplData))
 			suite.Eventually(func() bool {
 				counter := map[string]int{}
 				for i := 0; i < replicas*2; i++ {

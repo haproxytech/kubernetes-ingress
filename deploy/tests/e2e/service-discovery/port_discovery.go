@@ -35,7 +35,7 @@ func (suite *ServiceDiscoverySuite) Test_Port_Discovery() {
 func (suite *ServiceDiscoverySuite) testServicePort(serviceName, servicePort string) {
 	suite.tmplData.ServiceName = serviceName
 	suite.tmplData.ServicePort = servicePort
-	suite.NoError(suite.test.DeployYamlTemplate("config/ingress.yaml.tmpl", suite.test.GetNS(), suite.tmplData))
+	suite.NoError(suite.test.Apply("config/ingress.yaml.tmpl", suite.test.GetNS(), suite.tmplData))
 	suite.Eventually(func() bool {
 		res, cls, err := suite.client.Do()
 		if res == nil {

@@ -18,7 +18,6 @@ package tlsauth
 
 import (
 	"crypto/tls"
-	"os/exec"
 	"testing"
 
 	"github.com/stretchr/testify/suite"
@@ -44,8 +43,8 @@ func (suite *TLSAuthSuite) SetupSuite() {
 	suite.NoError(err)
 	suite.wrongClientCert, err = tls.LoadX509KeyPair("client-certs/wrong.crt", "client-certs/wrong.key")
 	suite.NoError(err)
-	suite.Require().NoError(suite.test.DeployYaml("config/secrets/default-cert.yaml", suite.test.GetNS()))
-	suite.Require().NoError(suite.test.DeployYaml("config/client-auth.yaml", "haproxy-controller"))
+	suite.Require().NoError(suite.test.Apply("config/secrets/default-cert.yaml", suite.test.GetNS(), nil))
+	suite.Require().NoError(suite.test.Apply("config/client-auth.yaml", "", nil))
 	suite.Eventually(func() bool {
 		res, cls, err := suite.client.Do()
 		if res == nil {
@@ -56,10 +55,9 @@ func (suite *TLSAuthSuite) SetupSuite() {
 		// default backend
 		return res.StatusCode == 404
 	}, e2e.WaitDuration, e2e.TickDuration)
-	suite.Require().NoError(suite.test.DeployYaml("config/secrets/client-ca.yaml", suite.test.GetNS()))
+	suite.Require().NoError(suite.test.Apply("config/secrets/client-ca.yaml", suite.test.GetNS(), nil))
 	suite.test.AddTearDown(func() error {
-		cmd := exec.Command("kubectl", "apply", "-f", "../../config/3.configmap.yaml")
-		return cmd.Run()
+		return suite.test.Apply("../../config/3.configmap.yaml", "", nil)
 	})
 }
 
