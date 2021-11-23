@@ -26,42 +26,53 @@ import (
 	"github.com/haproxytech/kubernetes-ingress/controller/store"
 )
 
-type ErrorFile struct {
-	files     files
-	updateAPI bool
+type ErrorFiles struct {
+	files files
 }
 
-func (h *ErrorFile) Update(k store.K8s, cfg *config.ControllerCfg, api api.HAProxyClient) (reload bool, err error) {
+func (h *ErrorFiles) Update(k store.K8s, cfg *config.ControllerCfg, api api.HAProxyClient) (reload bool, err error) {
 	h.files.dir = cfg.Env.ErrFileDir
 	if k.ConfigMaps.Errorfiles == nil {
 		return false, nil
 	}
+	// Update Files
+	for code, content := range k.ConfigMaps.Errorfiles.Annotations {
+		logger.Error(h.writeFile(code, content))
+	}
+	var apiInput []*models.Errorfile
+	apiInput, reload = h.refresh()
+	// Update API
+	defaults, err := api.DefaultsGetConfiguration()
+	if err != nil {
+		return false, err
+	}
+	defaults.ErrorFiles = apiInput
+	if err = api.DefaultsPushConfiguration(*defaults); err != nil {
+		return false, err
+	}
+	return reload, nil
+}
 
-	for code, v := range k.ConfigMaps.Errorfiles.Annotations {
-		_, ok := h.files.data[code]
-		if ok {
-			err = h.files.updateFile(code, v)
-			if err != nil {
-				logger.Errorf("failed updating errorfile for code '%s': %s", code, err)
-			}
-			continue
-		}
+func (h *ErrorFiles) writeFile(code, content string) (err error) {
+	// Update file
+	if _, ok := h.files.data[code]; !ok {
 		err = checkCode(code)
 		if err != nil {
-			logger.Errorf("failed creating errorfile for code '%s': %s", code, err)
+			return
 		}
-		err = h.files.newFile(code, v)
-		if err != nil {
-			logger.Errorf("failed creating errorfile for code '%s': %s", code, err)
-		}
-		h.updateAPI = true
 	}
+	err = h.files.writeFile(code, content)
+	if err != nil {
+		err = fmt.Errorf("failed writing errorfile for code '%s': %w", code, err)
+	}
+	return
+}
 
-	var apiInput = []*models.Errorfile{}
+func (h *ErrorFiles) refresh() (result []*models.Errorfile, reload bool) {
 	for code, f := range h.files.data {
 		if !f.inUse {
-			h.updateAPI = true
-			err = h.files.deleteFile(code)
+			reload = true
+			err := h.files.deleteFile(code)
 			if err != nil {
 				logger.Errorf("failed deleting errorfile for code '%s': %s", code, err)
 			}
@@ -72,28 +83,14 @@ func (h *ErrorFile) Update(k store.K8s, cfg *config.ControllerCfg, api api.HAPro
 			reload = true
 		}
 		c, _ := strconv.Atoi(code) // code already checked in newCode
-		apiInput = append(apiInput, &models.Errorfile{
+		result = append(result, &models.Errorfile{
 			Code: int64(c),
 			File: filepath.Join(h.files.dir, code),
 		})
 		f.inUse = false
 		f.updated = false
 	}
-	// HAProxy config update
-	if h.updateAPI {
-		defaults, err := api.DefaultsGetConfiguration()
-		if err != nil {
-			logger.Error(err)
-			return reload, err
-		}
-		defaults.ErrorFiles = apiInput
-		if err = api.DefaultsPushConfiguration(*defaults); err != nil {
-			logger.Error(err)
-			return reload, err
-		}
-		h.updateAPI = false
-	}
-	return reload, nil
+	return
 }
 
 func checkCode(code string) error {

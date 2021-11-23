@@ -41,7 +41,7 @@ func (c *HAProxyController) initHandlers() {
 			Port:     c.OSArgs.HTTPSBindPort,
 		},
 		handler.ProxyProtocol{},
-		&handler.ErrorFile{},
+		&handler.ErrorFiles{},
 		handler.TCPServices{
 			CertDir:  c.Cfg.Env.FrontendCertDir,
 			IPv4:     !c.OSArgs.DisableIPV4,

@@ -115,7 +115,7 @@ func main() {
 		logger.Printf("TCP Services provided in '%s'", osArgs.ConfigMapTCPServices)
 	}
 	if osArgs.ConfigMapErrorFiles.Name != "" {
-		logger.Printf("Errofile pages provided in '%s'", osArgs.ConfigMapErrorFiles)
+		logger.Printf("Errorfiles provided in '%s'", osArgs.ConfigMapErrorFiles)
 	}
 	if osArgs.ConfigMapPatternFiles.Name != "" {
 		logger.Printf("Pattern files provided in '%s'", osArgs.ConfigMapPatternFiles)
