@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: patternfiles
+  namespace: haproxy-controller
+data:
+  mapping: | 
+    H+DbITVEMAJDRS4EzVF4gVDfTmyUFB3RzEkCIST9 0
+    GBxqv9YZHQ5dBLMjTjBbyjd4/wS0F0ETZtsnLsYI 1
+    7tFRKRoboeFENmfTSHj+gjJKFjtOw2u+G+1d13rO 2

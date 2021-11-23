@@ -29,6 +29,8 @@ spec:
        - --default-backend-service=$(POD_NAMESPACE)/default-backend
        - --configmap=$(POD_NAMESPACE)/haproxy-configmap
        - --configmap-tcp-services=$(POD_NAMESPACE)/haproxy-configmap-tcp
+       - --configmap-errorfiles=$(POD_NAMESPACE)/errorfiles
+       - --configmap-patternfiles=$(POD_NAMESPACE)/patternfiles
        - --ingress.class=haproxy
        - --sync-period=1s
        securityContext:
