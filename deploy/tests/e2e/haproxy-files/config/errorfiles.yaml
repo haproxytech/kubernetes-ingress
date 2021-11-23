@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: errorfiles
+  namespace: haproxy-controller
+data:
+  503: |-
+    HTTP/1.1 521 Web server is down
+    Cache-Control: no-cache
+    Connection: close
+    Content-Type: text/html
+
+    <html><body><h1>Oops, that's embarrassing!</h1>
+    There are no servers available to handle your request.
+    </body></html>
