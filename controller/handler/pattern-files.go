@@ -36,17 +36,9 @@ func (h *PatternFiles) Update(k store.K8s, cfg *config.ControllerCfg, api api.HA
 		return false, nil
 	}
 	for name, v := range k.ConfigMaps.PatternFiles.Annotations {
-		_, ok := h.files.data[name]
-		if ok {
-			err = h.files.updateFile(name, v)
-			if err != nil {
-				logger.Errorf("failed updating patternFile '%s': %s", name, err)
-			}
-		} else {
-			err = h.files.newFile(name, v)
-			if err != nil {
-				logger.Errorf("failed creating patternFile '%s': %s", name, err)
-			}
+		err = h.files.writeFile(name, v)
+		if err != nil {
+			logger.Errorf("failed writing patternfile '%s': %s", name, err)
 		}
 	}
 
@@ -54,12 +46,12 @@ func (h *PatternFiles) Update(k store.K8s, cfg *config.ControllerCfg, api api.HA
 		if !f.inUse {
 			err = h.files.deleteFile(name)
 			if err != nil {
-				logger.Errorf("failed deleting PatternFile '%s': %s", name, err)
+				logger.Errorf("failed deleting atternfile '%s': %s", name, err)
 			}
 			continue
 		}
 		if f.updated {
-			logger.Debugf("updating PatternFile '%s': reload required", name)
+			logger.Debugf("patternfile '%s' updated: reload required", name)
 			reload = true
 		}
 		f.inUse = false
@@ -79,39 +71,29 @@ type file struct {
 	updated bool
 }
 
-func (f *files) deleteFile(code string) error {
-	delete(f.data, code)
-	err := os.Remove(filepath.Join(f.dir, code))
+func (f *files) deleteFile(name string) error {
+	delete(f.data, name)
+	err := os.Remove(filepath.Join(f.dir, name))
 	return err
 }
 
-func (f *files) newFile(code, value string) error {
-	if err := renameio.WriteFile(filepath.Join(f.dir, code), []byte(value), os.ModePerm); err != nil {
-		return err
-	}
+// writeFile checks if content hash has changed before writing it.
+func (f *files) writeFile(name, content string) error {
+	newHash := utils.Hash([]byte(content))
 	if f.data == nil {
 		f.data = map[string]*file{}
 	}
-	f.data[code] = &file{
-		hash:    utils.Hash([]byte(value)),
-		inUse:   true,
-		updated: true,
+	if f.data[name] == nil {
+		f.data[name] = &file{}
 	}
-	return nil
-}
-
-func (f *files) updateFile(name, value string) error {
-	newHash := utils.Hash([]byte(value))
 	file := f.data[name]
 	if file.hash != newHash {
-		err := renameio.WriteFile(filepath.Join(f.dir, name), []byte(value), os.ModePerm)
-		if err != nil {
+		if err := renameio.WriteFile(filepath.Join(f.dir, name), []byte(content), os.ModePerm); err != nil {
 			return err
 		}
 		file.hash = newHash
 		file.updated = true
 	}
 	file.inUse = true
-	f.data[name] = file
 	return nil
 }
