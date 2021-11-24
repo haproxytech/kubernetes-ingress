@@ -1,3 +1,3 @@
 #!/bin/bash
-
-kind delete cluster --name dev
+clustername=${1:-dev}
+kind delete cluster --name $clustername
