@@ -8,14 +8,14 @@ metadata:
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: haproxy-ingress-service-account
-  namespace: haproxy-controller
+  name: haproxy-kubernetes-ingress
+  namespace: default
 
 ---
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: haproxy-ingress-cluster-role
+  name: haproxy-kubernetes-ingress
 rules:
 - apiGroups:
   - ""
@@ -82,22 +82,22 @@ rules:
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: haproxy-ingress-cluster-role-binding
-  namespace: haproxy-controller
+  name: haproxy-kubernetes-ingress
+  namespace: default
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: haproxy-ingress-cluster-role
+  name: haproxy-kubernetes-ingress
 subjects:
 - kind: ServiceAccount
-  name: haproxy-ingress-service-account
-  namespace: haproxy-controller
+  name: haproxy-kubernetes-ingress
+  namespace: default
 
 ---
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: haproxy-configmap
+  name: haproxy-kubernetes-ingress
   namespace: default
 data:
 
@@ -107,8 +107,8 @@ kind: Deployment
 metadata:
   labels:
     run: ingress-default-backend
-  name: ingress-default-backend
-  namespace: haproxy-controller
+  name: haproxy-kubernetes-ingress-default-backend
+  namespace: default
 spec:
   replicas: 1
   selector:
@@ -131,8 +131,8 @@ kind: Service
 metadata:
   labels:
     run: ingress-default-backend
-  name: ingress-default-backend
-  namespace: haproxy-controller
+  name: haproxy-kubernetes-ingress-default-backend
+  namespace: default
 spec:
   selector:
     run: ingress-default-backend
@@ -148,8 +148,8 @@ kind: DaemonSet
 metadata:
   labels:
     run: haproxy-ingress
-  name: haproxy-ingress
-  namespace: haproxy-controller
+  name: haproxy-kubernetes-ingress
+  namespace: default
 spec:
   selector:
     matchLabels:
@@ -159,13 +159,13 @@ spec:
       labels:
         run: haproxy-ingress
     spec:
-      serviceAccountName: haproxy-ingress-service-account
+      serviceAccountName: haproxy-kubernetes-ingress
       containers:
       - name: haproxy-ingress
         image: haproxytech/kubernetes-ingress
         args:
-          - --configmap=default/haproxy-configmap
-          - --default-backend-service=haproxy-controller/ingress-default-backend
+          - --configmap=default/haproxy-kubernetes-ingress
+          - --default-backend-service=default/haproxy-kubernetes-ingress-default-backend
         securityContext:
           runAsUser:  1000
           runAsGroup: 1000
@@ -218,8 +218,8 @@ kind: Service
 metadata:
   labels:
     run: haproxy-ingress
-  name: haproxy-ingress
-  namespace: haproxy-controller
+  name: haproxy-kubernetes-ingress
+  namespace: default
 spec:
   selector:
     run: haproxy-ingress

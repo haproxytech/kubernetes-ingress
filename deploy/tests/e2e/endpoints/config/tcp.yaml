@@ -2,7 +2,7 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
- name: haproxy-configmap-tcp
- namespace: haproxy-controller
+ name: haproxy-kubernetes-ingress-tcp
+ namespace: default
 data:
   32766: "e2e-tests-endpoints/http-echo:443"

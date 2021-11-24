@@ -1,8 +1,8 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
- name: haproxy-configmap
- namespace: haproxy-controller
+ name: haproxy-kubernetes-ingress
+ namespace: default
 data:
   frontend-config-snippet: |
     unique-id-format %{+X}o\ %ci:%cp_%fi:%fp_%Ts_%rt:%pid

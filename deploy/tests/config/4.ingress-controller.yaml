@@ -3,8 +3,8 @@ kind: Deployment
 metadata:
  labels:
    run: haproxy-ingress
- name: haproxy-ingress
- namespace: haproxy-controller
+ name: haproxy-kubernetes-ingress
+ namespace: default
 spec:
  replicas: 1
  selector:
@@ -15,7 +15,7 @@ spec:
      labels:
        run: haproxy-ingress
    spec:
-     serviceAccountName: haproxy-ingress-service-account
+     serviceAccountName: haproxy-kubernetes-ingress
      containers:
      - name: haproxy-ingress
        image: haproxytech/kubernetes-ingress:latest
@@ -26,9 +26,9 @@ spec:
          requests:
            memory: 256Mi
        args:
-       - --default-backend-service=$(POD_NAMESPACE)/default-backend
-       - --configmap=$(POD_NAMESPACE)/haproxy-configmap
-       - --configmap-tcp-services=$(POD_NAMESPACE)/haproxy-configmap-tcp
+       - --default-backend-service=$(POD_NAMESPACE)/haproxy-kubernetes-ingress-default-backend
+       - --configmap=$(POD_NAMESPACE)/haproxy-kubernetes-ingress
+       - --configmap-tcp-services=$(POD_NAMESPACE)/haproxy-kubernetes-ingress-tcp
        - --configmap-errorfiles=$(POD_NAMESPACE)/errorfiles
        - --configmap-patternfiles=$(POD_NAMESPACE)/patternfiles
        - --ingress.class=haproxy
@@ -73,14 +73,14 @@ spec:
 ---
 apiVersion: v1
 kind: Service
-metadata:  
-  name: haproxy-ingress
-  namespace: haproxy-controller
+metadata:
+  name: haproxy-kubernetes-ingress
+  namespace: default
 spec:
-  selector:    
+  selector:
     run: haproxy-ingress
   type: NodePort
-  ports:  
+  ports:
   - name: http
     port: 80
     targetPort: 80
