@@ -57,7 +57,6 @@ type Env struct {
 	MapDir          string
 	PatternDir      string
 	ErrFileDir      string
-	TransactionDir  string
 }
 
 // Init initialize configuration
@@ -176,9 +175,6 @@ func (c *ControllerCfg) envInit() (err error) {
 	if c.Env.ErrFileDir == "" {
 		c.Env.ErrFileDir = filepath.Join(c.Env.CfgDir, "errors")
 	}
-	if c.Env.TransactionDir == "" {
-		c.Env.TransactionDir = filepath.Join(c.Env.CfgDir, "transactions")
-	}
 
 	for _, d := range []string{
 		c.Env.CertDir,
@@ -188,7 +184,6 @@ func (c *ControllerCfg) envInit() (err error) {
 		c.Env.MapDir,
 		c.Env.ErrFileDir,
 		c.Env.StateDir,
-		c.Env.TransactionDir,
 		c.Env.PatternDir,
 	} {
 		err = os.MkdirAll(d, 0755)
