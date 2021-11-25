@@ -80,7 +80,7 @@ func (c *HAProxyController) Start() {
 		logger.Panic(err)
 	}
 
-	c.Client, err = api.Init(c.Cfg.Env.TransactionDir, c.Cfg.Env.MainCFGFile, c.Cfg.Env.HAProxyBinary, c.Cfg.Env.RuntimeSocket)
+	c.Client, err = api.Init(c.Cfg.Env.CfgDir, c.Cfg.Env.MainCFGFile, c.Cfg.Env.HAProxyBinary, c.Cfg.Env.RuntimeSocket)
 	if err != nil {
 		logger.Panic(err)
 	}
