@@ -21,7 +21,7 @@ import (
 )
 
 func (suite *GlobalConfigSuite) TestMaxconn() {
-	suite.NoError(suite.test.Apply("config/configmap.yaml", "", nil))
+	suite.NoError(suite.test.Apply("config/configmap-maxconn.yaml", "", nil))
 	suite.maxconn = "1111"
 	suite.Eventually(suite.checkMaxconn, e2e.WaitDuration, e2e.TickDuration)
 

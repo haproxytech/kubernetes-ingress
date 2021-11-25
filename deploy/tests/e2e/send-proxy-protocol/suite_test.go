@@ -17,6 +17,7 @@
 package proxyprotocol
 
 import (
+	"io/ioutil"
 	"testing"
 
 	"github.com/stretchr/testify/suite"
@@ -43,6 +44,22 @@ func (suite *ProxyProtocolSuite) SetupSuite() {
 	suite.client, err = e2e.NewHTTPClient(suite.tmplData.Host)
 	suite.NoError(err)
 	suite.Require().NoError(suite.test.Apply("config/deploy.yaml.tmpl", suite.test.GetNS(), suite.tmplData))
+}
+
+func (suite *ProxyProtocolSuite) Test_Send_Proxy() {
+	suite.Eventually(func() bool {
+		res, cls, err := suite.client.Do()
+		if err != nil {
+			suite.T().Logf("Connection ERROR: %s", err.Error())
+			return false
+		}
+		defer cls()
+		body, err := ioutil.ReadAll(res.Body)
+		if err != nil {
+			return false
+		}
+		return string(body) == "hello!"
+	}, e2e.WaitDuration, e2e.TickDuration)
 }
 
 func (suite *ProxyProtocolSuite) TearDownSuite() {

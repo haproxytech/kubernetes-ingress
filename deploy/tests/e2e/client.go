@@ -20,10 +20,13 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"io/ioutil"
 	"net"
 	"net/http"
 	"os"
 	"strings"
+
+	proxyproto "github.com/pires/go-proxyproto"
 )
 
 type Client struct {
@@ -126,6 +129,52 @@ func (c *Client) Do() (res *http.Response, close func() error, err error) {
 	}
 	close = res.Body.Close
 	return
+}
+
+func ProxyProtoConn() (result []byte, err error) {
+	kindURL := os.Getenv("KIND_URL")
+	if kindURL == "" {
+		kindURL = "127.0.0.1"
+	}
+	dstPort := HTTP_PORT
+
+	target, errAddr := net.ResolveTCPAddr("tcp", fmt.Sprintf("%s:%d", kindURL, dstPort))
+	if errAddr != nil {
+		return nil, errAddr
+	}
+
+	conn, errConn := net.DialTCP("tcp", nil, target)
+	if err != nil {
+		return nil, errConn
+	}
+	defer conn.Close()
+
+	// Create a proxyprotocol header
+	header := &proxyproto.Header{
+		Version:           1,
+		Command:           proxyproto.PROXY,
+		TransportProtocol: proxyproto.TCPv4,
+		SourceAddr: &net.TCPAddr{
+			IP:   net.ParseIP("10.1.1.1"),
+			Port: 1000,
+		},
+		DestinationAddr: &net.TCPAddr{
+			IP:   net.ParseIP("20.2.2.2"),
+			Port: 2000,
+		},
+	}
+
+	_, err = header.WriteTo(conn)
+	if err != nil {
+		return
+	}
+
+	_, err = conn.Write([]byte("HEAD / HTTP/1.0\r\n\r\n"))
+	if err != nil {
+		return
+	}
+
+	return ioutil.ReadAll(conn)
 }
 
 func GetGlobalHAProxyInfo() (info GlobalHAProxyInfo, err error) {
