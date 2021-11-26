@@ -40,7 +40,8 @@ func (suite *SetHeaderSuite) Test_Request_Set_Header() {
 		suite.Eventually(func() bool {
 			res, cls, err := suite.client.Do()
 			if err != nil {
-				suite.FailNow(err.Error())
+				suite.T().Logf("Connection ERROR: %s", err.Error())
+				return false
 			}
 			defer cls()
 			b, err := ioutil.ReadAll(res.Body)

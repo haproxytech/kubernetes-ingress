@@ -47,7 +47,8 @@ func (suite *RateLimitingSuite) Test_Rate_Limiting() {
 				for responseCode != tc.customStatusCode {
 					res, cls, err := suite.client.Do()
 					if err != nil {
-						suite.FailNow(err.Error())
+						suite.T().Logf("Connection ERROR: %s", err.Error())
+						return false
 					}
 					defer cls()
 					if res.StatusCode == 200 {
