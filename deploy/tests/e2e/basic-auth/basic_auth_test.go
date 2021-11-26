@@ -41,7 +41,8 @@ func (suite *HTTPBasicAuthSuite) Test_BasicAuth() {
 				suite.client.Req.SetBasicAuth(user, "password")
 				res, cls, err := suite.client.Do()
 				if err != nil {
-					suite.FailNow(err.Error())
+					suite.T().Logf("Connection ERROR: %s", err.Error())
+					return false
 				}
 				defer cls()
 				return res.StatusCode == http.StatusOK

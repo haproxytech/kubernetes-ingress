@@ -43,7 +43,8 @@ func (suite *SourceIPSuite) Test_Set_Source_Ip() {
 				}
 				res, cls, err := suite.client.Do()
 				if err != nil {
-					suite.FailNow(err.Error())
+					suite.T().Logf("Connection ERROR: %s", err.Error())
+					return false
 				}
 				defer cls()
 				return res.StatusCode != http.StatusOK
