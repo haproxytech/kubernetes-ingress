@@ -36,7 +36,10 @@ func (suite *EndpointsSuite) Test_HTTP_Reach() {
 				for i := 0; i < replicas*2; i++ {
 					func() {
 						res, cls, err := suite.client.Do()
-						suite.NoError(err)
+						if err != nil {
+							suite.NoError(err)
+							return
+						}
 						defer cls()
 						if res.StatusCode == 200 {
 							body, err := ioutil.ReadAll(res.Body)

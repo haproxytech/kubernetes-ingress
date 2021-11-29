@@ -25,7 +25,10 @@ func (suite *EndpointsSuite) Test_TCP_Reach() {
 	for i := 0; i < 4; i++ {
 		func() {
 			res, cls, err := suite.client.Do()
-			suite.NoError(err)
+			if err != nil {
+				suite.NoError(err)
+				return
+			}
 			defer cls()
 			body, err := ioutil.ReadAll(res.Body)
 			if err != nil {

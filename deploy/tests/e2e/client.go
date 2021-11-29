@@ -24,6 +24,8 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"regexp"
+	"strconv"
 	"strings"
 
 	proxyproto "github.com/pires/go-proxyproto"
@@ -178,25 +180,52 @@ func ProxyProtoConn() (result []byte, err error) {
 	return ioutil.ReadAll(conn)
 }
 
-func GetGlobalHAProxyInfo() (info GlobalHAProxyInfo, err error) {
+func runtimeCommand(command string) (result []byte, err error) {
 	kindURL := os.Getenv("KIND_URL")
 	if kindURL == "" {
 		kindURL = "127.0.0.1"
 	}
 	conn, err := net.Dial("tcp", fmt.Sprintf("%s:%d", kindURL, STATS_PORT))
 	if err != nil {
-		return info, err
+		return
 	}
-	_, err = conn.Write([]byte("show info\n"))
+	_, err = conn.Write([]byte(command + "\n"))
 	if err != nil {
-		return info, err
+		return
 	}
-	reply := make([]byte, 1024)
-	_, err = conn.Read(reply)
+	result = make([]byte, 1024)
+	_, err = conn.Read(result)
+	conn.Close()
+	return
+}
+
+func GetHAProxyMapCount(mapName string) (count int, err error) {
+	var result []byte
+	result, err = runtimeCommand("show map")
 	if err != nil {
-		return info, err
+		return
 	}
-	scanner := bufio.NewScanner(bytes.NewReader(reply))
+	scanner := bufio.NewScanner(bytes.NewReader(result))
+	for scanner.Scan() {
+		line := scanner.Text()
+		if strings.Contains(line, mapName) {
+			r := regexp.MustCompile("entry_cnt=[0-9]*")
+			match := r.FindString(line)
+			nbr := strings.Split(match, "=")[1]
+			count, err = strconv.Atoi(nbr)
+			break
+		}
+	}
+	return
+}
+
+func GetGlobalHAProxyInfo() (info GlobalHAProxyInfo, err error) {
+	var result []byte
+	result, err = runtimeCommand("show info")
+	if err != nil {
+		return
+	}
+	scanner := bufio.NewScanner(bytes.NewReader(result))
 	for scanner.Scan() {
 		line := scanner.Text()
 		switch {
@@ -208,6 +237,5 @@ func GetGlobalHAProxyInfo() (info GlobalHAProxyInfo, err error) {
 			info.Pid = strings.Split(line, ": ")[1]
 		}
 	}
-	conn.Close()
-	return info, nil
+	return
 }
