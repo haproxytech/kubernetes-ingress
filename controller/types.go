@@ -15,6 +15,8 @@
 package controller
 
 import (
+	corev1 "k8s.io/api/core/v1"
+
 	"github.com/haproxytech/kubernetes-ingress/controller/store"
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 )
@@ -28,6 +30,11 @@ type SyncDataEvent struct {
 	SyncType
 	Namespace string
 	Data      interface{}
+}
+
+type SyncIngress struct {
+	Service *corev1.Service
+	Ingress *store.Ingress
 }
 
 type Mode string

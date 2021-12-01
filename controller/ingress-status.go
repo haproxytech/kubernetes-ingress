@@ -1,4 +1,4 @@
-package status
+package controller
 
 import (
 	"context"
@@ -16,20 +16,23 @@ import (
 	"github.com/haproxytech/kubernetes-ingress/controller/store"
 )
 
-func UpdateIngress(client *kubernetes.Clientset, k store.K8s, channel chan SyncIngress) {
+func (c *HAProxyController) UpdateIngress() {
 	addresses := []string{}
-	for status := range channel {
+	for status := range c.statusChan {
 		// Published Service updated: Update all Ingresses
 		if status.Service != nil && getServiceAddresses(status.Service, &addresses) {
 			logger.Debug("Addresses of Ingress Controller service changed, status of all ingress resources are going to be updated")
-			for _, ns := range k.Namespaces {
-				for _, ingress := range k.Namespaces[ns.Name].Ingresses {
-					logger.Error(updateIngressStatus(client, ingress, addresses))
+			for _, ns := range c.Store.Namespaces {
+				for _, ingress := range c.Store.Namespaces[ns.Name].Ingresses {
+					if !c.igClassIsSupported(ingress) {
+						continue
+					}
+					logger.Error(updateIngressStatus(c.k8s.API, ingress, addresses))
 				}
 			}
 		}
 		if status.Ingress != nil {
-			logger.Error(updateIngressStatus(client, status.Ingress, addresses))
+			logger.Error(updateIngressStatus(c.k8s.API, status.Ingress, addresses))
 		}
 	}
 }

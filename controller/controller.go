@@ -25,7 +25,6 @@ import (
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy"
 	"github.com/haproxytech/kubernetes-ingress/controller/haproxy/api"
 	"github.com/haproxytech/kubernetes-ingress/controller/route"
-	"github.com/haproxytech/kubernetes-ingress/controller/status"
 	"github.com/haproxytech/kubernetes-ingress/controller/store"
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 )
@@ -39,7 +38,7 @@ type HAProxyController struct {
 	PublishService *utils.NamespaceValue
 	AuxCfgModTime  int64
 	eventChan      chan SyncDataEvent
-	statusChan     chan status.SyncIngress
+	statusChan     chan SyncIngress
 	k8s            *K8s
 	ready          bool
 	reload         bool
@@ -118,8 +117,8 @@ func (c *HAProxyController) Start() {
 	go c.monitorChanges()
 	if c.PublishService != nil {
 		// Update Ingress status
-		c.statusChan = make(chan status.SyncIngress, watch.DefaultChanSize*6)
-		go status.UpdateIngress(c.k8s.API, c.Store, c.statusChan)
+		c.statusChan = make(chan SyncIngress, watch.DefaultChanSize*6)
+		go c.UpdateIngress()
 	}
 }
 
@@ -166,7 +165,7 @@ func (c *HAProxyController) updateHAProxy() {
 			}
 			if c.PublishService != nil && ingress.Status == ADDED {
 				select {
-				case c.statusChan <- status.SyncIngress{Ingress: ingress}:
+				case c.statusChan <- SyncIngress{Ingress: ingress}:
 				default:
 					logger.Errorf("Ingress %s/%s: unable to sync status: sync channel full", ingress.Namespace, ingress.Name)
 				}

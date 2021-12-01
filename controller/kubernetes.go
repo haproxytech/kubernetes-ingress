@@ -23,7 +23,6 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/clientcmd"
 
-	ingstatus "github.com/haproxytech/kubernetes-ingress/controller/status"
 	"github.com/haproxytech/kubernetes-ingress/controller/store"
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 )
@@ -336,7 +335,7 @@ func (k *K8s) EventsIngresses(channel chan SyncDataEvent, stop chan struct{}, in
 	go informer.Run(stop)
 }
 
-func (k *K8s) EventsServices(channel chan SyncDataEvent, ingChan chan ingstatus.SyncIngress, stop chan struct{}, informer cache.SharedIndexInformer, publishSvc *utils.NamespaceValue) {
+func (k *K8s) EventsServices(channel chan SyncDataEvent, ingChan chan SyncIngress, stop chan struct{}, informer cache.SharedIndexInformer, publishSvc *utils.NamespaceValue) {
 	informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			data, ok := obj.(*corev1.Service)
@@ -374,7 +373,7 @@ func (k *K8s) EventsServices(channel chan SyncDataEvent, ingChan chan ingstatus.
 			k.Logger.Tracef("%s %s: %s", SERVICE, item.Status, item.Name)
 			channel <- SyncDataEvent{SyncType: SERVICE, Namespace: item.Namespace, Data: item}
 			if publishSvc != nil && publishSvc.Namespace == data.Namespace && publishSvc.Name == data.Name {
-				ingChan <- ingstatus.SyncIngress{Service: data}
+				ingChan <- SyncIngress{Service: data}
 			}
 		},
 		DeleteFunc: func(obj interface{}) {
@@ -400,7 +399,7 @@ func (k *K8s) EventsServices(channel chan SyncDataEvent, ingChan chan ingstatus.
 			k.Logger.Tracef("%s %s: %s", SERVICE, item.Status, item.Name)
 			channel <- SyncDataEvent{SyncType: SERVICE, Namespace: item.Namespace, Data: item}
 			if publishSvc != nil && publishSvc.Namespace == data.Namespace && publishSvc.Name == data.Name {
-				ingChan <- ingstatus.SyncIngress{Service: data}
+				ingChan <- SyncIngress{Service: data}
 			}
 		},
 		UpdateFunc: func(oldObj, newObj interface{}) {
@@ -423,7 +422,7 @@ func (k *K8s) EventsServices(channel chan SyncDataEvent, ingChan chan ingstatus.
 				return
 			}
 			if publishSvc != nil && publishSvc.Namespace == data2.Namespace && publishSvc.Name == data2.Name {
-				ingChan <- ingstatus.SyncIngress{Service: data2}
+				ingChan <- SyncIngress{Service: data2}
 			}
 			status := MODIFIED
 			item1 := &store.Service{
