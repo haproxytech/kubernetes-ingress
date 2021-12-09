@@ -36,6 +36,10 @@ func (suite *GlobalConfigSuite) SetupSuite() {
 	suite.NoError(err)
 }
 
+func (suite *GlobalConfigSuite) TearDownSuite() {
+	suite.test.TearDown()
+}
+
 func TestGlobalConfigSuite(t *testing.T) {
 	suite.Run(t, new(GlobalConfigSuite))
 }

@@ -2,7 +2,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
  name: haproxy-kubernetes-ingress
- namespace: default
+ namespace: haproxy-controller
 data:
   global-config-snippet: |
     stats socket 0.0.0.0:31024

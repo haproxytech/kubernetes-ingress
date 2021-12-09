@@ -9,7 +9,7 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: haproxy-kubernetes-ingress
-  namespace: default
+  namespace: haproxy-controller
 
 ---
 kind: ClusterRole
@@ -83,7 +83,7 @@ kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: haproxy-kubernetes-ingress
-  namespace: default
+  namespace: haproxy-controller
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -91,14 +91,14 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: haproxy-kubernetes-ingress
-  namespace: default
+  namespace: haproxy-controller
 
 ---
 apiVersion: v1
 kind: ConfigMap
 metadata:
   name: haproxy
-  namespace: default
+  namespace: haproxy-controller
 data:
 
 ---
@@ -108,7 +108,7 @@ metadata:
   labels:
     run: ingress-default-backend
   name: haproxy-kubernetes-ingress-default-backend
-  namespace: default
+  namespace: haproxy-controller
 spec:
   replicas: 1
   selector:
@@ -132,7 +132,7 @@ metadata:
   labels:
     run: ingress-default-backend
   name: haproxy-kubernetes-ingress-default-backend
-  namespace: default
+  namespace: haproxy-controller
 spec:
   selector:
     run: ingress-default-backend
@@ -149,7 +149,7 @@ metadata:
   labels:
     run: haproxy-ingress
   name: haproxy-kubernetes-ingress
-  namespace: default
+  namespace: haproxy-controller
 spec:
   replicas: 1
   selector:
@@ -217,7 +217,7 @@ metadata:
   labels:
     run: haproxy-ingress
   name: haproxy-kubernetes-ingress
-  namespace: default
+  namespace: haproxy-controller
 spec:
   selector:
     run: haproxy-ingress

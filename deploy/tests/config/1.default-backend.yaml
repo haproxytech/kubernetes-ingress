@@ -4,7 +4,7 @@ metadata:
   labels:
     run: default-backend
   name: haproxy-kubernetes-ingress-default-backend
-  namespace: default
+  namespace: haproxy-controller
 spec:
   replicas: 1
   selector:
@@ -14,7 +14,7 @@ spec:
     metadata:
       labels:
         run: default-backend
-        namespace: default
+        namespace: haproxy-controller
     spec:
       containers:
         - name: default-backend
@@ -28,7 +28,7 @@ metadata:
   labels:
     run: default-backend
   name: haproxy-kubernetes-ingress-default-backend
-  namespace: default
+  namespace: haproxy-controller
 spec:
   ports:
   - name: port-1

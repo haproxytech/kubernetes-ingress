@@ -2,7 +2,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
  name: haproxy-kubernetes-ingress
- namespace: default
+ namespace: haproxy-controller
 data:
   # Mandatory config
   global-config-snippet: |

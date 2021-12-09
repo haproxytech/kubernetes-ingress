@@ -66,7 +66,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: tcp
-  namespace: default
+  namespace: haproxy-controller
 data:
   3306:                    # Port where the frontend is going to listen to.
     mysql-ns/mysql:3306    # Kubernetes service in the format NS/ServiceName:ServicePort
@@ -104,7 +104,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: errorfile
-  namespace: default
+  namespace: haproxy-controller
 data:
   503: |-
     HTTP/1.0 503 Service Unavailable
@@ -162,7 +162,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: acls-patterns
-  namespace: default
+  namespace: haproxy-controller
 data:
   ips: |
     127.0.0.1
