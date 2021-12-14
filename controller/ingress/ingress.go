@@ -146,7 +146,8 @@ func (i *Ingress) HandleAnnotations(k store.K8s, cfg *configuration.ControllerCf
 		annList = i.resource.Annotations
 		ingressRule = true
 	}
-	frontends := []string{cfg.FrontHTTP, cfg.FrontHTTPS}
+	defaultFrontends := []string{cfg.FrontHTTP, cfg.FrontHTTPS}
+	frontends := defaultFrontends
 	for _, a := range annotations.Frontend(i.resource, &result, *cfg.MapFiles) {
 		err = a.Process(k, annList)
 		if err != nil {
@@ -169,6 +170,8 @@ func (i *Ingress) HandleAnnotations(k store.K8s, cfg *configuration.ControllerCf
 		case rules.REQ_RATELIMIT:
 			limitRule := rule.(*rules.ReqRateLimit)
 			cfg.RateLimitTables = append(cfg.RateLimitTables, limitRule.TableName)
+		default:
+			frontends = defaultFrontends
 		}
 		for _, frontend := range frontends {
 			logger.Error(cfg.HAProxyRules.AddRule(rule, ingressRule, frontend))
