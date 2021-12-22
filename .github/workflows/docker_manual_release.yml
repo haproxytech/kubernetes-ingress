@@ -7,7 +7,7 @@ jobs:
     env:
       DOCKER_PLATFORMS: linux/amd64,linux/arm/v6,linux/arm/v7,linux/arm64,linux/386
       DOCKER_IMAGE: haproxytech/kubernetes-ingress
-      STABLE_BRANCH: "1.7"
+      LATEST_BRANCH: "1.7"
     steps:
       - name: Login to Docker Hub
         id: login
@@ -49,9 +49,10 @@ jobs:
           echo "BUILD_DATE=$(date +'%Y-%m-%d %H:%M:%S')" >> $GITHUB_ENV
           echo "GIT_SHA=$(git rev-parse --short HEAD | cut -c1-7)" >> $GITHUB_ENV
           echo "GIT_REF=$(git symbolic-ref -q --short HEAD || git describe --tags --exact-match)" >> $GITHUB_ENV
+          echo "LATEST_BRANCH=$(curl -sfSL 'https://raw.githubusercontent.com/haproxytech/kubernetes-ingress/master/documentation/doc.yaml' 2>/dev/null | awk -F: '/^active_version/ {gsub(/^ /,"",$2); print $2}' || echo $LATEST_BRANCH)" >> $GITHUB_ENV
 
       - name: Build and push latest stable branch
-        if: ${{ env.BUILD_BRANCH == env.STABLE_BRANCH }}
+        if: ${{ env.BUILD_BRANCH == env.LATEST_BRANCH }}
         id: docker_build_latest
         uses: docker/build-push-action@v2
         with:
@@ -75,7 +76,7 @@ jobs:
           cache-to: type=local,dest=/tmp/.buildx-cache-new
 
       - name: Build and push everything else
-        if: ${{ env.BUILD_BRANCH != env.STABLE_BRANCH }}
+        if: ${{ env.BUILD_BRANCH != env.LATEST_BRANCH }}
         id: docker_build_regular
         uses: docker/build-push-action@v2
         with:
