@@ -39,7 +39,7 @@ jobs:
 
       - name: Reposition to latest tag
         run: |
-          git checkout $(git describe --tags --abbrev=0)
+          git checkout $(git rev-list --tags --max-count=1)
 
       - name: Prepare env variables
         id: env
