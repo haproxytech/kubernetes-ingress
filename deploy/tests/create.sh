@@ -31,6 +31,10 @@ else
   kind load docker-image haproxytech/kubernetes-ingress:latest  --name=$clustername
 fi
 
+docker build --build-arg TARGETPLATFORM="linux/amd64" -t haproxytech/http-echo -f deploy/tests/images/http-echo/Dockerfile deploy/tests/images/http-echo
+echo "loading image http-echo in kind"
+kind load docker-image haproxytech/http-echo:latest  --name=$clustername
+
 echo "deploying Ingress Controller ..."
 kubectl apply -f $DIR/config/0.namespace.yaml
 kubectl apply -f $DIR/config/1.default-backend.yaml

@@ -27,7 +27,7 @@ This will also deploy the HAProxy Ingress Controller using config in `deploy/tes
 kubectl apply -f ./config/echo-app.yaml
 ```
 
-Deploys [http-echo](https://github.com/Mo3m3n/http-echo) as a test application.
+Deploys `haproxytech/http-echo` as a test application.
 
 ```bash
 curl --header "Host: echo.haproxy.local" 127.0.0.1:30080
@@ -41,22 +41,22 @@ Response will include a couple of useful information:
 ### E2E tests
 
 ```bash
-go test -v --tags=<tag_name> ./e2e/... 
+go test -v --tags=<tag_name> ./e2e/...
 ```
 
-This will run all e2e tests in `./e2e` directory tagged with `<tag_name>`.  
+This will run all e2e tests in `./e2e` directory tagged with `<tag_name>`.
 There are two available tags:
-- **e2e_parallel**: which will run tests in parallel 
+- **e2e_parallel**: which will run tests in parallel
 - **e2e_sequential**: which will run tests in sequence
 
 Currently two tests are run sequentially:
 - endpoints: in order to test endpoints scaling without reloading haproxy.
 - tls-auth:  tls authentication is a global config that will impact other tests running in parallel.
 
-Each E2E test runs in its **own Namespace** and has its own directory.  
-Tests are deployed by applying yaml files or/and templates from the `config` directory of the corresponding test.  
-When using yaml templates, the generated yaml files are stored in a temporary directory in `/tmp/`.  
-Using `--dev` option will keep generated files after test execution.  
+Each E2E test runs in its **own Namespace** and has its own directory.
+Tests are deployed by applying yaml files or/and templates from the `config` directory of the corresponding test.
+When using yaml templates, the generated yaml files are stored in a temporary directory in `/tmp/`.
+Using `--dev` option will keep generated files after test execution.
 Example:
 ```bash
 go test -v --tags=e2e_sequential --dev ./e2e/endpoints/
