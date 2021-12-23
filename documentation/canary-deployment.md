@@ -1,8 +1,8 @@
 # Canary Deployment
 
 [Canary deployment](https://martinfowler.com/bliki/CanaryRelease.html) is a technique for rolling out releases to a subset of users.
-There can be different criteria to select a subset of users for a given release. This can be based on user cookie, header, based on a fixed percentage, etc.  
-The [route-acl](./README.md#route-acl) annotation can be used to configure canary-deployment by providing an in-line [HAProxy ACL](https://www.haproxy.com/blog/introduction-to-haproxy-acls/).  
+There can be different criteria to select a subset of users for a given release. This can be based on user cookie, header, based on a fixed percentage, etc.
+The [route-acl](./README.md#route-acl) annotation can be used to configure canary-deployment by providing an in-line [HAProxy ACL](https://www.haproxy.com/blog/introduction-to-haproxy-acls/).
 The route-acl is a service annotation, so the provided ACL will be used to route ingress traffic to the service annotated by route-acl.
 
 The following example describes how to configure Canary Deployment with HAProxy Ingress Controller where 25% percent of the traffic will go to a staging backend while the rest will be routed to production.
@@ -26,7 +26,8 @@ spec:
     spec:
       containers:
         - name: echo-prod
-          image: mo3m3n/http-echo:v1.0.0
+          image: haproxytech/http-echo:latest
+          imagePullPolicy: Never
           args:
           - --default-response=hostname
           ports:
@@ -67,7 +68,8 @@ spec:
     spec:
       containers:
         - name: echo-staging
-          image: mo3m3n/http-echo:v1.0.0
+          image: haproxytech/http-echo:latest
+          imagePullPolicy: Never
           args:
           - --default-response=hostname
           ports:

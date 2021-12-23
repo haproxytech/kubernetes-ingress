@@ -17,7 +17,8 @@ spec:
     spec:
       containers:
         - name: http-echo-prod
-          image: mo3m3n/http-echo:v1.0.0
+          image: haproxytech/http-echo:latest
+          imagePullPolicy: Never
           args:
           - --default-response=hostname
           ports:
@@ -56,7 +57,8 @@ spec:
     spec:
       containers:
         - name: http-echo-staging
-          image: mo3m3n/http-echo:v1.0.0
+          image: haproxytech/http-echo:latest
+          imagePullPolicy: Never
           args:
           - --default-response=hostname
           ports:
