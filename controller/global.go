@@ -147,6 +147,9 @@ func (c *HAProxyController) handleDefaultService() (reload bool) {
 	if err != nil {
 		logger.Errorf("default service: %s", err)
 	}
+	if name == "" {
+		return
+	}
 	ingressPath := &store.IngressPath{
 		SvcNamespace:     ns,
 		SvcName:          name,
