@@ -19,8 +19,8 @@ import (
 	"path"
 	"path/filepath"
 
-	config "github.com/haproxytech/kubernetes-ingress/controller/configuration"
-	"github.com/haproxytech/kubernetes-ingress/controller/utils"
+	config "github.com/haproxytech/kubernetes-ingress/pkg/configuration"
+	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
 )
 
 // When controller is not running on a containerized

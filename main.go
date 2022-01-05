@@ -17,6 +17,7 @@ package main
 import (
 	_ "embed"
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 	"os/signal"
@@ -26,13 +27,13 @@ import (
 	_ "net/http/pprof"
 
 	"github.com/google/renameio"
-	c "github.com/haproxytech/kubernetes-ingress/controller"
-	"github.com/haproxytech/kubernetes-ingress/controller/annotations"
-	config "github.com/haproxytech/kubernetes-ingress/controller/configuration"
-	"github.com/haproxytech/kubernetes-ingress/controller/store"
-	"github.com/haproxytech/kubernetes-ingress/controller/utils"
-	"github.com/haproxytech/kubernetes-ingress/prometheus"
+	config "github.com/haproxytech/kubernetes-ingress/pkg/configuration"
+	c "github.com/haproxytech/kubernetes-ingress/pkg/controller"
+	"github.com/haproxytech/kubernetes-ingress/pkg/controller/annotations"
+	"github.com/haproxytech/kubernetes-ingress/pkg/store"
+	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
 	"github.com/jessevdk/go-flags"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 //go:embed fs/usr/local/etc/haproxy/haproxy.cfg
@@ -57,7 +58,12 @@ func main() {
 		return
 	}
 
-	go prometheus.Start(osArgs)
+	if osArgs.PromotheusPort != 0 {
+		http.Handle("/metrics", promhttp.Handler())
+		go func() {
+			log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", osArgs.PromotheusPort), nil))
+		}()
+	}
 
 	logger := utils.GetLogger()
 	logger.SetLevel(osArgs.LogLevel.LogLevel)

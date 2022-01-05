@@ -5,7 +5,7 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/haproxytech/kubernetes-ingress/controller/utils"
+	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
