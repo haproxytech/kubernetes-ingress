@@ -22,6 +22,13 @@ spec:
             - name: https
               containerPort: 8443
               protocol: TCP
+          {{- if .NotReady}}
+          readinessProbe:
+            failureThreshold: 3
+            periodSeconds: 1
+            httpGet:
+              port: 6666
+          {{- end}}
 ---
 kind: Service
 apiVersion: v1
@@ -46,6 +53,11 @@ metadata:
   name: http-echo
   annotations:
     ingress.class: haproxy
+    {{- if .NotReady}}
+    check: "false"
+    backend-config-snippet: |
+      http-request return status 503 if !{ nbsrv() eq 1 }
+    {{- end}}
 spec:
   rules:
   - host: {{ .Host }}
