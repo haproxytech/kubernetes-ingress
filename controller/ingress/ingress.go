@@ -59,25 +59,37 @@ func (i Ingress) supported(k8s store.K8s) (supported bool) {
 	if igClassResource := k8s.IngressClasses[i.resource.Class]; igClassResource != nil && igClassResource.Status != store.DELETED {
 		igClassSpec = igClassResource.Controller
 	}
-
-	defer func() {
-		if supported && i.resource.Ignored {
-			i.resource.Status = store.ADDED
-			i.resource.Ignored = false
+	if igClassAnn == "" && i.resource.Class == "" {
+		for _, ingressClass := range k8s.IngressClasses {
+			if ingressClass.Annotations["ingressclass.kubernetes.io/is-default-class"] == "true" {
+				igClassSpec = ingressClass.Controller
+				break
+			}
 		}
-	}()
+	}
 
-	emptyClass := igClassAnn == "" && i.resource.Class == ""
-
-	if i.controllerClass == "" {
-		supported = emptyClass || igClassSpec == CONTROLLER
-	} else {
-		supported = (emptyClass && i.allowEmptyClass) ||
-			igClassAnn == i.controllerClass ||
-			igClassSpec == filepath.Join(CONTROLLER, i.controllerClass)
+	switch i.controllerClass {
+	case "":
+		if igClassAnn == "" {
+			supported = (i.resource.Class == "" && igClassSpec == "") || igClassSpec == CONTROLLER
+		} else if igClassSpec == CONTROLLER {
+			logger.Warningf("Ingress '%s/%s': conflicting ingress class mechanisms", i.resource.Namespace, i.resource.Name)
+		}
+	case igClassAnn:
+		supported = true
+	default:
+		if igClassAnn == "" {
+			supported = i.resource.Class == "" && i.allowEmptyClass || igClassSpec == filepath.Join(CONTROLLER, i.controllerClass)
+		} else if igClassSpec == filepath.Join(CONTROLLER, i.controllerClass) {
+			logger.Warningf("Ingress '%s/%s': conflicting ingress class mechanisms", i.resource.Namespace, i.resource.Name)
+		}
 	}
 	if !supported {
 		i.resource.Ignored = true
+	}
+	if supported && i.resource.Ignored {
+		i.resource.Status = store.ADDED
+		i.resource.Ignored = false
 	}
 	return
 }

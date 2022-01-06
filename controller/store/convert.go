@@ -163,10 +163,15 @@ func (n ingressNetworkingV1Beta1Strategy) ConvertIngress() *Ingress {
 }
 
 func (n ingressNetworkingV1Beta1Strategy) ConvertClass() *IngressClass {
+	annotations := make(map[string]string, len(n.class.Annotations))
+	for key, value := range n.class.Annotations {
+		annotations[key] = value
+	}
 	return &IngressClass{
-		APIVersion: NETWORKINGV1BETA1,
-		Name:       n.class.GetName(),
-		Controller: n.class.Spec.Controller,
+		APIVersion:  NETWORKINGV1BETA1,
+		Name:        n.class.GetName(),
+		Controller:  n.class.Spec.Controller,
+		Annotations: annotations,
 		Status: func() Status {
 			if n.class.ObjectMeta.GetDeletionTimestamp() != nil {
 				return DELETED
@@ -353,10 +358,15 @@ func (n ingressNetworkingV1Strategy) ConvertIngress() *Ingress {
 }
 
 func (n ingressNetworkingV1Strategy) ConvertClass() *IngressClass {
+	annotations := make(map[string]string, len(n.class.Annotations))
+	for key, value := range n.class.Annotations {
+		annotations[key] = value
+	}
 	return &IngressClass{
-		APIVersion: NETWORKINGV1,
-		Name:       n.class.GetName(),
-		Controller: n.class.Spec.Controller,
+		APIVersion:  NETWORKINGV1,
+		Name:        n.class.GetName(),
+		Controller:  n.class.Spec.Controller,
+		Annotations: annotations,
 		Status: func() Status {
 			if n.class.ObjectMeta.GetDeletionTimestamp() != nil {
 				return DELETED

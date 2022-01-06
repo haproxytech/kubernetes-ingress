@@ -95,10 +95,11 @@ type CustomResources struct {
 }
 
 type IngressClass struct {
-	APIVersion string
-	Name       string
-	Controller string
-	Status     Status
+	APIVersion  string
+	Name        string
+	Controller  string
+	Annotations map[string]string
+	Status      Status
 }
 
 // IngressPath is useful data from k8s structures about ingress path
