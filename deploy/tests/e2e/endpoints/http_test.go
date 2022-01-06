@@ -19,7 +19,6 @@ package endpoints
 import (
 	"fmt"
 	"io/ioutil"
-	"net/http"
 
 	"github.com/haproxytech/kubernetes-ingress/deploy/tests/e2e"
 )
@@ -39,7 +38,7 @@ func (suite *EndpointsSuite) Test_HTTP_Reach() {
 						res, cls, err := suite.client.Do()
 						suite.NoError(err)
 						defer cls()
-						if res.StatusCode == http.StatusOK {
+						if res.StatusCode == 200 {
 							body, err := ioutil.ReadAll(res.Body)
 							if err != nil {
 								suite.Error(err)
