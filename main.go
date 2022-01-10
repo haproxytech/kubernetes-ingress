@@ -17,8 +17,6 @@ package main
 import (
 	_ "embed"
 	"fmt"
-	"log"
-	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
@@ -27,13 +25,12 @@ import (
 	_ "net/http/pprof"
 
 	"github.com/google/renameio"
-	config "github.com/haproxytech/kubernetes-ingress/pkg/configuration"
+	"github.com/jessevdk/go-flags"
+
 	c "github.com/haproxytech/kubernetes-ingress/pkg/controller"
 	"github.com/haproxytech/kubernetes-ingress/pkg/controller/annotations"
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
-	"github.com/jessevdk/go-flags"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 //go:embed fs/usr/local/etc/haproxy/haproxy.cfg
@@ -48,29 +45,58 @@ func main() {
 		os.Exit(exitCode)
 	}()
 
+	// Parse Controller Args
 	var osArgs utils.OSArgs
+	var err error
 	parser := flags.NewParser(&osArgs, flags.IgnoreUnknown)
-	_, err := parser.Parse()
-
-	if err != nil {
+	if _, err = parser.Parse(); err != nil {
 		fmt.Println(err)
 		exitCode = 1
 		return
 	}
 
-	if osArgs.PromotheusPort != 0 {
-		http.Handle("/metrics", promhttp.Handler())
-		go func() {
-			log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", osArgs.PromotheusPort), nil))
-		}()
-	}
-
+	// Set Logger
 	logger := utils.GetLogger()
 	logger.SetLevel(osArgs.LogLevel.LogLevel)
+	if len(osArgs.Help) > 0 && osArgs.Help[0] {
+		parser.WriteHelp(os.Stdout)
+		return
+	}
+	logger.ShowFilename(false)
+	logInfo(logger, osArgs)
+	logger.ShowFilename(true)
 
+	// Default annotations
 	defaultBackendSvc := fmt.Sprint(osArgs.DefaultBackendService)
 	defaultCertificate := fmt.Sprint(osArgs.DefaultCertificate)
+	annotations.SetDefaultValue("default-backend-service", defaultBackendSvc)
+	annotations.SetDefaultValue("ssl-certificate", defaultCertificate)
 
+	// Start Controller
+	s := store.NewK8sStore(osArgs)
+	for _, namespace := range osArgs.NamespaceWhitelist {
+		s.NamespacesAccess.Whitelist[namespace] = struct{}{}
+	}
+	for _, namespace := range osArgs.NamespaceBlacklist {
+		s.NamespacesAccess.Blacklist[namespace] = struct{}{}
+	}
+	controller := c.NewBuilder().WithStore(s).WithArgs(osArgs).Build()
+	cfg := controller.Cfg
+	err = renameio.WriteFile(cfg.Env.MainCFGFile, haproxyConf, 0755)
+	if err != nil {
+		logger.Panic(err)
+	}
+	logger.Error(os.Chdir(cfg.Env.CfgDir))
+	controller.Start()
+
+	// Catch QUIT signals
+	signalC := make(chan os.Signal, 1)
+	signal.Notify(signalC, os.Interrupt, syscall.SIGTERM, syscall.SIGUSR1)
+	<-signalC
+	controller.Stop()
+}
+
+func logInfo(logger utils.Logger, osArgs utils.OSArgs) {
 	if len(osArgs.Version) > 0 {
 		fmt.Printf("HAProxy Ingress Controller %s %s%s", GitTag, GitCommit, GitDirty)
 		fmt.Printf("Build from: %s", GitRepo)
@@ -83,28 +109,16 @@ func main() {
 		return
 	}
 
-	if len(osArgs.Help) > 0 && osArgs.Help[0] {
-		parser.WriteHelp(os.Stdout)
-		return
-	}
-
-	logger.FileName = false
 	logger.Print(IngressControllerInfo)
 	logger.Printf("HAProxy Ingress Controller %s %s%s", GitTag, GitCommit, GitDirty)
 	logger.Printf("Build from: %s", GitRepo)
 	logger.Printf("Build date: %s\n", BuildTime)
-	if osArgs.PprofEnabled {
-		logger.Warning("pprof endpoint exposed over https")
-		go func() {
-			logger.Error(http.ListenAndServe("127.0.0.1:6060", nil))
-		}()
-	}
 	logger.Printf("ConfigMap: %s", osArgs.ConfigMap)
 	logger.Printf("Ingress class: %s", osArgs.IngressClass)
 	logger.Printf("Empty Ingress class: %t", osArgs.EmptyIngressClass)
 	logger.Printf("Publish service: %s", osArgs.PublishService)
-	logger.Printf("Default backend service: %s", defaultBackendSvc)
-	logger.Printf("Default ssl certificate: %s", defaultCertificate)
+	logger.Printf("Default backend service: %s", osArgs.DefaultBackendService)
+	logger.Printf("Default ssl certificate: %s", osArgs.DefaultCertificate)
 	if !osArgs.DisableHTTP {
 		logger.Printf("Frontend HTTP listening on: %s:%d", osArgs.IPV4BindAddr, osArgs.HTTPBindPort)
 	}
@@ -138,53 +152,4 @@ func main() {
 	hostname, err := os.Hostname()
 	logger.Error(err)
 	logger.Printf("Running on %s", hostname)
-
-	cfg := config.ControllerCfg{
-		Env: config.Env{
-			HAProxyBinary: "/usr/local/sbin/haproxy",
-			MainCFGFile:   "/etc/haproxy/haproxy.cfg",
-			CfgDir:        "/etc/haproxy/",
-			RuntimeDir:    "/var/run",
-			StateDir:      "/var/state/haproxy/",
-		},
-	}
-	if osArgs.External {
-		cfg = setupHAProxyEnv(osArgs)
-	}
-	err = renameio.WriteFile(cfg.Env.MainCFGFile, haproxyConf, 0755)
-	if err != nil {
-		logger.Panic(err)
-	}
-	podName := os.Getenv("POD_NAME")
-
-	if osArgs.Program != "" {
-		cfg.Env.HAProxyBinary = osArgs.Program
-	}
-	logger.Error(os.Chdir(cfg.Env.CfgDir))
-
-	prefix, errPrefix := utils.GetPodPrefix(podName)
-	logger.Error(errPrefix)
-
-	controller := c.HAProxyController{
-		Cfg:          cfg,
-		OSArgs:       osArgs,
-		PodNamespace: os.Getenv("POD_NAMESPACE"),
-		PodPrefix:    prefix}
-	logger.FileName = true
-	// K8s Store
-	s := store.NewK8sStore(osArgs)
-	annotations.SetDefaultValue("default-backend-service", defaultBackendSvc)
-	annotations.SetDefaultValue("ssl-certificate", defaultCertificate)
-	for _, namespace := range osArgs.NamespaceWhitelist {
-		s.NamespacesAccess.Whitelist[namespace] = struct{}{}
-	}
-	for _, namespace := range osArgs.NamespaceBlacklist {
-		s.NamespacesAccess.Blacklist[namespace] = struct{}{}
-	}
-	controller.Store = s
-	controller.Start()
-	signalC := make(chan os.Signal, 1)
-	signal.Notify(signalC, os.Interrupt, syscall.SIGTERM, syscall.SIGUSR1)
-	<-signalC
-	controller.Stop()
 }
