@@ -261,6 +261,9 @@ func (k *K8s) convertToEndpoints(obj interface{}, status store.Status) (*store.E
 		}
 		addresses := make(map[string]struct{})
 		for _, endpoints := range data.Endpoints {
+			if endpoints.Conditions.Ready == nil || !*endpoints.Conditions.Ready {
+				continue
+			}
 			for _, address := range endpoints.Addresses {
 				addresses[address] = struct{}{}
 			}
@@ -285,6 +288,9 @@ func (k *K8s) convertToEndpoints(obj interface{}, status store.Status) (*store.E
 		}
 		addresses := make(map[string]struct{})
 		for _, endpoints := range data.Endpoints {
+			if endpoints.Conditions.Ready == nil || !*endpoints.Conditions.Ready {
+				continue
+			}
 			for _, address := range endpoints.Addresses {
 				addresses[address] = struct{}{}
 			}
