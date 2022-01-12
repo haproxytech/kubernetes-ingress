@@ -169,13 +169,9 @@ func (s *SvcContext) getEndpoints(k8s store.K8s) (endpoints *store.PortEndpoints
 		}
 		return nil, fmt.Errorf("no Endpoints for service '%s'", s.service.Name)
 	}
-	sp := s.path.SvcPortResolved
-	if sp != nil {
-		for portName, endpoints := range e.Ports {
-			if portName == sp.Name || endpoints.Port == sp.Port {
-				return endpoints, nil
-			}
-		}
+	svcPort := s.path.SvcPortResolved
+	if svcPort != nil && e.Ports[svcPort.Name] != nil {
+		return e.Ports[svcPort.Name], nil
 	}
 	if s.path.SvcPortString != "" {
 		return nil, fmt.Errorf("no matching endpoints for service '%s' and port '%s'", s.service.Name, s.path.SvcPortString)
