@@ -154,13 +154,9 @@ func (s *Service) getRuntimeBackend(k8s store.K8s) (backend *store.RuntimeBacken
 		}
 		return nil, fmt.Errorf("no available endpoints")
 	}
-	sp := s.path.SvcPortResolved
-	if sp != nil {
-		for portName, backend := range backends {
-			if portName == sp.Name || backend.Endpoints.Port == sp.Port {
-				return backend, nil
-			}
-		}
+	svcPort := s.path.SvcPortResolved
+	if svcPort != nil && backends[svcPort.Name] != nil {
+		return backends[svcPort.Name], nil
 	}
 	if s.path.SvcPortString != "" {
 		return nil, fmt.Errorf("no matching endpoints for port '%s'", s.path.SvcPortString)
