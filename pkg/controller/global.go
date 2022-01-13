@@ -22,9 +22,9 @@ import (
 	"github.com/haproxytech/kubernetes-ingress/pkg/configuration"
 	"github.com/haproxytech/kubernetes-ingress/pkg/controller/annotations"
 	"github.com/haproxytech/kubernetes-ingress/pkg/controller/annotations/common"
-	"github.com/haproxytech/kubernetes-ingress/pkg/controller/service"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/certs"
 	"github.com/haproxytech/kubernetes-ingress/pkg/ingress"
+	"github.com/haproxytech/kubernetes-ingress/pkg/service"
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
 )
 
