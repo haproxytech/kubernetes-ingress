@@ -64,7 +64,7 @@ rules:
 - apiGroups:
   - core.haproxy.org
   resources:
-     - '*'
+  - '*'
   verbs:
   - get
   - list
@@ -164,7 +164,7 @@ spec:
       - name: haproxy-ingress
         image: haproxytech/kubernetes-ingress
         args:
-          - --configmap=default/haproxy-kubernetes-ingress
+          - --configmap=haproxy-controller/haproxy-kubernetes-ingress
           - --default-backend-service=default/haproxy-kubernetes-ingress-default-backend
         securityContext:
           runAsUser:  1000
