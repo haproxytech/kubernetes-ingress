@@ -388,22 +388,6 @@ groups:
       - Insert raw HAProxy configuration in specific HAProxy config sections.
       - There is **no data validation** done by Ingress Controller. If input is incorrect, HAProxy will fail to apply new configuration.
       - It is possible to use [pattern files](controller.md/#--configmap-patternfiles) inside config snippets.
-  cookie-persistence:
-    header: |-
-      - Configure sticky session via cookie-based persistence.
-    footer: |-
-      Configuring the cookie can be done in two different ways:
-      - Using `cookie-persistence` annotation.
-        However, currently, this **does not work** when deploying more than one ingress controller pod. For such case (multiple IC pods) the following `dynamic` cookie configuration via `backend-config-snippet` annotation an be used.
-      - Using [`backend-config-snippet`](#config-snippet) annotation for more cookie options.
-
-        ```yaml
-        backend-config-snippet: |
-            dynamic-cookie-key ahgh5kiM
-            cookie SRV insert indirect nocache dynamic
-        ```
-
-      More information can be found in the official HAProxy [documentation](https://cbonte.github.io/haproxy-dconv/2.0/configuration.html#4-cookie)
   CORS:
     header: |-
       - *Cross-Origin Resource Sharing (CORS) is an HTTP-header based mechanism that allows a server to indicate any other origins (domain, scheme, or port) than its own from which a browser should permit loading of resources.* -  [Mozilla Docs](https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS)
@@ -814,15 +798,13 @@ annotations:
               stick on req.cook(sessionid)
   - title: cookie-persistence
     type: string
-    group: cookie-persistence
-    dependencies: ""
-    default: ""
     description:
-      - Enables persistent connections between a client and a pod by inserting a cookie
+      - Enables persistent connections (sticky sessions) between a client and a pod by inserting a cookie
         into the client's browser that is used to remember which backend pod they connected
         to before.
+      - Dynamic cookies are used by default via a [dynamic-cookie-key](https://cbonte.github.io/haproxy-dconv/2.4/configuration.html#4.2-dynamic-cookie-key) in order to support sticky sessions across multiple Ingress Controller instances/replicas.
     tip:
-      - This will insert the following cookie configuration in the corresponding backend `cookie <cookie-name> insert indirect nocache` with `<cookie-name>` the value of this annotation.
+      - This will insert the following cookie configuration in the corresponding backend `cookie <cookie-name> insert indirect nocache dynamic` with `<cookie-name>` the value of this annotation.
     values:
       - A name for the cookie
     applies_to:

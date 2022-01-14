@@ -630,15 +630,14 @@ backend-config-snippet: |
 
 #### Cookie Persistence
 
-- Configure sticky session via cookie-based persistence.
-
 ##### `cookie-persistence`
 
-  Enables persistent connections between a client and a pod by inserting a cookie into the client's browser that is used to remember which backend pod they connected to before.
+  Enables persistent connections (sticky sessions) between a client and a pod by inserting a cookie into the client's browser that is used to remember which backend pod they connected to before.
+  Dynamic cookies are used by default via a [dynamic-cookie-key](https://cbonte.github.io/haproxy-dconv/2.4/configuration.html#4.2-dynamic-cookie-key) in order to support sticky sessions across multiple Ingress Controller instances/replicas.
 
   Available on:  `configmap`  `ingress`  `service`
 
-  :information_source: This will insert the following cookie configuration in the corresponding backend `cookie <cookie-name> insert indirect nocache` with `<cookie-name>` the value of this annotation.
+  :information_source: This will insert the following cookie configuration in the corresponding backend `cookie <cookie-name> insert indirect nocache dynamic` with `<cookie-name>` the value of this annotation.
 
 Possible values:
 
@@ -649,19 +648,6 @@ Example:
 ```yaml
 cookie-persistence: "mycookie"
 ```
-
-Configuring the cookie can be done in two different ways:
-- Using `cookie-persistence` annotation.
-  However, currently, this **does not work** when deploying more than one ingress controller pod. For such case (multiple IC pods) the following `dynamic` cookie configuration via `backend-config-snippet` annotation an be used.
-- Using [`backend-config-snippet`](#config-snippet) annotation for more cookie options.
-
-  ```yaml
-  backend-config-snippet: |
-      dynamic-cookie-key ahgh5kiM
-      cookie SRV insert indirect nocache dynamic
-  ```
-
-More information can be found in the official HAProxy [documentation](https://cbonte.github.io/haproxy-dconv/2.0/configuration.html#4-cookie)
 
 <p align='right'><a href='#available-annotations'>:arrow_up_small: back to top</a></p>
 
