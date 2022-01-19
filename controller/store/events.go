@@ -40,7 +40,7 @@ func (k *K8s) EventIngressClass(data *IngressClass) (updateRequired bool) {
 			logger.Warningf("IngressClass '%s' not registered with controller !", data.Name)
 			return false
 		}
-		if oldIgClass.Equal(oldIgClass) {
+		if newIgClass.Equal(oldIgClass) {
 			return false
 		}
 		k.IngressClasses[data.Name] = newIgClass
