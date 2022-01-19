@@ -66,12 +66,54 @@ spec:
 ```
 In this case only HAProxy Ingress Controllers with `--ingress.class` set to "haproxy" are going to implement the previous Ingress object.
 
-## Eligibility rules
-- If the `--ingress.class` argument of the controller is not configured:
-  - **Accept** Ingress resource when neither `ingress.class` annotation nor `ingressClassName` fields are set.
-  - **Accept** Ingress resource when `ingress.class` annotation is not set but `ingressClassName` field matches.
-- If the `--ingress.class` argument of the controller is configured:
-  - **Accept** Ingress resource when neither `ingress.class` annotation nor `ingressClassName` fields are set but controller argument `--EmptyIngressClass` is enabled.
-  - **Accept** Ingress resource when --`ingress.class` argument is equal to `ingress.class` annotation.
-  - **Accept** Ingress resource when `ingressClassName` field matches.
+## Ingress eligibility rules
+
+### Inputs
+
+#### Controller
+- [`--ingress.class`](./controller.md#--ingressclass): CLI param of the Ingress Controller to select Ingress resources.
+- [`--EmptyIngressClass`](./controller.md#--empty-ingress-class):  CLI param of the Ingress Controller to select Ingress resources with ingress class config.
+
+#### Ingress resource
+- [`ingress.class`](https://kubernetes.io/docs/concepts/services-networking/ingress/#deprecated-annotation):  annotation which can be set in the ingress resource.
+- [`ingressClassName`](https://kubernetes.io/docs/concepts/services-networking/ingress/#deprecated-annotation): field in the ingress resource that reference a kubernetes IngressClass.
+
+#### IngressClass resource
+- [`is-default-class`](https://kubernetes.io/docs/concepts/services-networking/ingress/#default-ingress-class): annotation in ingressClass resource.
+- [`controller`](https://kubernetes.io/docs/concepts/services-networking/ingress/#ingress-class): field in the ingressClass resource.
+
+### Prerequisites
+A **matching default IngressClass** is true when a **valid IngressClass** resource is available in the cluster and its `is-default-class` annotation is enabled.  
+A **matching IngressClass** is true when the `ingressClassName` field of an Ingress resource points to a **valid IngressClass**.  
+A **valid IngressClass** is true when the `controller` field of the IngressClass is equal to:  
+- "*haproxy.org/ingress-controller*" if `--ingress.class` argument is empty
+- "*haproxy.org/ingress-controller/<--ingress.class value>*" if `--ingress.class` argument is not empty.
+
+### Rules
+- If the `--ingress.class` controller param is not set (empty):
+  - **Accept** Ingress resource with:
+	  - no `ingress.class` annotation
+	  - no `ingressClassName` field.
+	  - no IngressClass resource with `is-default-class` enabled.
+  - **Accept** Ingress resource with:
+	  - no `ingress.class` annotation
+	  - no `ingressClassName` field.
+	  - a "matching default IngressClass"
+  - **Accept** Ingress resource with:
+	  - no `ingress.class` annotation
+	  - a "matching IngressClass"
+- If the `--ingress.class` controller param is set (not empty):
+  - **Accept** Ingress resource with:
+	  - an `ingress.class` annotation equal to the `--ingress.class` argument.
+  - **Accept** Ingress resource with:
+	  - no `ingress.class` annotation
+	  - no `ingressClassName` field.
+	  - `--EmptyIngressClass` controller param is enabled.
+  - **Accept** Ingress resource  with:
+	  - no `ingress.class` annotation
+	  - no `ingressClassName` field.
+	  - a "matching default IngressClass"
+  - **Accept** Ingress resource  with:
+	  - no `ingress.class` annotation
+	  - a "matching IngressClass"
 - **Ignore** Ingress resource otherwise.
