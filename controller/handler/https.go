@@ -260,8 +260,10 @@ func (h HTTPS) toggleSSLPassthrough(passthrough bool, cfg *config.ControllerCfg,
 
 func (h HTTPS) sslPassthroughRules(k store.K8s, cfg *config.ControllerCfg) error {
 	inspectTimeout, err := annotations.Timeout("timeout-client", k.ConfigMaps.Main.Annotations)
-	if err != nil {
-		logger.Errorf("SSL Passthrough: %s", err)
+	if inspectTimeout == nil {
+		if err != nil {
+			logger.Errorf("SSL Passthrough: %s", err)
+		}
 		inspectTimeout = utils.PtrInt64(5000)
 	}
 	errors := utils.Errors{}
