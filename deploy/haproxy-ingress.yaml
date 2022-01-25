@@ -166,7 +166,7 @@ spec:
         image: haproxytech/kubernetes-ingress
         args:
           - --configmap=haproxy-controller/haproxy-kubernetes-ingress
-          - --default-backend-service=default/haproxy-kubernetes-ingress-default-backend
+          - --default-backend-service=haproxy-controller/haproxy-kubernetes-ingress-default-backend
         securityContext:
           runAsUser:  1000
           runAsGroup: 1000
