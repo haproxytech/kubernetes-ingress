@@ -19,7 +19,7 @@ echo "wait --for=condition=ready ..."
 COUNTER=0
 while [  $COUNTER -lt 150 ]; do
     sleep 2
-    kubectl get pods -n default --no-headers --selector=run=haproxy-ingress | awk '{print "default/haproxy-kubernetes-ingress " $3 " " $5}'
+    kubectl get pods -n haproxy-controller --no-headers --selector=run=haproxy-ingress | awk '{print "haproxy-controller/haproxy-kubernetes-ingress " $3 " " $5}'
     result=$(kubectl get pods -n default  --no-headers --selector=run=haproxy-ingress | awk '{print $3}')
     if [ "$result" = "Running" ]; then
       COUNTER=151
