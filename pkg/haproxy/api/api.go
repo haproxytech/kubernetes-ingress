@@ -69,7 +69,7 @@ type clientNative struct {
 	activeTransactionHasChanges bool
 }
 
-func Init(transactionDir, configFile, programPath, runtimeSocket string) (client HAProxyClient, err error) {
+func New(transactionDir, configFile, programPath, runtimeSocket string) (client HAProxyClient, err error) {
 	runtimeClient := runtime.Client{}
 	err = runtimeClient.InitWithSockets(map[int]string{
 		0: runtimeSocket,

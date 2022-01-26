@@ -142,7 +142,7 @@ func (r SectionRules) DeleteFrontend(frontend string) {
 }
 
 func (r SectionRules) Clean(frontends ...string) {
-	for _, frontend := range frontends {
+	for frontend := range r {
 		if ftRuleSet, ok := r[frontend]; ok {
 			for id := range ftRuleSet.meta {
 				ftRuleSet.meta[id].state = TO_DELETE

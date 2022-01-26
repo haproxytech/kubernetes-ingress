@@ -7,19 +7,19 @@ import (
 	"strconv"
 	"syscall"
 
-	"github.com/haproxytech/kubernetes-ingress/pkg/configuration"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/api"
+	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/config"
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
 )
 
 type directControl struct {
-	Env        configuration.Env
+	Env        config.Env
 	OSArgs     utils.OSArgs
 	API        api.HAProxyClient
 	useAuxFile bool
 }
 
-func NewDirectControl(env configuration.Env, oSArgs utils.OSArgs, api api.HAProxyClient) Process {
+func NewDirectControl(env config.Env, oSArgs utils.OSArgs, api api.HAProxyClient) Process {
 	return &directControl{
 		Env:    env,
 		OSArgs: oSArgs,
@@ -27,7 +27,7 @@ func NewDirectControl(env configuration.Env, oSArgs utils.OSArgs, api api.HAProx
 	}
 }
 
-func (d *directControl) HaproxyService(action string) (err error) {
+func (d *directControl) Service(action string) (err error) {
 	if d.OSArgs.Test {
 		logger.Infof("HAProxy would be %sed now", action)
 		return nil
@@ -44,9 +44,9 @@ func (d *directControl) HaproxyService(action string) (err error) {
 			logger.Error("haproxy is already running")
 			return nil
 		}
-		cmd = exec.Command(d.Env.HAProxyBinary, "-f", d.Env.MainCFGFile)
+		cmd = exec.Command(d.Env.Binary, "-f", d.Env.MainCFGFile)
 		if d.useAuxFile {
-			cmd = exec.Command(d.Env.HAProxyBinary, "-f", d.Env.MainCFGFile, "-f", d.Env.AuxCFGFile)
+			cmd = exec.Command(d.Env.Binary, "-f", d.Env.MainCFGFile, "-f", d.Env.AuxCFGFile)
 		}
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
@@ -65,19 +65,19 @@ func (d *directControl) HaproxyService(action string) (err error) {
 		logger.Error(saveServerState(d.Env.StateDir, d.API))
 		if processErr != nil {
 			logger.Errorf("haproxy is not running, trying to start it")
-			return d.HaproxyService("start")
+			return d.Service("start")
 		}
 		return process.Signal(syscall.SIGUSR2)
 	case "restart":
 		logger.Error(saveServerState(d.Env.StateDir, d.API))
 		if processErr != nil {
 			logger.Errorf("haproxy is not running, trying to start it")
-			return d.HaproxyService("start")
+			return d.Service("start")
 		}
 		pid := strconv.Itoa(process.Pid)
-		cmd = exec.Command(d.Env.HAProxyBinary, "-f", d.Env.MainCFGFile, "-sf", pid)
+		cmd = exec.Command(d.Env.Binary, "-f", d.Env.MainCFGFile, "-sf", pid)
 		if d.useAuxFile {
-			cmd = exec.Command(d.Env.HAProxyBinary, "-f", d.Env.MainCFGFile, "-f", d.Env.AuxCFGFile, "-sf", pid)
+			cmd = exec.Command(d.Env.Binary, "-f", d.Env.MainCFGFile, "-f", d.Env.AuxCFGFile, "-sf", pid)
 		}
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr

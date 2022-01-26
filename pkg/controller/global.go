@@ -21,8 +21,8 @@ import (
 
 	"github.com/haproxytech/kubernetes-ingress/pkg/annotations"
 	"github.com/haproxytech/kubernetes-ingress/pkg/annotations/common"
-	"github.com/haproxytech/kubernetes-ingress/pkg/configuration"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/certs"
+	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/config"
 	"github.com/haproxytech/kubernetes-ingress/pkg/ingress"
 	"github.com/haproxytech/kubernetes-ingress/pkg/service"
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
@@ -33,7 +33,7 @@ func (c *HAProxyController) handleGlobalConfig() (reload, restart bool) {
 	reload = c.defaultsCfg() || reload
 	c.handleDefaultCert()
 	reload = c.handleDefaultService() || reload
-	(&ingress.Ingress{}).HandleAnnotations(c.store, &c.cfg)
+	(&ingress.Ingress{}).HandleAnnotations(c.store, c.haproxy)
 	return reload, restart
 }
 
@@ -42,12 +42,12 @@ func (c *HAProxyController) globalCfg() (reload, restart bool) {
 	var newLg models.LogTargets
 	var err error
 	var updated []string
-	global, err = c.client.GlobalGetConfiguration()
+	global, err = c.haproxy.GlobalGetConfiguration()
 	if err != nil {
 		logger.Error(err)
 		return
 	}
-	lg, errL := c.client.GlobalGetLogTargets()
+	lg, errL := c.haproxy.GlobalGetLogTargets()
 	if errL != nil {
 		logger.Error(errL)
 		return
@@ -69,16 +69,16 @@ func (c *HAProxyController) globalCfg() (reload, restart bool) {
 			}
 		}
 	}
-	configuration.SetGlobal(newGlobal, &newLg, c.cfg.Env)
+	config.SetGlobal(newGlobal, &newLg, c.haproxy.Env)
 	updated = deep.Equal(newGlobal, global)
 	if len(updated) != 0 {
-		logger.Error(c.client.GlobalPushConfiguration(*newGlobal))
+		logger.Error(c.haproxy.GlobalPushConfiguration(*newGlobal))
 		logger.Debugf("Global config updated: %s\nRestart required", updated)
 		restart = true
 	}
 	updated = deep.Equal(newLg, lg)
 	if len(updated) != 0 {
-		logger.Error(c.client.GlobalPushLogTargets(newLg))
+		logger.Error(c.haproxy.GlobalPushLogTargets(newLg))
 		logger.Debugf("Global log targets updated: %s\nRestart required", updated)
 		restart = true
 	}
@@ -95,13 +95,13 @@ func (c *HAProxyController) globalCfgSnipp() (reload, restart bool) {
 			logger.Errorf("annotation %s: %s", a.GetName(), err)
 		}
 	}
-	updatedSnipp, errSnipp := annotations.UpdateGlobalCfgSnippet(c.client)
+	updatedSnipp, errSnipp := annotations.UpdateGlobalCfgSnippet(c.haproxy)
 	logger.Error(errSnipp)
 	if len(updatedSnipp) != 0 {
 		logger.Debugf("Global config-snippet updated: %s\nRestart required", updatedSnipp)
 		restart = true
 	}
-	updatedSnipp, errSnipp = annotations.UpdateFrontendCfgSnippet(c.client, "http", "https", "stats")
+	updatedSnipp, errSnipp = annotations.UpdateFrontendCfgSnippet(c.haproxy, "http", "https", "stats")
 	logger.Error(errSnipp)
 	if len(updatedSnipp) != 0 {
 		logger.Debugf("Frontend config-snippet updated: %s\nReload required", updatedSnipp)
@@ -112,7 +112,7 @@ func (c *HAProxyController) globalCfgSnipp() (reload, restart bool) {
 
 func (c *HAProxyController) defaultsCfg() (reload bool) {
 	var newDefaults, defaults *models.Defaults
-	defaults, err := c.client.DefaultsGetConfiguration()
+	defaults, err := c.haproxy.DefaultsGetConfiguration()
 	if err != nil {
 		logger.Error(err)
 		return
@@ -127,10 +127,10 @@ func (c *HAProxyController) defaultsCfg() (reload bool) {
 			logger.Error(a.Process(c.store, c.store.ConfigMaps.Main.Annotations))
 		}
 	}
-	configuration.SetDefaults(newDefaults)
+	config.SetDefaults(newDefaults)
 	updated := deep.Equal(newDefaults, defaults)
 	if len(updated) != 0 {
-		if err = c.client.DefaultsPushConfiguration(*newDefaults); err != nil {
+		if err = c.haproxy.DefaultsPushConfiguration(*newDefaults); err != nil {
 			logger.Error(err)
 			return
 		}
@@ -156,7 +156,7 @@ func (c *HAProxyController) handleDefaultService() (reload bool) {
 		IsDefaultBackend: true,
 	}
 	if svc, err = service.New(c.store, ingressPath, nil, false, c.store.ConfigMaps.Main.Annotations); err == nil {
-		reload, err = svc.SetDefaultBackend(c.store, &c.cfg, c.client, []string{c.cfg.FrontHTTP, c.cfg.FrontHTTPS})
+		reload, err = svc.SetDefaultBackend(c.store, c.haproxy, []string{c.haproxy.FrontHTTP, c.haproxy.FrontHTTPS})
 	}
 	if err != nil {
 		logger.Errorf("default service: %s", err)
@@ -174,6 +174,6 @@ func (c *HAProxyController) handleDefaultCert() {
 	if secret == nil {
 		return
 	}
-	_, err = c.cfg.Certificates.HandleTLSSecret(secret, certs.FT_DEFAULT_CERT)
+	_, err = c.haproxy.Certificates.HandleTLSSecret(secret, certs.FT_DEFAULT_CERT)
 	logger.Error(err)
 }

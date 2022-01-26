@@ -17,8 +17,7 @@ package handler
 import (
 	"github.com/haproxytech/client-native/v2/models"
 
-	config "github.com/haproxytech/kubernetes-ingress/pkg/configuration"
-	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/api"
+	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy"
 	"github.com/haproxytech/kubernetes-ingress/pkg/route"
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
 )
@@ -26,19 +25,19 @@ import (
 type Pprof struct {
 }
 
-func (h Pprof) Update(k store.K8s, cfg *config.ControllerCfg, api api.HAProxyClient) (reload bool, err error) {
+func (handler Pprof) Update(k store.K8s, h haproxy.HAProxy) (reload bool, err error) {
 	pprofBackend := "pprof"
 
-	_, err = api.BackendGet(pprofBackend)
+	_, err = h.BackendGet(pprofBackend)
 	if err != nil {
-		err = api.BackendCreate(models.Backend{
+		err = h.BackendCreate(models.Backend{
 			Name: pprofBackend,
 			Mode: "http",
 		})
 		if err != nil {
 			return
 		}
-		err = api.BackendServerCreate(pprofBackend, models.Server{
+		err = h.BackendServerCreate(pprofBackend, models.Server{
 			Name:    "pprof",
 			Address: "127.0.0.1:6060",
 		})
@@ -53,11 +52,11 @@ func (h Pprof) Update(k store.K8s, cfg *config.ControllerCfg, api api.HAProxyCli
 			Path:          "/debug/pprof",
 			PathTypeMatch: store.PATH_TYPE_IMPLEMENTATION_SPECIFIC,
 		},
-	}, cfg.MapFiles)
+	}, h.MapFiles)
 	if err != nil {
 		return
 	}
-	cfg.ActiveBackends[pprofBackend] = struct{}{}
+	h.ActiveBackends[pprofBackend] = struct{}{}
 	reload = true
 	return
 }

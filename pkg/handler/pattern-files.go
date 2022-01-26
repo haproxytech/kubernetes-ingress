@@ -20,8 +20,7 @@ import (
 
 	"github.com/google/renameio"
 
-	config "github.com/haproxytech/kubernetes-ingress/pkg/configuration"
-	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/api"
+	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy"
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
 )
@@ -30,21 +29,21 @@ type PatternFiles struct {
 	files files
 }
 
-func (h *PatternFiles) Update(k store.K8s, cfg *config.ControllerCfg, api api.HAProxyClient) (reload bool, err error) {
-	h.files.dir = cfg.Env.PatternDir
+func (handler *PatternFiles) Update(k store.K8s, h haproxy.HAProxy) (reload bool, err error) {
+	handler.files.dir = h.Env.PatternDir
 	if k.ConfigMaps.PatternFiles == nil {
 		return false, nil
 	}
 	for name, v := range k.ConfigMaps.PatternFiles.Annotations {
-		err = h.files.writeFile(name, v)
+		err = handler.files.writeFile(name, v)
 		if err != nil {
 			logger.Errorf("failed writing patternfile '%s': %s", name, err)
 		}
 	}
 
-	for name, f := range h.files.data {
+	for name, f := range handler.files.data {
 		if !f.inUse {
-			err = h.files.deleteFile(name)
+			err = handler.files.deleteFile(name)
 			if err != nil {
 				logger.Errorf("failed deleting atternfile '%s': %s", name, err)
 			}

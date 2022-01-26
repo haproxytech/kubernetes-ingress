@@ -27,6 +27,15 @@ type cert struct {
 
 type SecretType int
 
+type Env struct {
+	MainDir     string
+	FrontendDir string
+	BackendDir  string
+	CaDir       string
+}
+
+var env Env
+
 // module logger
 var logger = utils.GetLogger()
 
@@ -45,19 +54,22 @@ type SecretCtx struct {
 	SecretType SecretType
 }
 
-var frontendCertDir string
-var backendCertDir string
-var caCertDir string
-
-func NewCertificates(caDir, ftDir, bdDir string) *Certificates {
-	frontendCertDir = ftDir
-	backendCertDir = bdDir
-	caCertDir = caDir
+func New(envParam Env) (*Certificates, error) {
+	env = envParam
+	if env.FrontendDir == "" {
+		return nil, fmt.Errorf("empty name for Frontend Cert Directory")
+	}
+	if env.BackendDir == "" {
+		return nil, fmt.Errorf("empty name for Backend Cert Directory")
+	}
+	if env.CaDir == "" {
+		return nil, fmt.Errorf("empty name for CA Cert Directory")
+	}
 	return &Certificates{
 		frontend: make(map[string]*cert),
 		backend:  make(map[string]*cert),
 		ca:       make(map[string]*cert),
-	}
+	}, nil
 }
 
 func (c *Certificates) HandleTLSSecret(secret *store.Secret, secretType SecretType) (certPath string, err error) {
@@ -74,19 +86,19 @@ func (c *Certificates) HandleTLSSecret(secret *store.Secret, secretType SecretTy
 	case FT_DEFAULT_CERT:
 		// starting filename with "0" makes it first cert to be picked by HAProxy when no SNI matches.
 		certName = fmt.Sprintf("0_%s_%s", secret.Namespace, secret.Name)
-		certPath = path.Join(frontendCertDir, certName)
+		certPath = path.Join(env.FrontendDir, certName)
 		certs = c.frontend
 	case FT_CERT:
 		certName = fmt.Sprintf("%s_%s", secret.Namespace, secret.Name)
-		certPath = path.Join(frontendCertDir, certName)
+		certPath = path.Join(env.FrontendDir, certName)
 		certs = c.frontend
 	case BD_CERT:
 		certName = fmt.Sprintf("%s_%s", secret.Namespace, secret.Name)
-		certPath = path.Join(backendCertDir, certName)
+		certPath = path.Join(env.BackendDir, certName)
 		certs = c.backend
 	case CA_CERT:
 		certName = fmt.Sprintf("%s_%s", secret.Namespace, secret.Name)
-		certPath = path.Join(caCertDir, certName)
+		certPath = path.Join(env.CaDir, certName)
 		certs = c.ca
 		privateKeyNull = true
 	default:
@@ -139,9 +151,9 @@ func (c *Certificates) FrontendCertsEnabled() bool {
 
 // Refresh removes unused certs from HAProxyCertDir
 func (c *Certificates) Refresh() (reload bool) {
-	reload = refreshCerts(c.frontend, frontendCertDir)
-	reload = refreshCerts(c.backend, backendCertDir) || reload
-	reload = refreshCerts(c.ca, caCertDir) || reload
+	reload = refreshCerts(c.frontend, env.FrontendDir)
+	reload = refreshCerts(c.backend, env.BackendDir) || reload
+	reload = refreshCerts(c.ca, env.CaDir) || reload
 	return
 }
 

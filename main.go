@@ -90,6 +90,7 @@ func main() {
 	s := store.NewK8sStore(osArgs)
 
 	c := controller.NewBuilder().
+		WithHaproxyCfgFile(haproxyConf).
 		WithEventChan(eventChan).
 		WithIngressChan(ingressChan).
 		WithStore(s).
@@ -103,7 +104,7 @@ func main() {
 	)
 
 	go k.MonitorChanges(eventChan, ingressChan, stop)
-	go c.Start(haproxyConf)
+	go c.Start()
 	if publishService != nil {
 		go ingress.UpdateStatus(k.GetClientset(), s, osArgs.IngressClass, osArgs.EmptyIngressClass, ingressChan)
 	}

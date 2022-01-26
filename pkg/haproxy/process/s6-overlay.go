@@ -5,18 +5,18 @@ import (
 	"os"
 	"os/exec"
 
-	"github.com/haproxytech/kubernetes-ingress/pkg/configuration"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/api"
+	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/config"
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
 )
 
 type s6Control struct {
-	Env    configuration.Env
+	Env    config.Env
 	OSArgs utils.OSArgs
 	API    api.HAProxyClient
 }
 
-func NewControlOverS6(env configuration.Env, oSArgs utils.OSArgs, api api.HAProxyClient) Process {
+func NewControlOverS6(env config.Env, oSArgs utils.OSArgs, api api.HAProxyClient) Process {
 	return &s6Control{
 		Env:    env,
 		OSArgs: oSArgs,
@@ -24,7 +24,7 @@ func NewControlOverS6(env configuration.Env, oSArgs utils.OSArgs, api api.HAProx
 	}
 }
 
-func (d *s6Control) HaproxyService(action string) (err error) {
+func (d *s6Control) Service(action string) (err error) {
 	if d.OSArgs.Test {
 		logger.Infof("HAProxy would be %sed now", action)
 		return nil

@@ -17,8 +17,7 @@ package handler
 import (
 	"github.com/haproxytech/client-native/v2/models"
 
-	config "github.com/haproxytech/kubernetes-ingress/pkg/configuration"
-	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/api"
+	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy"
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
 )
@@ -34,24 +33,24 @@ type HTTPBind struct {
 	IPv6Addr  string
 }
 
-func (h HTTPBind) Update(k store.K8s, cfg *config.ControllerCfg, api api.HAProxyClient) (reload bool, err error) {
+func (handler HTTPBind) Update(k store.K8s, h haproxy.HAProxy) (reload bool, err error) {
 	var errors utils.Errors
 	frontends := make(map[string]int64, 2)
 	protos := make(map[string]string, 2)
-	if h.HTTP {
-		frontends[cfg.FrontHTTP] = h.HTTPPort
+	if handler.HTTP {
+		frontends[h.FrontHTTP] = handler.HTTPPort
 	}
-	if h.HTTPS {
-		frontends[cfg.FrontHTTPS] = h.HTTPSPort
+	if handler.HTTPS {
+		frontends[h.FrontHTTPS] = handler.HTTPSPort
 	}
-	if h.IPv4 {
-		protos["v4"] = h.IPv4Addr
+	if handler.IPv4 {
+		protos["v4"] = handler.IPv4Addr
 	}
-	if h.IPv6 {
-		protos["v6"] = h.IPv6Addr
+	if handler.IPv6 {
+		protos["v6"] = handler.IPv6Addr
 
 		// IPv6 not disabled, so add v6 listening to stats frontend
-		errors.Add(api.FrontendBindCreate("stats",
+		errors.Add(h.FrontendBindCreate("stats",
 			models.Bind{
 				Name:    "v6",
 				Address: ":::1024",
@@ -65,8 +64,8 @@ func (h HTTPBind) Update(k store.K8s, cfg *config.ControllerCfg, api api.HAProxy
 				Address: addr,
 				Port:    utils.PtrInt64(ftPort),
 			}
-			if err = api.FrontendBindEdit(ftName, bind); err != nil {
-				errors.Add(api.FrontendBindCreate(ftName, bind))
+			if err = h.FrontendBindEdit(ftName, bind); err != nil {
+				errors.Add(h.FrontendBindCreate(ftName, bind))
 			}
 		}
 	}

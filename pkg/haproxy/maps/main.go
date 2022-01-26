@@ -15,6 +15,7 @@
 package maps
 
 import (
+	"fmt"
 	"hash/fnv"
 	"os"
 	"path"
@@ -36,18 +37,12 @@ var logger = utils.GetLogger()
 
 var mapDir string
 
-//nolint:golint,stylecheck
-const (
-	SNI         Name = "sni"
-	HOST        Name = "host"
-	PATH_EXACT  Name = "path-exact"
-	PATH_PREFIX Name = "path-prefix"
-)
-
 type mapFile struct {
-	rows     []string
-	hash     uint64
-	preserve bool
+	rows       []string
+	hash       uint64
+	persistent bool
+	// A persistent map will not be removed even if the map is empty
+	// because it is always referenced in a haproxy rule.
 }
 
 func (mf *mapFile) getContent() (string, uint64) {
@@ -63,16 +58,16 @@ func (mf *mapFile) getContent() (string, uint64) {
 	return content, h.Sum64()
 }
 
-func New(path string) *MapFiles {
-	mapDir = path
-	var maps MapFiles = map[Name]*mapFile{
-		// Map files required for HAProxy Rules
-		SNI:         {preserve: true},
-		HOST:        {preserve: true},
-		PATH_EXACT:  {preserve: true},
-		PATH_PREFIX: {preserve: true},
+func New(dir string, persistentMaps []Name) (*MapFiles, error) {
+	if dir == "" {
+		return nil, fmt.Errorf("empty name for map directory")
 	}
-	return &maps
+	mapDir = dir
+	var maps MapFiles = make(map[Name]*mapFile, len(persistentMaps))
+	for _, name := range persistentMaps {
+		maps[name] = &mapFile{persistent: true}
+	}
+	return &maps, nil
 }
 
 func (m MapFiles) Exists(name Name) bool {
@@ -106,7 +101,7 @@ func (m MapFiles) Refresh(client api.HAProxyClient) (reload bool) {
 		var f *os.File
 		var err error
 		filename := GetPath(name)
-		if content == "" && !mapFile.preserve {
+		if content == "" && !mapFile.persistent {
 			logger.Error(os.Remove(string(filename)))
 			delete(m, name)
 			continue

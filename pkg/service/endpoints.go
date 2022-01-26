@@ -26,7 +26,7 @@ import (
 )
 
 // HandleHAProxySrvs handles the haproxy backend servers of the corresponding IngressPath (service + port)
-func (s *Service) HandleHAProxySrvs(client api.HAProxyClient, store store.K8s) (reload bool) {
+func (s *Service) HandleHAProxySrvs(store store.K8s, client api.HAProxyClient) (reload bool) {
 	var srvsScaled bool
 	backend, err := s.getRuntimeBackend(store)
 	if err != nil {

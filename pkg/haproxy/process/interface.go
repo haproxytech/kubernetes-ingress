@@ -11,7 +11,7 @@ import (
 )
 
 type Process interface {
-	HaproxyService(action string) (err error)
+	Service(action string) (err error)
 	UseAuxFile(useAuxFile bool)
 }
 

@@ -15,14 +15,13 @@
 package controller
 
 import (
+	"fmt"
 	"os"
 
-	"github.com/google/renameio"
-
 	"github.com/haproxytech/client-native/v2/models"
-	config "github.com/haproxytech/kubernetes-ingress/pkg/configuration"
-	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/api"
-	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/process"
+	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy"
+	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/maps"
+	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/rules"
 	"github.com/haproxytech/kubernetes-ingress/pkg/ingress"
 	"github.com/haproxytech/kubernetes-ingress/pkg/k8s"
 	"github.com/haproxytech/kubernetes-ingress/pkg/route"
@@ -34,8 +33,7 @@ var logger = utils.GetLogger()
 
 // HAProxyController is ingress controller
 type HAProxyController struct {
-	cfg            config.ControllerCfg
-	client         api.HAProxyClient
+	haproxy        haproxy.HAProxy
 	osArgs         utils.OSArgs
 	store          store.K8s
 	publishService *utils.NamespaceValue
@@ -46,7 +44,6 @@ type HAProxyController struct {
 	reload         bool
 	restart        bool
 	updateHandlers []UpdateHandler
-	haproxyProcess process.Process
 	podNamespace   string
 	podPrefix      string
 }
@@ -54,45 +51,28 @@ type HAProxyController struct {
 // Wrapping a Native-Client transaction and commit it.
 // Returning an error to let panic or log it upon the scenario.
 func (c *HAProxyController) clientAPIClosure(fn func() error) (err error) {
-	if err = c.client.APIStartTransaction(); err != nil {
+	if err = c.haproxy.APIStartTransaction(); err != nil {
 		return err
 	}
 	defer func() {
-		c.client.APIDisposeTransaction()
+		c.haproxy.APIDisposeTransaction()
 	}()
 	if err = fn(); err != nil {
 		return err
 	}
 
-	if err = c.client.APICommitTransaction(); err != nil {
+	if err = c.haproxy.APICommitTransaction(); err != nil {
 		return err
 	}
 	return nil
 }
 
 // Start initializes and runs HAProxyController
-func (c *HAProxyController) Start(haproxyConf []byte) {
-	var err error
-	logger.SetLevel(c.osArgs.LogLevel.LogLevel)
-	err = renameio.WriteFile(c.cfg.Env.MainCFGFile, haproxyConf, 0755)
-	if err != nil {
-		logger.Panic(err)
-	}
-	logger.Error(os.Chdir(c.cfg.Env.CfgDir))
-
-	// Initialize controller
-	err = c.cfg.Init()
-	if err != nil {
-		logger.Panic(err)
-	}
-
-	c.client, err = api.Init(c.cfg.Env.CfgDir, c.cfg.Env.MainCFGFile, c.cfg.Env.HAProxyBinary, c.cfg.Env.RuntimeSocket)
-	if err != nil {
-		logger.Panic(err)
-	}
-
+func (c *HAProxyController) Start() {
 	c.initHandlers()
-	c.haproxyStartup()
+	logger.Error(c.setupHAProxyRules())
+	logger.Error(os.Chdir(c.haproxy.Env.CfgDir))
+	logger.Panic(c.haproxy.Service("start"))
 
 	c.SyncData()
 }
@@ -100,7 +80,7 @@ func (c *HAProxyController) Start(haproxyConf []byte) {
 // Stop handles shutting down HAProxyController
 func (c *HAProxyController) Stop() {
 	logger.Infof("Stopping Ingress Controller")
-	logger.Error(c.haproxyService("stop"))
+	logger.Error(c.haproxy.Service("stop"))
 }
 
 // updateHAProxy is the control loop syncing HAProxy configuration
@@ -109,13 +89,13 @@ func (c *HAProxyController) updateHAProxy() {
 	var err error
 	logger.Trace("HAProxy config sync started")
 
-	err = c.client.APIStartTransaction()
+	err = c.haproxy.APIStartTransaction()
 	if err != nil {
 		logger.Error(err)
 		return
 	}
 	defer func() {
-		c.client.APIDisposeTransaction()
+		c.haproxy.APIDisposeTransaction()
 	}()
 
 	reload, restart := c.handleGlobalConfig()
@@ -123,7 +103,7 @@ func (c *HAProxyController) updateHAProxy() {
 	c.restart = c.restart || restart
 
 	if len(route.CustomRoutes) != 0 {
-		logger.Error(route.CustomRoutesReset(c.client))
+		logger.Error(route.CustomRoutesReset(c.haproxy))
 	}
 
 	for _, namespace := range c.store.Namespaces {
@@ -143,17 +123,17 @@ func (c *HAProxyController) updateHAProxy() {
 					logger.Errorf("Ingress %s/%s: unable to sync status: sync channel full", ingResource.Namespace, ingResource.Name)
 				}
 			}
-			c.reload = i.Update(c.store, &c.cfg, c.client) || c.reload
+			c.reload = i.Update(c.store, c.haproxy) || c.reload
 		}
 	}
 
 	for _, handler := range c.updateHandlers {
-		reload, err = handler.Update(c.store, &c.cfg, c.client)
+		reload, err = handler.Update(c.store, c.haproxy)
 		logger.Error(err)
 		c.reload = c.reload || reload
 	}
 
-	err = c.client.APICommitTransaction()
+	err = c.haproxy.APICommitTransaction()
 	if err != nil {
 		logger.Error("unable to Sync HAProxy configuration !!")
 		logger.Error(err)
@@ -167,13 +147,13 @@ func (c *HAProxyController) updateHAProxy() {
 
 	switch {
 	case c.restart:
-		if err = c.haproxyService("restart"); err != nil {
+		if err = c.haproxy.Service("restart"); err != nil {
 			logger.Error(err)
 		} else {
 			logger.Info("HAProxy restarted")
 		}
 	case c.reload:
-		if err = c.haproxyService("reload"); err != nil {
+		if err = c.haproxy.Service("reload"); err != nil {
 			logger.Error(err)
 		} else {
 			logger.Info("HAProxy reloaded")
@@ -188,7 +168,7 @@ func (c *HAProxyController) updateHAProxy() {
 // setToRready exposes readiness endpoint
 func (c *HAProxyController) setToReady() {
 	logger.Panic(c.clientAPIClosure(func() error {
-		return c.client.FrontendBindEdit("healthz",
+		return c.haproxy.FrontendBindEdit("healthz",
 			models.Bind{
 				Name:    "v4",
 				Address: "0.0.0.0:1042",
@@ -196,7 +176,7 @@ func (c *HAProxyController) setToReady() {
 	}))
 	if !c.osArgs.DisableIPV6 {
 		logger.Panic(c.clientAPIClosure(func() error {
-			return c.client.FrontendBindCreate("healthz",
+			return c.haproxy.FrontendBindCreate("healthz",
 				models.Bind{
 					Name:    "v6",
 					Address: ":::1042",
@@ -212,10 +192,65 @@ func (c *HAProxyController) setToReady() {
 	c.ready = true
 }
 
+// setupHAProxyRules configures haproxy rules (set-var) required for the controller logic implementation
+func (c *HAProxyController) setupHAProxyRules() error {
+	var errors utils.Errors
+	errors.Add(
+		// ForwardedProto rule
+		c.haproxy.AddRule(rules.SetHdr{
+			ForwardedProto: true,
+		}, false, c.haproxy.FrontHTTPS),
+	)
+	for _, frontend := range []string{c.haproxy.FrontHTTP, c.haproxy.FrontHTTPS} {
+		errors.Add(
+			// txn.base var used for logging
+			c.haproxy.AddRule(rules.ReqSetVar{
+				Name:       "base",
+				Scope:      "txn",
+				Expression: "base",
+			}, false, frontend),
+			// Backend switching rules.
+			c.haproxy.AddRule(rules.ReqSetVar{
+				Name:       "path",
+				Scope:      "txn",
+				Expression: "path",
+			}, false, frontend),
+			c.haproxy.AddRule(rules.ReqSetVar{
+				Name:       "host",
+				Scope:      "txn",
+				Expression: "req.hdr(Host),field(1,:),lower",
+			}, false, frontend),
+			c.haproxy.AddRule(rules.ReqSetVar{
+				Name:       "host_match",
+				Scope:      "txn",
+				Expression: fmt.Sprintf("var(txn.host),map(%s)", maps.GetPath(route.HOST)),
+			}, false, frontend),
+			c.haproxy.AddRule(rules.ReqSetVar{
+				Name:       "host_match",
+				Scope:      "txn",
+				Expression: fmt.Sprintf("var(txn.host),regsub(^[^.]*,,),map(%s,'')", maps.GetPath(route.HOST)),
+				CondTest:   "!{ var(txn.host_match) -m found }",
+			}, false, frontend),
+			c.haproxy.AddRule(rules.ReqSetVar{
+				Name:       "path_match",
+				Scope:      "txn",
+				Expression: fmt.Sprintf("var(txn.host_match),concat(,txn.path,),map(%s)", maps.GetPath(route.PATH_EXACT)),
+			}, false, frontend),
+			c.haproxy.AddRule(rules.ReqSetVar{
+				Name:       "path_match",
+				Scope:      "txn",
+				Expression: fmt.Sprintf("var(txn.host_match),concat(,txn.path,),map_beg(%s)", maps.GetPath(route.PATH_PREFIX)),
+				CondTest:   "!{ var(txn.path_match) -m found }",
+			}, false, frontend),
+		)
+	}
+	return errors.Result()
+}
+
 // clean controller state
 func (c *HAProxyController) clean(failedSync bool) {
-	logger.Error(c.cfg.Clean())
-	c.cfg.SSLPassthrough = false
+	c.haproxy.Clean()
+	logger.Error(c.setupHAProxyRules())
 	if !failedSync {
 		c.store.Clean()
 	}

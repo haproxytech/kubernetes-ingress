@@ -21,8 +21,7 @@ import (
 
 	"github.com/haproxytech/client-native/v2/models"
 
-	config "github.com/haproxytech/kubernetes-ingress/pkg/configuration"
-	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/api"
+	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy"
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
 )
 
@@ -30,49 +29,49 @@ type ErrorFiles struct {
 	files files
 }
 
-func (h *ErrorFiles) Update(k store.K8s, cfg *config.ControllerCfg, api api.HAProxyClient) (reload bool, err error) {
-	h.files.dir = cfg.Env.ErrFileDir
+func (handler *ErrorFiles) Update(k store.K8s, h haproxy.HAProxy) (reload bool, err error) {
+	handler.files.dir = h.ErrFileDir
 	if k.ConfigMaps.Errorfiles == nil {
 		return false, nil
 	}
 	// Update Files
 	for code, content := range k.ConfigMaps.Errorfiles.Annotations {
-		logger.Error(h.writeFile(code, content))
+		logger.Error(handler.writeFile(code, content))
 	}
 	var apiInput []*models.Errorfile
-	apiInput, reload = h.refresh()
+	apiInput, reload = handler.refresh()
 	// Update API
-	defaults, err := api.DefaultsGetConfiguration()
+	defaults, err := h.DefaultsGetConfiguration()
 	if err != nil {
 		return false, err
 	}
 	defaults.ErrorFiles = apiInput
-	if err = api.DefaultsPushConfiguration(*defaults); err != nil {
+	if err = h.DefaultsPushConfiguration(*defaults); err != nil {
 		return false, err
 	}
 	return reload, nil
 }
 
-func (h *ErrorFiles) writeFile(code, content string) (err error) {
+func (handler *ErrorFiles) writeFile(code, content string) (err error) {
 	// Update file
-	if _, ok := h.files.data[code]; !ok {
+	if _, ok := handler.files.data[code]; !ok {
 		err = checkCode(code)
 		if err != nil {
 			return
 		}
 	}
-	err = h.files.writeFile(code, content)
+	err = handler.files.writeFile(code, content)
 	if err != nil {
 		err = fmt.Errorf("failed writing errorfile for code '%s': %w", code, err)
 	}
 	return
 }
 
-func (h *ErrorFiles) refresh() (result []*models.Errorfile, reload bool) {
-	for code, f := range h.files.data {
+func (handler *ErrorFiles) refresh() (result []*models.Errorfile, reload bool) {
+	for code, f := range handler.files.data {
 		if !f.inUse {
 			reload = true
-			err := h.files.deleteFile(code)
+			err := handler.files.deleteFile(code)
 			if err != nil {
 				logger.Errorf("failed deleting errorfile for code '%s': %s", code, err)
 			}
@@ -85,7 +84,7 @@ func (h *ErrorFiles) refresh() (result []*models.Errorfile, reload bool) {
 		c, _ := strconv.Atoi(code) // code already checked in newCode
 		result = append(result, &models.Errorfile{
 			Code: int64(c),
-			File: filepath.Join(h.files.dir, code),
+			File: filepath.Join(handler.files.dir, code),
 		})
 		f.inUse = false
 		f.updated = false

@@ -23,7 +23,7 @@ import (
 	"github.com/haproxytech/client-native/v2/models"
 
 	"github.com/haproxytech/kubernetes-ingress/pkg/annotations"
-	"github.com/haproxytech/kubernetes-ingress/pkg/configuration"
+	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/api"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/certs"
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
@@ -102,7 +102,7 @@ func (s *Service) GetBackendName() (name string, err error) {
 }
 
 // HandleBackend processes a Service and creates/updates corresponding backend configuration in HAProxy
-func (s *Service) HandleBackend(client api.HAProxyClient, store store.K8s) (reload bool, err error) {
+func (s *Service) HandleBackend(store store.K8s, client api.HAProxyClient) (reload bool, err error) {
 	var backend, newBackend *models.Backend
 	newBackend, err = s.getBackendModel(store)
 	s.backend = newBackend
@@ -180,14 +180,14 @@ func (s *Service) getBackendModel(store store.K8s) (backend *models.Backend, err
 }
 
 // SetDefaultBackend configures the default service in kubernetes ingress resource as haproxy default backend of the frontends in params.
-func (s *Service) SetDefaultBackend(k store.K8s, cfg *configuration.ControllerCfg, api api.HAProxyClient, frontends []string) (reload bool, err error) {
+func (s *Service) SetDefaultBackend(k store.K8s, h haproxy.HAProxy, frontends []string) (reload bool, err error) {
 	if !s.path.IsDefaultBackend {
 		err = fmt.Errorf("service '%s/%s' is not marked as default backend", s.resource.Namespace, s.resource.Name)
 		return
 	}
 	var frontend models.Frontend
 	var ftReload bool
-	frontend, err = api.FrontendGet(frontends[0])
+	frontend, err = h.FrontendGet(frontends[0])
 	if err != nil {
 		return
 	}
@@ -198,24 +198,24 @@ func (s *Service) SetDefaultBackend(k store.K8s, cfg *configuration.ControllerCf
 	if s.path.SvcPortInt == 0 && s.path.SvcPortString == "" {
 		s.path.SvcPortString = s.resource.Ports[0].Name
 	}
-	bdReload, err := s.HandleBackend(api, k)
+	bdReload, err := s.HandleBackend(k, h)
 	if err != nil {
 		return
 	}
 	backendName, _ := s.GetBackendName()
 	if frontend.DefaultBackend != backendName {
 		for _, frontendName := range frontends {
-			frontend, _ := api.FrontendGet(frontendName)
+			frontend, _ := h.FrontendGet(frontendName)
 			frontend.DefaultBackend = backendName
-			err = api.FrontendEdit(frontend)
+			err = h.FrontendEdit(frontend)
 			if err != nil {
 				return
 			}
 			ftReload = true
 		}
 	}
-	cfg.ActiveBackends[backendName] = struct{}{}
-	endpointsReload := s.HandleHAProxySrvs(api, k)
+	h.ActiveBackends[backendName] = struct{}{}
+	endpointsReload := s.HandleHAProxySrvs(k, h)
 	reload = bdReload || ftReload || endpointsReload
 	return reload, err
 }

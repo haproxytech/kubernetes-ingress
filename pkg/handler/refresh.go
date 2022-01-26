@@ -16,46 +16,18 @@ package handler
 
 import (
 	"github.com/haproxytech/kubernetes-ingress/pkg/annotations"
-	config "github.com/haproxytech/kubernetes-ingress/pkg/configuration"
-	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/api"
+	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy"
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
 )
 
 type Refresh struct{}
 
-func (h Refresh) Update(k store.K8s, cfg *config.ControllerCfg, api api.HAProxyClient) (reload bool, err error) {
-	cleanCrtsAnn, err := annotations.ParseBool("clean-certs", k.ConfigMaps.Main.Annotations)
+func (handler Refresh) Update(k store.K8s, h haproxy.HAProxy) (reload bool, err error) {
+	var cleanCrts = true
+	cleanCrtsAnn, _ := annotations.ParseBool("clean-certs", k.ConfigMaps.Main.Annotations)
 	// cleanCrtsAnn is empty if clean-certs not set or set with a non boolean value =>  error
-	if cleanCrtsAnn == "" || cleanCrtsAnn == "true" {
-		reload = cfg.Certificates.Refresh() || reload
+	if cleanCrtsAnn == "false" {
+		cleanCrts = false
 	}
-	reload = cfg.HAProxyRules.Refresh(api) || reload
-	reload = cfg.MapFiles.Refresh(api) || reload
-	h.clearBackends(api, cfg)
-	return
-}
-
-// Remove unused backends
-func (h Refresh) clearBackends(api api.HAProxyClient, cfg *config.ControllerCfg) {
-	if cfg.SSLPassthrough {
-		// SSL default backend
-		cfg.ActiveBackends[cfg.BackSSL] = struct{}{}
-	}
-	// Ratelimting backends
-	for _, rateLimitTable := range cfg.RateLimitTables {
-		cfg.ActiveBackends[rateLimitTable] = struct{}{}
-	}
-	allBackends, err := api.BackendsGet()
-	if err != nil {
-		return
-	}
-	for _, backend := range allBackends {
-		if _, ok := cfg.ActiveBackends[backend.Name]; !ok {
-			logger.Debugf("Deleting backend '%s'", backend.Name)
-			if err := api.BackendDelete(backend.Name); err != nil {
-				logger.Panic(err)
-			}
-			annotations.RemoveBackendCfgSnippet(backend.Name)
-		}
-	}
+	return h.Refresh(cleanCrts)
 }

@@ -62,7 +62,7 @@ func (c *HAProxyController) SyncData() {
 		case k8s.INGRESS_CLASS:
 			change = c.store.EventIngressClass(job.Data.(*store.IngressClass))
 		case k8s.ENDPOINTS:
-			change = c.store.EventEndpoints(ns, job.Data.(*store.Endpoints), c.client.SyncBackendSrvs)
+			change = c.store.EventEndpoints(ns, job.Data.(*store.Endpoints), c.haproxy.SyncBackendSrvs)
 		case k8s.SERVICE:
 			change = c.store.EventService(ns, job.Data.(*store.Service))
 		case k8s.CONFIGMAP:
@@ -78,10 +78,10 @@ func (c *HAProxyController) SyncData() {
 
 // auxCfgManager returns restart or reload requirement based on state and transition of auxiliary configuration file.
 func (c *HAProxyController) auxCfgManager() (restart, reload bool) {
-	info, errStat := os.Stat(c.cfg.Env.AuxCFGFile)
+	info, errStat := os.Stat(c.haproxy.AuxCFGFile)
 	var (
 		modifTime  int64
-		auxCfgFile string = c.cfg.Env.AuxCFGFile
+		auxCfgFile string = c.haproxy.AuxCFGFile
 		useAuxFile bool
 	)
 
@@ -91,8 +91,8 @@ func (c *HAProxyController) auxCfgManager() (restart, reload bool) {
 			return
 		}
 		// Apply decisions
-		c.client.SetAuxCfgFile(auxCfgFile)
-		c.haproxyProcess.UseAuxFile(useAuxFile)
+		c.haproxy.SetAuxCfgFile(auxCfgFile)
+		c.haproxy.UseAuxFile(useAuxFile)
 		// The file exists now  (modifTime !=0 otherwise nothing changed case).
 		if c.auxCfgModTime == 0 {
 			restart = true
@@ -115,7 +115,7 @@ func (c *HAProxyController) auxCfgManager() (restart, reload bool) {
 			// never existed before
 			return
 		}
-		logger.Infof("Auxiliary HAProxy config '%s' removed", c.cfg.Env.AuxCFGFile)
+		logger.Infof("Auxiliary HAProxy config '%s' removed", c.haproxy.AuxCFGFile)
 		// but existed so need to restart
 		restart = true
 		return

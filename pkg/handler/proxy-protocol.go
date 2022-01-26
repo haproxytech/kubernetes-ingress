@@ -19,8 +19,7 @@ import (
 	"strings"
 
 	"github.com/haproxytech/kubernetes-ingress/pkg/annotations"
-	config "github.com/haproxytech/kubernetes-ingress/pkg/configuration"
-	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/api"
+	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/maps"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/rules"
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
@@ -29,7 +28,7 @@ import (
 
 type ProxyProtocol struct{}
 
-func (p ProxyProtocol) Update(k store.K8s, cfg *config.ControllerCfg, api api.HAProxyClient) (reload bool, err error) {
+func (handler ProxyProtocol) Update(k store.K8s, h haproxy.HAProxy) (reload bool, err error) {
 	//  Get annotation status
 	annProxyProtocol := annotations.String("proxy-protocol", k.ConfigMaps.Main.Annotations)
 	if annProxyProtocol == "" {
@@ -37,7 +36,7 @@ func (p ProxyProtocol) Update(k store.K8s, cfg *config.ControllerCfg, api api.HA
 	}
 	// Validate annotation
 	mapName := maps.Name("proxy-protocol-" + utils.Hash([]byte(annProxyProtocol)))
-	if !cfg.MapFiles.Exists(mapName) {
+	if !h.MapFiles.Exists(mapName) {
 		for _, address := range strings.Split(annProxyProtocol, ",") {
 			address = strings.TrimSpace(address)
 			if ip := net.ParseIP(address); ip == nil {
@@ -46,17 +45,17 @@ func (p ProxyProtocol) Update(k store.K8s, cfg *config.ControllerCfg, api api.HA
 					continue
 				}
 			}
-			cfg.MapFiles.AppendRow(mapName, address)
+			h.MapFiles.AppendRow(mapName, address)
 		}
 	}
 	// Configure Annotation
 	logger.Trace("Configuring ProxyProtcol annotation")
-	frontends := []string{cfg.FrontHTTP, cfg.FrontHTTPS}
-	if cfg.SSLPassthrough {
-		frontends = []string{cfg.FrontHTTP, cfg.FrontSSL}
+	frontends := []string{h.FrontHTTP, h.FrontHTTPS}
+	if h.SSLPassthrough {
+		frontends = []string{h.FrontHTTP, h.FrontSSL}
 	}
 	for _, frontend := range frontends {
-		err = cfg.HAProxyRules.AddRule(rules.ReqProxyProtocol{SrcIPsMap: maps.GetPath(mapName)}, false, frontend)
+		err = h.AddRule(rules.ReqProxyProtocol{SrcIPsMap: maps.GetPath(mapName)}, false, frontend)
 		if err != nil {
 			return
 		}

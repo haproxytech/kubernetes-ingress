@@ -17,29 +17,29 @@ package handler
 import (
 	"github.com/haproxytech/client-native/v2/models"
 
-	config "github.com/haproxytech/kubernetes-ingress/pkg/configuration"
-	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/api"
+	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy"
+	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/config"
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
 )
 
 type GlobalCfg struct {
 }
 
-func (h GlobalCfg) Update(k store.K8s, cfg *config.ControllerCfg, api api.HAProxyClient) (reload bool, err error) {
+func (handler GlobalCfg) Update(k store.K8s, h haproxy.HAProxy) (reload bool, err error) {
 	global := &models.Global{}
 	logTargets := &models.LogTargets{}
-	config.SetGlobal(global, logTargets, cfg.Env)
-	err = api.GlobalPushConfiguration(*global)
+	config.SetGlobal(global, logTargets, h.Env)
+	err = h.GlobalPushConfiguration(*global)
 	if err != nil {
 		return
 	}
-	err = api.GlobalPushLogTargets(*logTargets)
+	err = h.GlobalPushLogTargets(*logTargets)
 	if err != nil {
 		return
 	}
 	defaults := &models.Defaults{}
 	config.SetDefaults(defaults)
-	err = api.DefaultsPushConfiguration(*defaults)
+	err = h.DefaultsPushConfiguration(*defaults)
 	if err != nil {
 		return
 	}

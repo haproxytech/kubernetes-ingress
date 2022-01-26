@@ -19,8 +19,7 @@ import (
 	"path/filepath"
 
 	"github.com/haproxytech/kubernetes-ingress/pkg/annotations"
-	"github.com/haproxytech/kubernetes-ingress/pkg/configuration"
-	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/api"
+	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/certs"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/rules"
 	"github.com/haproxytech/kubernetes-ingress/pkg/route"
@@ -94,13 +93,13 @@ func (i Ingress) supported(k8s store.K8s) (supported bool) {
 	return
 }
 
-func (i *Ingress) handlePath(k store.K8s, cfg *configuration.ControllerCfg, api api.HAProxyClient, host string, path *store.IngressPath) (reload bool, err error) {
-	svc, err := service.New(k, path, cfg.Certificates, i.sslPassthrough, i.resource.Annotations, k.ConfigMaps.Main.Annotations)
+func (i *Ingress) handlePath(k store.K8s, h haproxy.HAProxy, host string, path *store.IngressPath) (reload bool, err error) {
+	svc, err := service.New(k, path, h.Certificates, i.sslPassthrough, i.resource.Annotations, k.ConfigMaps.Main.Annotations)
 	if err != nil {
 		return
 	}
 	// Backend
-	backendReload, err := svc.HandleBackend(api, k)
+	backendReload, err := svc.HandleBackend(k, h)
 	if err != nil {
 		return
 	}
@@ -122,16 +121,16 @@ func (i *Ingress) handlePath(k store.K8s, cfg *configuration.ControllerCfg, api 
 			logger.Debugf("Custom Route to backend '%s' deleted, reload required", backendName)
 			routeReload = true
 		}
-		err = route.AddHostPathRoute(ingRoute, cfg.MapFiles)
+		err = route.AddHostPathRoute(ingRoute, h.MapFiles)
 	} else {
-		routeReload, err = route.AddCustomRoute(ingRoute, routeACLAnn, api)
+		routeReload, err = route.AddCustomRoute(ingRoute, routeACLAnn, h)
 	}
 	if err != nil {
 		return
 	}
-	cfg.ActiveBackends[backendName] = struct{}{}
+	h.ActiveBackends[backendName] = struct{}{}
 	// Endpoints
-	endpointsReload := svc.HandleHAProxySrvs(api, k)
+	endpointsReload := svc.HandleHAProxySrvs(k, h)
 	return backendReload || endpointsReload || routeReload, err
 }
 
@@ -139,7 +138,7 @@ func (i *Ingress) handlePath(k store.K8s, cfg *configuration.ControllerCfg, api 
 // corresponding list of RuleIDs.
 // If Ingress Annotations are at the ConfigMap scope, HAProxy Rules will be applied globally
 // without the need to map Rule IDs to specific ingress traffic.
-func (i *Ingress) HandleAnnotations(k store.K8s, cfg *configuration.ControllerCfg) {
+func (i *Ingress) HandleAnnotations(k store.K8s, h haproxy.HAProxy) {
 	var err error
 	var ingressRule bool
 	var annSource string
@@ -155,9 +154,9 @@ func (i *Ingress) HandleAnnotations(k store.K8s, cfg *configuration.ControllerCf
 		annList = i.resource.Annotations
 		ingressRule = true
 	}
-	defaultFrontends := []string{cfg.FrontHTTP, cfg.FrontHTTPS}
+	defaultFrontends := []string{h.FrontHTTP, h.FrontHTTPS}
 
-	for _, a := range annotations.Frontend(i.resource, &result, *cfg.MapFiles) {
+	for _, a := range annotations.Frontend(i.resource, &result, *h.MapFiles) {
 		err = a.Process(k, annList)
 		if err != nil {
 			logger.Errorf("%s: annotation %s: %s", annSource, a.GetName(), err)
@@ -169,20 +168,20 @@ func (i *Ingress) HandleAnnotations(k store.K8s, cfg *configuration.ControllerCf
 		case rules.REQ_REDIRECT:
 			redirRule := rule.(*rules.RequestRedirect)
 			if redirRule.SSLRedirect {
-				frontends = []string{cfg.FrontHTTP}
+				frontends = []string{h.FrontHTTP}
 			} else {
-				frontends = []string{cfg.FrontHTTP, cfg.FrontHTTPS}
+				frontends = []string{h.FrontHTTP, h.FrontHTTPS}
 			}
 		case rules.REQ_DENY, rules.REQ_CAPTURE:
 			if i.sslPassthrough {
-				frontends = []string{cfg.FrontHTTP, cfg.FrontSSL}
+				frontends = []string{h.FrontHTTP, h.FrontSSL}
 			}
 		case rules.REQ_RATELIMIT:
 			limitRule := rule.(*rules.ReqRateLimit)
-			cfg.RateLimitTables = append(cfg.RateLimitTables, limitRule.TableName)
+			h.RateLimitTables = append(h.RateLimitTables, limitRule.TableName)
 		}
 		for _, frontend := range frontends {
-			logger.Error(cfg.HAProxyRules.AddRule(rule, ingressRule, frontend))
+			logger.Error(h.AddRule(rule, ingressRule, frontend))
 		}
 		i.ruleIDs = append(i.ruleIDs, rules.GetID(rule))
 	}
@@ -190,12 +189,12 @@ func (i *Ingress) HandleAnnotations(k store.K8s, cfg *configuration.ControllerCf
 
 // Update processes a Kubernetes ingress resource and configures HAProxy accordingly
 // by creating corresponding backend, route and HTTP rules.
-func (i *Ingress) Update(k store.K8s, cfg *configuration.ControllerCfg, api api.HAProxyClient) (reload bool) {
+func (i *Ingress) Update(k store.K8s, h haproxy.HAProxy) (reload bool) {
 	// Default Backend
 	if i.resource.DefaultBackend != nil {
-		svc, err := service.New(k, i.resource.DefaultBackend, cfg.Certificates, false, i.resource.Annotations, k.ConfigMaps.Main.Annotations)
+		svc, err := service.New(k, i.resource.DefaultBackend, h.Certificates, false, i.resource.Annotations, k.ConfigMaps.Main.Annotations)
 		if svc != nil {
-			reload, err = svc.SetDefaultBackend(k, cfg, api, []string{cfg.FrontHTTP, cfg.FrontHTTPS})
+			reload, err = svc.SetDefaultBackend(k, h, []string{h.FrontHTTP, h.FrontHTTPS})
 		}
 		if err != nil {
 			logger.Errorf("Ingress '%s/%s': default backend: %s", i.resource.Namespace, i.resource.Name, err)
@@ -212,7 +211,7 @@ func (i *Ingress) Update(k store.K8s, cfg *configuration.ControllerCfg, api api.
 			logger.Warningf("Ingress '%s/%s': %s", i.resource.Namespace, i.resource.Name, secErr)
 			continue
 		}
-		_, err := cfg.Certificates.HandleTLSSecret(secret, certs.FT_CERT)
+		_, err := h.Certificates.HandleTLSSecret(secret, certs.FT_CERT)
 		logger.Error(err)
 	}
 	// Ingress annotations
@@ -226,14 +225,14 @@ func (i *Ingress) Update(k store.K8s, cfg *configuration.ControllerCfg, api api.
 		logger.Error("Ingress '%s/%s': SSL Passthrough parsing: %s", i.resource.Namespace, i.resource.Name, err)
 	} else if enabled {
 		i.sslPassthrough = true
-		cfg.SSLPassthrough = true
+		h.SSLPassthrough = true
 	}
-	i.HandleAnnotations(k, cfg)
+	i.HandleAnnotations(k, h)
 	// Ingress rules
 	logger.Tracef("ingress '%s/%s': processing rules...", i.resource.Namespace, i.resource.Name)
 	for _, rule := range i.resource.Rules {
 		for _, path := range rule.Paths {
-			if r, err := i.handlePath(k, cfg, api, rule.Host, path); err != nil {
+			if r, err := i.handlePath(k, h, rule.Host, path); err != nil {
 				logger.Errorf("Ingress '%s/%s': %s", i.resource.Namespace, i.resource.Name, err)
 			} else {
 				reload = reload || r

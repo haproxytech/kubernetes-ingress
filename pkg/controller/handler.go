@@ -15,14 +15,13 @@
 package controller
 
 import (
-	config "github.com/haproxytech/kubernetes-ingress/pkg/configuration"
 	"github.com/haproxytech/kubernetes-ingress/pkg/handler"
-	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/api"
+	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy"
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
 )
 
 type UpdateHandler interface {
-	Update(k store.K8s, cfg *config.ControllerCfg, api api.HAProxyClient) (reload bool, err error)
+	Update(k store.K8s, h haproxy.HAProxy) (reload bool, err error)
 }
 
 func (c *HAProxyController) initHandlers() {
@@ -33,7 +32,7 @@ func (c *HAProxyController) initHandlers() {
 	c.updateHandlers = []UpdateHandler{
 		handler.HTTPS{
 			Enabled:  !c.osArgs.DisableHTTPS,
-			CertDir:  c.cfg.Env.FrontendCertDir,
+			CertDir:  c.haproxy.Certs.FrontendDir,
 			IPv4:     !c.osArgs.DisableIPV4,
 			AddrIPv4: c.osArgs.IPV4BindAddr,
 			AddrIPv6: c.osArgs.IPV6BindAddr,
@@ -43,7 +42,7 @@ func (c *HAProxyController) initHandlers() {
 		handler.ProxyProtocol{},
 		&handler.ErrorFiles{},
 		handler.TCPServices{
-			CertDir:  c.cfg.Env.FrontendCertDir,
+			CertDir:  c.haproxy.Certs.FrontendDir,
 			IPv4:     !c.osArgs.DisableIPV4,
 			AddrIPv4: c.osArgs.IPV4BindAddr,
 			IPv6:     !c.osArgs.DisableIPV6,
@@ -72,7 +71,7 @@ func (c *HAProxyController) startupHandlers() error {
 			IPv6Addr:  c.osArgs.IPV6BindAddr,
 		}}
 	for _, handler := range handlers {
-		_, err := handler.Update(c.store, &c.cfg, c.client)
+		_, err := handler.Update(c.store, c.haproxy)
 		if err != nil {
 			return err
 		}
