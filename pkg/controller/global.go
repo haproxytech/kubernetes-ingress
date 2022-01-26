@@ -19,9 +19,9 @@ import (
 
 	"github.com/haproxytech/client-native/v2/models"
 
+	"github.com/haproxytech/kubernetes-ingress/pkg/annotations"
+	"github.com/haproxytech/kubernetes-ingress/pkg/annotations/common"
 	"github.com/haproxytech/kubernetes-ingress/pkg/configuration"
-	"github.com/haproxytech/kubernetes-ingress/pkg/controller/annotations"
-	"github.com/haproxytech/kubernetes-ingress/pkg/controller/annotations/common"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/certs"
 	"github.com/haproxytech/kubernetes-ingress/pkg/ingress"
 	"github.com/haproxytech/kubernetes-ingress/pkg/service"

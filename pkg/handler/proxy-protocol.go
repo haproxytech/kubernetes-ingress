@@ -18,8 +18,8 @@ import (
 	"net"
 	"strings"
 
+	"github.com/haproxytech/kubernetes-ingress/pkg/annotations"
 	config "github.com/haproxytech/kubernetes-ingress/pkg/configuration"
-	"github.com/haproxytech/kubernetes-ingress/pkg/controller/annotations"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/api"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/maps"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/rules"

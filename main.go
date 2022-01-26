@@ -29,8 +29,8 @@ import (
 
 	"github.com/jessevdk/go-flags"
 
+	"github.com/haproxytech/kubernetes-ingress/pkg/annotations"
 	"github.com/haproxytech/kubernetes-ingress/pkg/controller"
-	"github.com/haproxytech/kubernetes-ingress/pkg/controller/annotations"
 	"github.com/haproxytech/kubernetes-ingress/pkg/ingress"
 	"github.com/haproxytech/kubernetes-ingress/pkg/k8s"
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
