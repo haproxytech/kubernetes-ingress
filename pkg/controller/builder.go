@@ -10,6 +10,7 @@ import (
 
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/config"
+	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/process"
 	"github.com/haproxytech/kubernetes-ingress/pkg/ingress"
 	"github.com/haproxytech/kubernetes-ingress/pkg/k8s"
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
@@ -19,9 +20,10 @@ import (
 type Builder struct {
 	osArgs         utils.OSArgs
 	haproxyEnv     config.Env
+	haproxyProcess process.Process
+	haproxyCfgFile []byte
 	store          store.K8s
 	publishService *utils.NamespaceValue
-	haproxyCfgFile []byte
 	eventChan      chan k8s.SyncDataEvent
 	ingressChan    chan ingress.Sync
 }
@@ -42,6 +44,11 @@ var defaultEnv = config.Env{
 
 func NewBuilder() *Builder {
 	return &Builder{haproxyEnv: defaultEnv}
+}
+
+func (builder *Builder) WithHAProxyProcess(process process.Process) *Builder {
+	builder.haproxyProcess = process
+	return builder
 }
 
 func (builder *Builder) WithEventChan(eventChan chan k8s.SyncDataEvent) *Builder {
@@ -97,7 +104,7 @@ func (builder *Builder) Build() *HAProxyController {
 		}()
 	}
 
-	haproxy, err := haproxy.New(builder.osArgs, builder.haproxyEnv, builder.haproxyCfgFile)
+	haproxy, err := haproxy.New(builder.osArgs, builder.haproxyEnv, builder.haproxyCfgFile, builder.haproxyProcess)
 	logger.Panic(err)
 
 	prefix, errPrefix := utils.GetPodPrefix(os.Getenv("POD_NAME"))

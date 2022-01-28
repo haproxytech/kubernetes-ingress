@@ -16,14 +16,6 @@ type s6Control struct {
 	API    api.HAProxyClient
 }
 
-func NewControlOverS6(env config.Env, oSArgs utils.OSArgs, api api.HAProxyClient) Process {
-	return &s6Control{
-		Env:    env,
-		OSArgs: oSArgs,
-		API:    api,
-	}
-}
-
 func (d *s6Control) Service(action string) (err error) {
 	if d.OSArgs.Test {
 		logger.Infof("HAProxy would be %sed now", action)

@@ -2,7 +2,6 @@ package haproxy
 
 import (
 	"fmt"
-	"os"
 	"os/exec"
 	"strings"
 
@@ -25,7 +24,7 @@ type HAProxy struct {
 	*config.Config
 }
 
-func New(osArgs utils.OSArgs, env config.Env, cfgFile []byte) (h HAProxy, err error) {
+func New(osArgs utils.OSArgs, env config.Env, cfgFile []byte, p process.Process) (h HAProxy, err error) {
 	err = (&env).Init(osArgs)
 	if err != nil {
 		err = fmt.Errorf("failed to initialize haproxy environment: %w", err)
@@ -50,16 +49,9 @@ func New(osArgs utils.OSArgs, env config.Env, cfgFile []byte) (h HAProxy, err er
 		err = fmt.Errorf("failed to initialize haproxy API client: %w", err)
 		return
 	}
-
-	if osArgs.UseWiths6Overlay {
-		h.Process = process.NewControlOverS6(h.Env, osArgs, h.HAProxyClient)
-	} else {
-		h.Process = process.NewDirectControl(h.Env, osArgs, h.HAProxyClient)
-		if _, err := os.Stat(h.AuxCFGFile); err == nil {
-			h.UseAuxFile(true)
-		}
+	if p == nil {
+		h.Process = process.New(h.Env, osArgs, h.AuxCFGFile, h.HAProxyClient)
 	}
-
 	if !osArgs.Test {
 		logVersion(h.Binary)
 	}

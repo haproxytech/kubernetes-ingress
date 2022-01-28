@@ -7,15 +7,36 @@ import (
 	"syscall"
 
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/api"
+	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/config"
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
 )
+
+var logger = utils.GetLogger()
 
 type Process interface {
 	Service(action string) (err error)
 	UseAuxFile(useAuxFile bool)
 }
 
-var logger = utils.GetLogger()
+func New(env config.Env, osArgs utils.OSArgs, auxCfgFile string, api api.HAProxyClient) (p Process) {
+	if osArgs.UseWiths6Overlay {
+		p = &s6Control{
+			Env:    env,
+			OSArgs: osArgs,
+			API:    api,
+		}
+	} else {
+		p = &directControl{
+			Env:    env,
+			OSArgs: osArgs,
+			API:    api,
+		}
+		if _, err := os.Stat(auxCfgFile); err == nil {
+			p.UseAuxFile(true)
+		}
+	}
+	return p
+}
 
 // Return HAProxy master process if it exists.
 func haproxyProcess(pidFile string) (*os.Process, error) {

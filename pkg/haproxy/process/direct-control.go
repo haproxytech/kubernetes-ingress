@@ -19,14 +19,6 @@ type directControl struct {
 	useAuxFile bool
 }
 
-func NewDirectControl(env config.Env, oSArgs utils.OSArgs, api api.HAProxyClient) Process {
-	return &directControl{
-		Env:    env,
-		OSArgs: oSArgs,
-		API:    api,
-	}
-}
-
 func (d *directControl) Service(action string) (err error) {
 	if d.OSArgs.Test {
 		logger.Infof("HAProxy would be %sed now", action)
