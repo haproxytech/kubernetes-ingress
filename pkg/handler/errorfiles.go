@@ -21,6 +21,7 @@ import (
 
 	"github.com/haproxytech/client-native/v2/models"
 
+	"github.com/haproxytech/kubernetes-ingress/pkg/annotations"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy"
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
 )
@@ -29,7 +30,7 @@ type ErrorFiles struct {
 	files files
 }
 
-func (handler *ErrorFiles) Update(k store.K8s, h haproxy.HAProxy) (reload bool, err error) {
+func (handler *ErrorFiles) Update(k store.K8s, h haproxy.HAProxy, a annotations.Annotations) (reload bool, err error) {
 	handler.files.dir = h.ErrFileDir
 	if k.ConfigMaps.Errorfiles == nil {
 		return false, nil

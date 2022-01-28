@@ -15,13 +15,14 @@
 package controller
 
 import (
+	"github.com/haproxytech/kubernetes-ingress/pkg/annotations"
 	"github.com/haproxytech/kubernetes-ingress/pkg/handler"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy"
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
 )
 
 type UpdateHandler interface {
-	Update(k store.K8s, h haproxy.HAProxy) (reload bool, err error)
+	Update(k store.K8s, h haproxy.HAProxy, a annotations.Annotations) (reload bool, err error)
 }
 
 func (c *HAProxyController) initHandlers() {
@@ -71,7 +72,7 @@ func (c *HAProxyController) startupHandlers() error {
 			IPv6Addr:  c.osArgs.IPV6BindAddr,
 		}}
 	for _, handler := range handlers {
-		_, err := handler.Update(c.store, c.haproxy)
+		_, err := handler.Update(c.store, c.haproxy, c.annotations)
 		if err != nil {
 			return err
 		}

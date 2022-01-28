@@ -17,6 +17,7 @@ package handler
 import (
 	"github.com/haproxytech/client-native/v2/models"
 
+	"github.com/haproxytech/kubernetes-ingress/pkg/annotations"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy"
 	"github.com/haproxytech/kubernetes-ingress/pkg/route"
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
@@ -25,7 +26,7 @@ import (
 type Pprof struct {
 }
 
-func (handler Pprof) Update(k store.K8s, h haproxy.HAProxy) (reload bool, err error) {
+func (handler Pprof) Update(k store.K8s, h haproxy.HAProxy, a annotations.Annotations) (reload bool, err error) {
 	pprofBackend := "pprof"
 
 	_, err = h.BackendGet(pprofBackend)

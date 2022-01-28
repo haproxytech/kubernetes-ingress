@@ -19,6 +19,7 @@ import (
 	"os"
 
 	"github.com/haproxytech/client-native/v2/models"
+	"github.com/haproxytech/kubernetes-ingress/pkg/annotations"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/maps"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/rules"
@@ -36,6 +37,7 @@ type HAProxyController struct {
 	haproxy        haproxy.HAProxy
 	osArgs         utils.OSArgs
 	store          store.K8s
+	annotations    annotations.Annotations
 	publishService *utils.NamespaceValue
 	auxCfgModTime  int64
 	eventChan      chan k8s.SyncDataEvent
@@ -111,7 +113,7 @@ func (c *HAProxyController) updateHAProxy() {
 			continue
 		}
 		for _, ingResource := range namespace.Ingresses {
-			i := ingress.New(c.store, ingResource, c.osArgs.IngressClass, c.osArgs.EmptyIngressClass)
+			i := ingress.New(c.store, ingResource, c.osArgs.IngressClass, c.osArgs.EmptyIngressClass, c.annotations)
 			if i == nil {
 				logger.Debugf("ingress '%s/%s' ignored: no matching IngressClass", ingResource.Namespace, ingResource.Name)
 				continue
@@ -123,12 +125,12 @@ func (c *HAProxyController) updateHAProxy() {
 					logger.Errorf("Ingress %s/%s: unable to sync status: sync channel full", ingResource.Namespace, ingResource.Name)
 				}
 			}
-			c.reload = i.Update(c.store, c.haproxy) || c.reload
+			c.reload = i.Update(c.store, c.haproxy, c.annotations) || c.reload
 		}
 	}
 
 	for _, handler := range c.updateHandlers {
-		reload, err = handler.Update(c.store, c.haproxy)
+		reload, err = handler.Update(c.store, c.haproxy, c.annotations)
 		logger.Error(err)
 		c.reload = c.reload || reload
 	}

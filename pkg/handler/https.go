@@ -140,14 +140,14 @@ func (handler HTTPS) handleClientTLSAuth(k store.K8s, h haproxy.HAProxy) (reload
 	return
 }
 
-func (handler HTTPS) Update(k store.K8s, h haproxy.HAProxy) (reload bool, err error) {
+func (handler HTTPS) Update(k store.K8s, h haproxy.HAProxy, a annotations.Annotations) (reload bool, err error) {
 	if !handler.Enabled {
 		logger.Debug("Cannot proceed with SSL Passthrough update, HTTPS is disabled")
 		return false, nil
 	}
 
 	// Fetch tls-alpn value for when SSL offloading is enabled
-	handler.alpn = annotations.String("tls-alpn", k.ConfigMaps.Main.Annotations)
+	handler.alpn = a.String("tls-alpn", k.ConfigMaps.Main.Annotations)
 
 	handler.strictSNI, err = annotations.Bool("client-strict-sni", k.ConfigMaps.Main.Annotations)
 	logger.Error(err)
@@ -180,7 +180,7 @@ func (handler HTTPS) Update(k store.K8s, h haproxy.HAProxy) (reload bool, err er
 			reload = true
 			logger.Debug("SSLPassthrough enabled, reload required")
 		}
-		logger.Error(handler.sslPassthroughRules(k, h))
+		logger.Error(handler.sslPassthroughRules(k, h, a))
 	} else if errFtSSL == nil {
 		logger.Error(handler.disableSSLPassthrough(h))
 		h.SSLPassthrough = false
@@ -261,8 +261,8 @@ func (handler HTTPS) toggleSSLPassthrough(passthrough bool, h haproxy.HAProxy) (
 	return nil
 }
 
-func (handler HTTPS) sslPassthroughRules(k store.K8s, h haproxy.HAProxy) error {
-	inspectTimeout, err := annotations.Timeout("timeout-client", k.ConfigMaps.Main.Annotations)
+func (handler HTTPS) sslPassthroughRules(k store.K8s, h haproxy.HAProxy, a annotations.Annotations) error {
+	inspectTimeout, err := a.Timeout("timeout-client", k.ConfigMaps.Main.Annotations)
 	if inspectTimeout == nil {
 		if err != nil {
 			logger.Errorf("SSL Passthrough: %s", err)

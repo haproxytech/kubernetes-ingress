@@ -13,10 +13,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 
+	"github.com/haproxytech/kubernetes-ingress/pkg/annotations"
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
 )
 
-func UpdateStatus(client *kubernetes.Clientset, k store.K8s, class string, emptyClass bool, channel chan Sync) {
+func UpdateStatus(client *kubernetes.Clientset, k store.K8s, class string, emptyClass bool, channel chan Sync, a annotations.Annotations) {
 	var i *Ingress
 	addresses := []string{}
 	for sync := range channel {
@@ -28,12 +29,12 @@ func UpdateStatus(client *kubernetes.Clientset, k store.K8s, class string, empty
 					continue
 				}
 				for _, ingress := range k.Namespaces[ns.Name].Ingresses {
-					if i = New(k, ingress, class, emptyClass); i != nil {
+					if i = New(k, ingress, class, emptyClass, a); i != nil {
 						logger.Error(i.updateStatus(client, addresses))
 					}
 				}
 			}
-		} else if i = New(k, sync.Ingress, class, emptyClass); i != nil {
+		} else if i = New(k, sync.Ingress, class, emptyClass, a); i != nil {
 			// Update single Ingress
 			logger.Error(i.updateStatus(client, addresses))
 		}

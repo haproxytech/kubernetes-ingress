@@ -106,7 +106,7 @@ func main() {
 	go k.MonitorChanges(eventChan, ingressChan, stop)
 	go c.Start()
 	if publishService != nil {
-		go ingress.UpdateStatus(k.GetClientset(), s, osArgs.IngressClass, osArgs.EmptyIngressClass, ingressChan)
+		go ingress.UpdateStatus(k.GetClientset(), s, osArgs.IngressClass, osArgs.EmptyIngressClass, ingressChan, annotations.New())
 	}
 
 	// Catch QUIT signals

@@ -102,9 +102,9 @@ func (s *Service) GetBackendName() (name string, err error) {
 }
 
 // HandleBackend processes a Service and creates/updates corresponding backend configuration in HAProxy
-func (s *Service) HandleBackend(store store.K8s, client api.HAProxyClient) (reload bool, err error) {
+func (s *Service) HandleBackend(store store.K8s, client api.HAProxyClient, a annotations.Annotations) (reload bool, err error) {
 	var backend, newBackend *models.Backend
-	newBackend, err = s.getBackendModel(store)
+	newBackend, err = s.getBackendModel(store, a)
 	s.backend = newBackend
 	if err != nil {
 		return
@@ -141,7 +141,7 @@ func (s *Service) HandleBackend(store store.K8s, client api.HAProxyClient) (relo
 }
 
 // getBackendModel checks for a corresponding custom resource before falling back to annoations
-func (s *Service) getBackendModel(store store.K8s) (backend *models.Backend, err error) {
+func (s *Service) getBackendModel(store store.K8s, a annotations.Annotations) (backend *models.Backend, err error) {
 	// Backend mode
 	var mode = "http"
 	if s.modeTCP {
@@ -152,7 +152,7 @@ func (s *Service) getBackendModel(store store.K8s) (backend *models.Backend, err
 	logger.Warning(err)
 	if backend == nil {
 		backend = &models.Backend{Mode: mode}
-		for _, a := range annotations.Backend(backend, store, s.certs) {
+		for _, a := range a.Backend(backend, store, s.certs) {
 			err = a.Process(store, s.annotations...)
 			if err != nil {
 				logger.Errorf("service '%s/%s': annotation '%s': %s", s.resource.Namespace, s.resource.Name, a.GetName(), err)
@@ -180,7 +180,7 @@ func (s *Service) getBackendModel(store store.K8s) (backend *models.Backend, err
 }
 
 // SetDefaultBackend configures the default service in kubernetes ingress resource as haproxy default backend of the frontends in params.
-func (s *Service) SetDefaultBackend(k store.K8s, h haproxy.HAProxy, frontends []string) (reload bool, err error) {
+func (s *Service) SetDefaultBackend(k store.K8s, h haproxy.HAProxy, frontends []string, a annotations.Annotations) (reload bool, err error) {
 	if !s.path.IsDefaultBackend {
 		err = fmt.Errorf("service '%s/%s' is not marked as default backend", s.resource.Namespace, s.resource.Name)
 		return
@@ -198,7 +198,7 @@ func (s *Service) SetDefaultBackend(k store.K8s, h haproxy.HAProxy, frontends []
 	if s.path.SvcPortInt == 0 && s.path.SvcPortString == "" {
 		s.path.SvcPortString = s.resource.Ports[0].Name
 	}
-	bdReload, err := s.HandleBackend(k, h)
+	bdReload, err := s.HandleBackend(k, h, a)
 	if err != nil {
 		return
 	}

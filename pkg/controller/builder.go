@@ -8,6 +8,7 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
+	"github.com/haproxytech/kubernetes-ingress/pkg/annotations"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/api"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/config"
@@ -24,6 +25,7 @@ type Builder struct {
 	haproxyEnv     config.Env
 	haproxyProcess process.Process
 	haproxyCfgFile []byte
+	annotations    annotations.Annotations
 	store          store.K8s
 	publishService *utils.NamespaceValue
 	eventChan      chan k8s.SyncDataEvent
@@ -45,11 +47,18 @@ var defaultEnv = config.Env{
 }
 
 func NewBuilder() *Builder {
-	return &Builder{haproxyEnv: defaultEnv}
+	return &Builder{haproxyEnv: defaultEnv,
+		annotations: annotations.New(),
+	}
 }
 
 func (builder *Builder) WithHAProxyProcess(process process.Process) *Builder {
 	builder.haproxyProcess = process
+	return builder
+}
+
+func (builder *Builder) WithAnnotations(a annotations.Annotations) *Builder {
+	builder.annotations = a
 	return builder
 }
 
@@ -125,5 +134,6 @@ func (builder *Builder) Build() *HAProxyController {
 		eventChan:      builder.eventChan,
 		ingressChan:    builder.ingressChan,
 		publishService: builder.publishService,
+		annotations:    builder.annotations,
 	}
 }

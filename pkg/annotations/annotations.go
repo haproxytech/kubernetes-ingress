@@ -22,7 +22,36 @@ type Annotation interface {
 	Process(k store.K8s, annotations ...map[string]string) error
 }
 
-func GlobalCfgSnipp() []Annotation {
+type Annotations interface {
+	GlobalCfgSnipp() []Annotation
+	Global(g *models.Global, l *models.LogTargets) []Annotation
+	Defaults(d *models.Defaults) []Annotation
+	Backend(b *models.Backend, s store.K8s, c *certs.Certificates) []Annotation
+	Frontend(i *store.Ingress, r *rules.Rules, m maps.MapFiles) []Annotation
+	Secret(name, defaultNs string, k store.K8s, annotations ...map[string]string) (secret *store.Secret, err error)
+	Timeout(name string, annotations ...map[string]string) (out *int64, err error)
+	String(name string, annotations ...map[string]string) string
+}
+
+type annImpl struct{}
+
+func New() Annotations {
+	return annImpl{}
+}
+
+func (a annImpl) String(name string, annotations ...map[string]string) string {
+	return String(name, annotations...)
+}
+
+func (a annImpl) Secret(name, defaultNs string, k store.K8s, annotations ...map[string]string) (secret *store.Secret, err error) {
+	return Secret(name, defaultNs, k, annotations...)
+}
+
+func (a annImpl) Timeout(name string, annotations ...map[string]string) (out *int64, err error) {
+	return Timeout(name, annotations...)
+}
+
+func (a annImpl) GlobalCfgSnipp() []Annotation {
 	return []Annotation{
 		NewGlobalCfgSnippet("global-config-snippet"),
 		NewFrontendCfgSnippet("frontend-config-snippet", "http"),
@@ -31,7 +60,7 @@ func GlobalCfgSnipp() []Annotation {
 	}
 }
 
-func Global(g *models.Global, l *models.LogTargets) []Annotation {
+func (a annImpl) Global(g *models.Global, l *models.LogTargets) []Annotation {
 	return []Annotation{
 		global.NewSyslogServers("syslog-server", l),
 		global.NewNbthread("nbthread", g),
@@ -40,7 +69,7 @@ func Global(g *models.Global, l *models.LogTargets) []Annotation {
 	}
 }
 
-func Defaults(d *models.Defaults) []Annotation {
+func (a annImpl) Defaults(d *models.Defaults) []Annotation {
 	return []Annotation{
 		global.NewOption("http-server-close", d),
 		global.NewOption("http-keep-alive", d),
@@ -59,7 +88,7 @@ func Defaults(d *models.Defaults) []Annotation {
 	}
 }
 
-func Frontend(i *store.Ingress, r *rules.Rules, m maps.MapFiles) []Annotation {
+func (a annImpl) Frontend(i *store.Ingress, r *rules.Rules, m maps.MapFiles) []Annotation {
 	reqRateLimit := ingress.NewReqRateLimit(r)
 	httpsRedirect := ingress.NewHTTPSRedirect(r, i)
 	hostRedirect := ingress.NewHostRedirect(r)
@@ -100,7 +129,7 @@ func Frontend(i *store.Ingress, r *rules.Rules, m maps.MapFiles) []Annotation {
 	}
 }
 
-func Backend(b *models.Backend, s store.K8s, c *certs.Certificates) []Annotation {
+func (a annImpl) Backend(b *models.Backend, s store.K8s, c *certs.Certificates) []Annotation {
 	annotations := []Annotation{
 		service.NewAbortOnClose("abortonclose", b),
 		service.NewTimeoutCheck("timeout-check", b),
@@ -176,27 +205,6 @@ func Secret(name, defaultNs string, k store.K8s, annotations ...map[string]strin
 		secNs = defaultNs
 	}
 	secret, err = k.GetSecret(secNs, secName)
-	if err != nil {
-		err = fmt.Errorf("annotation '%s': %w", name, err)
-		return
-	}
-	return
-}
-
-func Service(name, defaultNs string, k store.K8s, annotations ...map[string]string) (service *store.Service, err error) {
-	var svcNs, svcName string
-	svcNs, svcName, err = common.GetK8sPath(name, annotations...)
-	if err != nil {
-		err = fmt.Errorf("annotation '%s': %w", name, err)
-		return
-	}
-	if svcName == "" {
-		return
-	}
-	if svcNs == "" {
-		svcNs = defaultNs
-	}
-	service, err = k.GetService(svcNs, svcName)
 	if err != nil {
 		err = fmt.Errorf("annotation '%s': %w", name, err)
 		return

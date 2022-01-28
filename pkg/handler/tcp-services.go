@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/haproxytech/client-native/v2/models"
+	"github.com/haproxytech/kubernetes-ingress/pkg/annotations"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy"
 	"github.com/haproxytech/kubernetes-ingress/pkg/service"
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
@@ -26,7 +27,7 @@ type tcpSvcParser struct {
 	sslOffload bool
 }
 
-func (handler TCPServices) Update(k store.K8s, h haproxy.HAProxy) (reload bool, err error) {
+func (handler TCPServices) Update(k store.K8s, h haproxy.HAProxy, a annotations.Annotations) (reload bool, err error) {
 	if k.ConfigMaps.TCPServices == nil {
 		return false, nil
 	}
@@ -51,7 +52,7 @@ func (handler TCPServices) Update(k store.K8s, h haproxy.HAProxy) (reload bool, 
 			}
 		}
 		// Update  Frontend
-		r, err = handler.updateTCPFrontend(k, h, frontend, p)
+		r, err = handler.updateTCPFrontend(k, h, frontend, p, a)
 		reload = reload || r
 		if err != nil {
 			logger.Errorf("TCP frontend '%s': update failed: %s", frontendName, err)
@@ -154,7 +155,7 @@ func (handler TCPServices) createTCPFrontend(h haproxy.HAProxy, frontendName, bi
 	return frontend, true, nil
 }
 
-func (handler TCPServices) updateTCPFrontend(k store.K8s, h haproxy.HAProxy, frontend models.Frontend, p tcpSvcParser) (reload bool, err error) {
+func (handler TCPServices) updateTCPFrontend(k store.K8s, h haproxy.HAProxy, frontend models.Frontend, p tcpSvcParser, a annotations.Annotations) (reload bool, err error) {
 	binds, err := h.FrontendBindsGet(frontend.Name)
 	if err != nil {
 		err = fmt.Errorf("failed to get bind lines: %w", err)
@@ -194,7 +195,7 @@ func (handler TCPServices) updateTCPFrontend(k store.K8s, h haproxy.HAProxy, fro
 		IsDefaultBackend: true,
 	}
 	if svc, err = service.New(k, path, nil, true); err == nil {
-		r, err = svc.SetDefaultBackend(k, h, []string{frontend.Name})
+		r, err = svc.SetDefaultBackend(k, h, []string{frontend.Name}, a)
 	}
 	return reload || r, err
 }

@@ -33,7 +33,7 @@ func (c *HAProxyController) handleGlobalConfig() (reload, restart bool) {
 	reload = c.defaultsCfg() || reload
 	c.handleDefaultCert()
 	reload = c.handleDefaultService() || reload
-	(&ingress.Ingress{}).HandleAnnotations(c.store, c.haproxy)
+	ingress.HandleCfgMapAnnotations(c.store, c.haproxy, c.annotations)
 	return reload, restart
 }
 
@@ -62,7 +62,7 @@ func (c *HAProxyController) globalCfg() (reload, restart bool) {
 	}
 	if newGlobal == nil {
 		newGlobal = &models.Global{}
-		for _, a := range annotations.Global(newGlobal, &newLg) {
+		for _, a := range c.annotations.Global(newGlobal, &newLg) {
 			err = a.Process(c.store, c.store.ConfigMaps.Main.Annotations)
 			if err != nil {
 				logger.Errorf("annotation %s: %s", a.GetName(), err)
@@ -89,7 +89,7 @@ func (c *HAProxyController) globalCfg() (reload, restart bool) {
 
 func (c *HAProxyController) globalCfgSnipp() (reload, restart bool) {
 	var err error
-	for _, a := range annotations.GlobalCfgSnipp() {
+	for _, a := range c.annotations.GlobalCfgSnipp() {
 		err = a.Process(c.store, c.store.ConfigMaps.Main.Annotations)
 		if err != nil {
 			logger.Errorf("annotation %s: %s", a.GetName(), err)
@@ -123,7 +123,7 @@ func (c *HAProxyController) defaultsCfg() (reload bool) {
 	}
 	if newDefaults == nil {
 		newDefaults = &models.Defaults{}
-		for _, a := range annotations.Defaults(newDefaults) {
+		for _, a := range c.annotations.Defaults(newDefaults) {
 			logger.Error(a.Process(c.store, c.store.ConfigMaps.Main.Annotations))
 		}
 	}
@@ -156,7 +156,7 @@ func (c *HAProxyController) handleDefaultService() (reload bool) {
 		IsDefaultBackend: true,
 	}
 	if svc, err = service.New(c.store, ingressPath, nil, false, c.store.ConfigMaps.Main.Annotations); err == nil {
-		reload, err = svc.SetDefaultBackend(c.store, c.haproxy, []string{c.haproxy.FrontHTTP, c.haproxy.FrontHTTPS})
+		reload, err = svc.SetDefaultBackend(c.store, c.haproxy, []string{c.haproxy.FrontHTTP, c.haproxy.FrontHTTPS}, c.annotations)
 	}
 	if err != nil {
 		logger.Errorf("default service: %s", err)
