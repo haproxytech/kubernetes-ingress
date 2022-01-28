@@ -24,7 +24,7 @@ type HAProxy struct {
 	*config.Config
 }
 
-func New(osArgs utils.OSArgs, env config.Env, cfgFile []byte, p process.Process) (h HAProxy, err error) {
+func New(osArgs utils.OSArgs, env config.Env, cfgFile []byte, p process.Process, client api.HAProxyClient) (h HAProxy, err error) {
 	err = (&env).Init(osArgs)
 	if err != nil {
 		err = fmt.Errorf("failed to initialize haproxy environment: %w", err)
@@ -43,11 +43,12 @@ func New(osArgs utils.OSArgs, env config.Env, cfgFile []byte, p process.Process)
 		err = fmt.Errorf("failed to initialize haproxy config state: %w", err)
 		return
 	}
-
-	h.HAProxyClient, err = api.New(h.CfgDir, h.MainCFGFile, h.Binary, h.RuntimeSocket)
-	if err != nil {
-		err = fmt.Errorf("failed to initialize haproxy API client: %w", err)
-		return
+	if client == nil {
+		h.HAProxyClient, err = api.New(h.CfgDir, h.MainCFGFile, h.Binary, h.RuntimeSocket)
+		if err != nil {
+			err = fmt.Errorf("failed to initialize haproxy API client: %w", err)
+			return
+		}
 	}
 	if p == nil {
 		h.Process = process.New(h.Env, osArgs, h.AuxCFGFile, h.HAProxyClient)

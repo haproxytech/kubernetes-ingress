@@ -9,6 +9,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy"
+	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/api"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/config"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/process"
 	"github.com/haproxytech/kubernetes-ingress/pkg/ingress"
@@ -19,6 +20,7 @@ import (
 
 type Builder struct {
 	osArgs         utils.OSArgs
+	haproxyClient  api.HAProxyClient
 	haproxyEnv     config.Env
 	haproxyProcess process.Process
 	haproxyCfgFile []byte
@@ -48,6 +50,11 @@ func NewBuilder() *Builder {
 
 func (builder *Builder) WithHAProxyProcess(process process.Process) *Builder {
 	builder.haproxyProcess = process
+	return builder
+}
+
+func (builder *Builder) WithHaproxyClient(haproxyClient api.HAProxyClient) *Builder {
+	builder.haproxyClient = haproxyClient
 	return builder
 }
 
@@ -104,7 +111,7 @@ func (builder *Builder) Build() *HAProxyController {
 		}()
 	}
 
-	haproxy, err := haproxy.New(builder.osArgs, builder.haproxyEnv, builder.haproxyCfgFile, builder.haproxyProcess)
+	haproxy, err := haproxy.New(builder.osArgs, builder.haproxyEnv, builder.haproxyCfgFile, builder.haproxyProcess, builder.haproxyClient)
 	logger.Panic(err)
 
 	prefix, errPrefix := utils.GetPodPrefix(os.Getenv("POD_NAME"))
