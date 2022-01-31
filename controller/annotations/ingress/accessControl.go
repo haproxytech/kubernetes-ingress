@@ -36,14 +36,23 @@ func (a *AccessControl) Process(k store.K8s, annotations ...map[string]string) (
 	if input == "" {
 		return
 	}
+
+	if strings.HasPrefix(input, "patterns/") {
+		a.rules.Add(&rules.ReqDeny{
+			SrcIPsMap: maps.Path(input),
+			Whitelist: a.whitelist,
+		})
+
+		return
+	}
+
 	var mapName maps.Name
-	var whitelist bool
 	if a.whitelist {
 		mapName = maps.Name("whitelist-" + utils.Hash([]byte(input)))
-		whitelist = true
 	} else {
 		mapName = maps.Name("blacklist-" + utils.Hash([]byte(input)))
 	}
+
 	if !a.maps.Exists(mapName) {
 		for _, address := range strings.Split(input, ",") {
 			address = strings.TrimSpace(address)
@@ -57,7 +66,7 @@ func (a *AccessControl) Process(k store.K8s, annotations ...map[string]string) (
 	}
 	a.rules.Add(&rules.ReqDeny{
 		SrcIPsMap: maps.GetPath(mapName),
-		Whitelist: whitelist,
+		Whitelist: a.whitelist,
 	})
 	return
 }
