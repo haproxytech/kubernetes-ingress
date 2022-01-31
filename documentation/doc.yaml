@@ -490,15 +490,17 @@ annotations:
     version_min: "1.5"
     example: ["auth-realm: Admin Area"]
   - title: blacklist
-    type: IPs or CIDRs
+    type: IPs/CIDRs or pattern file
     group: access-control
     dependencies: ""
     default: ""
     description:
       - Blocks given IP addresses and/or IP address ranges.
-    tip: []
+    tip:
+      - The value is treated as a pattern file (see `--configmap-patternfiles`) if it starts with `patterns/`. It should consist of a list of IPs or CIDRs, one per line.
     values:
       - Comma-separated list of IP addresses and/or CIDR ranges
+      - Path to a pattern file, e.g. `pattern/ips`
     applies_to:
       - configmap
       - ingress
@@ -1726,15 +1728,17 @@ annotations:
     version_min: "1.4"
     example: ["timeout-tunnel: 30m"]
   - title: whitelist
-    type: IPs or CIDRs
+    type: IPs/CIDRs or pattern file
     group: access-control
     dependencies: ""
     default: ""
     description:
       - Blocks all IP addresses except the whitelisted ones (annotation value).
-    tip: []
+    tip:
+      - The value is treated as a pattern file (see `--configmap-patternfiles`) if it starts with `patterns/`. It should consist of a list of IPs or CIDRs, one per line.
     values:
       - Comma-separated list of IP addresses and/or CIDR ranges
+      - Path to a pattern file, e.g. `pattern/ips`
     applies_to:
       - configmap
       - ingress
