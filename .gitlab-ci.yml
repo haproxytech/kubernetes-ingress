@@ -62,12 +62,11 @@ lint-commit-msg:
 unit-tests:
   stage: unit-tests
   image:
-    name: $CI_REGISTRY_GO/golang:1.17
+    name: $CI_REGISTRY_GO/haproxy-alpine:2.5-go1.17
     entrypoint: [""]
   tags:
     - go
   script:
-    - apt update
     - go build -v .
     - go test -v ./...
   only:

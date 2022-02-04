@@ -30,3 +30,5 @@ linters:
     - wrapcheck
     - wsl
     - nakedret
+    - paralleltest
+    - testpackage
