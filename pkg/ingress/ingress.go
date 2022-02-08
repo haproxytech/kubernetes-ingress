@@ -216,7 +216,7 @@ func (i *Ingress) Update(k store.K8s, h haproxy.HAProxy, a annotations.Annotatio
 			logger.Warningf("Ingress '%s/%s': %s", i.resource.Namespace, i.resource.Name, secErr)
 			continue
 		}
-		_, err := h.Certificates.HandleTLSSecret(secret, certs.FT_CERT)
+		_, err := h.AddSecret(secret, certs.FT_CERT)
 		logger.Error(err)
 	}
 	// Ingress annotations

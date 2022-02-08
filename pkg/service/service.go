@@ -38,7 +38,7 @@ type Service struct {
 	path        *store.IngressPath
 	resource    *store.Service
 	backend     *models.Backend
-	certs       *certs.Certificates
+	certs       certs.Certificates
 	annotations []map[string]string
 	modeTCP     bool
 	newBackend  bool
@@ -46,7 +46,7 @@ type Service struct {
 
 // New returns a Service instance to handle the k8s IngressPath resource given in params.
 // An error will be returned if there is no k8s Service resource corresponding to the service description in IngressPath.
-func New(k store.K8s, path *store.IngressPath, certs *certs.Certificates, tcpService bool, annList ...map[string]string) (*Service, error) {
+func New(k store.K8s, path *store.IngressPath, certs certs.Certificates, tcpService bool, annList ...map[string]string) (*Service, error) {
 	service, err := k.GetService(path.SvcNamespace, path.SvcName)
 	if err != nil {
 		return nil, err

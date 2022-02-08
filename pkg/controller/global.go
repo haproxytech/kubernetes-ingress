@@ -174,6 +174,6 @@ func (c *HAProxyController) handleDefaultCert() {
 	if secret == nil {
 		return
 	}
-	_, err = c.haproxy.Certificates.HandleTLSSecret(secret, certs.FT_DEFAULT_CERT)
+	_, err = c.haproxy.AddSecret(secret, certs.FT_DEFAULT_CERT)
 	logger.Error(err)
 }

@@ -11,7 +11,7 @@ import (
 type Config struct {
 	*maps.MapFiles
 	rules.Rules
-	*certs.Certificates
+	certs.Certificates
 	ActiveBackends  map[string]struct{}
 	RateLimitTables []string
 	HTTPS           bool
@@ -46,6 +46,6 @@ func (cfg *Config) Clean() {
 	cfg.RateLimitTables = []string{}
 	cfg.ActiveBackends = make(map[string]struct{})
 	cfg.MapFiles.Clean()
-	cfg.Certificates.Clean()
+	cfg.CleanCerts()
 	cfg.CleanRules()
 }

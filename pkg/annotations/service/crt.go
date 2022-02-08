@@ -10,11 +10,11 @@ import (
 
 type Crt struct {
 	name         string
-	haproxyCerts *certs.Certificates
+	haproxyCerts certs.Certificates
 	backend      *models.Backend
 }
 
-func NewCrt(n string, c *certs.Certificates, b *models.Backend) *Crt {
+func NewCrt(n string, c certs.Certificates, b *models.Backend) *Crt {
 	return &Crt{
 		name:         n,
 		haproxyCerts: c,
@@ -41,7 +41,7 @@ func (a *Crt) Process(k store.K8s, annotations ...map[string]string) error {
 		}
 		return nil
 	}
-	crtFile, err = a.haproxyCerts.HandleTLSSecret(secret, certs.BD_CERT)
+	crtFile, err = a.haproxyCerts.AddSecret(secret, certs.BD_CERT)
 	if err != nil {
 		return err
 	}

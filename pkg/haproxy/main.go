@@ -63,7 +63,7 @@ func New(osArgs utils.OSArgs, env config.Env, cfgFile []byte, p process.Process,
 func (h *HAProxy) Refresh(cleanCrts bool) (reload bool, err error) {
 	// Certs
 	if cleanCrts {
-		reload = h.Certificates.Refresh()
+		reload = h.RefreshCerts()
 	}
 	// Rules
 	reload = h.RefreshRules(h.HAProxyClient) || reload

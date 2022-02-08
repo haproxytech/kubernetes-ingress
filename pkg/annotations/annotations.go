@@ -26,7 +26,7 @@ type Annotations interface {
 	GlobalCfgSnipp() []Annotation
 	Global(g *models.Global, l *models.LogTargets) []Annotation
 	Defaults(d *models.Defaults) []Annotation
-	Backend(b *models.Backend, s store.K8s, c *certs.Certificates) []Annotation
+	Backend(b *models.Backend, s store.K8s, c certs.Certificates) []Annotation
 	Frontend(i *store.Ingress, r *rules.List, m maps.MapFiles) []Annotation
 	Secret(name, defaultNs string, k store.K8s, annotations ...map[string]string) (secret *store.Secret, err error)
 	Timeout(name string, annotations ...map[string]string) (out *int64, err error)
@@ -129,7 +129,7 @@ func (a annImpl) Frontend(i *store.Ingress, r *rules.List, m maps.MapFiles) []An
 	}
 }
 
-func (a annImpl) Backend(b *models.Backend, s store.K8s, c *certs.Certificates) []Annotation {
+func (a annImpl) Backend(b *models.Backend, s store.K8s, c certs.Certificates) []Annotation {
 	annotations := []Annotation{
 		service.NewAbortOnClose("abortonclose", b),
 		service.NewTimeoutCheck("timeout-check", b),

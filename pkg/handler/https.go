@@ -89,7 +89,7 @@ func (handler HTTPS) handleClientTLSAuth(k store.K8s, h haproxy.HAProxy) (reload
 		}
 	}
 	if secret != nil {
-		caFile, err = h.Certificates.HandleTLSSecret(secret, certs.CA_CERT)
+		caFile, err = h.Certificates.AddSecret(secret, certs.CA_CERT)
 		if err != nil {
 			err = fmt.Errorf("client TLS Auth: %w", err)
 			return
@@ -153,7 +153,7 @@ func (handler HTTPS) Update(k store.K8s, h haproxy.HAProxy, a annotations.Annota
 	logger.Error(err)
 
 	// ssl-offload
-	if h.Certificates.FrontendCertsEnabled() {
+	if h.FrontCertsInUse() {
 		if !h.HTTPS {
 			logger.Panic(h.FrontendEnableSSLOffload(h.FrontHTTPS, handler.CertDir, handler.alpn, handler.strictSNI))
 			h.HTTPS = true
@@ -187,7 +187,7 @@ func (handler HTTPS) Update(k store.K8s, h haproxy.HAProxy, a annotations.Annota
 		reload = true
 		logger.Debug("SSLPassthrough disabled, reload required")
 	}
-	if h.Certificates.Updated() {
+	if h.CertsUpdated() {
 		reload = true
 	}
 

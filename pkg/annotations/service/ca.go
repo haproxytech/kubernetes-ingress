@@ -10,11 +10,11 @@ import (
 
 type CA struct {
 	name         string
-	haproxyCerts *certs.Certificates
+	haproxyCerts certs.Certificates
 	backend      *models.Backend
 }
 
-func NewCA(n string, c *certs.Certificates, b *models.Backend) *CA {
+func NewCA(n string, c certs.Certificates, b *models.Backend) *CA {
 	return &CA{
 		name:         n,
 		haproxyCerts: c,
@@ -41,7 +41,7 @@ func (a *CA) Process(k store.K8s, annotations ...map[string]string) error {
 		}
 		return nil
 	}
-	caFile, err = a.haproxyCerts.HandleTLSSecret(secret, certs.CA_CERT)
+	caFile, err = a.haproxyCerts.AddSecret(secret, certs.CA_CERT)
 	if err != nil {
 		return err
 	}

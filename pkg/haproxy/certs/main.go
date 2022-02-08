@@ -12,10 +12,24 @@ import (
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
 )
 
-type Certificates struct {
+type certs struct {
 	frontend map[string]*cert
 	backend  map[string]*cert
 	ca       map[string]*cert
+}
+
+type Certificates interface {
+	// Add takes a secret and its type and creats or updates the corresponding certificate
+	AddSecret(secret *store.Secret, secretType SecretType) (certPath string, err error)
+	// FrontCertsInuse returns true if a frontend certificate is configured.
+	FrontCertsInUse() bool
+	// Updated returns true if there is any updadted/created certificate
+	CertsUpdated() bool
+	// Refresh removes unused certs from HAProxyCertDir and returns false if
+	// no certificates were removed, otherwise returns true
+	RefreshCerts() bool
+	// Clean cleans certificates state
+	CleanCerts()
 }
 
 type cert struct {
@@ -54,7 +68,7 @@ type SecretCtx struct {
 	SecretType SecretType
 }
 
-func New(envParam Env) (*Certificates, error) {
+func New(envParam Env) (Certificates, error) {
 	env = envParam
 	if env.FrontendDir == "" {
 		return nil, fmt.Errorf("empty name for Frontend Cert Directory")
@@ -65,14 +79,14 @@ func New(envParam Env) (*Certificates, error) {
 	if env.CaDir == "" {
 		return nil, fmt.Errorf("empty name for CA Cert Directory")
 	}
-	return &Certificates{
+	return &certs{
 		frontend: make(map[string]*cert),
 		backend:  make(map[string]*cert),
 		ca:       make(map[string]*cert),
 	}, nil
 }
 
-func (c *Certificates) HandleTLSSecret(secret *store.Secret, secretType SecretType) (certPath string, err error) {
+func (c *certs) AddSecret(secret *store.Secret, secretType SecretType) (certPath string, err error) {
 	if secret == nil {
 		err = errors.New("nil secret")
 		return
@@ -125,7 +139,7 @@ func (c *Certificates) HandleTLSSecret(secret *store.Secret, secretType SecretTy
 	return crt.path, nil
 }
 
-func (c *Certificates) Clean() {
+func (c *certs) CleanCerts() {
 	for i := range c.frontend {
 		c.frontend[i].inUse = false
 		c.frontend[i].updated = false
@@ -140,7 +154,7 @@ func (c *Certificates) Clean() {
 	}
 }
 
-func (c *Certificates) FrontendCertsEnabled() bool {
+func (c *certs) FrontCertsInUse() bool {
 	for _, cert := range c.frontend {
 		if cert.inUse {
 			return true
@@ -149,15 +163,14 @@ func (c *Certificates) FrontendCertsEnabled() bool {
 	return false
 }
 
-// Refresh removes unused certs from HAProxyCertDir
-func (c *Certificates) Refresh() (reload bool) {
-	reload = refreshCerts(c.frontend, env.FrontendDir)
-	reload = refreshCerts(c.backend, env.BackendDir) || reload
-	reload = refreshCerts(c.ca, env.CaDir) || reload
+func (c *certs) RefreshCerts() (removed bool) {
+	removed = refreshCerts(c.frontend, env.FrontendDir)
+	removed = refreshCerts(c.backend, env.BackendDir) || removed
+	removed = refreshCerts(c.ca, env.CaDir) || removed
 	return
 }
 
-func (c *Certificates) Updated() (reload bool) {
+func (c *certs) CertsUpdated() (reload bool) {
 	for _, certs := range []map[string]*cert{c.frontend, c.backend, c.ca} {
 		for _, crt := range certs {
 			if crt.updated {
@@ -169,7 +182,7 @@ func (c *Certificates) Updated() (reload bool) {
 	return reload
 }
 
-func refreshCerts(certs map[string]*cert, certDir string) (reload bool) {
+func refreshCerts(certs map[string]*cert, certDir string) (removed bool) {
 	files, err := ioutil.ReadDir(certDir)
 	if err != nil {
 		logger.Error(err)
@@ -186,7 +199,7 @@ func refreshCerts(certs map[string]*cert, certDir string) (reload bool) {
 		if !crtOk || !crt.inUse {
 			logger.Error(os.Remove(path.Join(certDir, filename)))
 			delete(certs, certName)
-			reload = true
+			removed = true
 			logger.Debugf("secret %s removed, reload required", crt.name)
 		}
 	}
