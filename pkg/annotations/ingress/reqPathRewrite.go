@@ -11,10 +11,10 @@ import (
 
 type ReqPathRewrite struct {
 	name  string
-	rules *rules.Rules
+	rules *rules.List
 }
 
-func NewReqPathRewrite(n string, r *rules.Rules) *ReqPathRewrite {
+func NewReqPathRewrite(n string, r *rules.List) *ReqPathRewrite {
 	return &ReqPathRewrite{name: n, rules: r}
 }
 

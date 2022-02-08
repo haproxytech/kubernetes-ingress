@@ -55,7 +55,7 @@ func (handler ProxyProtocol) Update(k store.K8s, h haproxy.HAProxy, a annotation
 		frontends = []string{h.FrontHTTP, h.FrontSSL}
 	}
 	for _, frontend := range frontends {
-		err = h.AddRule(rules.ReqProxyProtocol{SrcIPsMap: maps.GetPath(mapName)}, false, frontend)
+		err = h.AddRule(frontend, rules.ReqProxyProtocol{SrcIPsMap: maps.GetPath(mapName)}, false)
 		if err != nil {
 			return
 		}

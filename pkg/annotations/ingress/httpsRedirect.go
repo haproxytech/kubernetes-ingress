@@ -12,7 +12,7 @@ import (
 
 type HTTPSRedirect struct {
 	redirect *rules.RequestRedirect
-	rules    *rules.Rules
+	rules    *rules.List
 	ingress  *store.Ingress
 }
 
@@ -21,7 +21,7 @@ type HTTPSRedirectAnn struct {
 	parent *HTTPSRedirect
 }
 
-func NewHTTPSRedirect(rules *rules.Rules, i *store.Ingress) *HTTPSRedirect {
+func NewHTTPSRedirect(rules *rules.List, i *store.Ingress) *HTTPSRedirect {
 	return &HTTPSRedirect{rules: rules, ingress: i}
 }
 

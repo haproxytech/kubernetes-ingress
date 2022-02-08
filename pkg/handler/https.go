@@ -238,7 +238,7 @@ func (handler HTTPS) disableSSLPassthrough(h haproxy.HAProxy) (err error) {
 	if err != nil {
 		return err
 	}
-	h.DeleteFrontend(h.FrontSSL)
+	h.DeleteFTRules(h.FrontSSL)
 	err = h.BackendDelete(h.BackSSL)
 	if err != nil {
 		return err
@@ -270,26 +270,26 @@ func (handler HTTPS) sslPassthroughRules(k store.K8s, h haproxy.HAProxy, a annot
 		inspectTimeout = utils.PtrInt64(5000)
 	}
 	errors := utils.Errors{}
-	errors.Add(h.AddRule(rules.ReqAcceptContent{}, false, h.FrontSSL),
-		h.AddRule(rules.ReqInspectDelay{
+	errors.Add(h.Rules.AddRule(h.FrontSSL, rules.ReqAcceptContent{}, false),
+		h.Rules.AddRule(h.FrontSSL, rules.ReqInspectDelay{
 			Timeout: inspectTimeout,
-		}, false, h.FrontSSL),
-		h.AddRule(rules.ReqSetVar{
+		}, false),
+		h.AddRule(h.FrontSSL, rules.ReqSetVar{
 			Name:       "sni",
 			Scope:      "sess",
 			Expression: "req_ssl_sni",
-		}, false, h.FrontSSL),
-		h.AddRule(rules.ReqSetVar{
+		}, false),
+		h.AddRule(h.FrontSSL, rules.ReqSetVar{
 			Name:       "sni_match",
 			Scope:      "txn",
 			Expression: fmt.Sprintf("req_ssl_sni,map(%s)", maps.GetPath(route.SNI)),
-		}, false, h.FrontSSL),
-		h.AddRule(rules.ReqSetVar{
+		}, false),
+		h.AddRule(h.FrontSSL, rules.ReqSetVar{
 			Name:       "sni_match",
 			Scope:      "txn",
 			Expression: fmt.Sprintf("req_ssl_sni,regsub(^[^.]*,,),map(%s)", maps.GetPath(route.SNI)),
 			CondTest:   "!{ var(txn.sni_match) -m found }",
-		}, false, h.FrontSSL),
+		}, false),
 	)
 	return errors.Result()
 }

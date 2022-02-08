@@ -13,6 +13,7 @@ import (
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/api"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/config"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/process"
+	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/rules"
 	"github.com/haproxytech/kubernetes-ingress/pkg/ingress"
 	"github.com/haproxytech/kubernetes-ingress/pkg/k8s"
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
@@ -24,6 +25,7 @@ type Builder struct {
 	haproxyClient  api.HAProxyClient
 	haproxyEnv     config.Env
 	haproxyProcess process.Process
+	haproxyRules   rules.Rules
 	haproxyCfgFile []byte
 	annotations    annotations.Annotations
 	store          store.K8s
@@ -48,7 +50,8 @@ var defaultEnv = config.Env{
 
 func NewBuilder() *Builder {
 	return &Builder{haproxyEnv: defaultEnv,
-		annotations: annotations.New(),
+		annotations:  annotations.New(),
+		haproxyRules: rules.New(),
 	}
 }
 
@@ -59,6 +62,11 @@ func (builder *Builder) WithHAProxyProcess(process process.Process) *Builder {
 
 func (builder *Builder) WithAnnotations(a annotations.Annotations) *Builder {
 	builder.annotations = a
+	return builder
+}
+
+func (builder *Builder) WithHAProxyRules(rules rules.Rules) *Builder {
+	builder.haproxyRules = rules
 	return builder
 }
 
@@ -120,7 +128,7 @@ func (builder *Builder) Build() *HAProxyController {
 		}()
 	}
 
-	haproxy, err := haproxy.New(builder.osArgs, builder.haproxyEnv, builder.haproxyCfgFile, builder.haproxyProcess, builder.haproxyClient)
+	haproxy, err := haproxy.New(builder.osArgs, builder.haproxyEnv, builder.haproxyCfgFile, builder.haproxyProcess, builder.haproxyClient, builder.haproxyRules)
 	logger.Panic(err)
 
 	prefix, errPrefix := utils.GetPodPrefix(os.Getenv("POD_NAME"))

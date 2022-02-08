@@ -9,16 +9,8 @@ import (
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
 )
 
-type Rule interface {
-	Create(client api.HAProxyClient, frontend *models.Frontend, ingressACL string) error
-	GetType() Type
-}
-
-type Rules []Rule
-
-func (rules *Rules) Add(rule Rule) {
-	*rules = append(*rules, rule)
-}
+// module logger
+var logger = utils.GetLogger()
 
 // HTTPACLVar used to match against RuleID in haproxy http frontend
 var HTTPACLVar = "txn.path_match"
@@ -26,48 +18,19 @@ var HTTPACLVar = "txn.path_match"
 // TCPACLVar used to match against RuleID in haproxy ssl frontend
 var TCPACLVar = "txn.sni_match"
 
-// Order matters !
-// Rules will be evaluated by HAProxy in the defined order.
-type Type int
-
-//nolint: golint,stylecheck
-const (
-	REQ_ACCEPT_CONTENT Type = iota
-	REQ_INSPECT_DELAY
-	REQ_PROXY_PROTOCOL
-	REQ_SET_VAR
-	REQ_SET_SRC
-	REQ_DENY
-	REQ_TRACK
-	REQ_AUTH
-	REQ_RATELIMIT
-	REQ_CAPTURE
-	REQ_REDIRECT
-	REQ_FORWARDED_PROTO
-	REQ_SET_HEADER
-	REQ_SET_HOST
-	REQ_PATH_REWRITE
-	RES_SET_HEADER
-)
-
-var constLookup = map[Type]string{
-	REQ_ACCEPT_CONTENT:  "REQ_ACCEPT_CONTENT",
-	REQ_INSPECT_DELAY:   "REQ_INSPECT_DELAY",
-	REQ_PROXY_PROTOCOL:  "REQ_PROXY_PROTOCOL",
-	REQ_SET_VAR:         "REQ_SET_VAR",
-	REQ_SET_SRC:         "REQ_SET_SRC",
-	REQ_DENY:            "REQ_DENY",
-	REQ_TRACK:           "REQ_TRACK",
-	REQ_AUTH:            "REQ_AUTH",
-	REQ_RATELIMIT:       "REQ_RATELIMIT",
-	REQ_CAPTURE:         "REQ_CAPTURE",
-	REQ_REDIRECT:        "REQ_REDIRECT",
-	REQ_FORWARDED_PROTO: "REQ_FORWARDED_PROTO",
-	REQ_SET_HEADER:      "REQ_SET_HEADER",
-	REQ_SET_HOST:        "REQ_SET_HOST",
-	REQ_PATH_REWRITE:    "REQ_PATH_REWRITE",
-	RES_SET_HEADER:      "RES_SET_HEADER",
+type Rules interface {
+	AddRule(frontend string, rule Rule, ingressRule bool) error
+	DeleteFTRules(frontend string)
+	CleanRules()
+	RefreshRules(client api.HAProxyClient) (reload bool)
 }
+
+type Rule interface {
+	Create(client api.HAProxyClient, frontend *models.Frontend, ingressACL string) error
+	GetType() Type
+}
+
+type List []Rule
 
 // RuleID uniquely identify a HAProxy Rule
 type RuleID string
@@ -77,7 +40,7 @@ type SectionRules map[string]*ruleset
 type ruleset struct {
 	// rules is a map of HAProxy rules
 	// grouped by rule types
-	rules map[Type]Rules
+	rules map[Type]List
 	// meta is a map of RuleIDs and
 	// the corresponding ruleInfo
 	meta map[RuleID]*ruleInfo
@@ -99,14 +62,15 @@ const (
 	TO_DELETE ruleState = 2
 )
 
-// module logger
-var logger = utils.GetLogger()
-
 func New() *SectionRules {
 	return &SectionRules{}
 }
 
-func (r SectionRules) AddRule(rule Rule, ingressRule bool, frontend string) error {
+func (rules *List) Add(rule Rule) {
+	*rules = append(*rules, rule)
+}
+
+func (r SectionRules) AddRule(frontend string, rule Rule, ingressRule bool) error {
 	if rule == nil || frontend == "" {
 		return fmt.Errorf("invalid params")
 	}
@@ -114,7 +78,7 @@ func (r SectionRules) AddRule(rule Rule, ingressRule bool, frontend string) erro
 	ftRuleSet, ok := r[frontend]
 	if !ok {
 		ftRuleSet = &ruleset{
-			rules: make(map[Type]Rules),
+			rules: make(map[Type]List),
 			meta:  make(map[RuleID]*ruleInfo),
 		}
 		r[frontend] = ftRuleSet
@@ -137,11 +101,11 @@ func (r SectionRules) AddRule(rule Rule, ingressRule bool, frontend string) erro
 	return nil
 }
 
-func (r SectionRules) DeleteFrontend(frontend string) {
+func (r SectionRules) DeleteFTRules(frontend string) {
 	delete(r, frontend)
 }
 
-func (r SectionRules) Clean(frontends ...string) {
+func (r SectionRules) CleanRules() {
 	for frontend := range r {
 		if ftRuleSet, ok := r[frontend]; ok {
 			for id := range ftRuleSet.meta {
@@ -151,7 +115,7 @@ func (r SectionRules) Clean(frontends ...string) {
 	}
 }
 
-func (r SectionRules) Refresh(client api.HAProxyClient) (reload bool) {
+func (r SectionRules) RefreshRules(client api.HAProxyClient) (reload bool) {
 	logger.Error(client.UserListDeleteAll())
 	for feName := range r {
 		fe, err := client.FrontendGet(feName)

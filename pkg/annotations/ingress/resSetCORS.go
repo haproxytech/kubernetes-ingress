@@ -13,7 +13,7 @@ import (
 const corsVarName = "cors_origin"
 
 type ResSetCORS struct {
-	rules   *rules.Rules
+	rules   *rules.List
 	acl     string
 	methods map[string]struct{}
 }
@@ -23,7 +23,7 @@ type ResSetCORSAnn struct {
 	parent *ResSetCORS
 }
 
-func NewResSetCORS(r *rules.Rules) *ResSetCORS {
+func NewResSetCORS(r *rules.List) *ResSetCORS {
 	return &ResSetCORS{
 		rules:   r,
 		methods: map[string]struct{}{"GET": {}, "POST": {}, "PUT": {}, "DELETE": {}, "HEAD": {}, "CONNECT": {}, "OPTIONS": {}, "TRACE": {}, "PATCH": {}},

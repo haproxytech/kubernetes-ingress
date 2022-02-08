@@ -140,7 +140,7 @@ func (i *Ingress) handlePath(k store.K8s, h haproxy.HAProxy, host string, path *
 // without the need to map Rule IDs to specific ingress traffic.
 func (i *Ingress) handleAnnotations(k store.K8s, h haproxy.HAProxy) {
 	var err error
-	var result = rules.Rules{}
+	var result = rules.List{}
 	for _, a := range i.annotations.Frontend(i.resource, &result, *h.MapFiles) {
 		err = a.Process(k, i.resource.Annotations)
 		if err != nil {
@@ -152,7 +152,7 @@ func (i *Ingress) handleAnnotations(k store.K8s, h haproxy.HAProxy) {
 
 func HandleCfgMapAnnotations(k store.K8s, h haproxy.HAProxy, a annotations.Annotations) {
 	var err error
-	var result = rules.Rules{}
+	var result = rules.List{}
 	logger.Tracef("Processing Ingress annotations in ConfigMap")
 	for _, a := range a.Frontend(nil, &result, *h.MapFiles) {
 		err = a.Process(k, k.ConfigMaps.Main.Annotations)
@@ -163,7 +163,7 @@ func HandleCfgMapAnnotations(k store.K8s, h haproxy.HAProxy, a annotations.Annot
 	addRules(result, h, false)
 }
 
-func addRules(list rules.Rules, h haproxy.HAProxy, ingressRule bool) []rules.RuleID {
+func addRules(list rules.List, h haproxy.HAProxy, ingressRule bool) []rules.RuleID {
 	ruleIDs := make([]rules.RuleID, 0, len(list))
 	defaultFrontends := []string{h.FrontHTTP, h.FrontHTTPS}
 	for _, rule := range list {
@@ -185,7 +185,7 @@ func addRules(list rules.Rules, h haproxy.HAProxy, ingressRule bool) []rules.Rul
 			h.RateLimitTables = append(h.RateLimitTables, limitRule.TableName)
 		}
 		for _, frontend := range frontends {
-			logger.Error(h.AddRule(rule, ingressRule, frontend))
+			logger.Error(h.AddRule(frontend, rule, ingressRule))
 			ruleIDs = append(ruleIDs, rules.GetID(rule))
 		}
 	}

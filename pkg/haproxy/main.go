@@ -11,6 +11,7 @@ import (
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/api"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/config"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/process"
+	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/rules"
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
 )
 
@@ -24,7 +25,7 @@ type HAProxy struct {
 	*config.Config
 }
 
-func New(osArgs utils.OSArgs, env config.Env, cfgFile []byte, p process.Process, client api.HAProxyClient) (h HAProxy, err error) {
+func New(osArgs utils.OSArgs, env config.Env, cfgFile []byte, p process.Process, client api.HAProxyClient, rulesManager rules.Rules) (h HAProxy, err error) {
 	err = (&env).Init(osArgs)
 	if err != nil {
 		err = fmt.Errorf("failed to initialize haproxy environment: %w", err)
@@ -38,7 +39,7 @@ func New(osArgs utils.OSArgs, env config.Env, cfgFile []byte, p process.Process,
 		return
 	}
 
-	h.Config, err = config.New(h.Env)
+	h.Config, err = config.New(h.Env, rulesManager)
 	if err != nil {
 		err = fmt.Errorf("failed to initialize haproxy config state: %w", err)
 		return
@@ -65,7 +66,7 @@ func (h *HAProxy) Refresh(cleanCrts bool) (reload bool, err error) {
 		reload = h.Certificates.Refresh()
 	}
 	// Rules
-	reload = h.SectionRules.Refresh(h.HAProxyClient) || reload
+	reload = h.RefreshRules(h.HAProxyClient) || reload
 	// Maps
 	reload = h.MapFiles.Refresh(h.HAProxyClient) || reload
 	// Backends

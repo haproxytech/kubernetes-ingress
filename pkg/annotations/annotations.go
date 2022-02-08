@@ -27,7 +27,7 @@ type Annotations interface {
 	Global(g *models.Global, l *models.LogTargets) []Annotation
 	Defaults(d *models.Defaults) []Annotation
 	Backend(b *models.Backend, s store.K8s, c *certs.Certificates) []Annotation
-	Frontend(i *store.Ingress, r *rules.Rules, m maps.MapFiles) []Annotation
+	Frontend(i *store.Ingress, r *rules.List, m maps.MapFiles) []Annotation
 	Secret(name, defaultNs string, k store.K8s, annotations ...map[string]string) (secret *store.Secret, err error)
 	Timeout(name string, annotations ...map[string]string) (out *int64, err error)
 	String(name string, annotations ...map[string]string) string
@@ -88,7 +88,7 @@ func (a annImpl) Defaults(d *models.Defaults) []Annotation {
 	}
 }
 
-func (a annImpl) Frontend(i *store.Ingress, r *rules.Rules, m maps.MapFiles) []Annotation {
+func (a annImpl) Frontend(i *store.Ingress, r *rules.List, m maps.MapFiles) []Annotation {
 	reqRateLimit := ingress.NewReqRateLimit(r)
 	httpsRedirect := ingress.NewHTTPSRedirect(r, i)
 	hostRedirect := ingress.NewHostRedirect(r)

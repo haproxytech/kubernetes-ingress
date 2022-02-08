@@ -13,7 +13,7 @@ import (
 type ReqRateLimit struct {
 	limit *rules.ReqRateLimit
 	track *rules.ReqTrack
-	rules *rules.Rules
+	rules *rules.List
 }
 
 type ReqRateLimitAnn struct {
@@ -21,7 +21,7 @@ type ReqRateLimitAnn struct {
 	parent *ReqRateLimit
 }
 
-func NewReqRateLimit(r *rules.Rules) *ReqRateLimit {
+func NewReqRateLimit(r *rules.List) *ReqRateLimit {
 	return &ReqRateLimit{rules: r}
 }
 

@@ -199,51 +199,51 @@ func (c *HAProxyController) setupHAProxyRules() error {
 	var errors utils.Errors
 	errors.Add(
 		// ForwardedProto rule
-		c.haproxy.AddRule(rules.SetHdr{
+		c.haproxy.AddRule(c.haproxy.FrontHTTPS, rules.SetHdr{
 			ForwardedProto: true,
-		}, false, c.haproxy.FrontHTTPS),
+		}, false),
 	)
 	for _, frontend := range []string{c.haproxy.FrontHTTP, c.haproxy.FrontHTTPS} {
 		errors.Add(
 			// txn.base var used for logging
-			c.haproxy.AddRule(rules.ReqSetVar{
+			c.haproxy.AddRule(frontend, rules.ReqSetVar{
 				Name:       "base",
 				Scope:      "txn",
 				Expression: "base",
-			}, false, frontend),
+			}, false),
 			// Backend switching rules.
-			c.haproxy.AddRule(rules.ReqSetVar{
+			c.haproxy.AddRule(frontend, rules.ReqSetVar{
 				Name:       "path",
 				Scope:      "txn",
 				Expression: "path",
-			}, false, frontend),
-			c.haproxy.AddRule(rules.ReqSetVar{
+			}, false),
+			c.haproxy.AddRule(frontend, rules.ReqSetVar{
 				Name:       "host",
 				Scope:      "txn",
 				Expression: "req.hdr(Host),field(1,:),lower",
-			}, false, frontend),
-			c.haproxy.AddRule(rules.ReqSetVar{
+			}, false),
+			c.haproxy.AddRule(frontend, rules.ReqSetVar{
 				Name:       "host_match",
 				Scope:      "txn",
 				Expression: fmt.Sprintf("var(txn.host),map(%s)", maps.GetPath(route.HOST)),
-			}, false, frontend),
-			c.haproxy.AddRule(rules.ReqSetVar{
+			}, false),
+			c.haproxy.AddRule(frontend, rules.ReqSetVar{
 				Name:       "host_match",
 				Scope:      "txn",
 				Expression: fmt.Sprintf("var(txn.host),regsub(^[^.]*,,),map(%s,'')", maps.GetPath(route.HOST)),
 				CondTest:   "!{ var(txn.host_match) -m found }",
-			}, false, frontend),
-			c.haproxy.AddRule(rules.ReqSetVar{
+			}, false),
+			c.haproxy.AddRule(frontend, rules.ReqSetVar{
 				Name:       "path_match",
 				Scope:      "txn",
 				Expression: fmt.Sprintf("var(txn.host_match),concat(,txn.path,),map(%s)", maps.GetPath(route.PATH_EXACT)),
-			}, false, frontend),
-			c.haproxy.AddRule(rules.ReqSetVar{
+			}, false),
+			c.haproxy.AddRule(frontend, rules.ReqSetVar{
 				Name:       "path_match",
 				Scope:      "txn",
 				Expression: fmt.Sprintf("var(txn.host_match),concat(,txn.path,),map_beg(%s)", maps.GetPath(route.PATH_PREFIX)),
 				CondTest:   "!{ var(txn.path_match) -m found }",
-			}, false, frontend),
+			}, false),
 		)
 	}
 	return errors.Result()

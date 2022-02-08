@@ -10,7 +10,7 @@ import (
 // Config holds the haroxy configuration state
 type Config struct {
 	*maps.MapFiles
-	*rules.SectionRules
+	rules.Rules
 	*certs.Certificates
 	ActiveBackends  map[string]struct{}
 	RateLimitTables []string
@@ -20,7 +20,7 @@ type Config struct {
 }
 
 // Init initializes HAProxy structs
-func New(env Env) (cfg *Config, err error) {
+func New(env Env, rules rules.Rules) (cfg *Config, err error) {
 	cfg = &Config{}
 	persistentMaps := []maps.Name{
 		route.SNI,
@@ -34,7 +34,7 @@ func New(env Env) (cfg *Config, err error) {
 	if cfg.Certificates, err = certs.New(env.Certs); err != nil {
 		return
 	}
-	cfg.SectionRules = rules.New()
+	cfg.Rules = rules
 	cfg.ActiveBackends = make(map[string]struct{})
 	return
 }
@@ -47,5 +47,5 @@ func (cfg *Config) Clean() {
 	cfg.ActiveBackends = make(map[string]struct{})
 	cfg.MapFiles.Clean()
 	cfg.Certificates.Clean()
-	cfg.SectionRules.Clean()
+	cfg.CleanRules()
 }

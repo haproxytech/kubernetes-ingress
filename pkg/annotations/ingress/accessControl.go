@@ -14,16 +14,16 @@ import (
 
 type AccessControl struct {
 	name      string
-	rules     *rules.Rules
+	rules     *rules.List
 	maps      maps.MapFiles
 	whitelist bool
 }
 
-func NewBlackList(n string, r *rules.Rules, m maps.MapFiles) *AccessControl {
+func NewBlackList(n string, r *rules.List, m maps.MapFiles) *AccessControl {
 	return &AccessControl{name: n, rules: r, maps: m}
 }
 
-func NewWhiteList(n string, r *rules.Rules, m maps.MapFiles) *AccessControl {
+func NewWhiteList(n string, r *rules.List, m maps.MapFiles) *AccessControl {
 	return &AccessControl{name: n, rules: r, maps: m, whitelist: true}
 }
 

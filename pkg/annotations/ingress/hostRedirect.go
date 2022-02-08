@@ -11,7 +11,7 @@ import (
 
 type HostRedirect struct {
 	redirect *rules.RequestRedirect
-	rules    *rules.Rules
+	rules    *rules.List
 }
 
 type HostRedirectAnn struct {
@@ -19,7 +19,7 @@ type HostRedirectAnn struct {
 	parent *HostRedirect
 }
 
-func NewHostRedirect(r *rules.Rules) *HostRedirect {
+func NewHostRedirect(r *rules.List) *HostRedirect {
 	return &HostRedirect{rules: r}
 }
 

@@ -12,7 +12,7 @@ import (
 
 type ReqCapture struct {
 	capture []*rules.ReqCapture
-	rules   *rules.Rules
+	rules   *rules.List
 }
 
 type ReqCaptureAnn struct {
@@ -20,7 +20,7 @@ type ReqCaptureAnn struct {
 	parent *ReqCapture
 }
 
-func NewReqCapture(r *rules.Rules) *ReqCapture {
+func NewReqCapture(r *rules.List) *ReqCapture {
 	return &ReqCapture{rules: r}
 }
 

@@ -8,10 +8,10 @@ import (
 
 type SrcIPHdr struct {
 	name  string
-	rules *rules.Rules
+	rules *rules.List
 }
 
-func NewSrcIPHdr(n string, r *rules.Rules) *SrcIPHdr {
+func NewSrcIPHdr(n string, r *rules.List) *SrcIPHdr {
 	return &SrcIPHdr{name: n, rules: r}
 }
 

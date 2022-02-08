@@ -11,15 +11,15 @@ import (
 
 type SetHdr struct {
 	name     string
-	rules    *rules.Rules
+	rules    *rules.List
 	response bool
 }
 
-func NewReqSetHdr(n string, r *rules.Rules) *SetHdr {
+func NewReqSetHdr(n string, r *rules.List) *SetHdr {
 	return &SetHdr{name: n, rules: r}
 }
 
-func NewResSetHdr(n string, r *rules.Rules) *SetHdr {
+func NewResSetHdr(n string, r *rules.List) *SetHdr {
 	return &SetHdr{name: n, rules: r, response: true}
 }
 

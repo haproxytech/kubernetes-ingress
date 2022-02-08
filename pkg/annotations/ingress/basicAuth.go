@@ -11,7 +11,7 @@ import (
 
 type ReqAuth struct {
 	authRule *rules.ReqBasicAuth
-	rules    *rules.Rules
+	rules    *rules.List
 	ingress  *store.Ingress
 }
 
@@ -20,7 +20,7 @@ type ReqAuthAnn struct {
 	parent *ReqAuth
 }
 
-func NewReqAuth(rules *rules.Rules, i *store.Ingress) *ReqAuth {
+func NewReqAuth(rules *rules.List, i *store.Ingress) *ReqAuth {
 	return &ReqAuth{rules: rules, ingress: i}
 }
 

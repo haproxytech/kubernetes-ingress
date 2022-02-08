@@ -8,10 +8,10 @@ import (
 
 type ReqSetHost struct {
 	name  string
-	rules *rules.Rules
+	rules *rules.List
 }
 
-func NewReqSetHost(n string, r *rules.Rules) *ReqSetHost {
+func NewReqSetHost(n string, r *rules.List) *ReqSetHost {
 	return &ReqSetHost{name: n, rules: r}
 }
 
