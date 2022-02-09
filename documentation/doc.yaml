@@ -614,6 +614,22 @@ annotations:
     version_min: "1.6"
     example:
       - "client-crt-optional: true"
+  - title: client-strict-sni
+    type: bool
+    group: ssl-offloading
+    dependencies: client-ca
+    default: "false"
+    description:
+      - If enabled, HAProxy will only accept TLS client connections where the provided SNI matchs an existing certificate.
+      - If disabled HAProxy will service the default certificate when the provided SNI does not match.
+    values:
+      - "true"
+      - "false"
+    applies_to:
+      - configmap
+    version_min: "1.7"
+    example:
+      - "client-strict-sni: true"
   - title: cors-enable
     type: bool
     group: CORS

@@ -31,14 +31,15 @@ import (
 )
 
 type HTTPS struct {
-	Enabled  bool
-	IPv4     bool
-	IPv6     bool
-	Port     int64
-	AddrIPv4 string
-	AddrIPv6 string
-	CertDir  string
-	Alpn     string
+	Enabled   bool
+	IPv4      bool
+	IPv6      bool
+	strictSNI bool
+	Port      int64
+	AddrIPv4  string
+	AddrIPv6  string
+	CertDir   string
+	alpn      string
 }
 
 func (h HTTPS) bindList(passhthrough bool) (binds []models.Bind) {
@@ -147,12 +148,15 @@ func (h HTTPS) Update(k store.K8s, cfg *config.ControllerCfg, api api.HAProxyCli
 	}
 
 	// Fetch tls-alpn value for when SSL offloading is enabled
-	h.Alpn = annotations.String("tls-alpn", k.ConfigMaps.Main.Annotations)
+	h.alpn = annotations.String("tls-alpn", k.ConfigMaps.Main.Annotations)
+
+	h.strictSNI, err = annotations.Bool("client-strict-sni", k.ConfigMaps.Main.Annotations)
+	logger.Error(err)
 
 	// ssl-offload
 	if cfg.Certificates.FrontendCertsEnabled() {
 		if !cfg.HTTPS {
-			logger.Panic(api.FrontendEnableSSLOffload(cfg.FrontHTTPS, h.CertDir, h.Alpn))
+			logger.Panic(api.FrontendEnableSSLOffload(cfg.FrontHTTPS, h.CertDir, h.alpn, h.strictSNI))
 			cfg.HTTPS = true
 			reload = true
 			logger.Debug("SSLOffload enabeld, reload required")
@@ -253,7 +257,7 @@ func (h HTTPS) toggleSSLPassthrough(passthrough bool, cfg *config.ControllerCfg,
 		}
 	}
 	if cfg.HTTPS {
-		logger.Panic(api.FrontendEnableSSLOffload(cfg.FrontHTTPS, h.CertDir, h.Alpn))
+		logger.Panic(api.FrontendEnableSSLOffload(cfg.FrontHTTPS, h.CertDir, h.alpn, h.strictSNI))
 	}
 	return nil
 }
