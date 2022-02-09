@@ -51,7 +51,7 @@ func (c *clientNative) FrontendEdit(frontend models.Frontend) error {
 	return c.nativeAPI.Configuration.EditFrontend(frontend.Name, &frontend, c.activeTransaction, 0)
 }
 
-func (c *clientNative) FrontendEnableSSLOffload(frontendName string, certDir string, alpn string) (err error) {
+func (c *clientNative) FrontendEnableSSLOffload(frontendName string, certDir string, alpn string, strictSNI bool) (err error) {
 	binds, err := c.FrontendBindsGet(frontendName)
 	if err != nil {
 		return err
@@ -61,6 +61,7 @@ func (c *clientNative) FrontendEnableSSLOffload(frontendName string, certDir str
 		bind.SslCertificate = certDir
 		if alpn != "" {
 			bind.Alpn = alpn
+			bind.StrictSni = strictSNI
 		}
 		err = c.FrontendBindEdit(frontendName, *bind)
 	}
@@ -81,6 +82,7 @@ func (c *clientNative) FrontendDisableSSLOffload(frontendName string) (err error
 		bind.Verify = ""
 		bind.SslCertificate = ""
 		bind.Alpn = ""
+		bind.StrictSni = false
 		err = c.FrontendBindEdit(frontendName, *bind)
 	}
 	if err != nil {
