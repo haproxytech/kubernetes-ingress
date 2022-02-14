@@ -16,7 +16,6 @@ package controller
 
 import (
 	"errors"
-	"strings"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
@@ -749,7 +748,7 @@ func (k *K8s) EventPods(namespace, podPrefix string, resyncPeriod time.Duration,
 		cache.ResourceEventHandlerFuncs{
 			AddFunc: func(obj interface{}) {
 				meta := obj.(*corev1.Pod).ObjectMeta
-				if !strings.HasPrefix(meta.Name, podPrefix) {
+				if utils.GetPodPrefix(meta.Name) != podPrefix {
 					return
 				}
 				eventChan <- SyncDataEvent{SyncType: POD, Namespace: meta.Namespace, Data: store.PodEvent{Created: true}}
@@ -757,7 +756,7 @@ func (k *K8s) EventPods(namespace, podPrefix string, resyncPeriod time.Duration,
 			DeleteFunc: func(obj interface{}) {
 				meta := obj.(*corev1.Pod).ObjectMeta
 
-				if !strings.HasPrefix(meta.Name, podPrefix) {
+				if utils.GetPodPrefix(meta.Name) != podPrefix {
 					return
 				}
 				eventChan <- SyncDataEvent{SyncType: POD, Namespace: meta.Namespace, Data: store.PodEvent{}}
