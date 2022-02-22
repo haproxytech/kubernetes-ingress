@@ -31,6 +31,7 @@ import (
 	config "github.com/haproxytech/kubernetes-ingress/controller/configuration"
 	"github.com/haproxytech/kubernetes-ingress/controller/store"
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
+	"github.com/haproxytech/kubernetes-ingress/prometheus"
 	"github.com/jessevdk/go-flags"
 )
 
@@ -38,9 +39,6 @@ import (
 var haproxyConf []byte
 
 func main() {
-	var osArgs utils.OSArgs
-	parser := flags.NewParser(&osArgs, flags.IgnoreUnknown)
-	_, err := parser.Parse()
 	exitCode := 0
 	defer func() {
 		if r := recover(); r != nil {
@@ -48,11 +46,19 @@ func main() {
 		}
 		os.Exit(exitCode)
 	}()
+
+	var osArgs utils.OSArgs
+	parser := flags.NewParser(&osArgs, flags.IgnoreUnknown)
+	_, err := parser.Parse()
+
 	if err != nil {
 		fmt.Println(err)
 		exitCode = 1
 		return
 	}
+
+	go prometheus.Start(osArgs)
+
 	logger := utils.GetLogger()
 	logger.SetLevel(osArgs.LogLevel.LogLevel)
 
