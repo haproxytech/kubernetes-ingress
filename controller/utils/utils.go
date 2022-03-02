@@ -16,6 +16,7 @@ package utils
 
 import (
 	"encoding/hex"
+	"fmt"
 	"hash/fnv"
 	"os"
 	"strconv"
@@ -116,11 +117,17 @@ func GetBoolValue(dataValue, dataName string) (result bool, err error) {
 	return result, nil
 }
 
-func GetPodPrefix(podName string) string {
+func GetPodPrefix(podName string) (prefix string, err error) {
 	i := strings.LastIndex(podName, "-")
 	if i == -1 {
-		return ""
+		err = fmt.Errorf("incorrect podName format: '%s'", podName)
+		return
 	}
 	i = strings.LastIndex(string([]rune(podName)[:i]), "-")
-	return string([]rune(podName)[:i])
+	if i == -1 {
+		err = fmt.Errorf("incorrect podName format: '%s'", podName)
+		return
+	}
+	prefix = string([]rune(podName)[:i])
+	return
 }

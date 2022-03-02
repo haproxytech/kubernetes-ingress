@@ -740,6 +740,10 @@ func (k *K8s) EventsSecrets(channel chan SyncDataEvent, stop chan struct{}, info
 }
 
 func (k *K8s) EventPods(namespace, podPrefix string, resyncPeriod time.Duration, eventChan chan SyncDataEvent) {
+	var prefix string
+	if podPrefix == "" {
+		return
+	}
 	watchlist := cache.NewListWatchFromClient(k.API.CoreV1().RESTClient(), "pods", namespace, fields.Nothing())
 	_, eController := cache.NewInformer(
 		watchlist,
@@ -748,15 +752,16 @@ func (k *K8s) EventPods(namespace, podPrefix string, resyncPeriod time.Duration,
 		cache.ResourceEventHandlerFuncs{
 			AddFunc: func(obj interface{}) {
 				meta := obj.(*corev1.Pod).ObjectMeta
-				if utils.GetPodPrefix(meta.Name) != podPrefix {
+				prefix, _ = utils.GetPodPrefix(meta.Name)
+				if prefix != podPrefix {
 					return
 				}
 				eventChan <- SyncDataEvent{SyncType: POD, Namespace: meta.Namespace, Data: store.PodEvent{Created: true}}
 			},
 			DeleteFunc: func(obj interface{}) {
 				meta := obj.(*corev1.Pod).ObjectMeta
-
-				if utils.GetPodPrefix(meta.Name) != podPrefix {
+				prefix, _ = utils.GetPodPrefix(meta.Name)
+				if prefix != podPrefix {
 					return
 				}
 				eventChan <- SyncDataEvent{SyncType: POD, Namespace: meta.Namespace, Data: store.PodEvent{}}
