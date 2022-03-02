@@ -441,7 +441,7 @@ Example:
 
 ```yaml
 args:
-  - --http-bind-port=8443
+  - --https-bind-port=8443
 ```
 
 <p align='right'><a href='#haproxy-kubernetes-ingress-controller'>:arrow_up_small: back to top</a></p>
