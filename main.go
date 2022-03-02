@@ -150,12 +150,14 @@ func main() {
 	}
 	logger.Error(os.Chdir(cfg.Env.CfgDir))
 
+	prefix, errPrefix := utils.GetPodPrefix(podName)
+	logger.Error(errPrefix)
+
 	controller := c.HAProxyController{
 		Cfg:          cfg,
 		OSArgs:       osArgs,
 		PodNamespace: os.Getenv("POD_NAMESPACE"),
-		PodPrefix:    utils.GetPodPrefix(podName),
-	}
+		PodPrefix:    prefix}
 	logger.FileName = true
 	// K8s Store
 	s := store.NewK8sStore(osArgs)
