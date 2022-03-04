@@ -48,20 +48,20 @@ func (d *s6Control) HaproxyService(action string) (err error) {
 		cmd = exec.Command("s6-svc", "-d", "/var/run/s6/services/haproxy")
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
-		return cmd.Start()
+		return cmd.Run()
 	case "reload":
 		logger.Error(saveServerState(d.Env.StateDir, d.API))
 		cmd = exec.Command("s6-svc", "-2", "/var/run/s6/services/haproxy")
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
-		return cmd.Start()
+		return cmd.Run()
 	case "restart":
 		logger.Error(saveServerState(d.Env.StateDir, d.API))
 		// -t terminates and s6 will start it again
 		cmd = exec.Command("s6-svc", "-t", "/var/run/s6/services/haproxy")
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
-		return cmd.Start()
+		return cmd.Run()
 	default:
 		return fmt.Errorf("unknown command '%s'", action)
 	}
