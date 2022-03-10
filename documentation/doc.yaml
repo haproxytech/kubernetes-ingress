@@ -1456,6 +1456,8 @@ annotations:
       - Integer value indicating the number of backend servers to provision. Defaults to 42.
     applies_to:
       - configmap
+      - ingress
+      - service
     version_min: "1.4"
     example: ['scale-server-slots: "75"']
   - title: ssl-certificate

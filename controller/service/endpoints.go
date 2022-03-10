@@ -39,7 +39,7 @@ func (s *Service) HandleHAProxySrvs(client api.HAProxyClient, store store.K8s) (
 	backend.Name = s.backend.Name // set backendName in store.PortEndpoints for runtime updates.
 	// scale servers
 	if s.resource.DNS == "" {
-		srvsScaled = s.scaleHAProxySrvs(backend, store)
+		srvsScaled = s.scaleHAProxySrvs(backend)
 	}
 	// update servers
 	for _, srvSlot := range backend.HAProxySrvs {
@@ -85,7 +85,7 @@ func (s *Service) updateHAProxySrv(client api.HAProxyClient, srvSlot store.HAPro
 }
 
 // scaleHAproxySrvs adds servers to match available addresses
-func (s *Service) scaleHAProxySrvs(backend *store.RuntimeBackend, k8sStore store.K8s) (reload bool) {
+func (s *Service) scaleHAProxySrvs(backend *store.RuntimeBackend) (reload bool) {
 	var flag bool
 	var disabled []*store.HAProxySrv
 	var annVal int
@@ -95,7 +95,7 @@ func (s *Service) scaleHAProxySrvs(backend *store.RuntimeBackend, k8sStore store
 	// "servers-increment", "server-slots" are legacy annotations
 	srvSlots := 42
 	for _, annotation := range []string{"servers-increment", "server-slots", "scale-server-slots"} {
-		annVal, annErr = annotations.Int(annotation, k8sStore.ConfigMaps.Main.Annotations)
+		annVal, annErr = annotations.Int(annotation, s.annotations...)
 		if annErr != nil {
 			logger.Errorf("Scale HAProxy servers: %s", annErr)
 		} else if annVal != 0 {
