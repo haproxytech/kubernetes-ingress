@@ -150,6 +150,9 @@ func (s *Service) getBackendModel(store store.K8s) (backend *models.Backend, err
 		backend = &models.Backend{DefaultServer: &models.DefaultServer{}}
 		crInUse = false
 	}
+	if backend.DefaultServer == nil {
+		backend.DefaultServer = &models.DefaultServer{}
+	}
 	// configure backend model
 	if s.modeTCP {
 		backend.Mode = "tcp"
@@ -159,8 +162,8 @@ func (s *Service) getBackendModel(store store.K8s) (backend *models.Backend, err
 	if backend.Name, err = s.GetBackendName(); err != nil {
 		return nil, err
 	}
-	if s.resource.DNS != "" {
-		backend.DefaultServer = &models.DefaultServer{InitAddr: "last,libc,none"}
+	if s.resource.DNS != "" && backend.DefaultServer.InitAddr == "" {
+		backend.DefaultServer.InitAddr = "last,libc,none"
 	}
 	if !crInUse {
 		for _, a := range annotations.Backend(backend, store, s.certs) {
