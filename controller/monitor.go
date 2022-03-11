@@ -113,7 +113,7 @@ func (c *HAProxyController) SyncData() {
 		case NAMESPACE:
 			change = c.Store.EventNamespace(ns, job.Data.(*store.Namespace))
 		case INGRESS:
-			change = c.Store.EventIngress(ns, job.Data.(*store.Ingress), c.OSArgs.IngressClass)
+			change = c.Store.EventIngress(ns, job.Data.(*store.Ingress))
 		case INGRESS_CLASS:
 			change = c.Store.EventIngressClass(job.Data.(*store.IngressClass))
 		case ENDPOINTS:

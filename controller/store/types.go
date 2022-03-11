@@ -99,7 +99,7 @@ type IngressClass struct {
 	Name        string
 	Controller  string
 	Annotations map[string]string
-	Status      Status
+	Status      Status // Used for store purpose
 }
 
 // IngressPath is useful data from k8s structures about ingress path
@@ -112,14 +112,12 @@ type IngressPath struct {
 	Path             string
 	PathTypeMatch    string
 	IsDefaultBackend bool
-	Status           Status
 }
 
 // IngressRule is useful data from k8s structures about ingress rule
 type IngressRule struct {
-	Host   string
-	Paths  map[string]*IngressPath
-	Status Status
+	Host  string
+	Paths map[string]*IngressPath
 }
 
 // Ingress is useful data from k8s structures about ingress
@@ -133,15 +131,14 @@ type Ingress struct {
 	Rules          map[string]*IngressRule
 	DefaultBackend *IngressPath
 	TLS            map[string]*IngressTLS
-	Ignored        bool // true if resource ignored because of non matching Controller Class
-	Status         Status
+	Ignored        bool   // true if resource ignored because of non matching Controller Class
+	Status         Status // Used for store purpose
 }
 
 // IngressTLS describes the transport layer security associated with an Ingress.
 type IngressTLS struct {
 	Host       string
 	SecretName string
-	Status     Status
 }
 
 type ConfigMaps struct {

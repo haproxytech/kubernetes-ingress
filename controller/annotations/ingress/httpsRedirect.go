@@ -90,10 +90,8 @@ func tlsEnabled(ingress *store.Ingress) bool {
 	if ingress == nil {
 		return false
 	}
-	for _, tls := range ingress.TLS {
-		if tls.Status != store.DELETED {
-			return true
-		}
+	if len(ingress.TLS) == 0 {
+		return false
 	}
-	return false
+	return true
 }

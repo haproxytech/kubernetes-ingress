@@ -71,41 +71,7 @@ func NewK8sStore(args utils.OSArgs) K8s {
 func (k K8s) Clean() {
 	for _, namespace := range k.Namespaces {
 		for _, data := range namespace.Ingresses {
-			for _, tls := range data.TLS {
-				switch tls.Status {
-				case DELETED:
-					delete(data.TLS, tls.Host)
-					continue
-				default:
-					tls.Status = EMPTY
-				}
-			}
-			if data.DefaultBackend != nil {
-				data.DefaultBackend.Status = EMPTY
-			}
-			for _, rule := range data.Rules {
-				switch rule.Status {
-				case DELETED:
-					delete(data.Rules, rule.Host)
-					continue
-				default:
-					rule.Status = EMPTY
-					for _, path := range rule.Paths {
-						switch path.Status {
-						case DELETED:
-							delete(rule.Paths, path.Path)
-						default:
-							path.Status = EMPTY
-						}
-					}
-				}
-			}
-			switch data.Status {
-			case DELETED:
-				delete(namespace.Ingresses, data.Name)
-			default:
-				data.Status = EMPTY
-			}
+			data.Status = EMPTY
 		}
 		for _, data := range namespace.Services {
 			switch data.Status {
@@ -143,6 +109,9 @@ func (k K8s) Clean() {
 			}
 		}
 	}
+	for _, igClass := range k.IngressClasses {
+		igClass.Status = EMPTY
+	}
 	for _, cm := range []*ConfigMap{k.ConfigMaps.Main, k.ConfigMaps.TCPServices, k.ConfigMaps.Errorfiles} {
 		switch cm.Status {
 		case DELETED:
@@ -150,14 +119,6 @@ func (k K8s) Clean() {
 			cm.Annotations = map[string]string{}
 		default:
 			cm.Status = EMPTY
-		}
-	}
-	for _, igClass := range k.IngressClasses {
-		switch igClass.Status {
-		case DELETED:
-			delete(k.IngressClasses, igClass.Name)
-		default:
-			igClass.Status = EMPTY
 		}
 	}
 }

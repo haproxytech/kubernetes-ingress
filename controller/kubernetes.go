@@ -385,25 +385,15 @@ func (k *K8s) EventsIngressClass(channel chan SyncDataEvent, stop chan struct{},
 				channel <- SyncDataEvent{SyncType: INGRESS_CLASS, Data: item}
 			},
 			UpdateFunc: func(oldObj, newObj interface{}) {
-				item1, err := store.ConvertToIngressClass(oldObj)
-				if err != nil {
-					k.Logger.Errorf("%s: Invalid data from k8s api, %s", INGRESS_CLASS, oldObj)
-					return
-				}
-				item1.Status = MODIFIED
-
-				item2, err := store.ConvertToIngressClass(newObj)
+				item, err := store.ConvertToIngressClass(newObj)
 				if err != nil {
 					k.Logger.Errorf("%s: Invalid data from k8s api, %s", INGRESS, oldObj)
 					return
 				}
-				item1.Status = MODIFIED
+				item.Status = MODIFIED
 
-				if item2.Equal(item1) {
-					return
-				}
-				k.Logger.Tracef("%s %s: %s", INGRESS_CLASS, item2.Status, item2.Name)
-				channel <- SyncDataEvent{SyncType: INGRESS_CLASS, Data: item2}
+				k.Logger.Tracef("%s %s: %s", INGRESS_CLASS, item.Status, item.Name)
+				channel <- SyncDataEvent{SyncType: INGRESS_CLASS, Data: item}
 			},
 		},
 	)
@@ -433,25 +423,14 @@ func (k *K8s) EventsIngresses(channel chan SyncDataEvent, stop chan struct{}, in
 				channel <- SyncDataEvent{SyncType: INGRESS, Namespace: item.Namespace, Data: item}
 			},
 			UpdateFunc: func(oldObj, newObj interface{}) {
-				item1, err := store.ConvertToIngress(oldObj)
+				item, err := store.ConvertToIngress(newObj)
 				if err != nil {
 					k.Logger.Errorf("%s: Invalid data from k8s api, %s", INGRESS, oldObj)
 					return
 				}
-				item1.Status = MODIFIED
-
-				item2, err := store.ConvertToIngress(newObj)
-				if err != nil {
-					k.Logger.Errorf("%s: Invalid data from k8s api, %s", INGRESS, oldObj)
-					return
-				}
-				item1.Status = MODIFIED
-
-				if item2.Equal(item1) {
-					return
-				}
-				k.Logger.Tracef("%s %s: %s", INGRESS, item2.Status, item2.Name)
-				channel <- SyncDataEvent{SyncType: INGRESS, Namespace: item2.Namespace, Data: item2}
+				item.Status = MODIFIED
+				k.Logger.Tracef("%s %s: %s", INGRESS, item.Status, item.Name)
+				channel <- SyncDataEvent{SyncType: INGRESS, Namespace: item.Namespace, Data: item}
 			},
 		},
 	)

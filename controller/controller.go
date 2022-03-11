@@ -160,9 +160,6 @@ func (c *HAProxyController) updateHAProxy() {
 			continue
 		}
 		for _, ingResource := range namespace.Ingresses {
-			if ingResource.Status == DELETED {
-				continue
-			}
 			i := ingress.New(c.Store, ingResource, c.OSArgs.IngressClass, c.OSArgs.EmptyIngressClass)
 			if i == nil {
 				logger.Debugf("ingress '%s/%s' ignored: no matching IngressClass", ingResource.Namespace, ingResource.Name)

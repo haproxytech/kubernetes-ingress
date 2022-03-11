@@ -56,7 +56,7 @@ func New(k store.K8s, resource *store.Ingress, class string, emptyClass bool) *I
 func (i Ingress) supported(k8s store.K8s) (supported bool) {
 	var igClassAnn, igClassSpec string
 	igClassAnn = annotations.String("ingress.class", i.resource.Annotations)
-	if igClassResource := k8s.IngressClasses[i.resource.Class]; igClassResource != nil && igClassResource.Status != store.DELETED {
+	if igClassResource := k8s.IngressClasses[i.resource.Class]; igClassResource != nil {
 		igClassSpec = igClassResource.Controller
 	}
 	if igClassAnn == "" && i.resource.Class == "" {
@@ -97,9 +97,6 @@ func (i Ingress) supported(k8s store.K8s) (supported bool) {
 func (i *Ingress) handlePath(k store.K8s, cfg *configuration.ControllerCfg, api api.HAProxyClient, host string, path *store.IngressPath) (reload bool, err error) {
 	svc, err := service.New(k, path, cfg.Certificates, i.sslPassthrough, i.resource.Annotations, k.ConfigMaps.Main.Annotations)
 	if err != nil {
-		return
-	}
-	if path.Status == store.DELETED {
 		return
 	}
 	// Backend
@@ -210,9 +207,6 @@ func (i *Ingress) Update(k store.K8s, cfg *configuration.ControllerCfg, api api.
 	// Ingress secrets
 	logger.Tracef("Ingress '%s/%s': processing secrets...", i.resource.Namespace, i.resource.Name)
 	for _, tls := range i.resource.TLS {
-		if tls.Status == store.DELETED {
-			continue
-		}
 		secret, secErr := k.GetSecret(i.resource.Namespace, tls.SecretName)
 		if secErr != nil {
 			logger.Warningf("Ingress '%s/%s': %s", i.resource.Namespace, i.resource.Name, secErr)
