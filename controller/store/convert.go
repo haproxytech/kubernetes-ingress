@@ -110,7 +110,6 @@ func (n ingressNetworkingV1Beta1Strategy) ConvertIngress() *Ingress {
 						SvcName:       k8sPath.Backend.ServiceName,
 						SvcPortInt:    int64(k8sPath.Backend.ServicePort.IntValue()),
 						SvcPortString: k8sPath.Backend.ServicePort.StrVal,
-						Status:        "",
 					}
 				}
 				if rule, ok := rules[k8sRule.Host]; ok {
@@ -119,9 +118,8 @@ func (n ingressNetworkingV1Beta1Strategy) ConvertIngress() *Ingress {
 					}
 				} else {
 					rules[k8sRule.Host] = &IngressRule{
-						Host:   k8sRule.Host,
-						Paths:  paths,
-						Status: "",
+						Host:  k8sRule.Host,
+						Paths: paths,
 					}
 				}
 			}
@@ -137,7 +135,6 @@ func (n ingressNetworkingV1Beta1Strategy) ConvertIngress() *Ingress {
 				SvcPortInt:       int64(ingressBackend.ServicePort.IntValue()),
 				SvcPortString:    ingressBackend.ServicePort.StrVal,
 				IsDefaultBackend: true,
-				Status:           "",
 			}
 		}(n.ig.Spec.Backend),
 		TLS: func(ingressTLS []networkingv1beta1.IngressTLS) map[string]*IngressTLS {
@@ -147,18 +144,11 @@ func (n ingressNetworkingV1Beta1Strategy) ConvertIngress() *Ingress {
 					tls[host] = &IngressTLS{
 						Host:       host,
 						SecretName: k8sTLS.SecretName,
-						Status:     EMPTY,
 					}
 				}
 			}
 			return tls
 		}(n.ig.Spec.TLS),
-		Status: func() Status {
-			if n.ig.ObjectMeta.GetDeletionTimestamp() != nil {
-				return DELETED
-			}
-			return ADDED
-		}(),
 	}
 }
 
@@ -167,12 +157,6 @@ func (n ingressNetworkingV1Beta1Strategy) ConvertClass() *IngressClass {
 		APIVersion: NETWORKINGV1BETA1,
 		Name:       n.class.GetName(),
 		Controller: n.class.Spec.Controller,
-		Status: func() Status {
-			if n.class.ObjectMeta.GetDeletionTimestamp() != nil {
-				return DELETED
-			}
-			return ADDED
-		}(),
 	}
 }
 
@@ -208,7 +192,6 @@ func (e ingressExtensionsStrategy) ConvertIngress() *Ingress {
 						SvcName:       k8sPath.Backend.ServiceName,
 						SvcPortInt:    int64(k8sPath.Backend.ServicePort.IntValue()),
 						SvcPortString: k8sPath.Backend.ServicePort.StrVal,
-						Status:        "",
 					}
 				}
 				if rule, ok := rules[k8sRule.Host]; ok {
@@ -217,9 +200,8 @@ func (e ingressExtensionsStrategy) ConvertIngress() *Ingress {
 					}
 				} else {
 					rules[k8sRule.Host] = &IngressRule{
-						Host:   k8sRule.Host,
-						Paths:  paths,
-						Status: "",
+						Host:  k8sRule.Host,
+						Paths: paths,
 					}
 				}
 			}
@@ -235,7 +217,6 @@ func (e ingressExtensionsStrategy) ConvertIngress() *Ingress {
 				SvcPortInt:       int64(ingressBackend.ServicePort.IntValue()),
 				SvcPortString:    ingressBackend.ServicePort.StrVal,
 				IsDefaultBackend: true,
-				Status:           "",
 			}
 		}(e.ig.Spec.Backend),
 		TLS: func(ingressTLS []extensionsv1beta1.IngressTLS) map[string]*IngressTLS {
@@ -245,18 +226,11 @@ func (e ingressExtensionsStrategy) ConvertIngress() *Ingress {
 					tls[host] = &IngressTLS{
 						Host:       host,
 						SecretName: k8sTLS.SecretName,
-						Status:     EMPTY,
 					}
 				}
 			}
 			return tls
 		}(e.ig.Spec.TLS),
-		Status: func() Status {
-			if e.ig.ObjectMeta.GetDeletionTimestamp() != nil {
-				return DELETED
-			}
-			return ADDED
-		}(),
 	}
 }
 
@@ -292,7 +266,6 @@ func (n ingressNetworkingV1Strategy) ConvertIngress() *Ingress {
 						Path:          k8sPath.Path,
 						PathTypeMatch: pathType,
 						SvcNamespace:  n.ig.GetNamespace(),
-						Status:        "",
 					}
 					if k8sPath.Backend.Service != nil {
 						paths[pathKey].SvcName = k8sPath.Backend.Service.Name
@@ -306,9 +279,8 @@ func (n ingressNetworkingV1Strategy) ConvertIngress() *Ingress {
 					}
 				} else {
 					rules[k8sRule.Host] = &IngressRule{
-						Host:   k8sRule.Host,
-						Paths:  paths,
-						Status: "",
+						Host:  k8sRule.Host,
+						Paths: paths,
 					}
 				}
 			}
@@ -321,7 +293,6 @@ func (n ingressNetworkingV1Strategy) ConvertIngress() *Ingress {
 			ingPath := &IngressPath{
 				SvcNamespace:     n.ig.GetNamespace(),
 				IsDefaultBackend: true,
-				Status:           "",
 			}
 			if ingressBackend.Service != nil {
 				ingPath.SvcName = ingressBackend.Service.Name
@@ -337,18 +308,11 @@ func (n ingressNetworkingV1Strategy) ConvertIngress() *Ingress {
 					tls[host] = &IngressTLS{
 						Host:       host,
 						SecretName: k8sTLS.SecretName,
-						Status:     EMPTY,
 					}
 				}
 			}
 			return tls
 		}(n.ig.Spec.TLS),
-		Status: func() Status {
-			if n.ig.ObjectMeta.GetDeletionTimestamp() != nil {
-				return DELETED
-			}
-			return ADDED
-		}(),
 	}
 }
 
@@ -357,12 +321,6 @@ func (n ingressNetworkingV1Strategy) ConvertClass() *IngressClass {
 		APIVersion: NETWORKINGV1,
 		Name:       n.class.GetName(),
 		Controller: n.class.Spec.Controller,
-		Status: func() Status {
-			if n.class.ObjectMeta.GetDeletionTimestamp() != nil {
-				return DELETED
-			}
-			return ADDED
-		}(),
 	}
 }
 

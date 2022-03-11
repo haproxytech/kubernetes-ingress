@@ -32,176 +32,21 @@ func (k *K8s) EventNamespace(ns *Namespace, data *Namespace) (updateRequired boo
 }
 
 func (k *K8s) EventIngressClass(data *IngressClass) (updateRequired bool) {
-	switch data.Status {
-	case MODIFIED:
-		newIgClass := data
-		oldIgClass, ok := k.IngressClasses[data.Name]
-		if !ok {
-			logger.Warningf("IngressClass '%s' not registered with controller !", data.Name)
-			return false
-		}
-		if newIgClass.Equal(oldIgClass) {
-			return false
-		}
-		k.IngressClasses[data.Name] = newIgClass
-		updateRequired = true
-	case ADDED:
-		if old, ok := k.IngressClasses[data.Name]; ok {
-			if old.Status == DELETED {
-				k.IngressClasses[data.Name].Status = ADDED
-			}
-			if !old.Equal(data) {
-				data.Status = MODIFIED
-				return k.EventIngressClass(data)
-			}
-			return false
-		}
+	if data.Status == DELETED {
+		delete(k.IngressClasses, data.Name)
+	} else {
 		k.IngressClasses[data.Name] = data
-		updateRequired = true
-	case DELETED:
-		igClass, ok := k.IngressClasses[data.Name]
-		if ok {
-			igClass.Status = DELETED
-			updateRequired = true
-		} else {
-			logger.Warningf("IngressClass '%s' not registered with controller, cannot delete !", data.Name)
-		}
 	}
-	return updateRequired
+	return true
 }
 
-func (k *K8s) EventIngress(ns *Namespace, data *Ingress, controllerClass string) (updateRequired bool) {
-	updateRequired = false
-	switch data.Status {
-	case MODIFIED:
-		newIngress := data
-		oldIngress, ok := ns.Ingresses[data.Name]
-		if !ok {
-			newIngress.Status = ADDED
-			return k.EventIngress(ns, newIngress, controllerClass)
-		}
-		newIngress.Ignored = oldIngress.Ignored
-		if oldIngress.Equal(data) {
-			return false
-		}
-		for host, tls := range newIngress.TLS {
-			_, ok := oldIngress.TLS[host]
-			if !ok {
-				tls.Status = ADDED
-				continue
-			}
-		}
-		for host, tls := range oldIngress.TLS {
-			_, ok := newIngress.TLS[host]
-			if !ok {
-				newIngress.TLS[host] = &IngressTLS{
-					Host:       host,
-					SecretName: tls.SecretName,
-					Status:     DELETED,
-				}
-				continue
-			}
-		}
-
-		// so see what exactly has changed in there
-		// DefaultBackend
-		newDtBd := newIngress.DefaultBackend
-		oldDtBd := oldIngress.DefaultBackend
-		if newDtBd != nil && !oldDtBd.Equal(newDtBd) {
-			newDtBd.Status = MODIFIED
-		}
-		// Rules
-		for _, newRule := range newIngress.Rules {
-			if oldRule, ok := oldIngress.Rules[newRule.Host]; ok {
-				// so we need to compare if anything is different
-				for _, newPath := range newRule.Paths {
-					if oldPath, ok := oldRule.Paths[newPath.Path]; ok {
-						// compare path for differences
-						if newPath.SvcName != oldPath.SvcName ||
-							newPath.SvcPortInt != oldPath.SvcPortInt ||
-							newPath.SvcPortString != oldPath.SvcPortString {
-							newPath.Status = MODIFIED
-							newRule.Status = MODIFIED
-						}
-						// Sync internal data
-						newPath.IsDefaultBackend = oldPath.IsDefaultBackend
-					} else {
-						newPath.Status = ADDED
-						newRule.Status = ADDED
-					}
-				}
-				for _, oldPath := range oldRule.Paths {
-					if _, ok := newRule.Paths[oldPath.Path]; !ok {
-						oldPath.Status = DELETED
-						newRule.Paths[oldPath.Path] = oldPath
-					}
-				}
-			} else {
-				newRule.Status = ADDED
-				for _, path := range newRule.Paths {
-					path.Status = ADDED
-				}
-			}
-		}
-		for _, oldRule := range oldIngress.Rules {
-			if _, ok := newIngress.Rules[oldRule.Host]; !ok {
-				oldRule.Status = DELETED
-				for _, path := range oldRule.Paths {
-					path.Status = DELETED
-				}
-				newIngress.Rules[oldRule.Host] = oldRule
-			}
-		}
-		ns.Ingresses[data.Name] = newIngress
-		updateRequired = true
-	case ADDED:
-		if old, ok := ns.Ingresses[data.Name]; ok {
-			if old.Status == DELETED {
-				ns.Ingresses[data.Name].Status = ADDED
-			}
-			data.Status = old.Status
-			if !old.Equal(data) {
-				data.Status = MODIFIED
-				return k.EventIngress(ns, data, controllerClass)
-			}
-			return updateRequired
-		}
+func (k *K8s) EventIngress(ns *Namespace, data *Ingress) (updateRequired bool) {
+	if data.Status == DELETED {
+		delete(ns.Ingresses, data.Name)
+	} else {
 		ns.Ingresses[data.Name] = data
-
-		if data.DefaultBackend != nil {
-			data.DefaultBackend.Status = ADDED
-		}
-		for _, newRule := range data.Rules {
-			for _, newPath := range newRule.Paths {
-				newPath.Status = ADDED
-			}
-		}
-		for _, tls := range data.TLS {
-			tls.Status = ADDED
-		}
-		updateRequired = true
-	case DELETED:
-		ingress, ok := ns.Ingresses[data.Name]
-		if ok {
-			ingress.Status = DELETED
-			if ingress.DefaultBackend != nil {
-				ingress.DefaultBackend.Status = DELETED
-			}
-			for _, rule := range ingress.Rules {
-				rule.Status = DELETED
-				for _, path := range rule.Paths {
-					path.Status = DELETED
-				}
-			}
-			for _, tls := range ingress.TLS {
-				tls.Status = DELETED
-			}
-			updateRequired = true
-		} else {
-			logger.Warningf("Ingress '%s' not registered with controller, cannot delete !", data.Name)
-		}
 	}
-	return updateRequired
+	return true
 }
 
 func getEndpoints(slices map[string]*Endpoints) (endpoints map[string]PortEndpoints) {
