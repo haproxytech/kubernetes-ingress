@@ -32,10 +32,13 @@ func (a *SSL) Process(k store.K8s, annotations ...map[string]string) error {
 		}
 	}
 	if enabled {
+		if a.backend.DefaultServer == nil {
+			a.backend.DefaultServer = &models.DefaultServer{}
+		}
 		a.backend.DefaultServer.Ssl = "enabled"
 		a.backend.DefaultServer.Alpn = "h2,http/1.1"
 		a.backend.DefaultServer.Verify = "none"
-	} else {
+	} else if a.backend.DefaultServer != nil {
 		a.backend.DefaultServer.Ssl = ""
 		a.backend.DefaultServer.Alpn = ""
 		a.backend.DefaultServer.Verify = ""

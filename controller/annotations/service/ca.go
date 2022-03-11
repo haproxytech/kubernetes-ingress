@@ -35,13 +35,18 @@ func (a *CA) Process(k store.K8s, annotations ...map[string]string) error {
 	}
 	secret, _ = k.GetSecret(ns, name)
 	if secret == nil {
-		a.backend.DefaultServer.CaFile = ""
-		// Other values from serverSSL annotation are kept
+		if a.backend.DefaultServer != nil {
+			a.backend.DefaultServer.CaFile = ""
+			// Other values from serverSSL annotation are kept
+		}
 		return nil
 	}
 	caFile, err = a.haproxyCerts.HandleTLSSecret(secret, certs.CA_CERT)
 	if err != nil {
 		return err
+	}
+	if a.backend.DefaultServer == nil {
+		a.backend.DefaultServer = &models.DefaultServer{}
 	}
 	a.backend.DefaultServer.Ssl = "enabled"
 	a.backend.DefaultServer.Alpn = "h2,http/1.1"
