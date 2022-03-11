@@ -24,6 +24,15 @@ func (a *Proto) GetName() string {
 
 func (a *Proto) Process(k store.K8s, annotations ...map[string]string) error {
 	input := common.GetValue(a.GetName(), annotations...)
+	if input == "h2" {
+		if a.backend.DefaultServer != nil {
+			a.backend.DefaultServer = &models.DefaultServer{}
+		}
+		a.backend.DefaultServer.Proto = "h2"
+		return nil
+	} else if a.backend.DefaultServer == nil {
+		return nil
+	}
 	switch input {
 	case "":
 		a.backend.DefaultServer.Proto = ""
@@ -31,8 +40,6 @@ func (a *Proto) Process(k store.K8s, annotations ...map[string]string) error {
 		// Forces H1 even when SSL is enabled
 		a.backend.DefaultServer.Alpn = ""
 		a.backend.DefaultServer.Proto = ""
-	case "h2":
-		a.backend.DefaultServer.Proto = "h2"
 	default:
 		return fmt.Errorf("unknown proto %s", input)
 	}

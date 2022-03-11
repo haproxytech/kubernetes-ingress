@@ -142,35 +142,35 @@ func (s *Service) HandleBackend(client api.HAProxyClient, store store.K8s) (relo
 
 // getBackendModel checks for a corresponding custom resource before falling back to annoations
 func (s *Service) getBackendModel(store store.K8s) (backend *models.Backend, err error) {
-	var crInUse = true
+	// Backend mode
+	var mode = "http"
+	if s.modeTCP {
+		mode = "tcp"
+	}
 	// get/create backend Model
 	backend, err = annotations.ModelBackend("cr-backend", s.resource.Namespace, store, s.annotations...)
 	logger.Warning(err)
 	if backend == nil {
-		backend = &models.Backend{DefaultServer: &models.DefaultServer{}}
-		crInUse = false
-	}
-	if backend.DefaultServer == nil {
-		backend.DefaultServer = &models.DefaultServer{}
-	}
-	// configure backend model
-	if s.modeTCP {
-		backend.Mode = "tcp"
-	} else {
-		backend.Mode = "http"
-	}
-	if backend.Name, err = s.GetBackendName(); err != nil {
-		return nil, err
-	}
-	if s.resource.DNS != "" && backend.DefaultServer.InitAddr == "" {
-		backend.DefaultServer.InitAddr = "last,libc,none"
-	}
-	if !crInUse {
+		backend = &models.Backend{Mode: mode}
 		for _, a := range annotations.Backend(backend, store, s.certs) {
 			err = a.Process(store, s.annotations...)
 			if err != nil {
 				logger.Errorf("service '%s/%s': annotation '%s': %s", s.resource.Namespace, s.resource.Name, a.GetName(), err)
 			}
+		}
+	}
+
+	// Manadatory backend params
+	backend.Mode = mode
+	backend.Name, err = s.GetBackendName()
+	if err != nil {
+		return nil, err
+	}
+	if s.resource.DNS != "" {
+		if backend.DefaultServer == nil {
+			backend.DefaultServer = &models.DefaultServer{InitAddr: "last,libc,none"}
+		} else if backend.DefaultServer.InitAddr == "" {
+			backend.DefaultServer.InitAddr = "last,libc,none"
 		}
 	}
 	if backend.Cookie != nil && backend.Cookie.Dynamic && backend.DynamicCookieKey == "" {

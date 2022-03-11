@@ -24,12 +24,17 @@ func (a *CheckInter) GetName() string {
 func (a *CheckInter) Process(k store.K8s, annotations ...map[string]string) error {
 	input := common.GetValue(a.GetName(), annotations...)
 	if input == "" {
-		a.backend.DefaultServer.Inter = nil
+		if a.backend.DefaultServer != nil {
+			a.backend.DefaultServer.Inter = nil
+		}
 		return nil
 	}
 	value, err := utils.ParseTime(input)
 	if err != nil {
 		return err
+	}
+	if a.backend.DefaultServer == nil {
+		a.backend.DefaultServer = &models.DefaultServer{}
 	}
 	a.backend.DefaultServer.Inter = value
 	return nil
