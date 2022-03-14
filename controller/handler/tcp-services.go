@@ -31,6 +31,7 @@ func (t TCPServices) Update(k store.K8s, cfg *config.ControllerCfg, api api.HAPr
 	if k.ConfigMaps.TCPServices == nil {
 		return false, nil
 	}
+	var r bool
 	reload = t.clearFrontends(api, k)
 	var p tcpSvcParser
 	for port, tcpSvcAnn := range k.ConfigMaps.TCPServices.Annotations {
@@ -43,14 +44,16 @@ func (t TCPServices) Update(k store.K8s, cfg *config.ControllerCfg, api api.HAPr
 		frontend, errGet := api.FrontendGet(frontendName)
 		// Create Frontend
 		if errGet != nil {
-			frontend, reload, err = t.createTCPFrontend(api, frontendName, port, p.sslOffload)
+			frontend, r, err = t.createTCPFrontend(api, frontendName, port, p.sslOffload)
+			reload = reload || r
 			if err != nil {
 				logger.Error(err)
 				continue
 			}
 		}
 		// Update  Frontend
-		reload, err = t.updateTCPFrontend(k, cfg, api, frontend, p)
+		r, err = t.updateTCPFrontend(k, cfg, api, frontend, p)
+		reload = reload || r
 		if err != nil {
 			logger.Errorf("TCP frontend '%s': update failed: %s", frontendName, err)
 		}
