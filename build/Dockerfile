@@ -58,7 +58,7 @@ RUN apk --no-cache add socat openssl util-linux htop tzdata curl && \
         "linux/arm/v7")     S6_ARCH=armhf       ;; \
         "linux/ppc64le")    S6_ARCH=ppc64le     ;; \
         "linux/386")        S6_ARCH=x86         ;; \
-        *)                  exit 1              ;; \
+        *) echo "ARG TARGETPLATFORM undeclared" >&2 && exit 1 ;; \
     esac && \
     curl -sS -L -o /tmp/s6-overlay-installer "https://github.com/just-containers/s6-overlay/releases/download/v${S6_OVERLAY_VERSION}/s6-overlay-${S6_ARCH}-installer" && \
     chmod +x /tmp/s6-overlay-installer && \
