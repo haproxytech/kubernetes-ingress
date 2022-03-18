@@ -58,6 +58,7 @@ func (h Refresh) clearBackends(api api.HAProxyClient, cfg *config.ControllerCfg)
 			if err := api.BackendDelete(backend.Name); err != nil {
 				logger.Panic(err)
 			}
+			annotations.RemoveBackendCfgSnippet(backend.Name)
 		}
 	}
 }

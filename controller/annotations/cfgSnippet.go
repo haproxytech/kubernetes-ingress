@@ -21,6 +21,14 @@ type cfgData struct {
 	updated []string
 }
 
+// cfgSnippet is a particular type of config that is not
+// handled by the upstram library haproxytech/client-native.
+// Which means there is no client-native models to
+// store, exchange and query cfgSnippet Data. Thus this logic
+// is directly handled by Ingress Controller in this package.
+//
+// The code in this file need to be rewritten to avoid init,
+// global variables and rather expose a clean interface.
 var cfgSnippet struct {
 	global    *cfgData
 	frontends map[string]*cfgData
@@ -136,4 +144,11 @@ func UpdateBackendCfgSnippet(api api.HAProxyClient, backend string) (updated []s
 	data.updated = nil
 	cfgSnippet.backends[backend] = data
 	return
+}
+
+func RemoveBackendCfgSnippet(backend string) {
+	if cfgSnippet.backends == nil {
+		return
+	}
+	delete(cfgSnippet.backends, backend)
 }
