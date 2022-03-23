@@ -409,6 +409,7 @@ func (k *K8s) EventsIngresses(channel chan SyncDataEvent, stop chan struct{}, in
 					k.Logger.Errorf("%s: Invalid data from k8s api, %s", INGRESS, obj)
 					return
 				}
+				item.Status = ADDED
 				k.Logger.Tracef("%s %s: %s", INGRESS, item.Status, item.Name)
 				channel <- SyncDataEvent{SyncType: INGRESS, Namespace: item.Namespace, Data: item}
 			},
