@@ -193,8 +193,7 @@ func (c *HAProxyController) getWhitelistedNamespaces() []string {
 	if len(c.Store.NamespacesAccess.Whitelist) == 0 {
 		return []string{""}
 	}
-	// Add one because of potential whitelisting of configmap namespace
-	namespaces := make([]string, len(c.Store.NamespacesAccess.Whitelist)+1)
+	namespaces := []string{}
 	for ns := range c.Store.NamespacesAccess.Whitelist {
 		namespaces = append(namespaces, ns)
 	}
