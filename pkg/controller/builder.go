@@ -74,11 +74,11 @@ func (builder *Builder) Build() *HAProxyController {
 	logger.Error(errPrefix)
 
 	return &HAProxyController{
-		Cfg:          builder.cfg,
-		OSArgs:       builder.osArgs,
-		PodNamespace: os.Getenv("POD_NAMESPACE"),
-		PodPrefix:    prefix,
-		Store:        builder.store,
+		cfg:          builder.cfg,
+		osArgs:       builder.osArgs,
+		podNamespace: os.Getenv("POD_NAMESPACE"),
+		podPrefix:    prefix,
+		store:        builder.store,
 	}
 }
 

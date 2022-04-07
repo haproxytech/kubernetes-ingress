@@ -32,16 +32,16 @@ func (c *HAProxyController) monitorChanges() {
 	informersSynced := []cache.InformerSynced{}
 	stop := make(chan struct{})
 	epMirror := c.endpointsMirroring()
-	c.crManager = cr.NewCRManager(&c.Store, c.k8s.RestConfig, c.OSArgs.CacheResyncPeriod, c.eventChan, stop)
+	c.crManager = cr.NewCRManager(&c.store, c.k8s.RestConfig, c.osArgs.CacheResyncPeriod, c.eventChan, stop)
 
-	c.k8s.EventPods(c.PodNamespace, c.PodPrefix, c.OSArgs.CacheResyncPeriod, c.eventChan)
+	c.k8s.EventPods(c.podNamespace, c.podPrefix, c.osArgs.CacheResyncPeriod, c.eventChan)
 
 	for _, namespace := range c.getWhitelistedNamespaces() {
-		factory := informers.NewSharedInformerFactoryWithOptions(c.k8s.API, c.OSArgs.CacheResyncPeriod, informers.WithNamespace(namespace))
+		factory := informers.NewSharedInformerFactoryWithOptions(c.k8s.API, c.osArgs.CacheResyncPeriod, informers.WithNamespace(namespace))
 
 		// Core.V1 Resources
 		svci := factory.Core().V1().Services().Informer()
-		c.k8s.EventsServices(c.eventChan, c.ingressChan, stop, svci, c.PublishService)
+		c.k8s.EventsServices(c.eventChan, c.ingressChan, stop, svci, c.publishService)
 
 		nsi := factory.Core().V1().Namespaces().Informer()
 		c.k8s.EventsNamespaces(c.eventChan, stop, nsi)
@@ -86,7 +86,7 @@ func (c *HAProxyController) monitorChanges() {
 		logger.Panic("Caches are not populated due to an underlying error, cannot run the Ingress Controller")
 	}
 
-	syncPeriod := c.OSArgs.SyncPeriod
+	syncPeriod := c.osArgs.SyncPeriod
 	logger.Debugf("Executing syncPeriod every %s", syncPeriod.String())
 	for {
 		time.Sleep(syncPeriod)
@@ -99,7 +99,7 @@ func (c *HAProxyController) monitorChanges() {
 func (c *HAProxyController) SyncData() {
 	hadChanges := false
 	for job := range c.eventChan {
-		ns := c.Store.GetNamespace(job.Namespace)
+		ns := c.store.GetNamespace(job.Namespace)
 		change := false
 		switch job.SyncType {
 		case k8s.COMMAND:
@@ -112,21 +112,21 @@ func (c *HAProxyController) SyncData() {
 		case k8s.CUSTOM_RESOURCE:
 			change = c.crManager.EventCustomResource(job)
 		case k8s.NAMESPACE:
-			change = c.Store.EventNamespace(ns, job.Data.(*store.Namespace))
+			change = c.store.EventNamespace(ns, job.Data.(*store.Namespace))
 		case k8s.INGRESS:
-			change = c.Store.EventIngress(ns, job.Data.(*store.Ingress))
+			change = c.store.EventIngress(ns, job.Data.(*store.Ingress))
 		case k8s.INGRESS_CLASS:
-			change = c.Store.EventIngressClass(job.Data.(*store.IngressClass))
+			change = c.store.EventIngressClass(job.Data.(*store.IngressClass))
 		case k8s.ENDPOINTS:
-			change = c.Store.EventEndpoints(ns, job.Data.(*store.Endpoints), c.Client.SyncBackendSrvs)
+			change = c.store.EventEndpoints(ns, job.Data.(*store.Endpoints), c.client.SyncBackendSrvs)
 		case k8s.SERVICE:
-			change = c.Store.EventService(ns, job.Data.(*store.Service))
+			change = c.store.EventService(ns, job.Data.(*store.Service))
 		case k8s.CONFIGMAP:
-			change = c.Store.EventConfigMap(ns, job.Data.(*store.ConfigMap))
+			change = c.store.EventConfigMap(ns, job.Data.(*store.ConfigMap))
 		case k8s.SECRET:
-			change = c.Store.EventSecret(ns, job.Data.(*store.Secret))
+			change = c.store.EventSecret(ns, job.Data.(*store.Secret))
 		case k8s.POD:
-			change = c.Store.EventPod(job.Data.(store.PodEvent))
+			change = c.store.EventPod(job.Data.(store.PodEvent))
 		}
 		hadChanges = hadChanges || change
 	}
@@ -191,15 +191,16 @@ func (c *HAProxyController) getEndpointSlicesSharedInformer(factory informers.Sh
 }
 
 func (c *HAProxyController) getWhitelistedNamespaces() []string {
-	if len(c.Store.NamespacesAccess.Whitelist) == 0 {
+	if len(c.store.NamespacesAccess.Whitelist) == 0 {
 		return []string{""}
 	}
+	// Add one because of potential whitelisting of configmap namespace
 	namespaces := []string{}
-	for ns := range c.Store.NamespacesAccess.Whitelist {
+	for ns := range c.store.NamespacesAccess.Whitelist {
 		namespaces = append(namespaces, ns)
 	}
-	cfgMapNS := c.OSArgs.ConfigMap.Namespace
-	if _, ok := c.Store.NamespacesAccess.Whitelist[cfgMapNS]; !ok {
+	cfgMapNS := c.osArgs.ConfigMap.Namespace
+	if _, ok := c.store.NamespacesAccess.Whitelist[cfgMapNS]; !ok {
 		namespaces = append(namespaces, cfgMapNS)
 		logger.Warningf("configmap Namespace '%s' not whitelisted. Whitelisting it anyway", cfgMapNS)
 	}
@@ -232,31 +233,31 @@ func (c *HAProxyController) endpointsMirroring() bool {
 
 // auxCfgManager returns restart or reload requirement based on state and transition of auxiliary configuration file.
 func (c *HAProxyController) auxCfgManager() (restart, reload bool) {
-	info, errStat := os.Stat(c.Cfg.Env.AuxCFGFile)
+	info, errStat := os.Stat(c.cfg.Env.AuxCFGFile)
 	var (
 		modifTime  int64
-		auxCfgFile string = c.Cfg.Env.AuxCFGFile
+		auxCfgFile string = c.cfg.Env.AuxCFGFile
 		useAuxFile bool
 	)
 
 	defer func() {
 		// Nothing changed
-		if c.AuxCfgModTime == modifTime {
+		if c.auxCfgModTime == modifTime {
 			return
 		}
 		// Apply decisions
-		c.Client.SetAuxCfgFile(auxCfgFile)
+		c.client.SetAuxCfgFile(auxCfgFile)
 		c.haproxyProcess.UseAuxFile(useAuxFile)
 		// The file exists now  (modifTime !=0 otherwise nothing changed case).
-		if c.AuxCfgModTime == 0 {
+		if c.auxCfgModTime == 0 {
 			restart = true
 		} else {
 			// File already exists,
 			// already in command line parameters just need to reload for modifications.
 			reload = true
 		}
-		c.AuxCfgModTime = modifTime
-		if c.AuxCfgModTime != 0 {
+		c.auxCfgModTime = modifTime
+		if c.auxCfgModTime != 0 {
 			logger.Infof("Auxiliary HAProxy config '%s' updated", auxCfgFile)
 		}
 	}()
@@ -265,11 +266,11 @@ func (c *HAProxyController) auxCfgManager() (restart, reload bool) {
 	if errStat != nil {
 		// nullify it
 		auxCfgFile = ""
-		if c.AuxCfgModTime == 0 {
+		if c.auxCfgModTime == 0 {
 			// never existed before
 			return
 		}
-		logger.Infof("Auxiliary HAProxy config '%s' removed", c.Cfg.Env.AuxCFGFile)
+		logger.Infof("Auxiliary HAProxy config '%s' removed", c.cfg.Env.AuxCFGFile)
 		// but existed so need to restart
 		restart = true
 		return

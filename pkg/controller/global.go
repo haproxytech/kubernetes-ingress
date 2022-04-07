@@ -33,7 +33,7 @@ func (c *HAProxyController) handleGlobalConfig() (reload, restart bool) {
 	reload = c.defaultsCfg() || reload
 	c.handleDefaultCert()
 	reload = c.handleDefaultService() || reload
-	(&ingress.Ingress{}).HandleAnnotations(c.Store, &c.Cfg)
+	(&ingress.Ingress{}).HandleAnnotations(c.store, &c.cfg)
 	return reload, restart
 }
 
@@ -42,43 +42,43 @@ func (c *HAProxyController) globalCfg() (reload, restart bool) {
 	var newLg models.LogTargets
 	var err error
 	var updated []string
-	global, err = c.Client.GlobalGetConfiguration()
+	global, err = c.client.GlobalGetConfiguration()
 	if err != nil {
 		logger.Error(err)
 		return
 	}
-	lg, errL := c.Client.GlobalGetLogTargets()
+	lg, errL := c.client.GlobalGetLogTargets()
 	if errL != nil {
 		logger.Error(errL)
 		return
 	}
-	newGlobal, err = annotations.ModelGlobal("cr-global", c.PodNamespace, c.Store, c.Store.ConfigMaps.Main.Annotations)
+	newGlobal, err = annotations.ModelGlobal("cr-global", c.podNamespace, c.store, c.store.ConfigMaps.Main.Annotations)
 	if err != nil {
 		logger.Errorf("Global config: %s", err)
 	}
-	newLg, err = annotations.ModelLog("cr-global", c.PodNamespace, c.Store, c.Store.ConfigMaps.Main.Annotations)
+	newLg, err = annotations.ModelLog("cr-global", c.podNamespace, c.store, c.store.ConfigMaps.Main.Annotations)
 	if err != nil {
 		logger.Errorf("Global logging: %s", err)
 	}
 	if newGlobal == nil {
 		newGlobal = &models.Global{}
 		for _, a := range annotations.Global(newGlobal, &newLg) {
-			err = a.Process(c.Store, c.Store.ConfigMaps.Main.Annotations)
+			err = a.Process(c.store, c.store.ConfigMaps.Main.Annotations)
 			if err != nil {
 				logger.Errorf("annotation %s: %s", a.GetName(), err)
 			}
 		}
 	}
-	configuration.SetGlobal(newGlobal, &newLg, c.Cfg.Env)
+	configuration.SetGlobal(newGlobal, &newLg, c.cfg.Env)
 	updated = deep.Equal(newGlobal, global)
 	if len(updated) != 0 {
-		logger.Error(c.Client.GlobalPushConfiguration(*newGlobal))
+		logger.Error(c.client.GlobalPushConfiguration(*newGlobal))
 		logger.Debugf("Global config updated: %s\nRestart required", updated)
 		restart = true
 	}
 	updated = deep.Equal(newLg, lg)
 	if len(updated) != 0 {
-		logger.Error(c.Client.GlobalPushLogTargets(newLg))
+		logger.Error(c.client.GlobalPushLogTargets(newLg))
 		logger.Debugf("Global log targets updated: %s\nRestart required", updated)
 		restart = true
 	}
@@ -90,18 +90,18 @@ func (c *HAProxyController) globalCfg() (reload, restart bool) {
 func (c *HAProxyController) globalCfgSnipp() (reload, restart bool) {
 	var err error
 	for _, a := range annotations.GlobalCfgSnipp() {
-		err = a.Process(c.Store, c.Store.ConfigMaps.Main.Annotations)
+		err = a.Process(c.store, c.store.ConfigMaps.Main.Annotations)
 		if err != nil {
 			logger.Errorf("annotation %s: %s", a.GetName(), err)
 		}
 	}
-	updatedSnipp, errSnipp := annotations.UpdateGlobalCfgSnippet(c.Client)
+	updatedSnipp, errSnipp := annotations.UpdateGlobalCfgSnippet(c.client)
 	logger.Error(errSnipp)
 	if len(updatedSnipp) != 0 {
 		logger.Debugf("Global config-snippet updated: %s\nRestart required", updatedSnipp)
 		restart = true
 	}
-	updatedSnipp, errSnipp = annotations.UpdateFrontendCfgSnippet(c.Client, "http", "https", "stats")
+	updatedSnipp, errSnipp = annotations.UpdateFrontendCfgSnippet(c.client, "http", "https", "stats")
 	logger.Error(errSnipp)
 	if len(updatedSnipp) != 0 {
 		logger.Debugf("Frontend config-snippet updated: %s\nReload required", updatedSnipp)
@@ -112,25 +112,25 @@ func (c *HAProxyController) globalCfgSnipp() (reload, restart bool) {
 
 func (c *HAProxyController) defaultsCfg() (reload bool) {
 	var newDefaults, defaults *models.Defaults
-	defaults, err := c.Client.DefaultsGetConfiguration()
+	defaults, err := c.client.DefaultsGetConfiguration()
 	if err != nil {
 		logger.Error(err)
 		return
 	}
-	newDefaults, err = annotations.ModelDefaults("cr-defaults", c.PodNamespace, c.Store, c.Store.ConfigMaps.Main.Annotations)
+	newDefaults, err = annotations.ModelDefaults("cr-defaults", c.podNamespace, c.store, c.store.ConfigMaps.Main.Annotations)
 	if err != nil {
 		logger.Errorf("Defaults config: %s", err)
 	}
 	if newDefaults == nil {
 		newDefaults = &models.Defaults{}
 		for _, a := range annotations.Defaults(newDefaults) {
-			logger.Error(a.Process(c.Store, c.Store.ConfigMaps.Main.Annotations))
+			logger.Error(a.Process(c.store, c.store.ConfigMaps.Main.Annotations))
 		}
 	}
 	configuration.SetDefaults(newDefaults)
 	updated := deep.Equal(newDefaults, defaults)
 	if len(updated) != 0 {
-		if err = c.Client.DefaultsPushConfiguration(*newDefaults); err != nil {
+		if err = c.client.DefaultsPushConfiguration(*newDefaults); err != nil {
 			logger.Error(err)
 			return
 		}
@@ -143,7 +143,7 @@ func (c *HAProxyController) defaultsCfg() (reload bool) {
 // handleDefaultService configures HAProy default backend provided via cli param "default-backend-service"
 func (c *HAProxyController) handleDefaultService() (reload bool) {
 	var svc *service.Service
-	ns, name, err := common.GetK8sPath("default-backend-service", c.Store.ConfigMaps.Main.Annotations)
+	ns, name, err := common.GetK8sPath("default-backend-service", c.store.ConfigMaps.Main.Annotations)
 	if err != nil {
 		logger.Errorf("default service: %s", err)
 	}
@@ -155,8 +155,8 @@ func (c *HAProxyController) handleDefaultService() (reload bool) {
 		SvcName:          name,
 		IsDefaultBackend: true,
 	}
-	if svc, err = service.New(c.Store, ingressPath, nil, false, c.Store.ConfigMaps.Main.Annotations); err == nil {
-		reload, err = svc.SetDefaultBackend(c.Store, &c.Cfg, c.Client, []string{c.Cfg.FrontHTTP, c.Cfg.FrontHTTPS})
+	if svc, err = service.New(c.store, ingressPath, nil, false, c.store.ConfigMaps.Main.Annotations); err == nil {
+		reload, err = svc.SetDefaultBackend(c.store, &c.cfg, c.client, []string{c.cfg.FrontHTTP, c.cfg.FrontHTTPS})
 	}
 	if err != nil {
 		logger.Errorf("default service: %s", err)
@@ -166,7 +166,7 @@ func (c *HAProxyController) handleDefaultService() (reload bool) {
 
 // handleDefaultCert configures default/fallback HAProxy certificate to use for client HTTPS requests.
 func (c *HAProxyController) handleDefaultCert() {
-	secret, err := annotations.Secret("ssl-certificate", c.PodNamespace, c.Store, c.Store.ConfigMaps.Main.Annotations)
+	secret, err := annotations.Secret("ssl-certificate", c.podNamespace, c.store, c.store.ConfigMaps.Main.Annotations)
 	if err != nil {
 		logger.Errorf("default certificate: %s", err)
 		return
@@ -174,6 +174,6 @@ func (c *HAProxyController) handleDefaultCert() {
 	if secret == nil {
 		return
 	}
-	_, err = c.Cfg.Certificates.HandleTLSSecret(secret, certs.FT_DEFAULT_CERT)
+	_, err = c.cfg.Certificates.HandleTLSSecret(secret, certs.FT_DEFAULT_CERT)
 	logger.Error(err)
 }

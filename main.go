@@ -24,7 +24,6 @@ import (
 	//nolint:gosec
 	_ "net/http/pprof"
 
-	"github.com/google/renameio"
 	"github.com/jessevdk/go-flags"
 
 	c "github.com/haproxytech/kubernetes-ingress/pkg/controller"
@@ -81,13 +80,7 @@ func main() {
 		s.NamespacesAccess.Blacklist[namespace] = struct{}{}
 	}
 	controller := c.NewBuilder().WithStore(s).WithArgs(osArgs).Build()
-	cfg := controller.Cfg
-	err = renameio.WriteFile(cfg.Env.MainCFGFile, haproxyConf, 0755)
-	if err != nil {
-		logger.Panic(err)
-	}
-	logger.Error(os.Chdir(cfg.Env.CfgDir))
-	controller.Start()
+	controller.Start(haproxyConf)
 
 	// Catch QUIT signals
 	signalC := make(chan os.Signal, 1)

@@ -32,27 +32,27 @@ func (c *HAProxyController) initHandlers() {
 	// handlers executed at reconciliation loop
 	c.updateHandlers = []UpdateHandler{
 		handler.HTTPS{
-			Enabled:  !c.OSArgs.DisableHTTPS,
-			CertDir:  c.Cfg.Env.FrontendCertDir,
-			IPv4:     !c.OSArgs.DisableIPV4,
-			AddrIPv4: c.OSArgs.IPV4BindAddr,
-			AddrIPv6: c.OSArgs.IPV6BindAddr,
-			IPv6:     !c.OSArgs.DisableIPV6,
-			Port:     c.OSArgs.HTTPSBindPort,
+			Enabled:  !c.osArgs.DisableHTTPS,
+			CertDir:  c.cfg.Env.FrontendCertDir,
+			IPv4:     !c.osArgs.DisableIPV4,
+			AddrIPv4: c.osArgs.IPV4BindAddr,
+			AddrIPv6: c.osArgs.IPV6BindAddr,
+			IPv6:     !c.osArgs.DisableIPV6,
+			Port:     c.osArgs.HTTPSBindPort,
 		},
 		handler.ProxyProtocol{},
 		&handler.ErrorFiles{},
 		handler.TCPServices{
-			CertDir:  c.Cfg.Env.FrontendCertDir,
-			IPv4:     !c.OSArgs.DisableIPV4,
-			AddrIPv4: c.OSArgs.IPV4BindAddr,
-			IPv6:     !c.OSArgs.DisableIPV6,
-			AddrIPv6: c.OSArgs.IPV6BindAddr,
+			CertDir:  c.cfg.Env.FrontendCertDir,
+			IPv4:     !c.osArgs.DisableIPV4,
+			AddrIPv4: c.osArgs.IPV4BindAddr,
+			IPv6:     !c.osArgs.DisableIPV6,
+			AddrIPv6: c.osArgs.IPV6BindAddr,
 		},
 		&handler.PatternFiles{},
 		handler.Refresh{},
 	}
-	if c.OSArgs.PprofEnabled {
+	if c.osArgs.PprofEnabled {
 		c.updateHandlers = append(c.updateHandlers, handler.Pprof{})
 	}
 	c.updateHandlers = append(c.updateHandlers, handler.Refresh{})
@@ -62,17 +62,17 @@ func (c *HAProxyController) startupHandlers() error {
 	handlers := []UpdateHandler{
 		handler.GlobalCfg{},
 		handler.HTTPBind{
-			HTTP:      !c.OSArgs.DisableHTTP,
-			HTTPS:     !c.OSArgs.DisableHTTPS,
-			IPv4:      !c.OSArgs.DisableIPV4,
-			IPv6:      !c.OSArgs.DisableIPV6,
-			HTTPPort:  c.OSArgs.HTTPBindPort,
-			HTTPSPort: c.OSArgs.HTTPSBindPort,
-			IPv4Addr:  c.OSArgs.IPV4BindAddr,
-			IPv6Addr:  c.OSArgs.IPV6BindAddr,
+			HTTP:      !c.osArgs.DisableHTTP,
+			HTTPS:     !c.osArgs.DisableHTTPS,
+			IPv4:      !c.osArgs.DisableIPV4,
+			IPv6:      !c.osArgs.DisableIPV6,
+			HTTPPort:  c.osArgs.HTTPBindPort,
+			HTTPSPort: c.osArgs.HTTPSBindPort,
+			IPv4Addr:  c.osArgs.IPV4BindAddr,
+			IPv6Addr:  c.osArgs.IPV6BindAddr,
 		}}
 	for _, handler := range handlers {
-		_, err := handler.Update(c.Store, &c.Cfg, c.Client)
+		_, err := handler.Update(c.store, &c.cfg, c.client)
 		if err != nil {
 			return err
 		}

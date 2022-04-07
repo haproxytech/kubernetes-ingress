@@ -29,7 +29,7 @@ func (c *HAProxyController) haproxyService(action string) (err error) {
 
 func (c *HAProxyController) haproxyStartup() {
 	//nolint:gosec //checks on HAProxyBinary should be done in configuration module.
-	cmd := exec.Command(c.Cfg.Env.HAProxyBinary, "-v")
+	cmd := exec.Command(c.cfg.Env.HAProxyBinary, "-v")
 	haproxyInfo, err := cmd.Output()
 	if err == nil {
 		haproxyInfo := strings.Split(string(haproxyInfo), "\n")
@@ -38,15 +38,15 @@ func (c *HAProxyController) haproxyStartup() {
 		logger.Error(err)
 	}
 	var msgAuxConfigFile string
-	if c.OSArgs.UseWiths6Overlay {
-		c.haproxyProcess = process.NewControlOverS6(c.Cfg.Env, c.OSArgs, c.Client)
+	if c.osArgs.UseWiths6Overlay {
+		c.haproxyProcess = process.NewControlOverS6(c.cfg.Env, c.osArgs, c.client)
 	} else {
-		c.haproxyProcess = process.NewDirectControl(c.Cfg.Env, c.OSArgs, c.Client)
-		if _, err := os.Stat(c.Cfg.Env.AuxCFGFile); err == nil {
+		c.haproxyProcess = process.NewDirectControl(c.cfg.Env, c.osArgs, c.client)
+		if _, err := os.Stat(c.cfg.Env.AuxCFGFile); err == nil {
 			c.haproxyProcess.UseAuxFile(true)
-			msgAuxConfigFile = "and aux config file " + c.Cfg.Env.AuxCFGFile
+			msgAuxConfigFile = "and aux config file " + c.cfg.Env.AuxCFGFile
 		}
 	}
-	logger.Printf("Starting HAProxy with %s %s", c.Cfg.Env.MainCFGFile, msgAuxConfigFile)
+	logger.Printf("Starting HAProxy with %s %s", c.cfg.Env.MainCFGFile, msgAuxConfigFile)
 	logger.Panic(c.haproxyService("start"))
 }

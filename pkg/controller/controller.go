@@ -15,8 +15,11 @@
 package controller
 
 import (
+	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/google/renameio"
 
 	"github.com/haproxytech/client-native/v2/models"
 	config "github.com/haproxytech/kubernetes-ingress/pkg/configuration"
@@ -35,13 +38,13 @@ var logger = utils.GetLogger()
 
 // HAProxyController is ingress controller
 type HAProxyController struct {
-	Cfg            config.ControllerCfg
+	cfg            config.ControllerCfg
 	crManager      cr.CRManager
-	Client         api.HAProxyClient
-	OSArgs         utils.OSArgs
-	Store          store.K8s
-	PublishService *utils.NamespaceValue
-	AuxCfgModTime  int64
+	client         api.HAProxyClient
+	osArgs         utils.OSArgs
+	store          store.K8s
+	publishService *utils.NamespaceValue
+	auxCfgModTime  int64
 	eventChan      chan k8s.SyncDataEvent
 	ingressChan    chan ingress.Sync
 	k8s            *k8s.K8s
@@ -50,41 +53,46 @@ type HAProxyController struct {
 	restart        bool
 	updateHandlers []UpdateHandler
 	haproxyProcess process.Process
-	PodNamespace   string
-	PodPrefix      string
+	podNamespace   string
+	podPrefix      string
 }
 
 // Wrapping a Native-Client transaction and commit it.
 // Returning an error to let panic or log it upon the scenario.
 func (c *HAProxyController) clientAPIClosure(fn func() error) (err error) {
-	if err = c.Client.APIStartTransaction(); err != nil {
+	if err = c.client.APIStartTransaction(); err != nil {
 		return err
 	}
 	defer func() {
-		c.Client.APIDisposeTransaction()
+		c.client.APIDisposeTransaction()
 	}()
 	if err = fn(); err != nil {
 		return err
 	}
 
-	if err = c.Client.APICommitTransaction(); err != nil {
+	if err = c.client.APICommitTransaction(); err != nil {
 		return err
 	}
 	return nil
 }
 
 // Start initializes and runs HAProxyController
-func (c *HAProxyController) Start() {
+func (c *HAProxyController) Start(haproxyConf []byte) {
 	var err error
-	logger.SetLevel(c.OSArgs.LogLevel.LogLevel)
+	logger.SetLevel(c.osArgs.LogLevel.LogLevel)
+	err = renameio.WriteFile(c.cfg.Env.MainCFGFile, haproxyConf, 0755)
+	if err != nil {
+		logger.Panic(err)
+	}
+	logger.Error(os.Chdir(c.cfg.Env.CfgDir))
 
 	// Initialize controller
-	err = c.Cfg.Init()
+	err = c.cfg.Init()
 	if err != nil {
 		logger.Panic(err)
 	}
 
-	c.Client, err = api.Init(c.Cfg.Env.CfgDir, c.Cfg.Env.MainCFGFile, c.Cfg.Env.HAProxyBinary, c.Cfg.Env.RuntimeSocket)
+	c.client, err = api.Init(c.cfg.Env.CfgDir, c.cfg.Env.MainCFGFile, c.cfg.Env.HAProxyBinary, c.cfg.Env.RuntimeSocket)
 	if err != nil {
 		logger.Panic(err)
 	}
@@ -93,22 +101,22 @@ func (c *HAProxyController) Start() {
 	c.haproxyStartup()
 
 	// Controller PublishService
-	parts := strings.Split(c.OSArgs.PublishService, "/")
+	parts := strings.Split(c.osArgs.PublishService, "/")
 	if len(parts) == 2 {
-		c.PublishService = &utils.NamespaceValue{
+		c.publishService = &utils.NamespaceValue{
 			Namespace: parts[0],
 			Name:      parts[1],
 		}
 	}
 
 	// Get K8s client
-	c.k8s, err = k8s.GetKubernetesClient(c.OSArgs.DisableServiceExternalName)
-	if c.OSArgs.External {
+	c.k8s, err = k8s.GetKubernetesClient(c.osArgs.DisableServiceExternalName)
+	if c.osArgs.External {
 		kubeconfig := filepath.Join(utils.HomeDir(), ".kube", "config")
-		if c.OSArgs.KubeConfig != "" {
-			kubeconfig = c.OSArgs.KubeConfig
+		if c.osArgs.KubeConfig != "" {
+			kubeconfig = c.osArgs.KubeConfig
 		}
-		c.k8s, err = k8s.GetRemoteKubernetesClient(kubeconfig, c.OSArgs.DisableServiceExternalName)
+		c.k8s, err = k8s.GetRemoteKubernetesClient(kubeconfig, c.osArgs.DisableServiceExternalName)
 	}
 	if err != nil {
 		logger.Panic(err)
@@ -122,16 +130,16 @@ func (c *HAProxyController) Start() {
 
 	// Monitor k8s events
 	var chanSize int64 = int64(watch.DefaultChanSize * 6)
-	if c.OSArgs.ChannelSize > 0 {
-		chanSize = c.OSArgs.ChannelSize
+	if c.osArgs.ChannelSize > 0 {
+		chanSize = c.osArgs.ChannelSize
 	}
 	logger.Infof("Channel size: %d", chanSize)
 	c.eventChan = make(chan k8s.SyncDataEvent, chanSize)
 	go c.monitorChanges()
-	if c.PublishService != nil {
+	if c.publishService != nil {
 		// Update Ingress status
 		c.ingressChan = make(chan ingress.Sync, chanSize)
-		go ingress.UpdateStatus(c.k8s.API, c.Store, c.OSArgs.IngressClass, c.OSArgs.EmptyIngressClass, c.ingressChan)
+		go ingress.UpdateStatus(c.k8s.API, c.store, c.osArgs.IngressClass, c.osArgs.EmptyIngressClass, c.ingressChan)
 	}
 }
 
@@ -147,13 +155,13 @@ func (c *HAProxyController) updateHAProxy() {
 	var err error
 	logger.Trace("HAProxy config sync started")
 
-	err = c.Client.APIStartTransaction()
+	err = c.client.APIStartTransaction()
 	if err != nil {
 		logger.Error(err)
 		return
 	}
 	defer func() {
-		c.Client.APIDisposeTransaction()
+		c.client.APIDisposeTransaction()
 	}()
 
 	reload, restart := c.handleGlobalConfig()
@@ -161,37 +169,37 @@ func (c *HAProxyController) updateHAProxy() {
 	c.restart = c.restart || restart
 
 	if len(route.CustomRoutes) != 0 {
-		logger.Error(route.CustomRoutesReset(c.Client))
+		logger.Error(route.CustomRoutesReset(c.client))
 	}
 
-	for _, namespace := range c.Store.Namespaces {
+	for _, namespace := range c.store.Namespaces {
 		if !namespace.Relevant {
 			continue
 		}
 		for _, ingResource := range namespace.Ingresses {
-			i := ingress.New(c.Store, ingResource, c.OSArgs.IngressClass, c.OSArgs.EmptyIngressClass)
+			i := ingress.New(c.store, ingResource, c.osArgs.IngressClass, c.osArgs.EmptyIngressClass)
 			if i == nil {
 				logger.Debugf("ingress '%s/%s' ignored: no matching IngressClass", ingResource.Namespace, ingResource.Name)
 				continue
 			}
-			if c.PublishService != nil && ingResource.Status == store.ADDED {
+			if c.publishService != nil && ingResource.Status == store.ADDED {
 				select {
 				case c.ingressChan <- ingress.Sync{Ingress: ingResource}:
 				default:
 					logger.Errorf("Ingress %s/%s: unable to sync status: sync channel full", ingResource.Namespace, ingResource.Name)
 				}
 			}
-			c.reload = i.Update(c.Store, &c.Cfg, c.Client) || c.reload
+			c.reload = i.Update(c.store, &c.cfg, c.client) || c.reload
 		}
 	}
 
 	for _, handler := range c.updateHandlers {
-		reload, err = handler.Update(c.Store, &c.Cfg, c.Client)
+		reload, err = handler.Update(c.store, &c.cfg, c.client)
 		logger.Error(err)
 		c.reload = c.reload || reload
 	}
 
-	err = c.Client.APICommitTransaction()
+	err = c.client.APICommitTransaction()
 	if err != nil {
 		logger.Error("unable to Sync HAProxy configuration !!")
 		logger.Error(err)
@@ -226,15 +234,15 @@ func (c *HAProxyController) updateHAProxy() {
 // setToRready exposes readiness endpoint
 func (c *HAProxyController) setToReady() {
 	logger.Panic(c.clientAPIClosure(func() error {
-		return c.Client.FrontendBindEdit("healthz",
+		return c.client.FrontendBindEdit("healthz",
 			models.Bind{
 				Name:    "v4",
 				Address: "0.0.0.0:1042",
 			})
 	}))
-	if !c.OSArgs.DisableIPV6 {
+	if !c.osArgs.DisableIPV6 {
 		logger.Panic(c.clientAPIClosure(func() error {
-			return c.Client.FrontendBindCreate("healthz",
+			return c.client.FrontendBindCreate("healthz",
 				models.Bind{
 					Name:    "v6",
 					Address: ":::1042",
@@ -243,7 +251,7 @@ func (c *HAProxyController) setToReady() {
 		}))
 	}
 	logger.Debugf("healthz frontend exposed for readiness probe")
-	cm := c.Store.ConfigMaps.Main
+	cm := c.store.ConfigMaps.Main
 	if cm.Name != "" && !cm.Loaded {
 		logger.Warningf("Main configmap '%s/%s' not found", cm.Namespace, cm.Name)
 	}
@@ -252,10 +260,10 @@ func (c *HAProxyController) setToReady() {
 
 // clean controller state
 func (c *HAProxyController) clean(failedSync bool) {
-	logger.Error(c.Cfg.Clean())
-	c.Cfg.SSLPassthrough = false
+	logger.Error(c.cfg.Clean())
+	c.cfg.SSLPassthrough = false
 	if !failedSync {
-		c.Store.Clean()
+		c.store.Clean()
 	}
 	c.reload = false
 	c.restart = false
