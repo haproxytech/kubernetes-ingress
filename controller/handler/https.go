@@ -159,7 +159,7 @@ func (h HTTPS) Update(k store.K8s, cfg *config.ControllerCfg, api api.HAProxyCli
 			logger.Panic(api.FrontendEnableSSLOffload(cfg.FrontHTTPS, h.CertDir, h.alpn, h.strictSNI))
 			cfg.HTTPS = true
 			reload = true
-			logger.Debug("SSLOffload enabeld, reload required")
+			logger.Debug("SSLOffload enabled, reload required")
 		}
 		r, err := h.handleClientTLSAuth(k, cfg, api)
 		if err != nil {
