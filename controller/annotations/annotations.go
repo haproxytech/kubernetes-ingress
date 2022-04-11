@@ -90,6 +90,8 @@ func Frontend(i *store.Ingress, r *rules.Rules, m maps.MapFiles) []Annotation {
 		reqAuth.NewAnnotation("auth-secret"),
 		reqCapture.NewAnnotation("request-capture"),
 		reqCapture.NewAnnotation("request-capture-len"),
+		// always put cors-enable annotation before any oth
+		resSetCORS.NewAnnotation("cors-enable"),
 		resSetCORS.NewAnnotation("cors-allow-origin"),
 		resSetCORS.NewAnnotation("cors-allow-method"),
 		resSetCORS.NewAnnotation("cors-allow-headers"),
