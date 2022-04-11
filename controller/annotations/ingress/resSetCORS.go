@@ -10,7 +10,7 @@ import (
 	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 )
 
-const corsVarName = "cors-origin"
+const corsVarName = "cors_origin"
 
 type ResSetCORS struct {
 	rules   *rules.Rules
