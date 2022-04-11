@@ -26,7 +26,18 @@ import (
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
 )
 
-type MapFiles map[Name]*mapFile
+type Maps interface {
+	// AppendRow appends row to mapFile
+	MapAppend(name Name, row string)
+	// Exists returns true if a map exists and is not empty
+	MapExists(name Name) bool
+	// Refresh refreshs maps content and returns true if a map content has changed(crated/deleted/updated)
+	RefreshMaps(client api.HAProxyClient) bool
+	// Clean cleans maps content
+	CleanMaps()
+}
+
+type mapFiles map[Name]*mapFile
 
 type Name string
 
@@ -58,24 +69,23 @@ func (mf *mapFile) getContent() (string, uint64) {
 	return content, h.Sum64()
 }
 
-func New(dir string, persistentMaps []Name) (*MapFiles, error) {
+func New(dir string, persistentMaps []Name) (Maps, error) {
 	if dir == "" {
 		return nil, fmt.Errorf("empty name for map directory")
 	}
 	mapDir = dir
-	var maps MapFiles = make(map[Name]*mapFile, len(persistentMaps))
+	var maps mapFiles = make(map[Name]*mapFile, len(persistentMaps))
 	for _, name := range persistentMaps {
 		maps[name] = &mapFile{persistent: true}
 	}
 	return &maps, nil
 }
 
-func (m MapFiles) Exists(name Name) bool {
+func (m mapFiles) MapExists(name Name) bool {
 	return m[name] != nil && len(m[name].rows) != 0
 }
 
-// AppendRow appends row to mapFile
-func (m MapFiles) AppendRow(name Name, row string) {
+func (m mapFiles) MapAppend(name Name, row string) {
 	if row == "" {
 		return
 	}
@@ -85,13 +95,13 @@ func (m MapFiles) AppendRow(name Name, row string) {
 	m[name].rows = append(m[name].rows, row)
 }
 
-func (m MapFiles) Clean() {
+func (m mapFiles) CleanMaps() {
 	for _, mapFile := range m {
 		mapFile.rows = []string{}
 	}
 }
 
-func (m MapFiles) Refresh(client api.HAProxyClient) (reload bool) {
+func (m mapFiles) RefreshMaps(client api.HAProxyClient) (reload bool) {
 	for name, mapFile := range m {
 		content, hash := mapFile.getContent()
 		if mapFile.hash == hash {

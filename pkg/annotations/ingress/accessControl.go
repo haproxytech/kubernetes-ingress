@@ -15,15 +15,15 @@ import (
 type AccessControl struct {
 	name      string
 	rules     *rules.List
-	maps      maps.MapFiles
+	maps      maps.Maps
 	whitelist bool
 }
 
-func NewBlackList(n string, r *rules.List, m maps.MapFiles) *AccessControl {
+func NewBlackList(n string, r *rules.List, m maps.Maps) *AccessControl {
 	return &AccessControl{name: n, rules: r, maps: m}
 }
 
-func NewWhiteList(n string, r *rules.List, m maps.MapFiles) *AccessControl {
+func NewWhiteList(n string, r *rules.List, m maps.Maps) *AccessControl {
 	return &AccessControl{name: n, rules: r, maps: m, whitelist: true}
 }
 
@@ -53,7 +53,7 @@ func (a *AccessControl) Process(k store.K8s, annotations ...map[string]string) (
 		mapName = maps.Name("blacklist-" + utils.Hash([]byte(input)))
 	}
 
-	if !a.maps.Exists(mapName) {
+	if !a.maps.MapExists(mapName) {
 		for _, address := range strings.Split(input, ",") {
 			address = strings.TrimSpace(address)
 			if ip := net.ParseIP(address); ip == nil {
@@ -61,7 +61,7 @@ func (a *AccessControl) Process(k store.K8s, annotations ...map[string]string) (
 					return fmt.Errorf("incorrect address '%s' in blacklist annotation'", address)
 				}
 			}
-			a.maps.AppendRow(mapName, address)
+			a.maps.MapAppend(mapName, address)
 		}
 	}
 	a.rules.Add(&rules.ReqDeny{

@@ -68,7 +68,7 @@ func (h *HAProxy) Refresh(cleanCrts bool) (reload bool, err error) {
 	// Rules
 	reload = h.RefreshRules(h.HAProxyClient) || reload
 	// Maps
-	reload = h.MapFiles.Refresh(h.HAProxyClient) || reload
+	reload = h.RefreshMaps(h.HAProxyClient) || reload
 	// Backends
 	if h.SSLPassthrough {
 		h.ActiveBackends[h.BackSSL] = struct{}{}

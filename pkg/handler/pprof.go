@@ -53,7 +53,7 @@ func (handler Pprof) Update(k store.K8s, h haproxy.HAProxy, a annotations.Annota
 			Path:          "/debug/pprof",
 			PathTypeMatch: store.PATH_TYPE_IMPLEMENTATION_SPECIFIC,
 		},
-	}, h.MapFiles)
+	}, h.Maps)
 	if err != nil {
 		return
 	}

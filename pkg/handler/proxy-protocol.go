@@ -36,7 +36,7 @@ func (handler ProxyProtocol) Update(k store.K8s, h haproxy.HAProxy, a annotation
 	}
 	// Validate annotation
 	mapName := maps.Name("proxy-protocol-" + utils.Hash([]byte(annProxyProtocol)))
-	if !h.MapFiles.Exists(mapName) {
+	if !h.MapExists(mapName) {
 		for _, address := range strings.Split(annProxyProtocol, ",") {
 			address = strings.TrimSpace(address)
 			if ip := net.ParseIP(address); ip == nil {
@@ -45,7 +45,7 @@ func (handler ProxyProtocol) Update(k store.K8s, h haproxy.HAProxy, a annotation
 					continue
 				}
 			}
-			h.MapFiles.AppendRow(mapName, address)
+			h.MapAppend(mapName, address)
 		}
 	}
 	// Configure Annotation
