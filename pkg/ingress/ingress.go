@@ -176,7 +176,7 @@ func addRules(list rules.List, h haproxy.HAProxy, ingressRule bool) []rules.Rule
 				frontends = []string{h.FrontHTTP, h.FrontHTTPS}
 			}
 		case rules.REQ_DENY, rules.REQ_CAPTURE:
-			if h.SSLPassthrough {
+			if haproxy.SSLPassthrough {
 				frontends = []string{h.FrontHTTP, h.FrontSSL}
 			}
 		}
@@ -226,7 +226,7 @@ func (i *Ingress) Update(k store.K8s, h haproxy.HAProxy, a annotations.Annotatio
 		logger.Error("Ingress '%s/%s': SSL Passthrough parsing: %s", i.resource.Namespace, i.resource.Name, err)
 	} else if enabled {
 		i.sslPassthrough = true
-		h.SSLPassthrough = true
+		haproxy.SSLPassthrough = true
 	}
 	i.handleAnnotations(k, h)
 	// Ingress rules

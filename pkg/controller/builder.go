@@ -11,7 +11,7 @@ import (
 	"github.com/haproxytech/kubernetes-ingress/pkg/annotations"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/api"
-	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/config"
+	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/env"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/process"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/rules"
 	"github.com/haproxytech/kubernetes-ingress/pkg/ingress"
@@ -23,7 +23,7 @@ import (
 type Builder struct {
 	osArgs         utils.OSArgs
 	haproxyClient  api.HAProxyClient
-	haproxyEnv     config.Env
+	haproxyEnv     env.Env
 	haproxyProcess process.Process
 	haproxyRules   rules.Rules
 	haproxyCfgFile []byte
@@ -34,13 +34,13 @@ type Builder struct {
 	ingressChan    chan ingress.Sync
 }
 
-var defaultEnv = config.Env{
+var defaultEnv = env.Env{
 	Binary:      "/usr/local/sbin/haproxy",
 	MainCFGFile: "/etc/haproxy/haproxy.cfg",
 	CfgDir:      "/etc/haproxy/",
 	RuntimeDir:  "/var/run",
 	StateDir:    "/var/state/haproxy/",
-	Proxies: config.Proxies{
+	Proxies: env.Proxies{
 		FrontHTTP:  "http",
 		FrontHTTPS: "https",
 		FrontSSL:   "ssl",
@@ -90,7 +90,7 @@ func (builder *Builder) WithStore(store store.K8s) *Builder {
 	return builder
 }
 
-func (builder *Builder) WithHaproxyEnv(env config.Env) *Builder {
+func (builder *Builder) WithHaproxyEnv(env env.Env) *Builder {
 	builder.haproxyEnv = env
 	return builder
 }

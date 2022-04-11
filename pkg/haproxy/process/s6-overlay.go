@@ -6,12 +6,12 @@ import (
 	"os/exec"
 
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/api"
-	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/config"
+	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/env"
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
 )
 
 type s6Control struct {
-	Env    config.Env
+	Env    env.Env
 	OSArgs utils.OSArgs
 	API    api.HAProxyClient
 }

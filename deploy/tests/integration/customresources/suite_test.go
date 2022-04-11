@@ -22,7 +22,7 @@ import (
 	"github.com/haproxytech/client-native/v2/models"
 	corev1alpha1 "github.com/haproxytech/kubernetes-ingress/crs/api/core/v1alpha1"
 	c "github.com/haproxytech/kubernetes-ingress/pkg/controller"
-	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/config"
+	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/env"
 	"github.com/haproxytech/kubernetes-ingress/pkg/k8s"
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
@@ -112,13 +112,13 @@ func (suite *CustomResourceSuite) GlobalCRFixture() (eventChan chan k8s.SyncData
 		Name: "globalcrjob",
 	}
 
-	haproxyEnv := config.Env{
+	haproxyEnv := env.Env{
 		Binary:      "/usr/local/sbin/haproxy",
 		MainCFGFile: filepath.Join(suite.test.TempDir, "haproxy.cfg"),
 		CfgDir:      suite.test.TempDir,
 		RuntimeDir:  filepath.Join(suite.test.TempDir, "run"),
 		StateDir:    filepath.Join(suite.test.TempDir, "state/haproxy/"),
-		Proxies: config.Proxies{
+		Proxies: env.Proxies{
 			FrontHTTP:  "http",
 			FrontHTTPS: "https",
 			FrontSSL:   "ssl",

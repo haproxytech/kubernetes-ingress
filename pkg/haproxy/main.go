@@ -7,25 +7,31 @@ import (
 
 	"github.com/google/renameio"
 
-	"github.com/haproxytech/kubernetes-ingress/pkg/annotations"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/api"
-	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/config"
+	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/certs"
+	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/env"
+	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/maps"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/process"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/rules"
+	"github.com/haproxytech/kubernetes-ingress/pkg/route"
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
 )
 
 var logger = utils.GetLogger()
 
-// Instance describes and controls a HAProxy Instance
+var SSLPassthrough bool
+
+// HAProxy holds haproxy config state
 type HAProxy struct {
 	api.HAProxyClient
 	process.Process
-	config.Env
-	*config.Config
+	maps.Maps
+	rules.Rules
+	certs.Certificates
+	env.Env
 }
 
-func New(osArgs utils.OSArgs, env config.Env, cfgFile []byte, p process.Process, client api.HAProxyClient, rulesManager rules.Rules) (h HAProxy, err error) {
+func New(osArgs utils.OSArgs, env env.Env, cfgFile []byte, p process.Process, client api.HAProxyClient, rules rules.Rules) (h HAProxy, err error) {
 	err = (&env).Init(osArgs)
 	if err != nil {
 		err = fmt.Errorf("failed to initialize haproxy environment: %w", err)
@@ -38,10 +44,14 @@ func New(osArgs utils.OSArgs, env config.Env, cfgFile []byte, p process.Process,
 		err = fmt.Errorf("failed to write haproxy config file: %w", err)
 		return
 	}
-
-	h.Config, err = config.New(h.Env, rulesManager)
-	if err != nil {
-		err = fmt.Errorf("failed to initialize haproxy config state: %w", err)
+	persistentMaps := []maps.Name{
+		route.SNI,
+		route.HOST,
+		route.PATH_EXACT,
+		route.PATH_PREFIX,
+	}
+	if h.Maps, err = maps.New(env.MapsDir, persistentMaps); err != nil {
+		err = fmt.Errorf("failed to initialize haproxy maps: %w", err)
 		return
 	}
 	if client == nil {
@@ -54,29 +64,22 @@ func New(osArgs utils.OSArgs, env config.Env, cfgFile []byte, p process.Process,
 	if p == nil {
 		h.Process = process.New(h.Env, osArgs, h.AuxCFGFile, h.HAProxyClient)
 	}
+	if h.Certificates, err = certs.New(env.Certs); err != nil {
+		err = fmt.Errorf("failed to initialize haproxy certificates: %w", err)
+		return
+	}
+	h.Rules = rules
 	if !osArgs.Test {
 		logVersion(h.Binary)
 	}
 	return
 }
 
-func (h *HAProxy) Refresh(cleanCrts bool) (reload bool, err error) {
-	// Certs
-	if cleanCrts {
-		reload = h.RefreshCerts()
-	}
-	// Rules
-	reload = h.RefreshRules(h.HAProxyClient) || reload
-	// Maps
-	reload = h.RefreshMaps(h.HAProxyClient) || reload
-	// Backends
-	deleted, err := h.RefreshBackends()
-	logger.Error(err)
-	for _, backend := range deleted {
-		logger.Debugf("Backend '%s' deleted", backend)
-		annotations.RemoveBackendCfgSnippet(backend)
-	}
-	return
+func (h HAProxy) Clean() {
+	SSLPassthrough = false
+	h.CleanMaps()
+	h.CleanCerts()
+	h.CleanRules()
 }
 
 func logVersion(program string) {

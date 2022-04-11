@@ -91,6 +91,19 @@ func (c *clientNative) FrontendDisableSSLOffload(frontendName string) (err error
 	return err
 }
 
+func (c *clientNative) FrontendSSLOffloadEnabled(frontendName string) bool {
+	binds, err := c.FrontendBindsGet(frontendName)
+	if err != nil {
+		return false
+	}
+	for _, bind := range binds {
+		if bind.Ssl {
+			return true
+		}
+	}
+	return false
+}
+
 func (c *clientNative) FrontendBindsGet(frontend string) (models.Binds, error) {
 	_, binds, err := c.nativeAPI.Configuration.GetBinds(frontend, c.activeTransaction)
 	return binds, err

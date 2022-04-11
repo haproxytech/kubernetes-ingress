@@ -8,12 +8,12 @@ import (
 	"syscall"
 
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/api"
-	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/config"
+	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/env"
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
 )
 
 type directControl struct {
-	Env        config.Env
+	Env        env.Env
 	OSArgs     utils.OSArgs
 	API        api.HAProxyClient
 	useAuxFile bool

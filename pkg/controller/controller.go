@@ -249,7 +249,7 @@ func (c *HAProxyController) setupHAProxyRules() error {
 	return errors.Result()
 }
 
-// clean controller state
+// clean haproxy config state
 func (c *HAProxyController) clean(failedSync bool) {
 	c.haproxy.Clean()
 	logger.Error(c.setupHAProxyRules())

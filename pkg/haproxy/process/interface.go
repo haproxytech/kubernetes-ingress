@@ -7,7 +7,7 @@ import (
 	"syscall"
 
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/api"
-	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/config"
+	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/env"
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
 )
 
@@ -18,7 +18,7 @@ type Process interface {
 	UseAuxFile(useAuxFile bool)
 }
 
-func New(env config.Env, osArgs utils.OSArgs, auxCfgFile string, api api.HAProxyClient) (p Process) {
+func New(env env.Env, osArgs utils.OSArgs, auxCfgFile string, api api.HAProxyClient) (p Process) {
 	if osArgs.UseWiths6Overlay {
 		p = &s6Control{
 			Env:    env,

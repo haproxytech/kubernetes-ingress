@@ -19,7 +19,7 @@ import (
 
 	"github.com/haproxytech/kubernetes-ingress/pkg/annotations"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy"
-	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/config"
+	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/env"
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
 )
 
@@ -29,7 +29,7 @@ type GlobalCfg struct {
 func (handler GlobalCfg) Update(k store.K8s, h haproxy.HAProxy, a annotations.Annotations) (reload bool, err error) {
 	global := &models.Global{}
 	logTargets := &models.LogTargets{}
-	config.SetGlobal(global, logTargets, h.Env)
+	env.SetGlobal(global, logTargets, h.Env)
 	err = h.GlobalPushConfiguration(*global)
 	if err != nil {
 		return
@@ -39,7 +39,7 @@ func (handler GlobalCfg) Update(k store.K8s, h haproxy.HAProxy, a annotations.An
 		return
 	}
 	defaults := &models.Defaults{}
-	config.SetDefaults(defaults)
+	env.SetDefaults(defaults)
 	err = h.DefaultsPushConfiguration(*defaults)
 	if err != nil {
 		return

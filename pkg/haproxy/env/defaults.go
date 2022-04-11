@@ -1,4 +1,4 @@
-package config
+package env
 
 import (
 	"github.com/haproxytech/client-native/v2/models"

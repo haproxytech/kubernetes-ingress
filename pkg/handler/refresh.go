@@ -29,5 +29,20 @@ func (handler Refresh) Update(k store.K8s, h haproxy.HAProxy, a annotations.Anno
 	if cleanCrtsAnn == "false" {
 		cleanCrts = false
 	}
-	return h.Refresh(cleanCrts)
+	// Certs
+	if cleanCrts {
+		reload = h.RefreshCerts()
+	}
+	// Rules
+	reload = h.RefreshRules(h.HAProxyClient) || reload
+	// Maps
+	reload = h.RefreshMaps(h.HAProxyClient) || reload
+	// Backends
+	deleted, err := h.RefreshBackends()
+	logger.Error(err)
+	for _, backend := range deleted {
+		logger.Debugf("Backend '%s' deleted", backend)
+		annotations.RemoveBackendCfgSnippet(backend)
+	}
+	return
 }

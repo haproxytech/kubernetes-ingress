@@ -22,7 +22,7 @@ import (
 	"github.com/haproxytech/kubernetes-ingress/pkg/annotations"
 	"github.com/haproxytech/kubernetes-ingress/pkg/annotations/common"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/certs"
-	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/config"
+	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/env"
 	"github.com/haproxytech/kubernetes-ingress/pkg/ingress"
 	"github.com/haproxytech/kubernetes-ingress/pkg/service"
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
@@ -69,7 +69,7 @@ func (c *HAProxyController) globalCfg() (reload, restart bool) {
 			}
 		}
 	}
-	config.SetGlobal(newGlobal, &newLg, c.haproxy.Env)
+	env.SetGlobal(newGlobal, &newLg, c.haproxy.Env)
 	updated = deep.Equal(newGlobal, global)
 	if len(updated) != 0 {
 		logger.Error(c.haproxy.GlobalPushConfiguration(*newGlobal))
@@ -127,7 +127,7 @@ func (c *HAProxyController) defaultsCfg() (reload bool) {
 			logger.Error(a.Process(c.store, c.store.ConfigMaps.Main.Annotations))
 		}
 	}
-	config.SetDefaults(newDefaults)
+	env.SetDefaults(newDefaults)
 	updated := deep.Equal(newDefaults, defaults)
 	if len(updated) != 0 {
 		if err = c.haproxy.DefaultsPushConfiguration(*newDefaults); err != nil {

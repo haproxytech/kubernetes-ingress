@@ -153,10 +153,10 @@ func (handler HTTPS) Update(k store.K8s, h haproxy.HAProxy, a annotations.Annota
 	logger.Error(err)
 
 	// ssl-offload
+	sslOffloadEnabled := h.FrontendSSLOffloadEnabled(h.FrontHTTPS)
 	if h.FrontCertsInUse() {
-		if !h.HTTPS {
+		if !sslOffloadEnabled {
 			logger.Panic(h.FrontendEnableSSLOffload(h.FrontHTTPS, handler.CertDir, handler.alpn, handler.strictSNI))
-			h.HTTPS = true
 			reload = true
 			logger.Debug("SSLOffload enabled, reload required")
 		}
@@ -165,26 +165,23 @@ func (handler HTTPS) Update(k store.K8s, h haproxy.HAProxy, a annotations.Annota
 			return r, err
 		}
 		reload = reload || r
-	} else if h.HTTPS {
+	} else if sslOffloadEnabled {
 		logger.Panic(h.FrontendDisableSSLOffload(h.FrontHTTPS))
-		h.HTTPS = false
 		reload = true
 		logger.Debug("SSLOffload disabled, reload required")
 	}
 	// ssl-passthrough
 	_, errFtSSL := h.FrontendGet(h.FrontSSL)
 	_, errBdSSL := h.BackendGet(h.BackSSL)
-	if h.SSLPassthrough {
+	if haproxy.SSLPassthrough {
 		if errFtSSL != nil || errBdSSL != nil {
 			logger.Error(handler.enableSSLPassthrough(h))
-			h.SSLPassthrough = true
 			reload = true
 			logger.Debug("SSLPassthrough enabled, reload required")
 		}
 		logger.Error(handler.sslPassthroughRules(k, h, a))
 	} else if errFtSSL == nil {
 		logger.Error(handler.disableSSLPassthrough(h))
-		h.SSLPassthrough = false
 		reload = true
 		logger.Debug("SSLPassthrough disabled, reload required")
 	}
@@ -256,7 +253,7 @@ func (handler HTTPS) toggleSSLPassthrough(passthrough bool, h haproxy.HAProxy) (
 			return err
 		}
 	}
-	if h.HTTPS {
+	if h.FrontendSSLOffloadEnabled(h.FrontHTTPS) {
 		logger.Panic(h.FrontendEnableSSLOffload(h.FrontHTTPS, handler.CertDir, handler.alpn, handler.strictSNI))
 	}
 	return nil
