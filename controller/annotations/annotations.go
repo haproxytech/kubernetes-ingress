@@ -93,7 +93,7 @@ func Frontend(i *store.Ingress, r *rules.Rules, m maps.MapFiles) []Annotation {
 		// always put cors-enable annotation before any oth
 		resSetCORS.NewAnnotation("cors-enable"),
 		resSetCORS.NewAnnotation("cors-allow-origin"),
-		resSetCORS.NewAnnotation("cors-allow-method"),
+		resSetCORS.NewAnnotation("cors-allow-methods"),
 		resSetCORS.NewAnnotation("cors-allow-headers"),
 		resSetCORS.NewAnnotation("cors-max-age"),
 	}
