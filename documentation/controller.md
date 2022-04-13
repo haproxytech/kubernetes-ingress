@@ -36,6 +36,7 @@ Image can be run with arguments:
 | [`--config-dir`](#--config-dir) | `/tmp/haproxy-ingress/etc` |
 | [`--runtime-dir`](#--runtime-dir) | `/tmp/haproxy-ingress/run` |
 | [`--disable-service-external-name`](#--disable-service-external-name) | `false` |
+| [`--channel-size`](#--channel-size) | `600` |
 
 
 ### `--configmap`
@@ -648,6 +649,27 @@ Example:
 ```yaml
 args:
   - --disable-service-external-name
+```
+
+<p align='right'><a href='#haproxy-kubernetes-ingress-controller'>:arrow_up_small: back to top</a></p>
+
+***
+
+### `--channel-size`
+
+  Sets the size of controller buffers used to receive and send k8s events.
+This parameter is a cursor to adapt to the number of resources inside your clusters and that generate a lot of events.
+Rule of thumb: the more resources the higher the value.
+
+Possible values:
+
+- Size of channels used for k8s resources events with regards to ingresses, etc.
+
+Example:
+
+```yaml
+args:
+  - --channel-size=10000
 ```
 
 <p align='right'><a href='#haproxy-kubernetes-ingress-controller'>:arrow_up_small: back to top</a></p>

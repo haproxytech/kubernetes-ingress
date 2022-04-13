@@ -117,11 +117,16 @@ func (c *HAProxyController) Start() {
 	}
 
 	// Monitor k8s events
-	c.eventChan = make(chan SyncDataEvent, watch.DefaultChanSize*6)
+	var chanSize int64 = int64(watch.DefaultChanSize * 6)
+	if c.OSArgs.ChannelSize > 0 {
+		chanSize = c.OSArgs.ChannelSize
+	}
+	logger.Infof("Channel size: %d", chanSize)
+	c.eventChan = make(chan SyncDataEvent, chanSize)
 	go c.monitorChanges()
 	if c.PublishService != nil {
 		// Update Ingress status
-		c.ingressChan = make(chan ingress.Sync, watch.DefaultChanSize*6)
+		c.ingressChan = make(chan ingress.Sync, chanSize)
 		go ingress.UpdateStatus(c.k8s.API, c.Store, c.OSArgs.IngressClass, c.OSArgs.EmptyIngressClass, c.ingressChan)
 	}
 }

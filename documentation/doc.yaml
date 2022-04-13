@@ -382,6 +382,18 @@ image_arguments:
     helm: |-
       helm install haproxy haproxytech/kubernetes-ingress \
         --set-string "controller.extraArgs={--disable-service-external-name}"
+  - argument: --channel-size
+    description: |-
+      Sets the size of controller buffers used to receive and send k8s events.
+      This parameter is a cursor to adapt to the number of resources inside your clusters and that generate a lot of events.
+      Rule of thumb: the more resources the higher the value.
+    values:
+      - Size of channels used for k8s resources events with regards to ingresses, etc.
+    default: 600
+    version_min: "1.7"
+    example: |-
+      args:
+        - --channel-size=10000
 groups:
   config-snippet:
     header: |-

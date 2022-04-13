@@ -100,4 +100,5 @@ type OSArgs struct { //nolint:maligned
 	DisableServiceExternalName bool           `long:"disable-service-external-name" description:"disable forwarding to ExternalName Services due to CVE-2021-25740"`
 	UseWiths6Overlay           bool           `long:"with-s6-overlay" description:"use s6 overlay to start/stpop/reload HAProxy"`
 	PromotheusPort             int64          `long:"enable-prometheus-port" description:"port to listen on for Prometheus metrics"`
+	ChannelSize                int64          `long:"channel-size" description:"sets the size of controller buffers used to receive and send k8s events.NOTE: increase the value to accommodate large number of resources "`
 }
