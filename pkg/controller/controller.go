@@ -19,12 +19,14 @@ import (
 	"path/filepath"
 	"strings"
 
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
+
 	"github.com/google/renameio"
 
 	"github.com/haproxytech/client-native/v2/models"
 	config "github.com/haproxytech/kubernetes-ingress/pkg/configuration"
 	"github.com/haproxytech/kubernetes-ingress/pkg/controller/route"
-	cr "github.com/haproxytech/kubernetes-ingress/pkg/customresource"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/api"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/process"
 	"github.com/haproxytech/kubernetes-ingress/pkg/ingress"
@@ -39,7 +41,6 @@ var logger = utils.GetLogger()
 // HAProxyController is ingress controller
 type HAProxyController struct {
 	cfg            config.ControllerCfg
-	crManager      cr.CRManager
 	client         api.HAProxyClient
 	osArgs         utils.OSArgs
 	store          store.K8s
@@ -47,7 +48,7 @@ type HAProxyController struct {
 	auxCfgModTime  int64
 	eventChan      chan k8s.SyncDataEvent
 	ingressChan    chan ingress.Sync
-	k8s            *k8s.K8s
+	k8s            k8s.K8s
 	ready          bool
 	reload         bool
 	restart        bool
@@ -110,18 +111,20 @@ func (c *HAProxyController) Start(haproxyConf []byte) {
 	}
 
 	// Get K8s client
-	c.k8s, err = k8s.GetKubernetesClient(c.osArgs.DisableServiceExternalName)
+	var restConfig *rest.Config
 	if c.osArgs.External {
 		kubeconfig := filepath.Join(utils.HomeDir(), ".kube", "config")
 		if c.osArgs.KubeConfig != "" {
 			kubeconfig = c.osArgs.KubeConfig
 		}
-		c.k8s, err = k8s.GetRemoteKubernetesClient(kubeconfig, c.osArgs.DisableServiceExternalName)
+		restConfig, err = clientcmd.BuildConfigFromFlags("", kubeconfig)
+	} else {
+		restConfig, err = rest.InClusterConfig()
 	}
-	if err != nil {
-		logger.Panic(err)
-	}
-	x := c.k8s.API.Discovery()
+	logger.Panicf("Unable to get kubernetes client config: %s", err)
+
+	c.k8s = k8s.New(restConfig, c.osArgs, c.eventChan)
+	x := c.k8s.GetClient().Discovery()
 	if k8sVersion, err := x.ServerVersion(); err != nil {
 		logger.Panicf("Unable to get Kubernetes version: %v\n", err)
 	} else {
@@ -139,7 +142,7 @@ func (c *HAProxyController) Start(haproxyConf []byte) {
 	if c.publishService != nil {
 		// Update Ingress status
 		c.ingressChan = make(chan ingress.Sync, chanSize)
-		go ingress.UpdateStatus(c.k8s.API, c.store, c.osArgs.IngressClass, c.osArgs.EmptyIngressClass, c.ingressChan)
+		go ingress.UpdateStatus(c.k8s.GetClient(), c.store, c.osArgs.IngressClass, c.osArgs.EmptyIngressClass, c.ingressChan)
 	}
 }
 

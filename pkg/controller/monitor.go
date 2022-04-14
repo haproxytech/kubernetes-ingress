@@ -19,7 +19,7 @@ import (
 	"strconv"
 	"time"
 
-	cr "github.com/haproxytech/kubernetes-ingress/pkg/customresource"
+	corev1alpha1 "github.com/haproxytech/kubernetes-ingress/crs/api/core/v1alpha1"
 	"github.com/haproxytech/kubernetes-ingress/pkg/k8s"
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
 	"k8s.io/client-go/informers"
@@ -32,12 +32,11 @@ func (c *HAProxyController) monitorChanges() {
 	informersSynced := []cache.InformerSynced{}
 	stop := make(chan struct{})
 	epMirror := c.endpointsMirroring()
-	c.crManager = cr.NewCRManager(&c.store, c.k8s.RestConfig, c.osArgs.CacheResyncPeriod, c.eventChan, stop)
 
 	c.k8s.EventPods(c.podNamespace, c.podPrefix, c.osArgs.CacheResyncPeriod, c.eventChan)
 
 	for _, namespace := range c.getWhitelistedNamespaces() {
-		factory := informers.NewSharedInformerFactoryWithOptions(c.k8s.API, c.osArgs.CacheResyncPeriod, informers.WithNamespace(namespace))
+		factory := informers.NewSharedInformerFactoryWithOptions(c.k8s.GetClient(), c.osArgs.CacheResyncPeriod, informers.WithNamespace(namespace))
 
 		// Core.V1 Resources
 		svci := factory.Core().V1().Services().Informer()
@@ -79,7 +78,7 @@ func (c *HAProxyController) monitorChanges() {
 		}
 
 		// Custom Resources
-		informersSynced = append(informersSynced, c.crManager.RunInformers(namespace)...)
+		informersSynced = append(informersSynced, c.k8s.RunCRInformers(namespace, stop)...)
 	}
 
 	if !cache.WaitForCacheSync(stop, informersSynced...) {
@@ -109,8 +108,24 @@ func (c *HAProxyController) SyncData() {
 				hadChanges = false
 				continue
 			}
-		case k8s.CUSTOM_RESOURCE:
-			change = c.crManager.EventCustomResource(job)
+		case k8s.CR_GLOBAL:
+			var data *corev1alpha1.Global
+			if job.Data != nil {
+				data = job.Data.(*corev1alpha1.Global)
+			}
+			change = c.store.EventGlobalCR(job.Namespace, job.Name, data)
+		case k8s.CR_DEFAULTS:
+			var data *corev1alpha1.Defaults
+			if job.Data != nil {
+				data = job.Data.(*corev1alpha1.Defaults)
+			}
+			change = c.store.EventDefaultsCR(job.Namespace, job.Name, data)
+		case k8s.CR_BACKEND:
+			var data *corev1alpha1.Backend
+			if job.Data != nil {
+				data = job.Data.(*corev1alpha1.Backend)
+			}
+			change = c.store.EventBackendCR(job.Namespace, job.Name, data)
 		case k8s.NAMESPACE:
 			change = c.store.EventNamespace(ns, job.Data.(*store.Namespace))
 		case k8s.INGRESS:
@@ -134,7 +149,7 @@ func (c *HAProxyController) SyncData() {
 
 func (c *HAProxyController) getIngressSharedInformers(factory informers.SharedInformerFactory) (ii, ici cache.SharedIndexInformer) {
 	for i, apiGroup := range []string{"networking.k8s.io/v1", "networking.k8s.io/v1beta1", "extensions/v1beta1"} {
-		resources, err := c.k8s.API.ServerResourcesForGroupVersion(apiGroup)
+		resources, err := c.k8s.GetClient().ServerResourcesForGroupVersion(apiGroup)
 		if err != nil {
 			continue
 		}
@@ -168,7 +183,7 @@ func (c *HAProxyController) getIngressSharedInformers(factory informers.SharedIn
 
 func (c *HAProxyController) getEndpointSlicesSharedInformer(factory informers.SharedInformerFactory) cache.SharedIndexInformer {
 	for i, apiGroup := range []string{"discovery.k8s.io/v1", "discovery.k8s.io/v1beta1"} {
-		resources, err := c.k8s.API.ServerResourcesForGroupVersion(apiGroup)
+		resources, err := c.k8s.GetClient().ServerResourcesForGroupVersion(apiGroup)
 		if err != nil {
 			continue
 		}
@@ -213,7 +228,7 @@ func (c *HAProxyController) getWhitelistedNamespaces() []string {
 func (c *HAProxyController) endpointsMirroring() bool {
 	var major, minor int
 	var err error
-	version, _ := c.k8s.API.ServerVersion()
+	version, _ := c.k8s.GetClient().ServerVersion()
 	if version == nil {
 		return false
 	}

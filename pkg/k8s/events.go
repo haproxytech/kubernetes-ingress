@@ -1,34 +1,17 @@
-// Copyright 2019 HAProxy Technologies LLC
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//    http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-
 package k8s
 
 import (
 	"errors"
 	"time"
 
-	corev1 "k8s.io/api/core/v1"
+	"k8s.io/client-go/tools/cache"
 
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/util/wait"
 
+	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	discoveryv1beta1 "k8s.io/api/discovery/v1beta1"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/cache"
-	"k8s.io/client-go/tools/clientcmd"
 
 	"github.com/haproxytech/client-native/v2/models"
 
@@ -37,84 +20,13 @@ import (
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
 )
 
-var logger = utils.GetLogger()
-
-// TRACE_API outputs all k8s events received from k8s API
-//nolint golint
-const (
-	TRACE_API = false
-)
-
-var ErrIgnored = errors.New("ignored resource")
-
-// K8s is structure with all data required to synchronize with k8s
-type K8s struct {
-	API                        *kubernetes.Clientset
-	Logger                     utils.Logger
-	DisableServiceExternalName bool // CVE-2021-25740
-	RestConfig                 *rest.Config
-}
-
-// GetKubernetesClient returns new client that communicates with k8s
-func GetKubernetesClient(disableServiceExternalName bool) (*K8s, error) {
-	k8sLogger := utils.GetK8sAPILogger()
-	if !TRACE_API {
-		k8sLogger.SetLevel(utils.Info)
-	}
-	config, err := rest.InClusterConfig()
-	if err != nil {
-		return nil, err
-	}
-	clientset, err := kubernetes.NewForConfig(config)
-	logger.Trace(config)
-	if err != nil {
-		logger.Panic(err)
-	}
-	return &K8s{
-		API:                        clientset,
-		Logger:                     k8sLogger,
-		DisableServiceExternalName: disableServiceExternalName,
-		RestConfig:                 config,
-	}, nil
-}
-
-func getKubeConfig(kubeconfig string) *rest.Config {
-	k8sLogger := utils.GetK8sAPILogger()
-	if !TRACE_API {
-		k8sLogger.SetLevel(utils.Info)
-	}
-
-	// use the current context in kubeconfig
-	config, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
-	if err != nil {
-		logger.Panic(err)
-	}
-	return config
-}
-
-// GetRemoteKubernetesClient returns new client that communicates with k8s
-func GetRemoteKubernetesClient(kubeconfig string, disableServiceExternalName bool) (*K8s, error) {
-	// create the clientset
-	restConfig := getKubeConfig(kubeconfig)
-	clientset, err := kubernetes.NewForConfig(restConfig)
-	if err != nil {
-		logger.Panic(err)
-	}
-	return &K8s{
-		API:                        clientset,
-		Logger:                     logger,
-		DisableServiceExternalName: disableServiceExternalName,
-		RestConfig:                 restConfig,
-	}, nil
-}
-
 func (k *K8s) EventsNamespaces(channel chan SyncDataEvent, stop chan struct{}, informer cache.SharedIndexInformer) {
 	informer.AddEventHandler(
 		cache.ResourceEventHandlerFuncs{
 			AddFunc: func(obj interface{}) {
 				data, ok := obj.(*corev1.Namespace)
 				if !ok {
-					k.Logger.Errorf("%s: Invalid data from k8s api, %s", NAMESPACE, obj)
+					logger.Errorf("%s: Invalid data from k8s api, %s", NAMESPACE, obj)
 					return
 				}
 				status := store.ADDED
@@ -137,13 +49,13 @@ func (k *K8s) EventsNamespaces(channel chan SyncDataEvent, stop chan struct{}, i
 					},
 					Status: status,
 				}
-				k.Logger.Tracef("%s %s: %s", NAMESPACE, item.Status, item.Name)
+				logger.Tracef("%s %s: %s", NAMESPACE, item.Status, item.Name)
 				channel <- SyncDataEvent{SyncType: NAMESPACE, Namespace: item.Name, Data: item}
 			},
 			DeleteFunc: func(obj interface{}) {
 				data, ok := obj.(*corev1.Namespace)
 				if !ok {
-					k.Logger.Errorf("%s: Invalid data from k8s api, %s", NAMESPACE, obj)
+					logger.Errorf("%s: Invalid data from k8s api, %s", NAMESPACE, obj)
 					return
 				}
 				status := store.DELETED
@@ -162,18 +74,18 @@ func (k *K8s) EventsNamespaces(channel chan SyncDataEvent, stop chan struct{}, i
 					},
 					Status: status,
 				}
-				k.Logger.Tracef("%s %s: %s", NAMESPACE, item.Status, item.Name)
+				logger.Tracef("%s %s: %s", NAMESPACE, item.Status, item.Name)
 				channel <- SyncDataEvent{SyncType: NAMESPACE, Namespace: item.Name, Data: item}
 			},
 			UpdateFunc: func(oldObj, newObj interface{}) {
 				data1, ok := oldObj.(*corev1.Namespace)
 				if !ok {
-					k.Logger.Errorf("%s: Invalid data from k8s api, %s", NAMESPACE, oldObj)
+					logger.Errorf("%s: Invalid data from k8s api, %s", NAMESPACE, oldObj)
 					return
 				}
 				data2, ok := newObj.(*corev1.Namespace)
 				if !ok {
-					k.Logger.Errorf("%s: Invalid data from k8s api, %s", NAMESPACE, newObj)
+					logger.Errorf("%s: Invalid data from k8s api, %s", NAMESPACE, newObj)
 					return
 				}
 				status := store.MODIFIED
@@ -188,7 +100,7 @@ func (k *K8s) EventsNamespaces(channel chan SyncDataEvent, stop chan struct{}, i
 				if item1.Name == item2.Name {
 					return
 				}
-				k.Logger.Tracef("%s %s: %s", SERVICE, item2.Status, item2.Name)
+				logger.Tracef("%s %s: %s", SERVICE, item2.Status, item2.Name)
 				channel <- SyncDataEvent{SyncType: NAMESPACE, Namespace: item2.Name, Data: item2}
 			},
 		},
@@ -203,7 +115,7 @@ func (k *K8s) EventsEndpointSlices(channel chan SyncDataEvent, stop chan struct{
 			if errors.Is(err, ErrIgnored) {
 				return
 			}
-			k.Logger.Tracef("%s %s: %s", ENDPOINTS, item.Status, item.Service)
+			logger.Tracef("%s %s: %s", ENDPOINTS, item.Status, item.Service)
 			channel <- SyncDataEvent{SyncType: ENDPOINTS, Namespace: item.Namespace, Data: item}
 		},
 		DeleteFunc: func(obj interface{}) {
@@ -211,7 +123,7 @@ func (k *K8s) EventsEndpointSlices(channel chan SyncDataEvent, stop chan struct{
 			if errors.Is(err, ErrIgnored) {
 				return
 			}
-			k.Logger.Tracef("%s %s: %s", ENDPOINTS, item.Status, item.Service)
+			logger.Tracef("%s %s: %s", ENDPOINTS, item.Status, item.Service)
 			channel <- SyncDataEvent{SyncType: ENDPOINTS, Namespace: item.Namespace, Data: item}
 		},
 		UpdateFunc: func(oldObj, newObj interface{}) {
@@ -224,7 +136,7 @@ func (k *K8s) EventsEndpointSlices(channel chan SyncDataEvent, stop chan struct{
 				return
 			}
 			// fix modified state for ones that are deleted,new,same
-			k.Logger.Tracef("%s %s: %s", ENDPOINTS, item2.Status, item2.Service)
+			logger.Tracef("%s %s: %s", ENDPOINTS, item2.Status, item2.Service)
 			channel <- SyncDataEvent{SyncType: ENDPOINTS, Namespace: item2.Namespace, Data: item2}
 		},
 	})
@@ -324,7 +236,7 @@ func (k *K8s) convertToEndpoints(obj interface{}, status store.Status) (*store.E
 		}
 		return item, nil
 	default:
-		k.Logger.Errorf("%s: Invalid data from k8s api, %s", ENDPOINTS, obj)
+		logger.Errorf("%s: Invalid data from k8s api, %s", ENDPOINTS, obj)
 		return nil, ErrIgnored
 	}
 }
@@ -336,7 +248,7 @@ func (k *K8s) EventsEndpoints(channel chan SyncDataEvent, stop chan struct{}, in
 			if errors.Is(err, ErrIgnored) {
 				return
 			}
-			k.Logger.Tracef("%s %s: %s", ENDPOINTS, item.Status, item.Service)
+			logger.Tracef("%s %s: %s", ENDPOINTS, item.Status, item.Service)
 			channel <- SyncDataEvent{SyncType: ENDPOINTS, Namespace: item.Namespace, Data: item}
 		},
 		DeleteFunc: func(obj interface{}) {
@@ -344,7 +256,7 @@ func (k *K8s) EventsEndpoints(channel chan SyncDataEvent, stop chan struct{}, in
 			if errors.Is(err, ErrIgnored) {
 				return
 			}
-			k.Logger.Tracef("%s %s: %s", ENDPOINTS, item.Status, item.Service)
+			logger.Tracef("%s %s: %s", ENDPOINTS, item.Status, item.Service)
 			channel <- SyncDataEvent{SyncType: ENDPOINTS, Namespace: item.Namespace, Data: item}
 		},
 		UpdateFunc: func(oldObj, newObj interface{}) {
@@ -357,7 +269,7 @@ func (k *K8s) EventsEndpoints(channel chan SyncDataEvent, stop chan struct{}, in
 				return
 			}
 			// fix modified state for ones that are deleted,new,same
-			k.Logger.Tracef("%s %s: %s", ENDPOINTS, item2.Status, item2.Service)
+			logger.Tracef("%s %s: %s", ENDPOINTS, item2.Status, item2.Service)
 			channel <- SyncDataEvent{SyncType: ENDPOINTS, Namespace: item2.Namespace, Data: item2}
 		},
 	})
@@ -370,31 +282,31 @@ func (k *K8s) EventsIngressClass(channel chan SyncDataEvent, stop chan struct{},
 			AddFunc: func(obj interface{}) {
 				item, err := store.ConvertToIngressClass(obj)
 				if err != nil {
-					k.Logger.Errorf("%s: Invalid data from k8s api, %s", INGRESS_CLASS, obj)
+					logger.Errorf("%s: Invalid data from k8s api, %s", INGRESS_CLASS, obj)
 					return
 				}
-				k.Logger.Tracef("%s %s: %s", INGRESS_CLASS, item.Status, item.Name)
+				logger.Tracef("%s %s: %s", INGRESS_CLASS, item.Status, item.Name)
 				channel <- SyncDataEvent{SyncType: INGRESS_CLASS, Data: item}
 			},
 			DeleteFunc: func(obj interface{}) {
 				item, err := store.ConvertToIngressClass(obj)
 				if err != nil {
-					k.Logger.Errorf("%s: Invalid data from k8s api, %s", INGRESS_CLASS, obj)
+					logger.Errorf("%s: Invalid data from k8s api, %s", INGRESS_CLASS, obj)
 					return
 				}
 				item.Status = store.DELETED
-				k.Logger.Tracef("%s %s: %s", INGRESS_CLASS, item.Status, item.Name)
+				logger.Tracef("%s %s: %s", INGRESS_CLASS, item.Status, item.Name)
 				channel <- SyncDataEvent{SyncType: INGRESS_CLASS, Data: item}
 			},
 			UpdateFunc: func(oldObj, newObj interface{}) {
 				item, err := store.ConvertToIngressClass(newObj)
 				if err != nil {
-					k.Logger.Errorf("%s: Invalid data from k8s api, %s", INGRESS, oldObj)
+					logger.Errorf("%s: Invalid data from k8s api, %s", INGRESS, oldObj)
 					return
 				}
 				item.Status = store.MODIFIED
 
-				k.Logger.Tracef("%s %s: %s", INGRESS_CLASS, item.Status, item.Name)
+				logger.Tracef("%s %s: %s", INGRESS_CLASS, item.Status, item.Name)
 				channel <- SyncDataEvent{SyncType: INGRESS_CLASS, Data: item}
 			},
 		},
@@ -408,31 +320,31 @@ func (k *K8s) EventsIngresses(channel chan SyncDataEvent, stop chan struct{}, in
 			AddFunc: func(obj interface{}) {
 				item, err := store.ConvertToIngress(obj)
 				if err != nil {
-					k.Logger.Errorf("%s: Invalid data from k8s api, %s", INGRESS, obj)
+					logger.Errorf("%s: Invalid data from k8s api, %s", INGRESS, obj)
 					return
 				}
 				item.Status = store.ADDED
-				k.Logger.Tracef("%s %s: %s", INGRESS, item.Status, item.Name)
+				logger.Tracef("%s %s: %s", INGRESS, item.Status, item.Name)
 				channel <- SyncDataEvent{SyncType: INGRESS, Namespace: item.Namespace, Data: item}
 			},
 			DeleteFunc: func(obj interface{}) {
 				item, err := store.ConvertToIngress(obj)
 				if err != nil {
-					k.Logger.Errorf("%s: Invalid data from k8s api, %s", INGRESS, obj)
+					logger.Errorf("%s: Invalid data from k8s api, %s", INGRESS, obj)
 					return
 				}
 				item.Status = store.DELETED
-				k.Logger.Tracef("%s %s: %s", INGRESS, item.Status, item.Name)
+				logger.Tracef("%s %s: %s", INGRESS, item.Status, item.Name)
 				channel <- SyncDataEvent{SyncType: INGRESS, Namespace: item.Namespace, Data: item}
 			},
 			UpdateFunc: func(oldObj, newObj interface{}) {
 				item, err := store.ConvertToIngress(newObj)
 				if err != nil {
-					k.Logger.Errorf("%s: Invalid data from k8s api, %s", INGRESS, oldObj)
+					logger.Errorf("%s: Invalid data from k8s api, %s", INGRESS, oldObj)
 					return
 				}
 				item.Status = store.MODIFIED
-				k.Logger.Tracef("%s %s: %s", INGRESS, item.Status, item.Name)
+				logger.Tracef("%s %s: %s", INGRESS, item.Status, item.Name)
 				channel <- SyncDataEvent{SyncType: INGRESS, Namespace: item.Namespace, Data: item}
 			},
 		},
@@ -445,11 +357,11 @@ func (k *K8s) EventsServices(channel chan SyncDataEvent, ingressChan chan ingres
 		AddFunc: func(obj interface{}) {
 			data, ok := obj.(*corev1.Service)
 			if !ok {
-				k.Logger.Errorf("%s: Invalid data from k8s api, %s", SERVICE, obj)
+				logger.Errorf("%s: Invalid data from k8s api, %s", SERVICE, obj)
 				return
 			}
-			if data.Spec.Type == corev1.ServiceTypeExternalName && k.DisableServiceExternalName {
-				k.Logger.Tracef("forwarding to ExternalName Services for %v is disabled", data)
+			if data.Spec.Type == corev1.ServiceTypeExternalName && k.disableSvcExternalName {
+				logger.Tracef("forwarding to ExternalName Services for %v is disabled", data)
 				return
 			}
 			status := store.ADDED
@@ -474,7 +386,7 @@ func (k *K8s) EventsServices(channel chan SyncDataEvent, ingressChan chan ingres
 					Port:     int64(sp.Port),
 				})
 			}
-			k.Logger.Tracef("%s %s: %s", SERVICE, item.Status, item.Name)
+			logger.Tracef("%s %s: %s", SERVICE, item.Status, item.Name)
 			channel <- SyncDataEvent{SyncType: SERVICE, Namespace: item.Namespace, Data: item}
 			if publishSvc != nil && publishSvc.Namespace == data.Namespace && publishSvc.Name == data.Name {
 				ingressChan <- ingress.Sync{Service: data}
@@ -483,10 +395,10 @@ func (k *K8s) EventsServices(channel chan SyncDataEvent, ingressChan chan ingres
 		DeleteFunc: func(obj interface{}) {
 			data, ok := obj.(*corev1.Service)
 			if !ok {
-				k.Logger.Errorf("%s: Invalid data from k8s api, %s", SERVICE, obj)
+				logger.Errorf("%s: Invalid data from k8s api, %s", SERVICE, obj)
 				return
 			}
-			if data.Spec.Type == corev1.ServiceTypeExternalName && k.DisableServiceExternalName {
+			if data.Spec.Type == corev1.ServiceTypeExternalName && k.disableSvcExternalName {
 				return
 			}
 			status := store.DELETED
@@ -499,7 +411,7 @@ func (k *K8s) EventsServices(channel chan SyncDataEvent, ingressChan chan ingres
 			if data.Spec.Type == corev1.ServiceTypeExternalName {
 				item.DNS = data.Spec.ExternalName
 			}
-			k.Logger.Tracef("%s %s: %s", SERVICE, item.Status, item.Name)
+			logger.Tracef("%s %s: %s", SERVICE, item.Status, item.Name)
 			channel <- SyncDataEvent{SyncType: SERVICE, Namespace: item.Namespace, Data: item}
 			if publishSvc != nil && publishSvc.Namespace == data.Namespace && publishSvc.Name == data.Name {
 				ingressChan <- ingress.Sync{Service: data}
@@ -508,20 +420,20 @@ func (k *K8s) EventsServices(channel chan SyncDataEvent, ingressChan chan ingres
 		UpdateFunc: func(oldObj, newObj interface{}) {
 			data1, ok := oldObj.(*corev1.Service)
 			if !ok {
-				k.Logger.Errorf("%s: Invalid data from k8s api, %s", SERVICE, oldObj)
+				logger.Errorf("%s: Invalid data from k8s api, %s", SERVICE, oldObj)
 				return
 			}
-			if data1.Spec.Type == corev1.ServiceTypeExternalName && k.DisableServiceExternalName {
-				k.Logger.Tracef("forwarding to ExternalName Services for %v is disabled", data1)
+			if data1.Spec.Type == corev1.ServiceTypeExternalName && k.disableSvcExternalName {
+				logger.Tracef("forwarding to ExternalName Services for %v is disabled", data1)
 				return
 			}
 			data2, ok := newObj.(*corev1.Service)
 			if !ok {
-				k.Logger.Errorf("%s: Invalid data from k8s api, %s", SERVICE, newObj)
+				logger.Errorf("%s: Invalid data from k8s api, %s", SERVICE, newObj)
 				return
 			}
-			if data2.Spec.Type == corev1.ServiceTypeExternalName && k.DisableServiceExternalName {
-				k.Logger.Tracef("forwarding to ExternalName Services for %v is disabled", data2)
+			if data2.Spec.Type == corev1.ServiceTypeExternalName && k.disableSvcExternalName {
+				logger.Tracef("forwarding to ExternalName Services for %v is disabled", data2)
 				return
 			}
 			if publishSvc != nil && publishSvc.Namespace == data2.Namespace && publishSvc.Name == data2.Name {
@@ -566,7 +478,7 @@ func (k *K8s) EventsServices(channel chan SyncDataEvent, ingressChan chan ingres
 			if item2.Equal(item1) {
 				return
 			}
-			k.Logger.Tracef("%s %s: %s", SERVICE, item2.Status, item2.Name)
+			logger.Tracef("%s %s: %s", SERVICE, item2.Status, item2.Name)
 			channel <- SyncDataEvent{SyncType: SERVICE, Namespace: item2.Namespace, Data: item2}
 		},
 	})
@@ -579,7 +491,7 @@ func (k *K8s) EventsConfigfMaps(channel chan SyncDataEvent, stop chan struct{}, 
 			AddFunc: func(obj interface{}) {
 				data, ok := obj.(*corev1.ConfigMap)
 				if !ok {
-					k.Logger.Errorf("%s: Invalid data from k8s api, %s", CONFIGMAP, obj)
+					logger.Errorf("%s: Invalid data from k8s api, %s", CONFIGMAP, obj)
 					return
 				}
 				status := store.ADDED
@@ -593,13 +505,13 @@ func (k *K8s) EventsConfigfMaps(channel chan SyncDataEvent, stop chan struct{}, 
 					Annotations: store.CopyAnnotations(data.Data),
 					Status:      status,
 				}
-				k.Logger.Tracef("%s %s: %s", CONFIGMAP, item.Status, item.Name)
+				logger.Tracef("%s %s: %s", CONFIGMAP, item.Status, item.Name)
 				channel <- SyncDataEvent{SyncType: CONFIGMAP, Namespace: item.Namespace, Data: item}
 			},
 			DeleteFunc: func(obj interface{}) {
 				data, ok := obj.(*corev1.ConfigMap)
 				if !ok {
-					k.Logger.Errorf("%s: Invalid data from k8s api, %s", CONFIGMAP, obj)
+					logger.Errorf("%s: Invalid data from k8s api, %s", CONFIGMAP, obj)
 					return
 				}
 				status := store.DELETED
@@ -609,18 +521,18 @@ func (k *K8s) EventsConfigfMaps(channel chan SyncDataEvent, stop chan struct{}, 
 					Annotations: store.CopyAnnotations(data.Data),
 					Status:      status,
 				}
-				k.Logger.Tracef("%s %s: %s", CONFIGMAP, item.Status, item.Name)
+				logger.Tracef("%s %s: %s", CONFIGMAP, item.Status, item.Name)
 				channel <- SyncDataEvent{SyncType: CONFIGMAP, Namespace: item.Namespace, Data: item}
 			},
 			UpdateFunc: func(oldObj, newObj interface{}) {
 				data1, ok := oldObj.(*corev1.ConfigMap)
 				if !ok {
-					k.Logger.Errorf("%s: Invalid data from k8s api, %s", CONFIGMAP, oldObj)
+					logger.Errorf("%s: Invalid data from k8s api, %s", CONFIGMAP, oldObj)
 					return
 				}
 				data2, ok := newObj.(*corev1.ConfigMap)
 				if !ok {
-					k.Logger.Errorf("%s: Invalid data from k8s api, %s", CONFIGMAP, newObj)
+					logger.Errorf("%s: Invalid data from k8s api, %s", CONFIGMAP, newObj)
 					return
 				}
 				status := store.MODIFIED
@@ -639,7 +551,7 @@ func (k *K8s) EventsConfigfMaps(channel chan SyncDataEvent, stop chan struct{}, 
 				if item2.Equal(item1) {
 					return
 				}
-				k.Logger.Tracef("%s %s: %s", CONFIGMAP, item2.Status, item2.Name)
+				logger.Tracef("%s %s: %s", CONFIGMAP, item2.Status, item2.Name)
 				channel <- SyncDataEvent{SyncType: CONFIGMAP, Namespace: item2.Namespace, Data: item2}
 			},
 		},
@@ -653,7 +565,7 @@ func (k *K8s) EventsSecrets(channel chan SyncDataEvent, stop chan struct{}, info
 			AddFunc: func(obj interface{}) {
 				data, ok := obj.(*corev1.Secret)
 				if !ok {
-					k.Logger.Errorf("%s: Invalid data from k8s api, %s", SECRET, obj)
+					logger.Errorf("%s: Invalid data from k8s api, %s", SECRET, obj)
 					return
 				}
 				status := store.ADDED
@@ -667,13 +579,13 @@ func (k *K8s) EventsSecrets(channel chan SyncDataEvent, stop chan struct{}, info
 					Data:      data.Data,
 					Status:    status,
 				}
-				k.Logger.Tracef("%s %s: %s", SECRET, item.Status, item.Name)
+				logger.Tracef("%s %s: %s", SECRET, item.Status, item.Name)
 				channel <- SyncDataEvent{SyncType: SECRET, Namespace: item.Namespace, Data: item}
 			},
 			DeleteFunc: func(obj interface{}) {
 				data, ok := obj.(*corev1.Secret)
 				if !ok {
-					k.Logger.Errorf("%s: Invalid data from k8s api, %s", SECRET, obj)
+					logger.Errorf("%s: Invalid data from k8s api, %s", SECRET, obj)
 					return
 				}
 				status := store.DELETED
@@ -683,18 +595,18 @@ func (k *K8s) EventsSecrets(channel chan SyncDataEvent, stop chan struct{}, info
 					Data:      data.Data,
 					Status:    status,
 				}
-				k.Logger.Tracef("%s %s: %s", SECRET, item.Status, item.Name)
+				logger.Tracef("%s %s: %s", SECRET, item.Status, item.Name)
 				channel <- SyncDataEvent{SyncType: SECRET, Namespace: item.Namespace, Data: item}
 			},
 			UpdateFunc: func(oldObj, newObj interface{}) {
 				data1, ok := oldObj.(*corev1.Secret)
 				if !ok {
-					k.Logger.Errorf("%s: Invalid data from k8s api, %s", SECRET, oldObj)
+					logger.Errorf("%s: Invalid data from k8s api, %s", SECRET, oldObj)
 					return
 				}
 				data2, ok := newObj.(*corev1.Secret)
 				if !ok {
-					k.Logger.Errorf("%s: Invalid data from k8s api, %s", SECRET, newObj)
+					logger.Errorf("%s: Invalid data from k8s api, %s", SECRET, newObj)
 					return
 				}
 				status := store.MODIFIED
@@ -713,7 +625,7 @@ func (k *K8s) EventsSecrets(channel chan SyncDataEvent, stop chan struct{}, info
 				if item2.Equal(item1) {
 					return
 				}
-				k.Logger.Tracef("%s %s: %s", SECRET, item2.Status, item2.Name)
+				logger.Tracef("%s %s: %s", SECRET, item2.Status, item2.Name)
 				channel <- SyncDataEvent{SyncType: SECRET, Namespace: item2.Namespace, Data: item2}
 			},
 		},
@@ -726,7 +638,7 @@ func (k *K8s) EventPods(namespace, podPrefix string, resyncPeriod time.Duration,
 	if podPrefix == "" {
 		return
 	}
-	watchlist := cache.NewListWatchFromClient(k.API.CoreV1().RESTClient(), "pods", namespace, fields.Nothing())
+	watchlist := cache.NewListWatchFromClient(k.builtInClient.CoreV1().RESTClient(), "pods", namespace, fields.Nothing())
 	_, eController := cache.NewInformer(
 		watchlist,
 		&corev1.Pod{},
@@ -751,20 +663,4 @@ func (k *K8s) EventPods(namespace, podPrefix string, resyncPeriod time.Duration,
 		},
 	)
 	go eController.Run(wait.NeverStop)
-}
-
-func (k *K8s) IsNetworkingV1Beta1ApiSupported() bool {
-	vi, _ := k.API.Discovery().ServerVersion()
-	major, _ := utils.ParseInt(vi.Major)
-	minor, _ := utils.ParseInt(vi.Minor)
-
-	return major == 1 && minor >= 14 && minor < 22
-}
-
-func (k *K8s) IsNetworkingV1ApiSupported() bool {
-	vi, _ := k.API.Discovery().ServerVersion()
-	major, _ := utils.ParseInt(vi.Major)
-	minor, _ := utils.ParseInt(vi.Minor)
-
-	return major == 1 && minor >= 19
 }

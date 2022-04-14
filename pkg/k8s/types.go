@@ -7,7 +7,6 @@ type SyncType string
 type SyncDataEvent struct {
 	_ [0]int
 	SyncType
-	CRKind    string
 	Namespace string
 	Name      string
 	Data      interface{}
@@ -16,14 +15,16 @@ type SyncDataEvent struct {
 //nolint:golint,stylecheck
 const (
 	// SyncType values
-	COMMAND         SyncType = "COMMAND"
-	CONFIGMAP       SyncType = "CONFIGMAP"
-	ENDPOINTS       SyncType = "ENDPOINTS"
-	INGRESS         SyncType = "INGRESS"
-	INGRESS_CLASS   SyncType = "INGRESS_CLASS"
-	NAMESPACE       SyncType = "NAMESPACE"
-	POD             SyncType = "POD"
-	SERVICE         SyncType = "SERVICE"
-	SECRET          SyncType = "SECRET"
-	CUSTOM_RESOURCE SyncType = "CUSTOM_RESOURCE"
+	COMMAND       SyncType = "COMMAND"
+	CONFIGMAP     SyncType = "CONFIGMAP"
+	ENDPOINTS     SyncType = "ENDPOINTS"
+	INGRESS       SyncType = "INGRESS"
+	INGRESS_CLASS SyncType = "INGRESS_CLASS"
+	NAMESPACE     SyncType = "NAMESPACE"
+	POD           SyncType = "POD"
+	SERVICE       SyncType = "SERVICE"
+	SECRET        SyncType = "SECRET"
+	CR_GLOBAL     SyncType = "Global"
+	CR_DEFAULTS   SyncType = "Defaults"
+	CR_BACKEND    SyncType = "Backend"
 )

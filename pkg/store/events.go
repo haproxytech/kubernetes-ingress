@@ -14,6 +14,10 @@
 
 package store
 
+import (
+	corev1alpha1 "github.com/haproxytech/kubernetes-ingress/crs/api/core/v1alpha1"
+)
+
 func (k *K8s) EventNamespace(ns *Namespace, data *Namespace) (updateRequired bool) {
 	updateRequired = false
 	switch data.Status {
@@ -225,5 +229,37 @@ func (k *K8s) EventPod(podEvent PodEvent) (updateRequired bool) {
 		k.NbrHAProxyInst--
 	}
 
+	return true
+}
+
+func (k *K8s) EventGlobalCR(namespace, name string, data *corev1alpha1.Global) bool {
+	ns := k.GetNamespace(namespace)
+	if data == nil {
+		delete(ns.CRs.Global, name)
+		delete(ns.CRs.LogTargets, name)
+		return true
+	}
+	ns.CRs.Global[name] = data.Spec.Config
+	ns.CRs.LogTargets[name] = data.Spec.LogTargets
+	return true
+}
+
+func (k *K8s) EventDefaultsCR(namespace, name string, data *corev1alpha1.Defaults) bool {
+	ns := k.GetNamespace(namespace)
+	if data == nil {
+		delete(ns.CRs.Defaults, name)
+		return true
+	}
+	ns.CRs.Defaults[name] = data.Spec.Config
+	return true
+}
+
+func (k *K8s) EventBackendCR(namespace, name string, data *corev1alpha1.Backend) bool {
+	ns := k.GetNamespace(namespace)
+	if data == nil {
+		delete(ns.CRs.Backends, name)
+		return true
+	}
+	ns.CRs.Backends[name] = data.Spec.Config
 	return true
 }
