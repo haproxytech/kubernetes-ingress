@@ -96,6 +96,7 @@ func Frontend(i *store.Ingress, r *rules.Rules, m maps.MapFiles) []Annotation {
 		resSetCORS.NewAnnotation("cors-allow-methods"),
 		resSetCORS.NewAnnotation("cors-allow-headers"),
 		resSetCORS.NewAnnotation("cors-max-age"),
+		resSetCORS.NewAnnotation("cors-allow-credentials"),
 	}
 }
 
