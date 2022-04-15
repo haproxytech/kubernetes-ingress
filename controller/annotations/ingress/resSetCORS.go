@@ -130,6 +130,16 @@ func (a ResSetCORSAnn) Process(k store.K8s, annotations ...map[string]string) (e
 			Response:  true,
 			CondTest:  a.parent.acl,
 		})
+	case "cors-allow-credentials":
+		if a.parent.acl == "" {
+			return
+		}
+		a.parent.rules.Add(&rules.SetHdr{
+			HdrName:   "Access-Control-Allow-Credentials",
+			HdrFormat: "\"true\"",
+			Response:  true,
+			CondTest:  a.parent.acl,
+		})
 	default:
 		err = fmt.Errorf("unknown cors annotation '%s'", a.name)
 	}
