@@ -78,6 +78,7 @@ func (a ResSetCORSAnn) Process(k store.K8s, annotations ...map[string]string) (e
 			HdrFormat: origin,
 			Response:  true,
 			CondTest:  a.parent.acl,
+			Cond:      "if",
 		})
 	case "cors-allow-methods":
 		if a.parent.acl == "" {
@@ -99,6 +100,7 @@ func (a ResSetCORSAnn) Process(k store.K8s, annotations ...map[string]string) (e
 			HdrFormat: input,
 			Response:  true,
 			CondTest:  a.parent.acl,
+			Cond:      "if",
 		})
 	case "cors-allow-headers":
 		if a.parent.acl == "" {
@@ -110,6 +112,7 @@ func (a ResSetCORSAnn) Process(k store.K8s, annotations ...map[string]string) (e
 			HdrFormat: "\"" + input + "\"",
 			Response:  true,
 			CondTest:  a.parent.acl,
+			Cond:      "if",
 		})
 	case "cors-max-age":
 		if a.parent.acl == "" {
@@ -129,6 +132,7 @@ func (a ResSetCORSAnn) Process(k store.K8s, annotations ...map[string]string) (e
 			HdrFormat: fmt.Sprintf("\"%d\"", maxage),
 			Response:  true,
 			CondTest:  a.parent.acl,
+			Cond:      "if",
 		})
 	case "cors-allow-credentials":
 		if a.parent.acl == "" {
@@ -139,6 +143,7 @@ func (a ResSetCORSAnn) Process(k store.K8s, annotations ...map[string]string) (e
 			HdrFormat: "\"true\"",
 			Response:  true,
 			CondTest:  a.parent.acl,
+			Cond:      "if",
 		})
 	default:
 		err = fmt.Errorf("unknown cors annotation '%s'", a.name)
