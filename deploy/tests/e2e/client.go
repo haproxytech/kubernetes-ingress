@@ -121,6 +121,7 @@ func (c *Client) Do() (res *http.Response, close func() error, err error) {
 		}
 	}
 	c.Req.Host = c.Host
+	c.Req.Header["Origin"] = []string{c.Req.URL.Scheme + "://" + c.Host}
 	c.Req.URL.Host = c.Host
 	c.Req.URL.Path = c.Path
 	res, err = client.Do(c.Req)
