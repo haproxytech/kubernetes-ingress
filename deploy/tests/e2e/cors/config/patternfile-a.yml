@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: patternfiles
+  namespace: haproxy-controller
+data:
+  cors-allow-credentials: 'false'
+  cors-allow-headers: >-
+      x-api-key
+  cors-allow-methods: GET, POST
+  cors-allow-origin: >-
+      ^https://configmap.com?$
+  cors-enable: 'true'
+  cors-max-age: 100s
