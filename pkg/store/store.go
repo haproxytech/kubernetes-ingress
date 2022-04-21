@@ -39,7 +39,7 @@ type ErrNotFound error
 var logger = utils.GetLogger()
 
 func NewK8sStore(args utils.OSArgs) K8s {
-	return K8s{
+	store := K8s{
 		Namespaces:     make(map[string]*Namespace),
 		IngressClasses: make(map[string]*IngressClass),
 		NamespacesAccess: NamespacesWatch{
@@ -65,6 +65,13 @@ func NewK8sStore(args utils.OSArgs) K8s {
 			},
 		},
 	}
+	for _, namespace := range args.NamespaceWhitelist {
+		store.NamespacesAccess.Whitelist[namespace] = struct{}{}
+	}
+	for _, namespace := range args.NamespaceBlacklist {
+		store.NamespacesAccess.Blacklist[namespace] = struct{}{}
+	}
+	return store
 }
 
 func (k K8s) Clean() {

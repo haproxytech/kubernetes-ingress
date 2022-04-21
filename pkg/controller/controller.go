@@ -16,11 +16,6 @@ package controller
 
 import (
 	"os"
-	"path/filepath"
-	"strings"
-
-	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/clientcmd"
 
 	"github.com/google/renameio"
 
@@ -33,7 +28,6 @@ import (
 	"github.com/haproxytech/kubernetes-ingress/pkg/k8s"
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
-	"k8s.io/apimachinery/pkg/watch"
 )
 
 var logger = utils.GetLogger()
@@ -48,7 +42,6 @@ type HAProxyController struct {
 	auxCfgModTime  int64
 	eventChan      chan k8s.SyncDataEvent
 	ingressChan    chan ingress.Sync
-	k8s            k8s.K8s
 	ready          bool
 	reload         bool
 	restart        bool
@@ -101,49 +94,7 @@ func (c *HAProxyController) Start(haproxyConf []byte) {
 	c.initHandlers()
 	c.haproxyStartup()
 
-	// Controller PublishService
-	parts := strings.Split(c.osArgs.PublishService, "/")
-	if len(parts) == 2 {
-		c.publishService = &utils.NamespaceValue{
-			Namespace: parts[0],
-			Name:      parts[1],
-		}
-	}
-
-	// Get K8s client
-	var restConfig *rest.Config
-	if c.osArgs.External {
-		kubeconfig := filepath.Join(utils.HomeDir(), ".kube", "config")
-		if c.osArgs.KubeConfig != "" {
-			kubeconfig = c.osArgs.KubeConfig
-		}
-		restConfig, err = clientcmd.BuildConfigFromFlags("", kubeconfig)
-	} else {
-		restConfig, err = rest.InClusterConfig()
-	}
-	logger.Panicf("Unable to get kubernetes client config: %s", err)
-
-	c.k8s = k8s.New(restConfig, c.osArgs, c.eventChan)
-	x := c.k8s.GetClient().Discovery()
-	if k8sVersion, err := x.ServerVersion(); err != nil {
-		logger.Panicf("Unable to get Kubernetes version: %v\n", err)
-	} else {
-		logger.Printf("Running on Kubernetes version: %s %s", k8sVersion.String(), k8sVersion.Platform)
-	}
-
-	// Monitor k8s events
-	var chanSize int64 = int64(watch.DefaultChanSize * 6)
-	if c.osArgs.ChannelSize > 0 {
-		chanSize = c.osArgs.ChannelSize
-	}
-	logger.Infof("Channel size: %d", chanSize)
-	c.eventChan = make(chan k8s.SyncDataEvent, chanSize)
-	go c.monitorChanges()
-	if c.publishService != nil {
-		// Update Ingress status
-		c.ingressChan = make(chan ingress.Sync, chanSize)
-		go ingress.UpdateStatus(c.k8s.GetClient(), c.store, c.osArgs.IngressClass, c.osArgs.EmptyIngressClass, c.ingressChan)
-	}
+	c.SyncData()
 }
 
 // Stop handles shutting down HAProxyController

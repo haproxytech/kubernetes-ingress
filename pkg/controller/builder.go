@@ -10,14 +10,19 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	config "github.com/haproxytech/kubernetes-ingress/pkg/configuration"
+	"github.com/haproxytech/kubernetes-ingress/pkg/ingress"
+	"github.com/haproxytech/kubernetes-ingress/pkg/k8s"
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
 )
 
 type Builder struct {
-	osArgs utils.OSArgs
-	cfg    config.ControllerCfg
-	store  store.K8s
+	osArgs         utils.OSArgs
+	cfg            config.ControllerCfg
+	store          store.K8s
+	publishService *utils.NamespaceValue
+	eventChan      chan k8s.SyncDataEvent
+	ingressChan    chan ingress.Sync
 }
 
 var defaultCfg = config.ControllerCfg{
@@ -36,6 +41,16 @@ func NewBuilder() *Builder {
 	}
 }
 
+func (builder *Builder) WithEventChan(eventChan chan k8s.SyncDataEvent) *Builder {
+	builder.eventChan = eventChan
+	return builder
+}
+
+func (builder *Builder) WithIngressChan(ingressChan chan ingress.Sync) *Builder {
+	builder.ingressChan = ingressChan
+	return builder
+}
+
 func (builder *Builder) WithStore(store store.K8s) *Builder {
 	builder.store = store
 	return builder
@@ -48,6 +63,11 @@ func (builder *Builder) WithConfiguration(cfg config.ControllerCfg) *Builder {
 
 func (builder *Builder) WithArgs(osArgs utils.OSArgs) *Builder {
 	builder.osArgs = osArgs
+	return builder
+}
+
+func (builder *Builder) WithPublishService(publishService *utils.NamespaceValue) *Builder {
+	builder.publishService = publishService
 	return builder
 }
 
@@ -72,13 +92,15 @@ func (builder *Builder) Build() *HAProxyController {
 
 	prefix, errPrefix := utils.GetPodPrefix(os.Getenv("POD_NAME"))
 	logger.Error(errPrefix)
-
 	return &HAProxyController{
-		cfg:          builder.cfg,
-		osArgs:       builder.osArgs,
-		podNamespace: os.Getenv("POD_NAMESPACE"),
-		podPrefix:    prefix,
-		store:        builder.store,
+		cfg:            builder.cfg,
+		osArgs:         builder.osArgs,
+		podNamespace:   os.Getenv("POD_NAMESPACE"),
+		podPrefix:      prefix,
+		store:          builder.store,
+		eventChan:      builder.eventChan,
+		ingressChan:    builder.ingressChan,
+		publishService: builder.publishService,
 	}
 }
 

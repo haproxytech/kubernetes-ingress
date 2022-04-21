@@ -19,15 +19,20 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 
 	//nolint:gosec
 	_ "net/http/pprof"
 
+	"k8s.io/apimachinery/pkg/watch"
+
 	"github.com/jessevdk/go-flags"
 
-	c "github.com/haproxytech/kubernetes-ingress/pkg/controller"
+	"github.com/haproxytech/kubernetes-ingress/pkg/controller"
 	"github.com/haproxytech/kubernetes-ingress/pkg/controller/annotations"
+	"github.com/haproxytech/kubernetes-ingress/pkg/ingress"
+	"github.com/haproxytech/kubernetes-ingress/pkg/k8s"
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
 )
@@ -72,21 +77,43 @@ func main() {
 	annotations.SetDefaultValue("ssl-certificate", defaultCertificate)
 
 	// Start Controller
+	var chanSize int64 = int64(watch.DefaultChanSize * 6)
+	if osArgs.ChannelSize > 0 {
+		chanSize = osArgs.ChannelSize
+	}
+	eventChan := make(chan k8s.SyncDataEvent, chanSize)
+	ingressChan := make(chan ingress.Sync, chanSize)
+	stop := make(chan struct{})
+
+	publishService := getNamespaceValue(osArgs.PublishService)
+
 	s := store.NewK8sStore(osArgs)
-	for _, namespace := range osArgs.NamespaceWhitelist {
-		s.NamespacesAccess.Whitelist[namespace] = struct{}{}
+
+	c := controller.NewBuilder().
+		WithEventChan(eventChan).
+		WithIngressChan(ingressChan).
+		WithStore(s).
+		WithPublishService(publishService).
+		WithArgs(osArgs).Build()
+
+	k := k8s.New(
+		osArgs,
+		s.NamespacesAccess.Whitelist,
+		publishService,
+	)
+
+	go k.MonitorChanges(eventChan, ingressChan, stop)
+	go c.Start(haproxyConf)
+	if publishService != nil {
+		go ingress.UpdateStatus(k.GetClientset(), s, osArgs.IngressClass, osArgs.EmptyIngressClass, ingressChan)
 	}
-	for _, namespace := range osArgs.NamespaceBlacklist {
-		s.NamespacesAccess.Blacklist[namespace] = struct{}{}
-	}
-	controller := c.NewBuilder().WithStore(s).WithArgs(osArgs).Build()
-	controller.Start(haproxyConf)
 
 	// Catch QUIT signals
 	signalC := make(chan os.Signal, 1)
 	signal.Notify(signalC, os.Interrupt, syscall.SIGTERM, syscall.SIGUSR1)
 	<-signalC
-	controller.Stop()
+	c.Stop()
+	close(stop)
 }
 
 func logInfo(logger utils.Logger, osArgs utils.OSArgs) {
@@ -145,4 +172,16 @@ func logInfo(logger utils.Logger, osArgs utils.OSArgs) {
 	hostname, err := os.Hostname()
 	logger.Error(err)
 	logger.Printf("Running on %s", hostname)
+}
+
+func getNamespaceValue(name string) *utils.NamespaceValue {
+	parts := strings.Split(name, "/")
+	var result *utils.NamespaceValue
+	if len(parts) == 2 {
+		result = &utils.NamespaceValue{
+			Namespace: parts[0],
+			Name:      parts[1],
+		}
+	}
+	return result
 }
