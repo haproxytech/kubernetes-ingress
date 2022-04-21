@@ -135,7 +135,7 @@ func (a ResSetCORSAnn) Process(k store.K8s, annotations ...map[string]string) (e
 			Cond:      "if",
 		})
 	case "cors-allow-credentials":
-		if a.parent.acl == "" {
+		if a.parent.acl == "" || input != "true" {
 			return
 		}
 		a.parent.rules.Add(&rules.SetHdr{

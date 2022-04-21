@@ -32,8 +32,9 @@ type CorsSuite struct {
 }
 
 type tmplData struct {
-	IngAnnotations []struct{ Key, Value string }
-	Host           string
+	IngAnnotations       []struct{ Key, Value string }
+	ConfigMapAnnotations []struct{ Key, Value string }
+	Host                 string
 }
 
 func (suite *CorsSuite) SetupSuite() {
@@ -44,11 +45,13 @@ func (suite *CorsSuite) SetupSuite() {
 	suite.client, err = e2e.NewHTTPClient(suite.tmplData.Host)
 	suite.NoError(err)
 
-	suite.NoError(suite.test.Apply("config/patternfile-empty.yml", "", nil))
+	suite.NoError(suite.test.Apply("../../config/3.configmap.yaml", "", nil))
+	suite.NoError(suite.test.Apply("config/deploy.yaml.tmpl", suite.test.GetNS(), tmplData{Host: suite.test.GetNS() + ".test"}))
 }
 
 func (suite *CorsSuite) TearDownSuite() {
-	suite.test.Apply("config/patternfile-empty.yml", "", nil)
+	//suite.test.Apply("../../config/3.configmap.yaml", "", nil)
+	suite.NoError(suite.test.Apply("config/deploy.yaml.tmpl", suite.test.GetNS(), tmplData{Host: suite.test.GetNS() + ".test"}))
 	suite.test.TearDown()
 }
 

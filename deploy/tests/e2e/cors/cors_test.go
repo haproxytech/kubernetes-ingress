@@ -37,130 +37,27 @@ const (
 	Star                         = "*"
 )
 
+func (suite *CorsSuite) Test_Configmap_Alone() {
+	suite.Run("Default", suite.Default(false))
+	suite.Run("CorsOriginAlone", suite.CorsOriginAlone(false))
+	suite.Run("CorsMethodsAlone", suite.CorsMethodsAlone(false))
+	suite.Run("CorsMethodsHeadersAlone", suite.CorsMethodsHeadersAlone(false))
+	suite.Run("CorsMethodsAgeAlone", suite.CorsMethodsAgeAlone(false))
+	suite.Run("CorsMethodsCredentialAlone", suite.CorsMethodsCredentialAlone(false))
+	suite.Run("CorsDisable", suite.CorsDisable(false))
+	suite.Run("CorsMethodsCredentialDisable", suite.CorsMethodsCredentialDisable(false))
+	suite.NoError(suite.test.Apply("../../config/3.configmap.yaml", "", nil))
+}
+
 func (suite *CorsSuite) Test_Ingress_Alone() {
-	suite.Run("Default", func() {
-		expectedHeaders := http.Header{
-			AccessControlAllowOrigin:  {Star},
-			AccessControlAllowMethods: {Star},
-			AccessControlAllowHeaders: {Star},
-			AccessControlMaxAge:       {"5"},
-		}
-		suite.tmplData.IngAnnotations = []struct{ Key, Value string }{
-			{AnnotationCorsEnable, q("true")},
-		}
-
-		suite.NoError(suite.test.Apply("config/deploy.yaml.tmpl", suite.test.GetNS(), suite.tmplData))
-
-		suite.eventuallyReturns(expectedHeaders, http.Header{})
-	})
-
-	suite.Run("CorsOriginAlone", func() {
-		expectedHeaders := http.Header{
-			AccessControlAllowOrigin:  {"http://" + suite.tmplData.Host},
-			AccessControlAllowMethods: {Star},
-			AccessControlAllowHeaders: {Star},
-			AccessControlMaxAge:       {"5"},
-		}
-		suite.tmplData.IngAnnotations = []struct{ Key, Value string }{
-			{AnnotationCorsEnable, q("true")},
-			{AnnotationCorsOrigin, q("http://" + suite.tmplData.Host)},
-		}
-
-		suite.NoError(suite.test.Apply("config/deploy.yaml.tmpl", suite.test.GetNS(), suite.tmplData))
-
-		suite.eventuallyReturns(expectedHeaders, http.Header{})
-	})
-
-	suite.Run("CorsMethodsAlone", func() {
-		expectedHeaders := http.Header{
-			AccessControlAllowOrigin:  {Star},
-			AccessControlAllowMethods: {"GET"},
-			AccessControlAllowHeaders: {Star},
-			AccessControlMaxAge:       {"5"},
-		}
-		suite.tmplData.IngAnnotations = []struct{ Key, Value string }{
-			{AnnotationCorsEnable, q("true")},
-			{AnnotationCorsMethods, q("GET")},
-		}
-
-		suite.NoError(suite.test.Apply("config/deploy.yaml.tmpl", suite.test.GetNS(), suite.tmplData))
-
-		suite.eventuallyReturns(expectedHeaders, http.Header{})
-	})
-
-	suite.Run("CorsMethodsHeaders", func() {
-		expectedHeaders := http.Header{
-			AccessControlAllowOrigin:  {Star},
-			AccessControlAllowMethods: {Star},
-			AccessControlAllowHeaders: {"Accept"},
-			AccessControlMaxAge:       {"5"},
-		}
-		suite.tmplData.IngAnnotations = []struct{ Key, Value string }{
-			{AnnotationCorsEnable, q("true")},
-			{AnnotationCorsHeaders, q("Accept")},
-		}
-
-		suite.NoError(suite.test.Apply("config/deploy.yaml.tmpl", suite.test.GetNS(), suite.tmplData))
-
-		suite.eventuallyReturns(expectedHeaders, http.Header{})
-	})
-
-	suite.Run("CorsMethodsAge", func() {
-		expectedHeaders := http.Header{
-			AccessControlAllowOrigin:  {Star},
-			AccessControlAllowMethods: {Star},
-			AccessControlAllowHeaders: {Star},
-			AccessControlMaxAge:       {"500"},
-		}
-		suite.tmplData.IngAnnotations = []struct{ Key, Value string }{
-			{AnnotationCorsEnable, q("true")},
-			{AnnotationCorsAge, q("500s")},
-		}
-
-		suite.NoError(suite.test.Apply("config/deploy.yaml.tmpl", suite.test.GetNS(), suite.tmplData))
-
-		suite.eventuallyReturns(expectedHeaders, http.Header{})
-	})
-
-	suite.Run("CorsMethodsCredential", func() {
-		expectedHeaders := http.Header{
-			AccessControlAllowOrigin:     {Star},
-			AccessControlAllowMethods:    {Star},
-			AccessControlAllowHeaders:    {Star},
-			AccessControlAllowCredential: {"true"},
-			AccessControlMaxAge:          {"5"},
-		}
-		suite.tmplData.IngAnnotations = []struct{ Key, Value string }{
-			{AnnotationCorsEnable, q("true")},
-			{AnnotationCorsCredential, q("true")},
-		}
-
-		suite.NoError(suite.test.Apply("config/deploy.yaml.tmpl", suite.test.GetNS(), suite.tmplData))
-
-		suite.eventuallyReturns(expectedHeaders, http.Header{})
-	})
-
-	suite.Run("CorsDisable", func() {
-		unexpectedHeaders := http.Header{
-			AccessControlAllowOrigin:     {},
-			AccessControlAllowMethods:    {},
-			AccessControlAllowHeaders:    {},
-			AccessControlMaxAge:          {},
-			AccessControlAllowCredential: {},
-		}
-
-		suite.tmplData.IngAnnotations = []struct{ Key, Value string }{
-			{AnnotationCorsEnable, q("false")},
-			{AnnotationCorsOrigin, q("http://wrong.com")},
-			{AnnotationCorsCredential, q("true")},
-			{AnnotationCorsMethods, q("GET")},
-			{AnnotationCorsHeaders, q("Accept")},
-		}
-
-		suite.NoError(suite.test.Apply("config/deploy.yaml.tmpl", suite.test.GetNS(), suite.tmplData))
-
-		suite.eventuallyReturns(http.Header{}, unexpectedHeaders)
-	})
+	suite.Run("Default", suite.Default(true))
+	suite.Run("CorsOriginAlone", suite.CorsOriginAlone(true))
+	suite.Run("CorsMethodsAlone", suite.CorsMethodsAlone(true))
+	suite.Run("CorsMethodsHeadersAlone", suite.CorsMethodsHeadersAlone(true))
+	suite.Run("CorsMethodsAgeAlone", suite.CorsMethodsAgeAlone(true))
+	suite.Run("CorsMethodsCredentialAlone", suite.CorsMethodsCredentialAlone(true))
+	suite.Run("CorsDisable", suite.CorsDisable(true))
+	suite.Run("CorsMethodsCredentialDisable", suite.CorsMethodsCredentialDisable(true))
 }
 
 func (suite *CorsSuite) eventuallyReturns(expecedHeaders, unexpectedHeaders http.Header) {
@@ -171,6 +68,9 @@ func (suite *CorsSuite) eventuallyReturns(expecedHeaders, unexpectedHeaders http
 			return false
 		}
 		defer cls()
+		if res.StatusCode == 503 {
+			return false
+		}
 		for expectedHeader, expectedValues := range expecedHeaders {
 			values, ok := res.Header[expectedHeader]
 			if !ok || len(values) != 1 || values[0] != expectedValues[0] {
@@ -189,4 +89,256 @@ func (suite *CorsSuite) eventuallyReturns(expecedHeaders, unexpectedHeaders http
 
 func q(value string) string {
 	return "\"" + value + "\""
+}
+
+func (suite *CorsSuite) Default(ingressCors bool) func() {
+	return func() {
+		expectedHeaders := http.Header{
+			AccessControlAllowOrigin:  {Star},
+			AccessControlAllowMethods: {Star},
+			AccessControlAllowHeaders: {Star},
+			AccessControlMaxAge:       {"5"},
+		}
+		unexpectedHeaders := http.Header{
+			AccessControlAllowCredential: {},
+		}
+		annotations := &suite.tmplData.IngAnnotations
+		if !ingressCors {
+			annotations = &suite.tmplData.ConfigMapAnnotations
+		}
+		*annotations = []struct{ Key, Value string }{
+			{AnnotationCorsEnable, q("true")},
+		}
+
+		yamlFile := "config/deploy.yaml.tmpl"
+		ns := suite.test.GetNS()
+		if !ingressCors {
+			yamlFile = "config/configmap.yaml.tmpl"
+			ns = ""
+		}
+		suite.NoError(suite.test.Apply(yamlFile, ns, suite.tmplData))
+
+		suite.eventuallyReturns(expectedHeaders, unexpectedHeaders)
+	}
+}
+func (suite *CorsSuite) CorsOriginAlone(ingressCors bool) func() {
+	return func() {
+		expectedHeaders := http.Header{
+			AccessControlAllowOrigin:  {"http://" + suite.tmplData.Host},
+			AccessControlAllowMethods: {Star},
+			AccessControlAllowHeaders: {Star},
+			AccessControlMaxAge:       {"5"},
+		}
+		unexpectedHeaders := http.Header{
+			AccessControlAllowCredential: {},
+		}
+		annotations := &suite.tmplData.IngAnnotations
+		if !ingressCors {
+			annotations = &suite.tmplData.ConfigMapAnnotations
+		}
+		*annotations = []struct{ Key, Value string }{
+			{AnnotationCorsEnable, q("true")},
+			{AnnotationCorsOrigin, q("http://" + suite.tmplData.Host)},
+		}
+
+		yamlFile := "config/deploy.yaml.tmpl"
+		ns := suite.test.GetNS()
+		if !ingressCors {
+			yamlFile = "config/configmap.yaml.tmpl"
+			ns = ""
+		}
+		suite.NoError(suite.test.Apply(yamlFile, ns, suite.tmplData))
+
+		suite.eventuallyReturns(expectedHeaders, unexpectedHeaders)
+	}
+}
+
+func (suite *CorsSuite) CorsMethodsAlone(ingressCors bool) func() {
+	return func() {
+		expectedHeaders := http.Header{
+			AccessControlAllowOrigin:  {Star},
+			AccessControlAllowMethods: {"GET"},
+			AccessControlAllowHeaders: {Star},
+			AccessControlMaxAge:       {"5"},
+		}
+		unexpectedHeaders := http.Header{
+			AccessControlAllowCredential: {},
+		}
+		annotations := &suite.tmplData.IngAnnotations
+		if !ingressCors {
+			annotations = &suite.tmplData.ConfigMapAnnotations
+		}
+		*annotations = []struct{ Key, Value string }{
+			{AnnotationCorsEnable, q("true")},
+			{AnnotationCorsMethods, q("GET")},
+		}
+
+		yamlFile := "config/deploy.yaml.tmpl"
+		ns := suite.test.GetNS()
+		if !ingressCors {
+			yamlFile = "config/configmap.yaml.tmpl"
+			ns = ""
+		}
+		suite.NoError(suite.test.Apply(yamlFile, ns, suite.tmplData))
+
+		suite.eventuallyReturns(expectedHeaders, unexpectedHeaders)
+	}
+}
+
+func (suite *CorsSuite) CorsMethodsHeadersAlone(ingressCors bool) func() {
+	return func() {
+		expectedHeaders := http.Header{
+			AccessControlAllowOrigin:  {Star},
+			AccessControlAllowMethods: {Star},
+			AccessControlAllowHeaders: {"Accept"},
+			AccessControlMaxAge:       {"5"},
+		}
+		unexpectedHeaders := http.Header{
+			AccessControlAllowCredential: {},
+		}
+		annotations := &suite.tmplData.IngAnnotations
+		if !ingressCors {
+			annotations = &suite.tmplData.ConfigMapAnnotations
+		}
+		*annotations = []struct{ Key, Value string }{
+			{AnnotationCorsEnable, q("true")},
+			{AnnotationCorsHeaders, q("Accept")},
+		}
+
+		yamlFile := "config/deploy.yaml.tmpl"
+		ns := suite.test.GetNS()
+		if !ingressCors {
+			yamlFile = "config/configmap.yaml.tmpl"
+			ns = ""
+		}
+		suite.NoError(suite.test.Apply(yamlFile, ns, suite.tmplData))
+
+		suite.eventuallyReturns(expectedHeaders, unexpectedHeaders)
+	}
+}
+
+func (suite *CorsSuite) CorsMethodsAgeAlone(ingressCors bool) func() {
+	return func() {
+		expectedHeaders := http.Header{
+			AccessControlAllowOrigin:  {Star},
+			AccessControlAllowMethods: {Star},
+			AccessControlAllowHeaders: {Star},
+			AccessControlMaxAge:       {"500"},
+		}
+		unexpectedHeaders := http.Header{
+			AccessControlAllowCredential: {},
+		}
+		annotations := &suite.tmplData.IngAnnotations
+		if !ingressCors {
+			annotations = &suite.tmplData.ConfigMapAnnotations
+		}
+		*annotations = []struct{ Key, Value string }{
+			{AnnotationCorsEnable, q("true")},
+			{AnnotationCorsAge, q("500s")},
+		}
+
+		yamlFile := "config/deploy.yaml.tmpl"
+		ns := suite.test.GetNS()
+		if !ingressCors {
+			yamlFile = "config/configmap.yaml.tmpl"
+			ns = ""
+		}
+		suite.NoError(suite.test.Apply(yamlFile, ns, suite.tmplData))
+
+		suite.eventuallyReturns(expectedHeaders, unexpectedHeaders)
+	}
+}
+
+func (suite *CorsSuite) CorsMethodsCredentialDisable(ingressCors bool) func() {
+	return func() {
+		expectedHeaders := http.Header{
+			AccessControlAllowOrigin:  {Star},
+			AccessControlAllowMethods: {Star},
+			AccessControlAllowHeaders: {Star},
+			AccessControlMaxAge:       {"5"},
+		}
+		unexpectedHeaders := http.Header{
+			AccessControlAllowCredential: {},
+		}
+
+		annotations := &suite.tmplData.IngAnnotations
+		if !ingressCors {
+			annotations = &suite.tmplData.ConfigMapAnnotations
+		}
+		*annotations = []struct{ Key, Value string }{
+			{AnnotationCorsEnable, q("true")},
+			{AnnotationCorsCredential, q("false")},
+		}
+		yamlFile := "config/deploy.yaml.tmpl"
+		ns := suite.test.GetNS()
+		if !ingressCors {
+			yamlFile = "config/configmap.yaml.tmpl"
+			ns = ""
+		}
+		suite.NoError(suite.test.Apply(yamlFile, ns, suite.tmplData))
+
+		suite.eventuallyReturns(expectedHeaders, unexpectedHeaders)
+	}
+}
+
+func (suite *CorsSuite) CorsMethodsCredentialAlone(ingressCors bool) func() {
+	return func() {
+		expectedHeaders := http.Header{
+			AccessControlAllowOrigin:     {Star},
+			AccessControlAllowMethods:    {Star},
+			AccessControlAllowHeaders:    {Star},
+			AccessControlAllowCredential: {"true"},
+			AccessControlMaxAge:          {"5"},
+		}
+		annotations := &suite.tmplData.IngAnnotations
+		if !ingressCors {
+			annotations = &suite.tmplData.ConfigMapAnnotations
+		}
+		*annotations = []struct{ Key, Value string }{
+			{AnnotationCorsEnable, q("true")},
+			{AnnotationCorsCredential, q("true")},
+		}
+		yamlFile := "config/deploy.yaml.tmpl"
+		ns := suite.test.GetNS()
+		if !ingressCors {
+			yamlFile = "config/configmap.yaml.tmpl"
+			ns = ""
+		}
+		suite.NoError(suite.test.Apply(yamlFile, ns, suite.tmplData))
+
+		suite.eventuallyReturns(expectedHeaders, http.Header{})
+	}
+}
+
+func (suite *CorsSuite) CorsDisable(ingressCors bool) func() {
+	return func() {
+		unexpectedHeaders := http.Header{
+			AccessControlAllowOrigin:     {},
+			AccessControlAllowMethods:    {},
+			AccessControlAllowHeaders:    {},
+			AccessControlMaxAge:          {},
+			AccessControlAllowCredential: {},
+		}
+
+		annotations := &suite.tmplData.IngAnnotations
+		if !ingressCors {
+			annotations = &suite.tmplData.ConfigMapAnnotations
+		}
+		*annotations = []struct{ Key, Value string }{
+			{AnnotationCorsEnable, q("false")},
+			{AnnotationCorsOrigin, q("http://wrong.com")},
+			{AnnotationCorsCredential, q("true")},
+			{AnnotationCorsMethods, q("GET")},
+			{AnnotationCorsHeaders, q("Accept")},
+		}
+
+		yamlFile := "config/deploy.yaml.tmpl"
+		ns := suite.test.GetNS()
+		if !ingressCors {
+			yamlFile = "config/configmap.yaml.tmpl"
+			ns = ""
+		}
+		suite.NoError(suite.test.Apply(yamlFile, ns, suite.tmplData))
+		suite.eventuallyReturns(http.Header{}, unexpectedHeaders)
+	}
 }
