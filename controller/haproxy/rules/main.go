@@ -187,6 +187,7 @@ func (r SectionRules) refreshRule(client api.HAProxyClient, ruleType Type, i int
 		delete(frontendRuleSet.meta, id)
 		frontendRuleSet.rules[ruleType] = append(rules[:i], rules[i+1:]...)
 		logger.Debugf("HAProxy rule '%s' deleted", constLookup[ruleType])
+		reload = true
 		return
 	}
 	// Create HAProxy Rule
