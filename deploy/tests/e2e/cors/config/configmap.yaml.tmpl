@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+ name: haproxy-kubernetes-ingress
+ namespace: haproxy-controller
+data:
+{{range .ConfigMapAnnotations}}
+  {{ .Key }}: {{ .Value }}
+{{end}}
+  global-config-snippet: |
+    stats socket 0.0.0.0:31024
+  syslog-server: |
+    address: stdout, format: raw, facility:daemon
+  maxconn: "1000"
+  server-slots: "4"
+  timeout-client: 50s
+  timeout-connect: 5s
+  timeout-http-keep-alive: 1m
+  timeout-http-request: 5s
+  timeout-queue: 5s
+  timeout-server: 50s
+  timeout-tunnel: 1h
