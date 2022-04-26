@@ -201,15 +201,6 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.namespace
-      initContainers:
-        - name: sysctl
-          image: busybox:musl
-          command:
-            - /bin/sh
-            - -c
-            - sysctl -w net.ipv4.ip_unprivileged_port_start=0
-          securityContext:
-            privileged: true
 ---
 apiVersion: v1
 kind: Service

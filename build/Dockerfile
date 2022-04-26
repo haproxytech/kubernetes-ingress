@@ -47,10 +47,11 @@ ENV S6_READ_ONLY_ROOT=1
 COPY /fs /
 COPY --from=builder /src/fs/haproxy-ingress-controller .
 
-RUN apk --no-cache add socat openssl util-linux htop tzdata curl && \
+RUN apk --no-cache add socat openssl util-linux htop tzdata curl libcap && \
     rm -f /usr/local/bin/dataplaneapi /usr/bin/dataplaneapi && \
     chgrp -R haproxy /usr/local/etc/haproxy /run /var && \
     chmod -R ug+rwx /usr/local/etc/haproxy /run /var && \
+    setcap 'cap_net_bind_service=+ep' /usr/local/sbin/haproxy && \
     case "${TARGETPLATFORM}" in \
         "linux/arm64")      S6_ARCH=aarch64     ;; \
         "linux/amd64")      S6_ARCH=amd64       ;; \
@@ -67,6 +68,7 @@ RUN apk --no-cache add socat openssl util-linux htop tzdata curl && \
     mkdir /var/run/s6 && \
     chown haproxy:haproxy /var/run/s6 && \
     chmod ug+rwx /var/run/s6 && \
-    sed -i 's/ root / haproxy /g' /etc/s6/init/init-stage2-fixattrs.txt
+    sed -i 's/ root / haproxy /g' /etc/s6/init/init-stage2-fixattrs.txt && \
+    chmod ugo+x /etc/services.d/*/run /etc/cont-init.d/*
 
 ENTRYPOINT ["/start.sh"]
