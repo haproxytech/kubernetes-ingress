@@ -52,7 +52,7 @@ func getParamsFromInput(value string) (*models.Balance, error) {
 		return nil, fmt.Errorf("missing algorithm name")
 	}
 
-	reg := regexp.MustCompile(`(\\(|\\))"`)
+	reg := regexp.MustCompile(`(\(|\))`)
 	algorithmTokens := reg.Split(tokens[0], -1)
 	algorithm := algorithmTokens[0]
 	balance.Algorithm = &algorithm
