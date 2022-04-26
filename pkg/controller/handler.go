@@ -50,7 +50,6 @@ func (c *HAProxyController) initHandlers() {
 			AddrIPv6: c.osArgs.IPV6BindAddr,
 		},
 		&handler.PatternFiles{},
-		handler.Refresh{},
 	}
 	if c.osArgs.PprofEnabled {
 		c.updateHandlers = append(c.updateHandlers, handler.Pprof{})

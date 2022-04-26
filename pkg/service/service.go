@@ -214,7 +214,6 @@ func (s *Service) SetDefaultBackend(k store.K8s, h haproxy.HAProxy, frontends []
 			ftReload = true
 		}
 	}
-	h.ActiveBackends[backendName] = struct{}{}
 	endpointsReload := s.HandleHAProxySrvs(k, h)
 	reload = bdReload || ftReload || endpointsReload
 	return reload, err

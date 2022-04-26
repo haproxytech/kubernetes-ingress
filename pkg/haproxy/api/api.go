@@ -52,6 +52,7 @@ type HAProxyClient interface {
 	GlobalPushConfiguration(models.Global) error
 	GlobalCfgSnippet(snippet []string) error
 	GetMap(mapFile string) (*models.Map, error)
+	RefreshBackends() (deleted []string, err error)
 	SetMapContent(mapFile string, payload string) error
 	SetServerAddr(backendName string, serverName string, ip string, port int) error
 	SetServerState(backendName string, serverName string, state string) error
@@ -65,6 +66,7 @@ type HAProxyClient interface {
 
 type clientNative struct {
 	nativeAPI                   clientnative.HAProxyClient
+	activeBackends              map[string]struct{}
 	activeTransaction           string
 	activeTransactionHasChanges bool
 }
@@ -100,6 +102,7 @@ func New(transactionDir, configFile, programPath, runtimeSocket string) (client 
 			Configuration: &confClient,
 			Runtime:       &runtimeClient,
 		},
+		activeBackends: make(map[string]struct{}),
 	}
 	return &cn, nil
 }

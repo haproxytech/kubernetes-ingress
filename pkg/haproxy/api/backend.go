@@ -1,6 +1,8 @@
 package api
 
 import (
+	"fmt"
+
 	"github.com/haproxytech/client-native/v2/models"
 	"github.com/haproxytech/config-parser/v4/types"
 )
@@ -15,12 +17,18 @@ func (c *clientNative) BackendGet(backendName string) (*models.Backend, error) {
 	if err != nil {
 		return nil, err
 	}
+	c.activeBackends[backend.Name] = struct{}{}
 	return backend, nil
 }
 
 func (c *clientNative) BackendCreate(backend models.Backend) error {
 	c.activeTransactionHasChanges = true
-	return c.nativeAPI.Configuration.CreateBackend(&backend, c.activeTransaction, 0)
+	err := c.nativeAPI.Configuration.CreateBackend(&backend, c.activeTransaction, 0)
+	if err != nil {
+		return err
+	}
+	c.activeBackends[backend.Name] = struct{}{}
+	return nil
 }
 
 func (c *clientNative) BackendEdit(backend models.Backend) error {
@@ -114,4 +122,22 @@ func (c *clientNative) BackendServersGet(backendName string) (models.Servers, er
 		return nil, err
 	}
 	return servers, nil
+}
+
+func (c *clientNative) RefreshBackends() (deleted []string, err error) {
+	backends, errAPI := c.BackendsGet()
+	if errAPI != nil {
+		err = fmt.Errorf("unable to get configured backends")
+		return
+	}
+	for _, backend := range backends {
+		if _, ok := c.activeBackends[backend.Name]; !ok {
+			if err = c.BackendDelete(backend.Name); err != nil {
+				return
+			}
+			deleted = append(deleted, backend.Name)
+		}
+	}
+	c.activeBackends = map[string]struct{}{}
+	return
 }

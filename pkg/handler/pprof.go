@@ -57,7 +57,6 @@ func (handler Pprof) Update(k store.K8s, h haproxy.HAProxy, a annotations.Annota
 	if err != nil {
 		return
 	}
-	h.ActiveBackends[pprofBackend] = struct{}{}
 	reload = true
 	return
 }

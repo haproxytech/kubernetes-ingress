@@ -12,11 +12,9 @@ type Config struct {
 	maps.Maps
 	rules.Rules
 	certs.Certificates
-	ActiveBackends  map[string]struct{}
-	RateLimitTables []string
-	HTTPS           bool
-	SSLPassthrough  bool
-	AuxCfgModTime   int64
+	HTTPS          bool
+	SSLPassthrough bool
+	AuxCfgModTime  int64
 }
 
 // Init initializes HAProxy structs
@@ -35,7 +33,6 @@ func New(env Env, rules rules.Rules) (cfg *Config, err error) {
 		return
 	}
 	cfg.Rules = rules
-	cfg.ActiveBackends = make(map[string]struct{})
 	return
 }
 
@@ -43,8 +40,6 @@ func New(env Env, rules rules.Rules) (cfg *Config, err error) {
 // deletes them completely or just resets them if needed
 func (cfg *Config) Clean() {
 	cfg.SSLPassthrough = false
-	cfg.RateLimitTables = []string{}
-	cfg.ActiveBackends = make(map[string]struct{})
 	cfg.CleanMaps()
 	cfg.CleanCerts()
 	cfg.CleanRules()

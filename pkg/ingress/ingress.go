@@ -128,7 +128,6 @@ func (i *Ingress) handlePath(k store.K8s, h haproxy.HAProxy, host string, path *
 	if err != nil {
 		return
 	}
-	h.ActiveBackends[backendName] = struct{}{}
 	// Endpoints
 	endpointsReload := svc.HandleHAProxySrvs(k, h)
 	return backendReload || endpointsReload || routeReload, err
@@ -180,9 +179,6 @@ func addRules(list rules.List, h haproxy.HAProxy, ingressRule bool) []rules.Rule
 			if h.SSLPassthrough {
 				frontends = []string{h.FrontHTTP, h.FrontSSL}
 			}
-		case rules.REQ_RATELIMIT:
-			limitRule := rule.(*rules.ReqRateLimit)
-			h.RateLimitTables = append(h.RateLimitTables, limitRule.TableName)
 		}
 		for _, frontend := range frontends {
 			logger.Error(h.AddRule(frontend, rule, ingressRule))

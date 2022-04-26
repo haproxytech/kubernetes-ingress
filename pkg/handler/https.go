@@ -173,8 +173,9 @@ func (handler HTTPS) Update(k store.K8s, h haproxy.HAProxy, a annotations.Annota
 	}
 	// ssl-passthrough
 	_, errFtSSL := h.FrontendGet(h.FrontSSL)
+	_, errBdSSL := h.BackendGet(h.BackSSL)
 	if h.SSLPassthrough {
-		if errFtSSL != nil {
+		if errFtSSL != nil || errBdSSL != nil {
 			logger.Error(handler.enableSSLPassthrough(h))
 			h.SSLPassthrough = true
 			reload = true

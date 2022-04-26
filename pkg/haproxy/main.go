@@ -70,25 +70,11 @@ func (h *HAProxy) Refresh(cleanCrts bool) (reload bool, err error) {
 	// Maps
 	reload = h.RefreshMaps(h.HAProxyClient) || reload
 	// Backends
-	if h.SSLPassthrough {
-		h.ActiveBackends[h.BackSSL] = struct{}{}
-	}
-	for _, rateLimitTable := range h.RateLimitTables {
-		h.ActiveBackends[rateLimitTable] = struct{}{}
-	}
-	backends, errAPI := h.BackendsGet()
-	if errAPI != nil {
-		err = fmt.Errorf("unable to get configured backends")
-		return
-	}
-	for _, backend := range backends {
-		if _, ok := h.ActiveBackends[backend.Name]; !ok {
-			logger.Debugf("Deleting backend '%s'", backend.Name)
-			if err := h.BackendDelete(backend.Name); err != nil {
-				logger.Panic(err)
-			}
-			annotations.RemoveBackendCfgSnippet(backend.Name)
-		}
+	deleted, err := h.RefreshBackends()
+	logger.Error(err)
+	for _, backend := range deleted {
+		logger.Debugf("Backend '%s' deleted", backend)
+		annotations.RemoveBackendCfgSnippet(backend)
 	}
 	return
 }
