@@ -88,13 +88,12 @@ func (h HTTPS) handleClientTLSAuth(k store.K8s, cfg *config.ControllerCfg, api a
 			return
 		}
 	}
-	if secret == nil {
-		return
-	}
-	caFile, err = cfg.Certificates.HandleTLSSecret(secret, certs.CA_CERT)
-	if err != nil {
-		err = fmt.Errorf("client TLS Auth: %w", err)
-		return
+	if secret != nil {
+		caFile, err = cfg.Certificates.HandleTLSSecret(secret, certs.CA_CERT)
+		if err != nil {
+			err = fmt.Errorf("client TLS Auth: %w", err)
+			return
+		}
 	}
 
 	binds, bindsErr := api.FrontendBindsGet(cfg.FrontHTTPS)
