@@ -97,7 +97,7 @@ func AddHostPathRoute(route Route, mapFiles *maps.MapFiles) error {
 func AddCustomRoute(route Route, routeACLAnn string, api api.HAProxyClient) (reload bool, err error) {
 	var routeCond string
 	if route.Host != "" {
-		routeCond = fmt.Sprintf("{ var(txn.host) %s } ", route.Host)
+		routeCond = fmt.Sprintf("{ var(txn.host) -m str %s } ", route.Host)
 	}
 	if route.Path.Path != "" {
 		if route.Path.PathTypeMatch == store.PATH_TYPE_EXACT {
