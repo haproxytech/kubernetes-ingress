@@ -24,12 +24,9 @@ import (
 type Refresh struct{}
 
 func (h Refresh) Update(k store.K8s, cfg *config.ControllerCfg, api api.HAProxyClient) (reload bool, err error) {
-	var cleanCrts bool
-	cleanCrts, err = annotations.Bool("clean-certs", k.ConfigMaps.Main.Annotations)
-	if err != nil {
-		cleanCrts = true
-	}
-	if cleanCrts {
+	cleanCrtsAnn, err := annotations.ParseBool("clean-certs", k.ConfigMaps.Main.Annotations)
+	// cleanCrtsAnn is empty if clean-certs not set or set with a non boolean value =>  error
+	if cleanCrtsAnn == "" || cleanCrtsAnn == "true" {
 		reload = cfg.Certificates.Refresh() || reload
 	}
 	reload = cfg.HAProxyRules.Refresh(api) || reload

@@ -130,15 +130,22 @@ func SetDefaultValue(annotation, value string) {
 }
 
 func Bool(name string, annotations ...map[string]string) (out bool, err error) {
+	boolean, err := ParseBool(name, annotations...)
+	out = boolean == "true"
+	return
+}
+
+func ParseBool(name string, annotations ...map[string]string) (out string, err error) {
 	input := common.GetValue(name, annotations...)
 	if input == "" {
 		return
 	}
-	out, err = utils.GetBoolValue(input, name)
+	_, err = utils.GetBoolValue(input, name)
 	if err != nil {
 		err = fmt.Errorf("%s annotation: %w", name, err)
 		return
 	}
+	out = input
 	return
 }
 
