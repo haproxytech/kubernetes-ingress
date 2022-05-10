@@ -85,70 +85,72 @@ type ingressNetworkingV1Beta1Strategy struct {
 
 func (n ingressNetworkingV1Beta1Strategy) ConvertIngress() *Ingress {
 	return &Ingress{
-		APIVersion:  NETWORKINGV1BETA1,
-		Namespace:   n.ig.GetNamespace(),
-		Name:        n.ig.GetName(),
-		Class:       getIgClass(n.ig.Spec.IngressClassName),
-		Annotations: CopyAnnotations(n.ig.GetAnnotations()),
-		Rules: func(ingressRules []networkingv1beta1.IngressRule) map[string]*IngressRule {
-			rules := make(map[string]*IngressRule)
-			for _, k8sRule := range ingressRules {
-				paths := make(map[string]*IngressPath)
-				if k8sRule.HTTP == nil {
-					logger.Warningf("Ingress HTTP rules for [%s] does not exists", k8sRule.Host)
-					continue
-				}
-				for _, k8sPath := range k8sRule.HTTP.Paths {
-					var pathType string
-					if k8sPath.PathType != nil {
-						pathType = string(*k8sPath.PathType)
+		IngressCore: IngressCore{
+			APIVersion:  NETWORKINGV1BETA1,
+			Namespace:   n.ig.GetNamespace(),
+			Name:        n.ig.GetName(),
+			Class:       getIgClass(n.ig.Spec.IngressClassName),
+			Annotations: CopyAnnotations(n.ig.GetAnnotations()),
+			Rules: func(ingressRules []networkingv1beta1.IngressRule) map[string]*IngressRule {
+				rules := make(map[string]*IngressRule)
+				for _, k8sRule := range ingressRules {
+					paths := make(map[string]*IngressPath)
+					if k8sRule.HTTP == nil {
+						logger.Warningf("Ingress HTTP rules for [%s] does not exists", k8sRule.Host)
+						continue
 					}
-					paths[pathType+"-"+k8sPath.Path] = &IngressPath{
-						Path:          k8sPath.Path,
-						PathTypeMatch: pathType,
-						SvcNamespace:  n.ig.GetNamespace(),
-						SvcName:       k8sPath.Backend.ServiceName,
-						SvcPortInt:    int64(k8sPath.Backend.ServicePort.IntValue()),
-						SvcPortString: k8sPath.Backend.ServicePort.StrVal,
+					for _, k8sPath := range k8sRule.HTTP.Paths {
+						var pathType string
+						if k8sPath.PathType != nil {
+							pathType = string(*k8sPath.PathType)
+						}
+						paths[pathType+"-"+k8sPath.Path] = &IngressPath{
+							Path:          k8sPath.Path,
+							PathTypeMatch: pathType,
+							SvcNamespace:  n.ig.GetNamespace(),
+							SvcName:       k8sPath.Backend.ServiceName,
+							SvcPortInt:    int64(k8sPath.Backend.ServicePort.IntValue()),
+							SvcPortString: k8sPath.Backend.ServicePort.StrVal,
+						}
 					}
-				}
-				if rule, ok := rules[k8sRule.Host]; ok {
-					for path, ingressPath := range paths {
-						rule.Paths[path] = ingressPath
-					}
-				} else {
-					rules[k8sRule.Host] = &IngressRule{
-						Host:  k8sRule.Host,
-						Paths: paths,
-					}
-				}
-			}
-			return rules
-		}(n.ig.Spec.Rules),
-		DefaultBackend: func(ingressBackend *networkingv1beta1.IngressBackend) *IngressPath {
-			if ingressBackend == nil {
-				return nil
-			}
-			return &IngressPath{
-				SvcNamespace:     n.ig.GetNamespace(),
-				SvcName:          ingressBackend.ServiceName,
-				SvcPortInt:       int64(ingressBackend.ServicePort.IntValue()),
-				SvcPortString:    ingressBackend.ServicePort.StrVal,
-				IsDefaultBackend: true,
-			}
-		}(n.ig.Spec.Backend),
-		TLS: func(ingressTLS []networkingv1beta1.IngressTLS) map[string]*IngressTLS {
-			tls := make(map[string]*IngressTLS)
-			for _, k8sTLS := range ingressTLS {
-				for _, host := range k8sTLS.Hosts {
-					tls[host] = &IngressTLS{
-						Host:       host,
-						SecretName: k8sTLS.SecretName,
+					if rule, ok := rules[k8sRule.Host]; ok {
+						for path, ingressPath := range paths {
+							rule.Paths[path] = ingressPath
+						}
+					} else {
+						rules[k8sRule.Host] = &IngressRule{
+							Host:  k8sRule.Host,
+							Paths: paths,
+						}
 					}
 				}
-			}
-			return tls
-		}(n.ig.Spec.TLS),
+				return rules
+			}(n.ig.Spec.Rules),
+			DefaultBackend: func(ingressBackend *networkingv1beta1.IngressBackend) *IngressPath {
+				if ingressBackend == nil {
+					return nil
+				}
+				return &IngressPath{
+					SvcNamespace:     n.ig.GetNamespace(),
+					SvcName:          ingressBackend.ServiceName,
+					SvcPortInt:       int64(ingressBackend.ServicePort.IntValue()),
+					SvcPortString:    ingressBackend.ServicePort.StrVal,
+					IsDefaultBackend: true,
+				}
+			}(n.ig.Spec.Backend),
+			TLS: func(ingressTLS []networkingv1beta1.IngressTLS) map[string]*IngressTLS {
+				tls := make(map[string]*IngressTLS)
+				for _, k8sTLS := range ingressTLS {
+					for _, host := range k8sTLS.Hosts {
+						tls[host] = &IngressTLS{
+							Host:       host,
+							SecretName: k8sTLS.SecretName,
+						}
+					}
+				}
+				return tls
+			}(n.ig.Spec.TLS),
+		},
 	}
 }
 
@@ -168,69 +170,71 @@ type ingressExtensionsStrategy struct {
 
 func (e ingressExtensionsStrategy) ConvertIngress() *Ingress {
 	return &Ingress{
-		APIVersion:  EXTENSIONSV1BETA1,
-		Namespace:   e.ig.GetNamespace(),
-		Name:        e.ig.GetName(),
-		Annotations: CopyAnnotations(e.ig.GetAnnotations()),
-		Rules: func(ingressRules []extensionsv1beta1.IngressRule) map[string]*IngressRule {
-			rules := make(map[string]*IngressRule)
-			for _, k8sRule := range ingressRules {
-				paths := make(map[string]*IngressPath)
-				if k8sRule.HTTP == nil {
-					logger.Warningf("Ingress HTTP rules for [%s] does not exists", k8sRule.Host)
-					continue
-				}
-				for _, k8sPath := range k8sRule.HTTP.Paths {
-					var pathType string
-					if k8sPath.PathType != nil {
-						pathType = string(*k8sPath.PathType)
+		IngressCore: IngressCore{
+			APIVersion:  EXTENSIONSV1BETA1,
+			Namespace:   e.ig.GetNamespace(),
+			Name:        e.ig.GetName(),
+			Annotations: CopyAnnotations(e.ig.GetAnnotations()),
+			Rules: func(ingressRules []extensionsv1beta1.IngressRule) map[string]*IngressRule {
+				rules := make(map[string]*IngressRule)
+				for _, k8sRule := range ingressRules {
+					paths := make(map[string]*IngressPath)
+					if k8sRule.HTTP == nil {
+						logger.Warningf("Ingress HTTP rules for [%s] does not exists", k8sRule.Host)
+						continue
 					}
-					paths[pathType+"-"+k8sPath.Path] = &IngressPath{
-						Path:          k8sPath.Path,
-						PathTypeMatch: pathType,
-						SvcNamespace:  e.ig.GetNamespace(),
-						SvcName:       k8sPath.Backend.ServiceName,
-						SvcPortInt:    int64(k8sPath.Backend.ServicePort.IntValue()),
-						SvcPortString: k8sPath.Backend.ServicePort.StrVal,
+					for _, k8sPath := range k8sRule.HTTP.Paths {
+						var pathType string
+						if k8sPath.PathType != nil {
+							pathType = string(*k8sPath.PathType)
+						}
+						paths[pathType+"-"+k8sPath.Path] = &IngressPath{
+							Path:          k8sPath.Path,
+							PathTypeMatch: pathType,
+							SvcNamespace:  e.ig.GetNamespace(),
+							SvcName:       k8sPath.Backend.ServiceName,
+							SvcPortInt:    int64(k8sPath.Backend.ServicePort.IntValue()),
+							SvcPortString: k8sPath.Backend.ServicePort.StrVal,
+						}
 					}
-				}
-				if rule, ok := rules[k8sRule.Host]; ok {
-					for path, ingressPath := range paths {
-						rule.Paths[path] = ingressPath
-					}
-				} else {
-					rules[k8sRule.Host] = &IngressRule{
-						Host:  k8sRule.Host,
-						Paths: paths,
-					}
-				}
-			}
-			return rules
-		}(e.ig.Spec.Rules),
-		DefaultBackend: func(ingressBackend *extensionsv1beta1.IngressBackend) *IngressPath {
-			if ingressBackend == nil {
-				return nil
-			}
-			return &IngressPath{
-				SvcNamespace:     e.ig.GetNamespace(),
-				SvcName:          ingressBackend.ServiceName,
-				SvcPortInt:       int64(ingressBackend.ServicePort.IntValue()),
-				SvcPortString:    ingressBackend.ServicePort.StrVal,
-				IsDefaultBackend: true,
-			}
-		}(e.ig.Spec.Backend),
-		TLS: func(ingressTLS []extensionsv1beta1.IngressTLS) map[string]*IngressTLS {
-			tls := make(map[string]*IngressTLS)
-			for _, k8sTLS := range ingressTLS {
-				for _, host := range k8sTLS.Hosts {
-					tls[host] = &IngressTLS{
-						Host:       host,
-						SecretName: k8sTLS.SecretName,
+					if rule, ok := rules[k8sRule.Host]; ok {
+						for path, ingressPath := range paths {
+							rule.Paths[path] = ingressPath
+						}
+					} else {
+						rules[k8sRule.Host] = &IngressRule{
+							Host:  k8sRule.Host,
+							Paths: paths,
+						}
 					}
 				}
-			}
-			return tls
-		}(e.ig.Spec.TLS),
+				return rules
+			}(e.ig.Spec.Rules),
+			DefaultBackend: func(ingressBackend *extensionsv1beta1.IngressBackend) *IngressPath {
+				if ingressBackend == nil {
+					return nil
+				}
+				return &IngressPath{
+					SvcNamespace:     e.ig.GetNamespace(),
+					SvcName:          ingressBackend.ServiceName,
+					SvcPortInt:       int64(ingressBackend.ServicePort.IntValue()),
+					SvcPortString:    ingressBackend.ServicePort.StrVal,
+					IsDefaultBackend: true,
+				}
+			}(e.ig.Spec.Backend),
+			TLS: func(ingressTLS []extensionsv1beta1.IngressTLS) map[string]*IngressTLS {
+				tls := make(map[string]*IngressTLS)
+				for _, k8sTLS := range ingressTLS {
+					for _, host := range k8sTLS.Hosts {
+						tls[host] = &IngressTLS{
+							Host:       host,
+							SecretName: k8sTLS.SecretName,
+						}
+					}
+				}
+				return tls
+			}(e.ig.Spec.TLS),
+		},
 	}
 }
 
@@ -243,76 +247,78 @@ type ingressNetworkingV1Strategy struct {
 
 func (n ingressNetworkingV1Strategy) ConvertIngress() *Ingress {
 	return &Ingress{
-		APIVersion:  NETWORKINGV1,
-		Namespace:   n.ig.GetNamespace(),
-		Name:        n.ig.GetName(),
-		Class:       getIgClass(n.ig.Spec.IngressClassName),
-		Annotations: CopyAnnotations(n.ig.GetAnnotations()),
-		Rules: func(ingressRules []networkingv1.IngressRule) map[string]*IngressRule {
-			rules := make(map[string]*IngressRule)
-			for _, k8sRule := range ingressRules {
-				paths := make(map[string]*IngressPath)
-				if k8sRule.HTTP == nil {
-					logger.Warningf("Ingress HTTP rules for [%s] does not exists", k8sRule.Host)
-					continue
-				}
-				for _, k8sPath := range k8sRule.HTTP.Paths {
-					var pathType string
-					if k8sPath.PathType != nil {
-						pathType = string(*k8sPath.PathType)
+		IngressCore: IngressCore{
+			APIVersion:  NETWORKINGV1,
+			Namespace:   n.ig.GetNamespace(),
+			Name:        n.ig.GetName(),
+			Class:       getIgClass(n.ig.Spec.IngressClassName),
+			Annotations: CopyAnnotations(n.ig.GetAnnotations()),
+			Rules: func(ingressRules []networkingv1.IngressRule) map[string]*IngressRule {
+				rules := make(map[string]*IngressRule)
+				for _, k8sRule := range ingressRules {
+					paths := make(map[string]*IngressPath)
+					if k8sRule.HTTP == nil {
+						logger.Warningf("Ingress HTTP rules for [%s] does not exists", k8sRule.Host)
+						continue
 					}
-					pathKey := pathType + "-" + k8sPath.Path
-					paths[pathKey] = &IngressPath{
-						Path:          k8sPath.Path,
-						PathTypeMatch: pathType,
-						SvcNamespace:  n.ig.GetNamespace(),
+					for _, k8sPath := range k8sRule.HTTP.Paths {
+						var pathType string
+						if k8sPath.PathType != nil {
+							pathType = string(*k8sPath.PathType)
+						}
+						pathKey := pathType + "-" + k8sPath.Path
+						paths[pathKey] = &IngressPath{
+							Path:          k8sPath.Path,
+							PathTypeMatch: pathType,
+							SvcNamespace:  n.ig.GetNamespace(),
+						}
+						if k8sPath.Backend.Service != nil {
+							paths[pathKey].SvcName = k8sPath.Backend.Service.Name
+							paths[pathKey].SvcPortInt = int64(k8sPath.Backend.Service.Port.Number)
+							paths[pathKey].SvcPortString = k8sPath.Backend.Service.Port.Name
+						}
 					}
-					if k8sPath.Backend.Service != nil {
-						paths[pathKey].SvcName = k8sPath.Backend.Service.Name
-						paths[pathKey].SvcPortInt = int64(k8sPath.Backend.Service.Port.Number)
-						paths[pathKey].SvcPortString = k8sPath.Backend.Service.Port.Name
-					}
-				}
-				if rule, ok := rules[k8sRule.Host]; ok {
-					for path, ingressPath := range paths {
-						rule.Paths[path] = ingressPath
-					}
-				} else {
-					rules[k8sRule.Host] = &IngressRule{
-						Host:  k8sRule.Host,
-						Paths: paths,
-					}
-				}
-			}
-			return rules
-		}(n.ig.Spec.Rules),
-		DefaultBackend: func(ingressBackend *networkingv1.IngressBackend) *IngressPath {
-			if ingressBackend == nil {
-				return nil
-			}
-			ingPath := &IngressPath{
-				SvcNamespace:     n.ig.GetNamespace(),
-				IsDefaultBackend: true,
-			}
-			if ingressBackend.Service != nil {
-				ingPath.SvcName = ingressBackend.Service.Name
-				ingPath.SvcPortInt = int64(ingressBackend.Service.Port.Number)
-				ingPath.SvcPortString = ingressBackend.Service.Port.Name
-			}
-			return ingPath
-		}(n.ig.Spec.DefaultBackend),
-		TLS: func(ingressTLS []networkingv1.IngressTLS) map[string]*IngressTLS {
-			tls := make(map[string]*IngressTLS)
-			for _, k8sTLS := range ingressTLS {
-				for _, host := range k8sTLS.Hosts {
-					tls[host] = &IngressTLS{
-						Host:       host,
-						SecretName: k8sTLS.SecretName,
+					if rule, ok := rules[k8sRule.Host]; ok {
+						for path, ingressPath := range paths {
+							rule.Paths[path] = ingressPath
+						}
+					} else {
+						rules[k8sRule.Host] = &IngressRule{
+							Host:  k8sRule.Host,
+							Paths: paths,
+						}
 					}
 				}
-			}
-			return tls
-		}(n.ig.Spec.TLS),
+				return rules
+			}(n.ig.Spec.Rules),
+			DefaultBackend: func(ingressBackend *networkingv1.IngressBackend) *IngressPath {
+				if ingressBackend == nil {
+					return nil
+				}
+				ingPath := &IngressPath{
+					SvcNamespace:     n.ig.GetNamespace(),
+					IsDefaultBackend: true,
+				}
+				if ingressBackend.Service != nil {
+					ingPath.SvcName = ingressBackend.Service.Name
+					ingPath.SvcPortInt = int64(ingressBackend.Service.Port.Number)
+					ingPath.SvcPortString = ingressBackend.Service.Port.Name
+				}
+				return ingPath
+			}(n.ig.Spec.DefaultBackend),
+			TLS: func(ingressTLS []networkingv1.IngressTLS) map[string]*IngressTLS {
+				tls := make(map[string]*IngressTLS)
+				for _, k8sTLS := range ingressTLS {
+					for _, host := range k8sTLS.Hosts {
+						tls[host] = &IngressTLS{
+							Host:       host,
+							SecretName: k8sTLS.SecretName,
+						}
+					}
+				}
+				return tls
+			}(n.ig.Spec.TLS),
+		},
 	}
 }
 

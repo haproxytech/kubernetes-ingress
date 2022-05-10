@@ -122,6 +122,13 @@ type IngressRule struct {
 // Ingress is useful data from k8s structures about ingress
 type Ingress struct {
 	// Required for K8s.UpdateIngressStatus to select proper versioned Client Set
+	IngressCore
+	Ignored   bool   // true if resource ignored because of non matching Controller Class
+	Status    Status // Used for store purpose
+	Addresses []string
+}
+
+type IngressCore struct {
 	APIVersion     string
 	Namespace      string
 	Name           string
@@ -130,8 +137,6 @@ type Ingress struct {
 	Rules          map[string]*IngressRule
 	DefaultBackend *IngressPath
 	TLS            map[string]*IngressTLS
-	Ignored        bool   // true if resource ignored because of non matching Controller Class
-	Status         Status // Used for store purpose
 }
 
 // IngressTLS describes the transport layer security associated with an Ingress.

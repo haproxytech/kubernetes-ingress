@@ -474,8 +474,11 @@ func (k *K8s) EventsServices(channel chan SyncDataEvent, ingressChan chan ingres
 			}
 			k.Logger.Tracef("%s %s: %s", SERVICE, item.Status, item.Name)
 			channel <- SyncDataEvent{SyncType: SERVICE, Namespace: item.Namespace, Data: item}
-			if publishSvc != nil && publishSvc.Namespace == data.Namespace && publishSvc.Name == data.Name {
-				ingressChan <- ingress.Sync{Service: data}
+			if publishSvc != nil && publishSvc.Namespace == item.Namespace && publishSvc.Name == item.Name {
+				// item copy because of ADDED handler in events.go which must modify the STATUS based solely on addresses
+				itemCopy := *item
+				itemCopy.Addresses = getServiceAddresses(data)
+				channel <- SyncDataEvent{SyncType: PUBLISH_SERVICE, Namespace: item.Namespace, Data: &itemCopy}
 			}
 		},
 		DeleteFunc: func(obj interface{}) {
@@ -499,8 +502,9 @@ func (k *K8s) EventsServices(channel chan SyncDataEvent, ingressChan chan ingres
 			}
 			k.Logger.Tracef("%s %s: %s", SERVICE, item.Status, item.Name)
 			channel <- SyncDataEvent{SyncType: SERVICE, Namespace: item.Namespace, Data: item}
-			if publishSvc != nil && publishSvc.Namespace == data.Namespace && publishSvc.Name == data.Name {
-				ingressChan <- ingress.Sync{Service: data}
+			if publishSvc != nil && publishSvc.Namespace == item.Namespace && publishSvc.Name == item.Name {
+				item.Addresses = getServiceAddresses(data)
+				channel <- SyncDataEvent{SyncType: PUBLISH_SERVICE, Namespace: data.Namespace, Data: item}
 			}
 		},
 		UpdateFunc: func(oldObj, newObj interface{}) {
@@ -522,9 +526,7 @@ func (k *K8s) EventsServices(channel chan SyncDataEvent, ingressChan chan ingres
 				k.Logger.Tracef("forwarding to ExternalName Services for %v is disabled", data2)
 				return
 			}
-			if publishSvc != nil && publishSvc.Namespace == data2.Namespace && publishSvc.Name == data2.Name {
-				ingressChan <- ingress.Sync{Service: data2}
-			}
+
 			status := MODIFIED
 			item1 := &store.Service{
 				Namespace:   data1.GetNamespace(),
@@ -564,8 +566,15 @@ func (k *K8s) EventsServices(channel chan SyncDataEvent, ingressChan chan ingres
 			if item2.Equal(item1) {
 				return
 			}
-			k.Logger.Tracef("%s %s: %s", SERVICE, item2.Status, item2.Name)
-			channel <- SyncDataEvent{SyncType: SERVICE, Namespace: item2.Namespace, Data: item2}
+
+			if !item2.Equal(item1) {
+				k.Logger.Tracef("%s %s: %s", SERVICE, item2.Status, item2.Name)
+				channel <- SyncDataEvent{SyncType: SERVICE, Namespace: item2.Namespace, Data: item2}
+			}
+			if publishSvc != nil && publishSvc.Namespace == item2.Namespace && publishSvc.Name == item2.Name {
+				item2.Addresses = getServiceAddresses(data2)
+				channel <- SyncDataEvent{SyncType: PUBLISH_SERVICE, Namespace: item2.Namespace, Data: item2}
+			}
 		},
 	})
 	go informer.Run(stop)
@@ -765,4 +774,35 @@ func (k *K8s) IsNetworkingV1ApiSupported() bool {
 	minor, _ := utils.ParseInt(vi.Minor)
 
 	return major == 1 && minor >= 19
+}
+
+func getServiceAddresses(service *corev1.Service) (addresses []string) {
+	switch service.Spec.Type {
+	case corev1.ServiceTypeExternalName:
+		addresses = []string{service.Spec.ExternalName}
+	case corev1.ServiceTypeClusterIP:
+		addresses = []string{service.Spec.ClusterIP}
+	case corev1.ServiceTypeNodePort:
+		if service.Spec.ExternalIPs != nil {
+			addresses = append(addresses, service.Spec.ExternalIPs...)
+		} else {
+			addresses = append(addresses, service.Spec.ClusterIP)
+		}
+	case corev1.ServiceTypeLoadBalancer:
+		for _, ip := range service.Status.LoadBalancer.Ingress {
+			if ip.IP == "" {
+				addresses = append(addresses, ip.Hostname)
+			} else {
+				addresses = append(addresses, ip.IP)
+			}
+		}
+		addresses = append(addresses, service.Spec.ExternalIPs...)
+	default:
+		logger.Errorf("Unable to extract IP address/es from service %s/%s", service.Namespace, service.Name)
+		return
+	}
+	if addresses == nil {
+		addresses = []string{}
+	}
+	return
 }

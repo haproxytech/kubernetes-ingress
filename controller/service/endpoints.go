@@ -28,7 +28,9 @@ import (
 // HandleHAProxySrvs handles the haproxy backend servers of the corresponding IngressPath (service + port)
 func (s *Service) HandleHAProxySrvs(client api.HAProxyClient, store store.K8s) (reload bool) {
 	var srvsScaled bool
+
 	backend, err := s.getRuntimeBackend(store)
+
 	if err != nil {
 		logger.Warningf("Ingress '%s/%s': %s", s.resource.Namespace, s.resource.Name, err)
 		if servers, _ := client.BackendServersGet(s.backend.Name); servers != nil {
@@ -47,6 +49,7 @@ func (s *Service) HandleHAProxySrvs(client api.HAProxyClient, store store.K8s) (
 			s.updateHAProxySrv(client, *srvSlot, backend.Endpoints.Port)
 		}
 	}
+
 	if backend.DynUpdateFailed {
 		backend.DynUpdateFailed = false
 		return true

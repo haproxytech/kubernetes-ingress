@@ -87,12 +87,15 @@ func (i *Ingress) handlePath(k store.K8s, cfg *configuration.ControllerCfg, api 
 	if err != nil {
 		return
 	}
+
 	// Backend
 	backendReload, err := svc.HandleBackend(api, k)
 	if err != nil {
 		return
 	}
+
 	backendName, _ := svc.GetBackendName()
+
 	// Route
 	var routeReload bool
 	ingRoute := route.Route{
@@ -119,7 +122,12 @@ func (i *Ingress) handlePath(k store.K8s, cfg *configuration.ControllerCfg, api 
 	}
 	cfg.ActiveBackends[backendName] = struct{}{}
 	// Endpoints
-	endpointsReload := svc.HandleHAProxySrvs(api, k)
+	service := svc.GetResource()
+	var endpointsReload bool
+	if _, ok := k.ServiceProcessed[service.Namespace+"/"+service.Name]; !ok {
+		endpointsReload = svc.HandleHAProxySrvs(api, k)
+		k.ServiceProcessed[service.Namespace+"/"+service.Name] = struct{}{}
+	}
 	return backendReload || endpointsReload || routeReload, err
 }
 
@@ -192,14 +200,19 @@ func (i *Ingress) Update(k store.K8s, cfg *configuration.ControllerCfg, api api.
 			logger.Infof("Setting http default backend to '%s'", backendName)
 		}
 	}
+
 	// Ingress secrets
 	logger.Tracef("Ingress '%s/%s': processing secrets...", i.resource.Namespace, i.resource.Name)
 	for _, tls := range i.resource.TLS {
+		if _, ok := k.SecretsProcessed[i.resource.Namespace+"/"+tls.SecretName]; ok {
+			continue
+		}
 		secret, secErr := k.GetSecret(i.resource.Namespace, tls.SecretName)
 		if secErr != nil {
 			logger.Warningf("Ingress '%s/%s': %s", i.resource.Namespace, i.resource.Name, secErr)
 			continue
 		}
+		k.SecretsProcessed[i.resource.Namespace+"/"+tls.SecretName] = struct{}{}
 		_, err := cfg.Certificates.HandleTLSSecret(secret, certs.FT_CERT)
 		logger.Error(err)
 	}
@@ -217,6 +230,7 @@ func (i *Ingress) Update(k store.K8s, cfg *configuration.ControllerCfg, api api.
 		cfg.SSLPassthrough = true
 	}
 	i.HandleAnnotations(k, cfg)
+
 	// Ingress rules
 	logger.Tracef("ingress '%s/%s': processing rules...", i.resource.Namespace, i.resource.Name)
 	for _, rule := range i.resource.Rules {
@@ -228,5 +242,6 @@ func (i *Ingress) Update(k store.K8s, cfg *configuration.ControllerCfg, api api.
 			}
 		}
 	}
+
 	return
 }

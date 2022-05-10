@@ -116,6 +116,8 @@ func (c *HAProxyController) Start() {
 		logger.Printf("Running on Kubernetes version: %s %s", k8sVersion.String(), k8sVersion.Platform)
 	}
 
+	c.Store.UpdateStatusFunc = ingress.NewStatusIngressUpdater(c.k8s.API, c.Store, c.OSArgs.IngressClass, c.OSArgs.EmptyIngressClass)
+
 	// Monitor k8s events
 	var chanSize int64 = int64(watch.DefaultChanSize * 6)
 	if c.OSArgs.ChannelSize > 0 {
@@ -124,11 +126,6 @@ func (c *HAProxyController) Start() {
 	logger.Infof("Channel size: %d", chanSize)
 	c.eventChan = make(chan SyncDataEvent, chanSize)
 	go c.monitorChanges()
-	if c.PublishService != nil {
-		// Update Ingress status
-		c.ingressChan = make(chan ingress.Sync, chanSize)
-		go ingress.UpdateStatus(c.k8s.API, c.Store, c.OSArgs.IngressClass, c.OSArgs.EmptyIngressClass, c.ingressChan)
-	}
 }
 
 // Stop handles shutting down HAProxyController
@@ -141,6 +138,7 @@ func (c *HAProxyController) Stop() {
 func (c *HAProxyController) updateHAProxy() {
 	var reload bool
 	var err error
+
 	logger.Trace("HAProxy config sync started")
 
 	err = c.Client.APIStartTransaction()
@@ -160,25 +158,26 @@ func (c *HAProxyController) updateHAProxy() {
 		logger.Error(route.CustomRoutesReset(c.Client))
 	}
 
+	ingresses := []*ingress.Ingress{}
 	for _, namespace := range c.Store.Namespaces {
 		if !namespace.Relevant {
 			continue
 		}
+		c.Store.SecretsProcessed = map[string]struct{}{}
 		for _, ingResource := range namespace.Ingresses {
 			i := ingress.New(c.Store, ingResource, c.OSArgs.IngressClass, c.OSArgs.EmptyIngressClass)
 			if i == nil {
 				logger.Debugf("ingress '%s/%s' ignored: no matching IngressClass", ingResource.Namespace, ingResource.Name)
 				continue
 			}
-			if c.PublishService != nil && ingResource.Status == ADDED {
-				select {
-				case c.ingressChan <- ingress.Sync{Ingress: ingResource}:
-				default:
-					logger.Errorf("Ingress %s/%s: unable to sync status: sync channel full", ingResource.Namespace, ingResource.Name)
-				}
+			if ingResource.Status == ADDED {
+				ingresses = append(ingresses, i)
 			}
 			c.reload = i.Update(c.Store, &c.Cfg, c.Client) || c.reload
 		}
+	}
+	if len(ingresses) > 0 {
+		go ingress.UpdatePublishService(ingresses, c.k8s.API, c.Store.PublishServiceAddresses)
 	}
 
 	for _, handler := range c.updateHandlers {

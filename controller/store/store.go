@@ -23,11 +23,15 @@ import (
 )
 
 type K8s struct {
-	NbrHAProxyInst   int64
-	Namespaces       map[string]*Namespace
-	IngressClasses   map[string]*IngressClass
-	NamespacesAccess NamespacesWatch
-	ConfigMaps       ConfigMaps
+	NbrHAProxyInst          int64
+	Namespaces              map[string]*Namespace
+	IngressClasses          map[string]*IngressClass
+	NamespacesAccess        NamespacesWatch
+	ConfigMaps              ConfigMaps
+	PublishServiceAddresses []string
+	UpdateStatusFunc        func(service Service, ingresses []*Ingress)
+	SecretsProcessed        map[string]struct{}
+	ServiceProcessed        map[string]struct{}
 }
 
 type NamespacesWatch struct {
@@ -65,10 +69,12 @@ func NewK8sStore(args utils.OSArgs) K8s {
 				Name:      args.ConfigMapPatternFiles.Name,
 			},
 		},
+		SecretsProcessed: map[string]struct{}{},
+		ServiceProcessed: map[string]struct{}{},
 	}
 }
 
-func (k K8s) Clean() {
+func (k *K8s) Clean() {
 	for _, namespace := range k.Namespaces {
 		for _, data := range namespace.Ingresses {
 			data.Status = EMPTY
@@ -121,6 +127,9 @@ func (k K8s) Clean() {
 			cm.Status = EMPTY
 		}
 	}
+
+	k.SecretsProcessed = map[string]struct{}{}
+	k.ServiceProcessed = map[string]struct{}{}
 }
 
 // GetNamespace returns Namespace. Creates one if not existing

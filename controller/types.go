@@ -47,6 +47,7 @@ const (
 	SERVICE         SyncType = "SERVICE"
 	SECRET          SyncType = "SECRET"
 	CUSTOM_RESOURCE SyncType = "CUSTOM_RESOURCE"
+	PUBLISH_SERVICE SyncType = "PUBLISH_SERVICE"
 	// Modes
 	HTTP Mode = "http"
 	TCP  Mode = "tcp"

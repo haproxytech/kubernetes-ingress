@@ -14,79 +14,28 @@ import (
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/haproxytech/kubernetes-ingress/controller/store"
+	"github.com/haproxytech/kubernetes-ingress/controller/utils"
 )
 
-func UpdateStatus(client *kubernetes.Clientset, k store.K8s, class string, emptyClass bool, channel chan Sync) {
-	var i *Ingress
-	addresses := []string{}
-	for sync := range channel {
-		// Published Service updated: Update all Ingresses
-		if sync.Service != nil && getServiceAddresses(sync.Service, &addresses) {
-			logger.Debug("Addresses of Ingress Controller service changed, status of all ingress resources are going to be updated")
-			for _, ns := range k.Namespaces {
-				if !ns.Relevant {
-					continue
-				}
-				for _, ingress := range k.Namespaces[ns.Name].Ingresses {
-					if i = New(k, ingress, class, emptyClass); i != nil {
-						logger.Error(i.updateStatus(client, addresses))
-					}
-				}
+type UpdateStatus func(service store.Service, ingresses []*store.Ingress)
+
+func NewStatusIngressUpdater(client *kubernetes.Clientset, k store.K8s, class string, emptyClass bool) UpdateStatus {
+	return func(service store.Service, ingresses []*store.Ingress) {
+		for _, ingress := range ingresses {
+			if ing := New(k, ingress, class, emptyClass); ing != nil {
+				logger.Error(ing.UpdateStatus(client, service.Addresses))
 			}
-		} else if i = New(k, sync.Ingress, class, emptyClass); i != nil {
-			// Update single Ingress
-			logger.Error(i.updateStatus(client, addresses))
 		}
 	}
 }
 
-func getServiceAddresses(service *corev1.Service, curAddr *[]string) (updated bool) {
-	addresses := []string{}
-	switch service.Spec.Type {
-	case corev1.ServiceTypeExternalName:
-		addresses = []string{service.Spec.ExternalName}
-	case corev1.ServiceTypeClusterIP:
-		addresses = []string{service.Spec.ClusterIP}
-	case corev1.ServiceTypeNodePort:
-		if service.Spec.ExternalIPs != nil {
-			addresses = append(addresses, service.Spec.ExternalIPs...)
-		} else {
-			addresses = append(addresses, service.Spec.ClusterIP)
-		}
-	case corev1.ServiceTypeLoadBalancer:
-		for _, ip := range service.Status.LoadBalancer.Ingress {
-			if ip.IP == "" {
-				addresses = append(addresses, ip.Hostname)
-			} else {
-				addresses = append(addresses, ip.IP)
-			}
-		}
-		addresses = append(addresses, service.Spec.ExternalIPs...)
-	default:
-		logger.Errorf("Unable to extract IP address/es from service %s/%s", service.Namespace, service.Name)
-		return
-	}
-
-	if len(*curAddr) != len(addresses) {
-		updated = true
-		*curAddr = addresses
-		return
-	}
-	for i, address := range addresses {
-		if address != (*curAddr)[i] {
-			updated = true
-			break
-		}
-	}
-	if updated {
-		*curAddr = addresses
-	}
-	return
-}
-
-func (i *Ingress) updateStatus(client *kubernetes.Clientset, addresses []string) (err error) {
-	logger.Tracef("Updating status of Ingress %s/%s", i.resource.Namespace, i.resource.Name)
+func (i *Ingress) UpdateStatus(client *kubernetes.Clientset, addresses []string) (err error) {
 	var lbi []corev1.LoadBalancerIngress
+
+	if utils.EqualSliceStringsWithoutOrder(i.resource.Addresses, addresses) {
+		return
+	}
+
 	for _, addr := range addresses {
 		if net.ParseIP(addr) == nil {
 			lbi = append(lbi, corev1.LoadBalancerIngress{Hostname: addr})
@@ -134,6 +83,13 @@ func (i *Ingress) updateStatus(client *kubernetes.Clientset, addresses []string)
 		return fmt.Errorf("failed to update LoadBalancer status of ingress %s/%s: %w", i.resource.Namespace, i.resource.Name, err)
 	}
 	logger.Tracef("Successful update of LoadBalancer status in ingress %s/%s", i.resource.Namespace, i.resource.Name)
-
+	// Allow to store the publish service addresses affected to the ingress for future comparison in update test.
+	i.resource.Addresses = addresses
 	return nil
+}
+
+func UpdatePublishService(ingresses []*Ingress, api *kubernetes.Clientset, publishServiceAddresses []string) {
+	for _, i := range ingresses {
+		logger.Error(i.UpdateStatus(api, publishServiceAddresses))
+	}
 }
