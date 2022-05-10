@@ -3,7 +3,7 @@ package api
 import (
 	"fmt"
 
-	"github.com/haproxytech/client-native/v2/models"
+	"github.com/haproxytech/client-native/v3/models"
 	parser "github.com/haproxytech/config-parser/v4"
 	"github.com/haproxytech/config-parser/v4/types"
 
@@ -11,7 +11,11 @@ import (
 )
 
 func (c *clientNative) DefaultsGetConfiguration() (defaults *models.Defaults, err error) {
-	_, defaults, err = c.nativeAPI.Configuration.GetDefaultsConfiguration(c.activeTransaction)
+	configuration, err := c.nativeAPI.Configuration()
+	if err != nil {
+		return nil, err
+	}
+	_, defaults, err = configuration.GetDefaultsConfiguration(c.activeTransaction)
 	if err != nil {
 		return nil, fmt.Errorf("unable to get HAProxy's defaults section: %w", err)
 	}
@@ -19,13 +23,17 @@ func (c *clientNative) DefaultsGetConfiguration() (defaults *models.Defaults, er
 }
 
 func (c *clientNative) DefaultsPushConfiguration(defaults models.Defaults) (err error) {
-	err = c.nativeAPI.Configuration.PushDefaultsConfiguration(&defaults, c.activeTransaction, 0)
+	configuration, err := c.nativeAPI.Configuration()
+	if err != nil {
+		return err
+	}
+	err = configuration.PushDefaultsConfiguration(&defaults, c.activeTransaction, 0)
 	if err != nil {
 		return fmt.Errorf("unable to update HAProxy's defaults section: %w", err)
 	}
 	// Force defaults log directive to "log global"
-	_ = c.nativeAPI.Configuration.DeleteLogTarget(0, string(parser.Defaults), parser.DefaultSectionName, c.activeTransaction, 0)
-	err = c.nativeAPI.Configuration.CreateLogTarget(string(parser.Defaults), parser.DefaultSectionName, &models.LogTarget{Index: utils.PtrInt64(0), Global: true}, c.activeTransaction, 0)
+	_ = configuration.DeleteLogTarget(0, string(parser.Defaults), parser.DefaultSectionName, c.activeTransaction, 0)
+	err = configuration.CreateLogTarget(string(parser.Defaults), parser.DefaultSectionName, &models.LogTarget{Index: utils.PtrInt64(0), Global: true}, c.activeTransaction, 0)
 	if err != nil {
 		return fmt.Errorf("unable to set 'log global' directive in defaults section: %w", err)
 	}
@@ -33,8 +41,12 @@ func (c *clientNative) DefaultsPushConfiguration(defaults models.Defaults) (err 
 }
 
 func (c *clientNative) GlobalCfgSnippet(value []string) (err error) {
+	configuration, err := c.nativeAPI.Configuration()
+	if err != nil {
+		return err
+	}
 	var config parser.Parser
-	config, err = c.nativeAPI.Configuration.GetParser(c.activeTransaction)
+	config, err = configuration.GetParser(c.activeTransaction)
 	if err != nil {
 		return
 	}
@@ -50,8 +62,12 @@ func (c *clientNative) GlobalCfgSnippet(value []string) (err error) {
 }
 
 func (c *clientNative) GlobalGetLogTargets() (lg models.LogTargets, err error) {
+	configuration, err := c.nativeAPI.Configuration()
+	if err != nil {
+		return nil, err
+	}
 	c.activeTransactionHasChanges = true
-	_, lg, err = c.nativeAPI.Configuration.GetLogTargets("global", parser.GlobalSectionName, c.activeTransaction)
+	_, lg, err = configuration.GetLogTargets("global", parser.GlobalSectionName, c.activeTransaction)
 	if err != nil {
 		return lg, fmt.Errorf("unable to get HAProxy's global log targets: %w", err)
 	}
@@ -59,16 +75,19 @@ func (c *clientNative) GlobalGetLogTargets() (lg models.LogTargets, err error) {
 }
 
 func (c *clientNative) GlobalPushLogTargets(logTargets models.LogTargets) error {
-	var err error
+	configuration, err := c.nativeAPI.Configuration()
+	if err != nil {
+		return err
+	}
 	c.activeTransactionHasChanges = true
 	for {
-		err = c.nativeAPI.Configuration.DeleteLogTarget(0, "global", parser.GlobalSectionName, c.activeTransaction, 0)
+		err = configuration.DeleteLogTarget(0, "global", parser.GlobalSectionName, c.activeTransaction, 0)
 		if err != nil {
 			break
 		}
 	}
 	for _, log := range logTargets {
-		err = c.nativeAPI.Configuration.CreateLogTarget(string(parser.Global), parser.GlobalSectionName, log, c.activeTransaction, 0)
+		err = configuration.CreateLogTarget(string(parser.Global), parser.GlobalSectionName, log, c.activeTransaction, 0)
 		if err != nil {
 			return fmt.Errorf("unable to update HAProxy's global log targets: %w", err)
 		}
@@ -77,7 +96,11 @@ func (c *clientNative) GlobalPushLogTargets(logTargets models.LogTargets) error 
 }
 
 func (c *clientNative) GlobalGetConfiguration() (*models.Global, error) {
-	_, global, err := c.nativeAPI.Configuration.GetGlobalConfiguration(c.activeTransaction)
+	configuration, err := c.nativeAPI.Configuration()
+	if err != nil {
+		return nil, err
+	}
+	_, global, err := configuration.GetGlobalConfiguration(c.activeTransaction)
 	if err != nil {
 		return nil, fmt.Errorf("unable to get HAProxy's global section: %w", err)
 	}
@@ -85,7 +108,11 @@ func (c *clientNative) GlobalGetConfiguration() (*models.Global, error) {
 }
 
 func (c *clientNative) GlobalPushConfiguration(global models.Global) (err error) {
-	err = c.nativeAPI.Configuration.PushGlobalConfiguration(&global, c.activeTransaction, 0)
+	configuration, err := c.nativeAPI.Configuration()
+	if err != nil {
+		return err
+	}
+	err = configuration.PushGlobalConfiguration(&global, c.activeTransaction, 0)
 	if err != nil {
 		return fmt.Errorf("unable to update HAProxy's global section: %w", err)
 	}

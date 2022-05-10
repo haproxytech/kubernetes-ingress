@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"syscall"
 
+	"github.com/haproxytech/client-native/v3/runtime"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/api"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/env"
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
@@ -16,6 +17,7 @@ var logger = utils.GetLogger()
 type Process interface {
 	Service(action string) (err error)
 	UseAuxFile(useAuxFile bool)
+	SetAPI(api api.HAProxyClient)
 }
 
 func New(env env.Env, osArgs utils.OSArgs, auxCfgFile string, api api.HAProxyClient) (p Process) {
@@ -34,6 +36,7 @@ func New(env env.Env, osArgs utils.OSArgs, auxCfgFile string, api api.HAProxyCli
 		if _, err := os.Stat(auxCfgFile); err == nil {
 			p.UseAuxFile(true)
 		}
+		_ = p.Service("start")
 	}
 	return p
 }
@@ -60,7 +63,7 @@ func haproxyProcess(pidFile string) (*os.Process, error) {
 }
 
 // Saves HAProxy servers state so it is retrieved after reload.
-func saveServerState(stateDir string, api api.HAProxyClient) error {
+func saveServerState(stateDir string, api runtime.Raw) error {
 	result, err := api.ExecuteRaw("show servers state")
 	if err != nil {
 		return err

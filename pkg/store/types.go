@@ -15,7 +15,7 @@
 package store
 
 import (
-	"github.com/haproxytech/client-native/v2/models"
+	"github.com/haproxytech/client-native/v3/models"
 )
 
 // ServicePort describes port of a service

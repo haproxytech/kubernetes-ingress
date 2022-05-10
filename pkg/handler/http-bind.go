@@ -15,7 +15,7 @@
 package handler
 
 import (
-	"github.com/haproxytech/client-native/v2/models"
+	"github.com/haproxytech/client-native/v3/models"
 
 	"github.com/haproxytech/kubernetes-ingress/pkg/annotations"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy"
@@ -53,15 +53,19 @@ func (handler HTTPBind) Update(k store.K8s, h haproxy.HAProxy, a annotations.Ann
 		// IPv6 not disabled, so add v6 listening to stats frontend
 		errors.Add(h.FrontendBindCreate("stats",
 			models.Bind{
-				Name:    "v6",
+				BindParams: models.BindParams{
+					Name: "v6",
+					V4v6: false,
+				},
 				Address: ":::1024",
-				V4v6:    false,
 			}))
 	}
 	for ftName, ftPort := range frontends {
 		for proto, addr := range protos {
 			bind := models.Bind{
-				Name:    proto,
+				BindParams: models.BindParams{
+					Name: proto,
+				},
 				Address: addr,
 				Port:    utils.PtrInt64(ftPort),
 			}

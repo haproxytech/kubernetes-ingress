@@ -39,7 +39,11 @@ func New(osArgs utils.OSArgs, env env.Env, cfgFile []byte, p process.Process, cl
 	}
 	h.Env = env
 
-	err = renameio.WriteFile(h.MainCFGFile, cfgFile, 0755)
+	if osArgs.External {
+		cfgFile = []byte(strings.ReplaceAll(string(cfgFile), "/var/run/haproxy-runtime-api.sock", h.RuntimeSocket))
+	}
+
+	err = renameio.WriteFile(h.MainCFGFile, cfgFile, 0o755)
 	if err != nil {
 		err = fmt.Errorf("failed to write haproxy config file: %w", err)
 		return
@@ -54,6 +58,9 @@ func New(osArgs utils.OSArgs, env env.Env, cfgFile []byte, p process.Process, cl
 		err = fmt.Errorf("failed to initialize haproxy maps: %w", err)
 		return
 	}
+	if p == nil {
+		h.Process = process.New(h.Env, osArgs, h.AuxCFGFile, h.HAProxyClient)
+	}
 	if client == nil {
 		h.HAProxyClient, err = api.New(h.CfgDir, h.MainCFGFile, h.Binary, h.RuntimeSocket)
 		if err != nil {
@@ -61,9 +68,7 @@ func New(osArgs utils.OSArgs, env env.Env, cfgFile []byte, p process.Process, cl
 			return
 		}
 	}
-	if p == nil {
-		h.Process = process.New(h.Env, osArgs, h.AuxCFGFile, h.HAProxyClient)
-	}
+	h.Process.SetAPI(h.HAProxyClient)
 	if h.Certificates, err = certs.New(env.Certs); err != nil {
 		err = fmt.Errorf("failed to initialize haproxy certificates: %w", err)
 		return

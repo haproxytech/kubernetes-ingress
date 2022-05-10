@@ -20,7 +20,7 @@ import (
 
 	"github.com/go-test/deep"
 
-	"github.com/haproxytech/client-native/v2/models"
+	"github.com/haproxytech/client-native/v3/models"
 
 	"github.com/haproxytech/kubernetes-ingress/pkg/annotations"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy"
@@ -143,7 +143,7 @@ func (s *Service) HandleBackend(store store.K8s, client api.HAProxyClient, a ann
 // getBackendModel checks for a corresponding custom resource before falling back to annoations
 func (s *Service) getBackendModel(store store.K8s, a annotations.Annotations) (backend *models.Backend, err error) {
 	// Backend mode
-	var mode = "http"
+	mode := "http"
 	if s.modeTCP {
 		mode = "tcp"
 	}

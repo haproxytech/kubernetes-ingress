@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/haproxytech/client-native/v2/models"
+	"github.com/haproxytech/client-native/v3/models"
 	"github.com/haproxytech/kubernetes-ingress/pkg/annotations"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy"
 	"github.com/haproxytech/kubernetes-ingress/pkg/service"
@@ -134,14 +134,18 @@ func (handler TCPServices) createTCPFrontend(h haproxy.HAProxy, frontendName, bi
 	if handler.IPv4 {
 		errors.Add(h.FrontendBindCreate(frontendName, models.Bind{
 			Address: handler.AddrIPv4 + ":" + bindPort,
-			Name:    "v4",
+			BindParams: models.BindParams{
+				Name: "v4",
+			},
 		}))
 	}
 	if handler.IPv6 {
 		errors.Add(h.FrontendBindCreate(frontendName, models.Bind{
 			Address: handler.AddrIPv6 + ":" + bindPort,
-			Name:    "v6",
-			V4v6:    true,
+			BindParams: models.BindParams{
+				Name: "v6",
+				V4v6: true,
+			},
 		}))
 	}
 	if sslOffload {

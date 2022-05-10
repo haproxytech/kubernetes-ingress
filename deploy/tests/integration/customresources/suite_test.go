@@ -19,7 +19,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/haproxytech/client-native/v2/models"
+	"github.com/haproxytech/client-native/v3/models"
 	corev1alpha1 "github.com/haproxytech/kubernetes-ingress/crs/api/core/v1alpha1"
 	c "github.com/haproxytech/kubernetes-ingress/pkg/controller"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/env"
@@ -84,12 +84,13 @@ option dontlog-normal
 
 frontend stats
  mode http
- bind *:1024
+ bind 0:0:0:0:1024
  http-request set-var(txn.base) base
  http-request use-service prometheus-exporter if { path /metrics }
  stats enable
  stats uri /
- stats refresh 10s`
+ stats refresh 10s
+ `
 
 func (suite *CustomResourceSuite) GlobalCRFixture() (eventChan chan k8s.SyncDataEvent, s store.K8s, globalCREvt k8s.SyncDataEvent) {
 	var osArgs utils.OSArgs

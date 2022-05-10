@@ -1,7 +1,7 @@
 package env
 
 import (
-	"github.com/haproxytech/client-native/v2/models"
+	"github.com/haproxytech/client-native/v3/models"
 
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
 )
@@ -14,11 +14,16 @@ func SetGlobal(global *models.Global, logTargets *models.LogTargets, env Env) {
 	global.Localpeer = "local"
 	global.ServerStateBase = env.StateDir
 	global.ServerStateFile = "global"
-	runtimeAPIs := []*models.RuntimeAPI{{
-		Address:           &env.RuntimeSocket,
-		ExposeFdListeners: true,
-		Level:             "admin",
-	}}
+	runtimeAPIs := []*models.RuntimeAPI{}
+	if env.RuntimeSocket != "" {
+		runtimeAPIs = append(runtimeAPIs, &models.RuntimeAPI{
+			Address: &env.RuntimeSocket,
+			BindParams: models.BindParams{
+				ExposeFdListeners: true,
+				Level:             "admin",
+			},
+		})
+	}
 	if len(global.RuntimeAPIs) == 0 {
 		global.RuntimeAPIs = runtimeAPIs
 	} else if *(global.RuntimeAPIs[0].Address) != env.RuntimeSocket {

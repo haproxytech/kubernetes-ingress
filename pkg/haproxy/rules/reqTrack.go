@@ -3,7 +3,7 @@ package rules
 import (
 	"fmt"
 
-	"github.com/haproxytech/client-native/v2/models"
+	"github.com/haproxytech/client-native/v3/models"
 
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/api"
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
@@ -24,11 +24,12 @@ func (r ReqTrack) Create(client api.HAProxyClient, frontend *models.Frontend, in
 	if frontend.Mode == "tcp" {
 		return fmt.Errorf("request Track cannot be configured in TCP mode")
 	}
+
 	// Create tracking table.
 	if _, err := client.BackendGet(r.TableName); err != nil {
 		err = client.BackendCreate(models.Backend{
 			Name: r.TableName,
-			StickTable: &models.BackendStickTable{
+			StickTable: &models.ConfigStickTable{
 				Peers: "localinstance",
 				Type:  "ip",
 				Size:  r.TableSize,

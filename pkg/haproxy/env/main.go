@@ -68,11 +68,12 @@ func (env *Env) Init(osArgs utils.OSArgs) (err error) {
 	env.PIDFile = filepath.Join(env.RuntimeDir, "haproxy.pid")
 	env.RuntimeSocket = filepath.Join(env.RuntimeDir, "haproxy-runtime-api.sock")
 	if osArgs.Test {
-		env.Binary = ""
+		env.Binary = "echo"
+		env.RuntimeSocket = ""
 	} else if _, err = os.Stat(env.Binary); err != nil {
 		return err
 	}
-	err = renameio.WriteFile(env.MainCFGFile, env.MainCFGRaw, 0755)
+	err = renameio.WriteFile(env.MainCFGFile, env.MainCFGRaw, 0o755)
 	if err != nil {
 		return err
 	}
@@ -95,7 +96,7 @@ func (env *Env) Init(osArgs utils.OSArgs) (err error) {
 		env.StateDir,
 		env.PatternDir,
 	} {
-		err = os.MkdirAll(d, 0755)
+		err = os.MkdirAll(d, 0o755)
 		if err != nil {
 			return err
 		}
@@ -123,7 +124,7 @@ func (env *Env) external(osArgs utils.OSArgs) (err error) {
 		env.RuntimeDir = osArgs.RuntimeDir
 	}
 	for _, dir := range []string{env.CfgDir, env.RuntimeDir, env.StateDir} {
-		if err = os.MkdirAll(dir, 0755); err != nil {
+		if err = os.MkdirAll(dir, 0o755); err != nil {
 			return err
 		}
 	}

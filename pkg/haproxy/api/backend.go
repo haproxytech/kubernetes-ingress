@@ -3,17 +3,26 @@ package api
 import (
 	"fmt"
 
-	"github.com/haproxytech/client-native/v2/models"
+	"github.com/haproxytech/client-native/v3/models"
 	"github.com/haproxytech/config-parser/v4/types"
+	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
 )
 
 func (c *clientNative) BackendsGet() (models.Backends, error) {
-	_, backends, err := c.nativeAPI.Configuration.GetBackends(c.activeTransaction)
+	configuration, err := c.nativeAPI.Configuration()
+	if err != nil {
+		return nil, err
+	}
+	_, backends, err := configuration.GetBackends(c.activeTransaction)
 	return backends, err
 }
 
 func (c *clientNative) BackendGet(backendName string) (*models.Backend, error) {
-	_, backend, err := c.nativeAPI.Configuration.GetBackend(backendName, c.activeTransaction)
+	configuration, err := c.nativeAPI.Configuration()
+	if err != nil {
+		return nil, err
+	}
+	_, backend, err := configuration.GetBackend(backendName, c.activeTransaction)
 	if err != nil {
 		return nil, err
 	}
@@ -22,8 +31,12 @@ func (c *clientNative) BackendGet(backendName string) (*models.Backend, error) {
 }
 
 func (c *clientNative) BackendCreate(backend models.Backend) error {
+	configuration, err := c.nativeAPI.Configuration()
+	if err != nil {
+		return err
+	}
 	c.activeTransactionHasChanges = true
-	err := c.nativeAPI.Configuration.CreateBackend(&backend, c.activeTransaction, 0)
+	err = configuration.CreateBackend(&backend, c.activeTransaction, 0)
 	if err != nil {
 		return err
 	}
@@ -32,17 +45,29 @@ func (c *clientNative) BackendCreate(backend models.Backend) error {
 }
 
 func (c *clientNative) BackendEdit(backend models.Backend) error {
+	configuration, err := c.nativeAPI.Configuration()
+	if err != nil {
+		return err
+	}
 	c.activeTransactionHasChanges = true
-	return c.nativeAPI.Configuration.EditBackend(backend.Name, &backend, c.activeTransaction, 0)
+	return configuration.EditBackend(backend.Name, &backend, c.activeTransaction, 0)
 }
 
 func (c *clientNative) BackendDelete(backendName string) error {
+	configuration, err := c.nativeAPI.Configuration()
+	if err != nil {
+		return err
+	}
 	c.activeTransactionHasChanges = true
-	return c.nativeAPI.Configuration.DeleteBackend(backendName, c.activeTransaction, 0)
+	return configuration.DeleteBackend(backendName, c.activeTransaction, 0)
 }
 
 func (c *clientNative) BackendCfgSnippetSet(backendName string, value []string) error {
-	config, err := c.nativeAPI.Configuration.GetParser(c.activeTransaction)
+	configuration, err := c.nativeAPI.Configuration()
+	if err != nil {
+		return err
+	}
+	config, err := configuration.GetParser(c.activeTransaction)
 	if err != nil {
 		return err
 	}
@@ -58,12 +83,22 @@ func (c *clientNative) BackendCfgSnippetSet(backendName string, value []string) 
 }
 
 func (c *clientNative) BackendHTTPRequestRuleCreate(backend string, rule models.HTTPRequestRule) error {
+	configuration, err := c.nativeAPI.Configuration()
+	if err != nil {
+		return err
+	}
 	c.activeTransactionHasChanges = true
-	return c.nativeAPI.Configuration.CreateHTTPRequestRule("backend", backend, &rule, c.activeTransaction, 0)
+	return configuration.CreateHTTPRequestRule("backend", backend, &rule, c.activeTransaction, 0)
 }
 
 func (c *clientNative) BackendServerDeleteAll(backendName string) bool {
-	_, servers, _ := c.nativeAPI.Configuration.GetServers(backendName, c.activeTransaction)
+	configuration, err := c.nativeAPI.Configuration()
+	if err != nil {
+		logger := utils.GetLogger()
+		logger.Error(err)
+		return false
+	}
+	_, servers, _ := configuration.GetServers(backendName, c.activeTransaction)
 	for _, srv := range servers {
 		c.activeTransactionHasChanges = true
 		_ = c.BackendServerDelete(backendName, srv.Name)
@@ -72,44 +107,77 @@ func (c *clientNative) BackendServerDeleteAll(backendName string) bool {
 }
 
 func (c *clientNative) BackendRuleDeleteAll(backend string) {
+	logger := utils.GetLogger()
+	configuration, err := c.nativeAPI.Configuration()
+	if err != nil {
+		logger.Error(err)
+		return
+	}
 	c.activeTransactionHasChanges = true
-	var err error
+
 	// Currently we are only using HTTPRequest rules on backend
-	for err == nil {
-		err = c.nativeAPI.Configuration.DeleteHTTPRequestRule(0, "backend", backend, c.activeTransaction, 0)
+	err = configuration.DeleteHTTPRequestRule(0, "backend", backend, c.activeTransaction, 0)
+	for err != nil {
+		logger.Error(err)
 	}
 }
 
 func (c *clientNative) BackendServerCreate(backendName string, data models.Server) error {
+	configuration, err := c.nativeAPI.Configuration()
+	if err != nil {
+		return err
+	}
 	c.activeTransactionHasChanges = true
-	return c.nativeAPI.Configuration.CreateServer(backendName, &data, c.activeTransaction, 0)
+	return configuration.CreateServer(backendName, &data, c.activeTransaction, 0)
 }
 
 func (c *clientNative) BackendServerEdit(backendName string, data models.Server) error {
+	configuration, err := c.nativeAPI.Configuration()
+	if err != nil {
+		return err
+	}
 	c.activeTransactionHasChanges = true
-	return c.nativeAPI.Configuration.EditServer(data.Name, backendName, &data, c.activeTransaction, 0)
+	return configuration.EditServer(data.Name, backendName, &data, c.activeTransaction, 0)
 }
 
 func (c *clientNative) BackendServerDelete(backendName string, serverName string) error {
+	configuration, err := c.nativeAPI.Configuration()
+	if err != nil {
+		return err
+	}
 	c.activeTransactionHasChanges = true
-	return c.nativeAPI.Configuration.DeleteServer(serverName, backendName, c.activeTransaction, 0)
+	return configuration.DeleteServer(serverName, backendName, c.activeTransaction, 0)
 }
 
 func (c *clientNative) BackendSwitchingRuleCreate(frontend string, rule models.BackendSwitchingRule) error {
+	configuration, err := c.nativeAPI.Configuration()
+	if err != nil {
+		return err
+	}
 	c.activeTransactionHasChanges = true
-	return c.nativeAPI.Configuration.CreateBackendSwitchingRule(frontend, &rule, c.activeTransaction, 0)
+	return configuration.CreateBackendSwitchingRule(frontend, &rule, c.activeTransaction, 0)
 }
 
 func (c *clientNative) BackendSwitchingRuleDeleteAll(frontend string) {
+	logger := utils.GetLogger()
+	configuration, err := c.nativeAPI.Configuration()
+	if err != nil {
+		logger.Error(err)
+		return
+	}
 	c.activeTransactionHasChanges = true
-	var err error
-	for err == nil {
-		err = c.nativeAPI.Configuration.DeleteBackendSwitchingRule(0, frontend, c.activeTransaction, 0)
+	err = configuration.DeleteBackendSwitchingRule(0, frontend, c.activeTransaction, 0)
+	for err != nil {
+		logger.Error(err)
 	}
 }
 
 func (c *clientNative) ServerGet(serverName, backendName string) (models.Server, error) {
-	_, server, err := c.nativeAPI.Configuration.GetServer(serverName, backendName, c.activeTransaction)
+	configuration, err := c.nativeAPI.Configuration()
+	if err != nil {
+		return models.Server{}, err
+	}
+	_, server, err := configuration.GetServer(serverName, backendName, c.activeTransaction)
 	if err != nil {
 		return models.Server{}, err
 	}
@@ -117,7 +185,11 @@ func (c *clientNative) ServerGet(serverName, backendName string) (models.Server,
 }
 
 func (c *clientNative) BackendServersGet(backendName string) (models.Servers, error) {
-	_, servers, err := c.nativeAPI.Configuration.GetServers(backendName, c.activeTransaction)
+	configuration, err := c.nativeAPI.Configuration()
+	if err != nil {
+		return nil, err
+	}
+	_, servers, err := configuration.GetServers(backendName, c.activeTransaction)
 	if err != nil {
 		return nil, err
 	}

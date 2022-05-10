@@ -82,3 +82,7 @@ func (d *directControl) Service(action string) (err error) {
 func (d *directControl) UseAuxFile(useAuxFile bool) {
 	d.useAuxFile = useAuxFile
 }
+
+func (d *directControl) SetAPI(api api.HAProxyClient) {
+	d.API = api
+}

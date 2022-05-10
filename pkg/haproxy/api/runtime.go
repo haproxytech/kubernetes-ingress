@@ -1,34 +1,54 @@
 package api
 
 import (
-	"github.com/haproxytech/client-native/v2/models"
+	"github.com/haproxytech/client-native/v3/models"
 
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
 )
 
 func (c *clientNative) ExecuteRaw(command string) (result []string, err error) {
-	return c.nativeAPI.Runtime.ExecuteRaw(command)
+	runtime, err := c.nativeAPI.Runtime()
+	if err != nil {
+		return nil, err
+	}
+	return runtime.ExecuteRaw(command)
 }
 
 func (c *clientNative) SetServerAddr(backendName string, serverName string, ip string, port int) error {
-	return c.nativeAPI.Runtime.SetServerAddr(backendName, serverName, ip, port)
-}
-
-func (c *clientNative) SetServerState(backendName string, serverName string, state string) error {
-	return c.nativeAPI.Runtime.SetServerState(backendName, serverName, state)
-}
-
-func (c *clientNative) SetMapContent(mapFile string, payload string) error {
-	err := c.nativeAPI.Runtime.ClearMap(mapFile, false)
+	runtime, err := c.nativeAPI.Runtime()
 	if err != nil {
 		return err
 	}
-	return c.nativeAPI.Runtime.AddMapPayload(mapFile, payload)
+	return runtime.SetServerAddr(backendName, serverName, ip, port)
+}
+
+func (c *clientNative) SetServerState(backendName string, serverName string, state string) error {
+	runtime, err := c.nativeAPI.Runtime()
+	if err != nil {
+		return err
+	}
+	return runtime.SetServerState(backendName, serverName, state)
+}
+
+func (c *clientNative) SetMapContent(mapFile string, payload string) error {
+	runtime, err := c.nativeAPI.Runtime()
+	if err != nil {
+		return err
+	}
+	err = runtime.ClearMap(mapFile, false)
+	if err != nil {
+		return err
+	}
+	return runtime.AddMapPayload(mapFile, payload)
 }
 
 func (c *clientNative) GetMap(mapFile string) (*models.Map, error) {
-	return c.nativeAPI.Runtime.GetMap(mapFile)
+	runtime, err := c.nativeAPI.Runtime()
+	if err != nil {
+		return nil, err
+	}
+	return runtime.GetMap(mapFile)
 }
 
 // SyncBackendSrvs syncs states and addresses of a backend servers with corresponding endpoints.

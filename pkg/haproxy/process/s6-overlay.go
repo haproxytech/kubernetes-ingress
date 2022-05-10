@@ -62,3 +62,7 @@ func (d *s6Control) Service(action string) (err error) {
 func (d *s6Control) UseAuxFile(useAuxFile bool) {
 	// do nothing we always have it
 }
+
+func (d *s6Control) SetAPI(api api.HAProxyClient) {
+	d.API = api
+}

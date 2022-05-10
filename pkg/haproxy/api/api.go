@@ -1,12 +1,18 @@
 package api
 
 import (
-	clientnative "github.com/haproxytech/client-native/v2"
-	"github.com/haproxytech/client-native/v2/configuration"
-	"github.com/haproxytech/client-native/v2/models"
-	"github.com/haproxytech/client-native/v2/runtime"
+	"context"
+
+	clientnative "github.com/haproxytech/client-native/v3"
+	"github.com/haproxytech/client-native/v3/configuration"
+	cfgoptions "github.com/haproxytech/client-native/v3/configuration/options"
+	"github.com/haproxytech/client-native/v3/models"
+	"github.com/haproxytech/client-native/v3/options"
+	"github.com/haproxytech/client-native/v3/runtime"
+	runtimeoptions "github.com/haproxytech/client-native/v3/runtime/options"
 
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
+	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
 )
 
 type HAProxyClient interface {
@@ -73,48 +79,53 @@ type clientNative struct {
 }
 
 func New(transactionDir, configFile, programPath, runtimeSocket string) (client HAProxyClient, err error) {
-	runtimeClient := runtime.Client{}
-	err = runtimeClient.InitWithSockets(map[int]string{
-		0: runtimeSocket,
-	})
+	var runtimeClient runtime.Runtime
+	if runtimeSocket != "" {
+		runtimeClient, err = runtime.New(context.Background(), runtimeoptions.Socket(runtimeSocket))
+	} else {
+		runtimeClient, err = runtime.New(context.Background())
+	}
 	if err != nil {
 		return nil, err
 	}
 
-	confClient := configuration.Client{}
-	confParams := configuration.ClientParams{
-		ConfigurationFile:         configFile,
-		PersistentTransactions:    false,
-		Haproxy:                   programPath,
-		ValidateConfigurationFile: true,
-		UseValidation:             true,
+	confClient, err := configuration.New(context.Background(),
+		cfgoptions.ConfigurationFile(configFile),
+		cfgoptions.HAProxyBin(programPath),
+		cfgoptions.UseModelsValidation,
+		cfgoptions.TransactionsDir(transactionDir),
+	)
+	if err != nil {
+		return nil, err
 	}
 
-	if transactionDir != "" {
-		confParams.TransactionDir = transactionDir
+	opt := []options.Option{
+		options.Configuration(confClient),
+		options.Runtime(runtimeClient),
 	}
-	err = confClient.Init(confParams)
+	cnHAProxyClient, err := clientnative.New(context.Background(), opt...)
 	if err != nil {
 		return nil, err
 	}
 
 	cn := clientNative{
-		nativeAPI: clientnative.HAProxyClient{
-			Configuration: &confClient,
-			Runtime:       &runtimeClient,
-		},
+		nativeAPI:      cnHAProxyClient,
 		activeBackends: make(map[string]struct{}),
 	}
 	return &cn, nil
 }
 
 func (c *clientNative) APIStartTransaction() error {
-	version, errVersion := c.nativeAPI.Configuration.GetVersion("")
+	configuration, err := c.nativeAPI.Configuration()
+	if err != nil {
+		return err
+	}
+	version, errVersion := configuration.GetVersion("")
 	if errVersion != nil || version < 1 {
 		// silently fallback to 1
 		version = 1
 	}
-	transaction, err := c.nativeAPI.Configuration.StartTransaction(version)
+	transaction, err := configuration.StartTransaction(version)
 	if err != nil {
 		return err
 	}
@@ -124,13 +135,17 @@ func (c *clientNative) APIStartTransaction() error {
 }
 
 func (c *clientNative) APICommitTransaction() error {
+	configuration, err := c.nativeAPI.Configuration()
+	if err != nil {
+		return err
+	}
 	if !c.activeTransactionHasChanges {
-		if err := c.nativeAPI.Configuration.DeleteTransaction(c.activeTransaction); err != nil {
-			return err
+		if errDel := configuration.DeleteTransaction(c.activeTransaction); errDel != nil {
+			return errDel
 		}
 		return nil
 	}
-	_, err := c.nativeAPI.Configuration.CommitTransaction(c.activeTransaction)
+	_, err = configuration.CommitTransaction(c.activeTransaction)
 	return err
 }
 
@@ -140,9 +155,14 @@ func (c *clientNative) APIDisposeTransaction() {
 }
 
 func (c *clientNative) SetAuxCfgFile(auxCfgFile string) {
+	configuration, err := c.nativeAPI.Configuration()
+	if err != nil {
+		logger := utils.GetLogger()
+		logger.Error(err)
+	}
 	if auxCfgFile == "" {
-		c.nativeAPI.Configuration.Transaction.ValidateConfigFilesAfter = nil
+		configuration.SetValidateConfigFiles(nil, nil)
 		return
 	}
-	c.nativeAPI.Configuration.Transaction.ValidateConfigFilesAfter = []string{auxCfgFile}
+	configuration.SetValidateConfigFiles(nil, []string{auxCfgFile})
 }

@@ -18,7 +18,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/haproxytech/client-native/v2/models"
+	"github.com/haproxytech/client-native/v3/models"
 
 	"github.com/haproxytech/kubernetes-ingress/pkg/annotations"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy"
@@ -52,9 +52,11 @@ func (handler HTTPS) bindList(passhthrough bool) (binds []models.Bind) {
 				}
 				return
 			}(),
-			Port:        utils.PtrInt64(handler.Port),
-			Name:        "v4",
-			AcceptProxy: passhthrough,
+			Port: utils.PtrInt64(handler.Port),
+			BindParams: models.BindParams{
+				Name:        "v4",
+				AcceptProxy: passhthrough,
+			},
 		})
 	}
 	if handler.IPv6 {
@@ -66,10 +68,12 @@ func (handler HTTPS) bindList(passhthrough bool) (binds []models.Bind) {
 				}
 				return
 			}(),
-			Port:        utils.PtrInt64(handler.Port),
-			AcceptProxy: passhthrough,
-			Name:        "v6",
-			V4v6:        true,
+			Port: utils.PtrInt64(handler.Port),
+			BindParams: models.BindParams{
+				AcceptProxy: passhthrough,
+				Name:        "v6",
+				V4v6:        true,
+			},
 		})
 	}
 	return binds

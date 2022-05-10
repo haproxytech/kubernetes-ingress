@@ -17,7 +17,7 @@ package controller
 import (
 	"github.com/go-test/deep"
 
-	"github.com/haproxytech/client-native/v2/models"
+	"github.com/haproxytech/client-native/v3/models"
 
 	"github.com/haproxytech/kubernetes-ingress/pkg/annotations"
 	"github.com/haproxytech/kubernetes-ingress/pkg/annotations/common"
@@ -61,7 +61,12 @@ func (c *HAProxyController) globalCfg() (reload, restart bool) {
 		logger.Errorf("Global logging: %s", err)
 	}
 	if newGlobal == nil {
-		newGlobal = &models.Global{}
+		newGlobal = &models.Global{
+			// TuneSslDefaultDhParam: 2048,
+			TuneOptions: &models.GlobalTuneOptions{
+				SslDefaultDhParam: 2048,
+			},
+		}
 		for _, a := range c.annotations.Global(newGlobal, &newLg) {
 			err = a.Process(c.store, c.store.ConfigMaps.Main.Annotations)
 			if err != nil {

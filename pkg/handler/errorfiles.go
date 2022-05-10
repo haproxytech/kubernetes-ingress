@@ -19,7 +19,7 @@ import (
 	"path/filepath"
 	"strconv"
 
-	"github.com/haproxytech/client-native/v2/models"
+	"github.com/haproxytech/client-native/v3/models"
 
 	"github.com/haproxytech/kubernetes-ingress/pkg/annotations"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy"
@@ -94,7 +94,7 @@ func (handler *ErrorFiles) refresh() (result []*models.Errorfile, reload bool) {
 }
 
 func checkCode(code string) error {
-	var codes = [15]string{"200", "400", "401", "403", "404", "405", "407", "408", "410", "425", "429", "500", "502", "503", "504"}
+	codes := [15]string{"200", "400", "401", "403", "404", "405", "407", "408", "410", "425", "429", "500", "502", "503", "504"}
 	var c string
 	for _, c = range codes {
 		if code == c {

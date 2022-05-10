@@ -5,8 +5,8 @@ go 1.17
 require (
 	github.com/go-test/deep v1.0.7
 	github.com/google/renameio v1.0.1
-	github.com/haproxytech/client-native/v2 v2.5.2-0.20211021104411-038f5cf8ec14
-	github.com/haproxytech/config-parser/v4 v4.0.0-rc2.0.20211021093817-f9021b6ca61c
+	github.com/haproxytech/client-native/v3 v3.1.1-0.20220510114028-57f50c20a1bf
+	github.com/haproxytech/config-parser/v4 v4.0.0-rc2.0.20220428133329-7d0ec01198d4
 	github.com/jessevdk/go-flags v1.4.0
 	github.com/pires/go-proxyproto v0.6.1
 	github.com/prometheus/client_golang v1.12.1
@@ -43,10 +43,11 @@ require (
 	github.com/google/gofuzz v1.1.0 // indirect
 	github.com/google/uuid v1.1.2 // indirect
 	github.com/googleapis/gnostic v0.5.5 // indirect
-	github.com/haproxytech/go-logger v1.0.0 // indirect
+	github.com/haproxytech/go-logger v1.0.1-0.20211022075555-178f1cdf4d84 // indirect
 	github.com/imdario/mergo v0.3.5 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51 // indirect
+	github.com/kr/pretty v0.3.0 // indirect
 	github.com/mailru/easyjson v0.7.1 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.1 // indirect
 	github.com/mitchellh/mapstructure v1.2.2 // indirect

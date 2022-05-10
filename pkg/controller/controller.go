@@ -18,7 +18,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/haproxytech/client-native/v2/models"
+	"github.com/haproxytech/client-native/v3/models"
 	"github.com/haproxytech/kubernetes-ingress/pkg/annotations"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/maps"
@@ -172,7 +172,9 @@ func (c *HAProxyController) setToReady() {
 	logger.Panic(c.clientAPIClosure(func() error {
 		return c.haproxy.FrontendBindEdit("healthz",
 			models.Bind{
-				Name:    "v4",
+				BindParams: models.BindParams{
+					Name: "v4",
+				},
 				Address: "0.0.0.0:1042",
 			})
 	}))
@@ -180,9 +182,11 @@ func (c *HAProxyController) setToReady() {
 		logger.Panic(c.clientAPIClosure(func() error {
 			return c.haproxy.FrontendBindCreate("healthz",
 				models.Bind{
-					Name:    "v6",
+					BindParams: models.BindParams{
+						Name: "v6",
+						V4v6: true,
+					},
 					Address: ":::1042",
-					V4v6:    true,
 				})
 		}))
 	}

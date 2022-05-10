@@ -6,12 +6,16 @@ import (
 )
 
 func (c *clientNative) UserListExistsByGroup(group string) (exist bool, err error) {
+	configuration, err := c.nativeAPI.Configuration()
+	if err != nil {
+		return false, err
+	}
 	c.activeTransactionHasChanges = true
 
 	var p parser.Parser
 	var sections []string
-	if p, err = c.nativeAPI.Configuration.GetParser(c.activeTransaction); err != nil {
-		return
+	if p, err = configuration.GetParser(c.activeTransaction); err != nil {
+		return exist, err
 	}
 	sections, err = p.SectionsGet(parser.UserList)
 	for _, section := range sections {
@@ -20,33 +24,44 @@ func (c *clientNative) UserListExistsByGroup(group string) (exist bool, err erro
 			break
 		}
 	}
-	return
+	return exist, err
 }
 
 func (c *clientNative) UserListDeleteAll() (err error) {
+	configuration, err := c.nativeAPI.Configuration()
+	if err != nil {
+		return err
+	}
 	c.activeTransactionHasChanges = true
 
 	var p parser.Parser
-	if p, err = c.nativeAPI.Configuration.GetParser(c.activeTransaction); err != nil {
-		return
+	if p, err = configuration.GetParser(c.activeTransaction); err != nil {
+		return err
 	}
 
 	var sections []string
 	sections, err = p.SectionsGet(parser.UserList)
+	if err != nil {
+		return err
+	}
 	for _, section := range sections {
 		err = p.SectionsDelete(parser.UserList, section)
 		if err != nil {
-			return
+			return err
 		}
 	}
-	return
+	return nil
 }
 
 func (c *clientNative) UserListCreateByGroup(group string, userPasswordMap map[string][]byte) (err error) {
+	configuration, err := c.nativeAPI.Configuration()
+	if err != nil {
+		return err
+	}
 	c.activeTransactionHasChanges = true
 
 	var p parser.Parser
-	if p, err = c.nativeAPI.Configuration.GetParser(c.activeTransaction); err != nil {
+	if p, err = configuration.GetParser(c.activeTransaction); err != nil {
 		return
 	}
 
