@@ -5,6 +5,7 @@ func main() {
 	cn.getConf()
 
 	cn.generateReadme()
+	cn.generateReadmeAnnotations()
 	cn.generateReadmeController()
 	// cn.saveConf()
 	// cn.saveDocConf()
