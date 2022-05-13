@@ -2,11 +2,14 @@ package controller
 
 import (
 	"errors"
-	"fmt"
-	"net/http"
 	"os"
+	"strconv"
 
+	"github.com/fasthttp/router"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/valyala/fasthttp"
+	"github.com/valyala/fasthttp/fasthttpadaptor"
+	"github.com/valyala/fasthttp/pprofhandler"
 
 	"github.com/haproxytech/kubernetes-ingress/pkg/annotations"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy"
@@ -49,7 +52,8 @@ var defaultEnv = env.Env{
 }
 
 func NewBuilder() *Builder {
-	return &Builder{haproxyEnv: defaultEnv,
+	return &Builder{
+		haproxyEnv:   defaultEnv,
 		annotations:  annotations.New(),
 		haproxyRules: rules.New(),
 	}
@@ -114,17 +118,37 @@ func (builder *Builder) Build() *HAProxyController {
 	if builder.haproxyCfgFile == nil {
 		logger.Panic(errors.New("no HAProxy Config file provided"))
 	}
-	if builder.osArgs.PromotheusPort != 0 {
-		http.Handle("/metrics", promhttp.Handler())
-		go func() {
-			logger.Error(http.ListenAndServe(fmt.Sprintf(":%d", builder.osArgs.PromotheusPort), nil))
-		}()
-	}
 
-	if builder.osArgs.PprofEnabled {
-		logger.Warning("pprof endpoint exposed over https")
+	chShutdown := make(chan struct{})
+	rtr := router.New()
+	if builder.osArgs.ControllerPort != 0 {
+		var runningServices string
+		if builder.osArgs.PprofEnabled {
+			rtr.GET("/debug/pprof/{profile:*}", pprofhandler.PprofHandler)
+			runningServices += " pprof,"
+		}
+		if builder.osArgs.PrometheusEnabled {
+			rtr.GET("/metrics", fasthttpadaptor.NewFastHTTPHandler(promhttp.Handler()))
+			runningServices += " prometheus,"
+		}
+		runningServices += " default service"
+		rtr.GET("/healtz", requestHandler)
+		// all others will be 404
 		go func() {
-			logger.Error(http.ListenAndServe("127.0.0.1:6060", nil))
+			server := fasthttp.Server{
+				Handler: rtr.Handler,
+			}
+			go func() {
+				<-chShutdown
+				if err := server.Shutdown(); err != nil {
+					logger.Errorf("Could not gracefully shutdown controller data server: %v\n", err)
+				} else {
+					logger.Errorf("Gracefully shuting down controller data server")
+				}
+			}()
+			logger.Infof("running controller data server on :%d, running%s", builder.osArgs.ControllerPort, runningServices)
+			err := server.ListenAndServe(":" + strconv.Itoa(builder.osArgs.ControllerPort))
+			logger.Error(err)
 		}()
 	}
 
@@ -143,5 +167,11 @@ func (builder *Builder) Build() *HAProxyController {
 		ingressChan:    builder.ingressChan,
 		publishService: builder.publishService,
 		annotations:    builder.annotations,
+		chShutdown:     chShutdown,
 	}
+}
+
+func requestHandler(ctx *fasthttp.RequestCtx) {
+	ctx.SetStatusCode(fasthttp.StatusOK)
+	ctx.Response.Header.Set("X-HAProxy-Ingress-Controller", "healtz")
 }

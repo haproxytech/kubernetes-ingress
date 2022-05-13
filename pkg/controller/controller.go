@@ -48,6 +48,7 @@ type HAProxyController struct {
 	updateHandlers []UpdateHandler
 	podNamespace   string
 	podPrefix      string
+	chShutdown     chan struct{}
 }
 
 // Wrapping a Native-Client transaction and commit it.
@@ -82,6 +83,7 @@ func (c *HAProxyController) Start() {
 // Stop handles shutting down HAProxyController
 func (c *HAProxyController) Stop() {
 	logger.Infof("Stopping Ingress Controller")
+	close(c.chShutdown)
 	logger.Error(c.haproxy.Service("stop"))
 }
 

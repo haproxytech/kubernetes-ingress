@@ -83,7 +83,6 @@ type OSArgs struct { //nolint:maligned
 	SyncPeriod                 time.Duration  `long:"sync-period" default:"5s" description:"Sets the period at which the controller syncs HAProxy configuration file"`
 	CacheResyncPeriod          time.Duration  `long:"cache-resync-period" default:"10m" description:"Sets the underlying Shared Informer resync period: resyncing controller with informers cache"`
 	LogLevel                   LogLevelValue  `long:"log" default:"info" description:"level of log messages you can see"`
-	PprofEnabled               bool           `short:"p" description:"enable pprof over https"`
 	External                   bool           `short:"e" long:"external" description:"use as external Ingress Controller (out of k8s cluster)"`
 	Test                       bool           `short:"t" description:"simulate running HAProxy"`
 	DisableIPV4                bool           `long:"disable-ipv4" description:"toggle to disable the IPv4 protocol from all frontends"`
@@ -99,6 +98,8 @@ type OSArgs struct { //nolint:maligned
 	RuntimeDir                 string         `long:"runtime-dir" description:"path to HAProxy runtime directory. NOTE: works only in External mode"`
 	DisableServiceExternalName bool           `long:"disable-service-external-name" description:"disable forwarding to ExternalName Services due to CVE-2021-25740"`
 	UseWiths6Overlay           bool           `long:"with-s6-overlay" description:"use s6 overlay to start/stpop/reload HAProxy"`
-	PromotheusPort             int64          `long:"enable-prometheus-port" description:"port to listen on for Prometheus metrics"`
+	ControllerPort             int            `long:"controller-port" description:"port to listen on for controller data: prometheus, pprof"`
+	PprofEnabled               bool           `long:"pprof" short:"p" description:"enable pprof"`
+	PrometheusEnabled          bool           `long:"prometheus" description:"enable prometheus of IC data"`
 	ChannelSize                int64          `long:"channel-size" description:"sets the size of controller buffers used to receive and send k8s events.NOTE: increase the value to accommodate large number of resources "`
 }
