@@ -166,7 +166,7 @@ func (c *HAProxyController) handleDefaultService() (reload bool) {
 	if err != nil {
 		logger.Errorf("default service: %s", err)
 	}
-	return false
+	return reload
 }
 
 // handleDefaultServicePort configures local HAProy default backend provided via cli param "default-backend-port"
@@ -201,7 +201,7 @@ func (c *HAProxyController) handleDefaultServicePort() (reload bool) {
 	if err != nil {
 		logger.Errorf("default service port: %s", err)
 	}
-	return true
+	return reload
 }
 
 // handleDefaultCert configures default/fallback HAProxy certificate to use for client HTTPS requests.

@@ -120,59 +120,13 @@ func (builder *Builder) Build() *HAProxyController {
 	}
 
 	chShutdown := make(chan struct{})
+
 	if builder.osArgs.ControllerPort != 0 {
-		rtr := router.New()
-		var runningServices string
-		if builder.osArgs.PprofEnabled {
-			rtr.GET("/debug/pprof/{profile:*}", pprofhandler.PprofHandler)
-			runningServices += " pprof"
-		}
-		if builder.osArgs.PrometheusEnabled {
-			rtr.GET("/metrics", fasthttpadaptor.NewFastHTTPHandler(promhttp.Handler()))
-			runningServices += ", prometheus"
-		}
-		rtr.GET("/healtz", requestHandler)
-		// all others will be 404
-		go func() {
-			server := fasthttp.Server{
-				Handler:               rtr.Handler,
-				NoDefaultServerHeader: true,
-			}
-			go func() {
-				<-chShutdown
-				if err := server.Shutdown(); err != nil {
-					logger.Errorf("Could not gracefully shutdown controller data server: %v\n", err)
-				} else {
-					logger.Errorf("Gracefully shuting down controller data server")
-				}
-			}()
-			logger.Infof("running controller data server on :%d, running%s", builder.osArgs.ControllerPort, runningServices)
-			err := server.ListenAndServe(":" + strconv.Itoa(builder.osArgs.ControllerPort))
-			logger.Error(err)
-		}()
+		addControllerMetricData(builder, chShutdown)
 	}
 
 	if builder.osArgs.DefaultBackendService.String() == "" {
-		rtr := router.New()
-		rtr.GET("/healtz", requestHandler)
-		// all others will be 404
-		go func() {
-			server := fasthttp.Server{
-				Handler:               rtr.Handler,
-				NoDefaultServerHeader: true,
-			}
-			go func() {
-				<-chShutdown
-				if err := server.Shutdown(); err != nil {
-					logger.Errorf("Could not gracefully shutdown controller data server: %v\n", err)
-				} else {
-					logger.Errorf("Gracefully shuting down controller data server")
-				}
-			}()
-			logger.Infof("running default backend server on :%d", builder.osArgs.DefaultBackendPort)
-			err := server.ListenAndServe(":" + strconv.Itoa(builder.osArgs.DefaultBackendPort))
-			logger.Error(err)
-		}()
+		addLocalDefaultService(builder, chShutdown)
 	}
 
 	haproxy, err := haproxy.New(builder.osArgs, builder.haproxyEnv, builder.haproxyCfgFile, builder.haproxyProcess, builder.haproxyClient, builder.haproxyRules)
@@ -192,6 +146,61 @@ func (builder *Builder) Build() *HAProxyController {
 		annotations:    builder.annotations,
 		chShutdown:     chShutdown,
 	}
+}
+
+func addControllerMetricData(builder *Builder, chShutdown chan struct{}) {
+	rtr := router.New()
+	var runningServices string
+	if builder.osArgs.PprofEnabled {
+		rtr.GET("/debug/pprof/{profile:*}", pprofhandler.PprofHandler)
+		runningServices += " pprof"
+	}
+	if builder.osArgs.PrometheusEnabled {
+		rtr.GET("/metrics", fasthttpadaptor.NewFastHTTPHandler(promhttp.Handler()))
+		runningServices += ", prometheus"
+	}
+	rtr.GET("/healtz", requestHandler)
+	// all others will be 404
+	go func() {
+		server := fasthttp.Server{
+			Handler:               rtr.Handler,
+			NoDefaultServerHeader: true,
+		}
+		go func() {
+			<-chShutdown
+			if err := server.Shutdown(); err != nil {
+				logger.Errorf("Could not gracefully shutdown controller data server: %v\n", err)
+			} else {
+				logger.Errorf("Gracefully shuting down controller data server")
+			}
+		}()
+		logger.Infof("running controller data server on :%d, running%s", builder.osArgs.ControllerPort, runningServices)
+		err := server.ListenAndServe(":" + strconv.Itoa(builder.osArgs.ControllerPort))
+		logger.Error(err)
+	}()
+}
+
+func addLocalDefaultService(builder *Builder, chShutdown chan struct{}) {
+	rtr := router.New()
+	rtr.GET("/healtz", requestHandler)
+	// all others will be 404
+	go func() {
+		server := fasthttp.Server{
+			Handler:               rtr.Handler,
+			NoDefaultServerHeader: true,
+		}
+		go func() {
+			<-chShutdown
+			if err := server.Shutdown(); err != nil {
+				logger.Errorf("Could not gracefully shutdown controller data server: %v\n", err)
+			} else {
+				logger.Errorf("Gracefully shuting down controller data server")
+			}
+		}()
+		logger.Infof("running default backend server on :%d", builder.osArgs.DefaultBackendPort)
+		err := server.ListenAndServe(":" + strconv.Itoa(builder.osArgs.DefaultBackendPort))
+		logger.Error(err)
+	}()
 }
 
 func requestHandler(ctx *fasthttp.RequestCtx) {
