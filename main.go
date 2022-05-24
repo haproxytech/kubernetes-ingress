@@ -71,6 +71,11 @@ func main() {
 	logInfo(logger, osArgs)
 	logger.ShowFilename(true)
 
+	// backwards compatibility with 1.7
+	if osArgs.PprofEnabled {
+		osArgs.ControllerPort = 6060
+	}
+
 	// Default annotations
 	defaultBackendSvc := fmt.Sprint(osArgs.DefaultBackendService)
 	defaultCertificate := fmt.Sprint(osArgs.DefaultCertificate)
