@@ -54,6 +54,12 @@ func (c *HAProxyController) initHandlers() {
 	if c.osArgs.PprofEnabled {
 		c.updateHandlers = append(c.updateHandlers, handler.Pprof{})
 	}
+	if c.osArgs.DefaultBackendService.String() == "" {
+		c.updateHandlers = append(c.updateHandlers, handler.DefaultLocalService{
+			Name: "default_local_backend",
+			Port: c.osArgs.DefaultBackendPort,
+		})
+	}
 	c.updateHandlers = append(c.updateHandlers, handler.Refresh{})
 }
 
@@ -69,7 +75,8 @@ func (c *HAProxyController) startupHandlers() error {
 			HTTPSPort: c.osArgs.HTTPSBindPort,
 			IPv4Addr:  c.osArgs.IPV4BindAddr,
 			IPv6Addr:  c.osArgs.IPV6BindAddr,
-		}}
+		},
+	}
 	for _, handler := range handlers {
 		_, err := handler.Update(c.store, c.haproxy, c.annotations)
 		if err != nil {

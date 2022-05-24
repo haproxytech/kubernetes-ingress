@@ -30,6 +30,9 @@ func (s *Service) HandleHAProxySrvs(store store.K8s, client api.HAProxyClient) (
 	var srvsScaled bool
 	backend, err := s.getRuntimeBackend(store)
 	if err != nil {
+		if s.backend != nil && s.backend.Name == "default_local_backend" {
+			return
+		}
 		logger.Warningf("Ingress '%s/%s': %s", s.resource.Namespace, s.resource.Name, err)
 		if servers, _ := client.BackendServersGet(s.backend.Name); servers != nil {
 			client.BackendServerDeleteAll(s.backend.Name)

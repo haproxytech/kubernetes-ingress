@@ -69,6 +69,7 @@ type OSArgs struct { //nolint:maligned
 	Help                       []bool         `short:"h" long:"help" description:"show this help message"`
 	Version                    []bool         `short:"v" long:"version" description:"version"`
 	DefaultBackendService      NamespaceValue `long:"default-backend-service" default:"" description:"default service to serve 404 page. If not specified HAProxy serves http 400"`
+	DefaultBackendPort         int            `long:"default-backend-port" description:"port to use for default service" default:"6061"`
 	DefaultCertificate         NamespaceValue `long:"default-ssl-certificate" default:"" description:"secret name of the certificate"`
 	ConfigMap                  NamespaceValue `long:"configmap" description:"configmap designated for HAProxy" default:""`
 	ConfigMapTCPServices       NamespaceValue `long:"configmap-tcp-services" description:"configmap used to define tcp services" default:""`

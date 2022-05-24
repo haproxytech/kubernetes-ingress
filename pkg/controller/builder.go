@@ -120,23 +120,23 @@ func (builder *Builder) Build() *HAProxyController {
 	}
 
 	chShutdown := make(chan struct{})
-	rtr := router.New()
 	if builder.osArgs.ControllerPort != 0 {
+		rtr := router.New()
 		var runningServices string
 		if builder.osArgs.PprofEnabled {
 			rtr.GET("/debug/pprof/{profile:*}", pprofhandler.PprofHandler)
-			runningServices += " pprof,"
+			runningServices += " pprof"
 		}
 		if builder.osArgs.PrometheusEnabled {
 			rtr.GET("/metrics", fasthttpadaptor.NewFastHTTPHandler(promhttp.Handler()))
-			runningServices += " prometheus,"
+			runningServices += ", prometheus"
 		}
-		runningServices += " default service"
 		rtr.GET("/healtz", requestHandler)
 		// all others will be 404
 		go func() {
 			server := fasthttp.Server{
-				Handler: rtr.Handler,
+				Handler:               rtr.Handler,
+				NoDefaultServerHeader: true,
 			}
 			go func() {
 				<-chShutdown
@@ -148,6 +148,29 @@ func (builder *Builder) Build() *HAProxyController {
 			}()
 			logger.Infof("running controller data server on :%d, running%s", builder.osArgs.ControllerPort, runningServices)
 			err := server.ListenAndServe(":" + strconv.Itoa(builder.osArgs.ControllerPort))
+			logger.Error(err)
+		}()
+	}
+
+	if builder.osArgs.DefaultBackendService.String() == "" {
+		rtr := router.New()
+		rtr.GET("/healtz", requestHandler)
+		// all others will be 404
+		go func() {
+			server := fasthttp.Server{
+				Handler:               rtr.Handler,
+				NoDefaultServerHeader: true,
+			}
+			go func() {
+				<-chShutdown
+				if err := server.Shutdown(); err != nil {
+					logger.Errorf("Could not gracefully shutdown controller data server: %v\n", err)
+				} else {
+					logger.Errorf("Gracefully shuting down controller data server")
+				}
+			}()
+			logger.Infof("running default backend server on :%d", builder.osArgs.DefaultBackendPort)
+			err := server.ListenAndServe(":" + strconv.Itoa(builder.osArgs.DefaultBackendPort))
 			logger.Error(err)
 		}()
 	}

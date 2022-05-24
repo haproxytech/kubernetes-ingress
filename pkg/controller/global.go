@@ -148,15 +148,15 @@ func (c *HAProxyController) defaultsCfg() (reload bool) {
 // handleDefaultService configures HAProy default backend provided via cli param "default-backend-service"
 func (c *HAProxyController) handleDefaultService() (reload bool) {
 	var svc *service.Service
-	ns, name, err := common.GetK8sPath("default-backend-service", c.store.ConfigMaps.Main.Annotations)
+	namespace, name, err := common.GetK8sPath("default-backend-service", c.store.ConfigMaps.Main.Annotations)
 	if err != nil {
 		logger.Errorf("default service: %s", err)
 	}
 	if name == "" {
-		return
+		return c.handleDefaultServicePort()
 	}
 	ingressPath := &store.IngressPath{
-		SvcNamespace:     ns,
+		SvcNamespace:     namespace,
 		SvcName:          name,
 		IsDefaultBackend: true,
 	}
@@ -166,7 +166,42 @@ func (c *HAProxyController) handleDefaultService() (reload bool) {
 	if err != nil {
 		logger.Errorf("default service: %s", err)
 	}
-	return
+	return false
+}
+
+// handleDefaultServicePort configures local HAProy default backend provided via cli param "default-backend-port"
+func (c *HAProxyController) handleDefaultServicePort() (reload bool) {
+	var svc *service.Service
+	_, portStr, err := common.GetK8sPath("default-backend-port", c.store.ConfigMaps.Main.Annotations)
+	if err != nil {
+		logger.Errorf("default backend port: %s", err)
+	}
+	if portStr == "" {
+		return
+	}
+	defaultLocalBackend := "default_local_backend"
+	ingressPath := &store.IngressPath{
+		SvcNamespace:     "",
+		SvcName:          defaultLocalBackend,
+		SvcPortString:    portStr,
+		IsDefaultBackend: true,
+	}
+
+	err = c.haproxy.BackendCreate(models.Backend{
+		Name: defaultLocalBackend,
+	})
+	if err != nil {
+		logger.Errorf("default backend port: %s", err)
+	}
+	backend, _ := c.haproxy.BackendGet(defaultLocalBackend)
+
+	if svc, err = service.NewLocal(c.store, ingressPath, backend, c.store.ConfigMaps.Main.Annotations); err == nil {
+		reload, err = svc.SetDefaultBackend(c.store, c.haproxy, []string{c.haproxy.FrontHTTP, c.haproxy.FrontHTTPS}, c.annotations)
+	}
+	if err != nil {
+		logger.Errorf("default service port: %s", err)
+	}
+	return true
 }
 
 // handleDefaultCert configures default/fallback HAProxy certificate to use for client HTTPS requests.

@@ -63,6 +63,18 @@ func New(k store.K8s, path *store.IngressPath, certs certs.Certificates, tcpServ
 	}, nil
 }
 
+// NewLocal returns a Service instance to handle the k8s IngressPath resource given in params.
+func NewLocal(k store.K8s, path *store.IngressPath, backend *models.Backend, annList ...map[string]string) (*Service, error) {
+	return &Service{
+		path: path,
+		resource: &store.Service{
+			Annotations: map[string]string{},
+		},
+		annotations: annList,
+		backend:     backend,
+	}, nil
+}
+
 func (s *Service) GetResource() *store.Service {
 	return s.resource
 }
@@ -140,7 +152,7 @@ func (s *Service) HandleBackend(store store.K8s, client api.HAProxyClient, a ann
 	return
 }
 
-// getBackendModel checks for a corresponding custom resource before falling back to annoations
+// getBackendModel checks for a corresponding custom resource before falling back to annotations
 func (s *Service) getBackendModel(store store.K8s, a annotations.Annotations) (backend *models.Backend, err error) {
 	// Backend mode
 	mode := "http"

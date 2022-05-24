@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"strconv"
 	"strings"
 	"syscall"
 
@@ -74,6 +75,7 @@ func main() {
 	defaultBackendSvc := fmt.Sprint(osArgs.DefaultBackendService)
 	defaultCertificate := fmt.Sprint(osArgs.DefaultCertificate)
 	annotations.SetDefaultValue("default-backend-service", defaultBackendSvc)
+	annotations.SetDefaultValue("default-backend-port", strconv.Itoa(osArgs.DefaultBackendPort))
 	annotations.SetDefaultValue("ssl-certificate", defaultCertificate)
 
 	// Start Controller
@@ -138,7 +140,11 @@ func logInfo(logger utils.Logger, osArgs utils.OSArgs) {
 	logger.Printf("Ingress class: %s", osArgs.IngressClass)
 	logger.Printf("Empty Ingress class: %t", osArgs.EmptyIngressClass)
 	logger.Printf("Publish service: %s", osArgs.PublishService)
-	logger.Printf("Default backend service: %s", osArgs.DefaultBackendService)
+	if osArgs.DefaultBackendService.String() != "" {
+		logger.Printf("Default backend service: %s", osArgs.DefaultBackendService)
+	} else {
+		logger.Printf("Using local backend service on port: %s", osArgs.DefaultBackendPort)
+	}
 	logger.Printf("Default ssl certificate: %s", osArgs.DefaultCertificate)
 	if !osArgs.DisableHTTP {
 		logger.Printf("Frontend HTTP listening on: %s:%d", osArgs.IPV4BindAddr, osArgs.HTTPBindPort)
