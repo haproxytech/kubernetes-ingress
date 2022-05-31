@@ -31,7 +31,9 @@ func (a *Option) Process(k store.K8s, annotations ...map[string]string) error {
 	if input == "" {
 		switch a.name {
 		case "http-server-close", "http-keep-alive":
-			a.defaults.HTTPConnectionMode = ""
+			if a.defaults.HTTPConnectionMode == a.name {
+				a.defaults.HTTPConnectionMode = ""
+			}
 		case "dontlognull":
 			a.defaults.Dontlognull = ""
 		case "logasap":
@@ -62,7 +64,9 @@ func (a *Option) Process(k store.K8s, annotations ...map[string]string) error {
 	} else {
 		switch a.name {
 		case "http-server-close", "http-keep-alive":
-			a.defaults.HTTPConnectionMode = ""
+			if a.defaults.HTTPConnectionMode == a.name {
+				a.defaults.HTTPConnectionMode = ""
+			}
 		case "dontlognull":
 			a.defaults.Dontlognull = "disabled"
 		case "logasap":
