@@ -72,7 +72,7 @@ func main() {
 	logger.ShowFilename(true)
 
 	// backwards compatibility with 1.7
-	if osArgs.PprofEnabled {
+	if osArgs.PprofEnabled && osArgs.ControllerPort == 0 {
 		osArgs.ControllerPort = 6060
 	}
 
