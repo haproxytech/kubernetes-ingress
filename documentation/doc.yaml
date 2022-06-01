@@ -115,7 +115,7 @@ image_arguments:
       - In order to use pattern files, the target file **should be prefixed with "patterns/"**
     values:
       - The name of the ConfigMap in format NS/ConfigMapName
-    version_min: "1.6"
+    version_min: "1.8"
     example: |-
       args:
         - --configmap-patternfiles=default/acl-patterns
@@ -127,6 +127,30 @@ image_arguments:
     example: |-
       args:
         - --default-backend-service=default/my-default-service
+  - argument: --default-backend-port
+    description: if default-backend-service is not used with this you can set default port used for same purpose
+    values:
+      - port that will be used for default service within controller pod
+    version_min: "1.8"
+    example: |-
+      args:
+        - --default-backend-port=6060
+  - argument: --pprof
+    description: enable pprof endpoint, if default-backend-port is not used 6060 will be used
+    values:
+      - this is boolean flag
+    version_min: "1.4"
+    example: |-
+      args:
+        - --pprof
+  - argument: --prometheus
+    description: enable prometheus endpoint, if default-backend-port is not used 6060 will be used
+    values:
+      - this is boolean flag
+    version_min: "1.8"
+    example: |-
+      args:
+        - --prometheus
   - argument: --default-ssl-certificate
     description: The name of a TLS Secret that contains the certificate to use for SSL/TLS traffic. This can be overridden with the <code>ssl-certificate</code> setting.
     values:
@@ -639,7 +663,7 @@ annotations:
       - "false"
     applies_to:
       - configmap
-    version_min: "1.7"
+    version_min: "1.8"
     example:
       - "client-strict-sni: true"
   - title: cors-enable

@@ -12,8 +12,11 @@ Image can be run with arguments:
 | [`--configmap`](#--configmap) | `default/haproxy-configmap` |
 | [`--configmap-tcp-services`](#--configmap-tcp-services) |  |
 | [`--configmap-errorfiles`](#--configmap-errorfiles) |  |
-| [`--configmap-patternfiles`](#--configmap-patternfiles) |  |
+| [`--configmap-patternfiles`](#--configmap-patternfiles) :construction:(dev) |  |
 | [`--default-backend-service`](#--default-backend-service) |  |
+| [`--default-backend-port`](#--default-backend-port) :construction:(dev) |  |
+| [`--pprof`](#--pprof) |  |
+| [`--prometheus`](#--prometheus) :construction:(dev) |  |
 | [`--default-ssl-certificate`](#--default-ssl-certificate) |  |
 | [`--ingress.class`](#--ingressclass) |  |
 | [`--empty-ingress-class`](#--empty-ingress-class) | `false` |
@@ -135,6 +138,9 @@ args:
 
 ### `--configmap-patternfiles`
 
+
+  > :construction: this is only available from next version, currently available in dev build
+
   Sets the ConfigMap object that defines pattern files to be used in HAProxy configuration.
 Controller will create corresponding files and update them when ConfigMap is updated.
 Pattern files are particularly useful for [HAProxy ACLs](https://cbonte.github.io/haproxy-dconv/2.3/configuration.html#7.1) where we can load patterns from file.
@@ -211,6 +217,69 @@ Example:
 ```yaml
 args:
   - --default-backend-service=default/my-default-service
+```
+
+<p align='right'><a href='#haproxy-kubernetes-ingress-controller'>:arrow_up_small: back to top</a></p>
+
+***
+
+### `--default-backend-port`
+
+
+  > :construction: this is only available from next version, currently available in dev build
+
+  if default-backend-service is not used with this you can set default port used for same purpose
+
+Possible values:
+
+- port that will be used for default service within controller pod
+
+Example:
+
+```yaml
+args:
+  - --default-backend-port=6060
+```
+
+<p align='right'><a href='#haproxy-kubernetes-ingress-controller'>:arrow_up_small: back to top</a></p>
+
+***
+
+### `--pprof`
+
+  enable pprof endpoint, if default-backend-port is not used 6060 will be used
+
+Possible values:
+
+- this is boolean flag
+
+Example:
+
+```yaml
+args:
+  - --pprof
+```
+
+<p align='right'><a href='#haproxy-kubernetes-ingress-controller'>:arrow_up_small: back to top</a></p>
+
+***
+
+### `--prometheus`
+
+
+  > :construction: this is only available from next version, currently available in dev build
+
+  enable prometheus endpoint, if default-backend-port is not used 6060 will be used
+
+Possible values:
+
+- this is boolean flag
+
+Example:
+
+```yaml
+args:
+  - --prometheus
 ```
 
 <p align='right'><a href='#haproxy-kubernetes-ingress-controller'>:arrow_up_small: back to top</a></p>
