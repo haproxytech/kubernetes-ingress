@@ -12,11 +12,11 @@ Image can be run with arguments:
 | [`--configmap`](#--configmap) | `default/haproxy-configmap` |
 | [`--configmap-tcp-services`](#--configmap-tcp-services) |  |
 | [`--configmap-errorfiles`](#--configmap-errorfiles) |  |
-| [`--configmap-patternfiles`](#--configmap-patternfiles) :construction:(dev) |  |
+| [`--configmap-patternfiles`](#--configmap-patternfiles) |  |
 | [`--default-backend-service`](#--default-backend-service) |  |
-| [`--default-backend-port`](#--default-backend-port) :construction:(dev) |  |
+| [`--default-backend-port`](#--default-backend-port) |  |
 | [`--pprof`](#--pprof) |  |
-| [`--prometheus`](#--prometheus) :construction:(dev) |  |
+| [`--prometheus`](#--prometheus) |  |
 | [`--default-ssl-certificate`](#--default-ssl-certificate) |  |
 | [`--ingress.class`](#--ingressclass) |  |
 | [`--empty-ingress-class`](#--empty-ingress-class) | `false` |
@@ -138,9 +138,6 @@ args:
 
 ### `--configmap-patternfiles`
 
-
-  > :construction: this is only available from next version, currently available in dev build
-
   Sets the ConfigMap object that defines pattern files to be used in HAProxy configuration.
 Controller will create corresponding files and update them when ConfigMap is updated.
 Pattern files are particularly useful for [HAProxy ACLs](https://cbonte.github.io/haproxy-dconv/2.3/configuration.html#7.1) where we can load patterns from file.
@@ -225,9 +222,6 @@ args:
 
 ### `--default-backend-port`
 
-
-  > :construction: this is only available from next version, currently available in dev build
-
   if default-backend-service is not used with this you can set default port used for same purpose
 
 Possible values:
@@ -265,9 +259,6 @@ args:
 ***
 
 ### `--prometheus`
-
-
-  > :construction: this is only available from next version, currently available in dev build
 
   enable prometheus endpoint, if default-backend-port is not used 6060 will be used
 
