@@ -75,6 +75,9 @@ func main() {
 	if osArgs.PprofEnabled && osArgs.ControllerPort == 0 {
 		osArgs.ControllerPort = 6060
 	}
+	if osArgs.PrometheusEnabled && osArgs.ControllerPort == 0 {
+		osArgs.ControllerPort = 6060
+	}
 
 	// Default annotations
 	defaultBackendSvc := fmt.Sprint(osArgs.DefaultBackendService)
