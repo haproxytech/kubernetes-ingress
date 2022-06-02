@@ -41,6 +41,7 @@ func New(osArgs utils.OSArgs, env env.Env, cfgFile []byte, p process.Process, cl
 
 	if osArgs.External {
 		cfgFile = []byte(strings.ReplaceAll(string(cfgFile), "/var/run/haproxy-runtime-api.sock", h.RuntimeSocket))
+		cfgFile = []byte(strings.ReplaceAll(string(cfgFile), "pidfile /var/run/haproxy.pid", "pidfile "+h.PIDFile))
 	}
 
 	err = renameio.WriteFile(h.MainCFGFile, cfgFile, 0o755)
