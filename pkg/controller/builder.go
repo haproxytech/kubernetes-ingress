@@ -10,6 +10,7 @@ import (
 	"github.com/valyala/fasthttp"
 	"github.com/valyala/fasthttp/fasthttpadaptor"
 	"github.com/valyala/fasthttp/pprofhandler"
+	"k8s.io/client-go/kubernetes"
 
 	"github.com/haproxytech/kubernetes-ingress/pkg/annotations"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy"
@@ -24,17 +25,19 @@ import (
 )
 
 type Builder struct {
-	osArgs         utils.OSArgs
-	haproxyClient  api.HAProxyClient
-	haproxyEnv     env.Env
-	haproxyProcess process.Process
-	haproxyRules   rules.Rules
-	haproxyCfgFile []byte
-	annotations    annotations.Annotations
-	store          store.K8s
-	publishService *utils.NamespaceValue
-	eventChan      chan k8s.SyncDataEvent
-	ingressChan    chan ingress.Sync
+	osArgs                   utils.OSArgs
+	haproxyClient            api.HAProxyClient
+	haproxyEnv               env.Env
+	haproxyProcess           process.Process
+	haproxyRules             rules.Rules
+	haproxyCfgFile           []byte
+	annotations              annotations.Annotations
+	store                    store.K8s
+	publishService           *utils.NamespaceValue
+	eventChan                chan k8s.SyncDataEvent
+	ingressChan              chan ingress.Sync
+	updatePublishServiceFunc func(ingresses []*ingress.Ingress, publishServiceAddresses []string)
+	clientSet                *kubernetes.Clientset
 }
 
 var defaultEnv = env.Env{
@@ -114,6 +117,16 @@ func (builder *Builder) WithPublishService(publishService *utils.NamespaceValue)
 	return builder
 }
 
+func (builder *Builder) WithUpdatePublishServiceFunc(updatePublishServiceFunc func(ingresses []*ingress.Ingress, publishServiceAddresses []string)) *Builder {
+	builder.updatePublishServiceFunc = updatePublishServiceFunc
+	return builder
+}
+
+func (builder *Builder) WithClientSet(clientSet *kubernetes.Clientset) *Builder {
+	builder.clientSet = clientSet
+	return builder
+}
+
 func (builder *Builder) Build() *HAProxyController {
 	if builder.haproxyCfgFile == nil {
 		logger.Panic(errors.New("no HAProxy Config file provided"))
@@ -134,17 +147,20 @@ func (builder *Builder) Build() *HAProxyController {
 
 	prefix, errPrefix := utils.GetPodPrefix(os.Getenv("POD_NAME"))
 	logger.Error(errPrefix)
+
+	builder.store.UpdateStatusFunc = ingress.NewStatusIngressUpdater(builder.clientSet, builder.store, builder.osArgs.IngressClass, builder.osArgs.EmptyIngressClass, builder.annotations)
 	return &HAProxyController{
-		osArgs:         builder.osArgs,
-		haproxy:        haproxy,
-		podNamespace:   os.Getenv("POD_NAMESPACE"),
-		podPrefix:      prefix,
-		store:          builder.store,
-		eventChan:      builder.eventChan,
-		ingressChan:    builder.ingressChan,
-		publishService: builder.publishService,
-		annotations:    builder.annotations,
-		chShutdown:     chShutdown,
+		osArgs:                   builder.osArgs,
+		haproxy:                  haproxy,
+		podNamespace:             os.Getenv("POD_NAMESPACE"),
+		podPrefix:                prefix,
+		store:                    builder.store,
+		eventChan:                builder.eventChan,
+		ingressChan:              builder.ingressChan,
+		publishService:           builder.publishService,
+		annotations:              builder.annotations,
+		chShutdown:               chShutdown,
+		updatePublishServiceFunc: builder.updatePublishServiceFunc,
 	}
 }
 

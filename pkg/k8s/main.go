@@ -47,6 +47,7 @@ var ErrIgnored = errors.New("ignored resource")
 type K8s interface {
 	GetClientset() *k8sclientset.Clientset
 	MonitorChanges(eventChan chan SyncDataEvent, ingressChan chan ingress.Sync, stop chan struct{})
+	UpdatePublishService(ingresses []*ingress.Ingress, publishServiceAddresses []string)
 }
 
 // A Custom Resource interface
@@ -108,6 +109,13 @@ func (k k8s) GetClientset() *k8sclientset.Clientset {
 	return k.builtInClient
 }
 
+func (k k8s) UpdatePublishService(ingresses []*ingress.Ingress, publishServiceAddresses []string) {
+	clientSet := k.GetClientset()
+	for _, i := range ingresses {
+		logger.Error(i.UpdateStatus(clientSet, publishServiceAddresses))
+	}
+}
+
 func (k k8s) MonitorChanges(eventChan chan SyncDataEvent, ingressChan chan ingress.Sync, stop chan struct{}) {
 	informersSynced := &[]cache.InformerSynced{}
 
@@ -159,7 +167,7 @@ func (k k8s) runInformers(eventChan chan SyncDataEvent, ingressChan chan ingress
 	// Core.V1 Resources
 	nsi := k.getNamespaceInfomer(eventChan, factory)
 	go nsi.Run(stop)
-	svci := k.getServiceInformer(eventChan, ingressChan, factory)
+	svci := k.getServiceInformer(eventChan, ingressChan, factory, k.publishSvc)
 	go svci.Run(stop)
 	seci := k.getSecretInformer(eventChan, factory)
 	go seci.Run(stop)

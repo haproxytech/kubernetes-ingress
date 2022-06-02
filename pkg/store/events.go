@@ -15,6 +15,9 @@
 package store
 
 import (
+	"strings"
+
+	"github.com/go-test/deep"
 	corev1alpha1 "github.com/haproxytech/kubernetes-ingress/crs/api/core/v1alpha1"
 )
 
@@ -45,12 +48,21 @@ func (k *K8s) EventIngressClass(data *IngressClass) (updateRequired bool) {
 }
 
 func (k *K8s) EventIngress(ns *Namespace, data *Ingress) (updateRequired bool) {
+	updateRequired = true
+
 	if data.Status == DELETED {
 		delete(ns.Ingresses, data.Name)
 	} else {
+		if oldIngress, ok := ns.Ingresses[data.Name]; ok {
+			updated := deep.Equal(data.IngressCore, oldIngress.IngressCore)
+			if len(updated) == 0 || (len(updated) == 1 && strings.HasSuffix(updated[0], "<nil pointer> != store.ServicePort")) {
+				updateRequired = false
+				data.Status = EMPTY
+			}
+		}
 		ns.Ingresses[data.Name] = data
 	}
-	return true
+	return
 }
 
 func getEndpoints(slices map[string]*Endpoints) (endpoints map[string]PortEndpoints) {
@@ -262,4 +274,70 @@ func (k *K8s) EventBackendCR(namespace, name string, data *corev1alpha1.Backend)
 	}
 	ns.CRs.Backends[name] = data.Spec.Config
 	return true
+}
+
+func (k *K8s) EventPublishService(ns *Namespace, data *Service) (updateRequired bool) {
+	updateRequired = false
+	switch data.Status {
+	case MODIFIED:
+		newService := data
+		oldService, ok := ns.Services[data.Name]
+		if !ok {
+			// intentionally do not add it. TODO see if our idea of only watching is ok
+			logger.Warningf("Service '%s' not registered with controller !", data.Name)
+		}
+		if oldService.EqualWithAddresses(newService) {
+			return
+		}
+		oldService.Addresses = newService.Addresses
+		k.PublishServiceAddresses = oldService.Addresses
+		// Extraction of ingresses from map to avoid concurrent modification.
+		ingresses := []*Ingress{}
+		for _, ns := range k.Namespaces {
+			if !ns.Relevant {
+				continue
+			}
+			for _, ingress := range k.Namespaces[ns.Name].Ingresses {
+				ingresses = append(ingresses, ingress)
+			}
+		}
+		go k.UpdateStatusFunc(ingresses, oldService.Addresses)
+	case ADDED:
+		if service, ok := ns.Services[data.Name]; ok {
+			k.PublishServiceAddresses = data.Addresses
+			service.Addresses = data.Addresses
+			// Extraction of ingresses from map to avoid concurrent modification.
+			ingresses := []*Ingress{}
+			for _, ns := range k.Namespaces {
+				if !ns.Relevant {
+					continue
+				}
+				for _, ingress := range k.Namespaces[ns.Name].Ingresses {
+					ingresses = append(ingresses, ingress)
+				}
+			}
+			go k.UpdateStatusFunc(ingresses, service.Addresses)
+			return
+		}
+		logger.Errorf("Publish service '%s/%s' not found", data.Namespace, data.Name)
+	case DELETED:
+		service, ok := ns.Services[data.Name]
+		if ok {
+			k.PublishServiceAddresses = nil
+			service.Addresses = nil
+			ingresses := []*Ingress{}
+			for _, ns := range k.Namespaces {
+				if !ns.Relevant {
+					continue
+				}
+				for _, ingress := range k.Namespaces[ns.Name].Ingresses {
+					ingresses = append(ingresses, ingress)
+				}
+			}
+			go k.UpdateStatusFunc(ingresses, service.Addresses)
+		} else {
+			logger.Warningf("Publish service '%s/%s' not registered with controller, cannot delete !", data.Namespace, data.Name)
+		}
+	}
+	return updateRequired
 }

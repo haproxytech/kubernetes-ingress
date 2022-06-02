@@ -71,6 +71,8 @@ func (c *HAProxyController) SyncData() {
 			change = c.store.EventSecret(ns, job.Data.(*store.Secret))
 		case k8s.POD:
 			change = c.store.EventPod(job.Data.(store.PodEvent))
+		case k8s.PUBLISH_SERVICE:
+			change = c.store.EventPublishService(ns, job.Data.(*store.Service))
 		}
 		hadChanges = hadChanges || change
 	}

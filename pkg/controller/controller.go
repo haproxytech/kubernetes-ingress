@@ -34,21 +34,22 @@ var logger = utils.GetLogger()
 
 // HAProxyController is ingress controller
 type HAProxyController struct {
-	haproxy        haproxy.HAProxy
-	osArgs         utils.OSArgs
-	store          store.K8s
-	annotations    annotations.Annotations
-	publishService *utils.NamespaceValue
-	auxCfgModTime  int64
-	eventChan      chan k8s.SyncDataEvent
-	ingressChan    chan ingress.Sync
-	ready          bool
-	reload         bool
-	restart        bool
-	updateHandlers []UpdateHandler
-	podNamespace   string
-	podPrefix      string
-	chShutdown     chan struct{}
+	haproxy                  haproxy.HAProxy
+	osArgs                   utils.OSArgs
+	store                    store.K8s
+	annotations              annotations.Annotations
+	publishService           *utils.NamespaceValue
+	auxCfgModTime            int64
+	eventChan                chan k8s.SyncDataEvent
+	ingressChan              chan ingress.Sync
+	ready                    bool
+	reload                   bool
+	restart                  bool
+	updateHandlers           []UpdateHandler
+	podNamespace             string
+	podPrefix                string
+	chShutdown               chan struct{}
+	updatePublishServiceFunc func(ingresses []*ingress.Ingress, publishServiceAddresses []string)
 }
 
 // Wrapping a Native-Client transaction and commit it.
@@ -110,25 +111,27 @@ func (c *HAProxyController) updateHAProxy() {
 		logger.Error(route.CustomRoutesReset(c.haproxy))
 	}
 
+	ingresses := []*ingress.Ingress{}
 	for _, namespace := range c.store.Namespaces {
 		if !namespace.Relevant {
 			continue
 		}
+		c.store.SecretsProcessed = map[string]struct{}{}
 		for _, ingResource := range namespace.Ingresses {
 			i := ingress.New(c.store, ingResource, c.osArgs.IngressClass, c.osArgs.EmptyIngressClass, c.annotations)
 			if i == nil {
 				logger.Debugf("ingress '%s/%s' ignored: no matching IngressClass", ingResource.Namespace, ingResource.Name)
 				continue
 			}
-			if c.publishService != nil && ingResource.Status == store.ADDED {
-				select {
-				case c.ingressChan <- ingress.Sync{Ingress: ingResource}:
-				default:
-					logger.Errorf("Ingress %s/%s: unable to sync status: sync channel full", ingResource.Namespace, ingResource.Name)
-				}
+			if ingResource.Status == store.ADDED {
+				ingresses = append(ingresses, i)
 			}
 			c.reload = i.Update(c.store, c.haproxy, c.annotations) || c.reload
 		}
+	}
+
+	if len(ingresses) > 0 {
+		go c.updatePublishServiceFunc(ingresses, c.store.PublishServiceAddresses)
 	}
 
 	for _, handler := range c.updateHandlers {
