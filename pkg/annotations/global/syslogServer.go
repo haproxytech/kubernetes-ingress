@@ -35,7 +35,7 @@ func (a *SyslogServers) GetName() string {
 func (a *SyslogServers) Process(k store.K8s, annotations ...map[string]string) error {
 	input := common.GetValue(a.GetName(), annotations...)
 	a.stdout = false
-	for _, syslogLine := range strings.Split(input, "\n") {
+	for i, syslogLine := range strings.Split(input, "\n") {
 		if syslogLine == "" {
 			continue
 		}
@@ -56,7 +56,7 @@ func (a *SyslogServers) Process(k store.K8s, annotations ...map[string]string) e
 			}
 		}
 		// populate annotation data
-		logTarget := models.LogTarget{Index: utils.PtrInt64(0)}
+		logTarget := models.LogTarget{Index: utils.PtrInt64(int64(i))}
 		address, ok := logParams["address"]
 		if !ok {
 			return fmt.Errorf("incorrect syslog Line: no address param in '%s'", syslogLine)
