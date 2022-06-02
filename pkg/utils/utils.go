@@ -131,3 +131,20 @@ func GetPodPrefix(podName string) (prefix string, err error) {
 	prefix = string([]rune(podName)[:i])
 	return
 }
+
+func EqualSliceStringsWithoutOrder(a, b []string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	// In case order is different
+	addresses := map[string]struct{}{}
+	for _, addr := range a {
+		addresses[addr] = struct{}{}
+	}
+	for _, addr := range b {
+		if _, ok := addresses[addr]; !ok {
+			return false
+		}
+	}
+	return true
+}

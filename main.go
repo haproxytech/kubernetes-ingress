@@ -98,6 +98,11 @@ func main() {
 	publishService := getNamespaceValue(osArgs.PublishService)
 
 	s := store.NewK8sStore(osArgs)
+	k := k8s.New(
+		osArgs,
+		s.NamespacesAccess.Whitelist,
+		publishService,
+	)
 
 	c := controller.NewBuilder().
 		WithHaproxyCfgFile(haproxyConf).
@@ -105,19 +110,12 @@ func main() {
 		WithIngressChan(ingressChan).
 		WithStore(s).
 		WithPublishService(publishService).
+		WithUpdatePublishServiceFunc(k.UpdatePublishService).
+		WithClientSet(k.GetClientset()).
 		WithArgs(osArgs).Build()
-
-	k := k8s.New(
-		osArgs,
-		s.NamespacesAccess.Whitelist,
-		publishService,
-	)
 
 	go k.MonitorChanges(eventChan, ingressChan, stop)
 	go c.Start()
-	if publishService != nil {
-		go ingress.UpdateStatus(k.GetClientset(), s, osArgs.IngressClass, osArgs.EmptyIngressClass, ingressChan, annotations.New())
-	}
 
 	// Catch QUIT signals
 	signalC := make(chan os.Signal, 1)

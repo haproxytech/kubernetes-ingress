@@ -129,7 +129,12 @@ func (i *Ingress) handlePath(k store.K8s, h haproxy.HAProxy, host string, path *
 		return
 	}
 	// Endpoints
-	endpointsReload := svc.HandleHAProxySrvs(k, h)
+	service := svc.GetResource()
+	var endpointsReload bool
+	if _, ok := k.ServiceProcessed[service.Namespace+"/"+service.Name]; !ok {
+		endpointsReload = svc.HandleHAProxySrvs(k, h)
+		k.ServiceProcessed[service.Namespace+"/"+service.Name] = struct{}{}
+	}
 	return backendReload || endpointsReload || routeReload, err
 }
 
@@ -207,11 +212,15 @@ func (i *Ingress) Update(k store.K8s, h haproxy.HAProxy, a annotations.Annotatio
 	// Ingress secrets
 	logger.Tracef("Ingress '%s/%s': processing secrets...", i.resource.Namespace, i.resource.Name)
 	for _, tls := range i.resource.TLS {
+		if _, ok := k.SecretsProcessed[i.resource.Namespace+"/"+tls.SecretName]; ok {
+			continue
+		}
 		secret, secErr := k.GetSecret(i.resource.Namespace, tls.SecretName)
 		if secErr != nil {
 			logger.Warningf("Ingress '%s/%s': %s", i.resource.Namespace, i.resource.Name, secErr)
 			continue
 		}
+		k.SecretsProcessed[i.resource.Namespace+"/"+tls.SecretName] = struct{}{}
 		_, err := h.AddSecret(secret, certs.FT_CERT)
 		logger.Error(err)
 	}
