@@ -115,7 +115,7 @@ func (handler HTTPS) handleClientTLSAuth(k store.K8s, h haproxy.HAProxy) (reload
 	}
 
 	// No changes
-	if binds[0].SslCafile == caFile && binds[0].Verify == verify {
+	if binds[0].SslCafile == caFile && (caFile == "" || binds[0].Verify == verify) {
 		return
 	}
 	// Removing config
