@@ -556,7 +556,7 @@ func (k k8s) addIngressClassHandlers(eventChan chan SyncDataEvent, informer cach
 			UpdateFunc: func(oldObj, newObj interface{}) {
 				item, err := store.ConvertToIngressClass(newObj)
 				if err != nil {
-					logger.Errorf("%s: Invalid data from k8s api, %s", INGRESS, oldObj)
+					logger.Errorf("%s: Invalid data from k8s api, %s", INGRESS_CLASS, oldObj)
 					return
 				}
 				item.Status = store.MODIFIED
