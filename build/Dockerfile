@@ -45,7 +45,6 @@ ENV S6_OVERLAY_VERSION $S6_OVERLAY_VERSION
 ENV S6_READ_ONLY_ROOT=1
 
 COPY /fs /
-COPY --from=builder /src/fs/haproxy-ingress-controller .
 
 RUN apk --no-cache add socat openssl util-linux htop tzdata curl libcap && \
     rm -f /usr/local/bin/dataplaneapi /usr/bin/dataplaneapi && \
@@ -70,5 +69,7 @@ RUN apk --no-cache add socat openssl util-linux htop tzdata curl libcap && \
     chmod ug+rwx /var/run/s6 && \
     sed -i 's/ root / haproxy /g' /etc/s6/init/init-stage2-fixattrs.txt && \
     chmod ugo+x /etc/services.d/*/run /etc/cont-init.d/*
+
+COPY --from=builder /src/fs/haproxy-ingress-controller .
 
 ENTRYPOINT ["/start.sh"]
