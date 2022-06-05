@@ -39,6 +39,7 @@ func (handler Refresh) Update(k store.K8s, h haproxy.HAProxy, a annotations.Anno
 	reload = h.RefreshMaps(h.HAProxyClient) || reload
 	// Backends
 	deleted, err := h.RefreshBackends()
+	reload = len(deleted) > 0 || reload
 	logger.Error(err)
 	for _, backend := range deleted {
 		logger.Debugf("Backend '%s' deleted", backend)
