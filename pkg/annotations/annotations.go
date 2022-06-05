@@ -71,8 +71,6 @@ func (a annImpl) Global(g *models.Global, l *models.LogTargets) []Annotation {
 
 func (a annImpl) Defaults(d *models.Defaults) []Annotation {
 	return []Annotation{
-		global.NewOption("http-server-close", d),
-		global.NewOption("http-keep-alive", d),
 		global.NewOption("dontlognull", d),
 		global.NewOption("logasap", d),
 		global.NewTimeout("timeout-http-request", d),
@@ -85,6 +83,7 @@ func (a annImpl) Defaults(d *models.Defaults) []Annotation {
 		global.NewTimeout("timeout-tunnel", d),
 		global.NewTimeout("timeout-http-keep-alive", d),
 		global.NewLogFormat("log-format", d),
+		global.NewHTTPConnectionMode("http-connection-mode", d),
 	}
 }
 
