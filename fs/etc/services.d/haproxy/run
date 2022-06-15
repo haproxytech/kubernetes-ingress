@@ -1,4 +1,5 @@
-#!/usr/bin/execlineb -P
+#!/usr/bin/with-contenv sh
 
-with-contenv
-/usr/local/sbin/haproxy -W -db -f /etc/haproxy/haproxy.cfg -f /etc/haproxy/haproxy-aux.cfg
+MEMLIMIT=$(free -m | awk '/Mem:/ {print int($2 * 2 / 3)}')
+
+exec /usr/local/sbin/haproxy -W -db -m "${MEMLIMIT}" -f /etc/haproxy/haproxy.cfg -f /etc/haproxy/haproxy-aux.cfg
