@@ -36,6 +36,7 @@ func (a *Cookie) Process(k store.K8s, annotations ...map[string]string) error {
 		Nocache:  true,
 		Indirect: true,
 		Dynamic:  true,
+		Domains:  []*models.Domain{},
 	}
 	return nil
 }
