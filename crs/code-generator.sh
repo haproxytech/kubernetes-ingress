@@ -41,6 +41,7 @@ echo "Generating register funcs"
 
 echo "Generating clientset"
 "${gobin}/client-gen"\
+	--plural-exceptions "Defaults:Defaults"\
 	--clientset-name "versioned"\
 	--input ${API_PKGS}\
 	--input-base "" \
@@ -50,6 +51,7 @@ echo "Generating clientset"
 
 echo "Generating listers"
 "${gobin}/lister-gen"\
+	--plural-exceptions "Defaults:Defaults"\
 	--input-dirs ${API_PKGS}\
 	--output-package "${CR_PKG}/generated/listers"\
 	--go-header-file ${HDR_FILE}\
@@ -57,6 +59,7 @@ echo "Generating listers"
 
 echo "Generating informers"
 "${gobin}/informer-gen"\
+	--plural-exceptions "Defaults:Defaults"\
 	--input-dirs ${API_PKGS}\
   --versioned-clientset-package "${CR_PKG}/generated/clientset/versioned"\
   --listers-package "${CR_PKG}/generated/listers"\
