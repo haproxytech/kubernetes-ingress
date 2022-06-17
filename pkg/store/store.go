@@ -29,7 +29,7 @@ type K8s struct {
 	ConfigMaps              ConfigMaps
 	PublishServiceAddresses []string
 	SecretsProcessed        map[string]struct{}
-	ServiceProcessed        map[string]struct{}
+	BackendProcessed        map[string]struct{}
 	UpdateStatusFunc        func(ingresses []*Ingress, publishServiceAddresses []string)
 }
 
@@ -69,7 +69,7 @@ func NewK8sStore(args utils.OSArgs) K8s {
 			},
 		},
 		SecretsProcessed: map[string]struct{}{},
-		ServiceProcessed: map[string]struct{}{},
+		BackendProcessed: map[string]struct{}{},
 	}
 	for _, namespace := range args.NamespaceWhitelist {
 		store.NamespacesAccess.Whitelist[namespace] = struct{}{}
@@ -134,7 +134,7 @@ func (k *K8s) Clean() {
 		}
 	}
 	k.SecretsProcessed = map[string]struct{}{}
-	k.ServiceProcessed = map[string]struct{}{}
+	k.BackendProcessed = map[string]struct{}{}
 }
 
 // GetNamespace returns Namespace. Creates one if not existing

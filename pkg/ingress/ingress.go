@@ -129,11 +129,10 @@ func (i *Ingress) handlePath(k store.K8s, h haproxy.HAProxy, host string, path *
 		return
 	}
 	// Endpoints
-	service := svc.GetResource()
 	var endpointsReload bool
-	if _, ok := k.ServiceProcessed[service.Namespace+"/"+service.Name]; !ok {
+	if _, ok := k.BackendProcessed[backendName]; !ok {
 		endpointsReload = svc.HandleHAProxySrvs(k, h)
-		k.ServiceProcessed[service.Namespace+"/"+service.Name] = struct{}{}
+		k.BackendProcessed[backendName] = struct{}{}
 	}
 	return backendReload || endpointsReload || routeReload, err
 }
