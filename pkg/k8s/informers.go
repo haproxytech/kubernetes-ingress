@@ -431,7 +431,9 @@ func (k k8s) getIngressInformers(eventChan chan SyncDataEvent, factory informers
 		}
 		if ii != nil {
 			k.addIngressHandlers(eventChan, ii)
-			k.addIngressClassHandlers(eventChan, ici)
+			if ici != nil {
+				k.addIngressClassHandlers(eventChan, ici)
+			}
 			return
 		}
 	}
