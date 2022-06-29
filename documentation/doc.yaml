@@ -929,12 +929,31 @@ annotations:
       - configmap
     version_min: "1.4"
     example: ["hard-stop-after: 30s"]
+  - title: http-connection-mode
+    type: string
+    group: http-options
+    dependencies: ""
+    default: http-keep-alive
+    description:
+      - Sets HAProxy connection mode
+    values:
+      - http-keep-alive `default` - Enables HTTP Keep-Alive both from the client to HAProxy and
+        from HAProxy to the backend.
+      - http-server-close - Disables HTTP Keep-Alive between HAProxy and the backend,
+        while allowing it to stay enabled from the client to HAProxy.
+      - httpclose - HAProxy will close connections with the server and the client as
+        soon as the request and the response are received
+    applies_to:
+      - configmap
+    version_min: "1.8"
+    example: ['http-connection-mode: "http-server-close"']
   - title: http-keep-alive
     type: bool
     group: http-options
     dependencies: ""
     default: "true"
     description:
+      - '**Deprecated**, use `http-connection-mode` instead.'
       - Enables HTTP Keep-Alive both from the client to HAProxy and from HAProxy to the
         backend.
     tip: []
@@ -951,6 +970,7 @@ annotations:
     dependencies: ""
     default: "false"
     description:
+      - '**Deprecated**, use `http-connection-mode` instead.'
       - Disables HTTP Keep-Alive between HAProxy and the backend, while allowing it to
         stay enabled from the client to HAProxy.
     tip: []
