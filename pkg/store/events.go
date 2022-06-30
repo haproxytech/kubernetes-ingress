@@ -95,12 +95,18 @@ func (k *K8s) EventEndpoints(ns *Namespace, data *Endpoints, syncHAproxySrvs fun
 			return false
 		}
 	}
+	logger.Tracef("Treating endpoints event %+v", *data)
 	ns.Endpoints[data.Service][data.SliceName] = data
 
 	endpoints := getEndpoints(ns.Endpoints[data.Service])
+	logger.Tracef("service %s : endpoints list %+v", data.Service, endpoints)
 	_, ok := ns.HAProxyRuntime[data.Service]
 	if !ok || len(endpoints) == 0 {
 		ns.HAProxyRuntime[data.Service] = make(map[string]*RuntimeBackend)
+	}
+	logger.Tracef("service %s : number of already existing backend(s) in this transaction for this endpoint: %d", data.Service, len(ns.HAProxyRuntime[data.Service]))
+	for key, value := range ns.HAProxyRuntime[data.Service] {
+		logger.Tracef("service %s : port name %s, backend %+v", data.Service, key, *value)
 	}
 	for portName, portEndpoints := range endpoints {
 		newBackend := &RuntimeBackend{Endpoints: portEndpoints}

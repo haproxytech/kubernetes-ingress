@@ -15,6 +15,8 @@
 package store
 
 import (
+	"fmt"
+
 	"github.com/haproxytech/client-native/v3/models"
 )
 
@@ -32,6 +34,10 @@ type HAProxySrv struct {
 	Address  string
 	Modified bool
 	Port     int64
+}
+
+func (h *HAProxySrv) String() string {
+	return fmt.Sprintf("%+v", *h)
 }
 
 // PortEndpoints describes endpoints of a service port

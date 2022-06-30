@@ -79,11 +79,15 @@ func (c *clientNative) GetMap(mapFile string) (*models.Map, error) {
 
 // SyncBackendSrvs syncs states and addresses of a backend servers with corresponding endpoints.
 func (c *clientNative) SyncBackendSrvs(backend *store.RuntimeBackend, portUpdated bool) error {
+	logger := utils.GetLogger()
 	if backend.Name == "" {
 		return nil
 	}
+	logger.Tracef("updating backend  %s for haproxy servers update (address and state) through socket", backend.Name)
 	haproxySrvs := backend.HAProxySrvs
 	addresses := backend.Endpoints.Addresses
+	logger.Tracef("backend %s: list of servers %+v", backend.Name, haproxySrvs)
+	logger.Tracef("backend %s: list of endpoints addresses %+v", backend.Name, addresses)
 	// Disable stale entries from HAProxySrvs
 	// and provide list of Disabled Srvs
 	var disabled []*store.HAProxySrv
@@ -109,6 +113,10 @@ func (c *clientNative) SyncBackendSrvs(backend *store.RuntimeBackend, portUpdate
 		disabled = disabled[1:]
 		delete(addresses, newAddr)
 	}
+
+	logger.Tracef("backend %s: list of servers after treatment  %+v", backend.Name, haproxySrvs)
+	logger.Tracef("backend %s: list of endpoints addresses after treatment  %+v", backend.Name, addresses)
+
 	// Dynamically updates HAProxy backend servers  with HAProxySrvs content
 	var addrErr, stateErr error
 	for _, srv := range haproxySrvs {
@@ -116,11 +124,11 @@ func (c *clientNative) SyncBackendSrvs(backend *store.RuntimeBackend, portUpdate
 			continue
 		}
 		if srv.Address == "" {
-			// logger.Tracef("server '%s/%s' changed status to %v", newEndpoints.BackendName, srv.Name, "maint")
+			logger.Tracef("backend %s: server '%s' changed status to %v", backend.Name, srv.Name, "maint")
 			addrErr = c.SetServerAddr(backend.Name, srv.Name, "127.0.0.1", 0)
 			stateErr = c.SetServerState(backend.Name, srv.Name, "maint")
 		} else {
-			// logger.Tracef("server '%s/%s' changed status to %v", newEndpoints.BackendName, srv.Name, "ready")
+			logger.Tracef("backend %s: server '%s' changed status to %v", backend.Name, srv.Name, "ready")
 			addrErr = c.SetServerAddr(backend.Name, srv.Name, srv.Address, int(backend.Endpoints.Port))
 			stateErr = c.SetServerState(backend.Name, srv.Name, "ready")
 		}

@@ -74,6 +74,7 @@ func (s *Service) updateHAProxySrv(client api.HAProxyClient, srvSlot store.HAPro
 	if s.backend.Cookie != nil && s.backend.Cookie.Type == "insert" {
 		srv.Cookie = srv.Name
 	}
+	logger.Tracef("backend %s: about to update server in configuration file :  models.Server { Name: %s, Port: %d, Address: %s, Maintenance: %s }", s.backend.Name, srv.Name, *srv.Port, srv.Address, srv.Maintenance)
 	// Update server
 	errAPI := client.BackendServerEdit(s.backend.Name, srv)
 	if errAPI == nil {
@@ -106,6 +107,7 @@ func (s *Service) scaleHAProxySrvs(backend *store.RuntimeBackend) (reload bool) 
 			break
 		}
 	}
+	logger.Tracef("backend %s: number of slots %d", backend.Name, srvSlots)
 	for len(backend.HAProxySrvs) < srvSlots {
 		srv := &store.HAProxySrv{
 			Name:     fmt.Sprintf("SRV_%d", len(backend.HAProxySrvs)+1),
