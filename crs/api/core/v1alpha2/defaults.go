@@ -13,51 +13,44 @@
 // limitations under the License.
 //
 
-package v1alpha1
+package v1alpha2
 
 import (
-	"github.com/haproxytech/client-native/v2/models"
+	"github.com/haproxytech/client-native/v3/models"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// Global is a specification for a Global resource
-type Global struct {
+// Defaults is a specification for a Defaults resource
+type Defaults struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec GlobalSpec `json:"spec"`
+	Spec DefaultsSpec `json:"spec"`
 }
 
-// GlobalSpec defines the desired state of Global
-type GlobalSpec struct {
-	Config     *models.Global    `json:"config"`
-	LogTargets models.LogTargets `json:"log_targets"` //nolint:tagliatelle
+// DefaultsSpec defines the desired state of Defaults
+type DefaultsSpec struct {
+	Config *models.Defaults `json:"config"`
 }
 
 // DeepCopyInto deepcopying  the receiver into out. in must be non-nil.
-func (in *GlobalSpec) DeepCopyInto(out *GlobalSpec) {
+func (in *DefaultsSpec) DeepCopyInto(out *DefaultsSpec) {
+	*out = *in
 	if in.Config != nil {
 		b, _ := in.Config.MarshalBinary()
 		_ = out.Config.UnmarshalBinary(b)
-	}
-	if in.LogTargets != nil {
-		out.LogTargets = make([]*models.LogTarget, len(in.LogTargets))
-		for i, v := range in.LogTargets {
-			b, _ := v.MarshalBinary()
-			_ = out.LogTargets[i].UnmarshalBinary(b)
-		}
 	}
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// GlobalList is a list of Global resources
-type GlobalList struct {
+// DefaultsList is a list of Defaults resources
+type DefaultsList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata"`
 
-	Items []Global `json:"items"`
+	Items []Defaults `json:"items"`
 }

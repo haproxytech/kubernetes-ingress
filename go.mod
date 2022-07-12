@@ -6,6 +6,7 @@ require (
 	github.com/fasthttp/router v1.4.12
 	github.com/go-test/deep v1.0.8
 	github.com/google/renameio v1.0.1
+	github.com/haproxytech/client-native/v2 v2.5.2-0.20220126142624-4a2781a21376
 	github.com/haproxytech/client-native/v3 v3.1.1-0.20220520145135-9afaaf96bc7f
 	github.com/haproxytech/config-parser/v4 v4.0.0-rc2.0.20220428133329-7d0ec01198d4
 	github.com/jessevdk/go-flags v1.4.0

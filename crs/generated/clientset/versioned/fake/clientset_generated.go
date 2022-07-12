@@ -21,6 +21,8 @@ import (
 	clientset "github.com/haproxytech/kubernetes-ingress/crs/generated/clientset/versioned"
 	corev1alpha1 "github.com/haproxytech/kubernetes-ingress/crs/generated/clientset/versioned/typed/core/v1alpha1"
 	fakecorev1alpha1 "github.com/haproxytech/kubernetes-ingress/crs/generated/clientset/versioned/typed/core/v1alpha1/fake"
+	corev1alpha2 "github.com/haproxytech/kubernetes-ingress/crs/generated/clientset/versioned/typed/core/v1alpha2"
+	fakecorev1alpha2 "github.com/haproxytech/kubernetes-ingress/crs/generated/clientset/versioned/typed/core/v1alpha2/fake"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/discovery"
@@ -81,4 +83,9 @@ var (
 // CoreV1alpha1 retrieves the CoreV1alpha1Client
 func (c *Clientset) CoreV1alpha1() corev1alpha1.CoreV1alpha1Interface {
 	return &fakecorev1alpha1.FakeCoreV1alpha1{Fake: &c.Fake}
+}
+
+// CoreV1alpha2 retrieves the CoreV1alpha2Client
+func (c *Clientset) CoreV1alpha2() corev1alpha2.CoreV1alpha2Interface {
+	return &fakecorev1alpha2.FakeCoreV1alpha2{Fake: &c.Fake}
 }

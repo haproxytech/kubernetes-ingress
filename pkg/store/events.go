@@ -18,7 +18,7 @@ import (
 	"strings"
 
 	"github.com/go-test/deep"
-	corev1alpha1 "github.com/haproxytech/kubernetes-ingress/crs/api/core/v1alpha1"
+	corev1alpha2 "github.com/haproxytech/kubernetes-ingress/crs/api/core/v1alpha2"
 )
 
 func (k *K8s) EventNamespace(ns *Namespace, data *Namespace) (updateRequired bool) {
@@ -253,7 +253,7 @@ func (k *K8s) EventPod(podEvent PodEvent) (updateRequired bool) {
 	return true
 }
 
-func (k *K8s) EventGlobalCR(namespace, name string, data *corev1alpha1.Global) bool {
+func (k *K8s) EventGlobalCR(namespace, name string, data *corev1alpha2.Global) bool {
 	ns := k.GetNamespace(namespace)
 	if data == nil {
 		delete(ns.CRs.Global, name)
@@ -265,7 +265,7 @@ func (k *K8s) EventGlobalCR(namespace, name string, data *corev1alpha1.Global) b
 	return true
 }
 
-func (k *K8s) EventDefaultsCR(namespace, name string, data *corev1alpha1.Defaults) bool {
+func (k *K8s) EventDefaultsCR(namespace, name string, data *corev1alpha2.Defaults) bool {
 	ns := k.GetNamespace(namespace)
 	if data == nil {
 		delete(ns.CRs.Defaults, name)
@@ -275,7 +275,7 @@ func (k *K8s) EventDefaultsCR(namespace, name string, data *corev1alpha1.Default
 	return true
 }
 
-func (k *K8s) EventBackendCR(namespace, name string, data *corev1alpha1.Backend) bool {
+func (k *K8s) EventBackendCR(namespace, name string, data *corev1alpha2.Backend) bool {
 	ns := k.GetNamespace(namespace)
 	if data == nil {
 		delete(ns.CRs.Backends, name)

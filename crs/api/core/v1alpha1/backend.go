@@ -16,7 +16,7 @@
 package v1alpha1
 
 import (
-	"github.com/haproxytech/client-native/v3/models"
+	"github.com/haproxytech/client-native/v2/models"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 

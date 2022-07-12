@@ -38,7 +38,7 @@ var logger = utils.GetK8sAPILogger()
 // TRACE_API outputs all k8s events received from k8s API
 const (
 	TRACE_API        = false //nolint:golint,stylecheck
-	CoreGroupVersion = "core.haproxy.org/v1alpha1"
+	CoreGroupVersion = "core.haproxy.org/v1alpha2"
 )
 
 var ErrIgnored = errors.New("ignored resource")
@@ -154,8 +154,8 @@ func (k k8s) registerCoreCR(cr CR) {
 
 func (k k8s) runCRInformers(eventChan chan SyncDataEvent, stop chan struct{}, namespace string, informersSynced *[]cache.InformerSynced) {
 	informerFactory := crinformers.NewSharedInformerFactoryWithOptions(k.crClient, k.cacheResyncPeriod, crinformers.WithNamespace(namespace))
-	for _, controller := range k.crs {
-		informer := controller.GetInformer(eventChan, informerFactory)
+	for _, cr := range k.crs {
+		informer := cr.GetInformer(eventChan, informerFactory)
 		go informer.Run(stop)
 		*informersSynced = append(*informersSynced, informer.HasSynced)
 	}

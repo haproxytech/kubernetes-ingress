@@ -17,7 +17,7 @@ package controller
 import (
 	"os"
 
-	corev1alpha1 "github.com/haproxytech/kubernetes-ingress/crs/api/core/v1alpha1"
+	corev1alpha2 "github.com/haproxytech/kubernetes-ingress/crs/api/core/v1alpha2"
 	"github.com/haproxytech/kubernetes-ingress/pkg/k8s"
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
 )
@@ -38,21 +38,21 @@ func (c *HAProxyController) SyncData() {
 				continue
 			}
 		case k8s.CR_GLOBAL:
-			var data *corev1alpha1.Global
+			var data *corev1alpha2.Global
 			if job.Data != nil {
-				data = job.Data.(*corev1alpha1.Global) //nolint:forcetypeassert
+				data = job.Data.(*corev1alpha2.Global) //nolint:forcetypeassert
 			}
 			change = c.store.EventGlobalCR(job.Namespace, job.Name, data)
 		case k8s.CR_DEFAULTS:
-			var data *corev1alpha1.Defaults
+			var data *corev1alpha2.Defaults
 			if job.Data != nil {
-				data = job.Data.(*corev1alpha1.Defaults) //nolint:forcetypeassert
+				data = job.Data.(*corev1alpha2.Defaults) //nolint:forcetypeassert
 			}
 			change = c.store.EventDefaultsCR(job.Namespace, job.Name, data)
 		case k8s.CR_BACKEND:
-			var data *corev1alpha1.Backend
+			var data *corev1alpha2.Backend
 			if job.Data != nil {
-				data = job.Data.(*corev1alpha1.Backend) //nolint:forcetypeassert
+				data = job.Data.(*corev1alpha2.Backend) //nolint:forcetypeassert
 			}
 			change = c.store.EventBackendCR(job.Namespace, job.Name, data)
 		case k8s.NAMESPACE:

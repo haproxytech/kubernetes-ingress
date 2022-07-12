@@ -21,7 +21,7 @@ import (
 	"testing"
 
 	"github.com/haproxytech/client-native/v3/models"
-	corev1alpha1 "github.com/haproxytech/kubernetes-ingress/crs/api/core/v1alpha1"
+	corev1alpha2 "github.com/haproxytech/kubernetes-ingress/crs/api/core/v1alpha2"
 	c "github.com/haproxytech/kubernetes-ingress/pkg/controller"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/env"
 	"github.com/haproxytech/kubernetes-ingress/pkg/k8s"
@@ -107,11 +107,11 @@ func (suite *CustomResourceSuite) GlobalCRFixture() (eventChan chan k8s.SyncData
 	s = store.NewK8sStore(osArgs)
 	globalCREvt = k8s.SyncDataEvent{
 		SyncType: k8s.CR_GLOBAL,
-		Data: &corev1alpha1.Global{
+		Data: &corev1alpha2.Global{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "fake",
 			},
-			Spec: corev1alpha1.GlobalSpec{
+			Spec: corev1alpha2.GlobalSpec{
 				Config:     &models.Global{},
 				LogTargets: models.LogTargets{},
 			},

@@ -13,10 +13,10 @@
 // limitations under the License.
 //
 
-package v1alpha1
+package v1alpha2
 
 import (
-	"github.com/haproxytech/client-native/v2/models"
+	"github.com/haproxytech/client-native/v3/models"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 

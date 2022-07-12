@@ -17,7 +17,7 @@ package k8s
 import (
 	"k8s.io/client-go/tools/cache"
 
-	corev1alpha1 "github.com/haproxytech/kubernetes-ingress/crs/api/core/v1alpha1"
+	corev1alpha2 "github.com/haproxytech/kubernetes-ingress/crs/api/core/v1alpha2"
 	informers "github.com/haproxytech/kubernetes-ingress/crs/generated/informers/externalversions"
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
 )
@@ -45,10 +45,10 @@ func (c GlobalCR) GetKind() string {
 }
 
 func (c GlobalCR) GetInformer(eventChan chan SyncDataEvent, factory informers.SharedInformerFactory) cache.SharedIndexInformer { //nolint:ireturn
-	informer := factory.Core().V1alpha1().Globals().Informer()
+	informer := factory.Core().V1alpha2().Globals().Informer()
 
 	sendToChannel := func(eventChan chan SyncDataEvent, object interface{}, status store.Status) {
-		data, ok := object.(*corev1alpha1.Global)
+		data, ok := object.(*corev1alpha2.Global)
 		if !ok {
 			logger.Warning(CoreGroupVersion + ": type mismatch with Global kind")
 			return
@@ -80,10 +80,10 @@ func (c DefaultsCR) GetKind() string {
 }
 
 func (c DefaultsCR) GetInformer(eventChan chan SyncDataEvent, factory informers.SharedInformerFactory) cache.SharedIndexInformer { //nolint:ireturn
-	informer := factory.Core().V1alpha1().Defaults().Informer()
+	informer := factory.Core().V1alpha2().Defaults().Informer()
 
 	sendToChannel := func(eventChan chan SyncDataEvent, object interface{}, status store.Status) {
-		data, ok := object.(*corev1alpha1.Defaults)
+		data, ok := object.(*corev1alpha2.Defaults)
 		if !ok {
 			logger.Warning(CoreGroupVersion + ": type mismatch with Defaults kind")
 			return
@@ -115,10 +115,10 @@ func (c BackendCR) GetKind() string {
 }
 
 func (c BackendCR) GetInformer(eventChan chan SyncDataEvent, factory informers.SharedInformerFactory) cache.SharedIndexInformer { //nolint:ireturn
-	informer := factory.Core().V1alpha1().Backends().Informer()
+	informer := factory.Core().V1alpha2().Backends().Informer()
 
 	sendToChannel := func(eventChan chan SyncDataEvent, object interface{}, status store.Status) {
-		data, ok := object.(*corev1alpha1.Backend)
+		data, ok := object.(*corev1alpha2.Backend)
 		if !ok {
 			logger.Warning(CoreGroupVersion + ": type mismatch with Backend kind")
 			return

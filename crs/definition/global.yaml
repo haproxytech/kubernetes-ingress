@@ -10,7 +10,7 @@ spec:
     plural: globals
   scope: Namespaced
   versions:
-    - name: v1alpha1
+    - name: v1alpha2
       served: true
       storage: true
       schema:
@@ -21,56 +21,17 @@ spec:
               type: object
               properties: 
                 config: 
-                  title: Global
                   description: HAProxy global configuration
                   type: object
+                  title: Global
                   properties:
+                    busy_polling:
+                      type: boolean
+                    ca_base:
+                      type: string
                     chroot:
                       type: string
-                      pattern: '^[^\s]+$'
-                    group:
-                      type: string
-                      pattern: '^[^\s]+$'
-                    hard_stop_after:
-                      type: integer
-                    user:
-                      type: string
-                      pattern: '^[^\s]+$'
-                    daemon:
-                      type: string
-                      enum: [enabled, disabled]
-                    nbproc:
-                      type: integer
-                    nbthread:
-                      type: integer
-                    master-worker:
-                      type: boolean
-                    external_check:
-                      type: boolean
-                    pidfile:
-                      type: string
-                    maxconn:
-                      type: integer
-                    server_state_base:
-                      type: string
-                      pattern: '^[^\s]+$'
-                    tune_ssl_default_dh_param:
-                      type: integer
-                    ssl_default_bind_options:
-                      type: string
-                    ssl_default_bind_ciphers:
-                      type: string
-                    ssl_default_bind_ciphersuites:
-                      type: string
-                    ssl_default_server_options:
-                      type: string
-                    ssl_default_server_ciphers:
-                      type: string
-                    ssl_default_server_ciphersuites:
-                      type: string
-                    ssl_mode_async:
-                      type: string
-                      enum: [enabled, disabled]
+                      pattern: ^[^\s]+$
                     cpu_maps:
                       type: array
                       items:
@@ -79,10 +40,130 @@ spec:
                           - process
                           - cpu_set
                         properties:
-                          process:
-                            type: string
                           cpu_set:
                             type: string
+                          process:
+                            type: string
+                    crt_base:
+                      type: string
+                    daemon:
+                      type: string
+                      enum:
+                        - enabled
+                        - disabled
+                    external_check:
+                      type: boolean
+                    gid:
+                      type: integer
+                    group:
+                      type: string
+                      pattern: ^[^\s]+$
+                    h1_case_adjust:
+                      type: array
+                      items:
+                        type: object
+                        required:
+                          - from
+                          - to
+                        properties:
+                          from:
+                            type: string
+                          to:
+                            type: string
+                    h1_case_adjust_file:
+                      type: string
+                    hard_stop_after:
+                      type: integer
+                      nullable: true
+                    localpeer:
+                      type: string
+                      pattern: ^[^\s]+$
+                    log_send_hostname:
+                      type: object
+                      required:
+                        - enabled
+                      properties:
+                        enabled:
+                          type: string
+                          enum:
+                            - enabled
+                            - disabled
+                        param:
+                          type: string
+                          pattern: ^[^\s]+$
+                    lua_loads:
+                      type: array
+                      items:
+                        type: object
+                        required:
+                          - file
+                        properties:
+                          file:
+                            type: string
+                            pattern: ^[^\s]+$
+                    lua_prepend_path:
+                      type: array
+                      items:
+                        type: object
+                        required:
+                          - path
+                        properties:
+                          path:
+                            type: string
+                            pattern: ^[^\s]+$
+                          type:
+                            type: string
+                            enum:
+                              - path
+                              - cpath
+                    master-worker:
+                      type: boolean
+                    max_spread_checks:
+                      type: integer
+                    maxcompcpuusage:
+                      type: integer
+                    maxcomprate:
+                      type: integer
+                    maxconn:
+                      type: integer
+                    maxconnrate:
+                      type: integer
+                    maxpipes:
+                      type: integer
+                    maxsessrate:
+                      type: integer
+                    maxsslconn:
+                      type: integer
+                    maxsslrate:
+                      type: integer
+                    maxzlibmem:
+                      type: integer
+                    nbproc:
+                      type: integer
+                    nbthread:
+                      type: integer
+                    noepoll:
+                      type: boolean
+                    noevports:
+                      type: boolean
+                    nogetaddrinfo:
+                      type: boolean
+                    nokqueue:
+                      type: boolean
+                    nopoll:
+                      type: boolean
+                    noreuseport:
+                      type: boolean
+                    nosplice:
+                      type: boolean
+                    pidfile:
+                      type: string
+                    profiling_tasks:
+                      type: string
+                      enum:
+                        - auto
+                        - on
+                        - off
                     runtime_apis:
                       type: array
                       items:
@@ -104,29 +185,184 @@ spec:
                             pattern: '^[^\s]+$'
                           exposeFdListeners:
                             type: boolean
+                    server_state_base:
+                      type: string
+                      pattern: ^[^\s]+$
+                    server_state_file:
+                      type: string
+                      pattern: ^[^\s]+$
+                    spread_checks:
+                      type: integer
+                    ssl_default_bind_ciphers:
+                      type: string
+                    ssl_default_bind_ciphersuites:
+                      type: string
+                    ssl_default_bind_options:
+                      type: string
+                    ssl_default_server_ciphers:
+                      type: string
+                    ssl_default_server_ciphersuites:
+                      type: string
+                    ssl_default_server_options:
+                      type: string
+                    ssl_mode_async:
+                      type: string
+                      enum:
+                        - enabled
+                        - disabled
                     stats_timeout:
                       type: integer
-                    lua_loads:
-                      type: array
-                      items:
-                        type: object
-                        required:
-                          - file
-                        properties:
-                          file:
-                            type: string
-                            pattern: '^[^\s]+$'
-                    log_send_hostname:
+                      nullable: true
+                    tune_options:
                       type: object
-                      required:
-                        - enabled
                       properties:
-                        enabled:
+                        buffers_limit:
+                          type: integer
+                          nullable: true
+                        buffers_reserve:
+                          type: integer
+                          minimum: 2
+                        bufsize:
+                          type: integer
+                        comp_maxlevel:
+                          type: integer
+                        fail_alloc:
+                          type: boolean
+                        h2_header_table_size:
+                          type: integer
+                          maximum: 65535
+                        h2_initial_window_size:
+                          type: integer
+                          nullable: true
+                        h2_max_concurrent_streams:
+                          type: integer
+                        h2_max_frame_size:
+                          type: integer
+                        http_cookielen:
+                          type: integer
+                        http_logurilen:
+                          type: integer
+                        http_maxhdr:
+                          type: integer
+                          maximum: 32767
+                          minimum: 1
+                        idle_pool_shared:
                           type: string
-                          enum: [enabled, disabled]
-                        param:
+                          enum:
+                            - enabled
+                            - disabled
+                        idletimer:
+                          type: integer
+                          maximum: 65535
+                          minimum: 0
+                          nullable: true
+                        listener_multi_queue:
                           type: string
-                          pattern: '^[^\s]+$'
+                          enum:
+                            - enabled
+                            - disabled
+                        lua_forced_yield:
+                          type: integer
+                        lua_maxmem:
+                          type: boolean
+                        lua_service_timeout:
+                          type: integer
+                          nullable: true
+                        lua_session_timeout:
+                          type: integer
+                          nullable: true
+                        lua_task_timeout:
+                          type: integer
+                          nullable: true
+                        maxaccept:
+                          type: integer
+                        maxpollevents:
+                          type: integer
+                        maxrewrite:
+                          type: integer
+                        pattern_cache_size:
+                          type: integer
+                          nullable: true
+                        pipesize:
+                          type: integer
+                        pool_high_fd_ratio:
+                          type: integer
+                        pool_low_fd_ratio:
+                          type: integer
+                        rcvbuf_client:
+                          type: integer
+                          nullable: true
+                        rcvbuf_server:
+                          type: integer
+                          nullable: true
+                        recv_enough:
+                          type: integer
+                        runqueue_depth:
+                          type: integer
+                        sched_low_latency:
+                          type: string
+                          enum:
+                            - enabled
+                            - disabled
+                        sndbuf_client:
+                          type: integer
+                          nullable: true
+                        sndbuf_server:
+                          type: integer
+                          nullable: true
+                        ssl_cachesize:
+                          type: integer
+                          nullable: true
+                        ssl_capture_buffer_size:
+                          type: integer
+                          nullable: true
+                        ssl_ctx_cache_size:
+                          type: integer
+                        ssl_default_dh_param:
+                          type: integer
+                        ssl_force_private_cache:
+                          type: boolean
+                        ssl_keylog:
+                          type: string
+                          enum:
+                            - enabled
+                            - disabled
+                        ssl_lifetime:
+                          type: integer
+                          nullable: true
+                        ssl_maxrecord:
+                          type: integer
+                          nullable: true
+                        vars_global_max_size:
+                          type: integer
+                          nullable: true
+                        vars_proc_max_size:
+                          type: integer
+                          nullable: true
+                        vars_reqres_max_size:
+                          type: integer
+                          nullable: true
+                        vars_sess_max_size:
+                          type: integer
+                          nullable: true
+                        vars_txn_max_size:
+                          type: integer
+                          nullable: true
+                        zlib_memlevel:
+                          type: integer
+                          maximum: 9
+                          minimum: 1
+                        zlib_windowsize:
+                          type: integer
+                          maximum: 15
+                          minimum: 8
+                    tune_ssl_default_dh_param:
+                      type: integer
+                    uid:
+                      type: integer
+                    user:
+                      type: string
+                      pattern: ^[^\s]+$
                 log_targets:
                   type: array
                   items:
