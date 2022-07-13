@@ -187,13 +187,17 @@ func (c *HAProxyController) handleDefaultServicePort() (reload bool) {
 		IsDefaultBackend: true,
 	}
 
+	backend, _ := c.haproxy.BackendGet(defaultLocalBackend)
+	if backend != nil {
+		return
+	}
 	err = c.haproxy.BackendCreate(models.Backend{
 		Name: defaultLocalBackend,
 	})
 	if err != nil {
 		logger.Errorf("default backend port: %s", err)
 	}
-	backend, _ := c.haproxy.BackendGet(defaultLocalBackend)
+	backend, _ = c.haproxy.BackendGet(defaultLocalBackend)
 
 	if svc, err = service.NewLocal(c.store, ingressPath, backend, c.store.ConfigMaps.Main.Annotations); err == nil {
 		reload, err = svc.SetDefaultBackend(c.store, c.haproxy, []string{c.haproxy.FrontHTTP, c.haproxy.FrontHTTPS}, c.annotations)
