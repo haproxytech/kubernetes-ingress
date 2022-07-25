@@ -71,7 +71,6 @@ func AddHostPathRoute(route Route, mapFiles maps.Maps) error {
 			return fmt.Errorf("empty SNI for backend %s,", route.BackendName)
 		}
 		mapFiles.MapAppend(SNI, route.Host+"\t\t\t"+value)
-		return nil
 	}
 	// HTTP
 	if route.Host != "" {
