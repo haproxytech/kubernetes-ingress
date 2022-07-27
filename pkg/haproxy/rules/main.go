@@ -86,15 +86,15 @@ func (r SectionRules) AddRule(frontend string, rule Rule, ingressRule bool) erro
 	// Update frontend ruleSet
 	ruleType := rule.GetType()
 	ruleID := GetID(rule)
-	_, ok = ftRuleSet.meta[ruleID]
-	if ok {
-		// rule already created
-		ftRuleSet.meta[ruleID].state = CREATED
-	} else {
-		// rule to be created at next refresh
+	ruleInf, ok := ftRuleSet.meta[ruleID]
+	if ok && ruleInf.state == TO_DELETE {
+		// rule already created and planned to be deleted
+		ruleInf.state = CREATED
+	} else if !ok {
 		ftRuleSet.rules[ruleType] = append(ftRuleSet.rules[ruleType], rule)
 		ftRuleSet.meta[ruleID] = &ruleInfo{state: TO_CREATE}
 	}
+
 	if ingressRule {
 		ftRuleSet.meta[ruleID].ingress = true
 	}
