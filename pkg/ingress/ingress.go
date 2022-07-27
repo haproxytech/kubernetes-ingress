@@ -145,7 +145,7 @@ func (i *Ingress) handleAnnotations(k store.K8s, h haproxy.HAProxy) {
 	var err error
 	var result = rules.List{}
 	for _, a := range i.annotations.Frontend(i.resource, &result, h.Maps) {
-		err = a.Process(k, i.resource.Annotations)
+		err = a.Process(k, i.resource.Annotations, k.ConfigMaps.Main.Annotations)
 		if err != nil {
 			logger.Errorf("Ingress '%s/%s': annotation %s: %s", i.resource.Namespace, i.resource.Name, a.GetName(), err)
 		}
@@ -168,6 +168,8 @@ func HandleCfgMapAnnotations(k store.K8s, h haproxy.HAProxy, a annotations.Annot
 
 func addRules(list rules.List, h haproxy.HAProxy, ingressRule bool) []rules.RuleID {
 	ruleIDs := make([]rules.RuleID, 0, len(list))
+	// To avoid inserting twice the same rule id in destinating map file
+	ruleIDSet := map[rules.RuleID]struct{}{}
 	defaultFrontends := []string{h.FrontHTTP, h.FrontHTTPS}
 	for _, rule := range list {
 		frontends := defaultFrontends
@@ -185,8 +187,12 @@ func addRules(list rules.List, h haproxy.HAProxy, ingressRule bool) []rules.Rule
 			}
 		}
 		for _, frontend := range frontends {
-			logger.Error(h.AddRule(frontend, rule, ingressRule))
-			ruleIDs = append(ruleIDs, rules.GetID(rule))
+			logger.Error(h.AddRule(frontend, rule, ingressRule || rule.GetType() == rules.REQ_REDIRECT))
+			idRule := rules.GetID(rule)
+			if _, ok := ruleIDSet[idRule]; !ok {
+				ruleIDs = append(ruleIDs, idRule)
+				ruleIDSet[idRule] = struct{}{}
+			}
 		}
 	}
 	return ruleIDs
