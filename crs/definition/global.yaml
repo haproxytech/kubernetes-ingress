@@ -127,6 +127,12 @@ spec:
                         param:
                           type: string
                           pattern: '^[^\s]+$'
+                    tune_options:
+                      type: object
+                      properties:
+                        bufsize:
+                          type: integer
+
                 log_targets:
                   type: array
                   items:
