@@ -45,6 +45,9 @@ func SetGlobal(global *models.Global, logTargets *models.LogTargets, env Env) {
 	if global.SslDefaultBindOptions == "" {
 		global.SslDefaultBindOptions = "no-sslv3 no-tls-tickets no-tlsv10"
 	}
+	if global.TuneOptions == nil {
+		global.TuneOptions = &models.GlobalTuneOptions{}
+	}
 	if len(*logTargets) == 0 {
 		*logTargets = []*models.LogTarget{{
 			Index:    utils.PtrInt64(0),
