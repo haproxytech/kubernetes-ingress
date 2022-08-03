@@ -44,6 +44,11 @@ fi
 echo "loading image http-echo in kind"
 kind load docker-image haproxytech/http-echo:latest  --name=$clustername
 
+echo "Install custom resource definitions ..."
+kubectl apply -f $DIR/../../crs/definition/backend.yaml
+kubectl apply -f $DIR/../../crs/definition/defaults.yaml
+kubectl apply -f $DIR/../../crs/definition/global.yaml
+
 echo "deploying Ingress Controller ..."
 kubectl apply -f $DIR/config/0.namespace.yaml
 kubectl apply -f $DIR/config/1.rbac.yaml

@@ -19,8 +19,8 @@ spec:
           properties:
             spec:
               type: object
-              properties: 
-                config: 
+              properties:
+                config:
                   title: Backend
                   description: HAProxy backend configuration
                   type: object

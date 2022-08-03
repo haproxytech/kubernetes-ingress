@@ -283,3 +283,15 @@ func (l *logger) Panicf(format string, args ...interface{}) {
 		}
 	}
 }
+
+func (l *logger) HandleWarningHeader(code int, agent string, text string) {
+	if code == 299 {
+		switch {
+		case strings.Contains(text, "use core.haproxy.org/v1alpha2 Defaults"),
+			strings.Contains(text, "use core.haproxy.org/v1alpha2 Global"),
+			strings.Contains(text, "use core.haproxy.org/v1alpha2 Backend"):
+			return
+		}
+	}
+	l.logf("K8s API ", " %d %s %s", code, agent, text)
+}

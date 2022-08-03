@@ -10,6 +10,737 @@ spec:
     plural: defaults
   scope: Namespaced
   versions:
+    - name: v1alpha1
+      served: true
+      storage: false
+      deprecated: true
+      #deprecationWarning: "defaults.core.haproxy.org/v1alpha1 is deprecated move to v1alpha2"
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            spec:
+              type: object
+              required:
+                - config
+              properties:
+                config:
+                  title: Defaults
+                  description: HAProxy defaults configuration
+                  type: object
+                  properties:
+                    mode:
+                      type: string
+                      enum:
+                        - tcp
+                        - http
+                    balance:
+                      type: object
+                      required:
+                        - algorithm
+                      properties:
+                        algorithm:
+                          type: string
+                          enum:
+                            - roundrobin
+                            - static-rr
+                            - leastconn
+                            - first
+                            - source
+                            - uri
+                            - url_param
+                            - hdr
+                            - random
+                            - rdp-cookie
+                        uri_whole:
+                          type: boolean
+                        uri_len:
+                          type: integer
+                        uri_depth:
+                          type: integer
+                        url_param:
+                          type: string
+                          pattern: ^[^\s]+$
+                        url_param_check_post:
+                          type: integer
+                        url_param_max_wait:
+                          type: integer
+                        hdr_name:
+                          type: string
+                        hdr_use_domain_only:
+                          type: boolean
+                        random_draws:
+                          type: integer
+                        rdp_cookie_name:
+                          type: string
+                          pattern: ^[^\s]+$
+                        uri_path_only:
+                          type: boolean
+                    maxconn:
+                      type: integer
+                      nullable: true
+                    adv_check:
+                      type: string
+                      enum:
+                        - ssl-hello-chk
+                        - smtpchk
+                        - ldap-check
+                        - mysql-check
+                        - pgsql-check
+                        - tcp-check
+                        - redis-check
+                        - httpchk
+                    smtpchk_params:
+                      type: object
+                      properties:
+                        hello:
+                          type: string
+                        domain:
+                          type: string
+                    mysql_check_params:
+                      type: object
+                      properties:
+                        username:
+                          type: string
+                        client_version:
+                          type: string
+                          enum:
+                            - pre-41
+                            - post-41
+                    pgsql_check_params:
+                      type: object
+                      properties:
+                        username:
+                          type: string
+                    httpchk_params:
+                      type: object
+                      properties:
+                        method:
+                          type: string
+                          enum:
+                            - HEAD
+                            - PUT
+                            - POST
+                            - GET
+                            - TRACE
+                            - PATCH
+                        uri:
+                          type: string
+                          pattern: ^[^ ]*$
+                        version:
+                          type: string
+                    http-check:
+                      type: object
+                      required:
+                        - type
+                      properties:
+                        type:
+                          type: string
+                          enum:
+                            - disable-on-404
+                            - expect
+                            - send-state
+                        exclamation_mark:
+                          type: boolean
+                        match:
+                          type: string
+                          enum:
+                            - status
+                            - rstatus
+                            - string
+                            - rstring
+                          pattern: ^[^\s]+$
+                        pattern:
+                          type: string
+                    bind_process:
+                      type: string
+                      pattern: ^[^\s]+$
+                    http_connection_mode:
+                      type: string
+                      enum:
+                        - httpclose
+                        - http-server-close
+                        - http-keep-alive
+                    http_pretend_keepalive:
+                      type: string
+                      enum:
+                        - enabled
+                        - disabled
+                    abortonclose:
+                      type: string
+                      enum:
+                        - enabled
+                        - disabled
+                    http-use-htx:
+                      type: string
+                      enum:
+                        - enabled
+                        - disabled
+                    dontlognull:
+                      type: string
+                      enum:
+                        - enabled
+                        - disabled
+                    http-buffer-request:
+                      type: string
+                      enum:
+                        - enabled
+                        - disabled
+                    httplog:
+                      type: boolean
+                    clflog:
+                      type: boolean
+                    tcplog:
+                      type: boolean
+                    log_format:
+                      type: string
+                    log_format_sd:
+                      type: string
+                    log_tag:
+                      type: string
+                      pattern: ^[^\s]+$
+                    log_separate_errors:
+                      type: string
+                      enum:
+                        - enabled
+                        - disabled
+                    clitcpka:
+                      type: string
+                      enum:
+                        - enabled
+                        - disabled
+                    forwardfor:
+                      type: object
+                      required:
+                        - enabled
+                      properties:
+                        enabled:
+                          type: string
+                          enum:
+                            - enabled
+                        except:
+                          type: string
+                          pattern: ^[^\s]+$
+                        header:
+                          type: string
+                          pattern: ^[^\s]+$
+                        ifnone:
+                          type: boolean
+                    check_timeout:
+                      type: integer
+                      nullable: true
+                    connect_timeout:
+                      type: integer
+                      nullable: true
+                    contstats:
+                      type: string
+                      enum:
+                        - enabled
+                    cookie:
+                      type: object
+                      required:
+                        - name
+                      properties:
+                        name:
+                          type: string
+                          pattern: ^[^\s]+$
+                        type:
+                          type: string
+                          enum:
+                            - rewrite
+                            - insert
+                            - prefix
+                        indirect:
+                          type: boolean
+                        nocache:
+                          type: boolean
+                        postonly:
+                          type: boolean
+                        preserve:
+                          type: boolean
+                        httponly:
+                          type: boolean
+                        secure:
+                          type: boolean
+                        domain:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              value:
+                                type: string
+                                pattern: ^[^\s]+$
+                        maxidle:
+                          type: integer
+                        maxlife:
+                          type: integer
+                        dynamic:
+                          type: boolean
+                    client_timeout:
+                      type: integer
+                      nullable: true
+                    client_fin_timeout:
+                      type: integer
+                      nullable: true
+                    http_request_timeout:
+                      type: integer
+                      nullable: true
+                    http_keep_alive_timeout:
+                      type: integer
+                      nullable: true
+                    http_reuse:
+                      type: string
+                      enum:
+                        - aggressive
+                        - always
+                        - never
+                        - safe
+                    server_timeout:
+                      type: integer
+                      nullable: true
+                    server_fin_timeout:
+                      type: integer
+                      nullable: true
+                    queue_timeout:
+                      type: integer
+                      nullable: true
+                    tunnel_timeout:
+                      type: integer
+                      nullable: true
+                    external_check:
+                      type: string
+                      enum:
+                        - enabled
+                        - disabled
+                    external_check_path:
+                      type: string
+                      pattern: ^[^\s]+$
+                    external_check_command:
+                      type: string
+                      pattern: ^[^\s]+$
+                    redispatch:
+                      type: object
+                      required:
+                        - enabled
+                      properties:
+                        enabled:
+                          type: string
+                          enum:
+                            - enabled
+                            - disabled
+                        interval:
+                          type: integer
+                    retries:
+                      type: integer
+                      nullable: true
+                    default_backend:
+                      type: string
+                      pattern: ^[A-Za-z0-9-_.:]+$
+                    default_server:
+                      title: Default Server
+                      type: object
+                      properties:
+                        init-addr:
+                          pattern: ^[^\s]+$
+                          type: string
+                        inter:
+                          type: integer
+                          nullable: true
+                        fastinter:
+                          type: integer
+                          nullable: true
+                        downinter:
+                          type: integer
+                          nullable: true
+                        rise:
+                          type: integer
+                          nullable: true
+                        fall:
+                          type: integer
+                          nullable: true
+                        check-sni:
+                          type: string
+                          pattern: ^[^\s]+$
+                        slowstart:
+                          type: integer
+                          nullable: true
+                        sni:
+                          type: string
+                          pattern: ^[^\s]+$
+                        check-ssl:
+                          type: string
+                          enum:
+                            - enabled
+                            - disabled
+                        check-send-proxy:
+                          type: string
+                          enum:
+                            - enabled
+                            - disabled
+                        ca_file:
+                          type: string
+                        enabled:
+                          type: string
+                          enum:
+                            - enabled
+                            - disabled
+                        disabled:
+                          type: string
+                          enum:
+                            - enabled
+                            - disabled
+                        port:
+                          type: integer
+                          minimum: 1
+                          maximum: 65535
+                          nullable: true
+                        resolvers:
+                          type: string
+                          pattern: ^[^\s]+$
+                        resolve-prefer:
+                          type: string
+                          enum:
+                            - ipv4
+                            - ipv6
+                          pattern: ^[^\s]+$
+                        resolve-net:
+                          type: string
+                          pattern: ^[^\s]+$
+                        name:
+                          type: string
+                          pattern: ^[^\s]+$
+                        address:
+                          type: string
+                          pattern: ^[^\s]+$
+                        health_check_port:
+                          type: integer
+                          nullable: true
+                          minimum: 1
+                          maximum: 65535
+                        ssl_certificate:
+                          type: string
+                          pattern: ^[^\s]+$
+                        agent-check:
+                          type: string
+                          enum:
+                            - enabled
+                            - disabled
+                        agent-send:
+                          type: string
+                        agent-inter:
+                          type: integer
+                          nullable: true
+                        agent-addr:
+                          type: string
+                          pattern: ^[^\s]+$
+                        agent-port:
+                          type: integer
+                          nullable: true
+                          minimum: 1
+                          maximum: 65535
+                        allow_0rtt:
+                          type: boolean
+                        alpn:
+                          type: string
+                          pattern: ^[^\s]+$
+                        backup:
+                          type: string
+                          enum:
+                            - enabled
+                            - disabled
+                        check:
+                          type: string
+                          enum:
+                            - enabled
+                            - disabled
+                        check_alpn:
+                          type: string
+                          pattern: ^[^\s]+$
+                        check_proto:
+                          type: string
+                          pattern: ^[^\s]+$
+                        check_via_socks4:
+                          type: string
+                          enum:
+                            - enabled
+                            - disabled
+                        ciphers:
+                          type: string
+                        ciphersuites:
+                          type: string
+                        cookie:
+                          type: string
+                          pattern: ^[^\s]+$
+                        crl_file:
+                          type: string
+                        error_limit:
+                          type: integer
+                        force_sslv3:
+                          type: string
+                          enum:
+                            - enabled
+                            - disabled
+                        force_tlsv10:
+                          type: string
+                          enum:
+                            - enabled
+                            - disabled
+                        force_tlsv11:
+                          type: string
+                          enum:
+                            - enabled
+                            - disabled
+                        force_tlsv12:
+                          type: string
+                          enum:
+                            - enabled
+                            - disabled
+                        force_tlsv13:
+                          type: string
+                          enum:
+                            - enabled
+                            - disabled
+                        log_proto:
+                          type: string
+                          enum:
+                            - legacy
+                            - octet-count
+                        maxconn:
+                          type: integer
+                          nullable: true
+                        maxqueue:
+                          type: integer
+                          nullable: true
+                        max_reuse:
+                          type: integer
+                          nullable: true
+                        minconn:
+                          type: integer
+                          nullable: true
+                        namespace:
+                          type: string
+                        no_sslv3:
+                          type: string
+                          enum:
+                            - enabled
+                            - disabled
+                        no_tlsv10:
+                          type: string
+                          enum:
+                            - enabled
+                            - disabled
+                        no_tlsv11:
+                          type: string
+                          enum:
+                            - enabled
+                            - disabled
+                        no_tlsv12:
+                          type: string
+                          enum:
+                            - enabled
+                            - disabled
+                        no_tlsv13:
+                          type: string
+                          enum:
+                            - enabled
+                            - disabled
+                        no_verifyhost:
+                          type: string
+                          enum:
+                            - enabled
+                            - disabled
+                        npn:
+                          type: string
+                        observe:
+                          type: string
+                          enum:
+                            - layer4
+                            - layer7
+                        on-error:
+                          type: string
+                          enum:
+                            - fastinter
+                            - fail-check
+                            - sudden-death
+                            - mark-down
+                        on-marked-down:
+                          type: string
+                          enum:
+                            - shutdown-sessions
+                        on-marked-up:
+                          type: string
+                          enum:
+                            - shutdown-backup-sessions
+                        pool_low_conn:
+                          type: integer
+                          nullable: true
+                        pool_max_conn:
+                          type: integer
+                          nullable: true
+                        pool_purge_delay:
+                          type: integer
+                          nullable: true
+                        proto:
+                          type: string
+                          pattern: ^[^\s]+$
+                        redir:
+                          type: string
+                        resolve_opts:
+                          type: string
+                          pattern: ^[^,\s][^\,]*[^,\s]*$
+                        send-proxy:
+                          type: string
+                          enum:
+                            - enabled
+                            - disabled
+                        send-proxy-v2:
+                          type: string
+                          enum:
+                            - enabled
+                            - disabled
+                        proxy-v2-options:
+                          type: array
+                          items:
+                            type: string
+                            enum:
+                              - ssl
+                              - cert-cn
+                              - ssl-cipher
+                              - cert-sig
+                              - cert-key
+                              - authority
+                              - crc32c
+                              - unique-id
+                        send_proxy_v2_ssl:
+                          type: string
+                          enum:
+                            - enabled
+                            - disabled
+                        send_proxy_v2_ssl_cn:
+                          type: string
+                          enum:
+                            - enabled
+                            - disabled
+                        source:
+                          type: string
+                        ssl:
+                          type: string
+                          enum:
+                            - enabled
+                            - disabled
+                        ssl_max_ver:
+                          type: string
+                          enum:
+                            - SSLv3
+                            - TLSv1.0
+                            - TLSv1.1
+                            - TLSv1.2
+                            - TLSv1.3
+                        ssl_min_ver:
+                          type: string
+                          enum:
+                            - SSLv3
+                            - TLSv1.0
+                            - TLSv1.1
+                            - TLSv1.2
+                            - TLSv1.3
+                        ssl_reuse:
+                          type: string
+                          enum:
+                            - enabled
+                            - disabled
+                        stick:
+                          type: string
+                          enum:
+                            - enabled
+                            - disabled
+                        socks4:
+                          type: string
+                          pattern: ^[^\s]+$
+                        tcp_ut:
+                          type: integer
+                        tfo:
+                          type: string
+                          enum:
+                            - enabled
+                            - disabled
+                        track:
+                          type: string
+                        tls_tickets:
+                          type: string
+                          enum:
+                            - enabled
+                            - disabled
+                        verify:
+                          type: string
+                          enum:
+                            - none
+                            - required
+                        verifyhost:
+                          type: string
+                        weight:
+                          type: integer
+                          nullable: true
+                    error_files:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          code:
+                            type: integer
+                            enum:
+                              - 200
+                              - 400
+                              - 403
+                              - 405
+                              - 408
+                              - 425
+                              - 429
+                              - 500
+                              - 502
+                              - 503
+                              - 504
+                          file:
+                            type: string
+                    unique_id_format:
+                      type: string
+                    unique_id_header:
+                      type: string
+                    logasap:
+                      type: string
+                      enum:
+                        - enabled
+                        - disabled
+                    allbackups:
+                      type: string
+                      enum:
+                        - enabled
+                        - disabled
+                    stats_options:
+                      type: object
+                      properties:
+                        stats_enable:
+                          type: boolean
+                        stats_hide_version:
+                          type: boolean
+                        stats_maxconn:
+                          type: integer
+                          minimum: 1
+                        stats_refresh_delay:
+                          type: integer
+                          nullable: true
+                        stats_show_desc:
+                          type: string
+                          nullable: true
+                        stats_show_legends:
+                          type: boolean
+                        stats_show_node_name:
+                          type: string
+                          pattern: ^[^\s]+$
+                          nullable: true
+                        stats_uri_prefix:
+                          type: string
+                          pattern: ^[^\s]+$
     - name: v1alpha2
       served: true
       storage: true

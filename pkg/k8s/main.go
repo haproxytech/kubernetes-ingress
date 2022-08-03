@@ -37,8 +37,9 @@ var logger = utils.GetK8sAPILogger()
 
 // TRACE_API outputs all k8s events received from k8s API
 const (
-	TRACE_API        = false //nolint:golint,stylecheck
-	CoreGroupVersion = "core.haproxy.org/v1alpha2"
+	TRACE_API               = false //nolint:golint,stylecheck
+	CRSGroupVersionV1alpha1 = "core.haproxy.org/v1alpha1"
+	CRSGroupVersionV1alpha2 = "core.haproxy.org/v1alpha2"
 )
 
 var ErrIgnored = errors.New("ignored resource")
@@ -98,9 +99,14 @@ func New(osArgs utils.OSArgs, whitelist map[string]struct{}, publishSvc *utils.N
 		cacheResyncPeriod:      osArgs.CacheResyncPeriod,
 		disableSvcExternalName: osArgs.DisableServiceExternalName,
 	}
-	k.registerCoreCR(NewGlobalCR())
-	k.registerCoreCR(NewDefaultsCR())
-	k.registerCoreCR(NewBackendCR())
+	// alpha1 is deprecated
+	k.registerCoreCR(NewGlobalCRV1Alpha1(), CRSGroupVersionV1alpha1)
+	k.registerCoreCR(NewDefaultsCRV1Alpha1(), CRSGroupVersionV1alpha1)
+	k.registerCoreCR(NewBackendCRV1Alpha1(), CRSGroupVersionV1alpha1)
+
+	k.registerCoreCR(NewGlobalCR(), CRSGroupVersionV1alpha2)
+	k.registerCoreCR(NewDefaultsCR(), CRSGroupVersionV1alpha2)
+	k.registerCoreCR(NewBackendCR(), CRSGroupVersionV1alpha2)
 	return k
 }
 
@@ -136,17 +142,17 @@ func (k k8s) MonitorChanges(eventChan chan SyncDataEvent, ingressChan chan ingre
 	}
 }
 
-func (k k8s) registerCoreCR(cr CR) {
-	resources, err := k.crClient.DiscoveryClient.ServerResourcesForGroupVersion(CoreGroupVersion)
+func (k k8s) registerCoreCR(cr CR, groupVersion string) {
+	resources, err := k.crClient.DiscoveryClient.ServerResourcesForGroupVersion(groupVersion)
 	if err != nil {
 		return
 	}
-	logger.Debugf("Custom API core.haproxy.org available")
+	logger.Debugf("Custom API %s available", groupVersion)
 	kindName := cr.GetKind()
 	for _, resource := range resources.APIResources {
 		if resource.Kind == kindName {
-			k.crs[kindName] = cr
-			logger.Infof("%s CR defined in API core.haproxy.org", kindName)
+			k.crs[resources.GroupVersion+" - "+kindName] = cr
+			logger.Infof("%s CR defined in API %s", kindName, resources.GroupVersion)
 			break
 		}
 	}
@@ -242,6 +248,7 @@ func getRestConfig(osArgs utils.OSArgs) (restConfig *rest.Config, err error) {
 	} else {
 		restConfig, err = rest.InClusterConfig()
 	}
+	restConfig.WarningHandler = logger
 	return restConfig, err
 }
 
