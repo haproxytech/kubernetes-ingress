@@ -97,7 +97,7 @@ spec:
 
 ```yaml
 kind: Ingress
-apiVersion: networking.k8s.io/v1beta1
+apiVersion: networking.k8s.io/v1
 metadata:
   name: echo
 spec:
@@ -106,12 +106,18 @@ spec:
     http:
       paths:
         - path: /
+          pathType: ImplementationSpecific
           backend:
-            serviceName: echo-prod
-            servicePort: http
-        - backend:
-            serviceName: echo-staging
-            servicePort: http
+            service:
+              name: echo-prod
+              port:
+                name: http
+        - pathType: ImplementationSpecific
+          backend:
+            service:
+              name: echo-staging
+              port:
+                name: http
 ```
 
 We can have ingress rules for staging and production in the same ingress resource but they **should not** share the same path otherwise the latter will overwrite the former. To avoid any confusion we can have rules in different ingress resources.
