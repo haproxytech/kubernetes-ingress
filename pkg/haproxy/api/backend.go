@@ -158,18 +158,22 @@ func (c *clientNative) BackendSwitchingRuleCreate(frontend string, rule models.B
 	return configuration.CreateBackendSwitchingRule(frontend, &rule, c.activeTransaction, 0)
 }
 
-func (c *clientNative) BackendSwitchingRuleDeleteAll(frontend string) {
-	logger := utils.GetLogger()
+func (c *clientNative) BackendSwitchingRuleDeleteAll(frontend string) (err error) {
 	configuration, err := c.nativeAPI.Configuration()
 	if err != nil {
-		logger.Error(err)
 		return
 	}
 	c.activeTransactionHasChanges = true
-	err = configuration.DeleteBackendSwitchingRule(0, frontend, c.activeTransaction, 0)
-	for err != nil {
-		logger.Error(err)
+	_, switchingRules, err := configuration.GetBackendSwitchingRules(frontend, c.activeTransaction)
+	if err != nil {
+		return
 	}
+	for i := 0; i < len(switchingRules); i++ {
+		if err = configuration.DeleteBackendSwitchingRule(0, frontend, c.activeTransaction, 0); err != nil {
+			break
+		}
+	}
+	return
 }
 
 func (c *clientNative) ServerGet(serverName, backendName string) (models.Server, error) {

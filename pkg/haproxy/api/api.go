@@ -33,7 +33,7 @@ type HAProxyClient interface {
 	BackendServerDelete(backendName string, serverName string) error
 	BackendServersGet(backendName string) (models.Servers, error)
 	BackendSwitchingRuleCreate(frontend string, rule models.BackendSwitchingRule) error
-	BackendSwitchingRuleDeleteAll(frontend string)
+	BackendSwitchingRuleDeleteAll(frontend string) error
 	DefaultsGetConfiguration() (*models.Defaults, error)
 	DefaultsPushConfiguration(models.Defaults) error
 	ExecuteRaw(command string) (result []string, err error)

@@ -135,7 +135,10 @@ func AddCustomRoute(route Route, routeACLAnn string, api api.HAProxyClient) (rel
 
 func CustomRoutesReset(api api.HAProxyClient) (err error) {
 	for _, frontend := range []string{FrontendHTTP, FrontendHTTPS} {
-		api.BackendSwitchingRuleDeleteAll(frontend)
+		err = api.BackendSwitchingRuleDeleteAll(frontend)
+		if err != nil {
+			break
+		}
 		err = api.BackendSwitchingRuleCreate(frontend, models.BackendSwitchingRule{
 			Name:  "%[var(txn.path_match),field(1,.)]",
 			Index: utils.PtrInt64(0),
@@ -144,5 +147,5 @@ func CustomRoutesReset(api api.HAProxyClient) (err error) {
 			return fmt.Errorf("unable to create main backendSwitching rule !!: %w", err)
 		}
 	}
-	return err
+	return
 }
