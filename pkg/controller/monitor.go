@@ -78,7 +78,6 @@ func (c *HAProxyController) SyncData() {
 		if job.EventProcessed != nil {
 			close(job.EventProcessed)
 		}
-
 	}
 }
 
