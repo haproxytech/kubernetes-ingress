@@ -16,6 +16,7 @@ package customresources
 
 import (
 	"io/ioutil"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -52,6 +53,7 @@ func (suite *CustomResourceSuite) BeforeTest(suiteName, testName string) {
 		suite.T().Fatalf("Suite '%s': Test '%s' : error : %s", suiteName, testName, err)
 	}
 	suite.test.TempDir = tempDir
+	suite.T().Logf("temporary configuration dir %s", suite.test.TempDir)
 }
 
 var haproxyConfig = `global
@@ -94,9 +96,13 @@ frontend stats
 
 func (suite *CustomResourceSuite) GlobalCRFixture() (eventChan chan k8s.SyncDataEvent, s store.K8s, globalCREvt k8s.SyncDataEvent) {
 	var osArgs utils.OSArgs
+	os.Args = []string{os.Args[0], "-e", "-t", "--config-dir=" + suite.test.TempDir}
 	parser := flags.NewParser(&osArgs, flags.IgnoreUnknown)
-	_, _ = parser.Parse()
-	osArgs.Test = true
+	_, errParsing := parser.Parse()
+	if errParsing != nil {
+		suite.T().Fatal(errParsing)
+	}
+
 	eventChan = make(chan k8s.SyncDataEvent, watch.DefaultChanSize*6)
 	s = store.NewK8sStore(osArgs)
 	globalCREvt = k8s.SyncDataEvent{

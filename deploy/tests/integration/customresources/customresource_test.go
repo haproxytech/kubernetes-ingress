@@ -16,8 +16,6 @@ package customresources
 
 import (
 	"github.com/stretchr/testify/assert"
-
-	"github.com/haproxytech/kubernetes-ingress/deploy/tests/e2e"
 )
 
 func (suite *CustomResourceSuite) TestGlobalCR() {
@@ -28,21 +26,23 @@ func (suite *CustomResourceSuite) TestGlobalCR() {
 	t := suite.T()
 
 	suite.Run("Adding a global CR creates global and logTargets objects", func() {
+		eventProcessedChan := make(chan struct{})
+		globalCREvt.EventProcessed = eventProcessedChan
 		eventChan <- globalCREvt
-		suite.Require().Eventually(func() bool {
-			return assert.Len(t, globals, 1, "Should find one and only one Global CR") ||
-				assert.Len(t, logtrargets, 1, "Should find one and only one LogTargets CR") ||
-				assert.Containsf(t, globals, globalCREvt.Name, "Global CR of name '%s' not found", globalCREvt.Name)
-		}, e2e.WaitDuration, e2e.TickDuration)
+		<-eventProcessedChan
+		assert.Len(t, globals, 1, "Should find one and only one Global CR")
+		assert.Len(t, logtrargets, 1, "Should find one and only one LogTargets CR")
+		assert.Containsf(t, globals, globalCREvt.Name, "Global CR of name '%s' not found", globalCREvt.Name)
 	})
 
 	suite.Run("Deleting a global CR removes global and logTargets objects", func() {
 		globalCREvt.Data = nil
+		eventProcessedChan := make(chan struct{})
+		globalCREvt.EventProcessed = eventProcessedChan
 		eventChan <- globalCREvt
-		suite.Require().Eventually(func() bool {
-			return assert.Len(t, globals, 0, "No Global CR should be present") ||
-				assert.Len(t, logtrargets, 0, "No LogTargets should be present")
-		}, e2e.WaitDuration, e2e.TickDuration)
+		<-eventProcessedChan
+		assert.Len(t, globals, 0, "No Global CR should be present")
+		assert.Len(t, logtrargets, 0, "No LogTargets should be present")
 	})
 
 	close(eventChan)
