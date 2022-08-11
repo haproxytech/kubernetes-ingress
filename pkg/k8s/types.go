@@ -7,9 +7,10 @@ type SyncType string
 type SyncDataEvent struct {
 	_ [0]int
 	SyncType
-	Namespace string
-	Name      string
-	Data      interface{}
+	Namespace      string
+	Name           string
+	Data           interface{}
+	EventProcessed chan struct{}
 }
 
 //nolint:golint,stylecheck

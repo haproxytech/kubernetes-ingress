@@ -75,6 +75,10 @@ func (c *HAProxyController) SyncData() {
 			change = c.store.EventPublishService(ns, job.Data.(*store.Service))
 		}
 		hadChanges = hadChanges || change
+		if job.EventProcessed != nil {
+			close(job.EventProcessed)
+		}
+
 	}
 }
 
