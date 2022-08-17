@@ -11,7 +11,7 @@ variables:
 diff:
   stage: diff
   image:
-    name: $CI_REGISTRY_GO/golang:1.17
+    name: $CI_REGISTRY_GO/golang:1.19
     entrypoint: [ "" ]
   tags:
     - go
@@ -26,7 +26,7 @@ diff:
 tidy:
   stage: lint
   image:
-    name: $CI_REGISTRY_GO/golang:1.17
+    name: $CI_REGISTRY_GO/golang:1.19
     entrypoint: [""]
   tags:
     - go
@@ -62,7 +62,7 @@ lint-commit-msg:
 unit-tests:
   stage: unit-tests
   image:
-    name: $CI_REGISTRY_GO/haproxy-alpine:2.5-go1.17
+    name: $CI_REGISTRY_GO/haproxy-alpine:2.5-go1.19
     entrypoint: [""]
   tags:
     - go
@@ -74,7 +74,7 @@ unit-tests:
     - branches
 .kind_deployment:
   stage: e2e-tests
-  image: $CI_REGISTRY_GO/docker:stable-go1.17
+  image: $CI_REGISTRY_GO/docker:stable-go1.19
   services:
     - name: $CI_REGISTRY_GO/docker:18.09.7-dind
       alias: docker
@@ -86,8 +86,8 @@ unit-tests:
     - go version
     - docker pull $CI_REGISTRY_GO/alpine:3
     - docker image tag $CI_REGISTRY_GO/alpine:3 alpine:3
-    - docker pull $CI_REGISTRY_GO/golang:1.17-alpine
-    - docker image tag $CI_REGISTRY_GO/golang:1.17-alpine golang:1.17-alpine
+    - docker pull $CI_REGISTRY_GO/golang:1.19-alpine
+    - docker image tag $CI_REGISTRY_GO/golang:1.19-alpine golang:1.19-alpine
     - wget -q -o /dev/null -O &> /dev/null /usr/local/bin/kind https://github.com/kubernetes-sigs/kind/releases/download/${KIND}/kind-linux-amd64
     - chmod +x /usr/local/bin/kind
     - wget -q -o /dev/null -O &> /dev/null /usr/local/bin/kubectl https://storage.googleapis.com/kubernetes-release/release/${KUBECTL}/bin/linux/amd64/kubectl
