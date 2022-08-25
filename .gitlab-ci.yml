@@ -2,6 +2,7 @@ stages:
   - diff
   - lint
   - unit-tests
+  - build
   - e2e-tests
 variables:
   KUBECTL: v1.24.3
@@ -25,6 +26,7 @@ diff:
     - branches
 tidy:
   stage: lint
+  needs: []
   image:
     name: $CI_REGISTRY_GO/golang:1.19
     entrypoint: [""]
@@ -38,6 +40,7 @@ tidy:
     - branches
 golangci_lint:
   stage: lint
+  needs: []
   image:
     name: $CI_REGISTRY_GO/lint:1.33
     entrypoint: [""]
@@ -50,6 +53,7 @@ golangci_lint:
     - branches
 lint-commit-msg:
   stage: lint
+  needs: []
   image:
     name: $CI_REGISTRY_GO/check-commit:v2.1.0
     entrypoint: [""]
@@ -60,6 +64,7 @@ lint-commit-msg:
   only:
     - merge_requests
 unit-tests:
+  needs: ["diff", "tidy"]
   stage: unit-tests
   image:
     name: $CI_REGISTRY_GO/haproxy-alpine:2.5-go1.19
@@ -72,8 +77,9 @@ unit-tests:
   only:
     - merge_requests
     - branches
-.kind_deployment:
-  stage: e2e-tests
+docker-build:
+  stage: build
+  needs: []
   image: $CI_REGISTRY_GO/docker:stable-go1.19
   services:
     - name: $CI_REGISTRY_GO/docker:18.09.7-dind
@@ -82,12 +88,46 @@ unit-tests:
     - go
   before_script:
     - docker login -u gitlab-ci-token -p $CI_BUILD_TOKEN $CI_REGISTRY_GO
-  script:
     - go version
-    - docker pull $CI_REGISTRY_GO/alpine:3
+    - docker pull -q $CI_REGISTRY_GO/alpine:3
     - docker image tag $CI_REGISTRY_GO/alpine:3 alpine:3
-    - docker pull $CI_REGISTRY_GO/golang:1.19-alpine
+    - docker pull -q $CI_REGISTRY_GO/golang:1.19-alpine
     - docker image tag $CI_REGISTRY_GO/golang:1.19-alpine golang:1.19-alpine
+    - sed -i "s~FROM golang~FROM $CI_REGISTRY_GO/golang~g" "build/Dockerfile"
+    - sed -i "s~FROM haproxytech/haproxy-alpine~FROM $CI_REGISTRY_GO/haproxy-alpine~g" "build/Dockerfile"
+  script:
+    - mkdir -p tar
+    - make build
+    - docker save -o tar/k8sIC.tar haproxytech/kubernetes-ingress:latest
+  artifacts:
+    when: on_success
+    paths:
+      - tar
+    expire_in: 15 minutes
+.kind_deployment:
+  stage: e2e-tests
+  needs: ["diff", "tidy", "docker-build"]
+  image: $CI_REGISTRY_GO/docker:stable-go1.19
+  services:
+    - name: $CI_REGISTRY_GO/docker:18.09.7-dind
+      alias: docker
+  tags:
+    - go
+  artifacts:
+    paths:
+      - tar
+    expire_in: 30 minutes
+  before_script:
+    - docker login -u gitlab-ci-token -p $CI_BUILD_TOKEN $CI_REGISTRY_GO
+    - docker load -i tar/k8sIC.tar
+    - go version
+    - go mod download &
+    #- docker pull -q $CI_REGISTRY_GO/alpine:3
+    #- docker image tag $CI_REGISTRY_GO/alpine:3 alpine:3
+    #- docker pull -q $CI_REGISTRY_GO/golang:1.19-alpine
+    #- docker image tag $CI_REGISTRY_GO/golang:1.19-alpine golang:1.19-alpine
+    - docker pull -q $CI_REGISTRY_GO/haproxytech/http-echo:latest
+    - docker image tag $CI_REGISTRY_GO/haproxytech/http-echo:latest haproxytech/http-echo:latest
     - wget -nv -O /usr/local/bin/kind https://github.com/kubernetes-sigs/kind/releases/download/${KIND}/kind-linux-amd64
     - chmod +x /usr/local/bin/kind
     - wget -nv -O /usr/local/bin/kubectl https://storage.googleapis.com/kubernetes-release/release/${KUBECTL}/bin/linux/amd64/kubectl
@@ -102,16 +142,20 @@ unit-tests:
     - sed -i -E -e "s/localhost|0\.0\.0\.0|127\.0\.0\.1/docker/g" "deploy/tests/e2e/client.go"
     - until kubectl get nodes -o wide;do sleep 2; done
     - kubectl get pods -A
-    - CI_ENV=gitlab deploy/tests/create.sh
-    - kubectl get pods -A
-    - KIND_URL=docker CGO_ENABLED=0 go test -v ./deploy/tests/e2e/... --tags=e2e_parallel
-    - KIND_URL=docker CGO_ENABLED=0 go test -v -p 1 ./deploy/tests/e2e/... --tags=e2e_sequential
   after_script:
     - kubectl get pods -A
     - kind delete cluster --name=dev
   only:
     - merge_requests
     - branches
+  parallel:
+    matrix:
+      - TEST_PART: [ "18#e2e_parallel", "1#e2e_sequential" ]
+        VAR_DUMMY: "YES"
+  script:
+    - CI_ENV=gitlab deploy/tests/create.sh
+    - kubectl get pods -A
+    - IFS='#' read -r -a array <<< $TEST_PART; KIND_URL=docker CGO_ENABLED=0 go test -v -p ${array[0]} ./deploy/tests/e2e/... --tags=${array[1]}
 .kind_deployment_schedules:
   only:
     - schedules
