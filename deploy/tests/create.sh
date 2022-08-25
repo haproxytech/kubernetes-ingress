@@ -9,7 +9,12 @@ if [ -n "${CI_ENV}" ]; then
   echo "cluster was already created by $CI_ENV CI"
 
   echo "building image for ingress controller"
-  docker build --build-arg TARGETPLATFORM="linux/amd64" -t haproxytech/kubernetes-ingress -f build/Dockerfile .
+  if [ -n "${GITLAB_CI}" ]; then
+    echo "haproxytech/kubernetes-ingress image already available from previous stage"
+    #docker build --build-arg TARGETPLATFORM="linux/amd64" -t haproxytech/kubernetes-ingress -f build/Dockerfile .
+  else
+    docker build --build-arg TARGETPLATFORM="linux/amd64" -t haproxytech/kubernetes-ingress -f build/Dockerfile .
+  fi
 
   echo "loading image of ingress controller in kind"
   kind load docker-image haproxytech/kubernetes-ingress:latest  --name=$clustername
@@ -31,7 +36,11 @@ else
   kind load docker-image haproxytech/kubernetes-ingress:latest  --name=$clustername
 fi
 
-docker build --build-arg TARGETPLATFORM="linux/amd64" -t haproxytech/http-echo -f deploy/tests/images/http-echo/Dockerfile deploy/tests/images/http-echo
+if [ -n "${GITLAB_CI}" ]; then
+  echo "haproxytech/http-echo:latest pulled from CI registry"
+else
+  docker build --build-arg TARGETPLATFORM="linux/amd64" -t haproxytech/http-echo -f deploy/tests/images/http-echo/Dockerfile deploy/tests/images/http-echo
+fi
 echo "loading image http-echo in kind"
 kind load docker-image haproxytech/http-echo:latest  --name=$clustername
 
