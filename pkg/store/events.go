@@ -135,6 +135,9 @@ func (k *K8s) EventService(ns *Namespace, data *Service) (updateRequired bool) {
 		if oldService.Equal(newService) {
 			return updateRequired
 		}
+		if oldService.Status == ADDED {
+			newService.Status = ADDED
+		}
 		ns.Services[data.Name] = newService
 		updateRequired = true
 	case ADDED:
