@@ -25,16 +25,17 @@ import (
 
 func (suite *ServiceDiscoverySuite) Test_Port_Discovery() {
 	suite.Run("port_number", func() {
-		suite.testServicePort("http-echo-2", "8080")
+		suite.testServicePort("http-echo-2", "8080", "number")
 	})
 	suite.Run("port_name", func() {
-		suite.testServicePort("http-echo-1", "http")
+		suite.testServicePort("http-echo-1", "http", "name")
 	})
 }
 
-func (suite *ServiceDiscoverySuite) testServicePort(serviceName, servicePort string) {
+func (suite *ServiceDiscoverySuite) testServicePort(serviceName, servicePort, portType string) {
 	suite.tmplData.ServiceName = serviceName
 	suite.tmplData.ServicePort = servicePort
+	suite.tmplData.PortType = portType
 	suite.NoError(suite.test.Apply("config/ingress.yaml.tmpl", suite.test.GetNS(), suite.tmplData))
 	suite.Eventually(func() bool {
 		res, cls, err := suite.client.Do()

@@ -33,16 +33,16 @@ type test struct {
 }
 
 var ingressRules = []IngressRule{
-	{Service: "http-echo-1", Host: "app.haproxy", Path: "/"},
-	{Service: "http-echo-2", Host: "app.haproxy", Path: "/a"},
-	{Service: "http-echo-3", Host: "app.haproxy", Path: "/a/b"},
+	{Service: "http-echo-1", Host: "app.haproxy", Path: "/", PathType: "ImplementationSpecific"},
+	{Service: "http-echo-2", Host: "app.haproxy", Path: "/a", PathType: "ImplementationSpecific"},
+	{Service: "http-echo-3", Host: "app.haproxy", Path: "/a/b", PathType: "ImplementationSpecific"},
 	{Service: "http-echo-4", Host: "app.haproxy", Path: "/exact", PathType: "Exact"},
 	{Service: "http-echo-5", Host: "app.haproxy", Path: "/exactslash/", PathType: "Exact"},
 	{Service: "http-echo-6", Host: "app.haproxy", Path: "/prefix", PathType: "Prefix"},
 	{Service: "http-echo-7", Host: "app.haproxy", Path: "/prefixslash", PathType: "Prefix"},
-	{Service: "http-echo-8", Host: "sub.app.haproxy"},
-	{Service: "http-echo-9", Host: "*.haproxy"},
-	{Service: "http-echo-10", Path: "/test"},
+	{Service: "http-echo-8", Host: "sub.app.haproxy", PathType: "ImplementationSpecific"},
+	{Service: "http-echo-9", Host: "*.haproxy", PathType: "ImplementationSpecific"},
+	{Service: "http-echo-10", Path: "/test", PathType: "ImplementationSpecific"},
 }
 var tests = []test{
 	{ingressRules[0].Service, "app.haproxy", []string{"/", "/test", "/exact/", "/exactslash", "/exactslash/foo", "/prefixxx"}},

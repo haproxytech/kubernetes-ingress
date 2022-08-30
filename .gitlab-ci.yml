@@ -4,8 +4,8 @@ stages:
   - unit-tests
   - e2e-tests
 variables:
-  KUBECTL: v1.19.3
-  KIND: v0.11.1
+  KUBECTL: v1.24.3
+  KIND: v0.14.0
   DOCKER_HOST: tcp://docker:2375
   DOCKER_DRIVER: overlay2
 diff:
@@ -88,9 +88,9 @@ unit-tests:
     - docker image tag $CI_REGISTRY_GO/alpine:3 alpine:3
     - docker pull $CI_REGISTRY_GO/golang:1.19-alpine
     - docker image tag $CI_REGISTRY_GO/golang:1.19-alpine golang:1.19-alpine
-    - wget -q -o /dev/null -O &> /dev/null /usr/local/bin/kind https://github.com/kubernetes-sigs/kind/releases/download/${KIND}/kind-linux-amd64
+    - wget -nv -O /usr/local/bin/kind https://github.com/kubernetes-sigs/kind/releases/download/${KIND}/kind-linux-amd64
     - chmod +x /usr/local/bin/kind
-    - wget -q -o /dev/null -O &> /dev/null /usr/local/bin/kubectl https://storage.googleapis.com/kubernetes-release/release/${KUBECTL}/bin/linux/amd64/kubectl
+    - wget -nv -O /usr/local/bin/kubectl https://storage.googleapis.com/kubernetes-release/release/${KUBECTL}/bin/linux/amd64/kubectl
     - chmod +x /usr/local/bin/kubectl
     - sed -i "s/K8S_VERSION/$K8S_VERSION/g" ".gitlab/kind-config.yaml"
     - sed -i "s~CI_REGISTRY_GO~$CI_REGISTRY_GO~g" ".gitlab/kind-config.yaml"
@@ -115,19 +115,28 @@ unit-tests:
   only:
     - schedules
   extends: .kind_deployment
-k8s_18:
-  variables:
-    K8S_VERSION: v1.18.19
-  extends: .kind_deployment_schedules
+# Kubernetes 1.19 is the oldest release to support networking.k8s.io/v1
 k8s_19:
   variables:
-    K8S_VERSION: v1.19.11
+    K8S_VERSION: v1.19.16
   extends: .kind_deployment_schedules
 k8s_20:
   variables:
-    K8S_VERSION: v1.20.7
+    K8S_VERSION: v1.20.15
   extends: .kind_deployment_schedules
 k8s_21:
   variables:
-    K8S_VERSION: v1.21.1
+    K8S_VERSION: v1.21.12
+  extends: .kind_deployment_schedules
+k8s_22:
+  variables:
+    K8S_VERSION: v1.22.9
+  extends: .kind_deployment_schedules
+k8s_23:
+  variables:
+    K8S_VERSION: v1.23.6
+  extends: .kind_deployment_schedules
+k8s_24:
+  variables:
+    K8S_VERSION: v1.24.3
   extends: .kind_deployment

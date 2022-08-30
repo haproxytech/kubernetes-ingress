@@ -36,6 +36,7 @@ type tmplData struct {
 	Host        string
 	ServiceName string
 	ServicePort string
+	PortType    string
 }
 
 func (suite *ServiceDiscoverySuite) SetupSuite() {
@@ -46,6 +47,7 @@ func (suite *ServiceDiscoverySuite) SetupSuite() {
 		Host:        suite.test.GetNS() + ".test",
 		ServiceName: "http-echo-1",
 		ServicePort: "8080",
+		PortType:    "number",
 	}
 	suite.client, err = e2e.NewHTTPClient(suite.tmplData.Host)
 	suite.NoError(err)

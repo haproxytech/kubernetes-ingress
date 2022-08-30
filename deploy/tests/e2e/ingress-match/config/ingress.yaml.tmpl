@@ -1,7 +1,7 @@
 {{$pathType:=.PathTypeSupported}}
 ---
 kind: Ingress
-apiVersion: networking.k8s.io/v1beta1
+apiVersion: networking.k8s.io/v1
 metadata:
   name: http-echo
   annotations:
@@ -17,6 +17,8 @@ spec:
             pathType: {{.PathType}}
           {{- end}}
             backend:
-              serviceName: {{.Service}}
-              servicePort: http
+              service:
+                name: {{.Service}}
+                port:
+                  name: http
     {{- end}}
