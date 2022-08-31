@@ -93,6 +93,7 @@ unit-tests:
     - wget -nv -O /usr/local/bin/kubectl https://storage.googleapis.com/kubernetes-release/release/${KUBECTL}/bin/linux/amd64/kubectl
     - chmod +x /usr/local/bin/kubectl
     - sed -i "s/K8S_VERSION/$K8S_VERSION/g" ".gitlab/kind-config.yaml"
+    - sed -i "s/KUBEADM_VER/$KUBEADM_VER/g" ".gitlab/kind-config.yaml"
     - sed -i "s~CI_REGISTRY_GO~$CI_REGISTRY_GO~g" ".gitlab/kind-config.yaml"
     - sed -i "s~FROM golang~FROM $CI_REGISTRY_GO/golang~g" "build/Dockerfile"
     - sed -i "s~FROM haproxytech/haproxy-alpine~FROM $CI_REGISTRY_GO/haproxy-alpine~g" "build/Dockerfile"
@@ -119,24 +120,30 @@ unit-tests:
 k8s_19:
   variables:
     K8S_VERSION: v1.19.16
+    KUBEADM_VER: v1beta2
   extends: .kind_deployment_schedules
 k8s_20:
   variables:
     K8S_VERSION: v1.20.15
+    KUBEADM_VER: v1beta2
   extends: .kind_deployment_schedules
 k8s_21:
   variables:
     K8S_VERSION: v1.21.12
+    KUBEADM_VER: v1beta2
   extends: .kind_deployment_schedules
 k8s_22:
   variables:
     K8S_VERSION: v1.22.9
+    KUBEADM_VER: v1beta2
   extends: .kind_deployment_schedules
 k8s_23:
   variables:
     K8S_VERSION: v1.23.6
+    KUBEADM_VER: v1beta3
   extends: .kind_deployment_schedules
 k8s_24:
   variables:
     K8S_VERSION: v1.24.3
+    KUBEADM_VER: v1beta3
   extends: .kind_deployment
