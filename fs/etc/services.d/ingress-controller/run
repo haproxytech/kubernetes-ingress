@@ -1,6 +1,22 @@
 #!/usr/bin/with-contenv sh
 
 MEMLIMIT=$(free -m | awk '/Mem:/ {print int($2 / 3)}')
+
+CG_LIMIT_FILE="/sys/fs/cgroup/memory/memory.limit_in_bytes"
+if [ -f "/sys/fs/cgroup/cgroup.controllers" ]; then
+    CG_LIMIT_FILE="/sys/fs/cgroup/memory.max"
+fi
+
+if [ -r "${CG_LIMIT_FILE}" ]; then
+    MEMLIMIT_CG=$(awk '{print int($1 / 1024 / 1024 / 3)}' "${CG_LIMIT_FILE}")
+
+    if [ ${MEMLIMIT_CG} -lt ${MEMLIMIT} ]; then
+        MEMLIMIT=${MEMLIMIT_CG}
+    fi
+fi
+
 export GOMEMLIMIT="${MEMLIMIT}MiB"
+
+echo "Memory limit for Ingress Controller: ${GOMEMLIMIT}"
 
 exec /haproxy-ingress-controller --with-s6-overlay ${EXTRA_OPTIONS}
