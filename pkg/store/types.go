@@ -16,6 +16,7 @@ package store
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/haproxytech/client-native/v3/models"
 )
@@ -81,16 +82,20 @@ type RuntimeBackend struct {
 
 // Namespace is useful data from k8s structures about namespace
 type Namespace struct {
-	_              [0]int
-	Name           string
-	Relevant       bool
-	Ingresses      map[string]*Ingress
-	Endpoints      map[string]map[string]*Endpoints // service -> sliceName -> Endpoints
-	Services       map[string]*Service
-	Secret         map[string]*Secret
-	HAProxyRuntime map[string]map[string]*RuntimeBackend // service -> portName -> Backend
-	CRs            *CustomResources
-	Status         Status
+	_               [0]int
+	Name            string
+	Relevant        bool
+	Ingresses       map[string]*Ingress
+	Endpoints       map[string]map[string]*Endpoints // service -> sliceName -> Endpoints
+	Services        map[string]*Service
+	Secret          map[string]*Secret
+	HAProxyRuntime  map[string]map[string]*RuntimeBackend // service -> portName -> Backend
+	CRs             *CustomResources
+	Gateways        map[string]*Gateway
+	TCPRoutes       map[string]*TCPRoute
+	ReferenceGrants map[string]*ReferenceGrant
+	Labels          map[string]string
+	Status          Status
 }
 
 type CustomResources struct {
@@ -175,3 +180,103 @@ type IngressCore struct {
 	DefaultBackend *IngressPath
 	TLS            map[string]*IngressTLS
 }
+
+type GatewayClass struct {
+	Name           string
+	ControllerName string
+	Description    *string
+	Status         Status
+}
+
+type Gateway struct {
+	Namespace        string
+	Name             string
+	GatewayClassName string
+	Listeners        []Listener
+	Status           Status
+}
+type Listener struct {
+	Name          string
+	Port          int32
+	Protocol      string
+	Hostname      *string
+	AllowedRoutes *AllowedRoutes
+	GwNamespace   string
+	GwName        string
+}
+
+type AllowedRoutes struct {
+	Namespaces *RouteNamespaces
+	Kinds      []RouteGroupKind
+}
+
+type RouteGroupKind struct {
+	Group *string
+	Kind  string
+}
+
+type RouteNamespaces struct {
+	From     *string
+	Selector *LabelSelector
+}
+
+type TCPRoute struct {
+	Name         string
+	Namespace    string
+	BackendRefs  []BackendRef
+	ParentRefs   []ParentRef
+	CreationTime time.Time
+	Status       Status
+}
+
+type BackendRef struct {
+	Name      string
+	Namespace *string
+	Port      *int32
+	Weight    *int32
+	Group     *string
+	Kind      *string
+}
+type LabelSelector struct {
+	MatchLabels      map[string]string
+	MatchExpressions []LabelSelectorRequirement
+}
+
+type LabelSelectorRequirement struct {
+	Key      string
+	Operator string
+	Values   []string
+}
+
+type TCPRoutes []TCPRoute
+
+type ParentRef struct {
+	Namespace   *string
+	Name        string
+	SectionName *string
+	Port        *int32
+}
+
+type ReferenceGrant struct {
+	Namespace string
+	Name      string
+	From      []ReferenceGrantFrom
+	To        []ReferenceGrantTo
+	Status    Status
+}
+
+type ReferenceGrantFrom struct {
+	Group     string
+	Kind      string
+	Namespace string
+}
+
+type ReferenceGrantTo struct {
+	Group string
+	Kind  string
+	Name  *string
+}
+
+const (
+	TCPProtocolType string = "TCP"
+)

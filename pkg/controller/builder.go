@@ -27,6 +27,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/haproxytech/kubernetes-ingress/pkg/annotations"
+	gateway "github.com/haproxytech/kubernetes-ingress/pkg/gateways"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/api"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/env"
@@ -51,6 +52,7 @@ type Builder struct {
 	eventChan                chan k8s.SyncDataEvent
 	updatePublishServiceFunc func(ingresses []*ingress.Ingress, publishServiceAddresses []string)
 	clientSet                *kubernetes.Clientset
+	gatewayManager           gateway.GatewayManager
 }
 
 var defaultEnv = env.Env{
@@ -135,6 +137,11 @@ func (builder *Builder) WithClientSet(clientSet *kubernetes.Clientset) *Builder 
 	return builder
 }
 
+func (builder *Builder) WithGatewayManager(gatewayManager gateway.GatewayManager) *Builder {
+	builder.gatewayManager = gatewayManager
+	return builder
+}
+
 func (builder *Builder) Build() *HAProxyController {
 	if builder.haproxyCfgFile == nil {
 		logger.Panic(errors.New("no HAProxy Config file provided"))
@@ -157,6 +164,11 @@ func (builder *Builder) Build() *HAProxyController {
 	logger.Error(errPrefix)
 
 	builder.store.UpdateStatusFunc = ingress.NewStatusIngressUpdater(builder.clientSet, builder.store, builder.osArgs.IngressClass, builder.osArgs.EmptyIngressClass, builder.annotations)
+	builder.store.GatewayControllerName = builder.osArgs.GatewayControllerName
+	gatewayManager := builder.gatewayManager
+	if gatewayManager == nil {
+		gatewayManager = gateway.New(builder.store, haproxy.HAProxyClient, builder.osArgs)
+	}
 	return &HAProxyController{
 		osArgs:                   builder.osArgs,
 		haproxy:                  haproxy,
@@ -168,6 +180,7 @@ func (builder *Builder) Build() *HAProxyController {
 		annotations:              builder.annotations,
 		chShutdown:               chShutdown,
 		updatePublishServiceFunc: builder.updatePublishServiceFunc,
+		gatewayManager:           gatewayManager,
 	}
 }
 

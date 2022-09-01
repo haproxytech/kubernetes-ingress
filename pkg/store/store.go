@@ -31,6 +31,8 @@ type K8s struct {
 	SecretsProcessed        map[string]struct{}
 	BackendProcessed        map[string]struct{}
 	UpdateStatusFunc        func(ingresses []*Ingress, publishServiceAddresses []string)
+	GatewayClasses          map[string]*GatewayClass
+	GatewayControllerName   string
 }
 
 type NamespacesWatch struct {
@@ -70,6 +72,7 @@ func NewK8sStore(args utils.OSArgs) K8s {
 		},
 		SecretsProcessed: map[string]struct{}{},
 		BackendProcessed: map[string]struct{}{},
+		GatewayClasses:   make(map[string]*GatewayClass),
 	}
 	for _, namespace := range args.NamespaceWhitelist {
 		store.NamespacesAccess.Whitelist[namespace] = struct{}{}
@@ -157,7 +160,11 @@ func (k K8s) GetNamespace(name string) *Namespace {
 			LogTargets: make(map[string]models.LogTargets),
 			Backends:   make(map[string]*models.Backend),
 		},
-		Status: ADDED,
+		Gateways:        make(map[string]*Gateway),
+		TCPRoutes:       make(map[string]*TCPRoute),
+		ReferenceGrants: make(map[string]*ReferenceGrant),
+		Labels:          make(map[string]string),
+		Status:          ADDED,
 	}
 	k.Namespaces[name] = newNamespace
 	return newNamespace

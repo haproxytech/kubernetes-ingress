@@ -24,8 +24,9 @@ import (
 func (k *K8s) EventNamespace(ns *Namespace, data *Namespace) (updateRequired bool) {
 	updateRequired = false
 	switch data.Status {
-	case ADDED:
-		_ = k.GetNamespace(data.Name)
+	case ADDED, MODIFIED:
+		data.Relevant = k.isRelevantNamespace(data.Name)
+		k.Namespaces[data.Name] = data
 	case DELETED:
 		_, ok := k.Namespaces[data.Name]
 		if ok {
@@ -349,4 +350,130 @@ func (k *K8s) EventPublishService(ns *Namespace, data *Service) (updateRequired 
 		}
 	}
 	return updateRequired
+}
+
+func (k *K8s) EventGatewayClass(data *GatewayClass) (updateRequired bool) {
+	if data.ControllerName != k.GatewayControllerName {
+		return
+	}
+	switch data.Status {
+	case ADDED:
+
+		if previous := k.GatewayClasses[data.Name]; previous != nil {
+			logger.Warningf("Replacing existing gatewayclass %s", data.Name)
+		}
+		k.GatewayClasses[data.Name] = data
+		updateRequired = true
+	case DELETED:
+		if previous := k.GatewayClasses[data.Name]; previous == nil {
+			logger.Warningf("Trying to delete unexisting gatewayclass %s", data.Name)
+			return
+		}
+		delete(k.GatewayClasses, data.Name)
+		updateRequired = true
+	case MODIFIED:
+		newGatewayClass := data
+		oldGatewayClass, ok := k.GatewayClasses[data.Name]
+		if !ok {
+			logger.Warningf("Modification of unexisting gatewayclass %s", data.Name)
+		}
+		if newGatewayClass.Equal(oldGatewayClass) {
+			return updateRequired
+		}
+		k.GatewayClasses[data.Name] = newGatewayClass
+		updateRequired = true
+	}
+	return
+}
+
+func (k *K8s) EventGateway(ns *Namespace, data *Gateway) (updateRequired bool) {
+	switch data.Status {
+	case ADDED:
+		if previous := ns.Gateways[data.Name]; previous != nil {
+			logger.Warningf("Replacing existing gateway %s", data.Name)
+		}
+		ns.Gateways[data.Name] = data
+		updateRequired = true
+	case DELETED:
+		if previous := ns.Gateways[data.Name]; previous == nil {
+			logger.Warningf("Trying to delete unexisting gateway %s", data.Name)
+			return
+		}
+		ns.Gateways[data.Name] = data
+		updateRequired = true
+	case MODIFIED:
+		newGateway := data
+		oldGateway, ok := ns.Gateways[data.Name]
+		if !ok {
+			logger.Warningf("Modification of unexisting gateway %s", data.Name)
+		}
+		if newGateway.Equal(oldGateway) {
+			return updateRequired
+		}
+		ns.Gateways[data.Name] = newGateway
+		updateRequired = true
+	}
+	return
+}
+
+func (k *K8s) EventTCPRoute(ns *Namespace, data *TCPRoute) (updateRequired bool) {
+	switch data.Status {
+	case ADDED:
+		if previous := ns.TCPRoutes[data.Name]; previous != nil {
+			logger.Warningf("Replacing existing tcproute %s", data.Name)
+		}
+		ns.TCPRoutes[data.Name] = data
+		updateRequired = true
+	case DELETED:
+		if previous := ns.TCPRoutes[data.Name]; previous == nil {
+			logger.Warningf("Trying to delete unexisting tcproute %s", data.Name)
+			return
+		}
+		// We can't remove directly because we need the listener attached to this route to be updated.
+		ns.TCPRoutes[data.Name] = data
+		updateRequired = true
+	case MODIFIED:
+		newTCPRoute := data
+		oldTCPRoute, ok := ns.TCPRoutes[data.Name]
+		if !ok {
+			logger.Warningf("Modification of unexisting tcproute %s", data.Name)
+		}
+		if newTCPRoute.Equal(oldTCPRoute) {
+			return false
+		}
+		ns.TCPRoutes[data.Name] = newTCPRoute
+		updateRequired = true
+	}
+	return
+}
+
+func (k *K8s) EventReferenceGrant(ns *Namespace, data *ReferenceGrant) (updateRequired bool) {
+	switch data.Status {
+	case ADDED:
+		if previous := ns.ReferenceGrants[data.Name]; previous != nil {
+			logger.Warningf("Replacing existing referencegrant %s", data.Name)
+		}
+		ns.ReferenceGrants[data.Name] = data
+		updateRequired = true
+	case DELETED:
+		if previous := ns.ReferenceGrants[data.Name]; previous == nil {
+			logger.Warningf("Trying to delete unexisting refrencegrant %s", data.Name)
+			return
+		}
+		delete(ns.ReferenceGrants, data.Name)
+		updateRequired = true
+	case MODIFIED:
+		newReferenceGrant := data
+		oldReferenceGrant, ok := ns.ReferenceGrants[data.Name]
+		if !ok {
+			logger.Warningf("Modification of unexisting referencegrant %s", data.Name)
+			return
+		}
+		if newReferenceGrant.Equal(oldReferenceGrant) {
+			return updateRequired
+		}
+		ns.ReferenceGrants[data.Name] = newReferenceGrant
+		updateRequired = true
+	}
+	return
 }

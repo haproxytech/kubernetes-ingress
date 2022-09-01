@@ -73,6 +73,14 @@ func (c *HAProxyController) SyncData() {
 			change = c.store.EventPod(job.Data.(store.PodEvent)) //nolint:forcetypeassert
 		case k8s.PUBLISH_SERVICE:
 			change = c.store.EventPublishService(ns, job.Data.(*store.Service)) //nolint:forcetypeassert
+		case k8s.GATEWAYCLASS:
+			change = c.store.EventGatewayClass(job.Data.(*store.GatewayClass))
+		case k8s.GATEWAY:
+			change = c.store.EventGateway(ns, job.Data.(*store.Gateway))
+		case k8s.TCPROUTE:
+			change = c.store.EventTCPRoute(ns, job.Data.(*store.TCPRoute))
+		case k8s.REFERENCEGRANT:
+			change = c.store.EventReferenceGrant(ns, job.Data.(*store.ReferenceGrant))
 		}
 		hadChanges = hadChanges || change
 		if job.EventProcessed != nil {

@@ -148,3 +148,34 @@ func EqualSliceStringsWithoutOrder(a, b []string) bool {
 	}
 	return true
 }
+
+type integer interface {
+	~int | ~int8 | ~int16 | ~int32 | ~int64 |
+		~uint | ~uint8 | ~uint16 | ~uint32 | ~uint64 | ~uintptr
+}
+
+func ConvertPointer[T1, T2 integer](p *T1) *T2 {
+	if p == nil {
+		return nil
+	}
+	var j T2 = T2(*p)
+	return &j
+}
+
+func CopyMap[K comparable, V any](mapArg map[K]V) map[K]V {
+	mapCopy := make(map[K]V, len(mapArg))
+	for k, v := range mapArg {
+		mapCopy[k] = v
+	}
+	return mapCopy
+}
+
+type Pair[T, U any] struct {
+	P1 T
+	P2 U
+}
+
+// NewPair creates a new Pair with type inference.
+func NewPair[T, U any](p1 T, p2 U) Pair[T, U] {
+	return Pair[T, U]{P1: p1, P2: p2}
+}

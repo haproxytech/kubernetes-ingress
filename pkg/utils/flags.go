@@ -106,4 +106,5 @@ type OSArgs struct { //nolint:maligned
 	PprofEnabled               bool           `long:"pprof" short:"p" description:"enable pprof"`
 	PrometheusEnabled          bool           `long:"prometheus" description:"enable prometheus of IC data"`
 	ChannelSize                int64          `long:"channel-size" description:"sets the size of controller buffers used to receive and send k8s events.NOTE: increase the value to accommodate large number of resources "`
+	GatewayControllerName      string         `long:"gateway-controller-name" description:"sets the controller name of gatewayclass managed by the controller"`
 }
