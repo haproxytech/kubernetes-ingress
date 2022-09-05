@@ -120,7 +120,9 @@ image_arguments:
       args:
         - --configmap-patternfiles=default/acl-patterns
   - argument: --default-backend-service
-    description: The name of the Kubernetes service to send requests to when no Ingress rules match.
+    description: |-
+      The name of the Kubernetes service to send requests to when no Ingress rules match.
+      By default, it uses the builtin HTTP backend.
     values:
       - The name of the backend service
     version_min: "1.4"
