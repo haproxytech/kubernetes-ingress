@@ -204,6 +204,7 @@ args:
 ### `--default-backend-service`
 
   The name of the Kubernetes service to send requests to when no Ingress rules match.
+By default, it uses the builtin HTTP backend.
 
 Possible values:
 

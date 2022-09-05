@@ -37,10 +37,9 @@ kind load docker-image haproxytech/http-echo:latest  --name=$clustername
 
 echo "deploying Ingress Controller ..."
 kubectl apply -f $DIR/config/0.namespace.yaml
-kubectl apply -f $DIR/config/1.default-backend.yaml
-kubectl apply -f $DIR/config/2.rbac.yaml
-kubectl apply -f $DIR/config/3.configmap.yaml
-kubectl apply -f $DIR/config/4.ingress-controller.yaml
+kubectl apply -f $DIR/config/1.rbac.yaml
+kubectl apply -f $DIR/config/2.configmap.yaml
+kubectl apply -f $DIR/config/3.ingress-controller.yaml
 
 echo "wait --for=condition=ready ..."
 COUNTER=0

@@ -26,7 +26,6 @@ spec:
          requests:
            memory: 256Mi
        args:
-       - --default-backend-service=$(POD_NAMESPACE)/haproxy-kubernetes-ingress-default-backend
        - --configmap=$(POD_NAMESPACE)/haproxy-kubernetes-ingress
        - --configmap-tcp-services=$(POD_NAMESPACE)/haproxy-kubernetes-ingress-tcp
        - --configmap-errorfiles=$(POD_NAMESPACE)/errorfiles
