@@ -149,11 +149,12 @@ docker-build:
     - branches
   parallel:
     matrix:
-      - TEST_PART: [ "18#e2e_parallel", "1#e2e_sequential" ]
+      - TEST_PART: [ "18#e2e_parallel", "18#e2e_https", "1#e2e_sequential" ]
         VAR_DUMMY: "YES"
   script:
     - CI_ENV=gitlab deploy/tests/create.sh
     - kubectl get pods -A
+    - IFS='#' read -r -a array <<< $TEST_PART; echo "running tests with --tags=${array[1]}"
     - IFS='#' read -r -a array <<< $TEST_PART; KIND_URL=docker CGO_ENABLED=0 go test -v -p ${array[0]} ./deploy/tests/e2e/... --tags=${array[1]}
 .kind_deployment_schedules:
   only:
