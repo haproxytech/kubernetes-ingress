@@ -46,7 +46,7 @@ func (suite *CorsSuite) Test_Configmap_Alone() {
 	suite.Run("CorsMethodsCredentialAlone", suite.CorsMethodsCredentialAlone(false))
 	suite.Run("CorsDisable", suite.CorsDisable(false))
 	suite.Run("CorsMethodsCredentialDisable", suite.CorsMethodsCredentialDisable(false))
-	suite.NoError(suite.test.Apply("../../config/3.configmap.yaml", "", nil))
+	suite.NoError(suite.test.Apply("../../config/2.configmap.yaml", "", nil))
 }
 
 func (suite *CorsSuite) Test_Ingress_Alone() {
@@ -121,6 +121,7 @@ func (suite *CorsSuite) Default(ingressCors bool) func() {
 		suite.eventuallyReturns(expectedHeaders, unexpectedHeaders)
 	}
 }
+
 func (suite *CorsSuite) CorsOriginAlone(ingressCors bool) func() {
 	return func() {
 		expectedHeaders := http.Header{
