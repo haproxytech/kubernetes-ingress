@@ -45,12 +45,12 @@ func (suite *CorsSuite) SetupSuite() {
 	suite.client, err = e2e.NewHTTPClient(suite.tmplData.Host)
 	suite.NoError(err)
 
-	suite.NoError(suite.test.Apply("../../config/3.configmap.yaml", "", nil))
+	suite.NoError(suite.test.Apply("../../config/2.configmap.yaml", "", nil))
 	suite.NoError(suite.test.Apply("config/deploy.yaml.tmpl", suite.test.GetNS(), tmplData{Host: suite.test.GetNS() + ".test"}))
 }
 
 func (suite *CorsSuite) TearDownSuite() {
-	//suite.test.Apply("../../config/3.configmap.yaml", "", nil)
+	// suite.test.Apply("../../config/2.configmap.yaml", "", nil)
 	suite.NoError(suite.test.Apply("config/deploy.yaml.tmpl", suite.test.GetNS(), tmplData{Host: suite.test.GetNS() + ".test"}))
 	suite.test.TearDown()
 }

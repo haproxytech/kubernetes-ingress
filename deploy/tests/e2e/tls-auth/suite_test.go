@@ -57,7 +57,7 @@ func (suite *TLSAuthSuite) SetupSuite() {
 	}, e2e.WaitDuration, e2e.TickDuration)
 	suite.Require().NoError(suite.test.Apply("config/secrets/client-ca.yaml", suite.test.GetNS(), nil))
 	suite.test.AddTearDown(func() error {
-		return suite.test.Apply("../../config/3.configmap.yaml", "", nil)
+		return suite.test.Apply("../../config/2.configmap.yaml", "", nil)
 	})
 }
 

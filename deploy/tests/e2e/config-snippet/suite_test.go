@@ -53,7 +53,7 @@ func (suite *ConfigSnippetSuite) SetupSuite() {
 		return res.StatusCode == 200
 	}, e2e.WaitDuration, e2e.TickDuration)
 	suite.test.AddTearDown(func() error {
-		return suite.test.Apply("../../config/3.configmap.yaml", "", nil)
+		return suite.test.Apply("../../config/2.configmap.yaml", "", nil)
 	})
 }
 

@@ -49,5 +49,5 @@ func (suite *GlobalConfigSuite) Test_Proxy_Protocol() {
 	})
 
 	// revert to initial configmap
-	suite.NoError(suite.test.Apply("../../config/3.configmap.yaml", "", nil))
+	suite.NoError(suite.test.Apply("../../config/2.configmap.yaml", "", nil))
 }
