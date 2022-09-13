@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:build e2e_parallel
+//go:build e2e_https
 
 package https
 
@@ -76,6 +76,6 @@ func (suite *HTTPSSuite) Test_HTTPS_Passthrough() {
 			}
 			// should not be blocked by whitelist rule since sni does not match
 			return res != nil
-		}, e2e.WaitDuration, e2e.TickDuration)
+		}, e2e.WaitDuration, e2e.TickDuration, "reason is :: ")
 	})
 }
