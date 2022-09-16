@@ -124,6 +124,6 @@ jobs:
     - name: Setup
       run: CI_ENV=github deploy/tests/create.sh
     - name: Run parallel e2e tests
-      run: go test ./... -v --tags=e2e_parallel
+      run: go test ./... -v --tags=e2e_parallel  --tags=e2e_https
     - name: Run sequential e2e tests
       run: go test ./... -v -p 1 --tags=e2e_sequential

@@ -8,7 +8,7 @@ test:
 .PHONY: e2e
 e2e:
 	go clean -testcache
-	go test ./... --tags=e2e_parallel
+	go test ./... --tags=e2e_parallel --tags=e2e_https
 	go test ./... -p 1 --tags=e2e_sequential
 
 .PHONY: tidy
