@@ -103,7 +103,7 @@ docker-build:
     when: on_success
     paths:
       - tar
-    expire_in: 15 minutes
+    expire_in: 60 minutes
 .kind_deployment:
   stage: e2e-tests
   needs: ["diff", "tidy", "docker-build"]
@@ -116,7 +116,9 @@ docker-build:
   artifacts:
     paths:
       - tar
-    expire_in: 30 minutes
+    expire_in: 1 minutes
+    exclude:
+      - tar/*
   before_script:
     - docker login -u gitlab-ci-token -p $CI_BUILD_TOKEN $CI_REGISTRY_GO
     - docker load -i tar/k8sIC.tar
