@@ -16,31 +16,20 @@ type s6Control struct {
 	API    api.HAProxyClient
 }
 
-func (d *s6Control) Service(action string) (err error) {
+func (d *s6Control) Service(action string) error {
 	if d.OSArgs.Test {
 		logger.Infof("HAProxy would be %sed now", action)
 		return nil
 	}
 	var cmd *exec.Cmd
 
-	//nolint:gosec //checks on HAProxyBinary should be done in configuration module.
 	switch action {
 	case "start":
 		// no need to start it is up already (s6)
 		return nil
-		/*if processErr == nil {
-			logger.Error("haproxy is already running")
-			return nil
-		}
-		cmd = exec.Command("s6-svc", "-u", "/var/run/s6/services/haproxy")
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-		return cmd.Start()*/
 	case "stop":
-		cmd = exec.Command("s6-svc", "-d", "/var/run/s6/services/haproxy")
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-		return cmd.Run()
+		// no need to stop it (s6)
+		return nil
 	case "reload":
 		logger.Error(saveServerState(d.Env.StateDir, d.API))
 		cmd = exec.Command("s6-svc", "-2", "/var/run/s6/services/haproxy")
