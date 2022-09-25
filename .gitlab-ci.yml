@@ -4,6 +4,12 @@ stages:
   - unit-tests
   - build
   - e2e-tests
+  - e2e_k8s_19
+  - e2e_k8s_20
+  - e2e_k8s_21
+  - e2e_k8s_22
+  - e2e_k8s_23
+  - e2e_k8s_24
 variables:
   KUBECTL: v1.24.3
   KIND: v0.14.0
@@ -11,6 +17,9 @@ variables:
   DOCKER_DRIVER: overlay2
 diff:
   stage: diff
+  rules:
+    - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
+    - if: $CI_PIPELINE_SOURCE == 'push'
   image:
     name: $CI_REGISTRY_GO/golang:1.19
     entrypoint: [ "" ]
@@ -21,12 +30,11 @@ diff:
   script:
     - test -z "$(git diff 2> /dev/null)" || exit "Documentation is not generated, issue \`cd documentation/gen && go run .\` and commit the result"
     - test -z "$(git ls-files --others --exclude-standard 2> /dev/null)" || exit "Documentation created untracked files, cannot proceed"
-  only:
-    - merge_requests
-    - branches
 tidy:
   stage: lint
   needs: []
+  rules:
+    - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
   image:
     name: $CI_REGISTRY_GO/golang:1.19
     entrypoint: [""]
@@ -35,12 +43,11 @@ tidy:
   script:
     - go mod tidy
     - test -z "$(git diff 2> /dev/null)" || exit 'Go modules not tidied, issue \`go mod tidy\` and commit the result'
-  only:
-    - merge_requests
-    - branches
 golangci_lint:
   stage: lint
   needs: []
+  rules:
+    - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
   image:
     name: $CI_REGISTRY_GO/lint:1.33
     entrypoint: [""]
@@ -48,12 +55,11 @@ golangci_lint:
     - go
   script:
     - golangci-lint run --enable-all --timeout=10m
-  only:
-    - merge_requests
-    - branches
 lint-commit-msg:
   stage: lint
   needs: []
+  rules:
+    - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
   image:
     name: $CI_REGISTRY_GO/check-commit:v2.1.0
     entrypoint: [""]
@@ -61,10 +67,11 @@ lint-commit-msg:
     - go
   script:
       - /check
-  only:
-    - merge_requests
 unit-tests:
   needs: ["diff", "tidy"]
+  rules:
+    - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
+    - if: $CI_PIPELINE_SOURCE == 'push'
   stage: unit-tests
   image:
     name: $CI_REGISTRY_GO/haproxy-alpine:2.5-go1.19
@@ -74,12 +81,12 @@ unit-tests:
   script:
     - go build -v .
     - go test -v ./...
-  only:
-    - merge_requests
-    - branches
 docker-build:
   stage: build
   needs: []
+  rules:
+    - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
+    - if: $CI_PIPELINE_SOURCE == 'push'
   image: $CI_REGISTRY_GO/docker:stable-go1.19
   services:
     - name: $CI_REGISTRY_GO/docker:18.09.7-dind
@@ -104,9 +111,41 @@ docker-build:
     paths:
       - tar
     expire_in: 60 minutes
+docker-build-sch:
+  stage: build
+  needs: []
+  rules:
+    - if: $CI_PIPELINE_SOURCE == 'schedule'
+  image: $CI_REGISTRY_GO/docker:stable-go1.19
+  services:
+    - name: $CI_REGISTRY_GO/docker:18.09.7-dind
+      alias: docker
+  tags:
+    - go
+  before_script:
+    - docker login -u gitlab-ci-token -p $CI_BUILD_TOKEN $CI_REGISTRY_GO
+    - go version
+    - docker pull -q $CI_REGISTRY_GO/alpine:3
+    - docker image tag $CI_REGISTRY_GO/alpine:3 alpine:3
+    - docker pull -q $CI_REGISTRY_GO/golang:1.19-alpine
+    - docker image tag $CI_REGISTRY_GO/golang:1.19-alpine golang:1.19-alpine
+    - sed -i "s~FROM golang~FROM $CI_REGISTRY_GO/golang~g" "build/Dockerfile"
+    - sed -i "s~FROM haproxytech/haproxy-alpine~FROM $CI_REGISTRY_GO/haproxy-alpine~g" "build/Dockerfile"
+  script:
+    - mkdir -p tar
+    - make build
+    - docker save -o tar/k8sIC.tar haproxytech/kubernetes-ingress:latest
+  artifacts:
+    when: on_success
+    paths:
+      - tar
+    expire_in: 24 hours
 .kind_deployment:
   stage: e2e-tests
   needs: ["diff", "tidy", "docker-build"]
+  rules:
+    - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
+    - if: $CI_PIPELINE_SOURCE == 'push'
   image: $CI_REGISTRY_GO/docker:stable-go1.19
   services:
     - name: $CI_REGISTRY_GO/docker:18.09.7-dind
@@ -147,9 +186,6 @@ docker-build:
   after_script:
     - kubectl get pods -A
     - kind delete cluster --name=dev
-  only:
-    - merge_requests
-    - branches
   parallel:
     matrix:
       - TEST_PART: [ "18#e2e_parallel", "18#e2e_https", "1#e2e_sequential" ]
@@ -160,36 +196,55 @@ docker-build:
     - IFS='#' read -r -a array <<< $TEST_PART; echo "running tests with --tags=${array[1]}"
     - IFS='#' read -r -a array <<< $TEST_PART; KIND_URL=docker CGO_ENABLED=0 go test -v -p ${array[0]} ./deploy/tests/e2e/... --tags=${array[1]}
 .kind_deployment_schedules:
-  only:
-    - schedules
+  needs: ["docker-build-sch"]
+  rules:
+   - if: $CI_PIPELINE_SOURCE == "schedule"
   extends: .kind_deployment
+  allow_failure: true
+  artifacts:
+    paths:
+      - tar
+    expire_in: 60 minutes
+    exclude:
+      - tar/*
 # Kubernetes 1.19 is the oldest release to support networking.k8s.io/v1
-k8s_19:
+e2e_k8s_19:
+  stage: e2e_k8s_19
   variables:
     K8S_VERSION: v1.19.16
     KUBEADM_VER: v1beta2
   extends: .kind_deployment_schedules
-k8s_20:
+e2e_k8s_20:
+  stage: e2e_k8s_20
+  needs: ["docker-build-sch","e2e_k8s_19"]
   variables:
     K8S_VERSION: v1.20.15
     KUBEADM_VER: v1beta2
   extends: .kind_deployment_schedules
-k8s_21:
+e2e_k8s_21:
+  stage: e2e_k8s_21
+  needs: ["docker-build-sch","e2e_k8s_20"]
   variables:
     K8S_VERSION: v1.21.12
     KUBEADM_VER: v1beta2
   extends: .kind_deployment_schedules
-k8s_22:
+e2e_k8s_22:
+  stage: e2e_k8s_22
+  needs: ["docker-build-sch","e2e_k8s_21"]
   variables:
     K8S_VERSION: v1.22.9
     KUBEADM_VER: v1beta2
   extends: .kind_deployment_schedules
-k8s_23:
+e2e_k8s_23:
+  stage: e2e_k8s_23
+  needs: ["docker-build-sch","e2e_k8s_22"]
   variables:
     K8S_VERSION: v1.23.6
     KUBEADM_VER: v1beta3
   extends: .kind_deployment_schedules
-k8s_24:
+e2e_k8s_24:
+  stage: e2e_k8s_24
+  needs: ["docker-build"]
   variables:
     K8S_VERSION: v1.24.3
     KUBEADM_VER: v1beta3
