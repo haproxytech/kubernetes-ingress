@@ -35,6 +35,7 @@ tidy:
   needs: []
   rules:
     - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
+    - if: $CI_PIPELINE_SOURCE == 'push'
   image:
     name: $CI_REGISTRY_GO/golang:1.19
     entrypoint: [""]
@@ -48,6 +49,7 @@ golangci_lint:
   needs: []
   rules:
     - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
+    - if: $CI_PIPELINE_SOURCE == 'push'
   image:
     name: $CI_REGISTRY_GO/lint:1.33
     entrypoint: [""]
