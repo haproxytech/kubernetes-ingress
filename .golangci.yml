@@ -2,11 +2,18 @@ linters-settings:
   govet:
     check-shadowing: true
   gocyclo:
-    min-complexity: 25
+    min-complexity: 42
+  cyclop:
+    max-complexity: 42
   maligned:
     suggest-new: true
   dupl:
     threshold: 200
+  revive:
+    rules:
+    - name: var-naming
+      severity: warning
+      disabled: true
 
 linters:
   enable-all: true
@@ -32,3 +39,9 @@ linters:
     - nakedret
     - paralleltest
     - testpackage
+    - nonamedreturns
+    - nosnakecase
+    - varnamelen
+    - staticcheck
+    - exhaustruct
+    - forcetypeassert

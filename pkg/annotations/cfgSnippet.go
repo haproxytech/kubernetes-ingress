@@ -35,7 +35,7 @@ var cfgSnippet struct {
 	backends  map[string]*cfgData
 }
 
-//nolint: gochecknoinits
+//nolint:gochecknoinits
 func init() {
 	cfgSnippet.global = &cfgData{}
 	cfgSnippet.frontends = make(map[string]*cfgData)

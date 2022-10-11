@@ -82,7 +82,7 @@ func (mf *mapFile) getContent() (result []string, hash uint64) {
 	return result, h.Sum64()
 }
 
-func New(dir string, persistentMaps []Name) (Maps, error) {
+func New(dir string, persistentMaps []Name) (Maps, error) { //nolint:ireturn
 	if dir == "" {
 		return nil, fmt.Errorf("empty name for map directory")
 	}

@@ -20,7 +20,7 @@ type Process interface {
 	SetAPI(api api.HAProxyClient)
 }
 
-func New(env env.Env, osArgs utils.OSArgs, auxCfgFile string, api api.HAProxyClient) (p Process) {
+func New(env env.Env, osArgs utils.OSArgs, auxCfgFile string, api api.HAProxyClient) (p Process) { //nolint:ireturn
 	if osArgs.UseWiths6Overlay {
 		p = &s6Control{
 			Env:    env,

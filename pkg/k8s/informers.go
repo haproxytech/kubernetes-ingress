@@ -20,7 +20,7 @@ import (
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
 )
 
-func (k k8s) getNamespaceInfomer(eventChan chan SyncDataEvent, factory informers.SharedInformerFactory) cache.SharedIndexInformer {
+func (k k8s) getNamespaceInfomer(eventChan chan SyncDataEvent, factory informers.SharedInformerFactory) cache.SharedIndexInformer { //nolint:ireturn
 	informer := factory.Core().V1().Namespaces().Informer()
 	informer.AddEventHandler(
 		cache.ResourceEventHandlerFuncs{
@@ -109,7 +109,7 @@ func (k k8s) getNamespaceInfomer(eventChan chan SyncDataEvent, factory informers
 	return informer
 }
 
-func (k k8s) getServiceInformer(eventChan chan SyncDataEvent, ingressChan chan ingress.Sync, factory informers.SharedInformerFactory, publishSvc *utils.NamespaceValue) cache.SharedIndexInformer {
+func (k k8s) getServiceInformer(eventChan chan SyncDataEvent, ingressChan chan ingress.Sync, factory informers.SharedInformerFactory, publishSvc *utils.NamespaceValue) cache.SharedIndexInformer { //nolint:ireturn
 	informer := factory.Core().V1().Services().Informer()
 	informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
@@ -252,7 +252,7 @@ func (k k8s) getServiceInformer(eventChan chan SyncDataEvent, ingressChan chan i
 	return informer
 }
 
-func (k k8s) getSecretInformer(eventChan chan SyncDataEvent, factory informers.SharedInformerFactory) cache.SharedIndexInformer {
+func (k k8s) getSecretInformer(eventChan chan SyncDataEvent, factory informers.SharedInformerFactory) cache.SharedIndexInformer { //nolint:ireturn
 	informer := factory.Core().V1().Secrets().Informer()
 	informer.AddEventHandler(
 		cache.ResourceEventHandlerFuncs{
@@ -327,7 +327,7 @@ func (k k8s) getSecretInformer(eventChan chan SyncDataEvent, factory informers.S
 	return informer
 }
 
-func (k k8s) getConfigMapInformer(eventChan chan SyncDataEvent, factory informers.SharedInformerFactory) cache.SharedIndexInformer {
+func (k k8s) getConfigMapInformer(eventChan chan SyncDataEvent, factory informers.SharedInformerFactory) cache.SharedIndexInformer { //nolint:ireturn
 	informer := factory.Core().V1().ConfigMaps().Informer()
 	informer.AddEventHandler(
 		cache.ResourceEventHandlerFuncs{
@@ -402,7 +402,7 @@ func (k k8s) getConfigMapInformer(eventChan chan SyncDataEvent, factory informer
 	return informer
 }
 
-func (k k8s) getIngressInformers(eventChan chan SyncDataEvent, factory informers.SharedInformerFactory) (ii, ici cache.SharedIndexInformer) {
+func (k k8s) getIngressInformers(eventChan chan SyncDataEvent, factory informers.SharedInformerFactory) (ii, ici cache.SharedIndexInformer) { //nolint:ireturn
 	for i, apiGroup := range []string{"networking.k8s.io/v1", "networking.k8s.io/v1beta1", "extensions/v1beta1"} {
 		resources, err := k.builtInClient.ServerResourcesForGroupVersion(apiGroup)
 		if err != nil {
@@ -440,7 +440,7 @@ func (k k8s) getIngressInformers(eventChan chan SyncDataEvent, factory informers
 	return
 }
 
-func (k k8s) getEndpointSliceInformer(eventChan chan SyncDataEvent, factory informers.SharedInformerFactory) cache.SharedIndexInformer {
+func (k k8s) getEndpointSliceInformer(eventChan chan SyncDataEvent, factory informers.SharedInformerFactory) cache.SharedIndexInformer { //nolint:ireturn
 	for i, apiGroup := range []string{"discovery.k8s.io/v1", "discovery.k8s.io/v1beta1"} {
 		resources, err := k.builtInClient.ServerResourcesForGroupVersion(apiGroup)
 		if err != nil {
@@ -466,7 +466,7 @@ func (k k8s) getEndpointSliceInformer(eventChan chan SyncDataEvent, factory info
 	return nil
 }
 
-func (k k8s) getEndpointsInformer(eventChan chan SyncDataEvent, factory informers.SharedInformerFactory) cache.SharedIndexInformer {
+func (k k8s) getEndpointsInformer(eventChan chan SyncDataEvent, factory informers.SharedInformerFactory) cache.SharedIndexInformer { //nolint:ireturn
 	informer := factory.Core().V1().Endpoints().Informer()
 	informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
@@ -502,7 +502,7 @@ func (k k8s) getEndpointsInformer(eventChan chan SyncDataEvent, factory informer
 	return informer
 }
 
-func (k *k8s) getPodInformer(namespace, podPrefix string, resyncPeriod time.Duration, eventChan chan SyncDataEvent) cache.Controller {
+func (k *k8s) getPodInformer(namespace, podPrefix string, resyncPeriod time.Duration, eventChan chan SyncDataEvent) cache.Controller { //nolint:ireturn
 	var prefix string
 	watchlist := cache.NewListWatchFromClient(k.builtInClient.CoreV1().RESTClient(), "pods", namespace, fields.Nothing())
 	_, eController := cache.NewInformer(
@@ -519,7 +519,7 @@ func (k *k8s) getPodInformer(namespace, podPrefix string, resyncPeriod time.Dura
 				eventChan <- SyncDataEvent{SyncType: POD, Namespace: meta.Namespace, Data: store.PodEvent{Created: true}}
 			},
 			DeleteFunc: func(obj interface{}) {
-				meta := obj.(*corev1.Pod).ObjectMeta
+				meta := obj.(*corev1.Pod).ObjectMeta //nolint:forcetypeassert
 				prefix, _ = utils.GetPodPrefix(meta.Name)
 				if prefix != podPrefix {
 					return

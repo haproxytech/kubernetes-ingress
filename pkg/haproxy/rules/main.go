@@ -55,7 +55,7 @@ type ruleInfo struct {
 // ruleState describes Rule creation
 type ruleState int
 
-//nolint: golint,stylecheck
+//nolint:golint,stylecheck
 const (
 	CREATED   ruleState = 0
 	TO_CREATE ruleState = 1
@@ -171,7 +171,7 @@ func (r SectionRules) refreshRule(client api.HAProxyClient, ruleType Type, i int
 }
 
 func GetID(rule Rule) RuleID {
-	b, _ := json.Marshal(rule)
+	b, _ := json.Marshal(rule) //nolint:errchkjson
 	b = append(b, byte(rule.GetType()))
 	return RuleID(utils.Hash(b))
 }

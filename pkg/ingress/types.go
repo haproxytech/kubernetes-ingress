@@ -6,7 +6,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-//nolint:golint,stylecheck
 const CONTROLLER = "haproxy.org/ingress-controller"
 
 var logger = utils.GetLogger()

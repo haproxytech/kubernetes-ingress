@@ -29,9 +29,10 @@ func (a *SyslogServers) GetName() string {
 // Input is multiple syslog lines
 // Each syslog line is a list of params
 // Example:
-//  syslog-server: |
-//    address:127.0.0.1, port:514, facility:local0
-//    address:192.168.1.1, port:514, facility:local1
+//
+//	syslog-server: |
+//	  address:127.0.0.1, port:514, facility:local0
+//	  address:192.168.1.1, port:514, facility:local1
 func (a *SyslogServers) Process(k store.K8s, annotations ...map[string]string) error {
 	input := common.GetValue(a.GetName(), annotations...)
 	a.stdout = false

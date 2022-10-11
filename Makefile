@@ -22,7 +22,7 @@ doc:
 .PHONY: lint
 lint:
 	docker run --rm -v $(pwd):/data cytopia/yamllint .
-	golangci-lint run --color always --timeout 240s
+	docker run --rm -v ${PROJECT_PATH}:/app -w /app ghcr.io/haproxytech/go-linter:1.50.0 -v --timeout 5m --color always --max-issues-per-linter 0 --max-same-issues 0
 
 .PHONY: example
 example:

@@ -22,14 +22,11 @@ import (
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
 )
 
-type GlobalCR struct {
-}
+type GlobalCR struct{}
 
-type DefaultsCR struct {
-}
+type DefaultsCR struct{}
 
-type BackendCR struct {
-}
+type BackendCR struct{}
 
 func NewGlobalCR() GlobalCR {
 	return GlobalCR{}
@@ -47,7 +44,7 @@ func (c GlobalCR) GetKind() string {
 	return "Global"
 }
 
-func (c GlobalCR) GetInformer(eventChan chan SyncDataEvent, factory informers.SharedInformerFactory) cache.SharedIndexInformer {
+func (c GlobalCR) GetInformer(eventChan chan SyncDataEvent, factory informers.SharedInformerFactory) cache.SharedIndexInformer { //nolint:ireturn
 	informer := factory.Core().V1alpha1().Globals().Informer()
 
 	sendToChannel := func(eventChan chan SyncDataEvent, object interface{}, status store.Status) {
@@ -82,7 +79,7 @@ func (c DefaultsCR) GetKind() string {
 	return "Defaults"
 }
 
-func (c DefaultsCR) GetInformer(eventChan chan SyncDataEvent, factory informers.SharedInformerFactory) cache.SharedIndexInformer {
+func (c DefaultsCR) GetInformer(eventChan chan SyncDataEvent, factory informers.SharedInformerFactory) cache.SharedIndexInformer { //nolint:ireturn
 	informer := factory.Core().V1alpha1().Defaults().Informer()
 
 	sendToChannel := func(eventChan chan SyncDataEvent, object interface{}, status store.Status) {
@@ -117,7 +114,7 @@ func (c BackendCR) GetKind() string {
 	return "Backend"
 }
 
-func (c BackendCR) GetInformer(eventChan chan SyncDataEvent, factory informers.SharedInformerFactory) cache.SharedIndexInformer {
+func (c BackendCR) GetInformer(eventChan chan SyncDataEvent, factory informers.SharedInformerFactory) cache.SharedIndexInformer { //nolint:ireturn
 	informer := factory.Core().V1alpha1().Backends().Informer()
 
 	sendToChannel := func(eventChan chan SyncDataEvent, object interface{}, status store.Status) {

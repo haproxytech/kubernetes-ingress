@@ -48,7 +48,7 @@ func ConvertToIngress(resource interface{}) (ingress *Ingress, err error) {
 			}
 		}
 	case *extensionsv1beta1.Ingress:
-		ingress = ingressExtensionsStrategy{ig: resource.(*extensionsv1beta1.Ingress)}.ConvertIngress()
+		ingress = ingressExtensionsStrategy{ig: resource.(*extensionsv1beta1.Ingress)}.ConvertIngress() //nolint:forcetypeassert
 		for _, rule := range ingress.Rules {
 			for _, path := range rule.Paths {
 				if path.PathTypeMatch == "" {
