@@ -67,7 +67,7 @@ func newClient(host string, port int, tls bool) (*Client, error) {
 	if port != 0 {
 		dstPort = port
 	}
-	req, err := http.NewRequest("GET", fmt.Sprintf("%s://%s", scheme, host), nil)
+	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s://%s", scheme, host), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -112,7 +112,7 @@ func NewHTTPSClient(host string, port ...int) (*Client, error) {
 	return client, nil
 }
 
-func (c *Client) Do() (res *http.Response, close func() error, err error) {
+func (c *Client) Do() (res *http.Response, closeFunc func() error, err error) {
 	client := &http.Client{}
 	if c.Transport != nil {
 		client.Transport = c.Transport
@@ -130,7 +130,7 @@ func (c *Client) Do() (res *http.Response, close func() error, err error) {
 	if err != nil {
 		return
 	}
-	close = res.Body.Close
+	closeFunc = res.Body.Close
 	return
 }
 

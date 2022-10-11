@@ -4,7 +4,7 @@ package rules
 // Rules will be evaluated by HAProxy in the defined order.
 type Type int
 
-//nolint: golint,stylecheck
+//nolint:golint,stylecheck
 const (
 	REQ_ACCEPT_CONTENT Type = iota
 	REQ_INSPECT_DELAY

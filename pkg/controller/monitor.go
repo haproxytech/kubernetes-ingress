@@ -40,39 +40,39 @@ func (c *HAProxyController) SyncData() {
 		case k8s.CR_GLOBAL:
 			var data *corev1alpha1.Global
 			if job.Data != nil {
-				data = job.Data.(*corev1alpha1.Global)
+				data = job.Data.(*corev1alpha1.Global) //nolint:forcetypeassert
 			}
 			change = c.store.EventGlobalCR(job.Namespace, job.Name, data)
 		case k8s.CR_DEFAULTS:
 			var data *corev1alpha1.Defaults
 			if job.Data != nil {
-				data = job.Data.(*corev1alpha1.Defaults)
+				data = job.Data.(*corev1alpha1.Defaults) //nolint:forcetypeassert
 			}
 			change = c.store.EventDefaultsCR(job.Namespace, job.Name, data)
 		case k8s.CR_BACKEND:
 			var data *corev1alpha1.Backend
 			if job.Data != nil {
-				data = job.Data.(*corev1alpha1.Backend)
+				data = job.Data.(*corev1alpha1.Backend) //nolint:forcetypeassert
 			}
 			change = c.store.EventBackendCR(job.Namespace, job.Name, data)
 		case k8s.NAMESPACE:
-			change = c.store.EventNamespace(ns, job.Data.(*store.Namespace))
+			change = c.store.EventNamespace(ns, job.Data.(*store.Namespace)) //nolint:forcetypeassert
 		case k8s.INGRESS:
-			change = c.store.EventIngress(ns, job.Data.(*store.Ingress))
+			change = c.store.EventIngress(ns, job.Data.(*store.Ingress)) //nolint:forcetypeassert
 		case k8s.INGRESS_CLASS:
-			change = c.store.EventIngressClass(job.Data.(*store.IngressClass))
+			change = c.store.EventIngressClass(job.Data.(*store.IngressClass)) //nolint:forcetypeassert
 		case k8s.ENDPOINTS:
-			change = c.store.EventEndpoints(ns, job.Data.(*store.Endpoints), c.haproxy.SyncBackendSrvs)
+			change = c.store.EventEndpoints(ns, job.Data.(*store.Endpoints), c.haproxy.SyncBackendSrvs) //nolint:forcetypeassert
 		case k8s.SERVICE:
-			change = c.store.EventService(ns, job.Data.(*store.Service))
+			change = c.store.EventService(ns, job.Data.(*store.Service)) //nolint:forcetypeassert
 		case k8s.CONFIGMAP:
-			change = c.store.EventConfigMap(ns, job.Data.(*store.ConfigMap))
+			change = c.store.EventConfigMap(ns, job.Data.(*store.ConfigMap)) //nolint:forcetypeassert
 		case k8s.SECRET:
-			change = c.store.EventSecret(ns, job.Data.(*store.Secret))
+			change = c.store.EventSecret(ns, job.Data.(*store.Secret)) //nolint:forcetypeassert
 		case k8s.POD:
-			change = c.store.EventPod(job.Data.(store.PodEvent))
+			change = c.store.EventPod(job.Data.(store.PodEvent)) //nolint:forcetypeassert
 		case k8s.PUBLISH_SERVICE:
-			change = c.store.EventPublishService(ns, job.Data.(*store.Service))
+			change = c.store.EventPublishService(ns, job.Data.(*store.Service)) //nolint:forcetypeassert
 		}
 		hadChanges = hadChanges || change
 		if job.EventProcessed != nil {
@@ -86,7 +86,7 @@ func (c *HAProxyController) auxCfgManager() (restart, reload bool) {
 	info, errStat := os.Stat(c.haproxy.AuxCFGFile)
 	var (
 		modifTime  int64
-		auxCfgFile string = c.haproxy.AuxCFGFile
+		auxCfgFile = c.haproxy.AuxCFGFile
 		useAuxFile bool
 	)
 

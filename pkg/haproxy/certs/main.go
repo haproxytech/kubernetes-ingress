@@ -68,7 +68,7 @@ type SecretCtx struct {
 	SecretType SecretType
 }
 
-func New(envParam Env) (Certificates, error) {
+func New(envParam Env) (Certificates, error) { //nolint:ireturn
 	env = envParam
 	if env.FrontendDir == "" {
 		return nil, fmt.Errorf("empty name for Frontend Cert Directory")

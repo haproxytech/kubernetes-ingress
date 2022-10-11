@@ -98,7 +98,7 @@ func (suite *CustomResourceSuite) GlobalCRFixture() (eventChan chan k8s.SyncData
 	var osArgs utils.OSArgs
 	os.Args = []string{os.Args[0], "-e", "-t", "--config-dir=" + suite.test.TempDir}
 	parser := flags.NewParser(&osArgs, flags.IgnoreUnknown)
-	_, errParsing := parser.Parse()
+	_, errParsing := parser.Parse() //nolint:ifshort
 	if errParsing != nil {
 		suite.T().Fatal(errParsing)
 	}

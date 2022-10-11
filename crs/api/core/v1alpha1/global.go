@@ -34,7 +34,7 @@ type Global struct {
 // GlobalSpec defines the desired state of Global
 type GlobalSpec struct {
 	Config     *models.Global    `json:"config"`
-	LogTargets models.LogTargets `json:"log_targets"`
+	LogTargets models.LogTargets `json:"log_targets"` //nolint:tagliatelle
 }
 
 // DeepCopyInto deepcopying  the receiver into out. in must be non-nil.

@@ -15,7 +15,7 @@ import (
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
 )
 
-type HAProxyClient interface {
+type HAProxyClient interface { //nolint:interfacebloat
 	APIStartTransaction() error
 	APICommitTransaction() error
 	APIDisposeTransaction()
@@ -79,7 +79,7 @@ type clientNative struct {
 	activeTransactionHasChanges bool
 }
 
-func New(transactionDir, configFile, programPath, runtimeSocket string) (client HAProxyClient, err error) {
+func New(transactionDir, configFile, programPath, runtimeSocket string) (client HAProxyClient, err error) { //nolint:ireturn
 	var runtimeClient runtime.Runtime
 	if runtimeSocket != "" {
 		runtimeClient, err = runtime.New(context.Background(), runtimeoptions.Socket(runtimeSocket))

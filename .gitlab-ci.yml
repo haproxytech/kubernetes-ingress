@@ -51,7 +51,7 @@ golangci_lint:
     - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
     - if: $CI_PIPELINE_SOURCE == 'push'
   image:
-    name: $CI_REGISTRY_GO/lint:1.33
+    name: $CI_REGISTRY_GO/lint:1.50.0
     entrypoint: [""]
   tags:
     - go

@@ -36,9 +36,8 @@ import (
 var logger = utils.GetK8sAPILogger()
 
 // TRACE_API outputs all k8s events received from k8s API
-//nolint golint
 const (
-	TRACE_API        = false
+	TRACE_API        = false //nolint:golint,stylecheck
 	CoreGroupVersion = "core.haproxy.org/v1alpha1"
 )
 
@@ -72,7 +71,7 @@ type k8s struct {
 	disableSvcExternalName bool // CVE-2021-25740
 }
 
-func New(osArgs utils.OSArgs, whitelist map[string]struct{}, publishSvc *utils.NamespaceValue) K8s {
+func New(osArgs utils.OSArgs, whitelist map[string]struct{}, publishSvc *utils.NamespaceValue) K8s { //nolint:ireturn
 	if !TRACE_API {
 		logger.SetLevel(utils.Info)
 	}

@@ -67,7 +67,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-go-
       - name: golangci-lint
-        uses: docker://ghcr.io/haproxytech/go-linter:1.33
+        uses: docker://ghcr.io/haproxytech/go-linter:1.50.0
         with:
           args: --timeout 5m
   build:

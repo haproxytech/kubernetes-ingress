@@ -35,7 +35,7 @@ type Annotations interface {
 
 type annImpl struct{}
 
-func New() Annotations {
+func New() Annotations { //nolint:ireturn
 	return annImpl{}
 }
 

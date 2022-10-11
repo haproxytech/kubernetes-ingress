@@ -17,11 +17,15 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 )
 
-var WaitDuration = 60 * time.Second
-var TickDuration = 2 * time.Second
+var (
+	WaitDuration = 60 * time.Second
+	TickDuration = 2 * time.Second
+)
 
-var devModeFlag = flag.Bool("dev", false, "keep test environment after finishing")
-var devMode bool
+var (
+	devModeFlag = flag.Bool("dev", false, "keep test environment after finishing")
+	devMode     bool
+)
 
 type Test struct {
 	namespace     string
@@ -91,7 +95,7 @@ func (t *Test) processTemplate(path string, tmplData interface{}) (string, error
 		return "", fmt.Errorf("error parsing yaml template: %w", err)
 	}
 	yaml := filepath.Join(t.templateDir, t.namespace+time.Now().Format("2006-01-02-1504051111")+".yaml")
-	return yaml, ioutil.WriteFile(yaml, result.Bytes(), 0600)
+	return yaml, ioutil.WriteFile(yaml, result.Bytes(), 0o600)
 }
 
 func (t *Test) Delete(path string) error {

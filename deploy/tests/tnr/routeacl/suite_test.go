@@ -54,6 +54,7 @@ func (suite *UseBackendSuite) BeforeTest(suiteName, testName string) {
 	suite.T().Logf("temporary configuration dir %s", suite.test.TempDir)
 }
 
+//nolint:dupword
 var haproxyConfig = `global
 daemon
 master-worker
@@ -96,7 +97,7 @@ func (suite *UseBackendSuite) UseBackendFixture() (eventChan chan k8s.SyncDataEv
 	var osArgs utils.OSArgs
 	os.Args = []string{os.Args[0], "-e", "-t", "--config-dir=" + suite.test.TempDir}
 	parser := flags.NewParser(&osArgs, flags.IgnoreUnknown)
-	_, errParsing := parser.Parse()
+	_, errParsing := parser.Parse() //nolint:ifshort
 	if errParsing != nil {
 		suite.T().Fatal(errParsing)
 	}
@@ -147,7 +148,8 @@ func (suite *UseBackendSuite) UseBackendFixture() (eventChan chan k8s.SyncDataEv
 		Namespace:   ns.Name,
 		Annotations: map[string]string{"route-acl": "cookie(staging) -m found"},
 		Ports: []store.ServicePort{
-			{Name: "https",
+			{
+				Name:     "https",
 				Protocol: "TCP",
 				Port:     443,
 				Status:   store.ADDED,
@@ -166,7 +168,6 @@ func (suite *UseBackendSuite) UseBackendFixture() (eventChan chan k8s.SyncDataEv
 			Annotations: map[string]string{"haproxy.org/ingress.class": "haproxy"},
 			Rules: map[string]*store.IngressRule{
 				"": {
-
 					Paths: map[string]*store.IngressPath{
 						string(prefixPathType) + "-/": {
 							Path:          "/",

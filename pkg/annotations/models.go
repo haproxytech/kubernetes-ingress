@@ -17,7 +17,7 @@ func ModelBackend(name, defaultNS string, k store.K8s, annotations ...map[string
 		return
 	}
 	if b != nil {
-		backend = b.(*models.Backend)
+		backend = b.(*models.Backend) //nolint:forcetypeassert
 	}
 	return
 }
@@ -56,7 +56,7 @@ func ModelLog(name, defaultNS string, k store.K8s, annotations ...map[string]str
 		return
 	}
 	if l != nil {
-		log = l.(models.LogTargets)
+		log = l.(models.LogTargets) //nolint:forcetypeassert
 	}
 	return
 }
@@ -104,5 +104,5 @@ func model(name, defaultNS string, crType int, k store.K8s, annotations ...map[s
 		}
 		return backend, nil
 	}
-	return nil, nil
+	return nil, nil //nolint:nilnil
 }
