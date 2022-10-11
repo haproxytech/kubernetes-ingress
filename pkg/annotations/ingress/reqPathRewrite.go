@@ -23,27 +23,29 @@ func (a *ReqPathRewrite) GetName() string {
 }
 
 func (a *ReqPathRewrite) Process(k store.K8s, annotations ...map[string]string) (err error) {
-	input := common.GetValue(a.GetName(), annotations...)
+	input := strings.TrimSpace(common.GetValue(a.GetName(), annotations...))
 	if input == "" {
 		return
 	}
-	parts := strings.Fields(strings.TrimSpace(input))
+	for _, rule := range strings.Split(input, "\n") {
+		parts := strings.Fields(strings.TrimSpace(rule))
 
-	var rewrite *rules.ReqPathRewrite
-	switch len(parts) {
-	case 1:
-		rewrite = &rules.ReqPathRewrite{
-			PathMatch: "(.*)",
-			PathFmt:   parts[0],
+		var rewrite *rules.ReqPathRewrite
+		switch len(parts) {
+		case 1:
+			rewrite = &rules.ReqPathRewrite{
+				PathMatch: "(.*)",
+				PathFmt:   parts[0],
+			}
+		case 2:
+			rewrite = &rules.ReqPathRewrite{
+				PathMatch: parts[0],
+				PathFmt:   parts[1],
+			}
+		default:
+			return fmt.Errorf("incorrect value '%s', path-rewrite takes 1 or 2 params ", input)
 		}
-	case 2:
-		rewrite = &rules.ReqPathRewrite{
-			PathMatch: parts[0],
-			PathFmt:   parts[1],
-		}
-	default:
-		return fmt.Errorf("incorrect value '%s', path-rewrite takes 1 or 2 params ", input)
+		a.rules.Add(rewrite)
 	}
-	a.rules.Add(rewrite)
 	return
 }
