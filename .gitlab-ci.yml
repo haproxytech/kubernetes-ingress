@@ -10,9 +10,10 @@ stages:
   - e2e_k8s_22
   - e2e_k8s_23
   - e2e_k8s_24
+  - e2e_k8s_25
 variables:
-  KUBECTL: v1.24.3
-  KIND: v0.14.0
+  KUBECTL: v1.25.3
+  KIND: v0.16.0
   DOCKER_HOST: tcp://docker:2375
   DOCKER_DRIVER: overlay2
 diff:
@@ -227,27 +228,34 @@ e2e_k8s_21:
   stage: e2e_k8s_21
   needs: ["docker-build-sch","e2e_k8s_20"]
   variables:
-    K8S_VERSION: v1.21.12
+    K8S_VERSION: v1.21.14
     KUBEADM_VER: v1beta2
   extends: .kind_deployment_schedules
 e2e_k8s_22:
   stage: e2e_k8s_22
   needs: ["docker-build-sch","e2e_k8s_21"]
   variables:
-    K8S_VERSION: v1.22.9
+    K8S_VERSION: v1.22.15
     KUBEADM_VER: v1beta2
   extends: .kind_deployment_schedules
 e2e_k8s_23:
   stage: e2e_k8s_23
   needs: ["docker-build-sch","e2e_k8s_22"]
   variables:
-    K8S_VERSION: v1.23.6
+    K8S_VERSION: v1.23.12
     KUBEADM_VER: v1beta3
   extends: .kind_deployment_schedules
 e2e_k8s_24:
   stage: e2e_k8s_24
   needs: ["docker-build"]
   variables:
-    K8S_VERSION: v1.24.3
+    K8S_VERSION: v1.24.6
+    KUBEADM_VER: v1beta3
+  extends: .kind_deployment_schedules
+e2e_k8s_25:
+  stage: e2e_k8s_25
+  needs: ["docker-build"]
+  variables:
+    K8S_VERSION: v1.25.2
     KUBEADM_VER: v1beta3
   extends: .kind_deployment
