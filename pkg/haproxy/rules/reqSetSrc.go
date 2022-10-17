@@ -34,5 +34,6 @@ func (r ReqSetSrc) Create(client api.HAProxyClient, frontend *models.Frontend, i
 		Type:  "set-src",
 		Expr:  fmt.Sprintf("hdr(%s)", r.HeaderName),
 	}
+	ingressACL += " || !{ var(txn.path_match) -m found }"
 	return client.FrontendHTTPRequestRuleCreate(frontend.Name, httpRule, ingressACL)
 }
