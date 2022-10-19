@@ -92,7 +92,7 @@ func SetDefaults(defaults *models.Defaults) {
 	if defaults.ConnectTimeout == nil {
 		defaults.ConnectTimeout = utils.PtrInt64(5000) // 5s
 	}
-	if defaults.ConnectTimeout == nil {
+	if defaults.QueueTimeout == nil {
 		defaults.QueueTimeout = utils.PtrInt64(5000) // 5s
 	}
 	if defaults.ClientTimeout == nil {
