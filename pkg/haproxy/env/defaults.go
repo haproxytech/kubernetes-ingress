@@ -64,6 +64,9 @@ func SetGlobal(global *models.Global, logTargets *models.LogTargets, env Env) {
 			}
 		}
 	}
+	if global.HardStopAfter == nil {
+		global.HardStopAfter = utils.PtrInt64(1800000) // 30m
+	}
 }
 
 // SetDefaults will set default values for Defaults section config.
