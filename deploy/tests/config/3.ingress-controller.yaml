@@ -1,65 +1,65 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
- labels:
-   run: haproxy-ingress
- name: haproxy-kubernetes-ingress
- namespace: haproxy-controller
+  labels:
+    run: haproxy-ingress
+  name: haproxy-kubernetes-ingress
+  namespace: haproxy-controller
 spec:
- replicas: 1
- selector:
-   matchLabels:
-     run: haproxy-ingress
- template:
-   metadata:
-     labels:
-       run: haproxy-ingress
-   spec:
-     serviceAccountName: haproxy-kubernetes-ingress
-     containers:
-     - name: haproxy-ingress
-       image: haproxytech/kubernetes-ingress:latest
-       imagePullPolicy: Never
-       resources:
-         limits:
-           memory: 512Mi
-         requests:
-           memory: 256Mi
-       args:
-       - --configmap=$(POD_NAMESPACE)/haproxy-kubernetes-ingress
-       - --configmap-tcp-services=$(POD_NAMESPACE)/haproxy-kubernetes-ingress-tcp
-       - --configmap-errorfiles=$(POD_NAMESPACE)/errorfiles
-       - --configmap-patternfiles=$(POD_NAMESPACE)/patternfiles
-       - --ingress.class=haproxy
-       - --sync-period=1s
-       securityContext:
-         runAsUser:  1000
-         runAsGroup: 1000
-         capabilities:
-           drop:
-             - ALL
-           add:
-             - NET_BIND_SERVICE
-       ports:
-       - name: http
-         containerPort: 80
-       - name: https
-         containerPort: 443
-       - name: stat
-         containerPort: 31024
-       - name: tcp1
-         containerPort: 32766
-       - name: tcp2
-         containerPort: 32767
-       env:
-       - name: POD_NAME
-         valueFrom:
-           fieldRef:
-             fieldPath: metadata.name
-       - name: POD_NAMESPACE
-         valueFrom:
-           fieldRef:
-             fieldPath: metadata.namespace
+  replicas: 1
+  selector:
+    matchLabels:
+      run: haproxy-ingress
+  template:
+    metadata:
+      labels:
+        run: haproxy-ingress
+    spec:
+      serviceAccountName: haproxy-kubernetes-ingress
+      containers:
+        - name: haproxy-ingress
+          image: haproxytech/kubernetes-ingress:latest
+          imagePullPolicy: Never
+          resources:
+            limits:
+              memory: 512Mi
+            requests:
+              memory: 256Mi
+          args:
+            - --configmap=$(POD_NAMESPACE)/haproxy-kubernetes-ingress
+            - --configmap-tcp-services=$(POD_NAMESPACE)/haproxy-kubernetes-ingress-tcp
+            - --configmap-errorfiles=$(POD_NAMESPACE)/errorfiles
+            - --configmap-patternfiles=$(POD_NAMESPACE)/patternfiles
+            - --ingress.class=haproxy
+            - --sync-period=1s
+          securityContext:
+            runAsUser: 1000
+            runAsGroup: 1000
+            capabilities:
+              drop:
+                - ALL
+              add:
+                - NET_BIND_SERVICE
+          ports:
+            - name: http
+              containerPort: 80
+            - name: https
+              containerPort: 443
+            - name: stat
+              containerPort: 31024
+            - name: tcp1
+              containerPort: 32766
+            - name: tcp2
+              containerPort: 32767
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
 ---
 apiVersion: v1
 kind: Service
@@ -71,25 +71,25 @@ spec:
     run: haproxy-ingress
   type: NodePort
   ports:
-  - name: http
-    port: 80
-    targetPort: 80
-    nodePort: 30080
-    protocol: TCP
-  - name: https
-    port: 443
-    targetPort: 443
-    nodePort: 30443
-    protocol: TCP
-  - name: stat
-    port: 31024
-    targetPort: 31024
-    nodePort: 31024
-  - name: tcp1
-    port: 32766
-    targetPort: 32766
-    nodePort: 32766
-  - name: tcp2
-    port: 32767
-    targetPort: 32767
-    nodePort: 32767
+    - name: http
+      port: 80
+      targetPort: 80
+      nodePort: 30080
+      protocol: TCP
+    - name: https
+      port: 443
+      targetPort: 443
+      nodePort: 30443
+      protocol: TCP
+    - name: stat
+      port: 31024
+      targetPort: 31024
+      nodePort: 31024
+    - name: tcp1
+      port: 32766
+      targetPort: 32766
+      nodePort: 32766
+    - name: tcp2
+      port: 32767
+      targetPort: 32767
+      nodePort: 32767

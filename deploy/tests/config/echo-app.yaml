@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
         - name: http-echo
-          image: 'haproxytech/http-echo:latest'
+          image: "haproxytech/http-echo:latest"
           imagePullPolicy: Never
           ports:
             - name: http
@@ -49,13 +49,13 @@ metadata:
     ingress.class: haproxy
 spec:
   rules:
-  - host: "echo.haproxy.local"
-    http:
-      paths:
-        - path: /
-          pathType: Prefix
-          backend:
-            service:
-              name: http-echo
-              port:
-                name: http
+    - host: "echo.haproxy.local"
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: http-echo
+                port:
+                  name: http
