@@ -1,7 +1,7 @@
 
 # ![HAProxy](../assets/images/haproxy-weblogo-210x49.png "HAProxy")
 
-## HAProxy kubernetes ingress controller 1.8
+## HAProxy kubernetes ingress controller 1.9
 
 ### Documentation
 
