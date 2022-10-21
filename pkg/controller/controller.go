@@ -41,7 +41,6 @@ type HAProxyController struct {
 	publishService           *utils.NamespaceValue
 	auxCfgModTime            int64
 	eventChan                chan k8s.SyncDataEvent
-	ingressChan              chan ingress.Sync
 	ready                    bool
 	reload                   bool
 	restart                  bool

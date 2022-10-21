@@ -15,7 +15,6 @@ import (
 
 	"github.com/haproxytech/client-native/v3/models"
 
-	"github.com/haproxytech/kubernetes-ingress/pkg/ingress"
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
 )
@@ -109,7 +108,7 @@ func (k k8s) getNamespaceInfomer(eventChan chan SyncDataEvent, factory informers
 	return informer
 }
 
-func (k k8s) getServiceInformer(eventChan chan SyncDataEvent, ingressChan chan ingress.Sync, factory informers.SharedInformerFactory, publishSvc *utils.NamespaceValue) cache.SharedIndexInformer {
+func (k k8s) getServiceInformer(eventChan chan SyncDataEvent, factory informers.SharedInformerFactory) cache.SharedIndexInformer { //nolint:ireturn
 	informer := factory.Core().V1().Services().Informer()
 	informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
@@ -146,7 +145,7 @@ func (k k8s) getServiceInformer(eventChan chan SyncDataEvent, ingressChan chan i
 			}
 			logger.Tracef("%s %s: %s", SERVICE, item.Status, item.Name)
 			eventChan <- SyncDataEvent{SyncType: SERVICE, Namespace: item.Namespace, Data: item}
-			if publishSvc != nil && publishSvc.Namespace == item.Namespace && publishSvc.Name == item.Name {
+			if k.publishSvc != nil && k.publishSvc.Namespace == item.Namespace && k.publishSvc.Name == item.Name {
 				// item copy because of ADDED handler in events.go which must modify the STATUS based solely on addresses
 				itemCopy := *item
 				itemCopy.Addresses = getServiceAddresses(data)
@@ -174,7 +173,7 @@ func (k k8s) getServiceInformer(eventChan chan SyncDataEvent, ingressChan chan i
 			}
 			logger.Tracef("%s %s: %s", SERVICE, item.Status, item.Name)
 			eventChan <- SyncDataEvent{SyncType: SERVICE, Namespace: item.Namespace, Data: item}
-			if publishSvc != nil && publishSvc.Namespace == item.Namespace && publishSvc.Name == item.Name {
+			if k.publishSvc != nil && k.publishSvc.Namespace == item.Namespace && k.publishSvc.Name == item.Name {
 				item.Addresses = getServiceAddresses(data)
 				eventChan <- SyncDataEvent{SyncType: PUBLISH_SERVICE, Namespace: data.Namespace, Data: item}
 			}
@@ -198,9 +197,7 @@ func (k k8s) getServiceInformer(eventChan chan SyncDataEvent, ingressChan chan i
 				logger.Tracef("forwarding to ExternalName Services for %v is disabled", data2)
 				return
 			}
-			if k.publishSvc != nil && k.publishSvc.Namespace == data2.Namespace && k.publishSvc.Name == data2.Name {
-				ingressChan <- ingress.Sync{Service: data2}
-			}
+
 			status := store.MODIFIED
 			item1 := &store.Service{
 				Namespace:   data1.GetNamespace(),
@@ -243,7 +240,7 @@ func (k k8s) getServiceInformer(eventChan chan SyncDataEvent, ingressChan chan i
 			logger.Tracef("%s %s: %s", SERVICE, item2.Status, item2.Name)
 			eventChan <- SyncDataEvent{SyncType: SERVICE, Namespace: item2.Namespace, Data: item2}
 
-			if publishSvc != nil && publishSvc.Namespace == item2.Namespace && publishSvc.Name == item2.Name {
+			if k.publishSvc != nil && k.publishSvc.Namespace == item2.Namespace && k.publishSvc.Name == item2.Name {
 				item2.Addresses = getServiceAddresses(data2)
 				eventChan <- SyncDataEvent{SyncType: PUBLISH_SERVICE, Namespace: item2.Namespace, Data: item2}
 			}

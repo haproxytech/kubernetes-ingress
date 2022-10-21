@@ -35,7 +35,6 @@ type Builder struct {
 	store                    store.K8s
 	publishService           *utils.NamespaceValue
 	eventChan                chan k8s.SyncDataEvent
-	ingressChan              chan ingress.Sync
 	updatePublishServiceFunc func(ingresses []*ingress.Ingress, publishServiceAddresses []string)
 	clientSet                *kubernetes.Clientset
 }
@@ -84,11 +83,6 @@ func (builder *Builder) WithHaproxyClient(haproxyClient api.HAProxyClient) *Buil
 
 func (builder *Builder) WithEventChan(eventChan chan k8s.SyncDataEvent) *Builder {
 	builder.eventChan = eventChan
-	return builder
-}
-
-func (builder *Builder) WithIngressChan(ingressChan chan ingress.Sync) *Builder {
-	builder.ingressChan = ingressChan
 	return builder
 }
 
@@ -156,7 +150,6 @@ func (builder *Builder) Build() *HAProxyController {
 		podPrefix:                prefix,
 		store:                    builder.store,
 		eventChan:                builder.eventChan,
-		ingressChan:              builder.ingressChan,
 		publishService:           builder.publishService,
 		annotations:              builder.annotations,
 		chShutdown:               chShutdown,

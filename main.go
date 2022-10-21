@@ -32,7 +32,6 @@ import (
 
 	"github.com/haproxytech/kubernetes-ingress/pkg/annotations"
 	"github.com/haproxytech/kubernetes-ingress/pkg/controller"
-	"github.com/haproxytech/kubernetes-ingress/pkg/ingress"
 	"github.com/haproxytech/kubernetes-ingress/pkg/k8s"
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
@@ -92,7 +91,6 @@ func main() {
 		chanSize = osArgs.ChannelSize
 	}
 	eventChan := make(chan k8s.SyncDataEvent, chanSize)
-	ingressChan := make(chan ingress.Sync, chanSize)
 	stop := make(chan struct{})
 
 	publishService := getNamespaceValue(osArgs.PublishService)
@@ -107,14 +105,13 @@ func main() {
 	c := controller.NewBuilder().
 		WithHaproxyCfgFile(haproxyConf).
 		WithEventChan(eventChan).
-		WithIngressChan(ingressChan).
 		WithStore(s).
 		WithPublishService(publishService).
 		WithUpdatePublishServiceFunc(k.UpdatePublishService).
 		WithClientSet(k.GetClientset()).
 		WithArgs(osArgs).Build()
 
-	go k.MonitorChanges(eventChan, ingressChan, stop)
+	go k.MonitorChanges(eventChan, stop)
 	go c.Start()
 
 	// Catch QUIT signals

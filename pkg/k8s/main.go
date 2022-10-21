@@ -46,7 +46,7 @@ var ErrIgnored = errors.New("ignored resource")
 
 type K8s interface {
 	GetClientset() *k8sclientset.Clientset
-	MonitorChanges(eventChan chan SyncDataEvent, ingressChan chan ingress.Sync, stop chan struct{})
+	MonitorChanges(eventChan chan SyncDataEvent, stop chan struct{})
 	UpdatePublishService(ingresses []*ingress.Ingress, publishServiceAddresses []string)
 }
 
@@ -116,12 +116,12 @@ func (k k8s) UpdatePublishService(ingresses []*ingress.Ingress, publishServiceAd
 	}
 }
 
-func (k k8s) MonitorChanges(eventChan chan SyncDataEvent, ingressChan chan ingress.Sync, stop chan struct{}) {
+func (k k8s) MonitorChanges(eventChan chan SyncDataEvent, stop chan struct{}) {
 	informersSynced := &[]cache.InformerSynced{}
 
 	k.runPodInformer(eventChan, stop, informersSynced)
 	for _, namespace := range k.whiteListedNS {
-		k.runInformers(eventChan, ingressChan, stop, namespace, informersSynced)
+		k.runInformers(eventChan, stop, namespace, informersSynced)
 		k.runCRInformers(eventChan, stop, namespace, informersSynced)
 	}
 
@@ -162,12 +162,12 @@ func (k k8s) runCRInformers(eventChan chan SyncDataEvent, stop chan struct{}, na
 	}
 }
 
-func (k k8s) runInformers(eventChan chan SyncDataEvent, ingressChan chan ingress.Sync, stop chan struct{}, namespace string, informersSynced *[]cache.InformerSynced) {
+func (k k8s) runInformers(eventChan chan SyncDataEvent, stop chan struct{}, namespace string, informersSynced *[]cache.InformerSynced) {
 	factory := k8sinformers.NewSharedInformerFactoryWithOptions(k.builtInClient, k.cacheResyncPeriod, k8sinformers.WithNamespace(namespace))
 	// Core.V1 Resources
 	nsi := k.getNamespaceInfomer(eventChan, factory)
 	go nsi.Run(stop)
-	svci := k.getServiceInformer(eventChan, ingressChan, factory, k.publishSvc)
+	svci := k.getServiceInformer(eventChan, factory)
 	go svci.Run(stop)
 	seci := k.getSecretInformer(eventChan, factory)
 	go seci.Run(stop)
