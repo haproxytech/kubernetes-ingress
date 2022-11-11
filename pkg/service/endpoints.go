@@ -70,10 +70,6 @@ func (s *Service) updateHAProxySrv(client api.HAProxyClient, srvSlot store.HAPro
 		srv.Address = srvSlot.Address
 		srv.Maintenance = "disabled"
 	}
-	// Cookie/Session persistence
-	if s.backend.Cookie != nil && s.backend.Cookie.Type == "insert" {
-		srv.Cookie = srv.Name
-	}
 	logger.Tracef("backend %s: about to update server in configuration file :  models.Server { Name: %s, Port: %d, Address: %s, Maintenance: %s }", s.backend.Name, srv.Name, *srv.Port, srv.Address, srv.Maintenance)
 	// Update server
 	errAPI := client.BackendServerEdit(s.backend.Name, srv)
