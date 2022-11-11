@@ -11,8 +11,9 @@ require (
 	github.com/jessevdk/go-flags v1.4.0
 	github.com/pires/go-proxyproto v0.6.1
 	github.com/prometheus/client_golang v1.12.1
-	github.com/stretchr/testify v1.7.0
+	github.com/stretchr/testify v1.7.1
 	github.com/valyala/fasthttp v1.36.0
+	go.uber.org/automaxprocs v1.5.1
 	k8s.io/api v0.22.2
 	k8s.io/apimachinery v0.22.2
 	k8s.io/client-go v0.22.2
