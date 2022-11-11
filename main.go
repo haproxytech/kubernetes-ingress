@@ -36,6 +36,8 @@ import (
 	"github.com/haproxytech/kubernetes-ingress/pkg/k8s"
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
+
+	_ "go.uber.org/automaxprocs"
 )
 
 //go:embed fs/usr/local/etc/haproxy/haproxy.cfg
