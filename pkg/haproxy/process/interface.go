@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"os"
 	"strconv"
+	"strings"
 	"syscall"
 
 	"github.com/haproxytech/client-native/v3/runtime"
@@ -74,7 +75,9 @@ func saveServerState(stateDir string, api runtime.Raw) error {
 		return err
 	}
 	defer f.Close()
-	if _, err = f.Write([]byte(result[0])); err != nil {
+	// remove leading new line if exists
+	state := strings.TrimPrefix(result[0], "\n")
+	if _, err = f.Write([]byte(state)); err != nil {
 		logger.Error(err)
 		return err
 	}
