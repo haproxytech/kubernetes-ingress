@@ -3,6 +3,7 @@ package process
 import (
 	"bufio"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"syscall"
@@ -70,7 +71,7 @@ func saveServerState(stateDir string, api runtime.Raw) error {
 		return err
 	}
 	var f *os.File
-	if f, err = os.Create(stateDir + "global"); err != nil {
+	if f, err = os.Create(filepath.Join(stateDir, "global")); err != nil {
 		logger.Error(err)
 		return err
 	}
