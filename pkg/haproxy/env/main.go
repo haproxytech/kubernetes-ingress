@@ -101,8 +101,7 @@ func (env *Env) Init(osArgs utils.OSArgs) (err error) {
 			return err
 		}
 	}
-	_, err = os.Create(filepath.Join(env.StateDir, "global"))
-	return err
+	return
 }
 
 // When controller is not running on a containerized
@@ -112,7 +111,7 @@ func (env *Env) external(osArgs utils.OSArgs) (err error) {
 	env.MainCFGFile = "/tmp/haproxy-ingress/etc/haproxy.cfg"
 	env.CfgDir = "/tmp/haproxy-ingress/etc"
 	env.RuntimeDir = "/tmp/haproxy-ingress/run"
-	env.StateDir = "/tmp/haproxy-ingress/state"
+	env.StateDir = "/tmp/haproxy-ingress/state/"
 	if osArgs.Program != "" {
 		env.Binary = osArgs.Program
 	}
