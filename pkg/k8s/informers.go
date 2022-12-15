@@ -795,6 +795,7 @@ func manageGatewayClass(gatewayclass *gatewayv1beta1.GatewayClass, eventChan cha
 		Name:           gatewayclass.Name,
 		ControllerName: string(gatewayclass.Spec.ControllerName),
 		Description:    gatewayclass.Spec.Description,
+		Generation:     gatewayclass.Generation,
 		Status:         status,
 	}
 	logger.Tracef("%s %s: %s", GATEWAYCLASS, item.Status, item.Name)
@@ -843,6 +844,7 @@ func manageGateway(gateway *gatewayv1beta1.Gateway, eventChan chan SyncDataEvent
 		Namespace:        gateway.Namespace,
 		GatewayClassName: string(gateway.Spec.GatewayClassName),
 		Listeners:        listeners,
+		Generation:       gateway.Generation,
 		Status:           status,
 	}
 	logger.Tracef("%s %s: %s", GATEWAY, item.Status, item.Name)
@@ -902,6 +904,7 @@ func manageTCPRoute(tcproute *gatewayv1alpha2.TCPRoute, eventChan chan SyncDataE
 		BackendRefs:  backendRefs,
 		ParentRefs:   parentRefs,
 		CreationTime: tcproute.CreationTimestamp.Time,
+		Generation:   tcproute.Generation,
 		Status:       status,
 	}
 	logger.Tracef("%s %s: %s", TCPROUTE, item.Status, item.Name)
@@ -954,9 +957,10 @@ func (k k8s) getReferenceGrantInformer(eventChan chan SyncDataEvent, factory gat
 func manageReferenceGrant(referenceGrant *gatewayv1alpha2.ReferenceGrant, eventChan chan SyncDataEvent, status store.Status) {
 	logger.Warningf("gwapi: referencegrant: informers: got '%s/%s'", referenceGrant.Namespace, referenceGrant.Name)
 	item := store.ReferenceGrant{
-		Name:      referenceGrant.Name,
-		Namespace: referenceGrant.Namespace,
-		Status:    status,
+		Name:       referenceGrant.Name,
+		Namespace:  referenceGrant.Namespace,
+		Generation: referenceGrant.Generation,
+		Status:     status,
 	}
 	item.From = make([]store.ReferenceGrantFrom, len(referenceGrant.Spec.From))
 	item.To = make([]store.ReferenceGrantTo, len(referenceGrant.Spec.To))

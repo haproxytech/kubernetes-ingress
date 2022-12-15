@@ -77,7 +77,7 @@ func (gm GatewayManagerImpl) clean() {
 
 // manageListeners loops over every gateway present in store and if managed gatewayclass matches, it creates the frontend if not marked as deleted .
 // We order a reload only if the status of the gateway suggests an addition, modification or removal.
-func (gm GatewayManagerImpl) manageListeners() (reload bool) {
+func (gm *GatewayManagerImpl) manageListeners() (reload bool) {
 	for _, ns := range gm.k8sStore.Namespaces {
 		if !ns.Relevant {
 			logger.Debugf("gwapi: skipping namespace '%s", ns.Name)
@@ -447,8 +447,8 @@ func (gm GatewayManagerImpl) isTCPRouteAllowedByListener(listener store.Listener
 			v := (string)(v1alpha2.NamespacesFromSame)
 			from = &v
 		}
-		if *from == "Same" && routeNamespace != gatewayNamespace {
-			return false
+		if *from == "Same" {
+			return routeNamespace == gatewayNamespace
 		}
 		if *from == (string)(v1alpha2.NamespacesFromSelector) {
 			if allowedRoutesNamespaces.Selector == nil {

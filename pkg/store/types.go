@@ -185,6 +185,7 @@ type GatewayClass struct {
 	Name           string
 	ControllerName string
 	Description    *string
+	Generation     int64
 	Status         Status
 }
 
@@ -193,6 +194,7 @@ type Gateway struct {
 	Name             string
 	GatewayClassName string
 	Listeners        []Listener
+	Generation       int64
 	Status           Status
 }
 type Listener struct {
@@ -226,6 +228,7 @@ type TCPRoute struct {
 	BackendRefs  []BackendRef
 	ParentRefs   []ParentRef
 	CreationTime time.Time
+	Generation   int64
 	Status       Status
 }
 
@@ -258,11 +261,12 @@ type ParentRef struct {
 }
 
 type ReferenceGrant struct {
-	Namespace string
-	Name      string
-	From      []ReferenceGrantFrom
-	To        []ReferenceGrantTo
-	Status    Status
+	Namespace  string
+	Name       string
+	From       []ReferenceGrantFrom
+	To         []ReferenceGrantTo
+	Generation int64
+	Status     Status
 }
 
 type ReferenceGrantFrom struct {
