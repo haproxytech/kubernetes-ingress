@@ -19,14 +19,16 @@ import (
 
 	"github.com/go-test/deep"
 	corev1alpha2 "github.com/haproxytech/kubernetes-ingress/crs/api/core/v1alpha2"
+	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
 )
 
 func (k *K8s) EventNamespace(ns *Namespace, data *Namespace) (updateRequired bool) {
 	updateRequired = false
 	switch data.Status {
 	case ADDED, MODIFIED:
-		data.Relevant = k.isRelevantNamespace(data.Name)
-		k.Namespaces[data.Name] = data
+		nsStore := k.GetNamespace(data.Name)
+		nsStore.Labels = utils.CopyMap(data.Labels)
+		updateRequired = true
 	case DELETED:
 		_, ok := k.Namespaces[data.Name]
 		if ok {
