@@ -1110,17 +1110,28 @@ annotations:
       - configmap
       - ingress
     version_min: "1.4"
-    example:
-      - 'path-rewrite: "/"                        # replace all paths with /'
-      - 'path-rewrite: (.*) /foo\1                # add the prefix /foo... "/bar?q=1" into "/foo/bar?q=1"'
-      - 'path-rewrite: ([^?]*)(\?(.*))? \1/foo\2  # add the suffix /foo ... "/bar?q=1" into "/bar/foo?q=1"'
-      - 'path-rewrite: /foo/(.*) /\1              # strip /foo ... "/foo/bar?q=1" into "/bar?q=1"'
-      - |
-        # strip /foo ... "/foo/bar?q=1" into "/bar?q=1" and replace "/bar/*" with "/baz/*"
-        # with multiline (using `|`) annotation
-        path-rewrite: |
-          /foo/(.*) /\1
-          /bar/(.*) /baz/\1
+    example_configmap: |-
+      path-rewrite: "/"                        # replace all paths with /
+      path-rewrite: (.*) /foo\1                # add the prefix /foo... "/bar?q=1" into "/foo/bar?q=1"
+      path-rewrite: ([^?]*)(\?(.*))? \1/foo\2  # add the suffix /foo ... "/bar?q=1" into "/bar/foo?q=1"
+      path-rewrite: /foo/(.*) /\1              # strip /foo ... "/foo/bar?q=1" into "/bar?q=1"
+
+      # strip /foo ... "/foo/bar?q=1" into "/bar?q=1" and replace "/bar/*" with "/baz/*"
+      # with multiline (using `|`) annotation
+      path-rewrite: |
+        /foo/(.*) /\1
+        /bar/(.*) /baz/\1
+    example_ingress: |-
+      haproxy.org/path-rewrite: "/"                        # replace all paths with /
+      haproxy.org/path-rewrite: (.*) /foo\1                # add the prefix /foo... "/bar?q=1" into "/foo/bar?q=1"
+      haproxy.org/path-rewrite: ([^?]*)(\?(.*))? \1/foo\2  # add the suffix /foo ... "/bar?q=1" into "/bar/foo?q=1"
+      haproxy.org/path-rewrite: /foo/(.*) /\1              # strip /foo ... "/foo/bar?q=1" into "/bar?q=1"
+      
+      # strip /foo ... "/foo/bar?q=1" into "/bar?q=1" and replace "/bar/*" with "/baz/*"
+      # with multiline (using `|`) annotation
+      haproxy.org/path-rewrite: |
+        /foo/(.*) /\1
+        /bar/(.*) /baz/\1
   - title: pod-maxconn
     type: number
     group: maximum-concurrent-backend-connections
