@@ -1053,19 +1053,34 @@ Possible values:
 - Two parameters. A regular expression to match and a path to replace it with.
 - Multiline annotation is split into more rewrite rules.
 
-Example:
+Example (configmap):
 
 ```yaml
 path-rewrite: "/"                        # replace all paths with /
 path-rewrite: (.*) /foo\1                # add the prefix /foo... "/bar?q=1" into "/foo/bar?q=1"
 path-rewrite: ([^?]*)(\?(.*))? \1/foo\2  # add the suffix /foo ... "/bar?q=1" into "/bar/foo?q=1"
 path-rewrite: /foo/(.*) /\1              # strip /foo ... "/foo/bar?q=1" into "/bar?q=1"
+
 # strip /foo ... "/foo/bar?q=1" into "/bar?q=1" and replace "/bar/*" with "/baz/*"
 # with multiline (using `|`) annotation
 path-rewrite: |
   /foo/(.*) /\1
   /bar/(.*) /baz/\1
+```
 
+Example (ingress):
+
+```yaml
+haproxy.org/path-rewrite: "/"                        # replace all paths with /
+haproxy.org/path-rewrite: (.*) /foo\1                # add the prefix /foo... "/bar?q=1" into "/foo/bar?q=1"
+haproxy.org/path-rewrite: ([^?]*)(\?(.*))? \1/foo\2  # add the suffix /foo ... "/bar?q=1" into "/bar/foo?q=1"
+haproxy.org/path-rewrite: /foo/(.*) /\1              # strip /foo ... "/foo/bar?q=1" into "/bar?q=1"
+
+# strip /foo ... "/foo/bar?q=1" into "/bar?q=1" and replace "/bar/*" with "/baz/*"
+# with multiline (using `|`) annotation
+haproxy.org/path-rewrite: |
+  /foo/(.*) /\1
+  /bar/(.*) /baz/\1
 ```
 
 <p align='right'><a href='#available-annotations'>:arrow_up_small: back to top</a></p>
