@@ -254,6 +254,8 @@ type LabelSelectorRequirement struct {
 type TCPRoutes []TCPRoute
 
 type ParentRef struct {
+	Group       string
+	Kind        string
 	Namespace   *string
 	Name        string
 	SectionName *string

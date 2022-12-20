@@ -17,6 +17,7 @@ linters-settings:
 linters:
   enable-all: true
   disable:
+    - ireturn
     - dupl
     - exhaustive
     - exhaustivestruct

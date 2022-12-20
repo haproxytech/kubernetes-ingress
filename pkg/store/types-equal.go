@@ -181,7 +181,8 @@ func (listeners Listeners) Equal(other Listeners) bool {
 
 	for name, listener := range mapListeners {
 		otherListener := mapOtherListeners[name]
-		if !otherListener.Equal(&listener) {
+		listenerCopy := listener
+		if !otherListener.Equal(&listenerCopy) {
 			return false
 		}
 	}
@@ -215,7 +216,6 @@ func (rn *RouteNamespaces) Equal(other *RouteNamespaces) bool {
 }
 
 func (backref *BackendRef) Equal(other *BackendRef) bool {
-
 	return backref == nil && other == nil ||
 		(NoNilPointer(backref, other) && backref.Name == other.Name && backref.Namespace == other.Namespace &&
 			EqualPointers(backref.Port, other.Port) && EqualPointers(backref.Weight, other.Weight))
@@ -253,8 +253,9 @@ func (refs BackendRefs) Equal(other BackendRefs) bool {
 	}
 
 	for name, backendRef := range mapBackendRefs {
+		backendRefCopy := backendRef
 		otherBackendRef := mapOtherBackendRefs[name]
-		if !otherBackendRef.Equal(&backendRef) {
+		if !otherBackendRef.Equal(&backendRefCopy) {
 			return false
 		}
 	}
@@ -288,7 +289,6 @@ func (refto ReferenceGrantTo) Equal(other ReferenceGrantTo) bool {
 func (rf *ReferenceGrant) Equal(other *ReferenceGrant) bool {
 	return rf == nil && other == nil ||
 		(NoNilPointer(rf, other) && rf.Namespace == other.Namespace && rf.Name == other.Name && EqualSliceComparable(rf.From, other.From) && EqualSlice(rf.To, other.To))
-
 }
 
 type ParentRefs []ParentRef
@@ -397,7 +397,6 @@ func EqualPointers[P Literal](a, b *P) bool {
 }
 
 func EqualMap[T, V Literal](mapA, mapB map[T]V) bool {
-
 	if mapA == nil && mapB == nil {
 		return true
 	}

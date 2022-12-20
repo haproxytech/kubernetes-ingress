@@ -17,7 +17,7 @@ func (e *Errors) Add(errors ...error) {
 func (e *Errors) Result() error {
 	var result string
 	for _, err := range *e {
-		result += "\n" + err.Error()
+		result += err.Error() + "\n"
 	}
 	if result == "" {
 		return nil

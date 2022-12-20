@@ -16,20 +16,28 @@ func TestGatewayClassEquality(t *testing.T) {
 		{expected: false, gwc2: &GatewayClass{}, description: "Left nil pointer"},
 		{expected: false, gwc1: &GatewayClass{}, description: "Right nil pointer"},
 		{expected: true, gwc1: &GatewayClass{}, gwc2: &GatewayClass{}, description: "Two empty gatewayclasses"},
-		{expected: true, gwc1: &GatewayClass{Name: "haproxy-gw-class", ControllerName: "example.net/gateway-controller", Description: &description1},
-			gwc2: &GatewayClass{Name: "haproxy-gw-class", ControllerName: "example.net/gateway-controller", Description: &description1}, description: "Two same gatewayclasses"},
-		{expected: false,
+		{
+			expected: true, gwc1: &GatewayClass{Name: "haproxy-gw-class", ControllerName: "example.net/gateway-controller", Description: &description1},
+			gwc2: &GatewayClass{Name: "haproxy-gw-class", ControllerName: "example.net/gateway-controller", Description: &description1}, description: "Two same gatewayclasses",
+		},
+		{
+			expected:    false,
 			gwc1:        &GatewayClass{Name: "gatewayclass1", ControllerName: "example.net/gateway-controller", Description: &description1},
 			gwc2:        &GatewayClass{Name: "gatewayclass2", ControllerName: "example.net/gateway-controller", Description: &description1},
-			description: "Two differents gatewayclasses by a name"},
-		{expected: false,
+			description: "Two differents gatewayclasses by a name",
+		},
+		{
+			expected:    false,
 			gwc1:        &GatewayClass{Name: "gatewayclass1", ControllerName: "example.net/gateway-controller", Description: &description1},
 			gwc2:        &GatewayClass{Name: "gatewayclass1", ControllerName: "example.net/other-gateway-controller", Description: &description1},
-			description: "Two differents gatewayclasses by a controller name"},
-		{expected: false,
+			description: "Two differents gatewayclasses by a controller name",
+		},
+		{
+			expected:    false,
 			gwc1:        &GatewayClass{Name: "gatewayclass1", ControllerName: "example.net/gateway-controller", Description: &description1},
 			gwc2:        &GatewayClass{Name: "gatewayclass1", ControllerName: "example.net/gateway-controller", Description: &description2},
-			description: "Two differents gatewayclasses by description"},
+			description: "Two differents gatewayclasses by description",
+		},
 	}
 
 	for _, test := range tests {
@@ -109,29 +117,41 @@ func TestListenerEquality(t *testing.T) {
 		{expected: false, listener2: &Listener{}, description: "Left nil pointer"},
 		{expected: false, listener1: &Listener{}, description: "Right nil pointer"},
 		{expected: true, listener1: &Listener{}, listener2: &Listener{}, description: "Two empty Listener"},
-		{expected: true,
+		{
+			expected:    true,
 			listener1:   &Listener{Name: "listener", Port: 1048, Protocol: TCPProtocolType, AllowedRoutes: &AllowedRoutes{Namespaces: &RouteNamespaces{From: &all}}},
 			listener2:   &Listener{Name: "listener", Port: 1048, Protocol: TCPProtocolType, AllowedRoutes: &AllowedRoutes{Namespaces: &RouteNamespaces{From: &all}}},
-			description: "Two same Listener"},
-		{expected: false,
+			description: "Two same Listener",
+		},
+		{
+			expected:    false,
 			listener1:   &Listener{Name: "listener1", Port: 1048, Protocol: TCPProtocolType, AllowedRoutes: &AllowedRoutes{Namespaces: &RouteNamespaces{From: &all}}},
 			listener2:   &Listener{Name: "listener2", Port: 1048, Protocol: TCPProtocolType, AllowedRoutes: &AllowedRoutes{Namespaces: &RouteNamespaces{From: &all}}},
-			description: "Two different Listener by Name"},
-		{expected: false,
+			description: "Two different Listener by Name",
+		},
+		{
+			expected:    false,
 			listener1:   &Listener{Name: "listener", Hostname: &hostname, Port: 1048, Protocol: TCPProtocolType, AllowedRoutes: &AllowedRoutes{Namespaces: &RouteNamespaces{From: &all}}},
 			listener2:   &Listener{Name: "listener", Port: 1048, Protocol: TCPProtocolType, AllowedRoutes: &AllowedRoutes{Namespaces: &RouteNamespaces{From: &all}}},
-			description: "Two different Listener by Hostname"},
-		{expected: false,
+			description: "Two different Listener by Hostname",
+		},
+		{
+			expected:    false,
 			listener1:   &Listener{Name: "listener", Port: 1096, Protocol: TCPProtocolType, AllowedRoutes: &AllowedRoutes{Namespaces: &RouteNamespaces{From: &all}}},
 			listener2:   &Listener{Name: "listener", Port: 1048, Protocol: TCPProtocolType, AllowedRoutes: &AllowedRoutes{Namespaces: &RouteNamespaces{From: &all}}},
-			description: "Two different Listener by Port"},
-		{expected: false,
+			description: "Two different Listener by Port",
+		},
+		{
+			expected:    false,
 			listener1:   &Listener{Name: "listener", Port: 1048, Protocol: "", AllowedRoutes: &AllowedRoutes{Namespaces: &RouteNamespaces{From: &all}}},
 			listener2:   &Listener{Name: "listener", Port: 1048, Protocol: TCPProtocolType, AllowedRoutes: &AllowedRoutes{Namespaces: &RouteNamespaces{From: &all}}},
-			description: "Two different Listener by Protocol"},
-		{expected: false,
+			description: "Two different Listener by Protocol",
+		},
+		{
+			expected:  false,
 			listener1: &Listener{Name: "listener", Port: 1048, Protocol: "", AllowedRoutes: &AllowedRoutes{Namespaces: &RouteNamespaces{From: &all}}},
-			listener2: &Listener{Name: "listener", Port: 1048, Protocol: TCPProtocolType}, description: "Two different Listener by AllowedRoutes"},
+			listener2: &Listener{Name: "listener", Port: 1048, Protocol: TCPProtocolType}, description: "Two different Listener by AllowedRoutes",
+		},
 	}
 
 	for _, test := range tests {
@@ -157,33 +177,49 @@ func TestGatewayEquality(t *testing.T) {
 		{expected: false, gw2: &Gateway{}, description: "Left nil pointer"},
 		{expected: false, gw1: &Gateway{}, description: "Right nil pointer"},
 		{expected: true, gw1: &Gateway{}, gw2: &Gateway{}, description: "Two empty Gateway"},
-		{expected: true,
+		{
+			expected:    true,
 			gw1:         &Gateway{Name: "gw", Namespace: ns, GatewayClassName: "gwc", Listeners: []Listener{{Name: "listener1", Port: 1048, Protocol: TCPProtocolType, AllowedRoutes: &AllowedRoutes{Namespaces: &RouteNamespaces{From: &all}}}}},
 			gw2:         &Gateway{Name: "gw", Namespace: ns, GatewayClassName: "gwc", Listeners: []Listener{{Name: "listener1", Port: 1048, Protocol: TCPProtocolType, AllowedRoutes: &AllowedRoutes{Namespaces: &RouteNamespaces{From: &all}}}}},
-			description: "Two same Gateway"},
-		{expected: false,
+			description: "Two same Gateway",
+		},
+		{
+			expected:    false,
 			gw1:         &Gateway{Name: "gw", Namespace: ns, GatewayClassName: "gwc", Listeners: []Listener{{Name: "listener1", Port: 1048, Protocol: TCPProtocolType, AllowedRoutes: &AllowedRoutes{Namespaces: &RouteNamespaces{From: &all}}}}},
 			gw2:         &Gateway{Name: "gw2", Namespace: ns, GatewayClassName: "gwc", Listeners: []Listener{{Name: "listener1", Port: 1048, Protocol: TCPProtocolType, AllowedRoutes: &AllowedRoutes{Namespaces: &RouteNamespaces{From: &all}}}}},
-			description: "Two different Gateway by Name"},
-		{expected: false,
+			description: "Two different Gateway by Name",
+		},
+		{
+			expected:    false,
 			gw1:         &Gateway{Name: "gw", Namespace: ns, GatewayClassName: "gwc", Listeners: []Listener{{Name: "listener1", Port: 1048, Protocol: TCPProtocolType, AllowedRoutes: &AllowedRoutes{Namespaces: &RouteNamespaces{From: &all}}}}},
 			gw2:         &Gateway{Name: "gw", Namespace: ns2, GatewayClassName: "gwc", Listeners: []Listener{{Name: "listener1", Port: 1048, Protocol: TCPProtocolType, AllowedRoutes: &AllowedRoutes{Namespaces: &RouteNamespaces{From: &all}}}}},
-			description: "Two different Gateway by Namespace"},
-		{expected: false,
+			description: "Two different Gateway by Namespace",
+		},
+		{
+			expected:    false,
 			gw1:         &Gateway{Name: "gw", Namespace: ns, GatewayClassName: "gwc", Listeners: []Listener{{Name: "listener1", Port: 1048, Protocol: TCPProtocolType, AllowedRoutes: &AllowedRoutes{Namespaces: &RouteNamespaces{From: &all}}}}},
 			gw2:         &Gateway{Name: "gw", Namespace: ns, GatewayClassName: "gwc2", Listeners: []Listener{{Name: "listener1", Port: 1048, Protocol: TCPProtocolType, AllowedRoutes: &AllowedRoutes{Namespaces: &RouteNamespaces{From: &all}}}}},
-			description: "Two different Gateway by GatewayClassName"},
-		{expected: false,
-			gw1: &Gateway{Name: "gw", Namespace: ns, GatewayClassName: "gwc", Listeners: []Listener{{Name: "listener1", Port: 1048, Protocol: TCPProtocolType, AllowedRoutes: &AllowedRoutes{Namespaces: &RouteNamespaces{From: &all}}}}},
-			gw2: &Gateway{Name: "gw", Namespace: ns, GatewayClassName: "gwc", Listeners: []Listener{}}, description: "Two different Gateway by Listener (one empty)"},
-		{expected: false,
+			description: "Two different Gateway by GatewayClassName",
+		},
+		{
+			expected: false,
+			gw1:      &Gateway{Name: "gw", Namespace: ns, GatewayClassName: "gwc", Listeners: []Listener{{Name: "listener1", Port: 1048, Protocol: TCPProtocolType, AllowedRoutes: &AllowedRoutes{Namespaces: &RouteNamespaces{From: &all}}}}},
+			gw2:      &Gateway{Name: "gw", Namespace: ns, GatewayClassName: "gwc", Listeners: []Listener{}}, description: "Two different Gateway by Listener (one empty)",
+		},
+		{
+			expected:    false,
 			gw1:         &Gateway{Name: "gw", Namespace: ns, GatewayClassName: "gwc", Listeners: []Listener{{Name: "listener1", Port: 1048, Protocol: TCPProtocolType, AllowedRoutes: &AllowedRoutes{Namespaces: &RouteNamespaces{From: &all}}}}},
 			gw2:         &Gateway{Name: "gw", Namespace: ns, GatewayClassName: "gwc", Listeners: []Listener{{Name: "listener2", Port: 1048, Protocol: TCPProtocolType, AllowedRoutes: &AllowedRoutes{Namespaces: &RouteNamespaces{From: &all}}}}},
-			description: "Two different Gateway by Listener contents"},
-		{expected: false,
-			gw1: &Gateway{Name: "gw", Namespace: ns, GatewayClassName: "gwc", Listeners: []Listener{{Name: "listener1", Port: 1048, Protocol: TCPProtocolType, AllowedRoutes: &AllowedRoutes{Namespaces: &RouteNamespaces{From: &all}}}}},
-			gw2: &Gateway{Name: "gw", Namespace: ns, GatewayClassName: "gwc", Listeners: []Listener{{Name: "listener1", Port: 1048, Protocol: TCPProtocolType, AllowedRoutes: &AllowedRoutes{Namespaces: &RouteNamespaces{From: &all}}},
-				{Name: "listener2", Port: 1048, Protocol: TCPProtocolType, AllowedRoutes: &AllowedRoutes{Namespaces: &RouteNamespaces{From: &all}}}}}, description: "Two different Gateway by Listener number"},
+			description: "Two different Gateway by Listener contents",
+		},
+		{
+			expected: false,
+			gw1:      &Gateway{Name: "gw", Namespace: ns, GatewayClassName: "gwc", Listeners: []Listener{{Name: "listener1", Port: 1048, Protocol: TCPProtocolType, AllowedRoutes: &AllowedRoutes{Namespaces: &RouteNamespaces{From: &all}}}}},
+			gw2: &Gateway{Name: "gw", Namespace: ns, GatewayClassName: "gwc", Listeners: []Listener{
+				{Name: "listener1", Port: 1048, Protocol: TCPProtocolType, AllowedRoutes: &AllowedRoutes{Namespaces: &RouteNamespaces{From: &all}}},
+				{Name: "listener2", Port: 1048, Protocol: TCPProtocolType, AllowedRoutes: &AllowedRoutes{Namespaces: &RouteNamespaces{From: &all}}},
+			}}, description: "Two different Gateway by Listener number",
+		},
 	}
 
 	for _, test := range tests {
@@ -202,11 +238,11 @@ func TestBackendRefEquality(t *testing.T) {
 		description string
 	}
 	var (
-		port1 int32  = 8080
-		port2 int32  = 8090
-		ns    string = "ns"
-		ns1   string = "ns1"
-		ns2   string = "ns2"
+		port1 int32 = 8080
+		port2 int32 = 8090
+		ns          = "ns"
+		ns1         = "ns1"
+		ns2         = "ns2"
 	)
 	var weight1 int32 = 1
 	var weight2 int32 = 100
@@ -214,30 +250,42 @@ func TestBackendRefEquality(t *testing.T) {
 		{expected: true, description: "Two nil pointers"},
 		{expected: false, bref2: &BackendRef{}, description: "Left nil pointer"},
 		{expected: false, bref1: &BackendRef{}, description: "Right nil pointer"},
-		{expected: true,
+		{
+			expected:    true,
 			bref1:       &BackendRef{},
 			bref2:       &BackendRef{},
-			description: "Two empty BackendRef"},
-		{expected: true,
+			description: "Two empty BackendRef",
+		},
+		{
+			expected:    true,
 			bref1:       &BackendRef{Name: "bref", Namespace: &ns, Port: &port1, Weight: &weight1},
 			bref2:       &BackendRef{Name: "bref", Namespace: &ns, Port: &port1, Weight: &weight1},
-			description: "Two same BackendRef"},
-		{expected: false,
+			description: "Two same BackendRef",
+		},
+		{
+			expected:    false,
 			bref1:       &BackendRef{Name: "bref", Namespace: &ns, Port: &port1, Weight: &weight1},
 			bref2:       &BackendRef{Name: "bref2", Namespace: &ns, Port: &port1, Weight: &weight1},
-			description: "Two different BackendRef by Name"},
-		{expected: false,
+			description: "Two different BackendRef by Name",
+		},
+		{
+			expected:    false,
 			bref1:       &BackendRef{Name: "bref", Namespace: &ns1, Port: &port1, Weight: &weight1},
 			bref2:       &BackendRef{Name: "bref", Namespace: &ns2, Port: &port1, Weight: &weight1},
-			description: "Two different BackendRef by Namespace"},
-		{expected: false,
+			description: "Two different BackendRef by Namespace",
+		},
+		{
+			expected:    false,
 			bref1:       &BackendRef{Name: "bref", Namespace: &ns1, Port: &port1, Weight: &weight1},
 			bref2:       &BackendRef{Name: "bref", Namespace: &ns1, Port: &port2, Weight: &weight1},
-			description: "Two different BackendRef by Port"},
-		{expected: false,
+			description: "Two different BackendRef by Port",
+		},
+		{
+			expected:    false,
 			bref1:       &BackendRef{Name: "bref", Namespace: &ns1, Port: &port1, Weight: &weight1},
 			bref2:       &BackendRef{Name: "bref", Namespace: &ns1, Port: &port1, Weight: &weight2},
-			description: "Two different BackendRef by Weight"},
+			description: "Two different BackendRef by Weight",
+		},
 	}
 
 	for _, test := range tests {
@@ -267,26 +315,36 @@ func TestTCPRouteEquality(t *testing.T) {
 		{expected: false, tcproute2: &TCPRoute{}, description: "Left nil pointer"},
 		{expected: false, tcproute1: &TCPRoute{}, description: "Right nil pointer"},
 		{expected: true, tcproute1: &TCPRoute{}, tcproute2: &TCPRoute{}, description: "Two empty TCPRoute"},
-		{expected: true,
+		{
+			expected:    true,
 			tcproute1:   &TCPRoute{Name: "tcp1", Namespace: ns, BackendRefs: []BackendRef{{Name: "tcp1", Namespace: &ns, Port: &port1, Weight: &weight1}}},
 			tcproute2:   &TCPRoute{Name: "tcp1", Namespace: ns, BackendRefs: []BackendRef{{Name: "tcp1", Namespace: &ns, Port: &port1, Weight: &weight1}}},
-			description: "Two same TCPRoute"},
-		{expected: false,
+			description: "Two same TCPRoute",
+		},
+		{
+			expected:    false,
 			tcproute1:   &TCPRoute{Name: "tcp1", Namespace: ns, BackendRefs: []BackendRef{{Name: "tcp1", Namespace: &ns, Port: &port1, Weight: &weight1}}},
 			tcproute2:   &TCPRoute{Name: "tcp2", Namespace: ns, BackendRefs: []BackendRef{{Name: "tcp1", Namespace: &ns, Port: &port1, Weight: &weight1}}},
-			description: "Two different TCPRoute by Name"},
-		{expected: false,
+			description: "Two different TCPRoute by Name",
+		},
+		{
+			expected:    false,
 			tcproute1:   &TCPRoute{Name: "tcp1", Namespace: ns, BackendRefs: []BackendRef{{Name: "tcp1", Namespace: &ns, Port: &port1, Weight: &weight1}}},
 			tcproute2:   &TCPRoute{Name: "tcp1", Namespace: ns2, BackendRefs: []BackendRef{{Name: "tcp1", Namespace: &ns, Port: &port1, Weight: &weight1}}},
-			description: "Two different TCPRoute by Namespace"},
-		{expected: false,
+			description: "Two different TCPRoute by Namespace",
+		},
+		{
+			expected:    false,
 			tcproute1:   &TCPRoute{Name: "tcp1", Namespace: ns, ParentRefs: []ParentRef{{Name: "tcp1"}}, BackendRefs: []BackendRef{{Name: "tcp1", Namespace: &ns, Port: &port1, Weight: &weight1}}},
 			tcproute2:   &TCPRoute{Name: "tcp1", Namespace: ns, BackendRefs: []BackendRef{{Name: "tcp1", Namespace: &ns, Port: &port1, Weight: &weight1}}},
-			description: "Two different TCPRoute by ParentRefs"},
-		{expected: false,
+			description: "Two different TCPRoute by ParentRefs",
+		},
+		{
+			expected:    false,
 			tcproute1:   &TCPRoute{Name: "tcp1", Namespace: ns, BackendRefs: []BackendRef{{Name: "tcp1", Namespace: &ns, Port: &port1, Weight: &weight1}}},
 			tcproute2:   &TCPRoute{Name: "tcp1", Namespace: ns, BackendRefs: []BackendRef{{Name: "tcp2", Namespace: &ns, Port: &port2, Weight: &weight1}}},
-			description: "Two different TCPRoute by BackendRefs"},
+			description: "Two different TCPRoute by BackendRefs",
+		},
 	}
 
 	for _, test := range tests {

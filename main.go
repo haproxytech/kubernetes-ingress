@@ -112,6 +112,7 @@ func main() {
 		WithPublishService(publishService).
 		WithUpdatePublishServiceFunc(k.UpdatePublishService).
 		WithClientSet(k.GetClientset()).
+		WithRestClientSet(k.GetRestClientset()).
 		WithArgs(osArgs).Build()
 
 	go k.MonitorChanges(eventChan, stop)

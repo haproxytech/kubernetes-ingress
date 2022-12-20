@@ -379,7 +379,7 @@ func (k *K8s) EventGatewayClass(data *GatewayClass) (updateRequired bool) {
 		if !ok {
 			logger.Warningf("Modification of unexisting gatewayclass %s", data.Name)
 		}
-		if oldGatewayClass.Generation == newGatewayClass.Generation ||
+		if ok && oldGatewayClass.Generation == newGatewayClass.Generation ||
 			newGatewayClass.Equal(oldGatewayClass) {
 			return updateRequired
 		}
@@ -410,7 +410,7 @@ func (k *K8s) EventGateway(ns *Namespace, data *Gateway) (updateRequired bool) {
 		if !ok {
 			logger.Warningf("Modification of unexisting gateway %s", data.Name)
 		}
-		if newGateway.Generation == oldGateway.Generation ||
+		if ok && newGateway.Generation == oldGateway.Generation ||
 			newGateway.Equal(oldGateway) {
 			return updateRequired
 		}
@@ -442,7 +442,7 @@ func (k *K8s) EventTCPRoute(ns *Namespace, data *TCPRoute) (updateRequired bool)
 		if !ok {
 			logger.Warningf("Modification of unexisting tcproute %s", data.Name)
 		}
-		if newTCPRoute.Generation == oldTCPRoute.Generation ||
+		if ok && newTCPRoute.Generation == oldTCPRoute.Generation ||
 			newTCPRoute.Equal(oldTCPRoute) {
 			return false
 		}
@@ -474,7 +474,7 @@ func (k *K8s) EventReferenceGrant(ns *Namespace, data *ReferenceGrant) (updateRe
 			logger.Warningf("Modification of unexisting referencegrant %s", data.Name)
 			return
 		}
-		if newReferenceGrant.Generation == oldReferenceGrant.Generation ||
+		if ok && newReferenceGrant.Generation == oldReferenceGrant.Generation ||
 			newReferenceGrant.Equal(oldReferenceGrant) {
 			return updateRequired
 		}

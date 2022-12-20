@@ -25,6 +25,7 @@ import (
 	"github.com/valyala/fasthttp/fasthttpadaptor"
 	"github.com/valyala/fasthttp/pprofhandler"
 	"k8s.io/client-go/kubernetes"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/haproxytech/kubernetes-ingress/pkg/annotations"
 	gateway "github.com/haproxytech/kubernetes-ingress/pkg/gateways"
@@ -52,6 +53,7 @@ type Builder struct {
 	eventChan                chan k8s.SyncDataEvent
 	updatePublishServiceFunc func(ingresses []*ingress.Ingress, publishServiceAddresses []string)
 	clientSet                *kubernetes.Clientset
+	restClientSet            client.Client
 	gatewayManager           gateway.GatewayManager
 }
 
@@ -137,6 +139,11 @@ func (builder *Builder) WithClientSet(clientSet *kubernetes.Clientset) *Builder 
 	return builder
 }
 
+func (builder *Builder) WithRestClientSet(restClientSet client.Client) *Builder {
+	builder.restClientSet = restClientSet
+	return builder
+}
+
 func (builder *Builder) WithGatewayManager(gatewayManager gateway.GatewayManager) *Builder {
 	builder.gatewayManager = gatewayManager
 	return builder
@@ -167,7 +174,7 @@ func (builder *Builder) Build() *HAProxyController {
 	builder.store.GatewayControllerName = builder.osArgs.GatewayControllerName
 	gatewayManager := builder.gatewayManager
 	if gatewayManager == nil {
-		gatewayManager = gateway.New(builder.store, haproxy.HAProxyClient, builder.osArgs)
+		gatewayManager = gateway.New(builder.store, haproxy.HAProxyClient, builder.osArgs, builder.restClientSet)
 	}
 	return &HAProxyController{
 		osArgs:                   builder.osArgs,

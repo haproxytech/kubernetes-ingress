@@ -84,7 +84,7 @@ rules:
     - list
     - watch
  - apiGroups:
-   - "gateway.networking.k8s.io"
+    - "gateway.networking.k8s.io"
    resources:
    - referencegrants
    - gateways
@@ -94,6 +94,14 @@ rules:
     - get
     - list
     - watch
+ - apiGroups:
+    - "gateway.networking.k8s.io"
+   resources:
+    - gatewayclasses/status
+    - gateways/status
+    - tcproutes/status
+   verbs:
+    - update
 ---
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1

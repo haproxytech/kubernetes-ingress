@@ -33,5 +33,4 @@ func (tcproutes TCPRoutes) Less(i, j int) bool {
 		return tcprouteI.CreationTime.Before(tcprouteJ.CreationTime)
 	}
 	return tcprouteI.Namespace+tcprouteI.Name < tcprouteJ.Namespace+tcprouteJ.Name
-
 }

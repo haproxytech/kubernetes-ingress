@@ -1,3 +1,17 @@
+// Copyright 2019 HAProxy Technologies LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//	http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package gateway
 
 import (
@@ -12,6 +26,7 @@ import (
 	networkingv1 "k8s.io/api/networking/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 )
@@ -19,6 +34,8 @@ import (
 var logger = utils.GetLogger()
 
 // Gateway management
+//
+//nolint:golint,stylecheck
 const (
 	K8S_CORE_GROUP       = ""
 	K8S_NETWORKING_GROUP = networkingv1.GroupName
@@ -27,30 +44,46 @@ const (
 	K8S_SERVICE_KIND     = "Service"
 )
 
+//nolint:golint
 type GatewayManager interface {
 	ManageGateway() bool
 }
 
 func New(k8sStore store.K8s,
 	haproxyClient api.HAProxyClient,
-	osArgs utils.OSArgs) GatewayManager {
+	osArgs utils.OSArgs,
+	k8sRestClient client.Client,
+) GatewayManager {
 	return GatewayManagerImpl{
-		k8sStore:      k8sStore,
-		haproxyClient: haproxyClient,
-		osArgs:        osArgs,
-		frontends:     map[string]struct{}{},
+		k8sStore:         k8sStore,
+		haproxyClient:    haproxyClient,
+		osArgs:           osArgs,
+		frontends:        map[string]struct{}{},
+		gateways:         map[string]struct{}{},
+		statusManager:    NewStatusManager(k8sRestClient, k8sStore.GatewayControllerName),
+		listenersByRoute: make(map[string][]store.Listener),
+		backends:         map[string]struct{}{},
+		serversByBackend: map[string][]string{},
 	}
 }
 
+//nolint:golint
 type GatewayManagerImpl struct {
-	k8sStore      store.K8s
-	haproxyClient api.HAProxyClient
-	osArgs        utils.OSArgs
-	frontends     map[string]struct{}
+	k8sStore         store.K8s
+	haproxyClient    api.HAProxyClient
+	osArgs           utils.OSArgs
+	frontends        map[string]struct{}
+	gateways         map[string]struct{}
+	statusManager    StatusManager
+	listenersByRoute map[string][]store.Listener
+	backends         map[string]struct{}
+	serversByBackend map[string][]string
 }
 
 func (gm GatewayManagerImpl) ManageGateway() bool {
 	gm.clean()
+	gm.manageGatewayClass()
+
 	listenersReload := gm.manageListeners()
 	if listenersReload {
 		logger.Debug("gwapi: gateway event, haproxy reload required.")
@@ -59,6 +92,8 @@ func (gm GatewayManagerImpl) ManageGateway() bool {
 	if tcproutesReload {
 		logger.Debug("gwapi: tcproute event, haproxy reload required.")
 	}
+	gm.statusManager.ProcessStatuses()
+	gm.resetStatuses()
 	return listenersReload || tcproutesReload
 }
 
@@ -80,24 +115,28 @@ func (gm GatewayManagerImpl) clean() {
 func (gm *GatewayManagerImpl) manageListeners() (reload bool) {
 	for _, ns := range gm.k8sStore.Namespaces {
 		if !ns.Relevant {
-			logger.Debugf("gwapi: skipping namespace '%s", ns.Name)
+			logger.Debugf("gwapi: skipping namespace '%s'", ns.Name)
 			continue
 		}
 		for _, gw := range ns.Gateways {
-			reload = reload || gw.Status != store.EMPTY
-			if gw.Status == store.DELETED {
+			gwName := getGatewayName(*gw)
+			gwDeleted := gw.Status == store.DELETED
+			gwc, gwcfound := gm.k8sStore.GatewayClasses[gw.GatewayClassName]
+			gwManaged := gwcfound && gwc.ControllerName == gm.k8sStore.GatewayControllerName
+			if gwManaged && gw.Status != store.DELETED {
+				gm.statusManager.PrepareGatewayStatus(*gw)
+				logger.Error(gm.createAllListeners(*gw))
+			}
+			_, gwConfigured := gm.gateways[gwName]
+			reload = reload || !((!gwConfigured && !gwManaged) || (gwConfigured && gwManaged && gw.Status == store.EMPTY))
+			if !gwDeleted && gwManaged {
+				gm.gateways[gwName] = struct{}{}
+			}
+			if gwDeleted {
+				delete(gm.gateways, gwName)
 				delete(ns.Gateways, gw.Name)
 				logger.Warningf("gwapi: deleted gateway'%s/%s'", gw.Namespace, gw.Name)
-				continue
 			}
-
-			gw.Status = store.EMPTY
-			// We don't care about gatewayclass with deleted status because they're already removed by store handler.
-			gwc, gwcfound := gm.k8sStore.GatewayClasses[gw.GatewayClassName]
-			if !gwcfound || gwc.ControllerName != gm.k8sStore.GatewayControllerName {
-				continue
-			}
-			logger.Error(gm.createAllListeners(*gw))
 		}
 	}
 	return
@@ -119,40 +158,21 @@ func (gm GatewayManagerImpl) manageTCPRoutes() (reload bool) {
 				logger.Warningf("gwapi: nil tcproute under name '%s'", tcproutename)
 				continue
 			}
-			reload = reload || tcproute.Status != store.EMPTY
-			// Nothing to do to delete the corresponding backend as an automatic mechanism will remove it.
-			if gm.isToBeDeleted(*tcproute) {
-				logger.Debugf("gwapi: backend of tcproute '%s/%s' is/will be deleted", tcproute.Namespace, tcproute.Name)
-				continue
-			}
+			tcpRouteBackendName := getBackendName(*tcproute)
 			if tcproute.Status == store.DELETED {
 				delete(ns.TCPRoutes, tcproute.Name)
+				delete(gm.listenersByRoute, tcpRouteBackendName)
+				delete(gm.backends, tcpRouteBackendName)
+				reload = true
 				continue
 			}
+			gm.statusManager.PrepareTCPRouteStatusRecord(*tcproute)
 
-			tcproute.Status = store.EMPTY
-			// If not called on the route, the afferent backend will be automatically deleted.
-			errBackendCreate := gm.haproxyClient.BackendCreateIfNotExist(
-				models.Backend{
-					Name:          gm.getBackendName(*tcproute),
-					Mode:          "tcp",
-					DefaultServer: &models.DefaultServer{Check: "enabled"},
-				})
-			if errBackendCreate != nil {
-				logger.Error(errBackendCreate)
-				continue
-			}
-			// Adds the servers to the backends
-			logger.Error(gm.addServersToRoute(*tcproute))
-			// Get the list of listeners (frontends) this tcproute (backend) wants to be attached to.
-			listeners, errListeners := gm.getListenersFromTcpRoute(*tcproute)
+			// Get the list of listeners (frontends) this tcproute (set of backends) wants to be attached to.
+			listeners, errListeners := gm.getOurListenersFromTCPRoute(*tcproute)
 			logger.Error(errListeners)
 			for _, listener := range listeners {
-				if listener.Protocol != store.TCPProtocolType {
-					continue
-				}
-
-				frontendName := gm.getFrontendName(listener)
+				frontendName := getFrontendName(listener)
 				if rbl, ok := routesByListeners[frontendName]; ok {
 					rbl.P2 = append(rbl.P2, *tcproute)
 				} else {
@@ -160,8 +180,60 @@ func (gm GatewayManagerImpl) manageTCPRoutes() (reload bool) {
 					routesByListeners[frontendName] = &pair
 				}
 			}
-		}
+			previousAssociatedListeners := gm.listenersByRoute[tcpRouteBackendName]
+			gm.listenersByRoute[tcpRouteBackendName] = listeners
 
+			needReload := ((len(listeners) != 0 || len(listeners) == 0 && len(previousAssociatedListeners) != 0) &&
+				!utils.EqualSliceByIDFunc(listeners, previousAssociatedListeners, extractNameFromListener))
+			reload = reload || needReload
+
+			if needReload {
+				logger.Debugf("modification in listeners for tcproute '%s/%s', reload required", tcproute.Namespace, tcproute.Name)
+			}
+
+			if len(listeners) == 0 {
+				continue
+			}
+
+			// Nothing to do to delete the corresponding backend as an automatic mechanism will remove it.
+			if gm.isToBeDeleted(*tcproute) {
+				_, backendExists := gm.backends[tcpRouteBackendName]
+				if backendExists {
+					logger.Debugf("modification in backend for tcproute '%s/%s', reload required", tcproute.Namespace, tcproute.Name)
+				}
+				reload = reload || backendExists
+				if backendExists {
+					delete(gm.backends, tcpRouteBackendName)
+				}
+				logger.Debugf("gwapi: backend of tcproute '%s/%s' is/will be deleted", tcproute.Namespace, tcproute.Name)
+				continue
+			}
+
+			// If not called on the route, the afferent backend will be automatically deleted.
+			errBackendCreate := gm.haproxyClient.BackendCreateIfNotExist(
+				models.Backend{
+					Name:          getBackendName(*tcproute),
+					Mode:          "tcp",
+					DefaultServer: &models.DefaultServer{Check: "enabled"},
+				})
+			if errBackendCreate != nil {
+				logger.Error(errBackendCreate)
+				continue
+			}
+			_, backendExists := gm.backends[tcpRouteBackendName]
+			if !backendExists {
+				logger.Debugf("modification in backend for tcproute '%s/%s', reload required", tcproute.Namespace, tcproute.Name)
+			}
+			reload = reload || !backendExists
+			gm.backends[tcpRouteBackendName] = struct{}{}
+			// Adds the servers to the backends
+			reloadServers, errServers := gm.addServersToRoute(*tcproute)
+			if reloadServers {
+				logger.Debugf("modification in servers of backend '%s' from tcproute '%s/%s'", tcpRouteBackendName, tcproute.Namespace, tcproute.Name)
+			}
+			logger.Error(errServers)
+			reload = reload || reloadServers
+		}
 	}
 
 	// Sorts the list of routes by listener and then attaches the first one to the listener.
@@ -170,7 +242,7 @@ func (gm GatewayManagerImpl) manageTCPRoutes() (reload bool) {
 			continue
 		}
 		sort.SliceStable(rbl.P2, rbl.P2.Less)
-		logger.Error(gm.addRouteToListener(fontendName, rbl.P2[0]))
+		logger.Error(gm.addRouteToListener(fontendName, rbl.P2[0], rbl.P1))
 	}
 	return
 }
@@ -178,11 +250,29 @@ func (gm GatewayManagerImpl) manageTCPRoutes() (reload bool) {
 // createAllListeners creates all TCP frontends from gateway and their bindings.
 func (gm GatewayManagerImpl) createAllListeners(gateway store.Gateway) error {
 	var errs utils.Errors
+MAIN_LOOP:
 	for _, listener := range gateway.Listeners {
+		gm.statusManager.PrepareListenerStatus(listener)
 		if listener.Protocol != store.TCPProtocolType {
+			gm.statusManager.SetListenerReasonUnsupportedProtocol(fmt.Sprintf("Listener protocol '%s' is not supported", listener.Protocol))
 			continue
 		}
-		frontendName := gm.getFrontendName(listener)
+		if listener.AllowedRoutes != nil {
+			validRGK := []store.RouteGroupKind{}
+			for _, kind := range listener.AllowedRoutes.Kinds {
+				if (kind.Group == nil || *kind.Group == v1alpha2.GroupName) && kind.Kind == K8S_TCPROUTE_KIND {
+					validRGK = append(validRGK, kind)
+				}
+			}
+			if len(validRGK) != len(listener.AllowedRoutes.Kinds) {
+				gm.statusManager.SetListenerReasonInvalidRouteKinds("Invalid Group/Kind in allowedRoutes: only gateway.networking.k8s.io or empty group and TCPRoute kind are supported", validRGK)
+			}
+			if len(validRGK) == 0 && len(listener.AllowedRoutes.Kinds) != 0 {
+				continue MAIN_LOOP
+			}
+		}
+
+		frontendName := getFrontendName(listener)
 		errFrontendCreate := gm.haproxyClient.FrontendCreate(models.Frontend{
 			Name:   frontendName,
 			Mode:   "tcp",
@@ -237,9 +327,11 @@ func (gm GatewayManagerImpl) isBackendRefValid(backendRef store.BackendRef) bool
 	if backendRef.Group != nil &&
 		*backendRef.Group != K8S_NETWORKING_GROUP &&
 		*backendRef.Group != K8S_CORE_GROUP {
+		gm.statusManager.SetRouteReasonInvalidKind(fmt.Sprintf("backendref group %s not managed", utils.PointerDefaultValueIfNil(backendRef.Group)))
 		return false
 	}
 	if backendRef.Kind != nil && *backendRef.Kind != K8S_SERVICE_KIND {
+		gm.statusManager.SetRouteReasonInvalidKind(fmt.Sprintf("backendref kind %s not managed", utils.PointerDefaultValueIfNil(backendRef.Kind)))
 		return false
 	}
 	if backendRef.Port == nil {
@@ -250,17 +342,14 @@ func (gm GatewayManagerImpl) isBackendRefValid(backendRef store.BackendRef) bool
 
 // isNamespaceGranted checks that backendref can refer to a resource.
 // This check depends on cross namespace reference and authorization to do so by referenceGrant if necessary.
-func (gm GatewayManagerImpl) isNamespaceGranted(namespace string, backendRef store.BackendRef) bool {
+func (gm GatewayManagerImpl) isNamespaceGranted(namespace string, backendRef store.BackendRef) (granted bool) {
 	// If namespace of backendRef is specified ...
 	if backendRef.Namespace != nil {
 		ns, found := gm.k8sStore.Namespaces[*backendRef.Namespace]
-		if !found {
-			return false
+		if !found || !ns.Relevant {
+			gm.statusManager.SetRouteReasonBackendNotFound(fmt.Sprintf("backend '%s/%s' not found", utils.PointerDefaultValueIfNil(backendRef.Namespace), backendRef.Name))
+			return
 		}
-		if !ns.Relevant {
-			return false
-		}
-		granted := false
 		// .. we iterate over referenceGrants in this namespace.
 		for _, referenceGrant := range ns.ReferenceGrants {
 			fromGranted := false
@@ -282,23 +371,33 @@ func (gm GatewayManagerImpl) isNamespaceGranted(namespace string, backendRef sto
 				}
 			}
 		}
-		return granted
+		if !granted {
+			gm.statusManager.SetRouteReasonRefNotPermitted(fmt.Sprintf("backendref '%s/%s' not allowed by any referencegrant",
+				*backendRef.Namespace, backendRef.Name))
+		}
+		return
 	}
 	return true
 }
 
 // addServersToRoute adds all the servers from the backendrefs from tcproute according validation rules.
-func (gm GatewayManagerImpl) addServersToRoute(route store.TCPRoute) error {
-
-	gm.haproxyClient.BackendServerDeleteAll(gm.getBackendName(route))
+func (gm GatewayManagerImpl) addServersToRoute(route store.TCPRoute) (reload bool, err error) {
+	backendName := getBackendName(route)
+	gm.haproxyClient.BackendServerDeleteAll(backendName)
 	i := 0
+	var servers []string
+	defer func() {
+		previousServers := gm.serversByBackend[backendName]
+		reload = reload || !utils.EqualSliceStringsWithoutOrder(servers, previousServers)
+		gm.serversByBackend[backendName] = servers
+	}()
 	for id, backendRef := range route.BackendRefs {
-
 		if !gm.isBackendRefValid(backendRef) {
 			continue
 		}
 
 		if !gm.isNamespaceGranted(route.Namespace, backendRef) {
+			gm.statusManager.SetRouteReasonRefNotPermitted(fmt.Sprintf("backend '%s/%s' reference not allowed", utils.PointerDefaultValueIfNil(backendRef.Namespace), backendRef.Name))
 			continue
 		}
 
@@ -308,50 +407,70 @@ func (gm GatewayManagerImpl) addServersToRoute(route store.TCPRoute) error {
 		}
 		ns, found := gm.k8sStore.Namespaces[*nsBackendRef]
 		if !found {
+			gm.statusManager.SetRouteReasonBackendNotFound(fmt.Sprintf("backend '%s/%s' not found", *nsBackendRef, backendRef.Name))
 			logger.Errorf("gwapi: unexisting namespace '%s' for backendRef number '%d' from tcp route '%s/%s'", *nsBackendRef, id, route.Namespace, route.Name)
+			continue
+		}
+		service, found := ns.Services[backendRef.Name]
+		if !found {
+			gm.statusManager.SetRouteReasonBackendNotFound(fmt.Sprintf("backend '%s/%s' not found", *nsBackendRef, backendRef.Name))
+			logger.Errorf("gwapi: unexisting endpoints '%s' for backendRef number '%d' from tcp route '%s/%s'", backendRef.Name, id, route.Namespace, route.Name)
+			continue
+		}
+		var portName *string
+		backendRefPort := int64(*backendRef.Port)
+		for _, svcPort := range service.Ports {
+			if svcPort.Port == backendRefPort {
+				svcPortName := svcPort.Name
+				portName = &svcPortName
+				break
+			}
+		}
+		if portName == nil {
+			gm.statusManager.SetRouteReasonBackendNotFound(fmt.Sprintf("backend port '%s/%s' not found", *nsBackendRef, backendRef.Name))
+			logger.Errorf("gwapi: unexisting port '%d' for backendRef '%spkg/gateways/gateways.go' number '%d' from tcp route '%s/%s'", backendRefPort, backendRef.Name, id, route.Namespace, route.Name)
 			continue
 		}
 		slice, found := ns.Endpoints[backendRef.Name]
 		if !found {
+			gm.statusManager.SetRouteReasonBackendNotFound(fmt.Sprintf("backend '%s/%s' not found", *nsBackendRef, backendRef.Name))
 			logger.Errorf("gwapi: unexisting endpoints '%s' for backendRef number '%d' from tcp route '%s/%s'", backendRef.Name, id, route.Namespace, route.Name)
 			continue
 		}
+
 		for _, endpoints := range slice {
 			if endpoints.Status == store.DELETED {
 				continue
 			}
-			for _, port := range endpoints.Ports {
-				if port.Port != int64(*backendRef.Port) {
-					continue
-				}
+			if port, found := endpoints.Ports[*portName]; found {
 				for address := range port.Addresses {
-					errSrv := gm.haproxyClient.BackendServerCreate(route.Namespace+"_"+route.Name, models.Server{
+					servers = append(servers, fmt.Sprintf("%s:%d", address, port.Port))
+					err = gm.haproxyClient.BackendServerCreate(backendName, models.Server{
 						Address:     address,
 						Port:        &port.Port,
 						Name:        fmt.Sprintf("SRV_%d", i+1),
 						Maintenance: "disabled",
 					})
-					if errSrv != nil {
-						return errSrv
+					if err != nil {
+						return
 					}
 					i++
 				}
 			}
 		}
-
 	}
-	return nil
+	return
 }
 
-// getListenersFromTcpRoute computes the list of listeners the tcproute can be attached to according matching and authorizations rules.
-func (gm GatewayManagerImpl) getListenersFromTcpRoute(tcproute store.TCPRoute) ([]store.Listener, error) {
+// getOurListenersFromTCPRoute computes the list of listeners the tcproute can be attached to according matching and authorizations rules.
+func (gm GatewayManagerImpl) getOurListenersFromTCPRoute(tcproute store.TCPRoute) ([]store.Listener, error) {
 	var errors utils.Errors
 	listeners := []store.Listener{}
 	// Iterates over parentRefs  which must be a gateway
 	for i, parentRef := range tcproute.ParentRefs {
 		gatewayNs := tcproute.Namespace
 		if parentRef.Namespace != nil {
-			gatewayNs = *(*string)(parentRef.Namespace)
+			gatewayNs = *parentRef.Namespace
 		}
 		ns, found := gm.k8sStore.Namespaces[gatewayNs]
 		if !found {
@@ -360,17 +479,22 @@ func (gm GatewayManagerImpl) getListenersFromTcpRoute(tcproute store.TCPRoute) (
 		}
 		gw, found := ns.Gateways[parentRef.Name]
 		if !found || gw == nil {
-			errors.Add(fmt.Errorf("gwapi: unexisting gateway in parentRef number '%d' from tcp route '%s/%s'", i, tcproute.Namespace, tcproute.Name))
+			errors.Add(fmt.Errorf("gwapi: unexisting gateway in parentRef '%s' from tcp route '%s/%s'", parentRef.Name, tcproute.Namespace, tcproute.Name))
 			continue
 		}
 		if !gm.isGatewayManaged(*gw) || gw.Status == store.DELETED {
 			continue
 		}
+		gm.statusManager.AddManagedParentRef(parentRef)
 		// We found the gateway, let's see if there's a match.
 		hasSectionName := parentRef.SectionName != nil
 		for _, listener := range gw.Listeners {
+			// if listener.Protocol != store.TCPProtocolType || (hasSectionName && listener.Name != *parentRef.SectionName) {
+			if hasSectionName && listener.Name != *parentRef.SectionName {
+				continue
+			}
 			// Does listener allow the route to be attached ?
-			if !gm.isTCPRouteAllowedByListener(listener, tcproute.Namespace, gatewayNs) {
+			if !gm.isTCPRouteAllowedByListener(listener, tcproute.Namespace, gatewayNs, parentRef) {
 				continue
 			}
 			// Does the listener have the expected name if provided ?
@@ -388,19 +512,22 @@ func (gm GatewayManagerImpl) getListenersFromTcpRoute(tcproute store.TCPRoute) (
 }
 
 // addRouteToListener attaches the route to the frontend.
-func (gm GatewayManagerImpl) addRouteToListener(frontendName string, route store.TCPRoute) error {
-
+func (gm GatewayManagerImpl) addRouteToListener(frontendName string, route store.TCPRoute, listener store.Listener) error {
 	frontend, err := gm.haproxyClient.FrontendGet(frontendName)
 	if err != nil {
 		return err
 	}
-	frontend.DefaultBackend = gm.getBackendName(route)
-	return gm.haproxyClient.FrontendEdit(frontend)
+	frontend.DefaultBackend = getBackendName(route)
+	errEdit := gm.haproxyClient.FrontendEdit(frontend)
+	if errEdit == nil {
+		// the counter of attached routes for listener status is incremented.
+		gm.statusManager.IncrementRouteForListener(listener)
+	}
+	return errEdit
 }
 
 // isToBeDeleted check if the backend corresponding to the tcproute should be removed if existing.
 func (gm GatewayManagerImpl) isToBeDeleted(tcproute store.TCPRoute) bool {
-
 	noBackendRefs := len(tcproute.BackendRefs) == 0
 	if noBackendRefs {
 		logger.Warningf("gwapi: no backendrefs in tcproute '%s/%s'", tcproute.Namespace, tcproute.Name)
@@ -424,11 +551,18 @@ func (gm GatewayManagerImpl) isGatewayManaged(gateway store.Gateway) bool {
 }
 
 // isTCPRouteAllowedByListener checks if the tcproute can refer to the listener according listener's authorization rules.
-func (gm GatewayManagerImpl) isTCPRouteAllowedByListener(listener store.Listener, routeNamespace, gatewayNamespace string) bool {
+func (gm GatewayManagerImpl) isTCPRouteAllowedByListener(listener store.Listener, routeNamespace, gatewayNamespace string, parentRef store.ParentRef) (allowed bool) {
+	defer func() {
+		if !allowed {
+			gm.statusManager.SetRouteReasonNotAllowedByListeners(fmt.Sprintf("not allowed by listener '%s/%s/%s'", listener.GwNamespace, listener.GwName, listener.Name), parentRef)
+		}
+	}()
+
 	if listener.AllowedRoutes == nil {
 		// If the listener has no restrictions rules simply checks that the route and the listener (gateway) are in the same namespace.
 		return routeNamespace != gatewayNamespace
 	}
+
 	gkAllowed := listener.AllowedRoutes.Kinds == nil || len(listener.AllowedRoutes.Kinds) == 0
 	for _, kind := range listener.AllowedRoutes.Kinds {
 		if (kind.Group != nil && *kind.Group != v1alpha2.GroupName) || kind.Kind != K8S_TCPROUTE_KIND {
@@ -468,15 +602,70 @@ func (gm GatewayManagerImpl) isTCPRouteAllowedByListener(listener store.Listener
 		}
 	}
 	return true
+}
 
+// manageGatewayClass has the sole purpose of updating status for matching gatewayclasses.
+func (gm GatewayManagerImpl) manageGatewayClass() {
+	for _, gatewayclass := range gm.k8sStore.GatewayClasses {
+		if gatewayclass.ControllerName == gm.k8sStore.GatewayControllerName &&
+			(gatewayclass.Status == store.ADDED || gatewayclass.Status == store.MODIFIED) {
+			gm.statusManager.SetGatewayClassConditionStatusAccepted(*gatewayclass)
+		}
+	}
 }
 
 // getBackendName provides backend name from tcproute attributes.
-func (gm GatewayManagerImpl) getBackendName(tcproute store.TCPRoute) string {
+func getBackendName(tcproute store.TCPRoute) string {
 	return tcproute.Namespace + "_" + tcproute.Name
 }
 
 // getFrontendName provides frontend name from the listener attributes.
-func (gm GatewayManagerImpl) getFrontendName(listener store.Listener) string {
+func getFrontendName(listener store.Listener) string {
 	return listener.GwNamespace + "-" + listener.GwName + "-" + listener.Name
+}
+
+// getGatewayName provides frontend name from the listener attributes.
+func getGatewayName(gateway store.Gateway) string {
+	return gateway.Namespace + "-" + gateway.Name
+}
+
+func extractNameFromListener(l store.Listener) string {
+	return l.Name
+}
+
+// resetStatuses sets the status of every processed resource to EMPTY.
+func (gm *GatewayManagerImpl) resetStatuses() {
+	// gatewayclass
+	for _, gatewayclass := range gm.k8sStore.GatewayClasses {
+		if gatewayclass.ControllerName == gm.k8sStore.GatewayControllerName &&
+			(gatewayclass.Status == store.ADDED || gatewayclass.Status == store.MODIFIED) {
+			gatewayclass.Status = store.EMPTY
+		}
+	}
+
+	// gateway
+	for _, ns := range gm.k8sStore.Namespaces {
+		if !ns.Relevant {
+			logger.Debugf("gwapi: skipping namespace '%s'", ns.Name)
+			continue
+		}
+		for _, gw := range ns.Gateways {
+			if gw.Status == store.ADDED || gw.Status == store.MODIFIED {
+				gw.Status = store.EMPTY
+			}
+		}
+	}
+
+	// tcproutes
+	for _, ns := range gm.k8sStore.Namespaces {
+		if !ns.Relevant {
+			logger.Debugf("gwapi: skipping namespace '%s'", ns.Name)
+			continue
+		}
+		for _, tcproute := range ns.TCPRoutes {
+			if tcproute.Status == store.ADDED || tcproute.Status == store.MODIFIED {
+				tcproute.Status = store.EMPTY
+			}
+		}
+	}
 }

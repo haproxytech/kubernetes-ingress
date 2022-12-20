@@ -800,14 +800,12 @@ func manageGatewayClass(gatewayclass *gatewayv1beta1.GatewayClass, eventChan cha
 	}
 	logger.Tracef("%s %s: %s", GATEWAYCLASS, item.Status, item.Name)
 	eventChan <- SyncDataEvent{SyncType: GATEWAYCLASS, Data: &item}
-
 }
 
 func manageGateway(gateway *gatewayv1beta1.Gateway, eventChan chan SyncDataEvent, status store.Status) {
 	logger.Warningf("gwapi: gateway: informers: got '%s/%s'", gateway.Namespace, gateway.Name)
 	listeners := make([]store.Listener, len(gateway.Spec.Listeners))
 	for i, listener := range gateway.Spec.Listeners {
-
 		listeners[i] = store.Listener{
 			Name:        string(listener.Name),
 			Port:        int32(listener.Port),
@@ -849,7 +847,6 @@ func manageGateway(gateway *gatewayv1beta1.Gateway, eventChan chan SyncDataEvent
 	}
 	logger.Tracef("%s %s: %s", GATEWAY, item.Status, item.Name)
 	eventChan <- SyncDataEvent{SyncType: GATEWAY, Namespace: item.Namespace, Data: &item}
-
 }
 
 func manageTCPRoute(tcproute *gatewayv1alpha2.TCPRoute, eventChan chan SyncDataEvent, status store.Status) {
@@ -857,7 +854,6 @@ func manageTCPRoute(tcproute *gatewayv1alpha2.TCPRoute, eventChan chan SyncDataE
 	backendRefs := []store.BackendRef{}
 	for _, rule := range tcproute.Spec.Rules {
 		for _, backendref := range rule.BackendRefs {
-
 			backendRefs = append(backendRefs, store.BackendRef{
 				Name: string(backendref.Name),
 				Namespace: func() *string {
@@ -872,7 +868,6 @@ func manageTCPRoute(tcproute *gatewayv1alpha2.TCPRoute, eventChan chan SyncDataE
 				Weight: backendref.Weight,
 			})
 		}
-
 	}
 	parentRefs := make([]store.ParentRef, 0, len(tcproute.Spec.ParentRefs))
 	for _, parentRefSpec := range tcproute.Spec.ParentRefs {
@@ -889,11 +884,17 @@ func manageTCPRoute(tcproute *gatewayv1alpha2.TCPRoute, eventChan chan SyncDataE
 			logger.Errorf("invalid parent reference in tcproute '%s/%s': parent reference must of kind 'Gateway' from group 'gateway.networking.k8s.io'", tcproute.Namespace, tcproute.Name)
 			continue
 		}
+		parentRefNs := (*string)(parentRefSpec.Namespace)
+		if parentRefNs == nil {
+			parentRefNs = &tcproute.Namespace
+		}
 		parentRef := store.ParentRef{
-			Namespace:   (*string)(parentRefSpec.Namespace),
+			Namespace:   parentRefNs,
 			Name:        string(parentRefSpec.Name),
 			SectionName: (*string)(parentRefSpec.SectionName),
 			Port:        (*int32)(parentRefSpec.Port),
+			Group:       parentRefGroup,
+			Kind:        parentRefKind,
 		}
 		parentRefs = append(parentRefs, parentRef)
 	}
@@ -909,7 +910,6 @@ func manageTCPRoute(tcproute *gatewayv1alpha2.TCPRoute, eventChan chan SyncDataE
 	}
 	logger.Tracef("%s %s: %s", TCPROUTE, item.Status, item.Name)
 	eventChan <- SyncDataEvent{SyncType: TCPROUTE, Namespace: item.Namespace, Data: &item}
-
 }
 
 func (k k8s) getGatewayClassesInformer(eventChan chan SyncDataEvent, factory gatewaynetworking.SharedInformerFactory) cache.SharedIndexInformer {
