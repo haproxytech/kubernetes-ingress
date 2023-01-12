@@ -59,14 +59,17 @@ func (i Ingress) supported(k8s store.K8s, a annotations.Annotations) (supported 
 		igClassSpec = igClassResource.Controller
 	}
 	if igClassAnn == "" && i.resource.Class == "" {
+		var defaultClassFound bool
 		for _, ingressClass := range k8s.IngressClasses {
 			if ingressClass.Annotations["ingressclass.kubernetes.io/is-default-class"] == "true" {
+				if defaultClassFound {
+					logger.Errorf("multiple default IngressClasses found")
+				}
 				igClassSpec = ingressClass.Controller
-				break
+				defaultClassFound = true
 			}
 		}
 	}
-
 	switch i.controllerClass {
 	case "":
 		if igClassAnn == "" {
