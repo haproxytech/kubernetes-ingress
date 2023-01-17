@@ -1,5 +1,6 @@
 PROJECT_PATH=${PWD}
 TARGETPLATFORM?=linux/amd64
+GOLANGCI_LINT_VERSION=1.50.1
 
 .PHONY: test
 test:
@@ -21,8 +22,12 @@ doc:
 
 .PHONY: lint
 lint:
+	cd bin;GOLANGCI_LINT_VERSION=${GOLANGCI_LINT_VERSION} sh lint-check.sh
+	bin/golangci-lint run --timeout 5m --color always --max-issues-per-linter 0 --max-same-issues 0
+
+.PHONY: yaml-lint
+yaml-lint:
 	docker run --rm -v $(pwd):/data cytopia/yamllint .
-	golangci-lint run --color always --timeout 240s
 
 .PHONY: example
 example:

@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -17,11 +16,15 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 )
 
-var WaitDuration = 60 * time.Second
-var TickDuration = 2 * time.Second
+var (
+	WaitDuration = 60 * time.Second
+	TickDuration = 2 * time.Second
+)
 
-var devModeFlag = flag.Bool("dev", false, "keep test environment after finishing")
-var devMode bool
+var (
+	devModeFlag = flag.Bool("dev", false, "keep test environment after finishing")
+	devMode     bool
+)
 
 type Test struct {
 	namespace     string
@@ -50,7 +53,7 @@ func NewTest() (test Test, err error) {
 		return nil
 	}}
 	// TemplateDir
-	test.templateDir, err = ioutil.TempDir("/tmp/", "haproxy-ic-test-tmpl")
+	test.templateDir, err = os.MkdirTemp("/tmp/", "haproxy-ic-test-tmpl")
 	if err != nil {
 		return test, fmt.Errorf("error creating template dir: %w ", err)
 	}
@@ -69,7 +72,7 @@ func (t *Test) Apply(path string, namespace string, tmplData interface{}) error 
 			return err
 		}
 	}
-	if file, err = ioutil.ReadFile(path); err != nil {
+	if file, err = os.ReadFile(path); err != nil {
 		return fmt.Errorf("error reading yaml file: %w", err)
 	}
 	// kubectl -n $NS apply -f -
@@ -80,7 +83,7 @@ func (t *Test) Apply(path string, namespace string, tmplData interface{}) error 
 }
 
 func (t *Test) processTemplate(path string, tmplData interface{}) (string, error) {
-	file, err := ioutil.ReadFile(path)
+	file, err := os.ReadFile(path)
 	if err != nil {
 		return "", fmt.Errorf("error reading yaml template: %w", err)
 	}
@@ -91,13 +94,13 @@ func (t *Test) processTemplate(path string, tmplData interface{}) (string, error
 		return "", fmt.Errorf("error parsing yaml template: %w", err)
 	}
 	yaml := filepath.Join(t.templateDir, t.namespace+time.Now().Format("2006-01-02-1504051111")+".yaml")
-	return yaml, ioutil.WriteFile(yaml, result.Bytes(), 0600)
+	return yaml, os.WriteFile(yaml, result.Bytes(), 0o600)
 }
 
 func (t *Test) Delete(path string) error {
 	var err error
 	var file []byte
-	if file, err = ioutil.ReadFile(path); err != nil {
+	if file, err = os.ReadFile(path); err != nil {
 		return fmt.Errorf("error reading yaml file: %w", err)
 	}
 	if out, errApply := t.execute(string(file), "kubectl", "delete", "-f", "-"); errApply != nil {

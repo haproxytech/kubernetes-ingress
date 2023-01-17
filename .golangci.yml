@@ -7,6 +7,14 @@ linters-settings:
     suggest-new: true
   dupl:
     threshold: 200
+  revive:
+    rules:
+      - name: var-naming
+        severity: warning
+        disabled: true
+        arguments:
+          - [] # AllowList
+          - [] # DenyList
 
 linters:
   enable-all: true
@@ -32,3 +40,15 @@ linters:
     - nakedret
     - paralleltest
     - testpackage
+    - varnamelen
+    - tagliatelle
+    - nonamedreturns
+    - forcetypeassert
+    - exhaustruct
+    - ireturn
+    - cyclop
+    - stylecheck
+    - errchkjson
+    - forbidigo
+    - nosnakecase
+    - interfacebloat

@@ -104,5 +104,5 @@ func model(name, defaultNS string, crType int, k store.K8s, annotations ...map[s
 		}
 		return backend, nil
 	}
-	return nil, nil
+	return nil, nil //nolint:nilnil
 }

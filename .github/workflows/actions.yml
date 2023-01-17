@@ -58,6 +58,10 @@ jobs:
     steps:
       - name: Check out code into the Go module directory
         uses: actions/checkout@v2
+      - name: Set up Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.19
       - uses: actions/cache@v2
         with:
           path: |
@@ -66,10 +70,9 @@ jobs:
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-
-      - name: golangci-lint
-        uses: docker://ghcr.io/haproxytech/go-linter:1.33
-        with:
-          args: --timeout 5m
+      - name: Lint
+        run: |
+          make lint
   build:
     name: build
     runs-on: ubuntu-latest

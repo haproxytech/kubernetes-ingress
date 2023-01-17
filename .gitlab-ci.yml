@@ -42,12 +42,12 @@ golangci_lint:
   stage: lint
   needs: []
   image:
-    name: $CI_REGISTRY_GO/lint:1.33
+    name: $CI_REGISTRY_GO/golang:1.19
     entrypoint: [""]
   tags:
     - go
   script:
-    - golangci-lint run --enable-all --timeout=10m
+    - make lint
   only:
     - merge_requests
     - branches

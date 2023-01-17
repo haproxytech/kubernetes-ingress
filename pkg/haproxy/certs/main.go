@@ -3,7 +3,6 @@ package certs
 import (
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path"
 	"strings"
@@ -183,7 +182,7 @@ func (c *certs) CertsUpdated() (reload bool) {
 }
 
 func refreshCerts(certs map[string]*cert, certDir string) (removed bool) {
-	files, err := ioutil.ReadDir(certDir)
+	files, err := os.ReadDir(certDir)
 	if err != nil {
 		logger.Error(err)
 		return false

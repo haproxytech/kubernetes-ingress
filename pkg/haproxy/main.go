@@ -89,7 +89,7 @@ func (h HAProxy) Clean() {
 }
 
 func logVersion(program string) {
-	//nolint:gosec //checks of HAProxyBinary should be done in Env.Init() .
+	// checks of HAProxyBinary should be done in Env.Init() .
 	cmd := exec.Command(program, "-v")
 	res, errExec := cmd.Output()
 	if errExec != nil {

@@ -55,7 +55,7 @@ type ruleInfo struct {
 // ruleState describes Rule creation
 type ruleState int
 
-//nolint: golint,stylecheck
+//nolint:golint,stylecheck
 const (
 	CREATED   ruleState = 0
 	TO_CREATE ruleState = 1

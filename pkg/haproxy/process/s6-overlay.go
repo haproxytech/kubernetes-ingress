@@ -23,7 +23,7 @@ func (d *s6Control) Service(action string) (err error) {
 	}
 	var cmd *exec.Cmd
 
-	//nolint:gosec //checks on HAProxyBinary should be done in configuration module.
+	// checks on HAProxyBinary should be done in configuration module.
 	switch action {
 	case "start":
 		// no need to start it is up already (s6)

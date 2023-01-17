@@ -36,7 +36,8 @@ import (
 var logger = utils.GetK8sAPILogger()
 
 // TRACE_API outputs all k8s events received from k8s API
-//nolint golint
+//
+//nolint:golint
 const (
 	TRACE_API        = false
 	CoreGroupVersion = "core.haproxy.org/v1alpha1"

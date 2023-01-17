@@ -44,10 +44,13 @@ const (
 //
 // if nil is sent, it won't be printed. This is useful for printing errors only
 // if they exist.
+//
 // ```
-// if err != nil {
-//   logger.Error(err)
-// }
+//
+//	if err != nil {
+//	  logger.Error(err)
+//	}
+//
 // ```
 // can be shortened to
 // ```
@@ -80,11 +83,15 @@ type logger struct {
 	FileName bool
 }
 
-var logSingelton *logger
-var doOnce sync.Once
+var (
+	logSingelton *logger
+	doOnce       sync.Once
+)
 
-var k8sAPILogSingelton *logger
-var dok8sAPIOnce sync.Once
+var (
+	k8sAPILogSingelton *logger
+	dok8sAPIOnce       sync.Once
+)
 
 //nolint:golint // 'exported func GetLogger returns unexported type , which can be annoying to use' - this is deliberate here
 func GetLogger() *logger {

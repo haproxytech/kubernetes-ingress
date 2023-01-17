@@ -83,7 +83,7 @@ func (c *HAProxyController) auxCfgManager() (restart, reload bool) {
 	info, errStat := os.Stat(c.haproxy.AuxCFGFile)
 	var (
 		modifTime  int64
-		auxCfgFile string = c.haproxy.AuxCFGFile
+		auxCfgFile = c.haproxy.AuxCFGFile
 		useAuxFile bool
 	)
 
