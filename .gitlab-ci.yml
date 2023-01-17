@@ -45,6 +45,20 @@ tidy:
   script:
     - go mod tidy
     - test -z "$(git diff 2> /dev/null)" || exit 'Go modules not tidied, issue \`go mod tidy\` and commit the result'
+gofumpt:
+  stage: lint
+  needs: []
+  rules:
+    - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
+    - if: $CI_PIPELINE_SOURCE == 'push'
+  image:
+    name: $CI_REGISTRY_GO/golang:1.19
+    entrypoint: [""]
+  tags:
+    - go
+  script:
+    - make gofumpt
+    - test -z "$(git diff 2> /dev/null)" || exit 'Go code not formatted, issue \`make gofumpt\` and commit the result'
 golangci_lint:
   stage: lint
   needs: []
@@ -52,12 +66,12 @@ golangci_lint:
     - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
     - if: $CI_PIPELINE_SOURCE == 'push'
   image:
-    name: $CI_REGISTRY_GO/lint:1.50.0
+    name: $CI_REGISTRY_GO/golang:1.19
     entrypoint: [""]
   tags:
     - go
   script:
-    - golangci-lint run --enable-all --timeout=10m
+    - make lint
 lint-commit-msg:
   stage: lint
   needs: []
@@ -193,7 +207,6 @@ docker-build-sch:
   parallel:
     matrix:
       - TEST_PART: [ "18#e2e_parallel", "18#e2e_https", "1#e2e_sequential" ]
-        VAR_DUMMY: "YES"
   script:
     - CI_ENV=gitlab deploy/tests/create.sh
     - kubectl get pods -A

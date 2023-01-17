@@ -1,5 +1,6 @@
 PROJECT_PATH=${PWD}
 TARGETPLATFORM?=linux/amd64
+GOLANGCI_LINT_VERSION=1.50.1
 
 .PHONY: test
 test:
@@ -21,8 +22,12 @@ doc:
 
 .PHONY: lint
 lint:
+	cd bin;GOLANGCI_LINT_VERSION=${GOLANGCI_LINT_VERSION} sh lint-check.sh
+	bin/golangci-lint run --timeout 5m --color always --max-issues-per-linter 0 --max-same-issues 0
+
+.PHONY: yaml-lint
+yaml-lint:
 	docker run --rm -v $(pwd):/data cytopia/yamllint .
-	docker run --rm -v ${PROJECT_PATH}:/app -w /app ghcr.io/haproxytech/go-linter:1.50.0 -v --timeout 5m --color always --max-issues-per-linter 0 --max-same-issues 0
 
 .PHONY: example
 example:
@@ -49,3 +54,8 @@ cr_generate:
 	crs/code-generator.sh
 	grep -lir defaultses crs/* | xargs sed -i 's/Defaultses/Defaults/g'
 	grep -lir defaultses crs/* | xargs sed -i 's/defaultses/defaults/g'
+
+.PHONY: gofumpt
+gofumpt:
+	go install mvdan.cc/gofumpt@latest
+	gofumpt -l -w .

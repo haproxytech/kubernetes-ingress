@@ -51,13 +51,16 @@ jobs:
         run: go mod tidy
       - name: changes
         run: test -z "$(git diff 2> /dev/null)" || exit "Go modules not tidied, issue \`go mod tidy\` and commit the result"
-  lint:
-    name: golangci-lint
-    needs: ["generate", "tidy"]
+  gofumpt:
+    name: gofumpt
     runs-on: ubuntu-latest
     steps:
-      - name: Check out code into the Go module directory
+      - name: Check out code
         uses: actions/checkout@v2
+      - name: Set up Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.19
       - uses: actions/cache@v2
         with:
           path: |
@@ -66,10 +69,32 @@ jobs:
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-
-      - name: golangci-lint
-        uses: docker://ghcr.io/haproxytech/go-linter:1.50.0
+      - name: tidy
+        run: make gofumpt
+      - name: changes
+        run: test -z "$(git diff 2> /dev/null)" || exit "Go code not formatted, issue \`make gofumpt\` and commit the result"
+  lint:
+    name: golangci-lint
+    needs: ["generate", "tidy"]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code into the Go module directory
+        uses: actions/checkout@v2
+      - name: Set up Go
+        uses: actions/setup-go@v2
         with:
-          args: --timeout 5m
+          go-version: 1.19
+      - uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+      - name: Lint
+        run: |
+          make lint
   build:
     name: build
     runs-on: ubuntu-latest
