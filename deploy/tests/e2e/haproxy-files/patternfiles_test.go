@@ -17,8 +17,9 @@
 package haproxyfiles
 
 import (
-	"github.com/haproxytech/kubernetes-ingress/deploy/tests/e2e"
 	"strconv"
+
+	"github.com/haproxytech/kubernetes-ingress/deploy/tests/e2e"
 )
 
 var tests1 = []string{

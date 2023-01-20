@@ -15,7 +15,6 @@
 package routeacl
 
 import (
-	"io/ioutil"
 	"os"
 	"testing"
 
@@ -46,7 +45,7 @@ type Test struct {
 }
 
 func (suite *UseBackendSuite) BeforeTest(suiteName, testName string) {
-	tempDir, err := ioutil.TempDir("", "tnr-"+testName+"-*")
+	tempDir, err := os.MkdirTemp("", "tnr-"+testName+"-*")
 	if err != nil {
 		suite.T().Fatalf("Suite '%s': Test '%s' : error : %s", suiteName, testName, err)
 	}

@@ -44,6 +44,7 @@ var ingressRules = []IngressRule{
 	{Service: "http-echo-9", Host: "*.haproxy", PathType: "ImplementationSpecific"},
 	{Service: "http-echo-10", Path: "/test", PathType: "ImplementationSpecific"},
 }
+
 var tests = []test{
 	{ingressRules[0].Service, "app.haproxy", []string{"/", "/test", "/exact/", "/exactslash", "/exactslash/foo", "/prefixxx"}},
 	{ingressRules[1].Service, "app.haproxy", []string{"/a"}},

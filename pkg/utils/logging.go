@@ -44,6 +44,7 @@ const (
 //
 // if nil is sent, it won't be printed. This is useful for printing errors only
 // if they exist.
+//
 // ```
 //
 //	if err != nil {

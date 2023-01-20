@@ -143,7 +143,7 @@ func (i *Ingress) handlePath(k store.K8s, h haproxy.HAProxy, host string, path *
 // without the need to map Rule IDs to specific ingress traffic.
 func (i *Ingress) handleAnnotations(k store.K8s, h haproxy.HAProxy) {
 	var err error
-	var result = rules.List{}
+	result := rules.List{}
 	for _, a := range i.annotations.Frontend(i.resource, &result, h.Maps) {
 		err = a.Process(k, i.resource.Annotations, k.ConfigMaps.Main.Annotations)
 		if err != nil {
@@ -155,7 +155,7 @@ func (i *Ingress) handleAnnotations(k store.K8s, h haproxy.HAProxy) {
 
 func HandleCfgMapAnnotations(k store.K8s, h haproxy.HAProxy, a annotations.Annotations) {
 	var err error
-	var result = rules.List{}
+	result := rules.List{}
 	logger.Tracef("Processing Ingress annotations in ConfigMap")
 	for _, a := range a.Frontend(nil, &result, h.Maps) {
 		err = a.Process(k, k.ConfigMaps.Main.Annotations)

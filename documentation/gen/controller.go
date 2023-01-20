@@ -75,7 +75,7 @@ func (c *Conf) generateReadmeController() {
 		buff.WriteString("<p align='right'><a href='#haproxy-kubernetes-ingress-controller'>:arrow_up_small: back to top</a></p>\n\n***\n\n")
 	}
 
-	err := renameio.WriteFile("../controller.md", []byte(buff.String()), 0644)
+	err := renameio.WriteFile("../controller.md", []byte(buff.String()), 0o644)
 	if err != nil {
 		log.Println(err)
 	}

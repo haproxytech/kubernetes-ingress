@@ -20,7 +20,7 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net"
 	"net/http"
 	"os"
@@ -177,7 +177,7 @@ func ProxyProtoConn() (result []byte, err error) {
 		return
 	}
 
-	return ioutil.ReadAll(conn)
+	return io.ReadAll(conn)
 }
 
 func runtimeCommand(command string) (result []byte, err error) {
