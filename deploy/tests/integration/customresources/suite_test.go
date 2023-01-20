@@ -15,7 +15,6 @@
 package customresources
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
@@ -48,7 +47,7 @@ type Test struct {
 }
 
 func (suite *CustomResourceSuite) BeforeTest(suiteName, testName string) {
-	tempDir, err := ioutil.TempDir("", "ut-"+testName+"-*")
+	tempDir, err := os.MkdirTemp("", "ut-"+testName+"-*")
 	if err != nil {
 		suite.T().Fatalf("Suite '%s': Test '%s' : error : %s", suiteName, testName, err)
 	}

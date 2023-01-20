@@ -15,7 +15,7 @@
 package routeacl
 
 import (
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"strings"
 )
@@ -24,7 +24,7 @@ func (suite *UseBackendSuite) TestUseBackend() {
 	// This test addresses https://github.com/haproxytech/kubernetes-ingress/issues/476
 	suite.UseBackendFixture()
 	suite.Run("Modifying service annotations should not duplicate use_backend clause", func() {
-		contents, err := ioutil.ReadFile(filepath.Join(suite.test.TempDir, "haproxy.cfg"))
+		contents, err := os.ReadFile(filepath.Join(suite.test.TempDir, "haproxy.cfg"))
 		if err != nil {
 			suite.T().Error(err.Error())
 		}

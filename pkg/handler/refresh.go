@@ -23,7 +23,7 @@ import (
 type Refresh struct{}
 
 func (handler Refresh) Update(k store.K8s, h haproxy.HAProxy, a annotations.Annotations) (reload bool, err error) {
-	var cleanCrts = true
+	cleanCrts := true
 	cleanCrtsAnn, _ := annotations.ParseBool("clean-certs", k.ConfigMaps.Main.Annotations)
 	// cleanCrtsAnn is empty if clean-certs not set or set with a non boolean value =>  error
 	if cleanCrtsAnn == "false" {

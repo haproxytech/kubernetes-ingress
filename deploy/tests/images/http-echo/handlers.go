@@ -15,7 +15,7 @@ func (c context) echoHostname(writer http.ResponseWriter, request *http.Request)
 	fmt.Fprintln(writer, c.hostname)
 }
 
-//  echoAll echos back request in response
+// echoAll echos back request in response
 func (c context) echoAll(writer http.ResponseWriter, request *http.Request) {
 	log.Println("Echoing back request made to " + request.URL.Path + " to client (" + request.RemoteAddr + ")")
 	attr := make(map[string]interface{})

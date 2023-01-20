@@ -50,5 +50,4 @@ func (suite *ServiceDiscoverySuite) testServicePort(serviceName, servicePort, po
 		}
 		return strings.HasPrefix(string(body), serviceName)
 	}, e2e.WaitDuration, e2e.TickDuration)
-
 }
