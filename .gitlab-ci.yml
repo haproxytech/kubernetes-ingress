@@ -106,7 +106,7 @@ docker-build:
     - if: $CI_PIPELINE_SOURCE == 'push'
   image: $CI_REGISTRY_GO/docker:stable-go1.19
   services:
-    - name: $CI_REGISTRY_GO/docker:18.09.7-dind
+    - name: $CI_REGISTRY_GO/docker:20.10-dind
       alias: docker
   tags:
     - go
@@ -135,7 +135,7 @@ docker-build-sch:
     - if: $CI_PIPELINE_SOURCE == 'schedule'
   image: $CI_REGISTRY_GO/docker:stable-go1.19
   services:
-    - name: $CI_REGISTRY_GO/docker:18.09.7-dind
+    - name: $CI_REGISTRY_GO/docker:20.10-dind
       alias: docker
   tags:
     - go
@@ -166,7 +166,7 @@ docker-build-sch:
     - if: $CI_PIPELINE_SOURCE == 'push'
   image: $CI_REGISTRY_GO/docker:stable-go1.19
   services:
-    - name: $CI_REGISTRY_GO/docker:18.09.7-dind
+    - name: $CI_REGISTRY_GO/docker:20.10-dind
       alias: docker
   tags:
     - go
