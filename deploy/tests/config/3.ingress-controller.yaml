@@ -22,9 +22,9 @@ spec:
           imagePullPolicy: Never
           resources:
             limits:
-              memory: 512Mi
+              memory: 2560Mi
             requests:
-              memory: 256Mi
+              memory: 2048Mi
           args:
             - --configmap=$(POD_NAMESPACE)/haproxy-kubernetes-ingress
             - --configmap-tcp-services=$(POD_NAMESPACE)/haproxy-kubernetes-ingress-tcp

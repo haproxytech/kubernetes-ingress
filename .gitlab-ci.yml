@@ -145,6 +145,7 @@ docker-build-sch:
     expire_in: 24 hours
 .kind_deployment:
   stage: e2e-tests
+  retry: 2
   needs: ["diff", "tidy", "docker-build"]
   rules:
     - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
