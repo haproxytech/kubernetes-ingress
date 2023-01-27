@@ -143,12 +143,6 @@ func (s *Service) HandleBackend(store store.K8s, client api.HAProxyClient, a ann
 	}
 	// config-snippet
 	logger.Error(annotations.NewBackendCfgSnippet("backend-config-snippet", newBackend.Name).Process(store, s.annotations...))
-	change, errSnipp := annotations.UpdateBackendCfgSnippet(client, newBackend.Name)
-	logger.Error(errSnipp)
-	if len(change) != 0 {
-		reload = true
-		logger.Debugf("Service '%s/%s': backend '%s' config-snippet updated: %s\nReload required", s.resource.Namespace, s.resource.Name, newBackend.Name, change)
-	}
 	return
 }
 
