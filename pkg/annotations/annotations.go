@@ -17,6 +17,8 @@ import (
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
 )
 
+var logger = utils.GetLogger()
+
 type Annotation interface {
 	GetName() string
 	Process(k store.K8s, annotations ...map[string]string) error
