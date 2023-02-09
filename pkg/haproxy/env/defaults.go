@@ -12,8 +12,6 @@ func SetGlobal(global *models.Global, logTargets *models.LogTargets, env Env) {
 	global.MasterWorker = true
 	global.Pidfile = env.PIDFile
 	global.Localpeer = "local"
-	global.ServerStateBase = env.StateDir
-	global.ServerStateFile = "global"
 	runtimeAPIs := []*models.RuntimeAPI{}
 	if env.RuntimeSocket != "" {
 		runtimeAPIs = append(runtimeAPIs, &models.RuntimeAPI{
@@ -73,7 +71,6 @@ func SetGlobal(global *models.Global, logTargets *models.LogTargets, env Env) {
 func SetDefaults(defaults *models.Defaults) {
 	// Enforced values
 	// Logging is enforced in DefaultsPushConfiguration method
-	defaults.LoadServerStateFromFile = "global"
 
 	// Default values
 	enabled := "enabled"
