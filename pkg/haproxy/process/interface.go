@@ -3,11 +3,9 @@ package process
 import (
 	"bufio"
 	"os"
-	"path/filepath"
 	"strconv"
 	"syscall"
 
-	"github.com/haproxytech/client-native/v3/runtime"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/api"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/env"
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
@@ -61,31 +59,4 @@ func haproxyProcess(pidFile string) (*os.Process, error) {
 	}
 	err = process.Signal(syscall.Signal(0))
 	return process, err
-}
-
-// Saves HAProxy servers state so it is retrieved after reload.
-func saveServerState(stateDir string, api runtime.Raw) error {
-	result, err := api.ExecuteRaw("show servers state")
-	if err != nil {
-		return err
-	}
-	var f *os.File
-	if f, err = os.Create(filepath.Join(stateDir, "global")); err != nil {
-		logger.Error(err)
-		return err
-	}
-	defer f.Close()
-	if _, err = f.Write([]byte(result[0])); err != nil {
-		logger.Error(err)
-		return err
-	}
-	if err = f.Sync(); err != nil {
-		logger.Error(err)
-		return err
-	}
-	if err = f.Close(); err != nil {
-		logger.Error(err)
-		return err
-	}
-	return nil
 }
