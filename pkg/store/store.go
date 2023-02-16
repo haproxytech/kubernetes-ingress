@@ -137,7 +137,6 @@ func (k *K8s) Clean() {
 		}
 	}
 	k.SecretsProcessed = map[string]struct{}{}
-	k.BackendProcessed = map[string]struct{}{}
 }
 
 // GetNamespace returns Namespace. Creates one if not existing

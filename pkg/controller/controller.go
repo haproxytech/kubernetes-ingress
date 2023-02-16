@@ -289,6 +289,8 @@ func (c *HAProxyController) setupHAProxyRules() error {
 // clean haproxy config state
 func (c *HAProxyController) clean(failedSync bool) {
 	c.haproxy.Clean()
+	// Need to do that even if transaction failed otherwise at fix time, they won't be reprocessed.
+	c.store.BackendProcessed = map[string]struct{}{}
 	logger.Error(c.setupHAProxyRules())
 	if !failedSync {
 		c.store.Clean()
