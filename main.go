@@ -148,7 +148,7 @@ func logInfo(logger utils.Logger, osArgs utils.OSArgs) {
 	if osArgs.DefaultBackendService.String() != "" {
 		logger.Printf("Default backend service: %s", osArgs.DefaultBackendService)
 	} else {
-		logger.Printf("Using local backend service on port: %s", osArgs.DefaultBackendPort)
+		logger.Printf("Using local backend service on port: %d", osArgs.DefaultBackendPort)
 	}
 	logger.Printf("Default ssl certificate: %s", osArgs.DefaultCertificate)
 	if !osArgs.DisableHTTP {
