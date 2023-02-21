@@ -146,6 +146,10 @@ func logInfo(logger utils.Logger, osArgs utils.OSArgs) {
 	logger.Printf("ConfigMap: %s", osArgs.ConfigMap)
 	logger.Printf("Ingress class: %s", osArgs.IngressClass)
 	logger.Printf("Empty Ingress class: %t", osArgs.EmptyIngressClass)
+	if osArgs.GatewayControllerName != "" {
+		// display log message only if Gateway API is used
+		logger.Printf("Gateway API controller name: %s", osArgs.GatewayControllerName)
+	}
 	logger.Printf("Publish service: %s", osArgs.PublishService)
 	if osArgs.DefaultBackendService.String() != "" {
 		logger.Printf("Default backend service: %s", osArgs.DefaultBackendService)

@@ -1,0 +1,38 @@
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+ name: haproxy-kubernetes-ingress-gwapi
+rules:
+ - apiGroups:
+    - "gateway.networking.k8s.io"
+   resources:
+   - referencegrants
+   - gateways
+   - gatewayclasses
+   - tcproutes
+   verbs:
+    - get
+    - list
+    - watch
+ - apiGroups:
+    - "gateway.networking.k8s.io"
+   resources:
+    - gatewayclasses/status
+    - gateways/status
+    - tcproutes/status
+   verbs:
+    - update
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: haproxy-kubernetes-ingress-gwapi
+  namespace: haproxy-controller
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: haproxy-kubernetes-ingress-gwapi
+subjects:
+- kind: ServiceAccount
+  name: haproxy-kubernetes-ingress
+  namespace: haproxy-controller

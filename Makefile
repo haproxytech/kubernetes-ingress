@@ -33,6 +33,10 @@ yaml-lint:
 example:
 	deploy/tests/create.sh
 
+.PHONY: example-experimental-gwapi
+example-experimental-gwapi:
+	EXPERIMENTAL_GWAPI=1 deploy/tests/create.sh
+
 .PHONY: example-rebuild
 example-rebuild:
 	deploy/tests/rebuild.sh

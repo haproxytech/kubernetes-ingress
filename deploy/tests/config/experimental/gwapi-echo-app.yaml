@@ -1,0 +1,19 @@
+apiVersion: gateway.networking.k8s.io/v1alpha2
+kind: TCPRoute
+metadata:
+  name: route1
+  namespace: default
+spec:
+  parentRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway1
+      namespace: default
+  rules:
+    - backendRefs:
+        - group: ''
+          kind: Service
+          name: http-echo
+          namespace: default
+          port: 80
+          weight: 13

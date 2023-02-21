@@ -790,7 +790,7 @@ type GatewayRelatedType interface {
 type GatewayInformerFunc[GWType GatewayRelatedType] func(gwObj GWType, eventChan chan SyncDataEvent, status store.Status)
 
 func manageGatewayClass(gatewayclass *gatewayv1beta1.GatewayClass, eventChan chan SyncDataEvent, status store.Status) {
-	logger.Warningf("gwapi: gatewayclass: informers: got '%s'", gatewayclass.Name)
+	logger.Infof("gwapi: gatewayclass: informers: got '%s'", gatewayclass.Name)
 	item := store.GatewayClass{
 		Name:           gatewayclass.Name,
 		ControllerName: string(gatewayclass.Spec.ControllerName),
@@ -803,7 +803,7 @@ func manageGatewayClass(gatewayclass *gatewayv1beta1.GatewayClass, eventChan cha
 }
 
 func manageGateway(gateway *gatewayv1beta1.Gateway, eventChan chan SyncDataEvent, status store.Status) {
-	logger.Warningf("gwapi: gateway: informers: got '%s/%s'", gateway.Namespace, gateway.Name)
+	logger.Infof("gwapi: gateway: informers: got '%s/%s'", gateway.Namespace, gateway.Name)
 	listeners := make([]store.Listener, len(gateway.Spec.Listeners))
 	for i, listener := range gateway.Spec.Listeners {
 		listeners[i] = store.Listener{
@@ -850,7 +850,7 @@ func manageGateway(gateway *gatewayv1beta1.Gateway, eventChan chan SyncDataEvent
 }
 
 func manageTCPRoute(tcproute *gatewayv1alpha2.TCPRoute, eventChan chan SyncDataEvent, status store.Status) {
-	logger.Warningf("gwapi: tcproute: informers: got '%s/%s'", tcproute.Namespace, tcproute.Name)
+	logger.Debugf("gwapi: tcproute: informers: got '%s/%s'", tcproute.Namespace, tcproute.Name)
 	backendRefs := []store.BackendRef{}
 	for _, rule := range tcproute.Spec.Rules {
 		for _, backendref := range rule.BackendRefs {
@@ -955,7 +955,7 @@ func (k k8s) getReferenceGrantInformer(eventChan chan SyncDataEvent, factory gat
 }
 
 func manageReferenceGrant(referenceGrant *gatewayv1alpha2.ReferenceGrant, eventChan chan SyncDataEvent, status store.Status) {
-	logger.Warningf("gwapi: referencegrant: informers: got '%s/%s'", referenceGrant.Namespace, referenceGrant.Name)
+	logger.Debugf("gwapi: referencegrant: informers: got '%s/%s'", referenceGrant.Namespace, referenceGrant.Name)
 	item := store.ReferenceGrant{
 		Name:       referenceGrant.Name,
 		Namespace:  referenceGrant.Namespace,
