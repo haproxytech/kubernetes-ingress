@@ -51,6 +51,8 @@ spec:
               containerPort: 32766
             - name: tcp2
               containerPort: 32767
+            - name: gwapi
+              containerPort: 8000
           env:
             - name: POD_NAME
               valueFrom:
@@ -93,3 +95,7 @@ spec:
       port: 32767
       targetPort: 32767
       nodePort: 32767
+    - name: gwapi
+      port: 32765
+      targetPort: 8000
+      nodePort: 32765

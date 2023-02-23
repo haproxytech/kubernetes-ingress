@@ -37,7 +37,7 @@ func (suite *MapUpdateSuite) Test_Update() {
 			count, err := e2e.GetHAProxyMapCount("path-prefix")
 			suite.NoError(err)
 			suite.T().Log(count)
-			return oldInfo.Pid == newInfo.Pid && count == 700
+			return oldInfo.Pid == newInfo.Pid && count == 701 // 700 + default_http-echo_http
 		}, e2e.WaitDuration, e2e.TickDuration)
 	})
 }
