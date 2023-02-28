@@ -22,9 +22,10 @@ type TCPServices struct {
 }
 
 type tcpSvcParser struct {
-	service    *store.Service
-	port       int64
-	sslOffload bool
+	service     *store.Service
+	port        int64
+	sslOffload  bool
+	acceptProxy bool
 }
 
 func (handler TCPServices) Update(k store.K8s, h haproxy.HAProxy, a annotations.Annotations) (reload bool, err error) {
@@ -44,7 +45,7 @@ func (handler TCPServices) Update(k store.K8s, h haproxy.HAProxy, a annotations.
 		frontend, errGet := h.FrontendGet(frontendName)
 		// Create Frontend
 		if errGet != nil {
-			frontend, r, err = handler.createTCPFrontend(h, frontendName, port, p.sslOffload)
+			frontend, r, err = handler.createTCPFrontend(h, frontendName, port, p.sslOffload, p.acceptProxy)
 			reload = reload || r
 			if err != nil {
 				logger.Error(err)
@@ -73,8 +74,14 @@ func (handler TCPServices) parseTCPService(store store.K8s, input string) (p tcp
 	svcName := strings.Split(parts[0], "/")
 	svcPort := parts[1]
 	if len(parts) > 2 {
-		if parts[2] == "ssl" {
-			p.sslOffload = true
+		opts := strings.Split(parts[2], ",")
+		for _, opt := range opts {
+			switch opt {
+			case "ssl":
+				p.sslOffload = true
+			case "acce-t-proxy":
+				p.acceptProxy = true
+			}
 		}
 	}
 	if len(svcName) != 2 {
@@ -121,7 +128,7 @@ func (handler TCPServices) clearFrontends(k store.K8s, h haproxy.HAProxy) (clear
 	return
 }
 
-func (handler TCPServices) createTCPFrontend(h haproxy.HAProxy, frontendName, bindPort string, sslOffload bool) (frontend models.Frontend, reload bool, err error) {
+func (handler TCPServices) createTCPFrontend(h haproxy.HAProxy, frontendName, bindPort string, sslOffload bool, acceptProxy bool) (frontend models.Frontend, reload bool, err error) {
 	// Create Frontend
 	frontend = models.Frontend{
 		Name:   frontendName,
@@ -151,6 +158,9 @@ func (handler TCPServices) createTCPFrontend(h haproxy.HAProxy, frontendName, bi
 	if sslOffload {
 		errors.Add(h.FrontendEnableSSLOffload(frontend.Name, handler.CertDir, "", false))
 	}
+
+	errors.Add(h.FrontendToggleAcceptProxy(frontend.Name, acceptProxy))
+
 	if errors.Result() != nil {
 		err = fmt.Errorf("error configuring tcp frontend: %w", err)
 		return frontend, false, err
@@ -183,6 +193,17 @@ func (handler TCPServices) updateTCPFrontend(k store.K8s, h haproxy.HAProxy, fro
 		logger.Debugf("TCP frontend '%s': ssl offload disabled, reload required", frontend.Name)
 		reload = true
 	}
+
+	if binds[0].AcceptProxy != p.acceptProxy {
+		err = h.FrontendToggleAcceptProxy(frontend.Name, p.acceptProxy)
+		if err != nil {
+			err = fmt.Errorf("failed to toggle Accept Proxy option: %w", err)
+			return
+		}
+		logger.Debugf("TCP frontend '%s': accept-proxy set to %+v, reload required", frontend.Name, p.acceptProxy)
+		reload = true
+	}
+
 	if p.service.Status == store.DELETED {
 		frontend.DefaultBackend = ""
 		err = h.FrontendEdit(frontend)
