@@ -96,6 +96,22 @@ func (c *clientNative) FrontendEnableSSLOffload(frontendName string, certDir str
 	return err
 }
 
+func (c *clientNative) FrontendToggleAcceptProxy(frontendName string, enabled bool) (err error) {
+	binds, err := c.FrontendBindsGet(frontendName)
+	if err != nil {
+		return err
+	}
+
+	for _, bind := range binds {
+		bind.AcceptProxy = enabled
+		err = c.FrontendBindEdit(frontendName, *bind)
+		if err != nil {
+			return err
+		}
+	}
+	return err
+}
+
 func (c *clientNative) FrontendDisableSSLOffload(frontendName string) (err error) {
 	binds, err := c.FrontendBindsGet(frontendName)
 	if err != nil {

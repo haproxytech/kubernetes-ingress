@@ -72,15 +72,16 @@ metadata:
   name: tcp
   namespace: haproxy-controller
 data:
-  3306:                    # Port where the frontend is going to listen to.
-    mysql-ns/mysql:3306    # Kubernetes service in the format NS/ServiceName:ServicePort
+  3306:                              # Port where the frontend is going to listen to.
+    mysql-ns/mysql:3306              # Kubernetes service in the format NS/ServiceName:ServicePort
   389:
-    ldap-ns/ldap:389:ssl   # ssl option will enable ssl offloading for target service.
+    ldap-ns/ldap:389:ssl             # ssl option will enable ssl offloading for target service.
   6379:
-    redis-ns/redis:6379
+    redis-ns/redis:6379:accept-proxy # accept-proxy option will enable the proxy protocol on the incoming frontend
 ```
 
   :information_source: Ports of TCP services should be exposed on the controller's Kubernetes service
+  :information_source: `ssl` and `accept-proxy` options can be used together separated by a comma
 
 Possible values:
 
