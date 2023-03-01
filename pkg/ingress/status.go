@@ -8,7 +8,6 @@ import (
 	"github.com/haproxytech/kubernetes-ingress/pkg/annotations"
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
-	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	k8serror "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -28,7 +27,7 @@ func NewStatusIngressUpdater(client *kubernetes.Clientset, k store.K8s, class st
 }
 
 func (i *Ingress) UpdateStatus(client *kubernetes.Clientset, addresses []string) (err error) {
-	var lbi []corev1.LoadBalancerIngress
+	var lbi []networkingv1.IngressLoadBalancerIngress
 
 	if utils.EqualSliceStringsWithoutOrder(i.resource.Addresses, addresses) {
 		return
@@ -36,9 +35,9 @@ func (i *Ingress) UpdateStatus(client *kubernetes.Clientset, addresses []string)
 
 	for _, addr := range addresses {
 		if net.ParseIP(addr) == nil {
-			lbi = append(lbi, corev1.LoadBalancerIngress{Hostname: addr})
+			lbi = append(lbi, networkingv1.IngressLoadBalancerIngress{Hostname: addr})
 		} else {
-			lbi = append(lbi, corev1.LoadBalancerIngress{IP: addr})
+			lbi = append(lbi, networkingv1.IngressLoadBalancerIngress{IP: addr})
 		}
 	}
 
@@ -50,7 +49,7 @@ func (i *Ingress) UpdateStatus(client *kubernetes.Clientset, addresses []string)
 			break
 		}
 		ingCopy := ingSource.DeepCopy()
-		ingCopy.Status = networkingv1.IngressStatus{LoadBalancer: corev1.LoadBalancerStatus{Ingress: lbi}}
+		ingCopy.Status = networkingv1.IngressStatus{LoadBalancer: networkingv1.IngressLoadBalancerStatus{Ingress: lbi}}
 		_, err = client.NetworkingV1().Ingresses(i.resource.Namespace).UpdateStatus(context.Background(), ingCopy, metav1.UpdateOptions{})
 	}
 
