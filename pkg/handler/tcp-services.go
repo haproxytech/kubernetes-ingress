@@ -79,7 +79,7 @@ func (handler TCPServices) parseTCPService(store store.K8s, input string) (p tcp
 			switch opt {
 			case "ssl":
 				p.sslOffload = true
-			case "acce-t-proxy":
+			case "accept-proxy":
 				p.acceptProxy = true
 			}
 		}
