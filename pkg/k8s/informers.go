@@ -414,39 +414,27 @@ func (k k8s) getConfigMapInformer(eventChan chan SyncDataEvent, factory informer
 }
 
 func (k k8s) getIngressInformers(eventChan chan SyncDataEvent, factory informers.SharedInformerFactory) (ii, ici cache.SharedIndexInformer) { //nolint:ireturn
-	for i, apiGroup := range []string{"networking.k8s.io/v1", "networking.k8s.io/v1beta1", "extensions/v1beta1"} {
-		resources, err := k.builtInClient.ServerResourcesForGroupVersion(apiGroup)
-		if err != nil {
-			continue
+	apiGroup := "networking.k8s.io/v1"
+
+	resources, err := k.builtInClient.ServerResourcesForGroupVersion(apiGroup)
+	if err != nil {
+		return
+	}
+	for _, rs := range resources.APIResources {
+		if rs.Name == "ingresses" {
+			ii = factory.Networking().V1().Ingresses().Informer()
+			logger.Debugf("watching ingress resources of apiGroup %s:", apiGroup)
 		}
-		for _, rs := range resources.APIResources {
-			if rs.Name == "ingresses" {
-				switch i {
-				case 0:
-					ii = factory.Networking().V1().Ingresses().Informer()
-				case 1:
-					ii = factory.Networking().V1beta1().Ingresses().Informer()
-				case 2:
-					ii = factory.Extensions().V1beta1().Ingresses().Informer()
-				}
-				logger.Debugf("watching ingress resources of apiGroup %s:", apiGroup)
-			}
-			if rs.Name == "ingressclasses" {
-				switch i {
-				case 0:
-					ici = factory.Networking().V1().IngressClasses().Informer()
-				case 1:
-					ici = factory.Networking().V1beta1().IngressClasses().Informer()
-				}
-			}
+		if rs.Name == "ingressclasses" {
+			ici = factory.Networking().V1().IngressClasses().Informer()
 		}
-		if ii != nil {
-			k.addIngressHandlers(eventChan, ii)
-			if ici != nil {
-				k.addIngressClassHandlers(eventChan, ici)
-			}
-			return
+	}
+	if ii != nil {
+		k.addIngressHandlers(eventChan, ii)
+		if ici != nil {
+			k.addIngressClassHandlers(eventChan, ici)
 		}
+		return
 	}
 	return
 }
