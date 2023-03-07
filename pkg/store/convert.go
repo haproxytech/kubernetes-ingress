@@ -271,7 +271,11 @@ func (n ingressNetworkingV1Strategy) ConvertIngress() *Ingress {
 						if k8sPath.PathType != nil {
 							pathType = string(*k8sPath.PathType)
 						}
-						pathKey := pathType + "-" + k8sPath.Path
+						if k8sPath.Backend.Service == nil {
+							logger.Errorf("backend in ingress '%s/%s' should have service but none found", n.ig.GetNamespace(), n.ig.GetName())
+							continue
+						}
+						pathKey := pathType + "-" + k8sPath.Path + "-" + k8sPath.Backend.Service.Port.Name
 						paths[pathKey] = &IngressPath{
 							Path:          k8sPath.Path,
 							PathTypeMatch: pathType,
