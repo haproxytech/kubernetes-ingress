@@ -21,6 +21,8 @@ import (
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
 )
 
+const DefaultLocalBackend = "default_local_backend"
+
 type K8s struct {
 	NbrHAProxyInst          int64
 	Namespaces              map[string]*Namespace

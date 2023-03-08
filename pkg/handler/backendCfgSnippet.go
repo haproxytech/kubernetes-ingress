@@ -23,5 +23,5 @@ import (
 type BackendCfgSnippet struct{}
 
 func (handler BackendCfgSnippet) Update(k store.K8s, h haproxy.HAProxy, a annotations.Annotations) (reload bool, err error) {
-	return annotations.HandleBackendCfgSnippet(h.HAProxyClient)
+	return annotations.HandleBackendCfgSnippet(k, h.HAProxyClient)
 }
