@@ -1,7 +1,6 @@
 package annotations
 
 import (
-	"sort"
 	"strings"
 
 	"github.com/go-test/deep"
@@ -20,6 +19,7 @@ type CfgSnippet struct {
 
 type cfgData struct {
 	value         []string
+	backendValue  map[string]struct{}
 	previousValue []string
 	updated       []string
 }
@@ -40,7 +40,7 @@ var cfgSnippet struct {
 
 //nolint:gochecknoinits
 func init() {
-	cfgSnippet.global = &cfgData{}
+	cfgSnippet.global = &cfgData{backendValue: map[string]struct{}{}}
 	cfgSnippet.frontends = make(map[string]*cfgData)
 	cfgSnippet.backends = make(map[string]*cfgData)
 }
@@ -83,7 +83,12 @@ func (a *CfgSnippet) Process(k store.K8s, annotations ...map[string]string) erro
 		if !ok {
 			cfg = &cfgData{}
 		}
-		cfg.value = append(cfg.value, data...)
+		if cfg.backendValue == nil {
+			cfg.backendValue = map[string]struct{}{}
+		}
+		// As a configsnippet from a service referenced by multiple ingress will be resubmited as many times as ingresses
+		// We guarantee unicity with map.
+		cfg.backendValue[input] = struct{}{}
 		cfgSnippet.backends[a.backend] = cfg
 	default:
 		updated := deep.Equal(cfgSnippet.global.value, data)
@@ -128,30 +133,36 @@ func UpdateFrontendCfgSnippet(api api.HAProxyClient, frontends ...string) (updat
 	return
 }
 
-func UpdateBackendCfgSnippet(api api.HAProxyClient, backend string) (updated []string, err error) {
+func UpdateBackendCfgSnippet(k store.K8s, api api.HAProxyClient, backend string) (updated []string, err error) {
 	data, ok := cfgSnippet.backends[backend]
 	if !ok {
 		return
 	}
+
 	defer func() {
+		if backend == store.DefaultLocalBackend {
+			return
+		}
 		data.value = nil
+		data.backendValue = nil
 	}()
-	valueCopy := make([]string, len(data.value))
-	copy(valueCopy, data.value)
-	prevValueCopy := make([]string, len(data.previousValue))
-	copy(prevValueCopy, data.previousValue)
-	sort.StringSlice(valueCopy).Sort()
-	sort.StringSlice(prevValueCopy).Sort()
-	updated = deep.Equal(valueCopy, prevValueCopy)
+
+	var value []string
+	for input := range data.backendValue {
+		if input != "" {
+			data := strings.Split(strings.Trim(input, "\n"), "\n")
+			value = append(value, data...)
+		}
+	}
+	updated = deep.Equal(data.previousValue, value)
 	if len(updated) == 0 {
 		return
 	}
-	err = api.BackendCfgSnippetSet(backend, data.value)
+	err = api.BackendCfgSnippetSet(backend, value)
 	if err != nil {
 		return
 	}
-	data.previousValue = data.value
-	data.value = nil
+	data.previousValue = value
 	return
 }
 
@@ -162,10 +173,10 @@ func RemoveBackendCfgSnippet(backend string) {
 	delete(cfgSnippet.backends, backend)
 }
 
-func HandleBackendCfgSnippet(api api.HAProxyClient) (reload bool, err error) {
+func HandleBackendCfgSnippet(k store.K8s, api api.HAProxyClient) (reload bool, err error) {
 	var errs utils.Errors
 	for backend := range cfgSnippet.backends {
-		updated, errBackend := UpdateBackendCfgSnippet(api, backend)
+		updated, errBackend := UpdateBackendCfgSnippet(k, api, backend)
 		if len(updated) != 0 {
 			logger.Debugf("backend configsnippet of '%s' has been updated, reload required", backend)
 		}

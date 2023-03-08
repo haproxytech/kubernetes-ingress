@@ -180,25 +180,25 @@ func (c *HAProxyController) handleDefaultServicePort() (reload bool) {
 	if portStr == "" {
 		return
 	}
-	defaultLocalBackend := "default_local_backend"
+
 	ingressPath := &store.IngressPath{
 		SvcNamespace:     "",
-		SvcName:          defaultLocalBackend,
+		SvcName:          store.DefaultLocalBackend,
 		SvcPortString:    portStr,
 		IsDefaultBackend: true,
 	}
 
-	backend, _ := c.haproxy.BackendGet(defaultLocalBackend)
+	backend, _ := c.haproxy.BackendGet(store.DefaultLocalBackend)
 	if backend != nil {
 		return
 	}
 	err = c.haproxy.BackendCreate(models.Backend{
-		Name: defaultLocalBackend,
+		Name: store.DefaultLocalBackend,
 	})
 	if err != nil {
 		logger.Errorf("default backend port: %s", err)
 	}
-	backend, _ = c.haproxy.BackendGet(defaultLocalBackend)
+	backend, _ = c.haproxy.BackendGet(store.DefaultLocalBackend)
 
 	if svc, err = service.NewLocal(c.store, ingressPath, backend, c.store.ConfigMaps.Main.Annotations); err == nil {
 		reload, err = svc.SetDefaultBackend(c.store, c.haproxy, []string{c.haproxy.FrontHTTP, c.haproxy.FrontHTTPS}, c.annotations)
