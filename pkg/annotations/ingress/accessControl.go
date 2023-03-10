@@ -13,9 +13,9 @@ import (
 )
 
 type AccessControl struct {
-	name      string
-	rules     *rules.List
 	maps      maps.Maps
+	rules     *rules.List
+	name      string
 	whitelist bool
 }
 

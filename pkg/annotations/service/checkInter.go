@@ -9,8 +9,8 @@ import (
 )
 
 type CheckInter struct {
-	name    string
 	backend *models.Backend
+	name    string
 }
 
 func NewCheckInter(n string, b *models.Backend) *CheckInter {

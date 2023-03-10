@@ -11,8 +11,8 @@ import (
 )
 
 type SendProxy struct {
-	name    string
 	backend *models.Backend
+	name    string
 }
 
 func NewSendProxy(n string, b *models.Backend) *SendProxy {

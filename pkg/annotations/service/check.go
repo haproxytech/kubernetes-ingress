@@ -9,8 +9,8 @@ import (
 )
 
 type Check struct {
-	name    string
 	backend *models.Backend
+	name    string
 }
 
 func NewCheck(n string, b *models.Backend) *Check {

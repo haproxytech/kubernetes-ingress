@@ -11,9 +11,9 @@ import (
 )
 
 type s6Control struct {
+	API    api.HAProxyClient
 	Env    env.Env
 	OSArgs utils.OSArgs
-	API    api.HAProxyClient
 }
 
 func (d *s6Control) Service(action string) error {

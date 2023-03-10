@@ -69,15 +69,15 @@ func New(k8sStore store.K8s,
 
 //nolint:golint
 type GatewayManagerImpl struct {
-	k8sStore         store.K8s
 	haproxyClient    api.HAProxyClient
-	osArgs           utils.OSArgs
+	statusManager    StatusManager
 	frontends        map[string]struct{}
 	gateways         map[string]struct{}
-	statusManager    StatusManager
 	listenersByRoute map[string][]store.Listener
 	backends         map[string]struct{}
 	serversByBackend map[string][]string
+	k8sStore         store.K8s
+	osArgs           utils.OSArgs
 }
 
 func (gm GatewayManagerImpl) ManageGateway() bool {

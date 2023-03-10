@@ -42,8 +42,8 @@ func TestCustomResource(t *testing.T) {
 }
 
 type Test struct {
-	TempDir    string
 	Controller *c.HAProxyController
+	TempDir    string
 }
 
 func (suite *CustomResourceSuite) BeforeTest(suiteName, testName string) {

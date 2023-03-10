@@ -40,8 +40,8 @@ func TestUseBackend(t *testing.T) {
 }
 
 type Test struct {
-	TempDir    string
 	Controller *c.HAProxyController
+	TempDir    string
 }
 
 func (suite *UseBackendSuite) BeforeTest(suiteName, testName string) {

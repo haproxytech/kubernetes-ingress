@@ -13,9 +13,9 @@ import (
 )
 
 type directControl struct {
+	API        api.HAProxyClient
 	Env        env.Env
 	OSArgs     utils.OSArgs
-	API        api.HAProxyClient
 	useAuxFile bool
 }
 

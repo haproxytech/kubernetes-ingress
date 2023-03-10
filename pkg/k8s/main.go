@@ -65,17 +65,17 @@ type CR interface {
 
 // k8s is structure with all data required to synchronize with k8s
 type k8s struct {
-	whiteListedNS          []string
-	podNamespace           string
-	podPrefix              string
 	gatewayRestClient      client.Client
+	crs                    map[string]CR
 	builtInClient          *k8sclientset.Clientset
 	crClient               *crclientset.Clientset
-	crs                    map[string]CR
 	publishSvc             *utils.NamespaceValue
+	gatewayClient          *gatewayclientset.Clientset
+	podPrefix              string
+	podNamespace           string
+	whiteListedNS          []string
 	syncPeriod             time.Duration
 	cacheResyncPeriod      time.Duration
-	gatewayClient          *gatewayclientset.Clientset
 	disableSvcExternalName bool // CVE-2021-25740
 	gatewayCRDInstalled    bool
 }

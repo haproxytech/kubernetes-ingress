@@ -25,8 +25,8 @@ import (
 type ServicePort struct {
 	Name     string
 	Protocol string
-	Port     int64
 	Status   Status
+	Port     int64
 }
 
 type HAProxySrv struct {
@@ -43,8 +43,8 @@ func (h *HAProxySrv) String() string {
 
 // PortEndpoints describes endpoints of a service port
 type PortEndpoints struct {
-	Port      int64
 	Addresses map[string]struct{}
+	Port      int64
 }
 
 // Endpoints describes endpoints of a service
@@ -63,39 +63,39 @@ type PodEvent struct {
 
 // Service is useful data from k8s structures about service
 type Service struct {
+	Annotations map[string]string
 	Namespace   string
 	Name        string
+	DNS         string
+	Status      Status
 	Ports       []ServicePort
 	Addresses   []string // Used only for publish-service
-	DNS         string
-	Annotations map[string]string
-	Status      Status
 }
 
 // RuntimeBackend holds the runtime state of an HAProxy backend
 type RuntimeBackend struct {
+	Endpoints       PortEndpoints
 	Name            string
 	HAProxySrvs     []*HAProxySrv
-	Endpoints       PortEndpoints
 	DynUpdateFailed bool
 }
 
 // Namespace is useful data from k8s structures about namespace
 type Namespace struct {
 	_               [0]int
-	Name            string
-	Relevant        bool
+	Secret          map[string]*Secret
 	Ingresses       map[string]*Ingress
 	Endpoints       map[string]map[string]*Endpoints // service -> sliceName -> Endpoints
 	Services        map[string]*Service
-	Secret          map[string]*Secret
 	HAProxyRuntime  map[string]map[string]*RuntimeBackend // service -> portName -> Backend
 	CRs             *CustomResources
 	Gateways        map[string]*Gateway
 	TCPRoutes       map[string]*TCPRoute
 	ReferenceGrants map[string]*ReferenceGrant
 	Labels          map[string]string
+	Name            string
 	Status          Status
+	Relevant        bool
 }
 
 type CustomResources struct {
@@ -115,28 +115,28 @@ type IngressClass struct {
 
 // IngressPath is useful data from k8s structures about ingress path
 type IngressPath struct {
+	SvcPortResolved  *ServicePort
 	SvcNamespace     string
 	SvcName          string
-	SvcPortInt       int64
 	SvcPortString    string
-	SvcPortResolved  *ServicePort
 	Path             string
 	PathTypeMatch    string
+	SvcPortInt       int64
 	IsDefaultBackend bool
 }
 
 // IngressRule is useful data from k8s structures about ingress rule
 type IngressRule struct {
-	Host  string
 	Paths map[string]*IngressPath
+	Host  string
 }
 
 // Ingress is useful data from k8s structures about ingress
 type Ingress struct {
 	IngressCore
-	Ignored   bool   // true if resource ignored because of non matching Controller Class
 	Status    Status // Used for store purpose
 	Addresses []string
+	Ignored   bool // true if resource ignored because of non matching Controller Class
 }
 
 // IngressTLS describes the transport layer security associated with an Ingress.
@@ -154,11 +154,11 @@ type ConfigMaps struct {
 
 // ConfigMap is useful data from k8s structures about configmap
 type ConfigMap struct {
+	Annotations map[string]string
 	Namespace   string
 	Name        string
-	Loaded      bool
-	Annotations map[string]string
 	Status      Status
+	Loaded      bool
 }
 
 // Secret is useful data from k8s structures about secret
@@ -170,41 +170,40 @@ type Secret struct {
 }
 
 type IngressCore struct {
-	// Required for K8s.UpdateIngressStatus to select proper versioned Client Set
-	APIVersion     string
-	Namespace      string
-	Name           string
-	Class          string
 	Annotations    map[string]string
 	Rules          map[string]*IngressRule
 	DefaultBackend *IngressPath
 	TLS            map[string]*IngressTLS
+	APIVersion     string // Required for K8s.UpdateIngressStatus to select proper versioned Client Set
+	Namespace      string
+	Name           string
+	Class          string
 }
 
 type GatewayClass struct {
+	Description    *string
 	Name           string
 	ControllerName string
-	Description    *string
-	Generation     int64
 	Status         Status
+	Generation     int64
 }
 
 type Gateway struct {
 	Namespace        string
 	Name             string
 	GatewayClassName string
+	Status           Status
 	Listeners        []Listener
 	Generation       int64
-	Status           Status
 }
 type Listener struct {
-	Name          string
-	Port          int32
-	Protocol      string
 	Hostname      *string
 	AllowedRoutes *AllowedRoutes
+	Name          string
+	Protocol      string
 	GwNamespace   string
 	GwName        string
+	Port          int32
 }
 
 type AllowedRoutes struct {
@@ -223,22 +222,22 @@ type RouteNamespaces struct {
 }
 
 type TCPRoute struct {
+	CreationTime time.Time
 	Name         string
 	Namespace    string
+	Status       Status
 	BackendRefs  []BackendRef
 	ParentRefs   []ParentRef
-	CreationTime time.Time
 	Generation   int64
-	Status       Status
 }
 
 type BackendRef struct {
-	Name      string
 	Namespace *string
 	Port      *int32
 	Weight    *int32
 	Group     *string
 	Kind      *string
+	Name      string
 }
 type LabelSelector struct {
 	MatchLabels      map[string]string
@@ -254,21 +253,21 @@ type LabelSelectorRequirement struct {
 type TCPRoutes []TCPRoute
 
 type ParentRef struct {
-	Group       string
-	Kind        string
 	Namespace   *string
-	Name        string
 	SectionName *string
 	Port        *int32
+	Group       string
+	Kind        string
+	Name        string
 }
 
 type ReferenceGrant struct {
 	Namespace  string
 	Name       string
+	Status     Status
 	From       []ReferenceGrantFrom
 	To         []ReferenceGrantTo
 	Generation int64
-	Status     Status
 }
 
 type ReferenceGrantFrom struct {
@@ -278,9 +277,9 @@ type ReferenceGrantFrom struct {
 }
 
 type ReferenceGrantTo struct {
+	Name  *string
 	Group string
 	Kind  string
-	Name  *string
 }
 
 const (

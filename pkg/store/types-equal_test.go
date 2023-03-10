@@ -4,10 +4,10 @@ import "testing"
 
 func TestGatewayClassEquality(t *testing.T) {
 	type testGatewayClass struct {
-		expected    bool
 		gwc1        *GatewayClass
 		gwc2        *GatewayClass
 		description string
+		expected    bool
 	}
 	description1 := "description gatewayclass 1"
 	description2 := "description gatewayclass 2"
@@ -50,10 +50,10 @@ func TestGatewayClassEquality(t *testing.T) {
 
 func TestRouteNamespacesEquality(t *testing.T) {
 	type testRouteNamespaces struct {
-		expected    bool
 		rn1         *RouteNamespaces
 		rn2         *RouteNamespaces
 		description string
+		expected    bool
 	}
 	all := "All"
 	same := "Same"
@@ -79,10 +79,10 @@ func TestRouteNamespacesEquality(t *testing.T) {
 
 func TestAllowedRoutesEquality(t *testing.T) {
 	type testAllowedRoutes struct {
-		expected    bool
 		routes1     *AllowedRoutes
 		routes2     *AllowedRoutes
 		description string
+		expected    bool
 	}
 	all := "All"
 	same := "Same"
@@ -105,10 +105,10 @@ func TestAllowedRoutesEquality(t *testing.T) {
 
 func TestListenerEquality(t *testing.T) {
 	type testListener struct {
-		expected    bool
 		listener1   *Listener
 		listener2   *Listener
 		description string
+		expected    bool
 	}
 	all := "All"
 	hostname := "hostname"
@@ -164,10 +164,10 @@ func TestListenerEquality(t *testing.T) {
 
 func TestGatewayEquality(t *testing.T) {
 	type testListener struct {
-		expected    bool
 		gw1         *Gateway
 		gw2         *Gateway
 		description string
+		expected    bool
 	}
 	ns := "ns"
 	ns2 := "ns2"
@@ -232,10 +232,10 @@ func TestGatewayEquality(t *testing.T) {
 
 func TestBackendRefEquality(t *testing.T) {
 	type testResource struct {
-		expected    bool
 		bref1       *BackendRef
 		bref2       *BackendRef
 		description string
+		expected    bool
 	}
 	var (
 		port1 int32 = 8080
@@ -298,10 +298,10 @@ func TestBackendRefEquality(t *testing.T) {
 
 func TestTCPRouteEquality(t *testing.T) {
 	type testResource struct {
-		expected    bool
 		tcproute1   *TCPRoute
 		tcproute2   *TCPRoute
 		description string
+		expected    bool
 	}
 	var (
 		port1 int32 = 8080

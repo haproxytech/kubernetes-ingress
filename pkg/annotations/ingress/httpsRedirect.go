@@ -17,8 +17,8 @@ type HTTPSRedirect struct {
 }
 
 type HTTPSRedirectAnn struct {
-	name   string
 	parent *HTTPSRedirect
+	name   string
 }
 
 func NewHTTPSRedirect(rules *rules.List, i *store.Ingress) *HTTPSRedirect {

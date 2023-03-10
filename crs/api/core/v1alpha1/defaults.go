@@ -25,10 +25,9 @@ import (
 
 // Defaults is a specification for a Defaults resource
 type Defaults struct {
+	Spec              DefaultsSpec `json:"spec"`
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
-
-	Spec DefaultsSpec `json:"spec"`
 }
 
 // DefaultsSpec defines the desired state of Defaults

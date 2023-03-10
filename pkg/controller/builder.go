@@ -41,20 +41,20 @@ import (
 )
 
 type Builder struct {
-	osArgs                   utils.OSArgs
+	annotations              annotations.Annotations
 	haproxyClient            api.HAProxyClient
-	haproxyEnv               env.Env
+	gatewayManager           gateway.GatewayManager
 	haproxyProcess           process.Process
 	haproxyRules             rules.Rules
-	haproxyCfgFile           []byte
-	annotations              annotations.Annotations
-	store                    store.K8s
-	publishService           *utils.NamespaceValue
-	eventChan                chan k8s.SyncDataEvent
-	updatePublishServiceFunc func(ingresses []*ingress.Ingress, publishServiceAddresses []string)
-	clientSet                *kubernetes.Clientset
 	restClientSet            client.Client
-	gatewayManager           gateway.GatewayManager
+	publishService           *utils.NamespaceValue
+	updatePublishServiceFunc func(ingresses []*ingress.Ingress, publishServiceAddresses []string)
+	eventChan                chan k8s.SyncDataEvent
+	clientSet                *kubernetes.Clientset
+	haproxyEnv               env.Env
+	haproxyCfgFile           []byte
+	store                    store.K8s
+	osArgs                   utils.OSArgs
 }
 
 var defaultEnv = env.Env{

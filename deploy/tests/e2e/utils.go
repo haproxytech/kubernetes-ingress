@@ -28,8 +28,8 @@ var (
 
 type Test struct {
 	namespace     string
-	tearDownFuncs []TearDownFunc
 	templateDir   string
+	tearDownFuncs []TearDownFunc
 }
 
 type TearDownFunc func() error

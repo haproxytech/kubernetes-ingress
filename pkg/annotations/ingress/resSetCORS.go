@@ -14,13 +14,13 @@ const corsVarName = "cors_origin"
 
 type ResSetCORS struct {
 	rules   *rules.List
-	acl     string
 	methods map[string]struct{}
+	acl     string
 }
 
 type ResSetCORSAnn struct {
-	name   string
 	parent *ResSetCORS
+	name   string
 }
 
 func NewResSetCORS(r *rules.List) *ResSetCORS {

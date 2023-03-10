@@ -27,20 +27,20 @@ import (
 
 // Env contains Directories and files required by haproxy
 type Env struct {
-	MainCFGRaw    []byte
-	MainCFGFile   string
-	Binary        string
+	Certs certs.Env
+	Proxies
+	CfgDir        string
 	RuntimeSocket string
 	PIDFile       string
 	AuxCFGFile    string
-	CfgDir        string
 	RuntimeDir    string
 	StateDir      string
 	PatternDir    string
 	ErrFileDir    string
 	MapsDir       string
-	Certs         certs.Env
-	Proxies
+	Binary        string
+	MainCFGFile   string
+	MainCFGRaw    []byte
 }
 
 // Proxies contains names of the main proxies of haproxy config

@@ -10,8 +10,8 @@ import (
 )
 
 type SetHdr struct {
-	name     string
 	rules    *rules.List
+	name     string
 	response bool
 }
 

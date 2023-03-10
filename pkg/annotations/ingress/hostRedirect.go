@@ -15,8 +15,8 @@ type HostRedirect struct {
 }
 
 type HostRedirectAnn struct {
-	name   string
 	parent *HostRedirect
+	name   string
 }
 
 func NewHostRedirect(r *rules.List) *HostRedirect {

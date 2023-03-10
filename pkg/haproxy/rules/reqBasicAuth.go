@@ -10,9 +10,9 @@ import (
 )
 
 type ReqBasicAuth struct {
+	Credentials map[string][]byte
 	AuthGroup   string
 	AuthRealm   string
-	Credentials map[string][]byte
 }
 
 func (r ReqBasicAuth) GetType() Type {

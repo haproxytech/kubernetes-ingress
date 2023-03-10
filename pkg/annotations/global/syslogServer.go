@@ -13,8 +13,8 @@ import (
 )
 
 type SyslogServers struct {
-	name       string
 	logTargets *models.LogTargets
+	name       string
 	stdout     bool
 }
 

@@ -98,40 +98,42 @@ type StatusManager interface {
 }
 
 type StatusManagerImpl struct {
+	k8sRestClient                        client.Client
 	gateway                              *gatewayStatusRecord
-	gatewayclasses                       []store.GatewayClass
 	listener                             *listenerStatusRecord
 	tcproute                             *routeStatusRecord
-	gateways                             []gatewayStatusRecord
-	tcproutes                            []routeStatusRecord
-	k8sRestClient                        client.Client
-	gatewayControllerName                string
 	numRoutesByListenerByGateway         map[string]map[string]int32
 	previousNumRoutesByListenerByGateway map[string]map[string]int32
+	gatewayControllerName                string
+	gatewayclasses                       []store.GatewayClass
+	gateways                             []gatewayStatusRecord
+	tcproutes                            []routeStatusRecord
 }
 
 // status records are created for two purposes:
 // - we need to record all the informations for each status type (gateway, listener, routes)
 // - we need to provide a copy of all recorded status informations to feed safely goroutines for asynchronous updates.
 type routeStatusRecord struct {
-	name, namespace        string
 	parentsStatusesRecords map[string]parentrefStatusRecord
 	generalConditions      map[string]string
-	generation             int64
+	name                   string
+	namespace              string
 	status                 store.Status
+	generation             int64
 }
 
 type parentrefStatusRecord struct {
-	parentRef store.ParentRef
 	reasons   map[string]string
+	parentRef store.ParentRef
 }
 
 type gatewayStatusRecord struct {
-	name, namespace          string
-	generation               int64
+	name                     string
+	namespace                string
 	status                   store.Status
-	listenerWithError        bool
 	listenersStatusesRecords []listenerStatusRecord
+	generation               int64
+	listenerWithError        bool
 }
 
 type listenerStatusRecord struct {

@@ -9,8 +9,8 @@ import (
 )
 
 type TimeoutCheck struct {
-	name    string
 	backend *models.Backend
+	name    string
 }
 
 func NewTimeoutCheck(n string, b *models.Backend) *TimeoutCheck {

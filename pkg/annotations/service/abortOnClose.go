@@ -9,8 +9,8 @@ import (
 )
 
 type AbortOnClose struct {
-	name    string
 	backend *models.Backend
+	name    string
 }
 
 func NewAbortOnClose(n string, b *models.Backend) *AbortOnClose {

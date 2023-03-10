@@ -10,8 +10,8 @@ import (
 )
 
 type LogFormat struct {
-	name     string
 	defaults *models.Defaults
+	name     string
 }
 
 func NewLogFormat(n string, d *models.Defaults) *LogFormat {

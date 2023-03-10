@@ -31,15 +31,15 @@ import (
 )
 
 type HTTPS struct {
-	Enabled   bool
-	IPv4      bool
-	IPv6      bool
-	strictSNI bool
-	Port      int64
 	AddrIPv4  string
 	AddrIPv6  string
 	CertDir   string
 	alpn      string
+	Port      int64
+	Enabled   bool
+	IPv4      bool
+	IPv6      bool
+	strictSNI bool
 }
 
 func (handler HTTPS) bindList(passhthrough bool) (binds []models.Bind) {

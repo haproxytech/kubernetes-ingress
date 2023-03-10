@@ -17,8 +17,8 @@ type ReqRateLimit struct {
 }
 
 type ReqRateLimitAnn struct {
-	name   string
 	parent *ReqRateLimit
+	name   string
 }
 
 func NewReqRateLimit(r *rules.List) *ReqRateLimit {

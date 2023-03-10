@@ -9,8 +9,8 @@ import (
 )
 
 type SSL struct {
-	name    string
 	backend *models.Backend
+	name    string
 }
 
 func NewSSL(n string, b *models.Backend) *SSL {

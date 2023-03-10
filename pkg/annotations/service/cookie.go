@@ -10,8 +10,8 @@ import (
 )
 
 type Cookie struct {
-	name    string
 	backend *models.Backend
+	name    string
 }
 
 func NewCookie(n string, b *models.Backend) *Cookie {

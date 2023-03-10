@@ -10,12 +10,12 @@ type SyncType string
 
 // k8s.SyncDataEvent represents converted k8s received message
 type SyncDataEvent struct {
-	_ [0]int
-	SyncType
-	Namespace      string
-	Name           string
+	_              [0]int
 	Data           interface{}
 	EventProcessed chan struct{}
+	SyncType
+	Namespace string
+	Name      string
 }
 
 //nolint:golint,stylecheck

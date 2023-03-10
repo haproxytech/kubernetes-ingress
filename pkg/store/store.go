@@ -22,17 +22,17 @@ import (
 )
 
 type K8s struct {
-	NbrHAProxyInst          int64
+	ConfigMaps              ConfigMaps
+	NamespacesAccess        NamespacesWatch
 	Namespaces              map[string]*Namespace
 	IngressClasses          map[string]*IngressClass
-	NamespacesAccess        NamespacesWatch
-	ConfigMaps              ConfigMaps
-	PublishServiceAddresses []string
 	SecretsProcessed        map[string]struct{}
 	BackendProcessed        map[string]struct{}
 	UpdateStatusFunc        func(ingresses []*Ingress, publishServiceAddresses []string)
 	GatewayClasses          map[string]*GatewayClass
 	GatewayControllerName   string
+	PublishServiceAddresses []string
+	NbrHAProxyInst          int64
 }
 
 type NamespacesWatch struct {

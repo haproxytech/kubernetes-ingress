@@ -11,8 +11,8 @@ import (
 )
 
 type Timeout struct {
-	name     string
 	defaults *models.Defaults
+	name     string
 }
 
 func NewTimeout(n string, d *models.Defaults) *Timeout {

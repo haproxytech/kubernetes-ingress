@@ -24,14 +24,14 @@ import (
 )
 
 type HTTPBind struct {
+	IPv4Addr  string
+	IPv6Addr  string
+	HTTPPort  int64
+	HTTPSPort int64
 	HTTP      bool
 	HTTPS     bool
 	IPv4      bool
 	IPv6      bool
-	HTTPPort  int64
-	HTTPSPort int64
-	IPv4Addr  string
-	IPv6Addr  string
 }
 
 func (handler HTTPBind) Update(k store.K8s, h haproxy.HAProxy, a annotations.Annotations) (reload bool, err error) {
