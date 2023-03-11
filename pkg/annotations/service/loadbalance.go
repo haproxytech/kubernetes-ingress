@@ -13,8 +13,8 @@ import (
 )
 
 type LoadBalance struct {
-	name    string
 	backend *models.Backend
+	name    string
 }
 
 func NewLoadBalance(n string, b *models.Backend) *LoadBalance {

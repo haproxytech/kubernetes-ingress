@@ -31,6 +31,10 @@ import (
 	crinformers "github.com/haproxytech/kubernetes-ingress/crs/generated/informers/externalversions"
 	"github.com/haproxytech/kubernetes-ingress/pkg/ingress"
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	gatewayclientset "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
+	scheme "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned/scheme"
+	gatewaynetworking "sigs.k8s.io/gateway-api/pkg/client/informers/externalversions"
 )
 
 var logger = utils.GetK8sAPILogger()
@@ -45,6 +49,7 @@ const (
 var ErrIgnored = errors.New("ignored resource")
 
 type K8s interface {
+	GetRestClientset() client.Client
 	GetClientset() *k8sclientset.Clientset
 	MonitorChanges(eventChan chan SyncDataEvent, stop chan struct{})
 	UpdatePublishService(ingresses []*ingress.Ingress, publishServiceAddresses []string)
@@ -60,16 +65,19 @@ type CR interface {
 
 // k8s is structure with all data required to synchronize with k8s
 type k8s struct {
+	gatewayRestClient      client.Client
+	crs                    map[string]CR
 	builtInClient          *k8sclientset.Clientset
 	crClient               *crclientset.Clientset
-	crs                    map[string]CR
-	whiteListedNS          []string
 	publishSvc             *utils.NamespaceValue
+	gatewayClient          *gatewayclientset.Clientset
+	podPrefix              string
+	podNamespace           string
+	whiteListedNS          []string
 	syncPeriod             time.Duration
 	cacheResyncPeriod      time.Duration
-	podNamespace           string
-	podPrefix              string
 	disableSvcExternalName bool // CVE-2021-25740
+	gatewayCRDInstalled    bool
 }
 
 func New(osArgs utils.OSArgs, whitelist map[string]struct{}, publishSvc *utils.NamespaceValue) K8s { //nolint:ireturn
@@ -86,6 +94,17 @@ func New(osArgs utils.OSArgs, whitelist map[string]struct{}, publishSvc *utils.N
 		logger.Printf("Running on Kubernetes version: %s %s", k8sVersion.String(), k8sVersion.Platform)
 	}
 
+	gatewayClient, err := gatewayclientset.NewForConfig(restconfig)
+	if err != nil {
+		logger.Print("Gateway API not present")
+	}
+	gatewayRestClient, err := client.New(restconfig, client.Options{
+		Scheme: scheme.Scheme,
+	})
+	if err != nil {
+		logger.Print("Gateway API not present")
+	}
+
 	prefix, _ := utils.GetPodPrefix(os.Getenv("POD_NAME"))
 	k := k8s{
 		builtInClient:          builtInClient,
@@ -98,6 +117,8 @@ func New(osArgs utils.OSArgs, whitelist map[string]struct{}, publishSvc *utils.N
 		syncPeriod:             osArgs.SyncPeriod,
 		cacheResyncPeriod:      osArgs.CacheResyncPeriod,
 		disableSvcExternalName: osArgs.DisableServiceExternalName,
+		gatewayClient:          gatewayClient,
+		gatewayRestClient:      gatewayRestClient,
 	}
 	// alpha1 is deprecated
 	k.registerCoreCR(NewGlobalCRV1Alpha1(), CRSGroupVersionV1alpha1)
@@ -108,6 +129,10 @@ func New(osArgs utils.OSArgs, whitelist map[string]struct{}, publishSvc *utils.N
 	k.registerCoreCR(NewDefaultsCR(), CRSGroupVersionV1alpha2)
 	k.registerCoreCR(NewBackendCR(), CRSGroupVersionV1alpha2)
 	return k
+}
+
+func (k k8s) GetRestClientset() client.Client {
+	return k.gatewayRestClient
 }
 
 func (k k8s) GetClientset() *k8sclientset.Clientset {
@@ -123,11 +148,12 @@ func (k k8s) UpdatePublishService(ingresses []*ingress.Ingress, publishServiceAd
 
 func (k k8s) MonitorChanges(eventChan chan SyncDataEvent, stop chan struct{}) {
 	informersSynced := &[]cache.InformerSynced{}
-
+	k.gatewayCRDInstalled = k.isGatewayAPIInstalled()
 	k.runPodInformer(eventChan, stop, informersSynced)
 	for _, namespace := range k.whiteListedNS {
 		k.runInformers(eventChan, stop, namespace, informersSynced)
 		k.runCRInformers(eventChan, stop, namespace, informersSynced)
+		k.runInformersGwAPI(eventChan, stop, namespace, informersSynced)
 	}
 
 	if !cache.WaitForCacheSync(stop, *informersSynced...) {
@@ -207,6 +233,33 @@ func (k k8s) runInformers(eventChan chan SyncDataEvent, stop chan struct{}, name
 	}
 }
 
+func (k k8s) runInformersGwAPI(eventChan chan SyncDataEvent, stop chan struct{}, namespace string, informersSynced *[]cache.InformerSynced) {
+	if !k.gatewayCRDInstalled {
+		return
+	}
+	factory := gatewaynetworking.NewSharedInformerFactoryWithOptions(k.gatewayClient, k.cacheResyncPeriod, gatewaynetworking.WithNamespace(namespace))
+	gwclassInf := k.getGatewayClassesInformer(eventChan, factory)
+	if gwclassInf != nil {
+		go gwclassInf.Run(stop)
+		*informersSynced = append(*informersSynced, gwclassInf.HasSynced)
+	}
+	gwInf := k.getGatewayInformer(eventChan, factory)
+	if gwInf != nil {
+		go gwInf.Run(stop)
+		*informersSynced = append(*informersSynced, gwInf.HasSynced)
+	}
+	tcprouteInf := k.getTCPRouteInformer(eventChan, factory)
+	if tcprouteInf != nil {
+		go tcprouteInf.Run(stop)
+		*informersSynced = append(*informersSynced, tcprouteInf.HasSynced)
+	}
+	referenceGrantInf := k.getReferenceGrantInformer(eventChan, factory)
+	if referenceGrantInf != nil {
+		go referenceGrantInf.Run(stop)
+		*informersSynced = append(*informersSynced, referenceGrantInf.HasSynced)
+	}
+}
+
 func (k k8s) runPodInformer(eventChan chan SyncDataEvent, stop chan struct{}, informersSynced *[]cache.InformerSynced) {
 	if k.podPrefix != "" {
 		pi := k.getPodInformer(k.podNamespace, k.podPrefix, k.cacheResyncPeriod, eventChan)
@@ -267,4 +320,9 @@ func getWhitelistedNS(whitelist map[string]struct{}, cfgMapNS string) []string {
 	}
 	logger.Infof("Whitelisted Namespaces: %s", namespaces)
 	return namespaces
+}
+
+func (k k8s) isGatewayAPIInstalled() bool {
+	_, err := k.crClient.DiscoveryClient.ServerResourcesForGroupVersion("gateway.networking.k8s.io/v1beta1")
+	return err == nil
 }

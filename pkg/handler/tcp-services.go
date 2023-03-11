@@ -14,11 +14,11 @@ import (
 )
 
 type TCPServices struct {
-	IPv4     bool
-	IPv6     bool
 	CertDir  string
 	AddrIPv4 string
 	AddrIPv6 string
+	IPv4     bool
+	IPv6     bool
 }
 
 type tcpSvcParser struct {

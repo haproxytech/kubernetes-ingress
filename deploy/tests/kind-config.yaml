@@ -5,7 +5,7 @@ networking:
 kind: Cluster
 nodes:
   - role: control-plane
-    image: kindest/node:v1.24.3
+    image: kindest/node:v1.26.0
     extraPortMappings:
       - hostPort: 30080
         containerPort: 30080
@@ -19,6 +19,8 @@ nodes:
         containerPort: 32766
       - hostPort: 32767
         containerPort: 32767
+      - hostPort: 32765 # gwapi
+        containerPort: 32765
     kubeadmConfigPatches:
     - |
       kind: ClusterConfiguration

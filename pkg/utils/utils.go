@@ -137,12 +137,64 @@ func EqualSliceStringsWithoutOrder(a, b []string) bool {
 		return false
 	}
 	// In case order is different
-	addresses := map[string]struct{}{}
-	for _, addr := range a {
-		addresses[addr] = struct{}{}
+	valuesInA := map[string]struct{}{}
+	for _, value := range a {
+		valuesInA[value] = struct{}{}
 	}
-	for _, addr := range b {
-		if _, ok := addresses[addr]; !ok {
+	for _, value := range b {
+		if _, ok := valuesInA[value]; !ok {
+			return false
+		}
+	}
+	return true
+}
+
+func CopyMap[K comparable, V any](mapArg map[K]V) map[K]V {
+	mapCopy := make(map[K]V, len(mapArg))
+	for k, v := range mapArg {
+		mapCopy[k] = v
+	}
+	return mapCopy
+}
+
+func CopyMapOfMap[K comparable, K2 any, V map[K]K2](mapArg map[K]V) map[K]V {
+	mapCopy := make(map[K]V, len(mapArg))
+	for k, v := range mapArg {
+		mapCopy[k] = CopyMap(v)
+	}
+	return mapCopy
+}
+
+type Pair[T, U any] struct {
+	P1 T
+	P2 U
+}
+
+// NewPair creates a new Pair with type inference.
+func NewPair[T, U any](p1 T, p2 U) Pair[T, U] {
+	return Pair[T, U]{P1: p1, P2: p2}
+}
+
+func PointerDefaultValueIfNil[T any](arg *T) T {
+	if arg == nil {
+		var a T
+		return a
+	}
+	return *arg
+}
+
+// EqualSliceByIDFunc checks equality of two slices. No duplication check.
+func EqualSliceByIDFunc[T any](a, b []T, id func(x T) string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	// In case order is different
+	m := map[string]struct{}{}
+	for _, value := range a {
+		m[id(value)] = struct{}{}
+	}
+	for _, value := range b {
+		if _, ok := m[id(value)]; !ok {
 			return false
 		}
 	}

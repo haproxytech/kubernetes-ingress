@@ -22,15 +22,17 @@ import (
 )
 
 type K8s struct {
-	NbrHAProxyInst          int64
+	ConfigMaps              ConfigMaps
+	NamespacesAccess        NamespacesWatch
 	Namespaces              map[string]*Namespace
 	IngressClasses          map[string]*IngressClass
-	NamespacesAccess        NamespacesWatch
-	ConfigMaps              ConfigMaps
-	PublishServiceAddresses []string
 	SecretsProcessed        map[string]struct{}
 	BackendProcessed        map[string]struct{}
 	UpdateStatusFunc        func(ingresses []*Ingress, publishServiceAddresses []string)
+	GatewayClasses          map[string]*GatewayClass
+	GatewayControllerName   string
+	PublishServiceAddresses []string
+	NbrHAProxyInst          int64
 }
 
 type NamespacesWatch struct {
@@ -70,6 +72,7 @@ func NewK8sStore(args utils.OSArgs) K8s {
 		},
 		SecretsProcessed: map[string]struct{}{},
 		BackendProcessed: map[string]struct{}{},
+		GatewayClasses:   make(map[string]*GatewayClass),
 	}
 	for _, namespace := range args.NamespaceWhitelist {
 		store.NamespacesAccess.Whitelist[namespace] = struct{}{}
@@ -134,7 +137,6 @@ func (k *K8s) Clean() {
 		}
 	}
 	k.SecretsProcessed = map[string]struct{}{}
-	k.BackendProcessed = map[string]struct{}{}
 }
 
 // GetNamespace returns Namespace. Creates one if not existing
@@ -157,7 +159,11 @@ func (k K8s) GetNamespace(name string) *Namespace {
 			LogTargets: make(map[string]models.LogTargets),
 			Backends:   make(map[string]*models.Backend),
 		},
-		Status: ADDED,
+		Gateways:        make(map[string]*Gateway),
+		TCPRoutes:       make(map[string]*TCPRoute),
+		ReferenceGrants: make(map[string]*ReferenceGrant),
+		Labels:          make(map[string]string),
+		Status:          ADDED,
 	}
 	k.Namespaces[name] = newNamespace
 	return newNamespace

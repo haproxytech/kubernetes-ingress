@@ -27,10 +27,10 @@ import (
 )
 
 type Ingress struct {
-	resource        *store.Ingress
-	ruleIDs         []rules.RuleID
 	annotations     annotations.Annotations
+	resource        *store.Ingress
 	controllerClass string
+	ruleIDs         []rules.RuleID
 	allowEmptyClass bool
 	sslPassthrough  bool
 }

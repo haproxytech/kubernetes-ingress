@@ -10,8 +10,8 @@ import (
 )
 
 type Maxconn struct {
-	name   string
 	global *models.Global
+	name   string
 }
 
 func NewMaxconn(n string, g *models.Global) *Maxconn {

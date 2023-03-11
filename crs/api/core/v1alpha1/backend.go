@@ -25,10 +25,9 @@ import (
 
 // Backend is a specification for a Backend resource
 type Backend struct {
+	Spec              BackendSpec `json:"spec"`
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
-
-	Spec BackendSpec `json:"spec"`
 }
 
 // BackendSpec defines the desired state of Backend

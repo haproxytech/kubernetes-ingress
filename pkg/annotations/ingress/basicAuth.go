@@ -16,8 +16,8 @@ type ReqAuth struct {
 }
 
 type ReqAuthAnn struct {
-	name   string
 	parent *ReqAuth
+	name   string
 }
 
 func NewReqAuth(rules *rules.List, i *store.Ingress) *ReqAuth {

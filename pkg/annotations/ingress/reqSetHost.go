@@ -7,8 +7,8 @@ import (
 )
 
 type ReqSetHost struct {
-	name  string
 	rules *rules.List
+	name  string
 }
 
 func NewReqSetHost(n string, r *rules.List) *ReqSetHost {

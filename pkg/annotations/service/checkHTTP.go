@@ -11,8 +11,8 @@ import (
 )
 
 type CheckHTTP struct {
-	name    string
 	backend *models.Backend
+	name    string
 }
 
 func NewCheckHTTP(n string, b *models.Backend) *CheckHTTP {

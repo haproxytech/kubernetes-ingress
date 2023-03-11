@@ -9,9 +9,9 @@ import (
 )
 
 type CA struct {
-	name         string
 	haproxyCerts certs.Certificates
 	backend      *models.Backend
+	name         string
 }
 
 func NewCA(n string, c certs.Certificates, b *models.Backend) *CA {

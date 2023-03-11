@@ -45,10 +45,10 @@ var (
 )
 
 type Route struct {
-	Host           string
 	Path           *store.IngressPath
-	HAProxyRules   []rules.RuleID
+	Host           string
 	BackendName    string
+	HAProxyRules   []rules.RuleID
 	SSLPassthrough bool
 }
 

@@ -10,9 +10,9 @@ import (
 )
 
 type RequestRedirect struct {
+	Host         string
 	RedirectCode int64
 	RedirectPort int
-	Host         string
 	SSLRequest   bool
 	SSLRedirect  bool
 }

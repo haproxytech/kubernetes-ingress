@@ -11,8 +11,8 @@ import (
 )
 
 type Option struct {
-	name     string
 	defaults *models.Defaults
+	name     string
 }
 
 func NewOption(n string, d *models.Defaults) *Option {

@@ -61,8 +61,8 @@ func (handler *PatternFiles) Update(k store.K8s, h haproxy.HAProxy, a annotation
 }
 
 type files struct {
-	dir  string
 	data map[string]*file
+	dir  string
 }
 
 type file struct {

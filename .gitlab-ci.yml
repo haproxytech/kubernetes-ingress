@@ -11,18 +11,21 @@ stages:
   - e2e_k8s_23
   - e2e_k8s_24
   - e2e_k8s_25
+  - e2e_k8s_26
 variables:
   KUBECTL: v1.25.3
-  KIND: v0.16.0
+  KIND: v0.17.0
   DOCKER_HOST: tcp://docker:2375
   DOCKER_DRIVER: overlay2
+  GO_VERSION: "1.20"
+  DOCKER_VERSION: "20.10"
 diff:
   stage: diff
   rules:
     - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
     - if: $CI_PIPELINE_SOURCE == 'push'
   image:
-    name: $CI_REGISTRY_GO/golang:1.19
+    name: $CI_REGISTRY_GO/golang:$GO_VERSION
     entrypoint: [ "" ]
   tags:
     - go
@@ -38,7 +41,7 @@ tidy:
     - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
     - if: $CI_PIPELINE_SOURCE == 'push'
   image:
-    name: $CI_REGISTRY_GO/golang:1.19
+    name: $CI_REGISTRY_GO/golang:$GO_VERSION
     entrypoint: [""]
   tags:
     - go
@@ -52,7 +55,7 @@ gofumpt:
     - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
     - if: $CI_PIPELINE_SOURCE == 'push'
   image:
-    name: $CI_REGISTRY_GO/golang:1.19
+    name: $CI_REGISTRY_GO/golang:$GO_VERSION
     entrypoint: [""]
   tags:
     - go
@@ -66,7 +69,7 @@ golangci_lint:
     - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
     - if: $CI_PIPELINE_SOURCE == 'push'
   image:
-    name: $CI_REGISTRY_GO/golang:1.19
+    name: $CI_REGISTRY_GO/golang:$GO_VERSION
     entrypoint: [""]
   tags:
     - go
@@ -78,7 +81,7 @@ lint-commit-msg:
   rules:
     - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
   image:
-    name: $CI_REGISTRY_GO/check-commit:v2.1.0
+    name: $CI_REGISTRY_GO/commit-check:3.0.0
     entrypoint: [""]
   tags:
     - go
@@ -91,7 +94,7 @@ unit-tests:
     - if: $CI_PIPELINE_SOURCE == 'push'
   stage: unit-tests
   image:
-    name: $CI_REGISTRY_GO/haproxy-alpine:2.5-go1.19
+    name: $CI_REGISTRY_GO/haproxy-alpine:2.6-go$GO_VERSION
     entrypoint: [""]
   tags:
     - go
@@ -104,9 +107,9 @@ docker-build:
   rules:
     - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
     - if: $CI_PIPELINE_SOURCE == 'push'
-  image: $CI_REGISTRY_GO/docker:stable-go1.19
+  image: $CI_REGISTRY_GO/docker:stable-go$GO_VERSION
   services:
-    - name: $CI_REGISTRY_GO/docker:20.10-dind
+    - name: $CI_REGISTRY_GO/docker:$DOCKER_VERSION-dind
       alias: docker
   tags:
     - go
@@ -115,8 +118,8 @@ docker-build:
     - go version
     - docker pull -q $CI_REGISTRY_GO/alpine:3
     - docker image tag $CI_REGISTRY_GO/alpine:3 alpine:3
-    - docker pull -q $CI_REGISTRY_GO/golang:1.19-alpine
-    - docker image tag $CI_REGISTRY_GO/golang:1.19-alpine golang:1.19-alpine
+    - docker pull -q $CI_REGISTRY_GO/golang:$GO_VERSION-alpine
+    - docker image tag $CI_REGISTRY_GO/golang:$GO_VERSION-alpine golang:$GO_VERSION-alpine
     - sed -i "s~FROM golang~FROM $CI_REGISTRY_GO/golang~g" "build/Dockerfile"
     - sed -i "s~FROM haproxytech/haproxy-alpine~FROM $CI_REGISTRY_GO/haproxy-alpine~g" "build/Dockerfile"
   script:
@@ -133,9 +136,9 @@ docker-build-sch:
   needs: []
   rules:
     - if: $CI_PIPELINE_SOURCE == 'schedule'
-  image: $CI_REGISTRY_GO/docker:stable-go1.19
+  image: $CI_REGISTRY_GO/docker:stable-go$GO_VERSION
   services:
-    - name: $CI_REGISTRY_GO/docker:20.10-dind
+    - name: $CI_REGISTRY_GO/docker:$DOCKER_VERSION-dind
       alias: docker
   tags:
     - go
@@ -144,8 +147,8 @@ docker-build-sch:
     - go version
     - docker pull -q $CI_REGISTRY_GO/alpine:3
     - docker image tag $CI_REGISTRY_GO/alpine:3 alpine:3
-    - docker pull -q $CI_REGISTRY_GO/golang:1.19-alpine
-    - docker image tag $CI_REGISTRY_GO/golang:1.19-alpine golang:1.19-alpine
+    - docker pull -q $CI_REGISTRY_GO/golang:$GO_VERSION-alpine
+    - docker image tag $CI_REGISTRY_GO/golang:$GO_VERSION-alpine golang:$GO_VERSION-alpine
     - sed -i "s~FROM golang~FROM $CI_REGISTRY_GO/golang~g" "build/Dockerfile"
     - sed -i "s~FROM haproxytech/haproxy-alpine~FROM $CI_REGISTRY_GO/haproxy-alpine~g" "build/Dockerfile"
   script:
@@ -164,9 +167,9 @@ docker-build-sch:
   rules:
     - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
     - if: $CI_PIPELINE_SOURCE == 'push'
-  image: $CI_REGISTRY_GO/docker:stable-go1.19
+  image: $CI_REGISTRY_GO/docker:stable-go$GO_VERSION
   services:
-    - name: $CI_REGISTRY_GO/docker:20.10-dind
+    - name: $CI_REGISTRY_GO/docker:$DOCKER_VERSION-dind
       alias: docker
   tags:
     - go
@@ -183,8 +186,8 @@ docker-build-sch:
     - go mod download &
     #- docker pull -q $CI_REGISTRY_GO/alpine:3
     #- docker image tag $CI_REGISTRY_GO/alpine:3 alpine:3
-    #- docker pull -q $CI_REGISTRY_GO/golang:1.19-alpine
-    #- docker image tag $CI_REGISTRY_GO/golang:1.19-alpine golang:1.19-alpine
+    #- docker pull -q $CI_REGISTRY_GO/golang:$GO_VERSION-alpine
+    #- docker image tag $CI_REGISTRY_GO/golang:$GO_VERSION-alpine golang:$GO_VERSION-alpine
     - docker pull -q $CI_REGISTRY_GO/haproxytech/http-echo:latest
     - docker image tag $CI_REGISTRY_GO/haproxytech/http-echo:latest haproxytech/http-echo:latest
     - wget -nv -O /usr/local/bin/kind https://github.com/kubernetes-sigs/kind/releases/download/${KIND}/kind-linux-amd64
@@ -256,20 +259,27 @@ e2e_k8s_23:
   stage: e2e_k8s_23
   needs: ["docker-build-sch","e2e_k8s_22"]
   variables:
-    K8S_VERSION: v1.23.12
+    K8S_VERSION: v1.23.13
     KUBEADM_VER: v1beta3
   extends: .kind_deployment_schedules
 e2e_k8s_24:
   stage: e2e_k8s_24
   needs: ["docker-build"]
   variables:
-    K8S_VERSION: v1.24.6
+    K8S_VERSION: v1.24.7
     KUBEADM_VER: v1beta3
   extends: .kind_deployment_schedules
 e2e_k8s_25:
   stage: e2e_k8s_25
   needs: ["docker-build"]
   variables:
-    K8S_VERSION: v1.25.2
+    K8S_VERSION: v1.25.3
+    KUBEADM_VER: v1beta3
+  extends: .kind_deployment_schedules
+e2e_k8s_26:
+  stage: e2e_k8s_26
+  needs: ["docker-build"]
+  variables:
+    K8S_VERSION: v1.26.0
     KUBEADM_VER: v1beta3
   extends: .kind_deployment

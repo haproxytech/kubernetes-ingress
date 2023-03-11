@@ -22,6 +22,7 @@ type HAProxyClient interface { //nolint:interfacebloat
 	BackendsGet() (models.Backends, error)
 	BackendGet(backendName string) (*models.Backend, error)
 	BackendCreate(backend models.Backend) error
+	BackendCreateIfNotExist(backend models.Backend) error
 	BackendEdit(backend models.Backend) error
 	BackendDelete(backendName string) error
 	BackendCfgSnippetSet(backendName string, value []string) error

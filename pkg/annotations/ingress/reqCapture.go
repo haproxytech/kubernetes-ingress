@@ -11,13 +11,13 @@ import (
 )
 
 type ReqCapture struct {
-	capture []*rules.ReqCapture
 	rules   *rules.List
+	capture []*rules.ReqCapture
 }
 
 type ReqCaptureAnn struct {
-	name   string
 	parent *ReqCapture
+	name   string
 }
 
 func NewReqCapture(r *rules.List) *ReqCapture {

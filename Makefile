@@ -1,6 +1,6 @@
 PROJECT_PATH=${PWD}
 TARGETPLATFORM?=linux/amd64
-GOLANGCI_LINT_VERSION=1.50.1
+GOLANGCI_LINT_VERSION=1.51.2
 
 .PHONY: test
 test:
@@ -32,6 +32,10 @@ yaml-lint:
 .PHONY: example
 example:
 	deploy/tests/create.sh
+
+.PHONY: example-experimental-gwapi
+example-experimental-gwapi:
+	EXPERIMENTAL_GWAPI=1 deploy/tests/create.sh
 
 .PHONY: example-rebuild
 example-rebuild:

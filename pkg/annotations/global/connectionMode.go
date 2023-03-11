@@ -13,8 +13,8 @@ import (
 var logger = utils.GetLogger()
 
 type HTTPConnectionMode struct {
-	name     string
 	defaults *models.Defaults
+	name     string
 }
 
 func NewHTTPConnectionMode(n string, d *models.Defaults) *HTTPConnectionMode {

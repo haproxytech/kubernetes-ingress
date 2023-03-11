@@ -20,6 +20,7 @@ import (
 
 	"github.com/haproxytech/client-native/v3/models"
 	"github.com/haproxytech/kubernetes-ingress/pkg/annotations"
+	gateway "github.com/haproxytech/kubernetes-ingress/pkg/gateways"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/maps"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/rules"
@@ -34,21 +35,22 @@ var logger = utils.GetLogger()
 
 // HAProxyController is ingress controller
 type HAProxyController struct {
-	haproxy                  haproxy.HAProxy
-	osArgs                   utils.OSArgs
-	store                    store.K8s
+	gatewayManager           gateway.GatewayManager
 	annotations              annotations.Annotations
 	publishService           *utils.NamespaceValue
-	auxCfgModTime            int64
 	eventChan                chan k8s.SyncDataEvent
-	ready                    bool
-	reload                   bool
-	restart                  bool
-	updateHandlers           []UpdateHandler
+	updatePublishServiceFunc func(ingresses []*ingress.Ingress, publishServiceAddresses []string)
+	chShutdown               chan struct{}
 	podNamespace             string
 	podPrefix                string
-	chShutdown               chan struct{}
-	updatePublishServiceFunc func(ingresses []*ingress.Ingress, publishServiceAddresses []string)
+	haproxy                  haproxy.HAProxy
+	updateHandlers           []UpdateHandler
+	store                    store.K8s
+	osArgs                   utils.OSArgs
+	auxCfgModTime            int64
+	restart                  bool
+	reload                   bool
+	ready                    bool
 }
 
 // Wrapping a Native-Client transaction and commit it.
@@ -132,6 +134,9 @@ func (c *HAProxyController) updateHAProxy() {
 	if len(ingresses) > 0 {
 		go c.updatePublishServiceFunc(ingresses, c.store.PublishServiceAddresses)
 	}
+
+	gatewayReload := c.gatewayManager.ManageGateway()
+	c.reload = gatewayReload || c.reload
 
 	for _, handler := range c.updateHandlers {
 		reload, err = handler.Update(c.store, c.haproxy, c.annotations)
@@ -228,15 +233,15 @@ func (c *HAProxyController) setToReady() {
 
 // setupHAProxyRules configures haproxy rules (set-var) required for the controller logic implementation
 func (c *HAProxyController) setupHAProxyRules() error {
-	var errors utils.Errors
-	errors.Add(
+	var errs utils.Errors
+	errs.Add(
 		// ForwardedProto rule
 		c.haproxy.AddRule(c.haproxy.FrontHTTPS, rules.SetHdr{
 			ForwardedProto: true,
 		}, false),
 	)
 	for _, frontend := range []string{c.haproxy.FrontHTTP, c.haproxy.FrontHTTPS} {
-		errors.Add(
+		errs.Add(
 			// txn.base var used for logging
 			c.haproxy.AddRule(frontend, rules.ReqSetVar{
 				Name:       "base",
@@ -278,12 +283,14 @@ func (c *HAProxyController) setupHAProxyRules() error {
 			}, false),
 		)
 	}
-	return errors.Result()
+	return errs.Result()
 }
 
 // clean haproxy config state
 func (c *HAProxyController) clean(failedSync bool) {
 	c.haproxy.Clean()
+	// Need to do that even if transaction failed otherwise at fix time, they won't be reprocessed.
+	c.store.BackendProcessed = map[string]struct{}{}
 	logger.Error(c.setupHAProxyRules())
 	if !failedSync {
 		c.store.Clean()

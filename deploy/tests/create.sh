@@ -5,6 +5,7 @@ command -v kind >/dev/null 2>&1 || { echo >&2 "Kind not installed.  Aborting."; 
 command -v kubectl >/dev/null 2>&1 || { echo >&2 "Kubectl not installed.  Aborting."; exit 1; }
 DIR=$(dirname "$0")
 
+printf %80s |tr " " "="; echo ""
 if [ -n "${CI_ENV}" ]; then
   echo "cluster was already created by $CI_ENV CI"
 
@@ -36,6 +37,7 @@ else
   kind load docker-image haproxytech/kubernetes-ingress:latest  --name=$clustername
 fi
 
+printf %80s |tr " " "="; echo ""
 if [ -n "${GITLAB_CI}" ]; then
   echo "haproxytech/http-echo:latest pulled from CI registry"
 else
@@ -44,16 +46,57 @@ fi
 echo "loading image http-echo in kind"
 kind load docker-image haproxytech/http-echo:latest  --name=$clustername
 
+printf %80s |tr " " "="; echo ""
 echo "Install custom resource definitions ..."
 kubectl apply -f $DIR/../../crs/definition/backend.yaml
 kubectl apply -f $DIR/../../crs/definition/defaults.yaml
 kubectl apply -f $DIR/../../crs/definition/global.yaml
 
+if [ "$EXPERIMENTAL_GWAPI" = "1" ]; then
+  printf %80s |tr " " "="; echo ""
+  echo "Install experimental GWAPI ..."
+  kubectl apply -f $DIR/../../deploy/tests/config/experimental/gwapi.experimental.yaml
+  printf %80s |tr " " "="; echo ""
+  echo "Install GWAPI resources..."
+  echo "kubectl wait --for=condition=ready --timeout=5m pod -l name=gateway-api-admission-server -n gateway-system"
+  ####################################################
+  COUNTER=0
+  while [  $COUNTER -lt 150 ]; do
+      FAILED_GWAPI=0
+      kubectl wait --for=condition=ready --timeout=5m pod -l name=gateway-api-admission-server -n gateway-system || FAILED_GWAPI=1
+      if [ "$FAILED_GWAPI" = "1" ]; then
+        COUNTER=`expr $COUNTER + 1`
+        sleep 1
+      else
+        COUNTER=151
+      fi
+  done
+  ####################################################
+  kubectl wait --for=condition=ready --timeout=5m pod -l name=gateway-api-admission-server -n gateway-system
+  printf %80s |tr " " "="; echo ""
+  kubectl apply -f $DIR/../../deploy/tests/config/experimental/gwapi-resources.yaml
+  kubectl apply -f $DIR/../../deploy/tests/config/experimental/gwapi-echo-app.yaml
+fi
+
+printf %80s |tr " " "="; echo ""
 echo "deploying Ingress Controller ..."
 kubectl apply -f $DIR/config/0.namespace.yaml
 kubectl apply -f $DIR/config/1.rbac.yaml
+if [ "$EXPERIMENTAL_GWAPI" = "1" ]; then
+  printf %80s |tr " " "="; echo ""
+  echo "Install GWAPI resources..."
+  kubectl apply -f deploy/tests/config/experimental/gwapi-rbac.yaml
+  printf %80s |tr " " "="; echo ""
+fi
 kubectl apply -f $DIR/config/2.configmap.yaml
-kubectl apply -f $DIR/config/3.ingress-controller.yaml
+if [ "$EXPERIMENTAL_GWAPI" = "1" ]; then
+  echo "Adding gateway-controller-name to IC config"
+  cat deploy/tests/config/3.ingress-controller.yaml | sed 's#ingress.class=haproxy#&\n            - --gateway-controller-name=haproxy.org/gateway-controller#g' | kubectl apply -f -
+else
+  kubectl apply -f $DIR/config/3.ingress-controller.yaml
+fi
+kubectl apply -f $DIR//config/echo-app.yaml
+printf %80s |tr " " "="; echo ""
 
 echo "wait --for=condition=ready ..."
 COUNTER=0

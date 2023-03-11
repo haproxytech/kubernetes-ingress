@@ -34,11 +34,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - name: Set up Go
-        uses: actions/setup-go@v2
+        uses: actions/setup-go@v3
         with:
-          go-version: 1.19
+          go-version-file: 'go.mod'
       - uses: actions/cache@v2
         with:
           path: |
@@ -56,11 +56,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - name: Set up Go
-        uses: actions/setup-go@v2
+        uses: actions/setup-go@v3
         with:
-          go-version: 1.19
+          go-version-file: 'go.mod'
       - uses: actions/cache@v2
         with:
           path: |
@@ -78,12 +78,12 @@ jobs:
     needs: ["generate", "tidy"]
     runs-on: ubuntu-latest
     steps:
-      - name: Check out code into the Go module directory
-        uses: actions/checkout@v2
+      - name: Check out code
+        uses: actions/checkout@v3
       - name: Set up Go
-        uses: actions/setup-go@v2
+        uses: actions/setup-go@v3
         with:
-          go-version: 1.19
+          go-version-file: 'go.mod'
       - uses: actions/cache@v2
         with:
           path: |
@@ -101,12 +101,11 @@ jobs:
     needs: ["lint"]
     steps:
     - name: Check out code
-      uses: actions/checkout@v2
-    - name: Set up Go 1.19
-      uses: actions/setup-go@v2
+      uses: actions/checkout@v3
+    - name: Set up Go
+      uses: actions/setup-go@v3
       with:
-        go-version: 1.19
-      id: go
+        go-version-file: 'go.mod'
     - uses: actions/cache@v2
       with:
         path: |
@@ -124,14 +123,16 @@ jobs:
   e2e:
     strategy:
         matrix:
-          k8s-version: ['v1.25.2']
+          k8s-version: ['v1.26.0']
     needs: ["build"]
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
-    - uses: actions/setup-go@v2
+    - name: Check out code
+      uses: actions/checkout@v3
+    - name: Set up Go
+      uses: actions/setup-go@v3
       with:
-        go-version: '^1.19' # The Go version to download (if necessary) and use.
+        go-version-file: 'go.mod'
     - uses: actions/cache@v2
       with:
         path: |
@@ -145,7 +146,7 @@ jobs:
           name: dev
           config: deploy/tests/kind-config.yaml
           image: kindest/node:${{ matrix.k8s-version }}
-          version: v0.16.0
+          version: v0.17.0
     - name: Setup
       run: CI_ENV=github deploy/tests/create.sh
     - name: Run parallel e2e tests

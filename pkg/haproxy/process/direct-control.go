@@ -13,9 +13,9 @@ import (
 )
 
 type directControl struct {
+	API        api.HAProxyClient
 	Env        env.Env
 	OSArgs     utils.OSArgs
-	API        api.HAProxyClient
 	useAuxFile bool
 }
 
@@ -54,14 +54,12 @@ func (d *directControl) Service(action string) (err error) {
 		_, err = process.Wait()
 		return err
 	case "reload":
-		logger.Error(saveServerState(d.Env.StateDir, d.API))
 		if processErr != nil {
 			logger.Errorf("haproxy is not running, trying to start it")
 			return d.Service("start")
 		}
 		return process.Signal(syscall.SIGUSR2)
 	case "restart":
-		logger.Error(saveServerState(d.Env.StateDir, d.API))
 		if processErr != nil {
 			logger.Errorf("haproxy is not running, trying to start it")
 			return d.Service("start")

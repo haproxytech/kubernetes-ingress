@@ -9,9 +9,9 @@ import (
 )
 
 type Crt struct {
-	name         string
 	haproxyCerts certs.Certificates
 	backend      *models.Backend
+	name         string
 }
 
 func NewCrt(n string, c certs.Certificates, b *models.Backend) *Crt {

@@ -11,8 +11,8 @@ import (
 )
 
 type Nbthread struct {
-	name   string
 	global *models.Global
+	name   string
 }
 
 func NewNbthread(n string, g *models.Global) *Nbthread {

@@ -11,8 +11,8 @@ import (
 )
 
 type ForwardedFor struct {
-	name    string
 	backend *models.Backend
+	name    string
 }
 
 func NewForwardedFor(n string, b *models.Backend) *ForwardedFor {

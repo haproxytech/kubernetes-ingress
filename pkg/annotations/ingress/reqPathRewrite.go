@@ -10,8 +10,8 @@ import (
 )
 
 type ReqPathRewrite struct {
-	name  string
 	rules *rules.List
+	name  string
 }
 
 func NewReqPathRewrite(n string, r *rules.List) *ReqPathRewrite {

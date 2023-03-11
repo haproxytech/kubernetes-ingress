@@ -32,12 +32,12 @@ import (
 )
 
 type Client struct {
-	NoRedirect bool
+	Req        *http.Request
+	Transport  *http.Transport
 	Path       string
 	Host       string
 	Port       int
-	Req        *http.Request
-	Transport  *http.Transport
+	NoRedirect bool
 }
 
 type GlobalHAProxyInfo struct {

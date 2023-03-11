@@ -8,10 +8,7 @@ import (
 	"github.com/haproxytech/kubernetes-ingress/pkg/annotations"
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
-	corev1 "k8s.io/api/core/v1"
-	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
 	networkingv1 "k8s.io/api/networking/v1"
-	networkingv1beta "k8s.io/api/networking/v1beta1"
 	k8serror "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -30,7 +27,7 @@ func NewStatusIngressUpdater(client *kubernetes.Clientset, k store.K8s, class st
 }
 
 func (i *Ingress) UpdateStatus(client *kubernetes.Clientset, addresses []string) (err error) {
-	var lbi []corev1.LoadBalancerIngress
+	var lbi []networkingv1.IngressLoadBalancerIngress
 
 	if utils.EqualSliceStringsWithoutOrder(i.resource.Addresses, addresses) {
 		return
@@ -38,33 +35,13 @@ func (i *Ingress) UpdateStatus(client *kubernetes.Clientset, addresses []string)
 
 	for _, addr := range addresses {
 		if net.ParseIP(addr) == nil {
-			lbi = append(lbi, corev1.LoadBalancerIngress{Hostname: addr})
+			lbi = append(lbi, networkingv1.IngressLoadBalancerIngress{Hostname: addr})
 		} else {
-			lbi = append(lbi, corev1.LoadBalancerIngress{IP: addr})
+			lbi = append(lbi, networkingv1.IngressLoadBalancerIngress{IP: addr})
 		}
 	}
 
 	switch i.resource.APIVersion {
-	// Required for Kubernetes < 1.14
-	case "extensions/v1beta1":
-		var ingSource *extensionsv1beta1.Ingress
-		ingSource, err = client.ExtensionsV1beta1().Ingresses(i.resource.Namespace).Get(context.Background(), i.resource.Name, metav1.GetOptions{})
-		if err != nil {
-			break
-		}
-		ingCopy := ingSource.DeepCopy()
-		ingCopy.Status = extensionsv1beta1.IngressStatus{LoadBalancer: corev1.LoadBalancerStatus{Ingress: lbi}}
-		_, err = client.ExtensionsV1beta1().Ingresses(i.resource.Namespace).UpdateStatus(context.Background(), ingCopy, metav1.UpdateOptions{})
-		// Required for Kubernetes < 1.19
-	case "networking.k8s.io/v1beta1":
-		var ingSource *networkingv1beta.Ingress
-		ingSource, err = client.NetworkingV1beta1().Ingresses(i.resource.Namespace).Get(context.Background(), i.resource.Name, metav1.GetOptions{})
-		if err != nil {
-			break
-		}
-		ingCopy := ingSource.DeepCopy()
-		ingCopy.Status = networkingv1beta.IngressStatus{LoadBalancer: corev1.LoadBalancerStatus{Ingress: lbi}}
-		_, err = client.NetworkingV1beta1().Ingresses(i.resource.Namespace).UpdateStatus(context.Background(), ingCopy, metav1.UpdateOptions{})
 	case "networking.k8s.io/v1":
 		var ingSource *networkingv1.Ingress
 		ingSource, err = client.NetworkingV1().Ingresses(i.resource.Namespace).Get(context.Background(), i.resource.Name, metav1.GetOptions{})
@@ -72,7 +49,7 @@ func (i *Ingress) UpdateStatus(client *kubernetes.Clientset, addresses []string)
 			break
 		}
 		ingCopy := ingSource.DeepCopy()
-		ingCopy.Status = networkingv1.IngressStatus{LoadBalancer: corev1.LoadBalancerStatus{Ingress: lbi}}
+		ingCopy.Status = networkingv1.IngressStatus{LoadBalancer: networkingv1.IngressLoadBalancerStatus{Ingress: lbi}}
 		_, err = client.NetworkingV1().Ingresses(i.resource.Namespace).UpdateStatus(context.Background(), ingCopy, metav1.UpdateOptions{})
 	}
 

@@ -9,8 +9,8 @@ import (
 )
 
 type HardStopAfter struct {
-	name   string
 	global *models.Global
+	name   string
 }
 
 func NewHardStopAfter(n string, g *models.Global) *HardStopAfter {

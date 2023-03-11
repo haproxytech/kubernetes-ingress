@@ -7,8 +7,8 @@ import (
 )
 
 type SrcIPHdr struct {
-	name  string
 	rules *rules.List
+	name  string
 }
 
 func NewSrcIPHdr(n string, r *rules.List) *SrcIPHdr {

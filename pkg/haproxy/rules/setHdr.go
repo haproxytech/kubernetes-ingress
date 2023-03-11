@@ -10,13 +10,13 @@ import (
 )
 
 type SetHdr struct {
-	Response       bool
-	ForwardedProto bool
 	HdrName        string
 	HdrFormat      string
-	Type           Type
 	CondTest       string
 	Cond           string
+	Type           Type
+	Response       bool
+	ForwardedProto bool
 }
 
 func (r SetHdr) GetType() Type {
