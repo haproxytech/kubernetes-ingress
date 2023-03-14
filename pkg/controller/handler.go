@@ -55,12 +55,6 @@ func (c *HAProxyController) initHandlers() {
 	if c.osArgs.PprofEnabled {
 		c.updateHandlers = append(c.updateHandlers, handler.Pprof{})
 	}
-	if c.osArgs.DefaultBackendService.String() == "" {
-		c.updateHandlers = append(c.updateHandlers, handler.DefaultLocalService{
-			Name: "default_local_backend",
-			Port: c.osArgs.DefaultBackendPort,
-		})
-	}
 	c.updateHandlers = append(c.updateHandlers, handler.Refresh{})
 }
 

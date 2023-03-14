@@ -26,11 +26,11 @@ import (
 )
 
 // HandleHAProxySrvs handles the haproxy backend servers of the corresponding IngressPath (service + port)
-func (s *Service) HandleHAProxySrvs(store store.K8s, client api.HAProxyClient) (reload bool) {
+func (s *Service) HandleHAProxySrvs(k8s store.K8s, client api.HAProxyClient) (reload bool) {
 	var srvsScaled bool
-	backend, err := s.getRuntimeBackend(store)
+	backend, err := s.getRuntimeBackend(k8s)
 	if err != nil {
-		if s.backend != nil && s.backend.Name == "default_local_backend" {
+		if s.backend != nil && s.backend.Name == store.DefaultLocalBackend {
 			return
 		}
 		logger.Warningf("Ingress '%s/%s': %s", s.resource.Namespace, s.resource.Name, err)

@@ -21,7 +21,7 @@ import (
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
 )
 
-const DefaultLocalBackend = "default_local_backend"
+const DefaultLocalBackend = "default-local-service"
 
 type K8s struct {
 	NbrHAProxyInst          int64
