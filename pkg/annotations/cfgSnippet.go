@@ -140,9 +140,6 @@ func UpdateBackendCfgSnippet(k store.K8s, api api.HAProxyClient, backend string)
 	}
 
 	defer func() {
-		if backend == store.DefaultLocalBackend {
-			return
-		}
 		data.value = nil
 		data.backendValue = nil
 	}()
