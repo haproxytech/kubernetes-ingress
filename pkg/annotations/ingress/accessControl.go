@@ -58,7 +58,7 @@ func (a *AccessControl) Process(k store.K8s, annotations ...map[string]string) (
 			address = strings.TrimSpace(address)
 			if ip := net.ParseIP(address); ip == nil {
 				if _, _, err := net.ParseCIDR(address); err != nil {
-					return fmt.Errorf("incorrect address '%s' in blacklist annotation'", address)
+					return fmt.Errorf("incorrect address '%s' in %s annotation", address, a.name)
 				}
 			}
 			a.maps.MapAppend(mapName, address)
