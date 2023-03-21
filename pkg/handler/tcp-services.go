@@ -25,6 +25,7 @@ type tcpSvcParser struct {
 	service    *store.Service
 	port       int64
 	sslOffload bool
+	annList    map[string]string
 }
 
 func (handler TCPServices) Update(k store.K8s, h haproxy.HAProxy, a annotations.Annotations) (reload bool, err error) {
@@ -65,6 +66,7 @@ func (handler TCPServices) parseTCPService(store store.K8s, input string) (p tcp
 	// parts[0]: Service Name
 	// parts[1]: Service Port
 	// parts[2]: SSL option
+	// parts[3]: Annotations separated by commas ex: annotation1=value,annotation2=value
 	parts := strings.Split(input, ":")
 	if len(parts) < 2 {
 		err = fmt.Errorf("incorrect format '%s', 'ServiceName:ServicePort' is required", input)
@@ -72,10 +74,24 @@ func (handler TCPServices) parseTCPService(store store.K8s, input string) (p tcp
 	}
 	svcName := strings.Split(parts[0], "/")
 	svcPort := parts[1]
-	if len(parts) > 2 {
+	if len(parts) == 3 {
 		if parts[2] == "ssl" {
 			p.sslOffload = true
 		}
+	}
+	if len(parts) > 3 {
+		if parts[2] == "ssl" {
+			p.sslOffload = true
+		}
+		svcOpts := strings.Split(parts[3], ",")
+		annList := map[string]string{}
+		for _, v := range svcOpts {
+			ann := strings.Split(v, "=")
+			if len(ann) > 0 {
+				annList[ann[0]] = ann[1]
+			}
+		}
+		p.annList = annList
 	}
 	if len(svcName) != 2 {
 		err = fmt.Errorf("incorrect Service Name '%s'. Should be in 'ServiceNS/ServiceName' format", parts[0])
@@ -198,7 +214,7 @@ func (handler TCPServices) updateTCPFrontend(k store.K8s, h haproxy.HAProxy, fro
 		SvcPortInt:       p.port,
 		IsDefaultBackend: true,
 	}
-	if svc, err = service.New(k, path, nil, true); err == nil {
+	if svc, err = service.New(k, path, nil, true, p.annList); err == nil {
 		r, err = svc.SetDefaultBackend(k, h, []string{frontend.Name}, a)
 	}
 	return reload || r, err
