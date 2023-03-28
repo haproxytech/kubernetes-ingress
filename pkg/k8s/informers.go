@@ -24,7 +24,7 @@ import (
 
 func (k k8s) getNamespaceInfomer(eventChan chan SyncDataEvent, factory informers.SharedInformerFactory) cache.SharedIndexInformer { //nolint:ireturn
 	informer := factory.Core().V1().Namespaces().Informer()
-	informer.AddEventHandler(
+	_, err := informer.AddEventHandler(
 		cache.ResourceEventHandlerFuncs{
 			AddFunc: func(obj interface{}) {
 				data, ok := obj.(*corev1.Namespace)
@@ -119,12 +119,13 @@ func (k k8s) getNamespaceInfomer(eventChan chan SyncDataEvent, factory informers
 			},
 		},
 	)
+	logger.Error(err)
 	return informer
 }
 
 func (k k8s) getServiceInformer(eventChan chan SyncDataEvent, factory informers.SharedInformerFactory) cache.SharedIndexInformer { //nolint:ireturn
 	informer := factory.Core().V1().Services().Informer()
-	informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+	_, err := informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			data, ok := obj.(*corev1.Service)
 			if !ok {
@@ -260,12 +261,13 @@ func (k k8s) getServiceInformer(eventChan chan SyncDataEvent, factory informers.
 			}
 		},
 	})
+	logger.Error(err)
 	return informer
 }
 
 func (k k8s) getSecretInformer(eventChan chan SyncDataEvent, factory informers.SharedInformerFactory) cache.SharedIndexInformer { //nolint:ireturn
 	informer := factory.Core().V1().Secrets().Informer()
-	informer.AddEventHandler(
+	_, err := informer.AddEventHandler(
 		cache.ResourceEventHandlerFuncs{
 			AddFunc: func(obj interface{}) {
 				data, ok := obj.(*corev1.Secret)
@@ -335,12 +337,13 @@ func (k k8s) getSecretInformer(eventChan chan SyncDataEvent, factory informers.S
 			},
 		},
 	)
+	logger.Error(err)
 	return informer
 }
 
 func (k k8s) getConfigMapInformer(eventChan chan SyncDataEvent, factory informers.SharedInformerFactory) cache.SharedIndexInformer { //nolint:ireturn
 	informer := factory.Core().V1().ConfigMaps().Informer()
-	informer.AddEventHandler(
+	_, err := informer.AddEventHandler(
 		cache.ResourceEventHandlerFuncs{
 			AddFunc: func(obj interface{}) {
 				data, ok := obj.(*corev1.ConfigMap)
@@ -410,6 +413,7 @@ func (k k8s) getConfigMapInformer(eventChan chan SyncDataEvent, factory informer
 			},
 		},
 	)
+	logger.Error(err)
 	return informer
 }
 
@@ -467,7 +471,7 @@ func (k k8s) getEndpointSliceInformer(eventChan chan SyncDataEvent, factory info
 
 func (k k8s) getEndpointsInformer(eventChan chan SyncDataEvent, factory informers.SharedInformerFactory) cache.SharedIndexInformer { //nolint:ireturn
 	informer := factory.Core().V1().Endpoints().Informer()
-	informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+	_, err := informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			item, err := k.convertToEndpoints(obj, store.ADDED)
 			if errors.Is(err, ErrIgnored) {
@@ -498,6 +502,7 @@ func (k k8s) getEndpointsInformer(eventChan chan SyncDataEvent, factory informer
 			eventChan <- SyncDataEvent{SyncType: ENDPOINTS, Namespace: item2.Namespace, Data: item2}
 		},
 	})
+	logger.Error(err)
 	return informer
 }
 
@@ -531,7 +536,7 @@ func (k *k8s) getPodInformer(namespace, podPrefix string, resyncPeriod time.Dura
 }
 
 func (k k8s) addIngressClassHandlers(eventChan chan SyncDataEvent, informer cache.SharedIndexInformer) {
-	informer.AddEventHandler(
+	_, err := informer.AddEventHandler(
 		cache.ResourceEventHandlerFuncs{
 			AddFunc: func(obj interface{}) {
 				item, err := store.ConvertToIngressClass(obj)
@@ -565,10 +570,11 @@ func (k k8s) addIngressClassHandlers(eventChan chan SyncDataEvent, informer cach
 			},
 		},
 	)
+	logger.Error(err)
 }
 
 func (k k8s) addIngressHandlers(eventChan chan SyncDataEvent, informer cache.SharedIndexInformer) {
-	informer.AddEventHandler(
+	_, err := informer.AddEventHandler(
 		cache.ResourceEventHandlerFuncs{
 			AddFunc: func(obj interface{}) {
 				item, err := store.ConvertToIngress(obj)
@@ -602,10 +608,11 @@ func (k k8s) addIngressHandlers(eventChan chan SyncDataEvent, informer cache.Sha
 			},
 		},
 	)
+	logger.Error(err)
 }
 
 func (k k8s) addEndpointSliceHandlers(eventChan chan SyncDataEvent, informer cache.SharedIndexInformer) {
-	informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+	_, err := informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			item, err := k.convertToEndpoints(obj, store.ADDED)
 			if errors.Is(err, ErrIgnored) {
@@ -636,6 +643,7 @@ func (k k8s) addEndpointSliceHandlers(eventChan chan SyncDataEvent, informer cac
 			eventChan <- SyncDataEvent{SyncType: ENDPOINTS, Namespace: item2.Namespace, Data: item2}
 		},
 	})
+	logger.Error(err)
 }
 
 func (k k8s) convertToEndpoints(obj interface{}, status store.Status) (*store.Endpoints, error) {
@@ -919,7 +927,7 @@ func (k k8s) getTCPRouteInformer(eventChan chan SyncDataEvent, factory gatewayne
 }
 
 func PopulateInformer[IT InformerGetter, GWType GatewayRelatedType, GWF GatewayInformerFunc[GWType]](eventChan chan SyncDataEvent, informer IT, handler GWF) cache.SharedIndexInformer {
-	informer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+	_, err := informer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			gatewaytype := obj.(GWType)
 			handler(gatewaytype, eventChan, store.ADDED)
@@ -933,6 +941,7 @@ func PopulateInformer[IT InformerGetter, GWType GatewayRelatedType, GWF GatewayI
 			handler(gatewaytype, eventChan, store.DELETED)
 		},
 	})
+	logger.Error(err)
 	return informer.Informer()
 }
 

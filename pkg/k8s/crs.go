@@ -62,7 +62,7 @@ func (c GlobalCR) GetInformer(eventChan chan SyncDataEvent, factory informers.Sh
 		eventChan <- SyncDataEvent{SyncType: SyncType(c.GetKind()), Namespace: data.GetNamespace(), Name: data.GetName(), Data: data}
 	}
 
-	informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+	_, err := informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			sendToChannel(eventChan, obj, store.ADDED)
 		},
@@ -73,6 +73,7 @@ func (c GlobalCR) GetInformer(eventChan chan SyncDataEvent, factory informers.Sh
 			sendToChannel(eventChan, obj, store.DELETED)
 		},
 	})
+	logger.Error(err)
 	return informer
 }
 
@@ -97,7 +98,7 @@ func (c DefaultsCR) GetInformer(eventChan chan SyncDataEvent, factory informers.
 		eventChan <- SyncDataEvent{SyncType: SyncType(c.GetKind()), Namespace: data.GetNamespace(), Name: data.GetName(), Data: data}
 	}
 
-	informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+	_, err := informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			sendToChannel(eventChan, obj, store.ADDED)
 		},
@@ -108,6 +109,7 @@ func (c DefaultsCR) GetInformer(eventChan chan SyncDataEvent, factory informers.
 			sendToChannel(eventChan, obj, store.DELETED)
 		},
 	})
+	logger.Error(err)
 	return informer
 }
 
@@ -132,7 +134,7 @@ func (c BackendCR) GetInformer(eventChan chan SyncDataEvent, factory informers.S
 		eventChan <- SyncDataEvent{SyncType: SyncType(c.GetKind()), Namespace: data.GetNamespace(), Name: data.GetName(), Data: data}
 	}
 
-	informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+	_, err := informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			sendToChannel(eventChan, obj, store.ADDED)
 		},
@@ -143,5 +145,6 @@ func (c BackendCR) GetInformer(eventChan chan SyncDataEvent, factory informers.S
 			sendToChannel(eventChan, obj, store.DELETED)
 		},
 	})
+	logger.Error(err)
 	return informer
 }
