@@ -262,11 +262,11 @@ github.com/googleapis/gax-go/v2 v2.0.4/go.mod h1:0Wqv26UfaUD9n4G6kQubkQ+KchISgw+
 github.com/googleapis/gax-go/v2 v2.0.5/go.mod h1:DWXyrwAJ9X0FpwwEdw+IPEYBICEFu5mhpdKc/us6bOk=
 github.com/haproxytech/client-native/v2 v2.5.2-0.20220126142624-4a2781a21376 h1:/KImJfBREyeFrKt1qtIoFKCOjEo1T5VS2TPznzgYB1w=
 github.com/haproxytech/client-native/v2 v2.5.2-0.20220126142624-4a2781a21376/go.mod h1:MTl8dabMibEE9ytnR1uPOFbcJ7XtYKEhxnBcqBP8kXM=
-github.com/haproxytech/client-native/v3 v3.1.1-0.20220520145135-9afaaf96bc7f h1:jV+f9lmAOqSJF3IBgrEFq5qrLBt73zuMRimdy0iJVis=
-github.com/haproxytech/client-native/v3 v3.1.1-0.20220520145135-9afaaf96bc7f/go.mod h1:W3WGOnzwpgXp483BCs8Xj40gejn4rNfhRgfQrJXL/sc=
+github.com/haproxytech/client-native/v3 v3.1.2-0.20230330141732-a5d527856af8 h1:nhnazgE5muTxnQ0MIOeV+kzPqzKQaEaZ5EP+5d//fWg=
+github.com/haproxytech/client-native/v3 v3.1.2-0.20230330141732-a5d527856af8/go.mod h1:0jzmX8gZJY+4PoKQN2Nih52+DsN3/AD22c1Wrl3mhbs=
 github.com/haproxytech/config-parser/v4 v4.0.0-rc2.0.20220126135717-1dd35f8b7a52/go.mod h1:pEuHx+aFhn0lIdvAg1OaawQfeRkpq1I8HzjtZN4/PLI=
-github.com/haproxytech/config-parser/v4 v4.0.0-rc2.0.20220428133329-7d0ec01198d4 h1:aTSSDkGwoDwGv0hRfKsaWxVejDW8iROlPPBhboI3ONk=
-github.com/haproxytech/config-parser/v4 v4.0.0-rc2.0.20220428133329-7d0ec01198d4/go.mod h1:pEuHx+aFhn0lIdvAg1OaawQfeRkpq1I8HzjtZN4/PLI=
+github.com/haproxytech/config-parser/v4 v4.0.0 h1:79DaXm9/5EeAdfKRmH8GXmmCCZHiw2+LdRNH0prZ5cg=
+github.com/haproxytech/config-parser/v4 v4.0.0/go.mod h1:reXxQMovpfJxmc3WLu6UkL29F9hx/PSKHS2jl47M3gs=
 github.com/haproxytech/go-logger v1.0.1-0.20211022075555-178f1cdf4d84/go.mod h1:OekUd8HCb7ubxMplzHUPBTHNxZmddOWfOjWclZsqIeM=
 github.com/haproxytech/go-logger v1.1.0 h1:HgGtYaI1ApkvbQdsm7f9AzQQoxTB7w37criTflh7IQE=
 github.com/haproxytech/go-logger v1.1.0/go.mod h1:OekUd8HCb7ubxMplzHUPBTHNxZmddOWfOjWclZsqIeM=
@@ -312,7 +312,6 @@ github.com/kr/pretty v0.1.0/go.mod h1:dAy3ld7l9f0ibDNOQOHHMYYIIbhfbHSm3C4ZsoJORN
 github.com/kr/pretty v0.2.0/go.mod h1:ipq/a2n7PKx3OHsz4KJII5eveXtPO4qwEXGdVfWzfnI=
 github.com/kr/pretty v0.2.1/go.mod h1:ipq/a2n7PKx3OHsz4KJII5eveXtPO4qwEXGdVfWzfnI=
 github.com/kr/pretty v0.3.0 h1:WgNl7dwNpEZ6jJ9k1snq4pZsg7DOEN8hP9Xw0Tsjwk0=
-github.com/kr/pretty v0.3.0/go.mod h1:640gp4NfQd8pI5XOwp5fnNeVWj67G7CFk/SaSQn7NBk=
 github.com/kr/pty v1.1.1/go.mod h1:pFQYn66WHrOpPYNljwOMqo10TkYh1fy3cYio2l3bCsQ=
 github.com/kr/pty v1.1.5/go.mod h1:9r2w37qlBe7rQ6e1fg1S/9xpWHSnaqNdHD3WcMdbPDA=
 github.com/kr/text v0.1.0/go.mod h1:4Jbv+DJW3UT/LiOwJeYQe1efqtUx/iVham/4vfdArNI=
@@ -389,8 +388,7 @@ github.com/prometheus/procfs v0.8.0/go.mod h1:z7EfXMXOkbkqb9IINtpCn86r/to3BnA0ua
 github.com/rogpeppe/go-internal v1.1.0/go.mod h1:M8bDsm7K2OlrFYOpmOWEs/qY81heoFRclV5y23lUDJ4=
 github.com/rogpeppe/go-internal v1.2.2/go.mod h1:M8bDsm7K2OlrFYOpmOWEs/qY81heoFRclV5y23lUDJ4=
 github.com/rogpeppe/go-internal v1.3.0/go.mod h1:M8bDsm7K2OlrFYOpmOWEs/qY81heoFRclV5y23lUDJ4=
-github.com/rogpeppe/go-internal v1.6.1 h1:/FiVV8dS/e+YqF2JvO3yXRFbBLTIuSDkuC7aBOAvL+k=
-github.com/rogpeppe/go-internal v1.6.1/go.mod h1:xXDCJY+GAPziupqXw64V24skbSoqbTEfhy4qGm1nDQc=
+github.com/rogpeppe/go-internal v1.10.0 h1:TMyTOH3F/DB16zRVcYyreMH6GnZZrwQVAoYjRBZyWFQ=
 github.com/savsgio/gotils v0.0.0-20220530130905-52f3993e8d6d h1:Q+gqLBOPkFGHyCJxXMRqtUgUbTjI8/Ze8vu8GGyNFwo=
 github.com/savsgio/gotils v0.0.0-20220530130905-52f3993e8d6d/go.mod h1:Gy+0tqhJvgGlqnTF8CVGP0AaGRjwBtXs/a5PA0Y3+A4=
 github.com/sirupsen/logrus v1.2.0/go.mod h1:LxeOpSwHxABJmUn/MG1IvRgCAasNZTLOkJPxbbu5VWo=
