@@ -18,7 +18,7 @@ variables:
   DOCKER_HOST: tcp://docker:2375
   DOCKER_DRIVER: overlay2
   GO_VERSION: "1.20"
-  DOCKER_VERSION: "20.10"
+  DOCKER_VERSION: "23.0"
 diff:
   stage: diff
   rules:
@@ -107,7 +107,7 @@ docker-build:
   rules:
     - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
     - if: $CI_PIPELINE_SOURCE == 'push'
-  image: $CI_REGISTRY_GO/docker:stable-go$GO_VERSION
+  image: $CI_REGISTRY_GO/docker:$DOCKER_VERSION-go$GO_VERSION
   services:
     - name: $CI_REGISTRY_GO/docker:$DOCKER_VERSION-dind
       alias: docker
@@ -136,7 +136,7 @@ docker-build-sch:
   needs: []
   rules:
     - if: $CI_PIPELINE_SOURCE == 'schedule'
-  image: $CI_REGISTRY_GO/docker:stable-go$GO_VERSION
+  image: $CI_REGISTRY_GO/docker:$DOCKER_VERSION-go$GO_VERSION
   services:
     - name: $CI_REGISTRY_GO/docker:$DOCKER_VERSION-dind
       alias: docker
@@ -167,7 +167,7 @@ docker-build-sch:
   rules:
     - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
     - if: $CI_PIPELINE_SOURCE == 'push'
-  image: $CI_REGISTRY_GO/docker:stable-go$GO_VERSION
+  image: $CI_REGISTRY_GO/docker:$DOCKER_VERSION-go$GO_VERSION
   services:
     - name: $CI_REGISTRY_GO/docker:$DOCKER_VERSION-dind
       alias: docker
