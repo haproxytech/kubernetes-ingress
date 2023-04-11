@@ -4,17 +4,11 @@ stages:
   - unit-tests
   - build
   - e2e-tests
-  - e2e_k8s_19
-  - e2e_k8s_20
-  - e2e_k8s_21
-  - e2e_k8s_22
-  - e2e_k8s_23
-  - e2e_k8s_24
   - e2e_k8s_25
   - e2e_k8s_26
+  - e2e_k8s_27
 variables:
-  KUBECTL: v1.25.3
-  KIND: v0.17.0
+  KIND: v0.18.0
   DOCKER_HOST: tcp://docker:2375
   DOCKER_DRIVER: overlay2
   GO_VERSION: "1.20"
@@ -227,59 +221,27 @@ docker-build-sch:
     expire_in: 60 minutes
     exclude:
       - tar/*
-# Kubernetes 1.19 is the oldest release to support networking.k8s.io/v1
-e2e_k8s_19:
-  stage: e2e_k8s_19
-  variables:
-    K8S_VERSION: v1.19.16
-    KUBEADM_VER: v1beta2
-  extends: .kind_deployment_schedules
-e2e_k8s_20:
-  stage: e2e_k8s_20
-  needs: ["docker-build-sch","e2e_k8s_19"]
-  variables:
-    K8S_VERSION: v1.20.15
-    KUBEADM_VER: v1beta2
-  extends: .kind_deployment_schedules
-e2e_k8s_21:
-  stage: e2e_k8s_21
-  needs: ["docker-build-sch","e2e_k8s_20"]
-  variables:
-    K8S_VERSION: v1.21.14
-    KUBEADM_VER: v1beta2
-  extends: .kind_deployment_schedules
-e2e_k8s_22:
-  stage: e2e_k8s_22
-  needs: ["docker-build-sch","e2e_k8s_21"]
-  variables:
-    K8S_VERSION: v1.22.15
-    KUBEADM_VER: v1beta2
-  extends: .kind_deployment_schedules
-e2e_k8s_23:
-  stage: e2e_k8s_23
-  needs: ["docker-build-sch","e2e_k8s_22"]
-  variables:
-    K8S_VERSION: v1.23.13
-    KUBEADM_VER: v1beta3
-  extends: .kind_deployment_schedules
-e2e_k8s_24:
-  stage: e2e_k8s_24
-  needs: ["docker-build"]
-  variables:
-    K8S_VERSION: v1.24.7
-    KUBEADM_VER: v1beta3
-  extends: .kind_deployment_schedules
 e2e_k8s_25:
   stage: e2e_k8s_25
   needs: ["docker-build"]
   variables:
-    K8S_VERSION: v1.25.3
+    K8S_VERSION: v1.25.8
     KUBEADM_VER: v1beta3
+    KUBECTL: v1.26.3
   extends: .kind_deployment_schedules
 e2e_k8s_26:
   stage: e2e_k8s_26
   needs: ["docker-build"]
   variables:
-    K8S_VERSION: v1.26.0
+    K8S_VERSION: v1.26.3
     KUBEADM_VER: v1beta3
+    KUBECTL: v1.26.3
+  extends: .kind_deployment_schedules
+e2e_k8s_27:
+  stage: e2e_k8s_27
+  needs: ["docker-build"]
+  variables:
+    K8S_VERSION: v1.27.0
+    KUBEADM_VER: v1beta3
+    KUBECTL: v1.27.0
   extends: .kind_deployment
