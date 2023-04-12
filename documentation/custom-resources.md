@@ -3,7 +3,7 @@
 - In order to use custom resources, you will need to apply/update resource [definitions](../crs/definition/)
 - Custom Resources are used by Ingress Controller to implement HAProxy concepts like (backend, frontend, http rules, etc) which are all available under the `core.haproxy.org` API.
 - Current implementation relies on the [client-native](https://github.com/haproxytech/client-native) library and its [models](https://github.com/haproxytech/client-native/tree/master/models) to [configure HAProxy](https://cbonte.github.io/haproxy-dconv/2.4/configuration.html#4.1).
-- Custom resources are meant to **replace annotations** when possible. So they will have **precedance** when used.   
+- Custom resources are meant to **replace annotations** when possible. So they will have **precedance** when used.
   *Example:* if the backend resource is used no backend annotation will be processed which means a backend cannot be configured by mixing both the backend resource and backend annotations.
 
 ## HAProxy concepts
@@ -28,7 +28,8 @@ spec:
     stats_timeout: 36000
     tune_ssl_default_dh_param: 2048
     ssl_default_bind_options: "no-sslv3 no-tls-tickets no-tlsv10"
-    ssl_default_bind_ciphers:  ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES256-GCM-SHA384:DHE-RSA-AES128-GCM-SHA256:DHE-DSS-AES128-GCM-SHA256:kEDH+AESGCM:ECDHE-RSA-AES128-SHA256:ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA:ECDHE-ECDSA-AES128-SHA:ECDHE-RSA-AES256-SHA384:ECDHE-ECDSA-AES256-SHA384:ECDHE-RSA-AES256-SHA:ECDHE-ECDSA-AES256-SHA:DHE-RSA-AES128-SHA256:DHE-RSA-AES128-SHA:DHE-DSS-AES128-SHA256:DHE-RSA-AES256-SHA256:DHE-DSS-AES256-SHA:DHE-RSA-AES256-SHA:!aNULL:!eNULL:!EXPORT:!DES:!RC4:!3DES:!MD5:!PSK
+    ssl_default_bind_ciphers:
+    ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES128-GCM-SHA256:DHE-DSS-AES128-GCM-SHA256:kEDH+AESGCM:ECDHE-RSA-AES128-SHA256:ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA:ECDHE-ECDSA-AES128-SHA:ECDHE-RSA-AES256-SHA384:ECDHE-ECDSA-AES256-SHA384:ECDHE-RSA-AES256-SHA:ECDHE-ECDSA-AES256-SHA:DHE-RSA-AES128-SHA256:DHE-RSA-AES128-SHA:DHE-DSS-AES128-SHA256:DHE-RSA-AES256-SHA256:DHE-DSS-AES256-SHA:DHE-RSA-AES256-SHA:AES256-GCM-SHA384:AES128-SHA256:AES256-SHA256:AES128-SHA:AES256-SHA:AES:CAMELLIA:!aNULL:!eNULL:!EXPORT:!DES:!RC4:!MD5:!PSK:!aECDH:!EDH-DSS-DES-CBC3-SHA:!EDH-RSA-DES-CBC3-SHA:!KRB5-DES-CBC3-SHA:!3DES
     hard_stop_after: 30000
     server_state_base: /tmp/haproxy-ingress/state
     runtime_apis:
@@ -99,7 +100,7 @@ data:
 
 
 ### Backend
-The Backend resource is used to configure the HAProxy backend section by referencing the resouce via the `cr-backend` annotation in corresponding backend service.   
+The Backend resource is used to configure the HAProxy backend section by referencing the resouce via the `cr-backend` annotation in corresponding backend service.
 `cr-backend` annotation can be used also at the ConfigMap level (as default backend config for all services) or Ingress level (as a default backend config for the underlying services)
 
 *Example:*
