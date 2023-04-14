@@ -187,6 +187,17 @@ image_arguments:
     helm: |-
       helm install haproxy haproxytech/kubernetes-ingress \
         --set-string "controller.extraArgs={--empty-ingress-class}"
+  - argument: --gateway-controller-name
+    description: identifier of your controller to know which gatewayclass it will handle
+    values:
+      - The name of the controllerName in GatewayClass
+    version_min: "1.10"
+    example: |-
+      args:
+        - --gateway-controller-name=haproxy.org/gateway-controller
+    helm: |-
+      helm install intranet haproxytech/kubernetes-ingress \
+        --set controller.gatewayControllerName=haproxy.org/gateway-controller
   - argument: --namespace-blacklist
     description: Namespaces that the ingress controller should not monitor for changes to pods and services.
     values:
@@ -1126,7 +1137,7 @@ annotations:
       haproxy.org/path-rewrite: (.*) /foo\1                # add the prefix /foo... "/bar?q=1" into "/foo/bar?q=1"
       haproxy.org/path-rewrite: ([^?]*)(\?(.*))? \1/foo\2  # add the suffix /foo ... "/bar?q=1" into "/bar/foo?q=1"
       haproxy.org/path-rewrite: /foo/(.*) /\1              # strip /foo ... "/foo/bar?q=1" into "/bar?q=1"
-      
+
       # strip /foo ... "/foo/bar?q=1" into "/bar?q=1" and replace "/bar/*" with "/baz/*"
       # with multiline (using `|`) annotation
       haproxy.org/path-rewrite: |

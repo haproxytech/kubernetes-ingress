@@ -20,6 +20,7 @@ Image can be run with arguments:
 | [`--default-ssl-certificate`](#--default-ssl-certificate) |  |
 | [`--ingress.class`](#--ingressclass) |  |
 | [`--empty-ingress-class`](#--empty-ingress-class) | `false` |
+| [`--gateway-controller-name`](#--gateway-controller-name) :construction:(dev) |  |
 | [`--namespace-blacklist`](#--namespace-blacklist) |  |
 | [`--namespace-whitelist`](#--namespace-whitelist) |  |
 | [`--publish-service`](#--publish-service) |  |
@@ -331,6 +332,28 @@ Example:
 ```yaml
 args:
   - --empty-ingress-class
+```
+
+<p align='right'><a href='#haproxy-kubernetes-ingress-controller'>:arrow_up_small: back to top</a></p>
+
+***
+
+### `--gateway-controller-name`
+
+
+  > :construction: this is only available from next version, currently available in dev build
+
+  identifier of your controller to know which gatewayclass it will handle
+
+Possible values:
+
+- The name of the controllerName in GatewayClass
+
+Example:
+
+```yaml
+args:
+  - --gateway-controller-name=haproxy.org/gateway-controller
 ```
 
 <p align='right'><a href='#haproxy-kubernetes-ingress-controller'>:arrow_up_small: back to top</a></p>
