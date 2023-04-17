@@ -20,9 +20,9 @@ jobs:
           GOMOD_VERSION=$(cat go.mod | grep -i "^go " | sed -e "s/go //g")
           echo "GOMOD_VERSION=${GOMOD_VERSION}" >> $GITHUB_ENV
       - name: Set up Go
-        uses: actions/setup-go@v2
+        uses: actions/setup-go@v4
         with:
-          go-version: "${{ env.GOMOD_VERSION }}"
+          go-version-file: 'go.mod'
       - name: generating documentation
         run: cd documentation/gen && go run .
       - name: changes
@@ -36,7 +36,7 @@ jobs:
       - name: Check out code
         uses: actions/checkout@v3
       - name: Set up Go
-        uses: actions/setup-go@v3
+        uses: actions/setup-go@v4
         with:
           go-version-file: 'go.mod'
       - uses: actions/cache@v2
@@ -58,7 +58,7 @@ jobs:
       - name: Check out code
         uses: actions/checkout@v3
       - name: Set up Go
-        uses: actions/setup-go@v3
+        uses: actions/setup-go@v4
         with:
           go-version-file: 'go.mod'
       - uses: actions/cache@v2
@@ -81,7 +81,7 @@ jobs:
       - name: Check out code
         uses: actions/checkout@v3
       - name: Set up Go
-        uses: actions/setup-go@v3
+        uses: actions/setup-go@v4
         with:
           go-version-file: 'go.mod'
       - uses: actions/cache@v2
@@ -103,7 +103,7 @@ jobs:
     - name: Check out code
       uses: actions/checkout@v3
     - name: Set up Go
-      uses: actions/setup-go@v3
+      uses: actions/setup-go@v4
       with:
         go-version-file: 'go.mod'
     - uses: actions/cache@v2
@@ -130,7 +130,7 @@ jobs:
     - name: Check out code
       uses: actions/checkout@v3
     - name: Set up Go
-      uses: actions/setup-go@v3
+      uses: actions/setup-go@v4
       with:
         go-version-file: 'go.mod'
     - uses: actions/cache@v2
