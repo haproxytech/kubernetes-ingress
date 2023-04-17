@@ -20,7 +20,7 @@ Image can be run with arguments:
 | [`--default-ssl-certificate`](#--default-ssl-certificate) |  |
 | [`--ingress.class`](#--ingressclass) |  |
 | [`--empty-ingress-class`](#--empty-ingress-class) | `false` |
-| [`--gateway-controller-name`](#--gateway-controller-name) :construction:(dev) |  |
+| [`--gateway-controller-name`](#--gateway-controller-name) |  |
 | [`--namespace-blacklist`](#--namespace-blacklist) |  |
 | [`--namespace-whitelist`](#--namespace-whitelist) |  |
 | [`--publish-service`](#--publish-service) |  |
@@ -339,9 +339,6 @@ args:
 ***
 
 ### `--gateway-controller-name`
-
-
-  > :construction: this is only available from next version, currently available in dev build
 
   identifier of your controller to know which gatewayclass it will handle
 
