@@ -202,7 +202,7 @@ func addControllerMetricData(builder *Builder, chShutdown chan struct{}) {
 		rtr.GET("/metrics", fasthttpadaptor.NewFastHTTPHandler(promhttp.Handler()))
 		runningServices += ", prometheus"
 	}
-	rtr.GET("/healtz", requestHandler)
+	rtr.GET("/healthz", requestHandler)
 	// all others will be 404
 	go func() {
 		server := fasthttp.Server{
@@ -225,7 +225,7 @@ func addControllerMetricData(builder *Builder, chShutdown chan struct{}) {
 
 func addLocalDefaultService(builder *Builder, chShutdown chan struct{}) {
 	rtr := router.New()
-	rtr.GET("/healtz", requestHandler)
+	rtr.GET("/healthz", requestHandler)
 	// all others will be 404
 	go func() {
 		server := fasthttp.Server{
@@ -248,5 +248,5 @@ func addLocalDefaultService(builder *Builder, chShutdown chan struct{}) {
 
 func requestHandler(ctx *fasthttp.RequestCtx) {
 	ctx.SetStatusCode(fasthttp.StatusOK)
-	ctx.Response.Header.Set("X-HAProxy-Ingress-Controller", "healtz")
+	ctx.Response.Header.Set("X-HAProxy-Ingress-Controller", "healthz")
 }
