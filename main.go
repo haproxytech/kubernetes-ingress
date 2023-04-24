@@ -29,6 +29,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/watch"
 
+	"github.com/go-test/deep"
 	"github.com/jessevdk/go-flags"
 
 	"github.com/haproxytech/kubernetes-ingress/pkg/annotations"
@@ -80,6 +81,9 @@ func main() {
 	if osArgs.PrometheusEnabled && osArgs.ControllerPort == 0 {
 		osArgs.ControllerPort = 6060
 	}
+
+	deep.NilMapsAreEmpty = true
+	deep.NilSlicesAreEmpty = true
 
 	// Default annotations
 	defaultBackendSvc := fmt.Sprint(osArgs.DefaultBackendService)
