@@ -119,7 +119,7 @@ func main() {
 		WithRestClientSet(k.GetRestClientset()).
 		WithArgs(osArgs).Build()
 
-	go k.MonitorChanges(eventChan, stop)
+	go k.MonitorChanges(eventChan, stop, osArgs)
 	go c.Start()
 
 	// Catch QUIT signals

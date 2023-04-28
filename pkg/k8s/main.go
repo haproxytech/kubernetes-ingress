@@ -51,7 +51,7 @@ var ErrIgnored = errors.New("ignored resource")
 type K8s interface {
 	GetRestClientset() client.Client
 	GetClientset() *k8sclientset.Clientset
-	MonitorChanges(eventChan chan SyncDataEvent, stop chan struct{})
+	MonitorChanges(eventChan chan SyncDataEvent, stop chan struct{}, osArgs utils.OSArgs)
 	UpdatePublishService(ingresses []*ingress.Ingress, publishServiceAddresses []string)
 }
 
@@ -77,7 +77,6 @@ type k8s struct {
 	syncPeriod             time.Duration
 	cacheResyncPeriod      time.Duration
 	disableSvcExternalName bool // CVE-2021-25740
-	gatewayCRDInstalled    bool
 }
 
 func New(osArgs utils.OSArgs, whitelist map[string]struct{}, publishSvc *utils.NamespaceValue) K8s { //nolint:ireturn
@@ -146,14 +145,16 @@ func (k k8s) UpdatePublishService(ingresses []*ingress.Ingress, publishServiceAd
 	}
 }
 
-func (k k8s) MonitorChanges(eventChan chan SyncDataEvent, stop chan struct{}) {
+func (k k8s) MonitorChanges(eventChan chan SyncDataEvent, stop chan struct{}, osArgs utils.OSArgs) {
 	informersSynced := &[]cache.InformerSynced{}
-	k.gatewayCRDInstalled = k.isGatewayAPIInstalled()
+	needGatewayAPIInformers := k.isGatewayAPIInstalled() && osArgs.GatewayControllerName != ""
 	k.runPodInformer(eventChan, stop, informersSynced)
 	for _, namespace := range k.whiteListedNS {
 		k.runInformers(eventChan, stop, namespace, informersSynced)
 		k.runCRInformers(eventChan, stop, namespace, informersSynced)
-		k.runInformersGwAPI(eventChan, stop, namespace, informersSynced)
+		if needGatewayAPIInformers {
+			k.runInformersGwAPI(eventChan, stop, namespace, informersSynced)
+		}
 	}
 
 	if !cache.WaitForCacheSync(stop, *informersSynced...) {
@@ -234,9 +235,6 @@ func (k k8s) runInformers(eventChan chan SyncDataEvent, stop chan struct{}, name
 }
 
 func (k k8s) runInformersGwAPI(eventChan chan SyncDataEvent, stop chan struct{}, namespace string, informersSynced *[]cache.InformerSynced) {
-	if !k.gatewayCRDInstalled {
-		return
-	}
 	factory := gatewaynetworking.NewSharedInformerFactoryWithOptions(k.gatewayClient, k.cacheResyncPeriod, gatewaynetworking.WithNamespace(namespace))
 	gwclassInf := k.getGatewayClassesInformer(eventChan, factory)
 	if gwclassInf != nil {
