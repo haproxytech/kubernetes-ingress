@@ -13,7 +13,7 @@ require (
 	github.com/pires/go-proxyproto v0.7.0
 	github.com/prometheus/client_golang v1.15.0
 	github.com/stretchr/testify v1.8.2
-	github.com/valyala/fasthttp v1.46.0
+	github.com/valyala/fasthttp v1.47.0
 	go.uber.org/automaxprocs v1.5.2
 	k8s.io/api v0.27.1
 	k8s.io/apimachinery v0.27.1
