@@ -11,7 +11,7 @@ require (
 	github.com/haproxytech/config-parser/v4 v4.0.0
 	github.com/jessevdk/go-flags v1.4.0
 	github.com/pires/go-proxyproto v0.7.0
-	github.com/prometheus/client_golang v1.15.0
+	github.com/prometheus/client_golang v1.15.1
 	github.com/stretchr/testify v1.8.2
 	github.com/valyala/fasthttp v1.47.0
 	go.uber.org/automaxprocs v1.5.2
