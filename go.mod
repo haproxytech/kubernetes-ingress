@@ -3,7 +3,7 @@ module github.com/haproxytech/kubernetes-ingress
 go 1.20
 
 require (
-	github.com/fasthttp/router v1.4.18
+	github.com/fasthttp/router v1.4.19
 	github.com/go-test/deep v1.1.0
 	github.com/google/renameio v1.0.1
 	github.com/haproxytech/client-native/v2 v2.5.2-0.20220126142624-4a2781a21376
@@ -11,7 +11,7 @@ require (
 	github.com/haproxytech/config-parser/v4 v4.0.0
 	github.com/jessevdk/go-flags v1.4.0
 	github.com/pires/go-proxyproto v0.7.0
-	github.com/prometheus/client_golang v1.15.0
+	github.com/prometheus/client_golang v1.15.1
 	github.com/stretchr/testify v1.8.2
 	github.com/valyala/fasthttp v1.47.0
 	go.uber.org/automaxprocs v1.5.2
@@ -63,13 +63,13 @@ require (
 	github.com/oklog/ulid v1.3.1 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
-	github.com/prometheus/client_model v0.3.0 // indirect
-	github.com/prometheus/common v0.42.0 // indirect
+	github.com/prometheus/client_model v0.4.0 // indirect
+	github.com/prometheus/common v0.43.0 // indirect
 	github.com/prometheus/procfs v0.9.0 // indirect
 	github.com/savsgio/gotils v0.0.0-20230208104028-c358bd845dee // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
-	go.mongodb.org/mongo-driver v1.11.4 // indirect
+	go.mongodb.org/mongo-driver v1.11.6 // indirect
 	golang.org/x/net v0.10.0 // indirect
 	golang.org/x/oauth2 v0.8.0 // indirect
 	golang.org/x/sys v0.8.0 // indirect
