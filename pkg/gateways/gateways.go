@@ -47,6 +47,7 @@ const (
 //nolint:golint
 type GatewayManager interface {
 	ManageGateway() bool
+	SetGatewayAPIInstalled(bool)
 }
 
 func New(k8sStore store.K8s,
@@ -54,7 +55,7 @@ func New(k8sStore store.K8s,
 	osArgs utils.OSArgs,
 	k8sRestClient client.Client,
 ) GatewayManager {
-	return GatewayManagerImpl{
+	return &GatewayManagerImpl{
 		k8sStore:         k8sStore,
 		haproxyClient:    haproxyClient,
 		osArgs:           osArgs,
@@ -69,18 +70,22 @@ func New(k8sStore store.K8s,
 
 //nolint:golint
 type GatewayManagerImpl struct {
-	haproxyClient    api.HAProxyClient
-	statusManager    StatusManager
-	frontends        map[string]struct{}
-	gateways         map[string]struct{}
-	listenersByRoute map[string][]store.Listener
-	backends         map[string]struct{}
-	serversByBackend map[string][]string
-	k8sStore         store.K8s
-	osArgs           utils.OSArgs
+	haproxyClient       api.HAProxyClient
+	statusManager       StatusManager
+	frontends           map[string]struct{}
+	gateways            map[string]struct{}
+	listenersByRoute    map[string][]store.Listener
+	backends            map[string]struct{}
+	serversByBackend    map[string][]string
+	k8sStore            store.K8s
+	osArgs              utils.OSArgs
+	gatewayAPIInstalled bool
 }
 
 func (gm GatewayManagerImpl) ManageGateway() bool {
+	if gm.osArgs.GatewayControllerName == "" || !gm.gatewayAPIInstalled {
+		return false
+	}
 	gm.clean()
 	gm.manageGatewayClass()
 
@@ -668,4 +673,8 @@ func (gm *GatewayManagerImpl) resetStatuses() {
 			}
 		}
 	}
+}
+
+func (gm *GatewayManagerImpl) SetGatewayAPIInstalled(gatewayAPIInstalled bool) {
+	gm.gatewayAPIInstalled = gatewayAPIInstalled
 }

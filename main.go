@@ -119,9 +119,12 @@ func main() {
 		WithRestClientSet(k.GetRestClientset()).
 		WithArgs(osArgs).Build()
 
-	go k.MonitorChanges(eventChan, stop, osArgs)
-	go c.Start()
+	isGatewayAPIInstalled := k.IsGatewayAPIInstalled(osArgs.GatewayControllerName)
 
+	c.SetGatewayAPIInstalled(isGatewayAPIInstalled)
+
+	go k.MonitorChanges(eventChan, stop, osArgs, isGatewayAPIInstalled)
+	go c.Start()
 	// Catch QUIT signals
 	signalC := make(chan os.Signal, 1)
 	signal.Notify(signalC, os.Interrupt, syscall.SIGTERM, syscall.SIGUSR1)
