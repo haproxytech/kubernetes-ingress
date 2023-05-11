@@ -15,6 +15,7 @@
 package k8s
 
 import (
+	"context"
 	"errors"
 	"os"
 	"path/filepath"
@@ -31,6 +32,9 @@ import (
 	crinformers "github.com/haproxytech/kubernetes-ingress/crs/generated/informers/externalversions"
 	"github.com/haproxytech/kubernetes-ingress/pkg/ingress"
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
+	crdclientset "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
+	errGw "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayclientset "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 	scheme "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned/scheme"
@@ -44,6 +48,7 @@ const (
 	TRACE_API               = false //nolint:golint,stylecheck
 	CRSGroupVersionV1alpha1 = "core.haproxy.org/v1alpha1"
 	CRSGroupVersionV1alpha2 = "core.haproxy.org/v1alpha2"
+	GATEWAY_API_VERSION     = "v0.5.1" //nolint:golint,stylecheck
 )
 
 var ErrIgnored = errors.New("ignored resource")
@@ -51,8 +56,9 @@ var ErrIgnored = errors.New("ignored resource")
 type K8s interface {
 	GetRestClientset() client.Client
 	GetClientset() *k8sclientset.Clientset
-	MonitorChanges(eventChan chan SyncDataEvent, stop chan struct{}, osArgs utils.OSArgs)
+	MonitorChanges(eventChan chan SyncDataEvent, stop chan struct{}, osArgs utils.OSArgs, gatewayAPIInstalled bool)
 	UpdatePublishService(ingresses []*ingress.Ingress, publishServiceAddresses []string)
+	IsGatewayAPIInstalled(gatewayControllerName string) bool
 }
 
 // A Custom Resource interface
@@ -77,6 +83,8 @@ type k8s struct {
 	syncPeriod             time.Duration
 	cacheResyncPeriod      time.Duration
 	disableSvcExternalName bool // CVE-2021-25740
+	crdClient              *crdclientset.Clientset
+	gatewayAPIInstalled    bool
 }
 
 func New(osArgs utils.OSArgs, whitelist map[string]struct{}, publishSvc *utils.NamespaceValue) K8s { //nolint:ireturn
@@ -104,6 +112,11 @@ func New(osArgs utils.OSArgs, whitelist map[string]struct{}, publishSvc *utils.N
 		logger.Print("Gateway API not present")
 	}
 
+	crdClient, err := crdclientset.NewForConfig(restconfig)
+	if err != nil {
+		logger.Error("CRD API client not present")
+	}
+
 	prefix, _ := utils.GetPodPrefix(os.Getenv("POD_NAME"))
 	k := k8s{
 		builtInClient:          builtInClient,
@@ -118,6 +131,7 @@ func New(osArgs utils.OSArgs, whitelist map[string]struct{}, publishSvc *utils.N
 		disableSvcExternalName: osArgs.DisableServiceExternalName,
 		gatewayClient:          gatewayClient,
 		gatewayRestClient:      gatewayRestClient,
+		crdClient:              crdClient,
 	}
 	// alpha1 is deprecated
 	k.registerCoreCR(NewGlobalCRV1Alpha1(), CRSGroupVersionV1alpha1)
@@ -145,14 +159,13 @@ func (k k8s) UpdatePublishService(ingresses []*ingress.Ingress, publishServiceAd
 	}
 }
 
-func (k k8s) MonitorChanges(eventChan chan SyncDataEvent, stop chan struct{}, osArgs utils.OSArgs) {
+func (k k8s) MonitorChanges(eventChan chan SyncDataEvent, stop chan struct{}, osArgs utils.OSArgs, gatewayAPIInstalled bool) {
 	informersSynced := &[]cache.InformerSynced{}
-	needGatewayAPIInformers := k.isGatewayAPIInstalled() && osArgs.GatewayControllerName != ""
 	k.runPodInformer(eventChan, stop, informersSynced)
 	for _, namespace := range k.whiteListedNS {
 		k.runInformers(eventChan, stop, namespace, informersSynced)
 		k.runCRInformers(eventChan, stop, namespace, informersSynced)
-		if needGatewayAPIInformers {
+		if gatewayAPIInstalled {
 			k.runInformersGwAPI(eventChan, stop, namespace, informersSynced)
 		}
 	}
@@ -320,7 +333,43 @@ func getWhitelistedNS(whitelist map[string]struct{}, cfgMapNS string) []string {
 	return namespaces
 }
 
-func (k k8s) isGatewayAPIInstalled() bool {
-	_, err := k.crClient.DiscoveryClient.ServerResourcesForGroupVersion("gateway.networking.k8s.io/v1beta1")
-	return err == nil
+func (k k8s) IsGatewayAPIInstalled(gatewayControllerName string) (installed bool) {
+	installed = true
+	defer func() {
+		k.gatewayAPIInstalled = installed
+	}()
+	gatewayCrd, err := k.crdClient.ApiextensionsV1().CustomResourceDefinitions().Get(context.Background(), "gateways.gateway.networking.k8s.io", metav1.GetOptions{})
+	if err != nil {
+		var errStatus *errGw.StatusError
+		if !errors.As(err, &errStatus) || errStatus.ErrStatus.Code != 404 {
+			logger.Error(err)
+			return false
+		}
+	}
+
+	if gatewayCrd.Name == "" {
+		if gatewayControllerName != "" {
+			logger.Errorf("No gateway api is installed, please install experimental yaml version %s", GATEWAY_API_VERSION)
+		}
+		return false
+	}
+
+	log := logger.Warningf
+	if gatewayControllerName != "" {
+		log = logger.Errorf
+	}
+
+	version := gatewayCrd.Annotations["gateway.networking.k8s.io/bundle-version"]
+	if version != GATEWAY_API_VERSION {
+		log("Unsupported version '%s' of gateway api is installed, please install experimental yaml version %s", version, GATEWAY_API_VERSION)
+		installed = false
+	}
+
+	// gatewayCrd is not nil so gateway API is present
+	tcprouteCrd, err := k.crdClient.ApiextensionsV1().CustomResourceDefinitions().Get(context.Background(), "tcproutes.gateway.networking.k8s.io", metav1.GetOptions{})
+	if tcprouteCrd == nil || err != nil {
+		log("No tcproute crd is installed, please install experimental yaml version %s", GATEWAY_API_VERSION)
+		installed = false
+	}
+	return
 }

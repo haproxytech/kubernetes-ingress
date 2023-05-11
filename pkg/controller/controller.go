@@ -298,3 +298,7 @@ func (c *HAProxyController) clean(failedSync bool) {
 	c.reload = false
 	c.restart = false
 }
+
+func (c *HAProxyController) SetGatewayAPIInstalled(gatewayAPIInstalled bool) {
+	c.gatewayManager.SetGatewayAPIInstalled(gatewayAPIInstalled)
+}
