@@ -1025,13 +1025,11 @@ annotations:
       - leastconn
       - first
       - source
-      - uri
-      - url_param
-      - hdr([name])
-      - random
-      - random([draws])
-      - rdp-cookie
-      - rdp-cookie([name])
+      - uri [path-only] [whole] [len num] [depth num]
+      - url_param name [check_post num]
+      - hdr[(name)] [use_domain_only]
+      - random[(draws)]
+      - rdp-cookie[(name)]
     applies_to:
       - configmap
       - ingress
