@@ -349,7 +349,7 @@ func (gm GatewayManagerImpl) isBackendRefValid(backendRef store.BackendRef) bool
 // This check depends on cross namespace reference and authorization to do so by referenceGrant if necessary.
 func (gm GatewayManagerImpl) isNamespaceGranted(namespace string, backendRef store.BackendRef) (granted bool) {
 	// If namespace of backendRef is specified ...
-	if backendRef.Namespace != nil {
+	if backendRef.Namespace != nil && *backendRef.Namespace != namespace {
 		ns, found := gm.k8sStore.Namespaces[*backendRef.Namespace]
 		if !found || !ns.Relevant {
 			gm.statusManager.SetRouteReasonBackendNotFound(fmt.Sprintf("backend '%s/%s' not found", utils.PointerDefaultValueIfNil(backendRef.Namespace), backendRef.Name))
