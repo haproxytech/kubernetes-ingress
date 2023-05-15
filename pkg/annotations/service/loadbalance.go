@@ -72,6 +72,9 @@ func getParamsFromInput(value string) (*models.Balance, error) {
 	}
 	i := 1
 	if algorithm == "url_param" {
+		if i >= len(tokens) {
+			return balance, fmt.Errorf("missing parameter for algorithm '%s' in balance configuration", algorithm)
+		}
 		balance.URLParam = tokens[i]
 		i++
 	}
