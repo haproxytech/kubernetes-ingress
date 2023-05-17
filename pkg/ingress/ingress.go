@@ -94,7 +94,7 @@ func (i Ingress) supported(k8s store.K8s, a annotations.Annotations) (supported 
 }
 
 func (i *Ingress) handlePath(k store.K8s, h haproxy.HAProxy, host string, path *store.IngressPath, a annotations.Annotations) (reload bool, err error) {
-	svc, err := service.New(k, path, h.Certificates, i.sslPassthrough, i.resource.Annotations, k.ConfigMaps.Main.Annotations)
+	svc, err := service.New(k, path, h.Certificates, i.sslPassthrough, i.resource.Namespace, i.resource.Name, i.resource.Annotations, k.ConfigMaps.Main.Annotations)
 	if err != nil {
 		return
 	}
@@ -203,7 +203,7 @@ func addRules(list rules.List, h haproxy.HAProxy, ingressRule bool) []rules.Rule
 func (i *Ingress) Update(k store.K8s, h haproxy.HAProxy, a annotations.Annotations) (reload bool) {
 	// Default Backend
 	if i.resource.DefaultBackend != nil {
-		svc, err := service.New(k, i.resource.DefaultBackend, h.Certificates, false, i.resource.Annotations, k.ConfigMaps.Main.Annotations)
+		svc, err := service.New(k, i.resource.DefaultBackend, h.Certificates, false, i.resource.Namespace, i.resource.Name, i.resource.Annotations, k.ConfigMaps.Main.Annotations)
 		if svc != nil {
 			reload, err = svc.SetDefaultBackend(k, h, []string{h.FrontHTTP, h.FrontHTTPS}, a)
 		}

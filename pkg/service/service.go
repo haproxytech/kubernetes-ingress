@@ -35,18 +35,21 @@ var logger = utils.GetLogger()
 const cookieKey = "ohph7OoGhong"
 
 type Service struct {
-	path        *store.IngressPath
-	resource    *store.Service
-	backend     *models.Backend
-	certs       certs.Certificates
-	annotations []map[string]string
-	modeTCP     bool
-	newBackend  bool
+	path             *store.IngressPath
+	resource         *store.Service
+	backend          *models.Backend
+	certs            certs.Certificates
+	annotations      []map[string]string
+	modeTCP          bool
+	newBackend       bool
+	standalone       bool
+	ingressName      string
+	ingressNamespace string
 }
 
 // New returns a Service instance to handle the k8s IngressPath resource given in params.
 // An error will be returned if there is no k8s Service resource corresponding to the service description in IngressPath.
-func New(k store.K8s, path *store.IngressPath, certs certs.Certificates, tcpService bool, annList ...map[string]string) (*Service, error) {
+func New(k store.K8s, path *store.IngressPath, certs certs.Certificates, tcpService bool, ingressNamespace, ingressName string, annList ...map[string]string) (*Service, error) {
 	service, err := k.GetService(path.SvcNamespace, path.SvcName)
 	if err != nil {
 		return nil, err
@@ -54,12 +57,22 @@ func New(k store.K8s, path *store.IngressPath, certs certs.Certificates, tcpServ
 	a := make([]map[string]string, 1, 3)
 	a[0] = service.Annotations
 	a = append(a, annList...)
+	var standalone bool
+	for _, anns := range a {
+		standalone = len(anns) != 0 && anns["standalone-backend"] == "true"
+		if standalone {
+			break
+		}
+	}
 	return &Service{
-		path:        path,
-		resource:    service,
-		certs:       certs,
-		annotations: a,
-		modeTCP:     tcpService,
+		path:             path,
+		resource:         service,
+		certs:            certs,
+		annotations:      a,
+		modeTCP:          tcpService,
+		standalone:       standalone,
+		ingressName:      ingressName,
+		ingressNamespace: ingressNamespace,
 	}, nil
 }
 
@@ -104,11 +117,20 @@ func (s *Service) GetBackendName() (name string, err error) {
 		}
 		return
 	}
+	resourceNamespace := s.resource.Namespace
+	resourceName := s.resource.Name
+	prefix := ""
+	if s.standalone && s.ingressName != "" {
+		resourceName = s.ingressName
+		resourceNamespace = s.ingressNamespace
+		prefix = "ing_"
+	}
+
 	s.path.SvcPortResolved = &svcPort
 	if svcPort.Name != "" {
-		name = fmt.Sprintf("%s_%s_%s", s.resource.Namespace, s.resource.Name, svcPort.Name)
+		name = fmt.Sprintf("%s%s_%s_%s", prefix, resourceNamespace, resourceName, svcPort.Name)
 	} else {
-		name = fmt.Sprintf("%s_%s_%s", s.resource.Namespace, s.resource.Name, strconv.Itoa(int(svcPort.Port)))
+		name = fmt.Sprintf("%s%s_%s_%s", prefix, resourceNamespace, resourceName, strconv.Itoa(int(svcPort.Port)))
 	}
 	return
 }
