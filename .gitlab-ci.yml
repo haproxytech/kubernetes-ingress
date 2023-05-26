@@ -104,6 +104,9 @@ docker-build:
     paths:
       - tar
     expire_in: 15 minutes
+  only:
+    - merge_requests
+    - branches
 .kind_deployment:
   stage: e2e-tests
   needs: ["diff", "tidy", "docker-build"]
