@@ -47,7 +47,6 @@ type Builder struct {
 	haproxyProcess           process.Process
 	haproxyRules             rules.Rules
 	restClientSet            client.Client
-	publishService           *utils.NamespaceValue
 	updatePublishServiceFunc func(ingresses []*ingress.Ingress, publishServiceAddresses []string)
 	eventChan                chan k8s.SyncDataEvent
 	clientSet                *kubernetes.Clientset
@@ -124,11 +123,6 @@ func (builder *Builder) WithArgs(osArgs utils.OSArgs) *Builder {
 	return builder
 }
 
-func (builder *Builder) WithPublishService(publishService *utils.NamespaceValue) *Builder {
-	builder.publishService = publishService
-	return builder
-}
-
 func (builder *Builder) WithUpdatePublishServiceFunc(updatePublishServiceFunc func(ingresses []*ingress.Ingress, publishServiceAddresses []string)) *Builder {
 	builder.updatePublishServiceFunc = updatePublishServiceFunc
 	return builder
@@ -183,7 +177,6 @@ func (builder *Builder) Build() *HAProxyController {
 		podPrefix:                prefix,
 		store:                    builder.store,
 		eventChan:                builder.eventChan,
-		publishService:           builder.publishService,
 		annotations:              builder.annotations,
 		chShutdown:               chShutdown,
 		updatePublishServiceFunc: builder.updatePublishServiceFunc,

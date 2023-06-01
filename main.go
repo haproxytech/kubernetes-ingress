@@ -113,7 +113,6 @@ func main() {
 		WithHaproxyCfgFile(haproxyConf).
 		WithEventChan(eventChan).
 		WithStore(s).
-		WithPublishService(publishService).
 		WithUpdatePublishServiceFunc(k.UpdatePublishService).
 		WithClientSet(k.GetClientset()).
 		WithRestClientSet(k.GetRestClientset()).
