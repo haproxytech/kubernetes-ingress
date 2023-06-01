@@ -62,6 +62,15 @@ func (k *K8s) EventIngress(ns *Namespace, data *Ingress) (updateRequired bool) {
 				updateRequired = false
 				data.Status = EMPTY
 			}
+			for _, update := range updated {
+				if strings.HasPrefix(update, "Class:") {
+					data.ClassUpdated = true
+					break
+				}
+			}
+			if data.Annotations["ingress.class"] != oldIngress.Annotations["ingress.class"] {
+				data.ClassUpdated = true
+			}
 		}
 		ns.Ingresses[data.Name] = data
 	}

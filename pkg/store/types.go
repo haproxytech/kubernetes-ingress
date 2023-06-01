@@ -134,9 +134,10 @@ type IngressRule struct {
 // Ingress is useful data from k8s structures about ingress
 type Ingress struct {
 	IngressCore
-	Status    Status // Used for store purpose
-	Addresses []string
-	Ignored   bool // true if resource ignored because of non matching Controller Class
+	Status       Status // Used for store purpose
+	Addresses    []string
+	Ignored      bool // true if resource ignored because of non matching Controller Class
+	ClassUpdated bool
 }
 
 // IngressTLS describes the transport layer security associated with an Ingress.

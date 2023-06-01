@@ -37,7 +37,6 @@ var logger = utils.GetLogger()
 type HAProxyController struct {
 	gatewayManager           gateway.GatewayManager
 	annotations              annotations.Annotations
-	publishService           *utils.NamespaceValue
 	eventChan                chan k8s.SyncDataEvent
 	updatePublishServiceFunc func(ingresses []*ingress.Ingress, publishServiceAddresses []string)
 	chShutdown               chan struct{}
@@ -124,7 +123,7 @@ func (c *HAProxyController) updateHAProxy() {
 				logger.Debugf("ingress '%s/%s' ignored: no matching IngressClass", ingResource.Namespace, ingResource.Name)
 				continue
 			}
-			if ingResource.Status == store.ADDED {
+			if ingResource.Status == store.ADDED || ingResource.ClassUpdated {
 				ingresses = append(ingresses, i)
 			}
 			c.reload = i.Update(c.store, c.haproxy, c.annotations) || c.reload
