@@ -7,7 +7,6 @@ import (
 
 	"github.com/haproxytech/kubernetes-ingress/pkg/annotations"
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
-	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
 	networkingv1 "k8s.io/api/networking/v1"
 	k8serror "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -20,20 +19,16 @@ func NewStatusIngressUpdater(client *kubernetes.Clientset, k store.K8s, class st
 	return func(ingresses []*store.Ingress, publishServiceAddresses []string) {
 		for _, ingress := range ingresses {
 			if ing := New(k, ingress, class, emptyClass, a); ing != nil {
-				logger.Error(ing.UpdateStatus(client, publishServiceAddresses))
+				logger.Error(ing.UpdateStatus(client))
 			}
 		}
 	}
 }
 
-func (i *Ingress) UpdateStatus(client *kubernetes.Clientset, addresses []string) (err error) {
+func (i *Ingress) UpdateStatus(client *kubernetes.Clientset) (err error) {
 	var lbi []networkingv1.IngressLoadBalancerIngress
 
-	if utils.EqualSliceStringsWithoutOrder(i.resource.Addresses, addresses) {
-		return
-	}
-
-	for _, addr := range addresses {
+	for _, addr := range i.resource.Addresses {
 		if net.ParseIP(addr) == nil {
 			lbi = append(lbi, networkingv1.IngressLoadBalancerIngress{Hostname: addr})
 		} else {
@@ -61,12 +56,5 @@ func (i *Ingress) UpdateStatus(client *kubernetes.Clientset, addresses []string)
 	}
 	logger.Tracef("Successful update of LoadBalancer status in ingress %s/%s", i.resource.Namespace, i.resource.Name)
 	// Allow to store the publish service addresses affected to the ingress for future comparison in update test.
-	i.resource.Addresses = addresses
 	return nil
-}
-
-func UpdatePublishService(ingresses []*Ingress, api *kubernetes.Clientset, publishServiceAddresses []string) {
-	for _, i := range ingresses {
-		logger.Error(i.UpdateStatus(api, publishServiceAddresses))
-	}
 }

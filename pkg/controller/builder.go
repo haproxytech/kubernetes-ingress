@@ -36,6 +36,7 @@ import (
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/rules"
 	"github.com/haproxytech/kubernetes-ingress/pkg/ingress"
 	"github.com/haproxytech/kubernetes-ingress/pkg/k8s"
+	"github.com/haproxytech/kubernetes-ingress/pkg/status"
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
 )
@@ -54,6 +55,7 @@ type Builder struct {
 	haproxyCfgFile           []byte
 	store                    store.K8s
 	osArgs                   utils.OSArgs
+	updateStatusManager      status.UpdateStatusManager
 }
 
 var defaultEnv = env.Env{
@@ -123,11 +125,6 @@ func (builder *Builder) WithArgs(osArgs utils.OSArgs) *Builder {
 	return builder
 }
 
-func (builder *Builder) WithUpdatePublishServiceFunc(updatePublishServiceFunc func(ingresses []*ingress.Ingress, publishServiceAddresses []string)) *Builder {
-	builder.updatePublishServiceFunc = updatePublishServiceFunc
-	return builder
-}
-
 func (builder *Builder) WithClientSet(clientSet *kubernetes.Clientset) *Builder {
 	builder.clientSet = clientSet
 	return builder
@@ -140,6 +137,11 @@ func (builder *Builder) WithRestClientSet(restClientSet client.Client) *Builder 
 
 func (builder *Builder) WithGatewayManager(gatewayManager gateway.GatewayManager) *Builder {
 	builder.gatewayManager = gatewayManager
+	return builder
+}
+
+func (builder *Builder) WithUpdateStatusManager(updateStatusManager status.UpdateStatusManager) *Builder {
+	builder.updateStatusManager = updateStatusManager
 	return builder
 }
 
@@ -170,6 +172,10 @@ func (builder *Builder) Build() *HAProxyController {
 	if gatewayManager == nil {
 		gatewayManager = gateway.New(builder.store, haproxy.HAProxyClient, builder.osArgs, builder.restClientSet)
 	}
+	updateStatusManager := builder.updateStatusManager
+	if updateStatusManager == nil {
+		updateStatusManager = status.New(builder.clientSet)
+	}
 	return &HAProxyController{
 		osArgs:                   builder.osArgs,
 		haproxy:                  haproxy,
@@ -181,6 +187,7 @@ func (builder *Builder) Build() *HAProxyController {
 		chShutdown:               chShutdown,
 		updatePublishServiceFunc: builder.updatePublishServiceFunc,
 		gatewayManager:           gatewayManager,
+		updateStatusManager:      updateStatusManager,
 	}
 }
 

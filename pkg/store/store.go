@@ -35,6 +35,7 @@ type K8s struct {
 	GatewayControllerName   string
 	PublishServiceAddresses []string
 	NbrHAProxyInst          int64
+	UpdateAllIngresses      bool
 }
 
 type NamespacesWatch struct {

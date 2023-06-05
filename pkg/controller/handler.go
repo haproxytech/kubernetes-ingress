@@ -51,6 +51,7 @@ func (c *HAProxyController) initHandlers() {
 		},
 		&handler.PatternFiles{},
 		&handler.BackendCfgSnippet{},
+		c.updateStatusManager,
 	}
 	if c.osArgs.PprofEnabled {
 		c.updateHandlers = append(c.updateHandlers, handler.Pprof{})
