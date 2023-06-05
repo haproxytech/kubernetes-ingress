@@ -30,7 +30,6 @@ import (
 
 	crclientset "github.com/haproxytech/kubernetes-ingress/crs/generated/clientset/versioned"
 	crinformers "github.com/haproxytech/kubernetes-ingress/crs/generated/informers/externalversions"
-	"github.com/haproxytech/kubernetes-ingress/pkg/ingress"
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
 	crdclientset "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	errGw "k8s.io/apimachinery/pkg/api/errors"
@@ -57,7 +56,6 @@ type K8s interface {
 	GetRestClientset() client.Client
 	GetClientset() *k8sclientset.Clientset
 	MonitorChanges(eventChan chan SyncDataEvent, stop chan struct{}, osArgs utils.OSArgs, gatewayAPIInstalled bool)
-	UpdatePublishService(ingresses []*ingress.Ingress, publishServiceAddresses []string)
 	IsGatewayAPIInstalled(gatewayControllerName string) bool
 }
 
@@ -150,13 +148,6 @@ func (k k8s) GetRestClientset() client.Client {
 
 func (k k8s) GetClientset() *k8sclientset.Clientset {
 	return k.builtInClient
-}
-
-func (k k8s) UpdatePublishService(ingresses []*ingress.Ingress, publishServiceAddresses []string) {
-	clientSet := k.GetClientset()
-	for _, i := range ingresses {
-		logger.Error(i.UpdateStatus(clientSet, publishServiceAddresses))
-	}
 }
 
 func (k k8s) MonitorChanges(eventChan chan SyncDataEvent, stop chan struct{}, osArgs utils.OSArgs, gatewayAPIInstalled bool) {

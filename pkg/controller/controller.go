@@ -27,6 +27,7 @@ import (
 	"github.com/haproxytech/kubernetes-ingress/pkg/ingress"
 	"github.com/haproxytech/kubernetes-ingress/pkg/k8s"
 	"github.com/haproxytech/kubernetes-ingress/pkg/route"
+	"github.com/haproxytech/kubernetes-ingress/pkg/status"
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
 )
@@ -50,6 +51,7 @@ type HAProxyController struct {
 	restart                  bool
 	reload                   bool
 	ready                    bool
+	updateStatusManager      status.UpdateStatusManager
 }
 
 // Wrapping a Native-Client transaction and commit it.
@@ -111,7 +113,6 @@ func (c *HAProxyController) updateHAProxy() {
 		logger.Error(route.CustomRoutesReset(c.haproxy))
 	}
 
-	ingresses := []*ingress.Ingress{}
 	for _, namespace := range c.store.Namespaces {
 		if !namespace.Relevant {
 			continue
@@ -119,19 +120,16 @@ func (c *HAProxyController) updateHAProxy() {
 		c.store.SecretsProcessed = map[string]struct{}{}
 		for _, ingResource := range namespace.Ingresses {
 			i := ingress.New(c.store, ingResource, c.osArgs.IngressClass, c.osArgs.EmptyIngressClass, c.annotations)
-			if i == nil {
+			if !i.Supported(c.store, c.annotations) {
 				logger.Debugf("ingress '%s/%s' ignored: no matching IngressClass", ingResource.Namespace, ingResource.Name)
-				continue
+				ingResource.Addresses = []string{""}
+			} else {
+				c.reload = i.Update(c.store, c.haproxy, c.annotations) || c.reload
 			}
 			if ingResource.Status == store.ADDED || ingResource.ClassUpdated {
-				ingresses = append(ingresses, i)
+				c.updateStatusManager.AddIngress(i)
 			}
-			c.reload = i.Update(c.store, c.haproxy, c.annotations) || c.reload
 		}
-	}
-
-	if len(ingresses) > 0 {
-		go c.updatePublishServiceFunc(ingresses, c.store.PublishServiceAddresses)
 	}
 
 	gatewayReload := c.gatewayManager.ManageGateway()

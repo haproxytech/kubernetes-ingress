@@ -18,7 +18,9 @@ import (
 	"os"
 	"testing"
 
+	"github.com/haproxytech/kubernetes-ingress/pkg/annotations"
 	c "github.com/haproxytech/kubernetes-ingress/pkg/controller"
+	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/env"
 	"github.com/haproxytech/kubernetes-ingress/pkg/ingress"
 	"github.com/haproxytech/kubernetes-ingress/pkg/k8s"
@@ -33,6 +35,13 @@ import (
 type UseBackendSuite struct {
 	suite.Suite
 	test Test
+}
+
+type updateStatusManager struct{}
+
+func (m *updateStatusManager) AddIngress(ingress *ingress.Ingress) {}
+func (m *updateStatusManager) Update(k store.K8s, h haproxy.HAProxy, a annotations.Annotations) (reload bool, err error) {
+	return
 }
 
 func TestUseBackend(t *testing.T) {
@@ -118,7 +127,7 @@ func (suite *UseBackendSuite) UseBackendFixture() (eventChan chan k8s.SyncDataEv
 		WithEventChan(eventChan).
 		WithStore(s).
 		WithHaproxyEnv(haproxyEnv).
-		WithUpdatePublishServiceFunc(func(ingresses []*ingress.Ingress, publishServiceAddresses []string) {}).
+		WithUpdateStatusManager(&updateStatusManager{}).
 		WithArgs(osArgs).Build()
 
 	go controller.Start()

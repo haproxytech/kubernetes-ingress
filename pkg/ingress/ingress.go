@@ -39,20 +39,16 @@ type Ingress struct {
 // If the k8s ingress resource is not assigned to the controller (no matching IngressClass)
 // then New will return nil
 func New(k store.K8s, resource *store.Ingress, class string, emptyClass bool, a annotations.Annotations) *Ingress {
-	i := &Ingress{resource: resource, controllerClass: class, allowEmptyClass: emptyClass, annotations: a}
-	if i.resource == nil || !i.supported(k, a) {
-		return nil
-	}
-	return i
+	return &Ingress{resource: resource, controllerClass: class, allowEmptyClass: emptyClass, annotations: a}
 }
 
-// supported verifies if the IngressClass matches the ControllerClass
+// Supported verifies if the IngressClass matches the ControllerClass
 // and in such case returns true otherwise false
 //
 // According to https://github.com/kubernetes/api/blob/master/networking/v1/types.go#L257
 // ingress.class annotation should have precedence over the IngressClass mechanism implemented
 // in "networking.k8s.io".
-func (i Ingress) supported(k8s store.K8s, a annotations.Annotations) (supported bool) {
+func (i Ingress) Supported(k8s store.K8s, a annotations.Annotations) (supported bool) {
 	var igClassAnn, igClassSpec string
 	igClassAnn = a.String("ingress.class", i.resource.Annotations)
 	if igClassResource := k8s.IngressClasses[i.resource.Class]; igClassResource != nil {
@@ -255,4 +251,8 @@ func (i *Ingress) Update(k store.K8s, h haproxy.HAProxy, a annotations.Annotatio
 		}
 	}
 	return
+}
+
+func (i Ingress) GetAddresses() []string {
+	return i.resource.Addresses
 }

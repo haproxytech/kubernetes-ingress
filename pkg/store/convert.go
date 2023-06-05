@@ -60,7 +60,7 @@ type ingressNetworkingV1Strategy struct {
 }
 
 func (n ingressNetworkingV1Strategy) ConvertIngress() *Ingress {
-	return &Ingress{
+	ing := &Ingress{
 		IngressCore: IngressCore{
 			APIVersion:  NETWORKINGV1,
 			Namespace:   n.ig.GetNamespace(),
@@ -138,6 +138,16 @@ func (n ingressNetworkingV1Strategy) ConvertIngress() *Ingress {
 			}(n.ig.Spec.TLS),
 		},
 	}
+	addresses := []string{}
+	for _, ingLoadBalancer := range n.ig.Status.LoadBalancer.Ingress {
+		address := ingLoadBalancer.IP
+		if ingLoadBalancer.Hostname != "" {
+			address = ingLoadBalancer.Hostname
+		}
+		addresses = append(addresses, address)
+	}
+	ing.Addresses = addresses
+	return ing
 }
 
 func (n ingressNetworkingV1Strategy) ConvertClass() *IngressClass {

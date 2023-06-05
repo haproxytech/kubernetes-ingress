@@ -311,33 +311,13 @@ func (k *K8s) EventPublishService(ns *Namespace, data *Service) (updateRequired 
 			return
 		}
 		oldService.Addresses = newService.Addresses
-		k.PublishServiceAddresses = oldService.Addresses
-		// Extraction of ingresses from map to avoid concurrent modification.
-		ingresses := []*Ingress{}
-		for _, ns := range k.Namespaces {
-			if !ns.Relevant {
-				continue
-			}
-			for _, ingress := range k.Namespaces[ns.Name].Ingresses {
-				ingresses = append(ingresses, ingress)
-			}
-		}
-		go k.UpdateStatusFunc(ingresses, oldService.Addresses)
+		k.PublishServiceAddresses = newService.Addresses
+		k.UpdateAllIngresses = true
 	case ADDED:
 		if service, ok := ns.Services[data.Name]; ok {
 			k.PublishServiceAddresses = data.Addresses
 			service.Addresses = data.Addresses
-			// Extraction of ingresses from map to avoid concurrent modification.
-			ingresses := []*Ingress{}
-			for _, ns := range k.Namespaces {
-				if !ns.Relevant {
-					continue
-				}
-				for _, ingress := range k.Namespaces[ns.Name].Ingresses {
-					ingresses = append(ingresses, ingress)
-				}
-			}
-			go k.UpdateStatusFunc(ingresses, service.Addresses)
+			k.UpdateAllIngresses = true
 			return
 		}
 		logger.Errorf("Publish service '%s/%s' not found", data.Namespace, data.Name)
@@ -346,16 +326,7 @@ func (k *K8s) EventPublishService(ns *Namespace, data *Service) (updateRequired 
 		if ok {
 			k.PublishServiceAddresses = nil
 			service.Addresses = nil
-			ingresses := []*Ingress{}
-			for _, ns := range k.Namespaces {
-				if !ns.Relevant {
-					continue
-				}
-				for _, ingress := range k.Namespaces[ns.Name].Ingresses {
-					ingresses = append(ingresses, ingress)
-				}
-			}
-			go k.UpdateStatusFunc(ingresses, service.Addresses)
+			k.UpdateAllIngresses = true
 		} else {
 			logger.Warningf("Publish service '%s/%s' not registered with controller, cannot delete !", data.Namespace, data.Name)
 		}
