@@ -1680,6 +1680,21 @@ annotations:
       syslog-server: |
         address:127.0.0.1, port:514, facility:local0
         address:192.168.1.1, port:514, facility:local1
+  - title: standalone-backend
+    type: bool
+    description:
+      - Creates a specific and separated backend for this ingress in case multiple ingresses refer to the same service.
+    tip:
+      - With this annotation you can create your own separate backend whose configuration won't be impacted by others ingresses. As a reminder, all ingresses refering to the same service have their configuration inserted in the same backend which can cause some conflict.
+    values:
+      - "true"
+      - "false"
+    applies_to:
+      - service
+      - ingress
+    version_min: "1.10"
+    example:
+      - 'standalone-backend: "true"'
   - title: timeout-check
     type: "[time](#time)"
     group: timeouts
