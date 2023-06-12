@@ -26,14 +26,14 @@ RUN mkdir -p /var/run/vars && \
     cd /src && \
     git config --get remote.origin.url > /var/run/vars/GIT_REPO && \
     git rev-parse --short HEAD > /var/run/vars/GIT_HEAD_COMMIT && \
+    git log -1 --date=format:"%Y/%m/%d %T" --format="%ad" > /var/run/vars/GIT_DATE_LAST_COMMIT && \
     git describe --abbrev=0 --tags > /var/run/vars/GIT_LAST_TAG && \
     git rev-parse --short $(cat /var/run/vars/GIT_LAST_TAG) > /var/run/vars/GIT_TAG_COMMIT && \
     git diff $(cat /var/run/vars/GIT_HEAD_COMMIT) $(cat /var/run/vars/GIT_TAG_COMMIT) --quiet > /var/run/vars/GIT_MODIFIED1 || echo '.dev' > /var/run/vars/GIT_MODIFIED1 && \
     git diff --quiet > /var/run/vars/GIT_MODIFIED2 || echo '.dirty' > /var/run/vars/GIT_MODIFIED2 && \
     cat /var/run/vars/GIT_MODIFIED1 /var/run/vars/GIT_MODIFIED2 | tr -d '\n' > /var/run/vars/GIT_MODIFIED && \
-    date '+%Y-%m-%dT%H:%M:%S' > /var/run/vars/BUILD_DATE && \
     CGO_ENABLED=0 go build \
-        -ldflags "-X main.GitRepo=$(cat /var/run/vars/GIT_REPO) -X main.GitTag=$(cat /var/run/vars/GIT_LAST_TAG) -X main.GitCommit=$(cat /var/run/vars/GIT_HEAD_COMMIT) -X main.GitDirty=$(cat /var/run/vars/GIT_MODIFIED) -X main.BuildTime=$(cat /var/run/vars/BUILD_DATE)" \
+        -ldflags "-X main.GitRepo=$(cat /var/run/vars/GIT_REPO) -X main.GitTag=$(cat /var/run/vars/GIT_LAST_TAG) -X main.GitCommit=$(cat /var/run/vars/GIT_HEAD_COMMIT) -X main.GitDirty=$(cat /var/run/vars/GIT_MODIFIED) -X \"main.GitCommitDate=$(cat /var/run/vars/GIT_DATE_LAST_COMMIT)\"" \
         -o fs/haproxy-ingress-controller .
 
 FROM haproxytech/haproxy-alpine:2.7
