@@ -7,7 +7,7 @@ require (
 	github.com/go-test/deep v1.1.0
 	github.com/google/renameio v1.0.1
 	github.com/haproxytech/client-native/v2 v2.5.2-0.20220126142624-4a2781a21376
-	github.com/haproxytech/client-native/v3 v3.1.2-0.20230330141732-a5d527856af8
+	github.com/haproxytech/client-native/v3 v3.1.2-0.20230607075433-231591da68ed
 	github.com/haproxytech/config-parser/v4 v4.0.0
 	github.com/jessevdk/go-flags v1.4.0
 	github.com/pires/go-proxyproto v0.7.0
