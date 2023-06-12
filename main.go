@@ -135,7 +135,7 @@ func logInfo(logger utils.Logger, osArgs utils.OSArgs) {
 	if len(osArgs.Version) > 0 {
 		fmt.Printf("HAProxy Ingress Controller %s %s%s", GitTag, GitCommit, GitDirty)
 		fmt.Printf("Build from: %s", GitRepo)
-		fmt.Printf("Build date: %s\n", BuildTime)
+		fmt.Printf("Git commit date: %s", GitCommitDate)
 		if len(osArgs.Version) > 1 {
 			fmt.Printf("ConfigMap: %s", osArgs.ConfigMap)
 			fmt.Printf("Ingress class: %s", osArgs.IngressClass)
@@ -147,7 +147,7 @@ func logInfo(logger utils.Logger, osArgs utils.OSArgs) {
 	logger.Print(IngressControllerInfo)
 	logger.Printf("HAProxy Ingress Controller %s %s%s", GitTag, GitCommit, GitDirty)
 	logger.Printf("Build from: %s", GitRepo)
-	logger.Printf("Build date: %s\n", BuildTime)
+	logger.Printf("Git commit date: %s", GitCommitDate)
 	logger.Printf("ConfigMap: %s", osArgs.ConfigMap)
 	logger.Printf("Ingress class: %s", osArgs.IngressClass)
 	logger.Printf("Empty Ingress class: %t", osArgs.EmptyIngressClass)
