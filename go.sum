@@ -217,8 +217,8 @@ github.com/google/uuid v1.3.0/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+
 github.com/grpc-ecosystem/grpc-gateway v1.16.0/go.mod h1:BDjrQk3hbvj6Nolgz8mAMFbcEtjT1g+wF4CSlocrBnw=
 github.com/haproxytech/client-native/v2 v2.5.2-0.20220126142624-4a2781a21376 h1:/KImJfBREyeFrKt1qtIoFKCOjEo1T5VS2TPznzgYB1w=
 github.com/haproxytech/client-native/v2 v2.5.2-0.20220126142624-4a2781a21376/go.mod h1:MTl8dabMibEE9ytnR1uPOFbcJ7XtYKEhxnBcqBP8kXM=
-github.com/haproxytech/client-native/v3 v3.1.2-0.20230330141732-a5d527856af8 h1:nhnazgE5muTxnQ0MIOeV+kzPqzKQaEaZ5EP+5d//fWg=
-github.com/haproxytech/client-native/v3 v3.1.2-0.20230330141732-a5d527856af8/go.mod h1:0jzmX8gZJY+4PoKQN2Nih52+DsN3/AD22c1Wrl3mhbs=
+github.com/haproxytech/client-native/v3 v3.1.2-0.20230607075433-231591da68ed h1:qjKxpoe4wYQmpGrrooqau88Fgusy9VQfulpXghBDqx8=
+github.com/haproxytech/client-native/v3 v3.1.2-0.20230607075433-231591da68ed/go.mod h1:xRVluo27FAjK4ag33+jUfpnNf9olXQlTRHUl3VMvq98=
 github.com/haproxytech/config-parser/v4 v4.0.0-rc2.0.20220126135717-1dd35f8b7a52/go.mod h1:pEuHx+aFhn0lIdvAg1OaawQfeRkpq1I8HzjtZN4/PLI=
 github.com/haproxytech/config-parser/v4 v4.0.0 h1:79DaXm9/5EeAdfKRmH8GXmmCCZHiw2+LdRNH0prZ5cg=
 github.com/haproxytech/config-parser/v4 v4.0.0/go.mod h1:reXxQMovpfJxmc3WLu6UkL29F9hx/PSKHS2jl47M3gs=
