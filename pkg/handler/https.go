@@ -257,7 +257,7 @@ func (handler HTTPS) toggleSSLPassthrough(passthrough bool, h haproxy.HAProxy) (
 			return err
 		}
 	}
-	if h.FrontendSSLOffloadEnabled(h.FrontHTTPS) {
+	if h.FrontendSSLOffloadEnabled(h.FrontHTTPS) || h.FrontCertsInUse() {
 		logger.Panic(h.FrontendEnableSSLOffload(h.FrontHTTPS, handler.CertDir, handler.alpn, handler.strictSNI))
 	}
 	return nil
