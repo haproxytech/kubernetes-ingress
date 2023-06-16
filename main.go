@@ -71,7 +71,10 @@ func main() {
 		return
 	}
 	logger.ShowFilename(false)
-	logInfo(logger, osArgs)
+	exit := logInfo(logger, osArgs)
+	if exit {
+		return
+	}
 	logger.ShowFilename(true)
 
 	// backwards compatibility with 1.7
@@ -129,7 +132,7 @@ func main() {
 	close(stop)
 }
 
-func logInfo(logger utils.Logger, osArgs utils.OSArgs) {
+func logInfo(logger utils.Logger, osArgs utils.OSArgs) bool {
 	if len(osArgs.Version) > 0 {
 		fmt.Printf("HAProxy Ingress Controller %s %s%s", GitTag, GitCommit, GitDirty)
 		fmt.Printf("Build from: %s", GitRepo)
@@ -139,7 +142,7 @@ func logInfo(logger utils.Logger, osArgs utils.OSArgs) {
 			fmt.Printf("Ingress class: %s", osArgs.IngressClass)
 			fmt.Printf("Empty Ingress class: %t", osArgs.EmptyIngressClass)
 		}
-		return
+		return true
 	}
 
 	logger.Print(IngressControllerInfo)
@@ -189,6 +192,7 @@ func logInfo(logger utils.Logger, osArgs utils.OSArgs) {
 	hostname, err := os.Hostname()
 	logger.Error(err)
 	logger.Printf("Running on %s", hostname)
+	return false
 }
 
 func getNamespaceValue(name string) *utils.NamespaceValue {
