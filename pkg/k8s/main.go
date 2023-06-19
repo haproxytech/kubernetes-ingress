@@ -248,6 +248,9 @@ func getRestConfig(osArgs utils.OSArgs) (restConfig *rest.Config, err error) {
 	} else {
 		restConfig, err = rest.InClusterConfig()
 	}
+	if err != nil {
+		return
+	}
 	restConfig.WarningHandler = logger
 	return restConfig, err
 }
