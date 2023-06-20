@@ -544,6 +544,7 @@ annotations:
     dependencies: ""
     default: ""
     description:
+      - "**Deprecated**, use `deny-list` instead."
       - Blocks given IP addresses and/or IP address ranges.
     tip:
       - The value is treated as a pattern file (see `--configmap-patternfiles`) if it starts with `patterns/`. It should consist of a list of IPs or CIDRs, one per line.
@@ -555,6 +556,23 @@ annotations:
       - ingress
     version_min: "1.4"
     example: ['blacklist: "192.168.1.0/24, 192.168.2.100"']
+  - title: deny-list
+    type: IPs/CIDRs or pattern file
+    group: access-control
+    dependencies: ""
+    default: ""
+    description:
+      - Blocks given IP addresses and/or IP address ranges.
+    tip:
+      - The value is treated as a pattern file (see `--configmap-patternfiles`) if it starts with `patterns/`. It should consist of a list of IPs or CIDRs, one per line.
+    values:
+      - Comma-separated list of IP addresses and/or CIDR ranges
+      - Path to a pattern file, e.g. `pattern/ips`
+    applies_to:
+      - configmap
+      - ingress
+    version_min: "1.10"
+    example: [ 'deny-list: "192.168.1.0/24, 192.168.2.100"' ]
   - title: check
     type: bool
     group: backend-checks
@@ -1851,6 +1869,7 @@ annotations:
     dependencies: ""
     default: ""
     description:
+      - "**Deprecated**, use `allow-list` instead."
       - Blocks all IP addresses except the whitelisted ones (annotation value).
     tip:
       - The value is treated as a pattern file (see `--configmap-patternfiles`) if it starts with `patterns/`. It should consist of a list of IPs or CIDRs, one per line.
@@ -1862,6 +1881,23 @@ annotations:
       - ingress
     version_min: "1.4"
     example: ['whitelist: "192.168.1.0/24, 192.168.2.100"']
+  - title: allow-list
+    type: IPs/CIDRs or pattern file
+    group: access-control
+    dependencies: ""
+    default: ""
+    description:
+      - Blocks all IP addresses except the whitelisted ones (annotation value).
+    tip:
+      - The value is treated as a pattern file (see `--configmap-patternfiles`) if it starts with `patterns/`. It should consist of a list of IPs or CIDRs, one per line.
+    values:
+      - Comma-separated list of IP addresses and/or CIDR ranges
+      - Path to a pattern file, e.g. `pattern/ips`
+    applies_to:
+      - configmap
+      - ingress
+    version_min: "1.10"
+    example: ['allow-list: "192.168.1.0/24, 192.168.2.100"']
   - title: tls-alpn
     type: string
     group: https
