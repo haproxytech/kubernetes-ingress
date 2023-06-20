@@ -50,7 +50,7 @@ func (c *HAProxyController) initHandlers() {
 			AddrIPv6: c.osArgs.IPV6BindAddr,
 		},
 		&handler.PatternFiles{},
-		&handler.BackendCfgSnippet{},
+		annotations.ConfigSnippetHandler{},
 		c.updateStatusManager,
 	}
 

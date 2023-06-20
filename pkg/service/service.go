@@ -35,21 +35,22 @@ var logger = utils.GetLogger()
 const cookieKey = "ohph7OoGhong"
 
 type Service struct {
-	path             *store.IngressPath
-	resource         *store.Service
-	backend          *models.Backend
-	certs            certs.Certificates
-	annotations      []map[string]string
-	modeTCP          bool
-	newBackend       bool
-	standalone       bool
-	ingressName      string
-	ingressNamespace string
+	path        *store.IngressPath
+	resource    *store.Service
+	backend     *models.Backend
+	certs       certs.Certificates
+	annotations []map[string]string
+	modeTCP     bool
+	newBackend  bool
+	standalone  bool
+	// ingressName      string
+	// ingressNamespace string
+	ingress *store.Ingress
 }
 
 // New returns a Service instance to handle the k8s IngressPath resource given in params.
 // An error will be returned if there is no k8s Service resource corresponding to the service description in IngressPath.
-func New(k store.K8s, path *store.IngressPath, certs certs.Certificates, tcpService bool, ingressNamespace, ingressName string, annList ...map[string]string) (*Service, error) {
+func New(k store.K8s, path *store.IngressPath, certs certs.Certificates, tcpService bool, ingress *store.Ingress, annList ...map[string]string) (*Service, error) {
 	service, err := k.GetService(path.SvcNamespace, path.SvcName)
 	if err != nil {
 		return nil, err
@@ -65,14 +66,15 @@ func New(k store.K8s, path *store.IngressPath, certs certs.Certificates, tcpServ
 		}
 	}
 	return &Service{
-		path:             path,
-		resource:         service,
-		certs:            certs,
-		annotations:      a,
-		modeTCP:          tcpService,
-		standalone:       standalone,
-		ingressName:      ingressName,
-		ingressNamespace: ingressNamespace,
+		path:        path,
+		resource:    service,
+		certs:       certs,
+		annotations: a,
+		modeTCP:     tcpService,
+		standalone:  standalone,
+		ingress:     ingress,
+		// ingressName:      ingressName,
+		// ingressNamespace: ingressNamespace,
 	}, nil
 }
 
@@ -120,9 +122,9 @@ func (s *Service) GetBackendName() (name string, err error) {
 	resourceNamespace := s.resource.Namespace
 	resourceName := s.resource.Name
 	prefix := ""
-	if s.standalone && s.ingressName != "" {
-		resourceName = s.ingressName
-		resourceNamespace = s.ingressNamespace
+	if s.standalone && s.ingress != nil && s.ingress.Name != "" {
+		resourceName = s.ingress.Name
+		resourceNamespace = s.ingress.Namespace
 		prefix = "ing_"
 	}
 
@@ -136,9 +138,9 @@ func (s *Service) GetBackendName() (name string, err error) {
 }
 
 // HandleBackend processes a Service and creates/updates corresponding backend configuration in HAProxy
-func (s *Service) HandleBackend(store store.K8s, client api.HAProxyClient, a annotations.Annotations) (reload bool, err error) {
+func (s *Service) HandleBackend(storeK8s store.K8s, client api.HAProxyClient, a annotations.Annotations) (reload bool, err error) {
 	var backend, newBackend *models.Backend
-	newBackend, err = s.getBackendModel(store, a)
+	newBackend, err = s.getBackendModel(storeK8s, a)
 	s.backend = newBackend
 	if err != nil {
 		return
@@ -164,7 +166,9 @@ func (s *Service) HandleBackend(store store.K8s, client api.HAProxyClient, a ann
 		logger.Debugf("Service '%s/%s': new backend '%s', reload required", s.resource.Namespace, s.resource.Name, newBackend.Name)
 	}
 	// config-snippet
-	logger.Error(annotations.NewBackendCfgSnippet("backend-config-snippet", newBackend.Name).Process(store, s.annotations...))
+	backendCfgSnippetHandler := annotations.NewBackendCfgSnippet("backend-config-snippet", newBackend.Name, s.ingress)
+	backendCfgSnippetHandler.SetService(s.resource)
+	logger.Error(backendCfgSnippetHandler.Process(storeK8s, s.annotations...))
 	return
 }
 

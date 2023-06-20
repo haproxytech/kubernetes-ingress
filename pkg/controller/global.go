@@ -174,7 +174,7 @@ func (c *HAProxyController) handleDefaultService() (reload bool) {
 		SvcName:          name,
 		IsDefaultBackend: true,
 	}
-	if svc, err = service.New(c.store, ingressPath, nil, false, "", "", c.store.ConfigMaps.Main.Annotations); err == nil {
+	if svc, err = service.New(c.store, ingressPath, nil, false, nil, c.store.ConfigMaps.Main.Annotations); err == nil {
 		reload, err = svc.SetDefaultBackend(c.store, c.haproxy, []string{c.haproxy.FrontHTTP, c.haproxy.FrontHTTPS}, c.annotations)
 	}
 	if err != nil {
@@ -256,7 +256,7 @@ func (c *HAProxyController) handleDefaultLocalService() (reload bool) {
 		IsDefaultBackend: true,
 	}
 
-	if svc, err = service.New(c.store, ingressPath, nil, false, "", ""); err == nil {
+	if svc, err = service.New(c.store, ingressPath, nil, false, nil); err == nil {
 		reload, err = svc.SetDefaultBackend(c.store, c.haproxy, []string{c.haproxy.FrontHTTP, c.haproxy.FrontHTTPS}, c.annotations)
 	}
 	if err != nil {

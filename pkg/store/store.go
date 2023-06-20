@@ -29,7 +29,7 @@ type K8s struct {
 	Namespaces              map[string]*Namespace
 	IngressClasses          map[string]*IngressClass
 	SecretsProcessed        map[string]struct{}
-	BackendProcessed        map[string]struct{}
+	BackendsProcessed       map[string]struct{}
 	GatewayClasses          map[string]*GatewayClass
 	GatewayControllerName   string
 	PublishServiceAddresses []string
@@ -72,9 +72,9 @@ func NewK8sStore(args utils.OSArgs) K8s {
 				Name:      args.ConfigMapPatternFiles.Name,
 			},
 		},
-		SecretsProcessed: map[string]struct{}{},
-		BackendProcessed: map[string]struct{}{},
-		GatewayClasses:   make(map[string]*GatewayClass),
+		SecretsProcessed:  map[string]struct{}{},
+		BackendsProcessed: map[string]struct{}{},
+		GatewayClasses:    make(map[string]*GatewayClass),
 	}
 	for _, namespace := range args.NamespaceWhitelist {
 		store.NamespacesAccess.Whitelist[namespace] = struct{}{}

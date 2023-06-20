@@ -113,6 +113,10 @@ func (c *HAProxyController) updateHAProxy() {
 		logger.Error(route.CustomRoutesReset(c.haproxy))
 	}
 
+	// global config-snippet
+	logger.Error(annotations.NewBackendCfgSnippet("backend-config-snippet", "configmap", nil).
+		Process(c.store, c.store.ConfigMaps.Main.Annotations))
+
 	for _, namespace := range c.store.Namespaces {
 		if !namespace.Relevant {
 			continue
@@ -144,8 +148,18 @@ func (c *HAProxyController) updateHAProxy() {
 	if err != nil {
 		logger.Error("unable to Sync HAProxy configuration !!")
 		logger.Error(err)
+		reloadCfgSnippet, errCfgSnippet := annotations.CheckBackendConfigSnippetError(err, c.haproxy.Env.CfgDir)
+		logger.Error(errCfgSnippet)
 		c.clean(true)
-		return
+		c.reload = c.reload || reloadCfgSnippet
+		if c.reload && errCfgSnippet == nil {
+			logger.Debug("disabling some config snippets because of errors, reload required")
+			// We need to replay all these resources.
+			c.store.SecretsProcessed = map[string]struct{}{}
+			c.store.BackendsProcessed = map[string]struct{}{}
+			c.updateHAProxy()
+			return
+		}
 	}
 
 	if !c.ready {
@@ -286,7 +300,7 @@ func (c *HAProxyController) setupHAProxyRules() error {
 func (c *HAProxyController) clean(failedSync bool) {
 	c.haproxy.Clean()
 	// Need to do that even if transaction failed otherwise at fix time, they won't be reprocessed.
-	c.store.BackendProcessed = map[string]struct{}{}
+	c.store.BackendsProcessed = map[string]struct{}{}
 	logger.Error(c.setupHAProxyRules())
 	if !failedSync {
 		c.store.Clean()

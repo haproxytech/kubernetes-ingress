@@ -63,3 +63,14 @@ var DefaultValues = map[string]string{
 	"client-crt-optional":    "false",
 	"tls-alpn":               "h2,http/1.1",
 }
+
+// Returns the first annotation value in the set of maps of annotations along with the indice of which map in argument provided the value.
+func GetValuesAndIndices(annotationName string, annotations ...map[string]string) map[int]string {
+	result := map[int]string{}
+	for i, a := range annotations {
+		if val, ok := a[annotationName]; ok {
+			result[i] = val
+		}
+	}
+	return result
+}
