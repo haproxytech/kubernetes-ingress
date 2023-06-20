@@ -41,7 +41,7 @@ func (suite *AccessControlSuite) Test_Whitelist() {
 	suite.Run("Inline", func() {
 		suite.tmplData.IngAnnotations = []struct{ Key, Value string }{
 			{"src-ip-header", " X-Client-IP"},
-			{"whitelist", " 192.168.2.0/24"},
+			{"allow-list", " 192.168.2.0/24"},
 		}
 
 		suite.NoError(suite.test.Apply("config/deploy.yaml.tmpl", suite.test.GetNS(), suite.tmplData))
@@ -50,10 +50,62 @@ func (suite *AccessControlSuite) Test_Whitelist() {
 		suite.eventuallyReturns("192.168.5.3", http.StatusForbidden)
 	})
 
+	suite.Run("Inline deprecated annotation name", func() {
+		suite.tmplData.IngAnnotations = []struct{ Key, Value string }{
+			{"src-ip-header", " X-Client-IP"},
+			{"whitelist", "192.168.4.0/24"},
+		}
+
+		suite.NoError(suite.test.Apply("config/deploy.yaml.tmpl", suite.test.GetNS(), suite.tmplData))
+
+		suite.eventuallyReturns("192.168.4.3", http.StatusOK)
+		suite.eventuallyReturns("192.168.5.3", http.StatusForbidden)
+	})
+
+	suite.Run("Inline: when new and deprecated annotation names are defined then only new name is considered", func() {
+		suite.tmplData.IngAnnotations = []struct{ Key, Value string }{
+			{"src-ip-header", " X-Client-IP"},
+			{"whitelist", "192.168.4.0/24"},
+			{"allow-list", "192.168.5.0/24"},
+		}
+
+		suite.NoError(suite.test.Apply("config/deploy.yaml.tmpl", suite.test.GetNS(), suite.tmplData))
+
+		suite.eventuallyReturns("192.168.5.3", http.StatusOK)
+		suite.eventuallyReturns("192.168.4.3", http.StatusForbidden)
+	})
+
 	suite.Run("Patternfile", func() {
 		suite.tmplData.IngAnnotations = []struct{ Key, Value string }{
 			{"src-ip-header", " X-Client-IP"},
-			{"whitelist", " patterns/ips"},
+			{"allow-list", " patterns/ips"},
+		}
+
+		suite.NoError(suite.test.Apply("config/deploy.yaml.tmpl", suite.test.GetNS(), suite.tmplData))
+		suite.NoError(suite.test.Apply("config/patternfile-a.yml", "", nil))
+
+		suite.eventuallyReturns("192.168.0.3", http.StatusOK)
+		suite.eventuallyReturns("192.168.2.3", http.StatusForbidden)
+	})
+
+	suite.Run("Patternfile deprecated annotation name", func() {
+		suite.tmplData.IngAnnotations = []struct{ Key, Value string }{
+			{"src-ip-header", " X-Client-IP"},
+			{"whitelist", " patterns/ips2"},
+		}
+
+		suite.NoError(suite.test.Apply("config/deploy.yaml.tmpl", suite.test.GetNS(), suite.tmplData))
+		suite.NoError(suite.test.Apply("config/patternfile-a.yml", "", nil))
+
+		suite.eventuallyReturns("192.169.0.3", http.StatusOK)
+		suite.eventuallyReturns("192.168.2.3", http.StatusForbidden)
+	})
+
+	suite.Run("Patternfile: when new and deprecated annotation names are defined then only new name is considered", func() {
+		suite.tmplData.IngAnnotations = []struct{ Key, Value string }{
+			{"src-ip-header", " X-Client-IP"},
+			{"whitelist", " patterns/ips2"},
+			{"allow-list", " patterns/ips"},
 		}
 
 		suite.NoError(suite.test.Apply("config/deploy.yaml.tmpl", suite.test.GetNS(), suite.tmplData))
@@ -68,7 +120,7 @@ func (suite *AccessControlSuite) Test_Blacklist() {
 	suite.Run("Inline", func() {
 		suite.tmplData.IngAnnotations = []struct{ Key, Value string }{
 			{"src-ip-header", " X-Client-IP"},
-			{"blacklist", " 192.168.2.0/24"},
+			{"deny-list", " 192.168.2.0/24"},
 		}
 
 		suite.NoError(suite.test.Apply("config/deploy.yaml.tmpl", suite.test.GetNS(), suite.tmplData))
@@ -77,10 +129,35 @@ func (suite *AccessControlSuite) Test_Blacklist() {
 		suite.eventuallyReturns("192.168.5.3", http.StatusOK)
 	})
 
+	suite.Run("Inline deprecated annotation name", func() {
+		suite.tmplData.IngAnnotations = []struct{ Key, Value string }{
+			{"src-ip-header", " X-Client-IP"},
+			{"blacklist", "192.168.4.0/24"},
+		}
+
+		suite.NoError(suite.test.Apply("config/deploy.yaml.tmpl", suite.test.GetNS(), suite.tmplData))
+
+		suite.eventuallyReturns("192.168.4.3", http.StatusForbidden)
+		suite.eventuallyReturns("192.168.5.3", http.StatusOK)
+	})
+
+	suite.Run("Inline: when new and deprecated annotation names are defined then only new name is considered", func() {
+		suite.tmplData.IngAnnotations = []struct{ Key, Value string }{
+			{"src-ip-header", " X-Client-IP"},
+			{"blacklist", "192.168.4.0/24"},
+			{"deny-list", "192.168.5.0/24"},
+		}
+
+		suite.NoError(suite.test.Apply("config/deploy.yaml.tmpl", suite.test.GetNS(), suite.tmplData))
+
+		suite.eventuallyReturns("192.168.5.3", http.StatusForbidden)
+		suite.eventuallyReturns("192.168.4.3", http.StatusOK)
+	})
+
 	suite.Run("Patternfile", func() {
 		suite.tmplData.IngAnnotations = []struct{ Key, Value string }{
 			{"src-ip-header", " X-Client-IP"},
-			{"blacklist", " patterns/ips"},
+			{"deny-list", "patterns/ips"},
 		}
 
 		suite.NoError(suite.test.Apply("config/deploy.yaml.tmpl", suite.test.GetNS(), suite.tmplData))
@@ -88,5 +165,31 @@ func (suite *AccessControlSuite) Test_Blacklist() {
 
 		suite.eventuallyReturns("192.168.0.3", http.StatusForbidden)
 		suite.eventuallyReturns("192.168.2.3", http.StatusOK)
+	})
+
+	suite.Run("Patternfile deprecated annotation name", func() {
+		suite.tmplData.IngAnnotations = []struct{ Key, Value string }{
+			{"src-ip-header", " X-Client-IP"},
+			{"blacklist", " patterns/ips2"},
+		}
+
+		suite.NoError(suite.test.Apply("config/deploy.yaml.tmpl", suite.test.GetNS(), suite.tmplData))
+		suite.NoError(suite.test.Apply("config/patternfile-a.yml", "", nil))
+
+		suite.eventuallyReturns("192.169.0.3", http.StatusForbidden)
+		suite.eventuallyReturns("192.168.2.3", http.StatusOK)
+	})
+	suite.Run("Patternfile: when new and deprecated annotation names are defined then only new name is considered", func() {
+		suite.tmplData.IngAnnotations = []struct{ Key, Value string }{
+			{"src-ip-header", " X-Client-IP"},
+			{"blacklist", "patterns/ips2"},
+			{"deny-list", "patterns/ips"},
+		}
+
+		suite.NoError(suite.test.Apply("config/deploy.yaml.tmpl", suite.test.GetNS(), suite.tmplData))
+		suite.NoError(suite.test.Apply("config/patternfile-a.yml", "", nil))
+
+		suite.eventuallyReturns("192.168.0.3", http.StatusForbidden)
+		suite.eventuallyReturns("192.169.2.3", http.StatusOK)
 	})
 }

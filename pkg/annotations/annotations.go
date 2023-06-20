@@ -98,8 +98,8 @@ func (a annImpl) Frontend(i *store.Ingress, r *rules.List, m maps.Maps) []Annota
 	resSetCORS := ingress.NewResSetCORS(r)
 	return []Annotation{
 		// Simple annoations
-		ingress.NewBlackList("blacklist", r, m),
-		ingress.NewWhiteList("whitelist", r, m),
+		ingress.NewDenyList("deny-list", r, m),
+		ingress.NewAllowList("allow-list", r, m),
 		ingress.NewSrcIPHdr("src-ip-header", r),
 		ingress.NewReqSetHost("set-host", r),
 		ingress.NewReqPathRewrite("path-rewrite", r),

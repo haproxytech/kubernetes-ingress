@@ -12,7 +12,7 @@ import (
 
 type ReqDeny struct {
 	SrcIPsMap maps.Path
-	Whitelist bool
+	AllowList bool
 }
 
 func (r ReqDeny) GetType() Type {
@@ -21,7 +21,7 @@ func (r ReqDeny) GetType() Type {
 
 func (r ReqDeny) Create(client api.HAProxyClient, frontend *models.Frontend, ingressACL string) error {
 	not := ""
-	if r.Whitelist {
+	if r.AllowList {
 		not = "!"
 	}
 	if frontend.Mode == "tcp" {

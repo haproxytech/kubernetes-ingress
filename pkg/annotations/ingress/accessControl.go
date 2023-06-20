@@ -12,19 +12,27 @@ import (
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
 )
 
+var logger = utils.GetLogger()
+
 type AccessControl struct {
-	maps      maps.Maps
-	rules     *rules.List
-	name      string
-	whitelist bool
+	maps  maps.Maps
+	rules *rules.List
+
+	// name of the annotation managing the access control (either allow-list or deny-list)
+	name string
+
+	// deprecatedName is the deprecated annotation's name managing the access control (either whitelist or blacklist).
+	// It will be removed in a future version in favor name.
+	deprecatedName string
+	allowList      bool
 }
 
-func NewBlackList(n string, r *rules.List, m maps.Maps) *AccessControl {
-	return &AccessControl{name: n, rules: r, maps: m}
+func NewDenyList(n string, r *rules.List, m maps.Maps) *AccessControl {
+	return &AccessControl{name: n, deprecatedName: "blacklist", rules: r, maps: m}
 }
 
-func NewWhiteList(n string, r *rules.List, m maps.Maps) *AccessControl {
-	return &AccessControl{name: n, rules: r, maps: m, whitelist: true}
+func NewAllowList(n string, r *rules.List, m maps.Maps) *AccessControl {
+	return &AccessControl{name: n, deprecatedName: "whitelist", rules: r, maps: m, allowList: true}
 }
 
 func (a *AccessControl) GetName() string {
@@ -32,7 +40,7 @@ func (a *AccessControl) GetName() string {
 }
 
 func (a *AccessControl) Process(k store.K8s, annotations ...map[string]string) (err error) {
-	input := common.GetValue(a.GetName(), annotations...)
+	input := a.GetAnnotationValue(annotations...)
 	if input == "" {
 		return
 	}
@@ -40,17 +48,17 @@ func (a *AccessControl) Process(k store.K8s, annotations ...map[string]string) (
 	if strings.HasPrefix(input, "patterns/") {
 		a.rules.Add(&rules.ReqDeny{
 			SrcIPsMap: maps.Path(input),
-			Whitelist: a.whitelist,
+			AllowList: a.allowList,
 		})
 
 		return
 	}
 
 	var mapName maps.Name
-	if a.whitelist {
-		mapName = maps.Name("whitelist-" + utils.Hash([]byte(input)))
+	if a.allowList {
+		mapName = maps.Name("allowlist-" + utils.Hash([]byte(input)))
 	} else {
-		mapName = maps.Name("blacklist-" + utils.Hash([]byte(input)))
+		mapName = maps.Name("denylist-" + utils.Hash([]byte(input)))
 	}
 
 	if !a.maps.MapExists(mapName) {
@@ -66,7 +74,21 @@ func (a *AccessControl) Process(k store.K8s, annotations ...map[string]string) (
 	}
 	a.rules.Add(&rules.ReqDeny{
 		SrcIPsMap: maps.GetPath(mapName),
-		Whitelist: a.whitelist,
+		AllowList: a.allowList,
 	})
 	return
+}
+
+// GetAnnotationValue returns the annotation value of the AccessControl. If the annotation is not defined, it returns an empty string.
+// If the "new" annotation's name is not defined, it falls back to the deprecated name and logs a warning.
+// Deprecated: remove this function when the deprecated annotation name will not be supported anymore.
+func (a *AccessControl) GetAnnotationValue(annotations ...map[string]string) string {
+	value := common.GetValue(a.name, annotations...)
+	if value == "" { // fallback to deprecated annotation name
+		value = common.GetValue(a.deprecatedName, annotations...)
+		if value != "" {
+			logger.Warningf("annotation %q is deprecated and will be removed in a future version. Please use %q instead.", a.deprecatedName, a.name)
+		}
+	}
+	return value
 }
