@@ -37,13 +37,24 @@ builds:
       - ppc64le
       - s390x
 archives:
-  - name_template: "{{.Binary}}_{{.Version}}_{{.Os}}_{{.Arch}}"
-    replacements:
-      darwin: Darwin
-      linux: Linux
-      386: i386
-      amd64: x86_64
-      freebsd: FreeBSD
+#  - name_template: "{{.Binary}}_{{.Version}}_{{.Os}}_{{.Arch}}"
+  - name_template: |-
+      {{- $prettyOS := .Os -}}
+      {{- if eq $prettyOS "darwin" -}}
+      	{{- $prettyOS = "Darwin" -}}
+      {{- else if eq $prettyOS "linux" -}}
+      	{{- $prettyOS = "Linux" -}}
+      {{- else if eq $prettyOS "freebsd" -}}
+      	{{- $prettyOS = "FreeBSD" -}}
+      {{- end -}}
+
+      {{- $prettyArch := .Arch -}}
+      {{- if eq $prettyArch "386" -}}
+      	{{- $prettyArch = "i386" -}}
+      {{- else if eq $prettyArch "amd64" -}}
+      	{{- $prettyArch = "x86_64" -}}
+      {{- end -}}
+      {{.Binary}}_{{.Version}}_{{$prettyOS}}_{{$prettyArch}}
 checksum:
   name_template: 'checksums.txt'
 snapshot:
