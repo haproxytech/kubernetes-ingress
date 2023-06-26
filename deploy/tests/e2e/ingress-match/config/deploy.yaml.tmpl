@@ -33,6 +33,7 @@ kind: Service
 metadata:
   name: http-echo-{{$i}}
 spec:
+  ipFamilyPolicy: RequireDualStack
   type: ClusterIP
   ports:
     - name: http

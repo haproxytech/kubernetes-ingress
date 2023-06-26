@@ -52,7 +52,7 @@ func (suite *EndpointsSuite) Test_HTTP_Reach() {
 					}()
 				}
 				switch replicas {
-				case 8, 3:
+				case 8, 4, 3:
 					// HAProxy reloaded due to scale up
 					pid = suite.getPID()
 				case 0:

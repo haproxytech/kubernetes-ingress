@@ -29,6 +29,7 @@ apiVersion: v1
 metadata:
   name: http-echo
 spec:
+  ipFamilyPolicy: RequireDualStack
   ports:
     - name: http
       protocol: TCP
