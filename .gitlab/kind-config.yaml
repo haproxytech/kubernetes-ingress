@@ -1,5 +1,6 @@
 apiVersion: kind.x-k8s.io/v1alpha4
 networking:
+  ipFamily: dual
   apiServerAddress: 0.0.0.0
   apiServerPort: 6443
 # add to the apiServer certSANs the name of the docker (dind) service in order to be able to reach the cluster through it
