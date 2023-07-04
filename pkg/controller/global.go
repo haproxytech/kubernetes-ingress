@@ -16,6 +16,7 @@ package controller
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/go-test/deep"
 
@@ -204,8 +205,14 @@ func populateDefaultLocalBackendResources(k8sStore store.K8s, eventChan chan k8s
 				},
 			},
 		}
-		eventChan <- k8s.SyncDataEvent{SyncType: k8s.SERVICE, Namespace: item.Namespace, Data: item}
-
+		eventProcessed := make(chan struct{})
+		eventChan <- k8s.SyncDataEvent{SyncType: k8s.SERVICE, Namespace: item.Namespace, Data: item, EventProcessed: eventProcessed}
+		timerService := time.NewTimer(time.Second)
+		defer timerService.Stop()
+		select {
+		case <-timerService.C:
+		case <-eventProcessed:
+		}
 		endpoints := &store.Endpoints{
 			Namespace: podNs,
 			Service:   store.DefaultLocalBackend,
@@ -218,7 +225,14 @@ func populateDefaultLocalBackendResources(k8sStore store.K8s, eventChan chan k8s
 				},
 			},
 		}
-		eventChan <- k8s.SyncDataEvent{SyncType: k8s.ENDPOINTS, Namespace: endpoints.Namespace, Data: endpoints}
+		eventProcessed = make(chan struct{})
+		eventChan <- k8s.SyncDataEvent{SyncType: k8s.ENDPOINTS, Namespace: endpoints.Namespace, Data: endpoints, EventProcessed: eventProcessed}
+		timerEndpoints := time.NewTimer(time.Second)
+		defer timerEndpoints.Stop()
+		select {
+		case <-timerEndpoints.C:
+		case <-eventProcessed:
+		}
 	} else {
 		defaultLocalService.Annotations = k8sStore.ConfigMaps.Main.Annotations
 	}
