@@ -44,10 +44,12 @@ func (k *K8s) EventNamespace(ns *Namespace, data *Namespace) (updateRequired boo
 func (k *K8s) EventIngressClass(data *IngressClass) (updateRequired bool) {
 	if data.Status == DELETED {
 		delete(k.IngressClasses, data.Name)
-	} else {
+		updateRequired = true
+	} else if !data.Equal(k.IngressClasses[data.Name]) {
+		updateRequired = true
 		k.IngressClasses[data.Name] = data
 	}
-	return true
+	return
 }
 
 func (k *K8s) EventIngress(ns *Namespace, data *Ingress) (updateRequired bool) {
