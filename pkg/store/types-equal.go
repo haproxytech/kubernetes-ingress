@@ -441,3 +441,11 @@ func EqualSliceComparable[T comparable](sliceA, sliceB []T) bool {
 	}
 	return true
 }
+
+func (a *IngressClass) Equal(b *IngressClass) bool {
+	if a == nil || b == nil {
+		return false
+	}
+
+	return a.Controller == b.Controller && a.Name == b.Name
+}
