@@ -5,25 +5,11 @@ import (
 	"fmt"
 	"net"
 
-	"github.com/haproxytech/kubernetes-ingress/pkg/annotations"
-	"github.com/haproxytech/kubernetes-ingress/pkg/store"
 	networkingv1 "k8s.io/api/networking/v1"
 	k8serror "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 )
-
-type UpdateStatus func(ingresses []*store.Ingress, publishServiceAddresses []string)
-
-func NewStatusIngressUpdater(client *kubernetes.Clientset, k store.K8s, class string, emptyClass bool, a annotations.Annotations) UpdateStatus {
-	return func(ingresses []*store.Ingress, publishServiceAddresses []string) {
-		for _, ingress := range ingresses {
-			if ing := New(k, ingress, class, emptyClass, a); ing != nil {
-				logger.Error(ing.UpdateStatus(client))
-			}
-		}
-	}
-}
 
 func (i *Ingress) UpdateStatus(client *kubernetes.Clientset) (err error) {
 	var lbi []networkingv1.IngressLoadBalancerIngress

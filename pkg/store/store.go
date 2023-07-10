@@ -30,7 +30,6 @@ type K8s struct {
 	IngressClasses          map[string]*IngressClass
 	SecretsProcessed        map[string]struct{}
 	BackendProcessed        map[string]struct{}
-	UpdateStatusFunc        func(ingresses []*Ingress, publishServiceAddresses []string)
 	GatewayClasses          map[string]*GatewayClass
 	GatewayControllerName   string
 	PublishServiceAddresses []string
