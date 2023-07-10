@@ -9,19 +9,25 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
+var logger = utils.GetLogger()
+
 type UpdateStatusManager interface {
 	AddIngress(ingress *ingress.Ingress)
 	Update(k store.K8s, h haproxy.HAProxy, a annotations.Annotations) (reload bool, err error)
 }
 
 type UpdateStatusManagerImpl struct {
-	updateIngresses []*ingress.Ingress
-	client          *kubernetes.Clientset
+	updateIngresses   []*ingress.Ingress
+	client            *kubernetes.Clientset
+	ingressClass      string
+	emptyIngressClass bool
 }
 
-func New(client *kubernetes.Clientset) UpdateStatusManager {
+func New(client *kubernetes.Clientset, ingressClass string, emptyIngressClass bool) UpdateStatusManager {
 	return &UpdateStatusManagerImpl{
-		client: client,
+		client:            client,
+		ingressClass:      ingressClass,
+		emptyIngressClass: emptyIngressClass,
 	}
 }
 
@@ -45,20 +51,21 @@ func (m *UpdateStatusManagerImpl) Update(k store.K8s, h haproxy.HAProxy, a annot
 			}
 
 			for _, ingResource := range namespace.Ingresses {
-				previousAddresses := ingResource.Addresses
-				i := ingress.New(k, ingResource, "haproxy", false, a)
+				i := ingress.New(k, ingResource, m.ingressClass, m.emptyIngressClass, a)
 				supported := i.Supported(k, a)
-				if supported {
-					ingResource.Addresses = k.PublishServiceAddresses
-				}
-				// If ingress is not managed by us, three cases can occur:
-				// - it has no adddresses.
-				// - it has addresses and they are different (maybe managed by someone else).
-				// - it has addresses and they are ours. We managed it but not now anymore.
-				// You can see we can't easily manage the case when while the IC is stopped, the ingress switches to unmanaged state (ingress class change) and the publish service addresses have also changed.
-				if !supported && !utils.EqualSliceStringsWithoutOrder(previousAddresses, ingResource.Addresses) {
+
+				if (!supported && (len(ingResource.Addresses) == 0 || !utils.EqualSliceStringsWithoutOrder(k.PublishServiceAddresses, ingResource.Addresses))) ||
+					(supported && utils.EqualSliceStringsWithoutOrder(k.PublishServiceAddresses, ingResource.Addresses)) {
 					continue
 				}
+
+				if supported {
+					ingResource.Addresses = k.PublishServiceAddresses
+				} else {
+					ingResource.Addresses = []string{""}
+				}
+				logger.Debugf("new ingress status ip address of '%s/%s' will be %+v", ingResource.Namespace, ingResource.Name, ingResource.Addresses)
+
 				ingresses = append(ingresses, i)
 			}
 		}

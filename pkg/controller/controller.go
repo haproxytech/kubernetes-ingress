@@ -121,8 +121,7 @@ func (c *HAProxyController) updateHAProxy() {
 		for _, ingResource := range namespace.Ingresses {
 			i := ingress.New(c.store, ingResource, c.osArgs.IngressClass, c.osArgs.EmptyIngressClass, c.annotations)
 			if !i.Supported(c.store, c.annotations) {
-				logger.Debugf("ingress '%s/%s' ignored: no matching IngressClass", ingResource.Namespace, ingResource.Name)
-				ingResource.Addresses = []string{""}
+				logger.Debugf("ingress '%s/%s' ignored: no matching", ingResource.Namespace, ingResource.Name)
 			} else {
 				c.reload = i.Update(c.store, c.haproxy, c.annotations) || c.reload
 			}

@@ -166,7 +166,6 @@ func (builder *Builder) Build() *HAProxyController {
 	prefix, errPrefix := utils.GetPodPrefix(os.Getenv("POD_NAME"))
 	logger.Error(errPrefix)
 
-	builder.store.UpdateStatusFunc = ingress.NewStatusIngressUpdater(builder.clientSet, builder.store, builder.osArgs.IngressClass, builder.osArgs.EmptyIngressClass, builder.annotations)
 	builder.store.GatewayControllerName = builder.osArgs.GatewayControllerName
 	gatewayManager := builder.gatewayManager
 	if gatewayManager == nil {
@@ -174,7 +173,7 @@ func (builder *Builder) Build() *HAProxyController {
 	}
 	updateStatusManager := builder.updateStatusManager
 	if updateStatusManager == nil {
-		updateStatusManager = status.New(builder.clientSet)
+		updateStatusManager = status.New(builder.clientSet, builder.osArgs.IngressClass, builder.osArgs.EmptyIngressClass)
 	}
 	return &HAProxyController{
 		osArgs:                   builder.osArgs,
