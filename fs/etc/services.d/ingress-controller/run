@@ -18,8 +18,10 @@ fi
 if [ -r "${CG_LIMIT_FILE}" ]; then
     MEMLIMIT_CG=$(awk '{print int($1 / 1024 / 1024 / 3)}' "${CG_LIMIT_FILE}")
 
-    if [ ${MEMLIMIT_CG} -lt ${MEMLIMIT} ]; then
-        MEMLIMIT=${MEMLIMIT_CG}
+    if [ "${MEMLIMIT_CG}" -gt 0 ]; then
+        if [ "${MEMLIMIT_CG}" -lt "${MEMLIMIT}" ]; then
+            MEMLIMIT="${MEMLIMIT_CG}"
+        fi
     fi
 fi
 
