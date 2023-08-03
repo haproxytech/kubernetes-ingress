@@ -16,7 +16,6 @@ package controller
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/go-test/deep"
 
@@ -27,7 +26,6 @@ import (
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/certs"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/env"
 	"github.com/haproxytech/kubernetes-ingress/pkg/ingress"
-	"github.com/haproxytech/kubernetes-ingress/pkg/k8s"
 	"github.com/haproxytech/kubernetes-ingress/pkg/service"
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
 )
@@ -183,7 +181,7 @@ func (c *HAProxyController) handleDefaultService() (reload bool) {
 	return reload
 }
 
-func populateDefaultLocalBackendResources(k8sStore store.K8s, eventChan chan k8s.SyncDataEvent, podNs string, defaultBackendPort int) error {
+func populateDefaultLocalBackendResources(k8sStore store.K8s, podNs string, defaultBackendPort int) error {
 	controllerNs, ok := k8sStore.Namespaces[podNs]
 	if !ok {
 		return fmt.Errorf("controller namespace '%s' not found", podNs)
@@ -205,14 +203,9 @@ func populateDefaultLocalBackendResources(k8sStore store.K8s, eventChan chan k8s
 				},
 			},
 		}
-		eventProcessed := make(chan struct{})
-		eventChan <- k8s.SyncDataEvent{SyncType: k8s.SERVICE, Namespace: item.Namespace, Data: item, EventProcessed: eventProcessed}
-		timerService := time.NewTimer(time.Second)
-		defer timerService.Stop()
-		select {
-		case <-timerService.C:
-		case <-eventProcessed:
-		}
+		k8sStore.EventService(controllerNs, item)
+		logger.Debug("default backend event service processed")
+
 		endpoints := &store.Endpoints{
 			Namespace: podNs,
 			Service:   store.DefaultLocalBackend,
@@ -225,14 +218,10 @@ func populateDefaultLocalBackendResources(k8sStore store.K8s, eventChan chan k8s
 				},
 			},
 		}
-		eventProcessed = make(chan struct{})
-		eventChan <- k8s.SyncDataEvent{SyncType: k8s.ENDPOINTS, Namespace: endpoints.Namespace, Data: endpoints, EventProcessed: eventProcessed}
-		timerEndpoints := time.NewTimer(time.Second)
-		defer timerEndpoints.Stop()
-		select {
-		case <-timerEndpoints.C:
-		case <-eventProcessed:
-		}
+		k8sStore.EventEndpoints(controllerNs, endpoints, nil)
+		logger.Debug("default backend event endpoints processed")
+	} else {
+		defaultLocalService.Annotations = k8sStore.ConfigMaps.Main.Annotations
 	}
 	return nil
 }
@@ -242,7 +231,7 @@ func (c *HAProxyController) handleDefaultLocalService() (reload bool) {
 		err error
 		svc *service.Service
 	)
-	err = populateDefaultLocalBackendResources(c.store, c.eventChan, c.podNamespace, c.osArgs.DefaultBackendPort)
+	err = populateDefaultLocalBackendResources(c.store, c.podNamespace, c.osArgs.DefaultBackendPort)
 	if err != nil {
 		logger.Error(err)
 		return
