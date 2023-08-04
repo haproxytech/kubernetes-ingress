@@ -52,9 +52,7 @@ func (c *HAProxyController) initHandlers() {
 		&handler.PatternFiles{},
 		&handler.BackendCfgSnippet{},
 	}
-	if c.osArgs.PprofEnabled {
-		c.updateHandlers = append(c.updateHandlers, handler.Pprof{})
-	}
+
 	c.updateHandlers = append(c.updateHandlers, handler.Refresh{})
 }
 
@@ -71,6 +69,9 @@ func (c *HAProxyController) startupHandlers() error {
 			IPv4Addr:  c.osArgs.IPV4BindAddr,
 			IPv6Addr:  c.osArgs.IPV6BindAddr,
 		},
+	}
+	if c.osArgs.PprofEnabled {
+		handlers = append(handlers, handler.Pprof{})
 	}
 	for _, handler := range handlers {
 		_, err := handler.Update(c.store, c.haproxy, c.annotations)

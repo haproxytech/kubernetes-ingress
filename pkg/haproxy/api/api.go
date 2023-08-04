@@ -22,6 +22,8 @@ type HAProxyClient interface { //nolint:interfacebloat
 	BackendsGet() (models.Backends, error)
 	BackendGet(backendName string) (*models.Backend, error)
 	BackendCreate(backend models.Backend) error
+	BackendCreatePermanently(backend models.Backend) error
+	BackendCreateIfNotExist(backend models.Backend) error
 	BackendEdit(backend models.Backend) error
 	BackendDelete(backendName string) error
 	BackendCfgSnippetSet(backendName string, value []string) error
@@ -75,6 +77,7 @@ type HAProxyClient interface { //nolint:interfacebloat
 type clientNative struct {
 	nativeAPI                   clientnative.HAProxyClient
 	activeBackends              map[string]struct{}
+	permanentBackends           map[string]struct{}
 	activeTransaction           string
 	activeTransactionHasChanges bool
 }
@@ -110,8 +113,9 @@ func New(transactionDir, configFile, programPath, runtimeSocket string) (client 
 	}
 
 	cn := clientNative{
-		nativeAPI:      cnHAProxyClient,
-		activeBackends: make(map[string]struct{}),
+		nativeAPI:         cnHAProxyClient,
+		activeBackends:    make(map[string]struct{}),
+		permanentBackends: make(map[string]struct{}),
 	}
 	return &cn, nil
 }
