@@ -44,6 +44,15 @@ func (c *clientNative) BackendCreate(backend models.Backend) error {
 	return nil
 }
 
+func (c *clientNative) BackendCreatePermanently(backend models.Backend) error {
+	err := c.BackendCreate(backend)
+	if err != nil {
+		return err
+	}
+	c.permanentBackends[backend.Name] = struct{}{}
+	return nil
+}
+
 func (c *clientNative) BackendCreateIfNotExist(backend models.Backend) (err error) {
 	configuration, err := c.nativeAPI.Configuration()
 	if err != nil {
@@ -227,6 +236,9 @@ func (c *clientNative) RefreshBackends() (deleted []string, err error) {
 		return
 	}
 	for _, backend := range backends {
+		if _, ok := c.permanentBackends[backend.Name]; ok {
+			continue
+		}
 		if _, ok := c.activeBackends[backend.Name]; !ok {
 			if err = c.BackendDelete(backend.Name); err != nil {
 				return

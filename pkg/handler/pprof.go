@@ -30,7 +30,7 @@ func (handler Pprof) Update(k store.K8s, h haproxy.HAProxy, a annotations.Annota
 
 	_, err = h.BackendGet(pprofBackend)
 	if err != nil {
-		err = h.BackendCreate(models.Backend{
+		err = h.BackendCreatePermanently(models.Backend{
 			Name: pprofBackend,
 			Mode: "http",
 		})
