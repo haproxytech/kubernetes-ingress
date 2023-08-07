@@ -192,10 +192,10 @@ func populateDefaultLocalBackendResources(k8sStore store.K8s, eventChan chan k8s
 	defaultLocalService := controllerNs.Services[store.DefaultLocalBackend]
 	if defaultLocalService == nil {
 		item := &store.Service{
-			Namespace:   podNs,
-			Name:        store.DefaultLocalBackend,
-			Status:      store.ADDED,
-			Annotations: k8sStore.ConfigMaps.Main.Annotations,
+			Namespace: podNs,
+			Name:      store.DefaultLocalBackend,
+			Status:    store.ADDED,
+
 			Ports: []store.ServicePort{
 				{
 					Name:     "http",
@@ -233,8 +233,6 @@ func populateDefaultLocalBackendResources(k8sStore store.K8s, eventChan chan k8s
 		case <-timerEndpoints.C:
 		case <-eventProcessed:
 		}
-	} else {
-		defaultLocalService.Annotations = k8sStore.ConfigMaps.Main.Annotations
 	}
 	return nil
 }
@@ -256,7 +254,7 @@ func (c *HAProxyController) handleDefaultLocalService() (reload bool) {
 		IsDefaultBackend: true,
 	}
 
-	if svc, err = service.New(c.store, ingressPath, nil, false, nil); err == nil {
+	if svc, err = service.New(c.store, ingressPath, nil, false, nil, c.store.ConfigMaps.Main.Annotations); err == nil {
 		reload, err = svc.SetDefaultBackend(c.store, c.haproxy, []string{c.haproxy.FrontHTTP, c.haproxy.FrontHTTPS}, c.annotations)
 	}
 	if err != nil {
