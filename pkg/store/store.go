@@ -24,17 +24,18 @@ import (
 const DefaultLocalBackend = "default-local-service"
 
 type K8s struct {
-	ConfigMaps              ConfigMaps
-	NamespacesAccess        NamespacesWatch
-	Namespaces              map[string]*Namespace
-	IngressClasses          map[string]*IngressClass
-	SecretsProcessed        map[string]struct{}
-	BackendsProcessed       map[string]struct{}
-	GatewayClasses          map[string]*GatewayClass
-	GatewayControllerName   string
-	PublishServiceAddresses []string
-	NbrHAProxyInst          int64
-	UpdateAllIngresses      bool
+	ConfigMaps                   ConfigMaps
+	NamespacesAccess             NamespacesWatch
+	Namespaces                   map[string]*Namespace
+	IngressClasses               map[string]*IngressClass
+	SecretsProcessed             map[string]struct{}
+	BackendsProcessed            map[string]struct{}
+	GatewayClasses               map[string]*GatewayClass
+	GatewayControllerName        string
+	PublishServiceAddresses      []string
+	NbrHAProxyInst               int64
+	UpdateAllIngresses           bool
+	BackendsWithNoConfigSnippets map[string]struct{}
 }
 
 type NamespacesWatch struct {
@@ -72,9 +73,10 @@ func NewK8sStore(args utils.OSArgs) K8s {
 				Name:      args.ConfigMapPatternFiles.Name,
 			},
 		},
-		SecretsProcessed:  map[string]struct{}{},
-		BackendsProcessed: map[string]struct{}{},
-		GatewayClasses:    make(map[string]*GatewayClass),
+		SecretsProcessed:             map[string]struct{}{},
+		BackendsProcessed:            map[string]struct{}{},
+		GatewayClasses:               map[string]*GatewayClass{},
+		BackendsWithNoConfigSnippets: map[string]struct{}{},
 	}
 	for _, namespace := range args.NamespaceWhitelist {
 		store.NamespacesAccess.Whitelist[namespace] = struct{}{}

@@ -13,7 +13,7 @@ type ConfigSnippetHandler struct{}
 
 func (h ConfigSnippetHandler) Update(k store.K8s, api haproxy.HAProxy, ann Annotations) (reload bool, err error) {
 	// We get the configmap configsnippet value
-	configmapCfgSnippetValue, errConfigmapCfgSnippet := getConfigmapConfigSnippet(api)
+	configmapCfgSnippetValue, errConfigmapCfgSnippet := getConfigmapConfigSnippet(k.BackendsWithNoConfigSnippets, api)
 	if errConfigmapCfgSnippet != nil {
 		return false, errConfigmapCfgSnippet
 	}
@@ -22,7 +22,7 @@ func (h ConfigSnippetHandler) Update(k store.K8s, api haproxy.HAProxy, ann Annot
 	return
 }
 
-func getConfigmapConfigSnippet(api api.HAProxyClient) (configmapCfgSnippetValue []string, err error) {
+func getConfigmapConfigSnippet(backendsWithNoConfigSnippets map[string]struct{}, api api.HAProxyClient) (configmapCfgSnippetValue []string, err error) {
 	// configmap config snippet if any.
 	configmapCfgSnippetValue = []string{}
 	// configmap config snippet will be hold in special backend 'configmap' with origin 'configmap'
@@ -34,6 +34,9 @@ func getConfigmapConfigSnippet(api api.HAProxyClient) (configmapCfgSnippetValue 
 		// to replicate everywhere the configmap insertion.
 		if backends, errGet := api.BackendsGet(); errGet == nil {
 			for _, backend := range backends {
+				if _, ok := backendsWithNoConfigSnippets[backend.Name]; ok {
+					continue
+				}
 				if _, ok := cfgSnippet.backends[backend.Name]; !ok {
 					cfgSnippet.backends[backend.Name] = map[string]*cfgData{
 						"configmap-insertion": {status: store.ADDED},

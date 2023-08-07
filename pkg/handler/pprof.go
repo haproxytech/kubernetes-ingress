@@ -23,11 +23,12 @@ import (
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
 )
 
+const pprofBackend = "pprof"
+
 type Pprof struct{}
 
 func (handler Pprof) Update(k store.K8s, h haproxy.HAProxy, a annotations.Annotations) (reload bool, err error) {
-	pprofBackend := "pprof"
-
+	k.BackendsWithNoConfigSnippets[pprofBackend] = struct{}{}
 	_, err = h.BackendGet(pprofBackend)
 	if err != nil {
 		err = h.BackendCreatePermanently(models.Backend{
@@ -38,7 +39,7 @@ func (handler Pprof) Update(k store.K8s, h haproxy.HAProxy, a annotations.Annota
 			return
 		}
 		err = h.BackendServerCreate(pprofBackend, models.Server{
-			Name:    "pprof",
+			Name:    pprofBackend,
 			Address: "127.0.0.1:6060",
 		})
 		if err != nil {
