@@ -49,6 +49,10 @@ example-remove:
 build:
 	docker build -t haproxytech/kubernetes-ingress --build-arg TARGETPLATFORM=$(TARGETPLATFORM) -f build/Dockerfile .
 
+.PHONY: build-pebble
+build-pebble:
+	docker build -t haproxytech/kubernetes-ingress --build-arg TARGETPLATFORM=$(TARGETPLATFORM) -f build/Dockerfile.pebble .
+
 .PHONY: publish
 publish:
 	goreleaser release --rm-dist

@@ -1,0 +1,103 @@
+# (Optional) A short one line summary of the layer
+summary: Manage the HAPRoxy process
+
+# (Optional) A list of services managed by this configuration layer
+services:
+
+    haproxy:
+
+        # (Required) Control how this service definition is combined with any
+        # other pre-existing definition with the same name in the Pebble plan.
+        #
+        # The value 'merge' will ensure that values in this layer specification
+        # are merged over existing definitions, whereas 'replace' will entirely
+        # override the existing service spec in the plan with the same name.
+        override: replace
+
+        # (Required in combined layer) The command to run the service. It is executed
+        # directly, not interpreted by a shell, and may be optionally suffixed by default
+        # arguments within "[" and "]" which may be overriden via --args.
+        # Example: /usr/bin/somedaemon --db=/db/path [ --port 8080 ]
+        command: /var/lib/pebble/default/run-haproxy
+
+
+        # (Optional) Control whether the service is started automatically when
+        # Pebble starts. Default is "disabled".
+        startup: enabled
+
+        # (Optional) Username for starting service as a different user. It is
+        # an error if the user doesn't exist.
+        # user: haproxy
+
+        # (Optional) Group name for starting service as a different user. It is
+        # an error if the group doesn't exist.
+        # group: haproxy
+
+        # (Optional) Defines what happens when the service exits with a zero
+        # exit code. Possible values are: "restart" (default) which restarts
+        # the service after the backoff delay, "shutdown" which shuts down and
+        # exits the Pebble server, and "ignore" which does nothing further.
+        on-success: restart
+
+        # (Optional) Defines what happens when the service exits with a nonzero
+        # exit code. Possible values are: "restart" (default) which restarts
+        # the service after the backoff delay, "shutdown" which shuts down and
+        # exits the Pebble server, and "ignore" which does nothing further.
+        on-failure: restart
+
+    controller:
+
+        # (Required) Control how this service definition is combined with any
+        # other pre-existing definition with the same name in the Pebble plan.
+        #
+        # The value 'merge' will ensure that values in this layer specification
+        # are merged over existing definitions, whereas 'replace' will entirely
+        # override the existing service spec in the plan with the same name.
+        override: replace
+
+        # (Required in combined layer) The command to run the service. It is executed
+        # directly, not interpreted by a shell, and may be optionally suffixed by default
+        # arguments within "[" and "]" which may be overriden via --args.
+        # Example: /usr/bin/somedaemon --db=/db/path [ --port 8080 ]
+        command: /var/lib/pebble/default/run-controller
+
+
+        # (Optional) Control whether the service is started automatically when
+        # Pebble starts. Default is "disabled".
+        startup: enabled
+
+        # (Optional) Username for starting service as a different user. It is
+        # an error if the user doesn't exist.
+        #user: haproxy
+
+        # (Optional) Group name for starting service as a different user. It is
+        # an error if the group doesn't exist.
+        #group: haproxy
+
+        # (Optional) Defines what happens when the service exits with a zero
+        # exit code. Possible values are: "restart" (default) which restarts
+        # the service after the backoff delay, "shutdown" which shuts down and
+        # exits the Pebble server, and "ignore" which does nothing further.
+        on-success: restart
+
+        # (Optional) Defines what happens when the service exits with a nonzero
+        # exit code. Possible values are: "restart" (default) which restarts
+        # the service after the backoff delay, "shutdown" which shuts down and
+        # exits the Pebble server, and "ignore" which does nothing further.
+        on-failure: restart
+
+        after:
+            - haproxy
+
+checks:
+    check-haproxy:
+        # (Required) Control how this check definition is combined with any
+        # other pre-existing definition with the same name in the Pebble plan.
+        #
+        # The value 'merge' will ensure that values in this layer specification
+        # are merged over existing definitions, whereas 'replace' will entirely
+        # override the existing check spec in the plan with the same name.
+        override: replace
+        http:
+            # (Required) URL to fetch, for example "https://example.com/foo".
+            url: http://127.0.0.1:1042/healthz

@@ -20,13 +20,19 @@ type Process interface {
 }
 
 func New(env env.Env, osArgs utils.OSArgs, auxCfgFile string, api api.HAProxyClient) (p Process) { //nolint:ireturn
-	if osArgs.UseWiths6Overlay {
+	switch {
+	case osArgs.UseWiths6Overlay:
 		p = &s6Control{
 			Env:    env,
 			OSArgs: osArgs,
 			API:    api,
 		}
-	} else {
+	case osArgs.UseWithPebble:
+		p = &pebbleControl{
+			Env:    env,
+			OSArgs: osArgs,
+		}
+	default:
 		p = &directControl{
 			Env:    env,
 			OSArgs: osArgs,
