@@ -99,7 +99,7 @@ Example:
 ### `--configmap-errorfiles`
 
   Sets the ConfigMap object that defines contents to serve instead of HAProxy errors.
-As explained in the [haproxy documentation](https://cbonte.github.io/haproxy-dconv/2.0/configuration.html#4.2-errorfile) it is important to understand that errorfile content is not meant to rewrite errors returned by the server, but rather errors detected and returned by HAProxy.
+As explained in the [haproxy documentation](https://docs.haproxy.org/2.8/configuration.html#4.2-errorfile) it is important to understand that errorfile content is not meant to rewrite errors returned by the server, but rather errors detected and returned by HAProxy.
 In the following example, instead of HAProxy returning a 503 error, it will return the corresponding content in the ConfigMap:
 
 ```yaml

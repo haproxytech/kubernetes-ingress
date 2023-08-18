@@ -340,7 +340,7 @@ auth-secret: default/haproxy-credentials
 
   :information_source: Encrypted passwords are evaluated using the crypt(3) function, so depending on the system's capabilities, different algorithms are supported.
 
-  :information_source: Unencrypted passwords (used with HAProxy [insecure-password](https://cbonte.github.io/haproxy-dconv/2.0/configuration.html#3.4-user) ) **are not accepted**.
+  :information_source: Unencrypted passwords (used with HAProxy [insecure-password](https://docs.haproxy.org/2.8/configuration.html#3.4-user) ) **are not accepted**.
 
 Possible values:
 
@@ -927,7 +927,7 @@ ingress.class: "haproxy"
 
 Possible values:
 
-- Log format string. More information in [HAProxy documentation](https://cbonte.github.io/haproxy-dconv/2.0/configuration.html#8.2.3)
+- Log format string. More information in [HAProxy documentation](https://docs.haproxy.org/2.8/configuration.html#8.2.3)
 
 Example:
 
@@ -981,7 +981,7 @@ logasap: "true"
 
   Available on:  `configmap`
 
-  :information_source: More information can be found in the [HAProxy documentation](https://cbonte.github.io/haproxy-dconv/2.0/configuration.html#3.1-log)
+  :information_source: More information can be found in the [HAProxy documentation](https://docs.haproxy.org/2.8/configuration.html#3.1-log)
 
 Possible values:
 
