@@ -54,8 +54,7 @@ Possible values:
 Example:
 
 ```yaml
-args:
-  - --configmap=default/my-configmap
+--configmap=default/my-configmap
 ```
 
 <p align='right'><a href='#haproxy-kubernetes-ingress-controller'>:arrow_up_small: back to top</a></p>
@@ -90,8 +89,7 @@ Possible values:
 Example:
 
 ```yaml
-args:
-  - --configmap-tcp-services=default/my-tcpservices-configmap
+--configmap-tcp-services=default/my-tcpservices-configmap
 ```
 
 <p align='right'><a href='#haproxy-kubernetes-ingress-controller'>:arrow_up_small: back to top</a></p>
@@ -129,8 +127,7 @@ Possible values:
 Example:
 
 ```yaml
-args:
-  - --configmap-errorfiles=default/errorfile
+--configmap-errorfiles=default/errorfile
 ```
 
 <p align='right'><a href='#haproxy-kubernetes-ingress-controller'>:arrow_up_small: back to top</a></p>
@@ -194,8 +191,7 @@ Possible values:
 Example:
 
 ```yaml
-args:
-  - --configmap-patternfiles=default/acl-patterns
+--configmap-patternfiles=default/acl-patterns
 ```
 
 <p align='right'><a href='#haproxy-kubernetes-ingress-controller'>:arrow_up_small: back to top</a></p>
@@ -214,8 +210,7 @@ Possible values:
 Example:
 
 ```yaml
-args:
-  - --default-backend-service=default/my-default-service
+--default-backend-service=default/my-default-service
 ```
 
 <p align='right'><a href='#haproxy-kubernetes-ingress-controller'>:arrow_up_small: back to top</a></p>
@@ -233,8 +228,7 @@ Possible values:
 Example:
 
 ```yaml
-args:
-  - --default-backend-port=6060
+--default-backend-port=6060
 ```
 
 <p align='right'><a href='#haproxy-kubernetes-ingress-controller'>:arrow_up_small: back to top</a></p>
@@ -252,8 +246,7 @@ Possible values:
 Example:
 
 ```yaml
-args:
-  - --pprof
+--pprof
 ```
 
 <p align='right'><a href='#haproxy-kubernetes-ingress-controller'>:arrow_up_small: back to top</a></p>
@@ -271,8 +264,7 @@ Possible values:
 Example:
 
 ```yaml
-args:
-  - --prometheus
+--prometheus
 ```
 
 <p align='right'><a href='#haproxy-kubernetes-ingress-controller'>:arrow_up_small: back to top</a></p>
@@ -290,8 +282,7 @@ Possible values:
 Example:
 
 ```yaml
-args:
-  - --default-ssl-certificate=default/my-tls
+--default-ssl-certificate=default/my-tls
 ```
 
 <p align='right'><a href='#haproxy-kubernetes-ingress-controller'>:arrow_up_small: back to top</a></p>
@@ -311,8 +302,7 @@ Possible values:
 Example:
 
 ```yaml
-args:
-  - --ingress.class=haproxy
+--ingress.class=haproxy
 ```
 
 <p align='right'><a href='#haproxy-kubernetes-ingress-controller'>:arrow_up_small: back to top</a></p>
@@ -330,8 +320,7 @@ Possible values:
 Example:
 
 ```yaml
-args:
-  - --empty-ingress-class
+--empty-ingress-class
 ```
 
 <p align='right'><a href='#haproxy-kubernetes-ingress-controller'>:arrow_up_small: back to top</a></p>
@@ -349,8 +338,7 @@ Possible values:
 Example:
 
 ```yaml
-args:
-  - --gateway-controller-name=haproxy.org/gateway-controller
+--gateway-controller-name=haproxy.org/gateway-controller
 ```
 
 <p align='right'><a href='#haproxy-kubernetes-ingress-controller'>:arrow_up_small: back to top</a></p>
@@ -368,9 +356,7 @@ Possible values:
 Example:
 
 ```yaml
-args:
-    - --namespace-blacklist=foo
-    - --namespace-blacklist=bar
+--namespace-blacklist=foo --namespace-blacklist=bar
 ```
 
 <p align='right'><a href='#haproxy-kubernetes-ingress-controller'>:arrow_up_small: back to top</a></p>
@@ -388,9 +374,7 @@ Possible values:
 Example:
 
 ```yaml
-args:
-  - --namespace-whitelist=foo
-  - --namespace-whitelist=bar
+--namespace-whitelist=foo --namespace-whitelist=bar
 ```
 
 <p align='right'><a href='#haproxy-kubernetes-ingress-controller'>:arrow_up_small: back to top</a></p>
@@ -408,8 +392,7 @@ Possible values:
 Example:
 
 ```yaml
-args:
-  - --publish-service=default/kubernetes-ingress
+--publish-service=default/kubernetes-ingress
 ```
 
 <p align='right'><a href='#haproxy-kubernetes-ingress-controller'>:arrow_up_small: back to top</a></p>
@@ -427,8 +410,7 @@ Possible values:
 Example:
 
 ```yaml
-args:
-  - --disable-ipv4
+--disable-ipv4
 ```
 
 <p align='right'><a href='#haproxy-kubernetes-ingress-controller'>:arrow_up_small: back to top</a></p>
@@ -446,8 +428,7 @@ Possible values:
 Example:
 
 ```yaml
-args:
-  - --disable-ipv6
+--disable-ipv6
 ```
 
 <p align='right'><a href='#haproxy-kubernetes-ingress-controller'>:arrow_up_small: back to top</a></p>
@@ -465,8 +446,7 @@ Possible values:
 Example:
 
 ```yaml
-args:
-  - --ipv4-bind-address=10.0.0.1
+--ipv4-bind-address=10.0.0.1
 ```
 
 <p align='right'><a href='#haproxy-kubernetes-ingress-controller'>:arrow_up_small: back to top</a></p>
@@ -484,8 +464,7 @@ Possible values:
 Example:
 
 ```yaml
-args:
-  - --ipv6-bind-address=::ffff:c0a8:5909
+--ipv6-bind-address=::ffff:c0a8:5909
 ```
 
 <p align='right'><a href='#haproxy-kubernetes-ingress-controller'>:arrow_up_small: back to top</a></p>
@@ -503,8 +482,7 @@ Possible values:
 Example:
 
 ```yaml
-args:
-  - --http-bind-port=8080
+--http-bind-port=8080
 ```
 
 <p align='right'><a href='#haproxy-kubernetes-ingress-controller'>:arrow_up_small: back to top</a></p>
@@ -522,8 +500,7 @@ Possible values:
 Example:
 
 ```yaml
-args:
-  - --http-bind-port=8443
+--http-bind-port=8443
 ```
 
 <p align='right'><a href='#haproxy-kubernetes-ingress-controller'>:arrow_up_small: back to top</a></p>
@@ -541,8 +518,7 @@ Possible values:
 Example:
 
 ```yaml
-args:
-  - --disable-http
+--disable-http
 ```
 
 <p align='right'><a href='#haproxy-kubernetes-ingress-controller'>:arrow_up_small: back to top</a></p>
@@ -560,8 +536,7 @@ Possible values:
 Example:
 
 ```yaml
-args:
-  - --disable-https
+--disable-https
 ```
 
 <p align='right'><a href='#haproxy-kubernetes-ingress-controller'>:arrow_up_small: back to top</a></p>
@@ -579,8 +554,7 @@ Possible values:
 Example:
 
 ```yaml
-args:
-  - --sync-period=10s
+--sync-period=10s
 ```
 
 <p align='right'><a href='#haproxy-kubernetes-ingress-controller'>:arrow_up_small: back to top</a></p>
@@ -598,8 +572,7 @@ Possible values:
 Example:
 
 ```yaml
-args:
-  - --cache-resync-period=30m
+--cache-resync-period=30m
 ```
 
 <p align='right'><a href='#haproxy-kubernetes-ingress-controller'>:arrow_up_small: back to top</a></p>
@@ -621,8 +594,7 @@ Possible values:
 Example:
 
 ```yaml
-args:
-  - --log=debug
+--log=debug
 ```
 
 <p align='right'><a href='#haproxy-kubernetes-ingress-controller'>:arrow_up_small: back to top</a></p>
@@ -640,8 +612,7 @@ Possible values:
 Example:
 
 ```yaml
-args:
-  - --external
+--external
 ```
 
 <p align='right'><a href='#haproxy-kubernetes-ingress-controller'>:arrow_up_small: back to top</a></p>
@@ -662,9 +633,7 @@ Possible values:
 Example:
 
 ```yaml
-args:
-  - --external
-  - --program=/usr/bin/haproxy
+--external --program=/usr/bin/haproxy
 ```
 
 <p align='right'><a href='#haproxy-kubernetes-ingress-controller'>:arrow_up_small: back to top</a></p>
@@ -685,9 +654,7 @@ Possible values:
 Example:
 
 ```yaml
-args:
-  - --external
-  - --config-dir=/haproxy-ingress/etc
+--external --config-dir=/haproxy-ingress/etc
 ```
 
 <p align='right'><a href='#haproxy-kubernetes-ingress-controller'>:arrow_up_small: back to top</a></p>
@@ -708,9 +675,7 @@ Possible values:
 Example:
 
 ```yaml
-args:
-  - --external
-  - --runtime-dir=/haproxy-ingress/run
+--external --runtime-dir=/haproxy-ingress/run
 ```
 
 <p align='right'><a href='#haproxy-kubernetes-ingress-controller'>:arrow_up_small: back to top</a></p>
@@ -728,8 +693,7 @@ Possible values:
 Example:
 
 ```yaml
-args:
-  - --disable-service-external-name
+--disable-service-external-name
 ```
 
 <p align='right'><a href='#haproxy-kubernetes-ingress-controller'>:arrow_up_small: back to top</a></p>
@@ -749,8 +713,7 @@ Possible values:
 Example:
 
 ```yaml
-args:
-  - --channel-size=10000
+--channel-size=10000
 ```
 
 <p align='right'><a href='#haproxy-kubernetes-ingress-controller'>:arrow_up_small: back to top</a></p>

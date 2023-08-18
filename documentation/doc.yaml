@@ -6,9 +6,7 @@ image_arguments:
       - The name of the ConfigMap that contains global settings. Defaults to `default/haproxy-configmap`
     default: default/haproxy-configmap
     version_min: "1.4"
-    example: |-
-      args:
-        - --configmap=default/my-configmap
+    example: --configmap=default/my-configmap
   - argument: --configmap-tcp-services
     tip:
       - Ports of TCP services should be exposed on the controller's Kubernetes service
@@ -32,9 +30,7 @@ image_arguments:
     values:
       - The name of the ConfigMap that contains mappings for TCP services
     version_min: "1.4"
-    example: |-
-      args:
-        - --configmap-tcp-services=default/my-tcpservices-configmap
+    example: --configmap-tcp-services=default/my-tcpservices-configmap
   - argument: --configmap-errorfiles
     description: |-
       Sets the ConfigMap object that defines contents to serve instead of HAProxy errors.
@@ -61,9 +57,7 @@ image_arguments:
     values:
       - The name of the ConfigMap containing errorfile content
     version_min: "1.5"
-    example: |-
-      args:
-        - --configmap-errorfiles=default/errorfile
+    example: --configmap-errorfiles=default/errorfile
   - argument: --configmap-patternfiles
     description: |-
       Sets the ConfigMap object that defines pattern files to be used in HAProxy configuration.
@@ -116,9 +110,7 @@ image_arguments:
     values:
       - The name of the ConfigMap in format NS/ConfigMapName
     version_min: "1.8"
-    example: |-
-      args:
-        - --configmap-patternfiles=default/acl-patterns
+    example: --configmap-patternfiles=default/acl-patterns
   - argument: --default-backend-service
     description: |-
       The name of the Kubernetes service to send requests to when no Ingress rules match.
@@ -126,41 +118,31 @@ image_arguments:
     values:
       - The name of the backend service
     version_min: "1.4"
-    example: |-
-      args:
-        - --default-backend-service=default/my-default-service
+    example: --default-backend-service=default/my-default-service
   - argument: --default-backend-port
     description: if default-backend-service is not used with this you can set default port used for same purpose
     values:
       - port that will be used for default service within controller pod
     version_min: "1.8"
-    example: |-
-      args:
-        - --default-backend-port=6060
+    example: --default-backend-port=6060
   - argument: --pprof
     description: enable pprof endpoint, if default-backend-port is not used 6060 will be used
     values:
       - this is boolean flag
     version_min: "1.4"
-    example: |-
-      args:
-        - --pprof
+    example: --pprof
   - argument: --prometheus
     description: enable prometheus endpoint, if default-backend-port is not used 6060 will be used
     values:
       - this is boolean flag
     version_min: "1.8"
-    example: |-
-      args:
-        - --prometheus
+    example: --prometheus
   - argument: --default-ssl-certificate
     description: The name of a TLS Secret that contains the certificate to use for SSL/TLS traffic. This can be overridden with the <code>ssl-certificate</code> setting.
     values:
       - The name of the TLS Secret
     version_min: "1.4"
-    example: |-
-      args:
-        - --default-ssl-certificate=default/my-tls
+    example: --default-ssl-certificate=default/my-tls
   - argument: --ingress.class
     description: A name to assign to the ingress controller so that Ingress objects can target it apart from other running ingress controllers.
     tip:
@@ -169,9 +151,7 @@ image_arguments:
     values:
       - The name of the ingress class
     version_min: "1.4"
-    example: |-
-      args:
-        - --ingress.class=haproxy
+    example: --ingress.class=haproxy
     helm: |-
       helm install intranet haproxytech/kubernetes-ingress \
         --set controller.ingressClass=haproxy
@@ -181,9 +161,7 @@ image_arguments:
       - No value.Being a flag you add it or not.
     default: false
     version_min: "1.6"
-    example: |-
-      args:
-        - --empty-ingress-class
+    example: --empty-ingress-class
     helm: |-
       helm install haproxy haproxytech/kubernetes-ingress \
         --set-string "controller.extraArgs={--empty-ingress-class}"
@@ -192,9 +170,7 @@ image_arguments:
     values:
       - The name of the controllerName in GatewayClass
     version_min: "1.10"
-    example: |-
-      args:
-        - --gateway-controller-name=haproxy.org/gateway-controller
+    example: --gateway-controller-name=haproxy.org/gateway-controller
     helm: |-
       helm install intranet haproxytech/kubernetes-ingress \
         --set controller.gatewayControllerName=haproxy.org/gateway-controller
@@ -203,10 +179,7 @@ image_arguments:
     values:
       - The namespace to exclude from monitoring; You can specify this argument multiple times
     version_min: "1.4"
-    example: |-
-      args:
-          - --namespace-blacklist=foo
-          - --namespace-blacklist=bar
+    example: --namespace-blacklist=foo --namespace-blacklist=bar
     helm: |-
       helm install haproxy haproxytech/kubernetes-ingress \
         --set-string "controller.extraArgs={--namespace-blacklist=foo}"
@@ -215,10 +188,7 @@ image_arguments:
     values:
       - The namespace to monitor; You can specify this argument multiple times
     version_min: "1.4"
-    example: |-
-      args:
-        - --namespace-whitelist=foo
-        - --namespace-whitelist=bar
+    example: --namespace-whitelist=foo --namespace-whitelist=bar
     helm: |-
       helm install haproxy haproxytech/kubernetes-ingress \
         --set-string "controller.extraArgs={--namespace-whitelist=foo}"
@@ -227,18 +197,14 @@ image_arguments:
     values:
       - Name of the ingress controller's service, e.g. default/kubernetes-ingress
     version_min: "1.4"
-    example: |-
-      args:
-        - --publish-service=default/kubernetes-ingress
+    example: --publish-service=default/kubernetes-ingress
   - argument: --disable-ipv4
     description: Disabling the IPv4 bind support.
     values:
       - Boolean value, just need to declare the flag to disable the IPv4.
     default: false
     version_min: "1.5"
-    example: |-
-      args:
-        - --disable-ipv4
+    example: --disable-ipv4
     helm: |-
       helm install haproxy haproxytech/kubernetes-ingress \
         --set-string "controller.extraArgs={--disable-ipv4}"
@@ -248,9 +214,7 @@ image_arguments:
       - Boolean value, just need to declare the flag to disable the IPv6.
     default: false
     version_min: "1.5"
-    example: |-
-      args:
-        - --disable-ipv6
+    example: --disable-ipv6
     helm: |-
       helm install haproxy haproxytech/kubernetes-ingress \
         --set-string "controller.extraArgs={--disable-ipv6}"
@@ -260,9 +224,7 @@ image_arguments:
       - "A valid IPv4 addresses. Default: 0.0.0.0"
     default: 0.0.0.0
     version_min: "1.5"
-    example: |-
-      args:
-        - --ipv4-bind-address=10.0.0.1
+    example: --ipv4-bind-address=10.0.0.1
     helm: |-
       helm install haproxy haproxytech/kubernetes-ingress \
         --set-string "controller.extraArgs={--ipv4-bind-address=10.0.0.1}"
@@ -272,9 +234,7 @@ image_arguments:
       - "A valid IPv6 addresses. Default: ::"
     default: "::"
     version_min: "1.5"
-    example: |-
-      args:
-        - --ipv6-bind-address=::ffff:c0a8:5909
+    example: --ipv6-bind-address=::ffff:c0a8:5909
     helm: |-
       helm install haproxy haproxytech/kubernetes-ingress \
         --set-string "controller.extraArgs={--ipv6-bind-address=::ffff:c0a8:5909}"
@@ -284,9 +244,7 @@ image_arguments:
       - "A valid port in the range. Default: 80"
     default: 80
     version_min: "1.5"
-    example: |-
-      args:
-        - --http-bind-port=8080
+    example: --http-bind-port=8080
     helm: |-
       helm install haproxy haproxytech/kubernetes-ingress \
         --set-string "controller.extraArgs={--http-bind-port=8080}"
@@ -296,9 +254,7 @@ image_arguments:
       - "A valid port in the range. Default: 443"
     default: 443
     version_min: "1.5"
-    example: |-
-      args:
-        - --http-bind-port=8443
+    example: --http-bind-port=8443
     helm: |-
       helm install haproxy haproxytech/kubernetes-ingress \
         --set-string "controller.extraArgs={--http-bind-port=8443}"
@@ -308,9 +264,7 @@ image_arguments:
       - Boolean value, just need to declare the flag to disable the HTTP frontend.
     default: false
     version_min: "1.5"
-    example: |-
-      args:
-        - --disable-http
+    example: --disable-http
     helm: |-
       helm install haproxy haproxytech/kubernetes-ingress \
         --set-string "controller.extraArgs={--disable-http}"
@@ -320,9 +274,7 @@ image_arguments:
       - Boolean value, just need to declare the flag to disable the HTTPS frontend.
     default: false
     version_min: "1.5"
-    example: |-
-      args:
-        - --disable-https
+    example: --disable-https
     helm: |-
       helm install haproxy haproxytech/kubernetes-ingress \
         --set-string "controller.extraArgs={--disable-https}"
@@ -332,9 +284,7 @@ image_arguments:
       - An integer with unit of time (1s = 1 second, 1m = 1 minute, 1h = 1 hour); Defaults to 5s
     default: 5s
     version_min: "1.4"
-    example: |-
-      args:
-        - --sync-period=10s
+    example: --sync-period=10s
     helm: |-
       helm install haproxy haproxytech/kubernetes-ingress \
         --set-string "controller.extraArgs={--sync-period=10s}"
@@ -344,10 +294,7 @@ image_arguments:
       - The duration in <code>time.Duration</code> format; Defaults to 10m (10 minutes).
     default: 10m
     version_min: "1.5"
-    example: |-
-      args:
-        - --cache-resync-period=30m
-
+    example: --cache-resync-period=30m
   - argument: --log
     description: The level of logging to perform; Defaults to <i>info</i>
     values:
@@ -358,9 +305,7 @@ image_arguments:
       - trace
     default: info
     version_min: "1.4"
-    example: |-
-      args:
-        - --log=debug
+    example: --log=debug
     helm: |-
       helm install haproxy haproxytech/kubernetes-ingress \
         --set controller.logging.level=debug
@@ -371,9 +316,7 @@ image_arguments:
     default: false
     external: true
     version_min: "1.5"
-    example: |-
-      args:
-        - --external
+    example: --external
   - argument: --program
     description: Path to HAProxy binary to use when running controller in [external mode](#--external).
     values:
@@ -381,10 +324,7 @@ image_arguments:
     default: haproxy in PATH location
     external: true
     version_min: "1.5"
-    example: |-
-      args:
-        - --external
-        - --program=/usr/bin/haproxy
+    example: --external --program=/usr/bin/haproxy
   - argument: --config-dir
     description: Path to HAProxy configuration directory when running controller in [external mode](#--external). Configuration directory is where resources like configuration file, certificates, haproxy map files, are located.
     values:
@@ -392,10 +332,7 @@ image_arguments:
     default: "/tmp/haproxy-ingress/etc"
     external: true
     version_min: "1.5"
-    example: |-
-      args:
-        - --external
-        - --config-dir=/haproxy-ingress/etc
+    example: --external --config-dir=/haproxy-ingress/etc
   - argument: --runtime-dir
     description: Path to HAProxy runtime directory when running controller in [external mode](#--external). Runtime directory is where resources like PID file, runtime socket, etc are located.
     values:
@@ -403,19 +340,14 @@ image_arguments:
     default: "/tmp/haproxy-ingress/run"
     external: true
     version_min: "1.5"
-    example: |-
-      args:
-        - --external
-        - --runtime-dir=/haproxy-ingress/run
+    example: --external --runtime-dir=/haproxy-ingress/run
   - argument: --disable-service-external-name
     description: Disable forwarding to ExternalName Services due to CVE-2021-25740
     values:
       - Boolean value, just need to declare the flag to disable forwarding to ExternalName Services.
     default: "false"
     version_min: "1.6"
-    example: |-
-      args:
-        - --disable-service-external-name
+    example: --disable-service-external-name
     helm: |-
       helm install haproxy haproxytech/kubernetes-ingress \
         --set-string "controller.extraArgs={--disable-service-external-name}"
@@ -428,9 +360,7 @@ image_arguments:
       - Size of channels used for k8s resources events with regards to ingresses, etc.
     default: 600
     version_min: "1.7"
-    example: |-
-      args:
-        - --channel-size=10000
+    example: --channel-size=10000
 groups:
   config-snippet:
     header: |-
