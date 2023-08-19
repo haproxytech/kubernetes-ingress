@@ -51,6 +51,7 @@ linters:
     - scopelint #deprecated
     - interfacer #deprecated
     - deadcode #deprecated
-    - rowserrcheck #rowserrcheck is disabled because of generics
-    - sqlclosecheck #rowserrcheck is disabled because of generics
-    - wastedassign #rowserrcheck is disabled because of generics
+    - depguard
+issues:
+  exclude:
+    - "tag is not aligned, should be:" # this is harder to read
