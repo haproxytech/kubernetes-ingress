@@ -44,6 +44,11 @@ func PtrString(value string) *string {
 	return &value
 }
 
+// Ptr return pointer to a given value
+func Ptr[V any](v V) *V {
+	return &v
+}
+
 func ParseInt(data string) (v int64, err error) {
 	i, err := strconv.Atoi(data)
 	if err == nil {

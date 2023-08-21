@@ -42,6 +42,16 @@ type cfgData struct {
 	status   store.Status
 }
 
+// CfgSnippetType represents type of a config snippet
+type cfgSnippetType string
+
+const (
+	// CfgSnippetType values
+	configSnippetBackend  cfgSnippetType = "backend"
+	configSnippetFrontend cfgSnippetType = "frontend"
+	configSnippetGlobal   cfgSnippetType = "global"
+)
+
 // cfgSnippet is a particular type of config that is not
 // handled by the upstram library haproxytech/client-native.
 // Which means there is no client-native models to
@@ -55,6 +65,8 @@ var cfgSnippet struct {
 	frontends        map[string]*cfgData
 	backends         map[string]map[string]*cfgData // backends[backend][origin] = &cfgData{}
 	disabledServices map[string]bool
+	// Flags to allow disable some config snippet ("backend", "frontend", "global")
+	disabledSnippets map[cfgSnippetType]struct{}
 }
 
 func init() { //nolint:gochecknoinits
@@ -63,16 +75,59 @@ func init() { //nolint:gochecknoinits
 	cfgSnippet.backends = make(map[string]map[string]*cfgData)
 }
 
-func NewGlobalCfgSnippet(n string) *CfgSnippet {
-	return &CfgSnippet{name: n}
+type ConfigSnippetOptions struct {
+	Name     string
+	Backend  *string
+	Frontend *string
+	Ingress  *store.Ingress
 }
 
-func NewFrontendCfgSnippet(n string, f string) *CfgSnippet {
-	return &CfgSnippet{name: n, frontend: f}
+// DisableConfigSnippets fills a map[cfgSnippetType]struct{} of disabled config snippet types:
+// - backend/frontend/global
+// and store it in the global var cfgSnippet
+// from a comma separated list : all,backend,frontend,global.
+// If "all" is present in the list, then: backend, frontend and global config snippets are disabled.
+func DisableConfigSnippets(disableConfigSnippets string) {
+	disable := map[cfgSnippetType]struct{}{}
+	for _, d := range strings.Split(disableConfigSnippets, ",") {
+		switch strings.TrimSpace(d) {
+		case "all":
+			disable[configSnippetBackend] = struct{}{}
+			disable[configSnippetFrontend] = struct{}{}
+			disable[configSnippetGlobal] = struct{}{}
+		case "frontend":
+			disable[configSnippetFrontend] = struct{}{}
+		case "backend":
+			disable[configSnippetBackend] = struct{}{}
+		case "global":
+			disable[configSnippetGlobal] = struct{}{}
+		default:
+			logger.Errorf("wrong config snippet type '%s' in disable-config-snippets arg in command line", d)
+		}
+	}
+	cfgSnippet.disabledSnippets = disable
 }
 
-func NewBackendCfgSnippet(n string, b string, ingress *store.Ingress) *CfgSnippet {
-	return &CfgSnippet{name: n, backend: b, ingress: ingress}
+func isConfigSnippetDisabled(name cfgSnippetType) bool {
+	_, disabled := cfgSnippet.disabledSnippets[name]
+	return disabled
+}
+
+func NewCfgSnippet(opts ConfigSnippetOptions) *CfgSnippet {
+	frontend := ""
+	backend := ""
+	if opts.Backend != nil {
+		backend = *opts.Backend
+	}
+	if opts.Frontend != nil {
+		frontend = *opts.Frontend
+	}
+	return &CfgSnippet{
+		name:     opts.Name,
+		frontend: frontend,
+		backend:  backend,
+		ingress:  opts.Ingress,
+	}
 }
 
 func (a *CfgSnippet) GetName() string {
@@ -82,6 +137,10 @@ func (a *CfgSnippet) GetName() string {
 func (a *CfgSnippet) Process(k store.K8s, annotations ...map[string]string) error {
 	switch {
 	case a.frontend != "":
+		if isConfigSnippetDisabled(configSnippetFrontend) {
+			// frontend snippet is disabled, do not handle
+			return nil
+		}
 		var data []string
 		input := common.GetValue(a.GetName(), annotations...)
 		if input != "" {
@@ -97,7 +156,12 @@ func (a *CfgSnippet) Process(k store.K8s, annotations ...map[string]string) erro
 			cfgSnippet.frontends[a.frontend].value = data
 			cfgSnippet.frontends[a.frontend].updated = updated
 		}
+
 	case a.backend != "":
+		if isConfigSnippetDisabled(configSnippetBackend) {
+			// backend snippet is disabled, do not handle
+			return nil
+		}
 		anns := common.GetValuesAndIndices(a.GetName(), annotations...)
 		// We don't want configmap value unless it's configmap being processed.
 		// We detect that by name of the backend and indice of maps providing the value
@@ -132,6 +196,10 @@ func (a *CfgSnippet) Process(k store.K8s, annotations ...map[string]string) erro
 			}
 		}
 	default:
+		if isConfigSnippetDisabled(configSnippetGlobal) {
+			// global snippet is disabled, do not handle
+			return nil
+		}
 		var data []string
 		input := common.GetValue(a.GetName(), annotations...)
 		if input != "" {

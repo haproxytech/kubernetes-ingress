@@ -114,7 +114,12 @@ func (c *HAProxyController) updateHAProxy() {
 	}
 
 	// global config-snippet
-	logger.Error(annotations.NewBackendCfgSnippet("backend-config-snippet", "configmap", nil).
+	logger.Error(annotations.NewCfgSnippet(
+		annotations.ConfigSnippetOptions{
+			Name:    "backend-config-snippet",
+			Backend: utils.Ptr("configmap"),
+			Ingress: nil,
+		}).
 		Process(c.store, c.store.ConfigMaps.Main.Annotations))
 
 	for _, namespace := range c.store.Namespaces {

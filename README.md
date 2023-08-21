@@ -34,7 +34,7 @@ Example environment can be created with
 make example
 ```
 
-Please see [controller.md](https://github.com/haproxytech/kubernetes-ingress/blob/master/documentation/controller.md) for all available arguments of controler image.
+Please see [controller.md](https://github.com/haproxytech/kubernetes-ingress/blob/master/documentation/controller.md) for all available arguments of controller image.
 
 Available customisations are described in [doc](https://github.com/haproxytech/kubernetes-ingress/blob/master/documentation/README.md)
 

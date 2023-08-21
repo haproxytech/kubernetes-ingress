@@ -55,10 +55,24 @@ func (a annImpl) Timeout(name string, annotations ...map[string]string) (out *in
 
 func (a annImpl) GlobalCfgSnipp() []Annotation {
 	return []Annotation{
-		NewGlobalCfgSnippet("global-config-snippet"),
-		NewFrontendCfgSnippet("frontend-config-snippet", "http"),
-		NewFrontendCfgSnippet("frontend-config-snippet", "https"),
-		NewFrontendCfgSnippet("stats-config-snippet", "stats"),
+		// global
+		NewCfgSnippet(ConfigSnippetOptions{Name: "global-config-snippet"}),
+		// frontend
+		NewCfgSnippet(ConfigSnippetOptions{
+			Name:     "frontend-config-snippet",
+			Frontend: utils.Ptr("http"),
+		},
+		),
+		NewCfgSnippet(ConfigSnippetOptions{
+			Name:     "frontend-config-snippet",
+			Frontend: utils.Ptr("https"),
+		},
+		),
+		NewCfgSnippet(ConfigSnippetOptions{
+			Name:     "stats-config-snippet",
+			Frontend: utils.Ptr("stats"),
+		},
+		),
 	}
 }
 

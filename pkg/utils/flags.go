@@ -107,4 +107,5 @@ type OSArgs struct {
 	PrometheusEnabled          bool           `long:"prometheus" description:"enable prometheus of IC data"`
 	DisableHTTP                bool           `long:"disable-http" description:"toggle to disable the HTTP frontend"`
 	DisableIPV6                bool           `long:"disable-ipv6" description:"toggle to disable the IPv6 protocol from all frontends"`
+	DisableConfigSnippets      string         `long:"disable-config-snippets" description:"Allow to disable config snippets. List of comma separated values (possible values: all/global/backend/frontend)"`
 }

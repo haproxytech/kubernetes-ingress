@@ -165,8 +165,13 @@ func (s *Service) HandleBackend(storeK8s store.K8s, client api.HAProxyClient, a 
 		reload = true
 		logger.Debugf("Service '%s/%s': new backend '%s', reload required", s.resource.Namespace, s.resource.Name, newBackend.Name)
 	}
-	// config-snippet
-	backendCfgSnippetHandler := annotations.NewBackendCfgSnippet("backend-config-snippet", newBackend.Name, s.ingress)
+	// config-snippet: backend
+	backendCfgSnippetHandler := annotations.NewCfgSnippet(
+		annotations.ConfigSnippetOptions{
+			Name:    "backend-config-snippet",
+			Backend: utils.PtrString(newBackend.Name),
+			Ingress: s.ingress,
+		})
 	backendCfgSnippetHandler.SetService(s.resource)
 	logger.Error(backendCfgSnippetHandler.Process(storeK8s, s.annotations...))
 	return

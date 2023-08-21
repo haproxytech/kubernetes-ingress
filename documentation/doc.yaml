@@ -361,6 +361,15 @@ image_arguments:
     default: 600
     version_min: "1.7"
     example: --channel-size=10000
+  - argument: --disable-config-snippets
+    description: |-
+      Allow to disable one or several of the following config snippets: backend, frontend, global.
+    values:
+      - Comma separated list of the kind of config snippets to disable. Possible values in the list are
+      - backend,frontend,global,all
+      - If 'all' is present then all (backend, frontend, global) config snippets are disabled.
+    version_min: "1.11"
+    example: --disable-config-snippets=backend,frontend
 groups:
   config-snippet:
     header: |-

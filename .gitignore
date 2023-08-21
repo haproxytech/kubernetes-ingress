@@ -1,5 +1,6 @@
 .vscode/*
 .idea/*
+.test/*
 kubernetes-ingress
 dist/
 .code-generator/
