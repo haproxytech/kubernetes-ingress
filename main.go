@@ -77,6 +77,8 @@ func main() {
 	}
 	logger.ShowFilename(true)
 
+	annotations.DisableConfigSnippets(osArgs.DisableConfigSnippets)
+
 	// backwards compatibility with 1.7
 	if osArgs.PprofEnabled && osArgs.ControllerPort == 0 {
 		osArgs.ControllerPort = 6060
@@ -194,7 +196,6 @@ func logInfo(logger utils.Logger, osArgs utils.OSArgs) bool {
 	}
 	if osArgs.DisableConfigSnippets != "" {
 		logger.Printf("Disabling config snippets for [%s]", osArgs.DisableConfigSnippets)
-		annotations.DisableConfigSnippets(osArgs.DisableConfigSnippets)
 	}
 	logger.Debugf("Kubernetes Informers resync period: %s", osArgs.CacheResyncPeriod.String())
 	logger.Printf("Controller sync period: %s\n", osArgs.SyncPeriod.String())

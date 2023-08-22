@@ -43,13 +43,13 @@ type cfgData struct {
 }
 
 // CfgSnippetType represents type of a config snippet
-type cfgSnippetType string
+type CfgSnippetType string
 
 const (
 	// CfgSnippetType values
-	configSnippetBackend  cfgSnippetType = "backend"
-	configSnippetFrontend cfgSnippetType = "frontend"
-	configSnippetGlobal   cfgSnippetType = "global"
+	ConfigSnippetBackend  CfgSnippetType = "backend"
+	ConfigSnippetFrontend CfgSnippetType = "frontend"
+	ConfigSnippetGlobal   CfgSnippetType = "global"
 )
 
 // cfgSnippet is a particular type of config that is not
@@ -66,7 +66,7 @@ var cfgSnippet struct {
 	backends         map[string]map[string]*cfgData // backends[backend][origin] = &cfgData{}
 	disabledServices map[string]bool
 	// Flags to allow disable some config snippet ("backend", "frontend", "global")
-	disabledSnippets map[cfgSnippetType]struct{}
+	disabledSnippets map[CfgSnippetType]struct{}
 }
 
 func init() { //nolint:gochecknoinits
@@ -88,19 +88,19 @@ type ConfigSnippetOptions struct {
 // from a comma separated list : all,backend,frontend,global.
 // If "all" is present in the list, then: backend, frontend and global config snippets are disabled.
 func DisableConfigSnippets(disableConfigSnippets string) {
-	disable := map[cfgSnippetType]struct{}{}
+	disable := map[CfgSnippetType]struct{}{}
 	for _, d := range strings.Split(disableConfigSnippets, ",") {
 		switch strings.TrimSpace(d) {
 		case "all":
-			disable[configSnippetBackend] = struct{}{}
-			disable[configSnippetFrontend] = struct{}{}
-			disable[configSnippetGlobal] = struct{}{}
+			disable[ConfigSnippetBackend] = struct{}{}
+			disable[ConfigSnippetFrontend] = struct{}{}
+			disable[ConfigSnippetGlobal] = struct{}{}
 		case "frontend":
-			disable[configSnippetFrontend] = struct{}{}
+			disable[ConfigSnippetFrontend] = struct{}{}
 		case "backend":
-			disable[configSnippetBackend] = struct{}{}
+			disable[ConfigSnippetBackend] = struct{}{}
 		case "global":
-			disable[configSnippetGlobal] = struct{}{}
+			disable[ConfigSnippetGlobal] = struct{}{}
 		default:
 			logger.Errorf("wrong config snippet type '%s' in disable-config-snippets arg in command line", d)
 		}
@@ -108,7 +108,7 @@ func DisableConfigSnippets(disableConfigSnippets string) {
 	cfgSnippet.disabledSnippets = disable
 }
 
-func isConfigSnippetDisabled(name cfgSnippetType) bool {
+func IsConfigSnippetDisabled(name CfgSnippetType) bool {
 	_, disabled := cfgSnippet.disabledSnippets[name]
 	return disabled
 }
@@ -137,7 +137,7 @@ func (a *CfgSnippet) GetName() string {
 func (a *CfgSnippet) Process(k store.K8s, annotations ...map[string]string) error {
 	switch {
 	case a.frontend != "":
-		if isConfigSnippetDisabled(configSnippetFrontend) {
+		if IsConfigSnippetDisabled(ConfigSnippetFrontend) {
 			// frontend snippet is disabled, do not handle
 			return nil
 		}
@@ -158,7 +158,7 @@ func (a *CfgSnippet) Process(k store.K8s, annotations ...map[string]string) erro
 		}
 
 	case a.backend != "":
-		if isConfigSnippetDisabled(configSnippetBackend) {
+		if IsConfigSnippetDisabled(ConfigSnippetBackend) {
 			// backend snippet is disabled, do not handle
 			return nil
 		}
@@ -196,7 +196,7 @@ func (a *CfgSnippet) Process(k store.K8s, annotations ...map[string]string) erro
 			}
 		}
 	default:
-		if isConfigSnippetDisabled(configSnippetGlobal) {
+		if IsConfigSnippetDisabled(ConfigSnippetGlobal) {
 			// global snippet is disabled, do not handle
 			return nil
 		}
