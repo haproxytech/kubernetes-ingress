@@ -15,96 +15,27 @@
 package customresources
 
 import (
-	"os"
-	"path/filepath"
 	"testing"
 
 	"github.com/haproxytech/client-native/v3/models"
 	corev1alpha2 "github.com/haproxytech/kubernetes-ingress/crs/api/core/v1alpha2"
-	c "github.com/haproxytech/kubernetes-ingress/pkg/controller"
-	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/env"
+	"github.com/haproxytech/kubernetes-ingress/deploy/tests/integration"
 	"github.com/haproxytech/kubernetes-ingress/pkg/k8s"
-	"github.com/haproxytech/kubernetes-ingress/pkg/store"
-	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
-	"github.com/jessevdk/go-flags"
 	"github.com/stretchr/testify/suite"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/watch"
 )
 
 type CustomResourceSuite struct {
-	suite.Suite
-	test Test
+	integration.BaseSuite
+	globalCREvt k8s.SyncDataEvent
 }
 
 func TestCustomResource(t *testing.T) {
 	suite.Run(t, new(CustomResourceSuite))
 }
 
-type Test struct {
-	Controller *c.HAProxyController
-	TempDir    string
-}
-
-func (suite *CustomResourceSuite) BeforeTest(suiteName, testName string) {
-	tempDir, err := os.MkdirTemp("", "ut-"+testName+"-*")
-	if err != nil {
-		suite.T().Fatalf("Suite '%s': Test '%s' : error : %s", suiteName, testName, err)
-	}
-	suite.test.TempDir = tempDir
-	suite.T().Logf("temporary configuration dir %s", suite.test.TempDir)
-}
-
-var haproxyConfig = `global
-daemon
-master-worker
-pidfile /var/run/haproxy.pid
-stats socket /var/run/haproxy-runtime-api.sock level admin expose-fd listeners
-default-path config
-
-peers localinstance
- peer local 127.0.0.1:10000
-
-frontend https
-mode http
-bind 127.0.0.1:8080 name v4
-http-request set-var(txn.base) base
-use_backend %[var(txn.path_match),field(1,.)]
-
-frontend http
-mode http
-bind 127.0.0.1:4443 name v4
-http-request set-var(txn.base) base
-use_backend %[var(txn.path_match),field(1,.)]
-
-frontend healthz
-bind 127.0.0.1:1042 name v4
-mode http
-monitor-uri /healthz
-option dontlog-normal
-
-frontend stats
- mode http
- bind 0:0:0:0:1024
- http-request set-var(txn.base) base
- http-request use-service prometheus-exporter if { path /metrics }
- stats enable
- stats uri /
- stats refresh 10s
- `
-
-func (suite *CustomResourceSuite) GlobalCRFixture() (eventChan chan k8s.SyncDataEvent, s store.K8s, globalCREvt k8s.SyncDataEvent) {
-	var osArgs utils.OSArgs
-	os.Args = []string{os.Args[0], "-e", "-t", "--config-dir=" + suite.test.TempDir}
-	parser := flags.NewParser(&osArgs, flags.IgnoreUnknown)
-	_, errParsing := parser.Parse() //nolint:ifshort
-	if errParsing != nil {
-		suite.T().Fatal(errParsing)
-	}
-
-	eventChan = make(chan k8s.SyncDataEvent, watch.DefaultChanSize*6)
-	s = store.NewK8sStore(osArgs)
-	globalCREvt = k8s.SyncDataEvent{
+func (suite *CustomResourceSuite) GlobalCRFixture() {
+	suite.globalCREvt = k8s.SyncDataEvent{
 		SyncType: k8s.CR_GLOBAL,
 		Data: &corev1alpha2.Global{
 			ObjectMeta: metav1.ObjectMeta{
@@ -117,28 +48,4 @@ func (suite *CustomResourceSuite) GlobalCRFixture() (eventChan chan k8s.SyncData
 		},
 		Name: "globalcrjob",
 	}
-
-	haproxyEnv := env.Env{
-		Binary:      "/usr/local/sbin/haproxy",
-		MainCFGFile: filepath.Join(suite.test.TempDir, "haproxy.cfg"),
-		CfgDir:      suite.test.TempDir,
-		RuntimeDir:  filepath.Join(suite.test.TempDir, "run"),
-		StateDir:    filepath.Join(suite.test.TempDir, "state/haproxy/"),
-		Proxies: env.Proxies{
-			FrontHTTP:  "http",
-			FrontHTTPS: "https",
-			FrontSSL:   "ssl",
-			BackSSL:    "ssl",
-		},
-	}
-
-	controller := c.NewBuilder().
-		WithHaproxyCfgFile([]byte(haproxyConfig)).
-		WithEventChan(eventChan).
-		WithStore(s).
-		WithHaproxyEnv(haproxyEnv).
-		WithArgs(osArgs).Build()
-
-	go controller.Start()
-	return
 }

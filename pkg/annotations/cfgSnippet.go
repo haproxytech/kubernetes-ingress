@@ -70,9 +70,15 @@ var cfgSnippet struct {
 }
 
 func init() { //nolint:gochecknoinits
+	InitCfgSnippet()
+}
+
+func InitCfgSnippet() {
 	cfgSnippet.global = &cfgData{}
 	cfgSnippet.frontends = make(map[string]*cfgData)
 	cfgSnippet.backends = make(map[string]map[string]*cfgData)
+	cfgSnippet.disabledServices = make(map[string]bool)
+	cfgSnippet.disabledSnippets = make(map[CfgSnippetType]struct{})
 }
 
 type ConfigSnippetOptions struct {
@@ -89,20 +95,22 @@ type ConfigSnippetOptions struct {
 // If "all" is present in the list, then: backend, frontend and global config snippets are disabled.
 func DisableConfigSnippets(disableConfigSnippets string) {
 	disable := map[CfgSnippetType]struct{}{}
-	for _, d := range strings.Split(disableConfigSnippets, ",") {
-		switch strings.TrimSpace(d) {
-		case "all":
-			disable[ConfigSnippetBackend] = struct{}{}
-			disable[ConfigSnippetFrontend] = struct{}{}
-			disable[ConfigSnippetGlobal] = struct{}{}
-		case "frontend":
-			disable[ConfigSnippetFrontend] = struct{}{}
-		case "backend":
-			disable[ConfigSnippetBackend] = struct{}{}
-		case "global":
-			disable[ConfigSnippetGlobal] = struct{}{}
-		default:
-			logger.Errorf("wrong config snippet type '%s' in disable-config-snippets arg in command line", d)
+	if disableConfigSnippets != "" {
+		for _, d := range strings.Split(disableConfigSnippets, ",") {
+			switch strings.TrimSpace(d) {
+			case "all":
+				disable[ConfigSnippetBackend] = struct{}{}
+				disable[ConfigSnippetFrontend] = struct{}{}
+				disable[ConfigSnippetGlobal] = struct{}{}
+			case "frontend":
+				disable[ConfigSnippetFrontend] = struct{}{}
+			case "backend":
+				disable[ConfigSnippetBackend] = struct{}{}
+			case "global":
+				disable[ConfigSnippetGlobal] = struct{}{}
+			default:
+				logger.Errorf("wrong config snippet type '%s' in disable-config-snippets arg in command line", d)
+			}
 		}
 	}
 	cfgSnippet.disabledSnippets = disable

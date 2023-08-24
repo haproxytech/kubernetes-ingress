@@ -19,31 +19,35 @@ import (
 )
 
 func (suite *CustomResourceSuite) TestGlobalCR() {
-	eventChan, s, globalCREvt := suite.GlobalCRFixture()
+	name := suite.T().Name()
+	testController := suite.TestControllers[name]
 
-	globals := s.GetNamespace(globalCREvt.Namespace).CRs.Global
-	logtrargets := s.GetNamespace(globalCREvt.Namespace).CRs.LogTargets
+	suite.StartController()
+	suite.GlobalCRFixture()
+
+	globals := testController.Store.GetNamespace(suite.globalCREvt.Namespace).CRs.Global
+	logtrargets := testController.Store.GetNamespace(suite.globalCREvt.Namespace).CRs.LogTargets
 	t := suite.T()
 
 	suite.Run("Adding a global CR creates global and logTargets objects", func() {
 		eventProcessedChan := make(chan struct{})
-		globalCREvt.EventProcessed = eventProcessedChan
-		eventChan <- globalCREvt
+		suite.globalCREvt.EventProcessed = eventProcessedChan
+		testController.EventChan <- suite.globalCREvt
 		<-eventProcessedChan
 		assert.Len(t, globals, 1, "Should find one and only one Global CR")
 		assert.Len(t, logtrargets, 1, "Should find one and only one LogTargets CR")
-		assert.Containsf(t, globals, globalCREvt.Name, "Global CR of name '%s' not found", globalCREvt.Name)
+		assert.Containsf(t, globals, suite.globalCREvt.Name, "Global CR of name '%s' not found", suite.globalCREvt.Name)
 	})
 
 	suite.Run("Deleting a global CR removes global and logTargets objects", func() {
-		globalCREvt.Data = nil
+		suite.globalCREvt.Data = nil
 		eventProcessedChan := make(chan struct{})
-		globalCREvt.EventProcessed = eventProcessedChan
-		eventChan <- globalCREvt
+		suite.globalCREvt.EventProcessed = eventProcessedChan
+		testController.EventChan <- suite.globalCREvt
 		<-eventProcessedChan
 		assert.Len(t, globals, 0, "No Global CR should be present")
 		assert.Len(t, logtrargets, 0, "No LogTargets should be present")
 	})
 
-	close(eventChan)
+	suite.StopController()
 }
