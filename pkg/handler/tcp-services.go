@@ -34,7 +34,12 @@ func (handler TCPServices) Update(k store.K8s, h haproxy.HAProxy, a annotations.
 	var r bool
 	reload = handler.clearFrontends(k, h)
 	var p tcpSvcParser
+	logFormat := k.ConfigMaps.TCPServices.Annotations["log-format-tcp"]
+
 	for port, tcpSvcAnn := range k.ConfigMaps.TCPServices.Annotations {
+		if port == "log-format-tcp" {
+			continue
+		}
 		frontendName := fmt.Sprintf("tcp-%s", port)
 		p, err = handler.parseTCPService(k, tcpSvcAnn)
 		if err != nil {
@@ -42,15 +47,31 @@ func (handler TCPServices) Update(k store.K8s, h haproxy.HAProxy, a annotations.
 			continue
 		}
 		frontend, errGet := h.FrontendGet(frontendName)
+		if errGet != nil {
+			frontend = models.Frontend{
+				Name: frontendName,
+				Mode: "tcp",
+			}
+		}
+
+		if logFormat != "" {
+			frontend.LogFormat = "'" + strings.TrimSpace(logFormat) + "'"
+			frontend.Tcplog = false
+		} else {
+			frontend.LogFormat = ""
+			frontend.Tcplog = true
+		}
+
 		// Create Frontend
 		if errGet != nil {
-			frontend, r, err = handler.createTCPFrontend(h, frontendName, port, p.sslOffload)
+			r, err = handler.createTCPFrontend(h, frontend, port, p.sslOffload)
 			reload = reload || r
 			if err != nil {
 				logger.Error(err)
 				continue
 			}
 		}
+
 		// Update  Frontend
 		r, err = handler.updateTCPFrontend(k, h, frontend, p, a)
 		reload = reload || r
@@ -121,18 +142,11 @@ func (handler TCPServices) clearFrontends(k store.K8s, h haproxy.HAProxy) (clear
 	return
 }
 
-func (handler TCPServices) createTCPFrontend(h haproxy.HAProxy, frontendName, bindPort string, sslOffload bool) (frontend models.Frontend, reload bool, err error) {
-	// Create Frontend
-	frontend = models.Frontend{
-		Name:   frontendName,
-		Mode:   "tcp",
-		Tcplog: true,
-		//	DefaultBackend: route.BackendName,
-	}
+func (handler TCPServices) createTCPFrontend(h haproxy.HAProxy, frontend models.Frontend, bindPort string, sslOffload bool) (reload bool, err error) {
 	var errors utils.Errors
 	errors.Add(h.FrontendCreate(frontend))
 	if handler.IPv4 {
-		errors.Add(h.FrontendBindCreate(frontendName, models.Bind{
+		errors.Add(h.FrontendBindCreate(frontend.Name, models.Bind{
 			Address: handler.AddrIPv4 + ":" + bindPort,
 			BindParams: models.BindParams{
 				Name: "v4",
@@ -140,7 +154,7 @@ func (handler TCPServices) createTCPFrontend(h haproxy.HAProxy, frontendName, bi
 		}))
 	}
 	if handler.IPv6 {
-		errors.Add(h.FrontendBindCreate(frontendName, models.Bind{
+		errors.Add(h.FrontendBindCreate(frontend.Name, models.Bind{
 			Address: handler.AddrIPv6 + ":" + bindPort,
 			BindParams: models.BindParams{
 				Name: "v6",
@@ -153,13 +167,27 @@ func (handler TCPServices) createTCPFrontend(h haproxy.HAProxy, frontendName, bi
 	}
 	if errors.Result() != nil {
 		err = fmt.Errorf("error configuring tcp frontend: %w", err)
-		return frontend, false, err
+		return false, err
 	}
-	logger.Debugf("TCP frontend '%s' created, reload required", frontendName)
-	return frontend, true, nil
+	logger.Debugf("TCP frontend '%s' created, reload required", frontend.Name)
+	return true, nil
 }
 
 func (handler TCPServices) updateTCPFrontend(k store.K8s, h haproxy.HAProxy, frontend models.Frontend, p tcpSvcParser, a annotations.Annotations) (reload bool, err error) {
+	prevFrontend, err := h.FrontendGet(frontend.Name)
+	if err != nil {
+		err = fmt.Errorf("failed to get frontend '%s' : %w", frontend.Name, err)
+		return
+	}
+
+	if prevFrontend.LogFormat != frontend.LogFormat {
+		err = h.FrontendEdit(frontend)
+		if err != nil {
+			return
+		}
+		logger.Debugf("log format TCP changed from configmap '%s/%s', reload required", k.ConfigMaps.TCPServices.Namespace, k.ConfigMaps.TCPServices.Name)
+		reload = true
+	}
 	binds, err := h.FrontendBindsGet(frontend.Name)
 	if err != nil {
 		err = fmt.Errorf("failed to get bind lines: %w", err)
