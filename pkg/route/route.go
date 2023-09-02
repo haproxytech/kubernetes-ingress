@@ -40,8 +40,8 @@ const (
 )
 
 var (
-	CustomRoutes = make(map[string]string)
-	logger       = utils.GetLogger()
+	CurentCustomRoutes = make([]string, 0)
+	CustomRoutes       = make([]string, 0)
 )
 
 type Route struct {
@@ -125,11 +125,8 @@ func AddCustomRoute(route Route, routeACLAnn string, api api.HAProxyClient) (rel
 			return
 		}
 	}
-	if acl := CustomRoutes[route.BackendName]; acl != routeCond {
-		CustomRoutes[route.BackendName] = routeCond
-		reload = true
-		logger.Debugf("Custom Route to backend '%s' added, reload required", route.BackendName)
-	}
+
+	CustomRoutes = append(CustomRoutes, routeCond)
 	return reload, err
 }
 
@@ -147,5 +144,6 @@ func CustomRoutesReset(api api.HAProxyClient) (err error) {
 			return fmt.Errorf("unable to create main backendSwitching rule !!: %w", err)
 		}
 	}
+	CustomRoutes = make([]string, 0)
 	return
 }
