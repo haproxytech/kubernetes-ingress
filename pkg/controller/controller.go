@@ -18,6 +18,8 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/go-test/deep"
+
 	"github.com/haproxytech/client-native/v3/models"
 	"github.com/haproxytech/kubernetes-ingress/pkg/annotations"
 	gateway "github.com/haproxytech/kubernetes-ingress/pkg/gateways"
@@ -129,6 +131,13 @@ func (c *HAProxyController) updateHAProxy() {
 				c.updateStatusManager.AddIngress(i)
 			}
 		}
+	}
+
+	updated := deep.Equal(route.CurentCustomRoutes, route.CustomRoutes, deep.FLAG_IGNORE_SLICE_ORDER)
+	if len(updated) != 0 {
+		route.CurentCustomRoutes = route.CustomRoutes
+		logger.Debugf("Custom Routes changed: %s, reload required", updated)
+		c.reload = true
 	}
 
 	gatewayReload := c.gatewayManager.ManageGateway()
