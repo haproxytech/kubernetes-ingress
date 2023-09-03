@@ -33,6 +33,8 @@ func (handler TCPServices) Update(k store.K8s, h haproxy.HAProxy, a annotations.
 	}
 	var r bool
 	reload = handler.clearFrontends(k, h)
+	logFormat := annotations.String("tcp-log-format", k.ConfigMaps.Main.Annotations)
+
 	var p tcpSvcParser
 	for port, tcpSvcAnn := range k.ConfigMaps.TCPServices.Annotations {
 		frontendName := fmt.Sprintf("tcp-%s", port)
@@ -44,7 +46,7 @@ func (handler TCPServices) Update(k store.K8s, h haproxy.HAProxy, a annotations.
 		frontend, errGet := h.FrontendGet(frontendName)
 		// Create Frontend
 		if errGet != nil {
-			frontend, r, err = handler.createTCPFrontend(h, frontendName, port, p.sslOffload)
+			frontend, r, err = handler.createTCPFrontend(h, frontendName, port, p.sslOffload, logFormat)
 			reload = reload || r
 			if err != nil {
 				logger.Error(err)
@@ -52,6 +54,7 @@ func (handler TCPServices) Update(k store.K8s, h haproxy.HAProxy, a annotations.
 			}
 		}
 		// Update  Frontend
+		frontend.LogFormat = logFormat
 		r, err = handler.updateTCPFrontend(k, h, frontend, p, a)
 		reload = reload || r
 		if err != nil {
@@ -121,12 +124,13 @@ func (handler TCPServices) clearFrontends(k store.K8s, h haproxy.HAProxy) (clear
 	return
 }
 
-func (handler TCPServices) createTCPFrontend(h haproxy.HAProxy, frontendName, bindPort string, sslOffload bool) (frontend models.Frontend, reload bool, err error) {
+func (handler TCPServices) createTCPFrontend(h haproxy.HAProxy, frontendName, bindPort string, sslOffload bool, logFormat string) (frontend models.Frontend, reload bool, err error) {
 	// Create Frontend
 	frontend = models.Frontend{
-		Name:   frontendName,
-		Mode:   "tcp",
-		Tcplog: true,
+		Name:      frontendName,
+		Mode:      "tcp",
+		Tcplog:    logFormat == "",
+		LogFormat: logFormat,
 		//	DefaultBackend: route.BackendName,
 	}
 	var errors utils.Errors
@@ -188,6 +192,20 @@ func (handler TCPServices) updateTCPFrontend(k store.K8s, h haproxy.HAProxy, fro
 		err = h.FrontendEdit(frontend)
 		reload = true
 		return
+	}
+	fe, err := h.FrontendGet(frontend.Name)
+	if err != nil {
+		err = fmt.Errorf("failed to get frontend: %w", err)
+		return
+	}
+	if fe.LogFormat != frontend.LogFormat {
+		err = h.FrontendEdit(frontend)
+		if err != nil {
+			err = fmt.Errorf("failed to edit frontend: %w", err)
+			return
+		}
+		logger.Debug("TCP log-format updated, reload required", frontend.Name)
+		reload = true
 	}
 
 	var svc *service.Service
