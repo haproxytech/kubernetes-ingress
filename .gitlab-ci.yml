@@ -193,6 +193,7 @@ docker-build-sch:
     - sed -i "s~CI_REGISTRY_GO~$CI_REGISTRY_GO~g" ".gitlab/kind-config.yaml"
     - sed -i "s~FROM golang~FROM $CI_REGISTRY_GO/golang~g" "build/Dockerfile"
     - sed -i "s~FROM haproxytech/haproxy-alpine~FROM $CI_REGISTRY_GO/haproxy-alpine~g" "build/Dockerfile"
+    - cat ./.gitlab/kind-config.yaml
     - kind create cluster --name=dev --config=./.gitlab/kind-config.yaml
     - sed -i -E -e "s/localhost|0\.0\.0\.0|127\.0\.0\.1/docker/g" "$HOME/.kube/config"
     - sed -i -E -e "s/localhost|0\.0\.0\.0|127\.0\.0\.1/docker/g" "deploy/tests/e2e/client.go"
