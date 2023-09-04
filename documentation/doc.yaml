@@ -1014,6 +1014,25 @@ annotations:
       [
         'log-format: "%ci:%cp [%tr] %ft %b/%s %TR/%Tw/%Tc/%Tr/%Ta %ST %B %CC %CS %tsc %ac/%fc/%bc/%sc/%rc %sq/%bq %hr %hs \"%HM %[var(txn.base)] %HV\""',
       ]
+  - title: log-format-tcp
+    type: string
+    group: log-format
+    dependencies: ""
+    default: ""
+    description:
+      - Sets the log format string to use for TCP traffic.
+    tip:
+      - 'Default is option tcplog'
+      - 'Applies only to TCP configmap defined by command line option --configmap-tcp-services'
+    values:
+      - Log format string. More information in [HAProxy documentation](https://docs.haproxy.org/2.8/configuration.html#8.2.3)
+    applies_to:
+      - configmap
+    version_min: "1.7"
+    example:
+      [
+        'log-format-tcp: "%{+Q}o %t %s"'
+      ]
   - title: logasap
     type: bool
     group: logging
