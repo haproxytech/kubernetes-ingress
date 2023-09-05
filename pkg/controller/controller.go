@@ -195,7 +195,7 @@ func (c *HAProxyController) updateHAProxy() {
 func (c *HAProxyController) setToReady() {
 	healthzPort := c.osArgs.HealthzBindPort
 	logger.Panic(c.clientAPIClosure(func() error {
-		return c.haproxy.FrontendBindEdit("healthz",
+		return c.haproxy.FrontendBindCreate("healthz",
 			models.Bind{
 				BindParams: models.BindParams{
 					Name: "v4",
@@ -228,7 +228,7 @@ func (c *HAProxyController) setToReady() {
 	}))
 
 	logger.Panic(c.clientAPIClosure(func() error {
-		return c.haproxy.FrontendBindEdit("stats",
+		return c.haproxy.FrontendBindCreate("stats",
 			models.Bind{
 				BindParams: models.BindParams{
 					Name: "stats",
