@@ -1,4 +1,4 @@
-FROM golang:1.17-alpine AS builder
+FROM golang:1.21-alpine AS builder
 
 COPY *.go /src/
 COPY go.mod /src/go.mod
