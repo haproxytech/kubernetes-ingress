@@ -1804,6 +1804,8 @@ annotations:
       - An integer with a unit of time (1 second = 1s, 1 minute = 1m, 1h = 1 hour)
     applies_to:
       - configmap
+      - ingress
+      - service
     version_min: "1.4"
     example: ["timeout-server-fin: 5s"]
   - title: timeout-tunnel

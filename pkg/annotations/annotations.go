@@ -148,6 +148,7 @@ func (a annImpl) Backend(b *models.Backend, s store.K8s, c certs.Certificates) [
 	annotations := []Annotation{
 		service.NewAbortOnClose("abortonclose", b),
 		service.NewTimeoutCheck("timeout-check", b),
+		service.NewTimeoutServer("timeout-server", b),
 		service.NewLoadBalance("load-balance", b),
 		service.NewCheck("check", b),
 		service.NewCheckInter("check-interval", b),
