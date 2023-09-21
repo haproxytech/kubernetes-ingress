@@ -1,0 +1,19 @@
+.PHONY: ci-e2e-parallel
+ci-e2e-parallel:
+	go clean -testcache
+	KIND_URL=docker CGO_ENABLED=0 gotest -t e2e_parallel
+
+.PHONY: ci-e2e-https
+ci-e2e-https:
+	go clean -testcache
+	KIND_URL=docker CGO_ENABLED=0 gotest -t e2e_https
+
+.PHONY: ci-e2e-sequential-1
+ci-e2e-sequential-1:
+	go clean -testcache
+	KIND_URL=docker CGO_ENABLED=0 gotest -t e2e_sequential -n 2 -s 0 -p 1
+
+.PHONY: ci-e2e-sequential-2
+ci-e2e-sequential-2:
+	go clean -testcache
+	KIND_URL=docker CGO_ENABLED=0 gotest -t e2e_sequential -n 2 -s 1 -p 1
