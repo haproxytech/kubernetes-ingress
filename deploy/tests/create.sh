@@ -1,6 +1,7 @@
 #!/bin/sh
 set -e
 clustername=${1:-dev}
+dockerfile=${CUSTOMDOCKERFILE:-build/Dockerfile}
 command -v kind >/dev/null 2>&1 || { echo >&2 "Kind not installed.  Aborting."; exit 1; }
 command -v kubectl >/dev/null 2>&1 || { echo >&2 "Kubectl not installed.  Aborting."; exit 1; }
 DIR=$(dirname "$0")
@@ -31,7 +32,7 @@ else
   kind create cluster --name $clustername --config $DIR/kind-config.yaml
 
   echo "building image for ingress controller"
-  docker build --build-arg TARGETPLATFORM="linux/amd64" -t haproxytech/kubernetes-ingress -f build/Dockerfile .
+  docker build --build-arg TARGETPLATFORM="linux/amd64" -t haproxytech/kubernetes-ingress -f "${dockerfile}" .
 
   echo "loading image of ingress controller in kind"
   kind load docker-image haproxytech/kubernetes-ingress:latest  --name=$clustername

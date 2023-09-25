@@ -29,6 +29,8 @@ func (d *directControl) Service(action string) (err error) {
 	// hold information about a running Master HAproxy process
 	process, processErr := haproxyProcess(d.Env.PIDFile)
 
+	masterSocketArg := fmt.Sprintf("%s,level,admin", d.Env.MasterSocket)
+
 	//nolint:gosec //checks on HAProxyBinary should be done in configuration module.
 	switch action {
 	case "start":
@@ -36,9 +38,9 @@ func (d *directControl) Service(action string) (err error) {
 			logger.Error("haproxy is already running")
 			return nil
 		}
-		cmd = exec.Command(d.Env.Binary, "-f", d.Env.MainCFGFile)
+		cmd = exec.Command(d.Env.Binary, "-S", masterSocketArg, "-f", d.Env.MainCFGFile)
 		if d.useAuxFile {
-			cmd = exec.Command(d.Env.Binary, "-f", d.Env.MainCFGFile, "-f", d.Env.AuxCFGFile)
+			cmd = exec.Command(d.Env.Binary, "-S", masterSocketArg, "-f", d.Env.MainCFGFile, "-f", d.Env.AuxCFGFile)
 		}
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
@@ -65,9 +67,9 @@ func (d *directControl) Service(action string) (err error) {
 			return d.Service("start")
 		}
 		pid := strconv.Itoa(process.Pid)
-		cmd = exec.Command(d.Env.Binary, "-f", d.Env.MainCFGFile, "-sf", pid)
+		cmd = exec.Command(d.Env.Binary, "-S", masterSocketArg, "-f", d.Env.MainCFGFile, "-sf", pid)
 		if d.useAuxFile {
-			cmd = exec.Command(d.Env.Binary, "-f", d.Env.MainCFGFile, "-f", d.Env.AuxCFGFile, "-sf", pid)
+			cmd = exec.Command(d.Env.Binary, "-S", masterSocketArg, "-f", d.Env.MainCFGFile, "-f", d.Env.AuxCFGFile, "-sf", pid)
 		}
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr

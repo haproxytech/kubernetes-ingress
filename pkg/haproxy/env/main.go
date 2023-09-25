@@ -31,6 +31,7 @@ type Env struct {
 	Proxies
 	CfgDir        string
 	RuntimeSocket string
+	MasterSocket  string
 	PIDFile       string
 	AuxCFGFile    string
 	RuntimeDir    string
@@ -67,9 +68,11 @@ func (env *Env) Init(osArgs utils.OSArgs) (err error) {
 	env.AuxCFGFile = filepath.Join(env.CfgDir, "haproxy-aux.cfg")
 	env.PIDFile = filepath.Join(env.RuntimeDir, "haproxy.pid")
 	env.RuntimeSocket = filepath.Join(env.RuntimeDir, "haproxy-runtime-api.sock")
+	env.MasterSocket = filepath.Join(env.RuntimeDir, "haproxy-master.sock")
 	if osArgs.Test {
 		env.Binary = "echo"
 		env.RuntimeSocket = ""
+		env.MasterSocket = ""
 	} else if _, err = os.Stat(env.Binary); err != nil {
 		return err
 	}

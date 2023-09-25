@@ -19,4 +19,4 @@ fi
 
 echo "Memory limit for HAProxy: ${MEMLIMIT}MiB"
 
-exec /usr/local/sbin/haproxy -W -db -m "${MEMLIMIT}" -f /etc/haproxy/haproxy.cfg -f /etc/haproxy/haproxy-aux.cfg
+exec /usr/local/sbin/haproxy -W -db -m "${MEMLIMIT}" -S /var/run/haproxy-master.sock,level,admin -f /etc/haproxy/haproxy.cfg -f /etc/haproxy/haproxy-aux.cfg
