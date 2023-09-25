@@ -1853,6 +1853,7 @@ timeout-queue: 5s
 ##### `timeout-server`
 
   Sets the maximum inactivity time on the server side.
+  configmap available since version 1.4
 
   Available on:  `configmap`  `ingress`  `service`
 
