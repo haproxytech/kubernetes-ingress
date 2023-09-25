@@ -21,4 +21,4 @@ if [ ! -e /etc/haproxy/haproxy-aux.cfg ]; then
 fi
 
 export EXTRA_OPTIONS="$@"
-pebble run --verbose
+exec pebble run --verbose
