@@ -1822,6 +1822,7 @@ annotations:
     default: 50s
     description:
       - Sets the maximum inactivity time on the server side.
+      - configmap available since version 1.4
     tip: []
     values:
       - An integer with a unit of time (1 second = 1s, 1 minute = 1m, 1h = 1 hour); Defaults
@@ -1830,7 +1831,7 @@ annotations:
       - configmap
       - ingress
       - service
-    version_min: "1.4"
+    version_min: "1.11"
     example: ["timeout-server: 5s"]
   - title: timeout-server-fin
     type: "[time](#time)"
