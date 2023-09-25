@@ -16,9 +16,7 @@
 
 package endpoints
 
-import (
-	"io/ioutil"
-)
+import "io"
 
 func (suite *EndpointsSuite) Test_TCP_Reach() {
 	counter := map[string]int{}
@@ -30,7 +28,7 @@ func (suite *EndpointsSuite) Test_TCP_Reach() {
 				return
 			}
 			defer cls()
-			body, err := ioutil.ReadAll(res.Body)
+			body, err := io.ReadAll(res.Body)
 			if err != nil {
 				suite.Error(err)
 				return

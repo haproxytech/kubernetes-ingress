@@ -17,7 +17,7 @@
 package canarydeployment
 
 import (
-	"io/ioutil"
+	"io"
 	"strings"
 	"testing"
 
@@ -57,7 +57,7 @@ func (suite *CanaryDeploymentSuite) SetupSuite() {
 		}
 		defer cls()
 		if res.StatusCode == 200 {
-			body, _ := ioutil.ReadAll(res.Body)
+			body, _ := io.ReadAll(res.Body)
 			return strings.HasPrefix(string(body), "http-echo-prod")
 		}
 		return false

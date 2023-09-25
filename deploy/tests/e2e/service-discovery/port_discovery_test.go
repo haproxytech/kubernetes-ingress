@@ -17,7 +17,7 @@
 package servicediscovery
 
 import (
-	"io/ioutil"
+	"io"
 	"strings"
 
 	"github.com/haproxytech/kubernetes-ingress/deploy/tests/e2e"
@@ -44,7 +44,7 @@ func (suite *ServiceDiscoverySuite) testServicePort(serviceName, servicePort, po
 			return false
 		}
 		defer cls()
-		body, err := ioutil.ReadAll(res.Body)
+		body, err := io.ReadAll(res.Body)
 		if err != nil {
 			return false
 		}

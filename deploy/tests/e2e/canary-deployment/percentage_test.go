@@ -18,7 +18,7 @@ package canarydeployment
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"strings"
 
 	"github.com/haproxytech/kubernetes-ingress/deploy/tests/e2e"
@@ -39,7 +39,7 @@ func (suite *CanaryDeploymentSuite) Test_Response_Percentage() {
 					}
 					defer cls()
 					if res.StatusCode == 200 {
-						body, _ := ioutil.ReadAll(res.Body)
+						body, _ := io.ReadAll(res.Body)
 						if strings.HasPrefix(string(body), "http-echo-staging") {
 							counter++
 						}

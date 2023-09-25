@@ -17,7 +17,7 @@
 package proxyprotocol
 
 import (
-	"io/ioutil"
+	"io"
 	"testing"
 
 	"github.com/stretchr/testify/suite"
@@ -54,7 +54,7 @@ func (suite *ProxyProtocolSuite) Test_Send_Proxy() {
 			return false
 		}
 		defer cls()
-		body, err := ioutil.ReadAll(res.Body)
+		body, err := io.ReadAll(res.Body)
 		if err != nil {
 			return false
 		}

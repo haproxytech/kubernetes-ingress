@@ -18,7 +18,7 @@ package setheader
 
 import (
 	"encoding/json"
-	"io/ioutil"
+	"io"
 
 	"github.com/haproxytech/kubernetes-ingress/deploy/tests/e2e"
 )
@@ -44,7 +44,7 @@ func (suite *SetHeaderSuite) Test_Request_Set_Header() {
 				return false
 			}
 			defer cls()
-			b, err := ioutil.ReadAll(res.Body)
+			b, err := io.ReadAll(res.Body)
 			if err != nil {
 				return false
 			}

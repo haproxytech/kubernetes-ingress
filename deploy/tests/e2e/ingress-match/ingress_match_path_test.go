@@ -17,7 +17,7 @@
 package ingressmatch
 
 import (
-	"io/ioutil"
+	"io"
 	"strings"
 
 	"github.com/haproxytech/kubernetes-ingress/deploy/tests/e2e"
@@ -89,7 +89,7 @@ func (suite *IngressMatchSuite) Test_Http_MatchPath() {
 						return false
 					}
 					defer cls()
-					body, err := ioutil.ReadAll(res.Body)
+					body, err := io.ReadAll(res.Body)
 					if err != nil {
 						return false
 					}

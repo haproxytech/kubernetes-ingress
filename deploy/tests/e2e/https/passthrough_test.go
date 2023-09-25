@@ -18,7 +18,7 @@ package https
 
 import (
 	"encoding/json"
-	"io/ioutil"
+	"io"
 
 	"github.com/haproxytech/kubernetes-ingress/deploy/tests/e2e"
 )
@@ -37,7 +37,7 @@ func (suite *HTTPSSuite) Test_HTTPS_Passthrough() {
 				return false
 			}
 			defer cls()
-			body, err := ioutil.ReadAll(res.Body)
+			body, err := io.ReadAll(res.Body)
 			if err != nil {
 				return false
 			}
