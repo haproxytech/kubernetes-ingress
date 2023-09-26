@@ -23,7 +23,6 @@ import (
 	v1alpha2 "github.com/haproxytech/kubernetes-ingress/crs/api/core/v1alpha2"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
-	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
 	testing "k8s.io/client-go/testing"
@@ -35,9 +34,9 @@ type FakeBackends struct {
 	ns   string
 }
 
-var backendsResource = schema.GroupVersionResource{Group: "core.haproxy.org", Version: "v1alpha2", Resource: "backends"}
+var backendsResource = v1alpha2.SchemeGroupVersion.WithResource("backends")
 
-var backendsKind = schema.GroupVersionKind{Group: "core.haproxy.org", Version: "v1alpha2", Kind: "Backend"}
+var backendsKind = v1alpha2.SchemeGroupVersion.WithKind("Backend")
 
 // Get takes name of the backend, and returns the corresponding backend object, and an error if there is any.
 func (c *FakeBackends) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha2.Backend, err error) {
@@ -104,7 +103,7 @@ func (c *FakeBackends) Update(ctx context.Context, backend *v1alpha2.Backend, op
 // Delete takes name of the backend and deletes it. Returns an error if one occurs.
 func (c *FakeBackends) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
-		Invokes(testing.NewDeleteAction(backendsResource, c.ns, name), &v1alpha2.Backend{})
+		Invokes(testing.NewDeleteActionWithOptions(backendsResource, c.ns, name, opts), &v1alpha2.Backend{})
 
 	return err
 }

@@ -23,7 +23,6 @@ import (
 	v1alpha2 "github.com/haproxytech/kubernetes-ingress/crs/api/core/v1alpha2"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
-	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
 	testing "k8s.io/client-go/testing"
@@ -35,9 +34,9 @@ type FakeGlobals struct {
 	ns   string
 }
 
-var globalsResource = schema.GroupVersionResource{Group: "core.haproxy.org", Version: "v1alpha2", Resource: "globals"}
+var globalsResource = v1alpha2.SchemeGroupVersion.WithResource("globals")
 
-var globalsKind = schema.GroupVersionKind{Group: "core.haproxy.org", Version: "v1alpha2", Kind: "Global"}
+var globalsKind = v1alpha2.SchemeGroupVersion.WithKind("Global")
 
 // Get takes name of the global, and returns the corresponding global object, and an error if there is any.
 func (c *FakeGlobals) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha2.Global, err error) {
@@ -104,7 +103,7 @@ func (c *FakeGlobals) Update(ctx context.Context, global *v1alpha2.Global, opts 
 // Delete takes name of the global and deletes it. Returns an error if one occurs.
 func (c *FakeGlobals) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
-		Invokes(testing.NewDeleteAction(globalsResource, c.ns, name), &v1alpha2.Global{})
+		Invokes(testing.NewDeleteActionWithOptions(globalsResource, c.ns, name, opts), &v1alpha2.Global{})
 
 	return err
 }
