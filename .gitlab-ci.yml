@@ -16,7 +16,7 @@ variables:
   KIND: v0.16.0
   DOCKER_HOST: tcp://docker:2375
   DOCKER_DRIVER: overlay2
-  GO_VERSION: "1.20"
+  GO_VERSION: "1.21"
   DOCKER_VERSION: "24.0"
 diff:
   stage: diff
