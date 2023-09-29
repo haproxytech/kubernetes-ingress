@@ -33,11 +33,10 @@ import (
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
 )
 
-var logger = utils.GetK8sAPILogger()
+var logger = utils.GetLogger()
 
 // TRACE_API outputs all k8s events received from k8s API
 const (
-	TRACE_API               = false //nolint:golint,stylecheck
 	CRSGroupVersionV1alpha1 = "core.haproxy.org/v1alpha1"
 	CRSGroupVersionV1alpha2 = "core.haproxy.org/v1alpha2"
 )
@@ -73,10 +72,6 @@ type k8s struct {
 }
 
 func New(osArgs utils.OSArgs, whitelist map[string]struct{}, publishSvc *utils.NamespaceValue) K8s { //nolint:ireturn
-	if !TRACE_API {
-		logger.SetLevel(utils.Info)
-	}
-
 	restconfig, err := getRestConfig(osArgs)
 	logger.Panic(err)
 	builtInClient := k8sclientset.NewForConfigOrDie(restconfig)

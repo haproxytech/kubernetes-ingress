@@ -83,11 +83,11 @@ func (c *clientNative) SyncBackendSrvs(backend *store.RuntimeBackend, portUpdate
 	if backend.Name == "" {
 		return nil
 	}
-	logger.Tracef("updating backend  %s for haproxy servers update (address and state) through socket", backend.Name)
+	logger.Tracef("[RUNTIME] [BACKEND] [SERVER] updating backend  %s for haproxy servers update (address and state) through socket", backend.Name)
 	haproxySrvs := backend.HAProxySrvs
 	addresses := backend.Endpoints.Addresses
-	logger.Tracef("backend %s: list of servers %+v", backend.Name, haproxySrvs)
-	logger.Tracef("backend %s: list of endpoints addresses %+v", backend.Name, addresses)
+	logger.Tracef("[RUNTIME] [BACKEND] [SERVER] backend %s: list of servers %+v", backend.Name, haproxySrvs)
+	logger.Tracef("[RUNTIME] [BACKEND] [SERVER] backend %s: list of endpoints addresses %+v", backend.Name, addresses)
 	// Disable stale entries from HAProxySrvs
 	// and provide list of Disabled Srvs
 	var disabled []*store.HAProxySrv
@@ -114,8 +114,8 @@ func (c *clientNative) SyncBackendSrvs(backend *store.RuntimeBackend, portUpdate
 		delete(addresses, newAddr)
 	}
 
-	logger.Tracef("backend %s: list of servers after treatment  %+v", backend.Name, haproxySrvs)
-	logger.Tracef("backend %s: list of endpoints addresses after treatment  %+v", backend.Name, addresses)
+	logger.Tracef("[RUNTIME] [BACKEND] [SERVER] backend %s: list of servers after treatment  %+v", backend.Name, haproxySrvs)
+	logger.Tracef("[RUNTIME] [BACKEND] [SERVER] backend %s: list of endpoints addresses after treatment  %+v", backend.Name, addresses)
 
 	// Dynamically updates HAProxy backend servers  with HAProxySrvs content
 	var addrErr, stateErr error
@@ -124,11 +124,11 @@ func (c *clientNative) SyncBackendSrvs(backend *store.RuntimeBackend, portUpdate
 			continue
 		}
 		if srv.Address == "" {
-			logger.Tracef("backend %s: server '%s' changed status to %v", backend.Name, srv.Name, "maint")
+			logger.Tracef("[RUNTIME] [BACKEND] [SERVER] [SOCKET] backend %s: server '%s' changed status to %v", backend.Name, srv.Name, "maint")
 			addrErr = c.SetServerAddr(backend.Name, srv.Name, "127.0.0.1", 0)
 			stateErr = c.SetServerState(backend.Name, srv.Name, "maint")
 		} else {
-			logger.Tracef("backend %s: server '%s' changed status to %v", backend.Name, srv.Name, "ready")
+			logger.Tracef("[RUNTIME] [BACKEND] [SERVER] [SOCKET] backend %s: server '%s': addr '%s' changed status to %v", backend.Name, srv.Name, srv.Address, "ready")
 			addrErr = c.SetServerAddr(backend.Name, srv.Name, srv.Address, int(backend.Endpoints.Port))
 			stateErr = c.SetServerState(backend.Name, srv.Name, "ready")
 		}
@@ -136,6 +136,7 @@ func (c *clientNative) SyncBackendSrvs(backend *store.RuntimeBackend, portUpdate
 			backend.DynUpdateFailed = true
 			errors.Add(addrErr)
 			errors.Add(stateErr)
+			logger.Errorf("[RUNTIME] [BACKEND] [SERVER] [SOCKET] backend %s: server '%s': addr '%s': addrError '%v': stateError: '%v'", backend.Name, srv.Name, srv.Address, addrErr, stateErr)
 		}
 	}
 	return errors.Result()

@@ -92,6 +92,9 @@ func (k *K8s) EventEndpoints(ns *Namespace, data *Endpoints, syncHAproxySrvs fun
 	}
 	if endpoints, ok := ns.Endpoints[data.Service][data.SliceName]; ok {
 		if data.Status != DELETED && endpoints.Equal(data) {
+			if data != nil {
+				logger.Tracef("[RUNTIME] [BACKEND] [SERVER] [No change] [EventEndpoints]. No change for %s %s %s", data.Status, data.Service, data.SliceName)
+			}
 			return false
 		}
 	}

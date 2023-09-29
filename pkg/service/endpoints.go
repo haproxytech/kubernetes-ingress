@@ -70,17 +70,22 @@ func (s *Service) updateHAProxySrv(client api.HAProxyClient, srvSlot store.HAPro
 		srv.Address = srvSlot.Address
 		srv.Maintenance = "disabled"
 	}
-	logger.Tracef("backend %s: about to update server in configuration file :  models.Server { Name: %s, Port: %d, Address: %s, Maintenance: %s }", s.backend.Name, srv.Name, *srv.Port, srv.Address, srv.Maintenance)
+	logger.Tracef("[CONFIG] [BACKEND] [SERVER] backend %s: about to update server in configuration file :  models.Server { Name: %s, Port: %d, Address: %s, Maintenance: %s }", s.backend.Name, srv.Name, *srv.Port, srv.Address, srv.Maintenance)
 	// Update server
 	errAPI := client.BackendServerEdit(s.backend.Name, srv)
 	if errAPI == nil {
-		logger.Tracef("Updating server '%s/%s'", s.backend.Name, srv.Name)
+		logger.Tracef("[CONFIG] [BACKEND] [SERVER] Updating server '%s/%s'", s.backend.Name, srv.Name)
 		return
 	}
 	// Create server
 	if strings.Contains(errAPI.Error(), "does not exist") {
-		logger.Tracef("Creating server '%s/%s'", s.backend.Name, srv.Name)
-		logger.Error(client.BackendServerCreate(s.backend.Name, srv))
+		logger.Tracef("[CONFIG] [BACKEND] [SERVER] Creating server '%s/%s'", s.backend.Name, srv.Name)
+		errAPI = client.BackendServerCreate(s.backend.Name, srv)
+		if errAPI != nil {
+			logger.Errorf("[CONFIG] [BACKEND] [SERVER] %v", errAPI)
+		}
+	} else {
+		logger.Errorf("[CONFIG] [BACKEND] [SERVER] %v", errAPI)
 	}
 }
 
@@ -97,13 +102,13 @@ func (s *Service) scaleHAProxySrvs(backend *store.RuntimeBackend) (reload bool) 
 	for _, annotation := range []string{"servers-increment", "server-slots", "scale-server-slots"} {
 		annVal, annErr = annotations.Int(annotation, s.annotations...)
 		if annErr != nil {
-			logger.Errorf("Scale HAProxy servers: %s", annErr)
+			logger.Errorf("[CONFIG] [BACKEND] [SERVER] Scale HAProxy servers: %s", annErr)
 		} else if annVal != 0 {
 			srvSlots = annVal
 			break
 		}
 	}
-	logger.Tracef("backend %s: number of slots %d", backend.Name, srvSlots)
+	logger.Tracef("[CONFIG] [BACKEND] [SERVER] backend %s: number of slots %d", backend.Name, srvSlots)
 	for len(backend.HAProxySrvs) < srvSlots {
 		srv := &store.HAProxySrv{
 			Name:     fmt.Sprintf("SRV_%d", len(backend.HAProxySrvs)+1),
@@ -116,7 +121,7 @@ func (s *Service) scaleHAProxySrvs(backend *store.RuntimeBackend) (reload bool) 
 	}
 	if flag {
 		reload = true
-		logger.Debugf("Server slots in backend '%s' scaled to match scale-server-slots value: %d, reload required", s.backend.Name, srvSlots)
+		logger.Debugf("[CONFIG] [BACKEND] [SERVER] Server slots in backend '%s' scaled to match scale-server-slots value: %d, reload required", s.backend.Name, srvSlots)
 	}
 	// Configure remaining addresses in available HAProxySrvs
 	flag = false
@@ -138,7 +143,7 @@ func (s *Service) scaleHAProxySrvs(backend *store.RuntimeBackend) (reload bool) 
 	}
 	if flag {
 		reload = true
-		logger.Debugf("Server slots in backend '%s' scaled to match available endpoints, reload required", s.backend.Name)
+		logger.Debugf("[CONFIG] [BACKEND] [SERVER] Server slots in backend '%s' scaled to match available endpoints, reload required", s.backend.Name)
 	}
 	return reload
 }
