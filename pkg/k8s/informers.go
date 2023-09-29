@@ -57,7 +57,7 @@ func (k k8s) getNamespaceInfomer(eventChan chan SyncDataEvent, factory informers
 					Labels:          utils.CopyMap(data.Labels),
 					Status:          status,
 				}
-				logger.Tracef("%s %s: %s", NAMESPACE, item.Status, item.Name)
+				logger.Tracef("[RUNTIME] [K8s] %s %s: %s", NAMESPACE, item.Status, item.Name)
 				eventChan <- SyncDataEvent{SyncType: NAMESPACE, Namespace: item.Name, Data: item}
 			},
 			DeleteFunc: func(obj interface{}) {
@@ -86,7 +86,7 @@ func (k k8s) getNamespaceInfomer(eventChan chan SyncDataEvent, factory informers
 					Labels:          utils.CopyMap(data.Labels),
 					Status:          status,
 				}
-				logger.Tracef("%s %s: %s", NAMESPACE, item.Status, item.Name)
+				logger.Tracef("[RUNTIME] [K8s] %s %s: %s", NAMESPACE, item.Status, item.Name)
 				eventChan <- SyncDataEvent{SyncType: NAMESPACE, Namespace: item.Name, Data: item}
 			},
 			UpdateFunc: func(oldObj, newObj interface{}) {
@@ -114,7 +114,7 @@ func (k k8s) getNamespaceInfomer(eventChan chan SyncDataEvent, factory informers
 				if item1.Equal(item2) {
 					return
 				}
-				logger.Tracef("%s %s: %s", SERVICE, item2.Status, item2.Name)
+				logger.Tracef("[RUNTIME] [K8s] %s %s: %s", NAMESPACE, item2.Status, item2.Name)
 				eventChan <- SyncDataEvent{SyncType: NAMESPACE, Namespace: item2.Name, Data: item2}
 			},
 		},
@@ -158,12 +158,13 @@ func (k k8s) getServiceInformer(eventChan chan SyncDataEvent, factory informers.
 					Port:     int64(sp.Port),
 				})
 			}
-			logger.Tracef("%s %s: %s", SERVICE, item.Status, item.Name)
+			logger.Tracef("[RUNTIME] [K8s] %s %s: %s", SERVICE, item.Status, item.Name)
 			eventChan <- SyncDataEvent{SyncType: SERVICE, Namespace: item.Namespace, Data: item}
 			if k.publishSvc != nil && k.publishSvc.Namespace == item.Namespace && k.publishSvc.Name == item.Name {
 				// item copy because of ADDED handler in events.go which must modify the STATUS based solely on addresses
 				itemCopy := *item
 				itemCopy.Addresses = getServiceAddresses(data)
+				logger.Tracef("[RUNTIME] [K8s] %s %s: %s", PUBLISH_SERVICE, item.Status, item.Name)
 				eventChan <- SyncDataEvent{SyncType: PUBLISH_SERVICE, Namespace: item.Namespace, Data: &itemCopy}
 			}
 		},
@@ -186,10 +187,11 @@ func (k k8s) getServiceInformer(eventChan chan SyncDataEvent, factory informers.
 			if data.Spec.Type == corev1.ServiceTypeExternalName {
 				item.DNS = data.Spec.ExternalName
 			}
-			logger.Tracef("%s %s: %s", SERVICE, item.Status, item.Name)
+			logger.Tracef("[RUNTIME] [K8s] %s %s: %s", SERVICE, item.Status, item.Name)
 			eventChan <- SyncDataEvent{SyncType: SERVICE, Namespace: item.Namespace, Data: item}
 			if k.publishSvc != nil && k.publishSvc.Namespace == item.Namespace && k.publishSvc.Name == item.Name {
 				item.Addresses = getServiceAddresses(data)
+				logger.Tracef("[RUNTIME] [K8s] %s %s: %s", PUBLISH_SERVICE, item.Status, item.Name)
 				eventChan <- SyncDataEvent{SyncType: PUBLISH_SERVICE, Namespace: data.Namespace, Data: item}
 			}
 		},
@@ -252,11 +254,12 @@ func (k k8s) getServiceInformer(eventChan chan SyncDataEvent, factory informers.
 			if item2.Equal(item1) {
 				return
 			}
-			logger.Tracef("%s %s: %s", SERVICE, item2.Status, item2.Name)
+			logger.Tracef("[RUNTIME] [K8s] %s %s: %s", SERVICE, item2.Status, item2.Name)
 			eventChan <- SyncDataEvent{SyncType: SERVICE, Namespace: item2.Namespace, Data: item2}
 
 			if k.publishSvc != nil && k.publishSvc.Namespace == item2.Namespace && k.publishSvc.Name == item2.Name {
 				item2.Addresses = getServiceAddresses(data2)
+				logger.Tracef("[RUNTIME] [K8s] %s %s: %s", PUBLISH_SERVICE, item2.Status, item2.Name)
 				eventChan <- SyncDataEvent{SyncType: PUBLISH_SERVICE, Namespace: item2.Namespace, Data: item2}
 			}
 		},
@@ -286,7 +289,7 @@ func (k k8s) getSecretInformer(eventChan chan SyncDataEvent, factory informers.S
 					Data:      data.Data,
 					Status:    status,
 				}
-				logger.Tracef("%s %s: %s", SECRET, item.Status, item.Name)
+				logger.Tracef("[RUNTIME] [K8s] %s %s: %s", SECRET, item.Status, item.Name)
 				eventChan <- SyncDataEvent{SyncType: SECRET, Namespace: item.Namespace, Data: item}
 			},
 			DeleteFunc: func(obj interface{}) {
@@ -302,7 +305,7 @@ func (k k8s) getSecretInformer(eventChan chan SyncDataEvent, factory informers.S
 					Data:      data.Data,
 					Status:    status,
 				}
-				logger.Tracef("%s %s: %s", SECRET, item.Status, item.Name)
+				logger.Tracef("[RUNTIME] [K8s] %s %s: %s", SECRET, item.Status, item.Name)
 				eventChan <- SyncDataEvent{SyncType: SECRET, Namespace: item.Namespace, Data: item}
 			},
 			UpdateFunc: func(oldObj, newObj interface{}) {
@@ -332,7 +335,7 @@ func (k k8s) getSecretInformer(eventChan chan SyncDataEvent, factory informers.S
 				if item2.Equal(item1) {
 					return
 				}
-				logger.Tracef("%s %s: %s", SECRET, item2.Status, item2.Name)
+				logger.Tracef("[RUNTIME] [K8s] %s %s: %s", SECRET, item2.Status, item2.Name)
 				eventChan <- SyncDataEvent{SyncType: SECRET, Namespace: item2.Namespace, Data: item2}
 			},
 		},
@@ -362,7 +365,7 @@ func (k k8s) getConfigMapInformer(eventChan chan SyncDataEvent, factory informer
 					Annotations: store.CopyAnnotations(data.Data),
 					Status:      status,
 				}
-				logger.Tracef("%s %s: %s", CONFIGMAP, item.Status, item.Name)
+				logger.Tracef("[RUNTIME] [K8s] %s %s: %s", CONFIGMAP, item.Status, item.Name)
 				eventChan <- SyncDataEvent{SyncType: CONFIGMAP, Namespace: item.Namespace, Data: item}
 			},
 			DeleteFunc: func(obj interface{}) {
@@ -378,7 +381,7 @@ func (k k8s) getConfigMapInformer(eventChan chan SyncDataEvent, factory informer
 					Annotations: store.CopyAnnotations(data.Data),
 					Status:      status,
 				}
-				logger.Tracef("%s %s: %s", CONFIGMAP, item.Status, item.Name)
+				logger.Tracef("[RUNTIME] [K8s] %s %s: %s", CONFIGMAP, item.Status, item.Name)
 				eventChan <- SyncDataEvent{SyncType: CONFIGMAP, Namespace: item.Namespace, Data: item}
 			},
 			UpdateFunc: func(oldObj, newObj interface{}) {
@@ -408,7 +411,7 @@ func (k k8s) getConfigMapInformer(eventChan chan SyncDataEvent, factory informer
 				if item2.Equal(item1) {
 					return
 				}
-				logger.Tracef("%s %s: %s", CONFIGMAP, item2.Status, item2.Name)
+				logger.Tracef("[RUNTIME] [K8s] %s %s: %s", CONFIGMAP, item2.Status, item2.Name)
 				eventChan <- SyncDataEvent{SyncType: CONFIGMAP, Namespace: item2.Namespace, Data: item2}
 			},
 		},
@@ -477,7 +480,7 @@ func (k k8s) getEndpointsInformer(eventChan chan SyncDataEvent, factory informer
 			if errors.Is(err, ErrIgnored) {
 				return
 			}
-			logger.Tracef("%s %s: %s", ENDPOINTS, item.Status, item.Service)
+			logger.Tracef("[RUNTIME] [K8s] %s %s: %s %s", ENDPOINTS, item.Status, item.Service, item.SliceName)
 			eventChan <- SyncDataEvent{SyncType: ENDPOINTS, Namespace: item.Namespace, Data: item}
 		},
 		DeleteFunc: func(obj interface{}) {
@@ -485,20 +488,17 @@ func (k k8s) getEndpointsInformer(eventChan chan SyncDataEvent, factory informer
 			if errors.Is(err, ErrIgnored) {
 				return
 			}
-			logger.Tracef("%s %s: %s", ENDPOINTS, item.Status, item.Service)
+			logger.Tracef("[RUNTIME] [K8s] %s %s: %s %s", ENDPOINTS, item.Status, item.Service, item.SliceName)
 			eventChan <- SyncDataEvent{SyncType: ENDPOINTS, Namespace: item.Namespace, Data: item}
 		},
 		UpdateFunc: func(oldObj, newObj interface{}) {
-			item1, err := k.convertToEndpoints(oldObj, store.EMPTY)
+			_, err := k.convertToEndpoints(oldObj, store.EMPTY)
 			if errors.Is(err, ErrIgnored) {
 				return
 			}
 			item2, _ := k.convertToEndpoints(newObj, store.MODIFIED)
-			if item2.Equal(item1) {
-				return
-			}
 			// fix modified state for ones that are deleted,new,same
-			logger.Tracef("%s %s: %s", ENDPOINTS, item2.Status, item2.Service)
+			logger.Tracef("[RUNTIME] [K8s] %s %s: %s %s", ENDPOINTS, item2.Status, item2.Service, item2.SliceName)
 			eventChan <- SyncDataEvent{SyncType: ENDPOINTS, Namespace: item2.Namespace, Data: item2}
 		},
 	})
@@ -544,7 +544,7 @@ func (k k8s) addIngressClassHandlers(eventChan chan SyncDataEvent, informer cach
 					logger.Errorf("%s: Invalid data from k8s api, %s", INGRESS_CLASS, obj)
 					return
 				}
-				logger.Tracef("%s %s: %s", INGRESS_CLASS, item.Status, item.Name)
+				logger.Tracef("[RUNTIME] [K8s] %s %s: %s", INGRESS_CLASS, item.Status, item.Name)
 				eventChan <- SyncDataEvent{SyncType: INGRESS_CLASS, Data: item}
 			},
 			DeleteFunc: func(obj interface{}) {
@@ -554,7 +554,7 @@ func (k k8s) addIngressClassHandlers(eventChan chan SyncDataEvent, informer cach
 					return
 				}
 				item.Status = store.DELETED
-				logger.Tracef("%s %s: %s", INGRESS_CLASS, item.Status, item.Name)
+				logger.Tracef("[RUNTIME] [K8s] %s %s: %s", INGRESS_CLASS, item.Status, item.Name)
 				eventChan <- SyncDataEvent{SyncType: INGRESS_CLASS, Data: item}
 			},
 			UpdateFunc: func(oldObj, newObj interface{}) {
@@ -565,7 +565,7 @@ func (k k8s) addIngressClassHandlers(eventChan chan SyncDataEvent, informer cach
 				}
 				item.Status = store.MODIFIED
 
-				logger.Tracef("%s %s: %s", INGRESS_CLASS, item.Status, item.Name)
+				logger.Tracef("[RUNTIME] [K8s] %s %s: %s", INGRESS_CLASS, item.Status, item.Name)
 				eventChan <- SyncDataEvent{SyncType: INGRESS_CLASS, Data: item}
 			},
 		},
@@ -583,7 +583,7 @@ func (k k8s) addIngressHandlers(eventChan chan SyncDataEvent, informer cache.Sha
 					return
 				}
 				item.Status = store.ADDED
-				logger.Tracef("%s %s: %s", INGRESS, item.Status, item.Name)
+				logger.Tracef("[RUNTIME] [K8s] %s %s: %s", INGRESS, item.Status, item.Name)
 				eventChan <- SyncDataEvent{SyncType: INGRESS, Namespace: item.Namespace, Data: item}
 			},
 			DeleteFunc: func(obj interface{}) {
@@ -593,7 +593,7 @@ func (k k8s) addIngressHandlers(eventChan chan SyncDataEvent, informer cache.Sha
 					return
 				}
 				item.Status = store.DELETED
-				logger.Tracef("%s %s: %s", INGRESS, item.Status, item.Name)
+				logger.Tracef("[RUNTIME] [K8s] %s %s: %s", INGRESS, item.Status, item.Name)
 				eventChan <- SyncDataEvent{SyncType: INGRESS, Namespace: item.Namespace, Data: item}
 			},
 			UpdateFunc: func(oldObj, newObj interface{}) {
@@ -603,7 +603,7 @@ func (k k8s) addIngressHandlers(eventChan chan SyncDataEvent, informer cache.Sha
 					return
 				}
 				item.Status = store.MODIFIED
-				logger.Tracef("%s %s: %s", INGRESS, item.Status, item.Name)
+				logger.Tracef("[RUNTIME] [K8s] %s %s: %s", INGRESS, item.Status, item.Name)
 				eventChan <- SyncDataEvent{SyncType: INGRESS, Namespace: item.Namespace, Data: item}
 			},
 		},
@@ -618,7 +618,7 @@ func (k k8s) addEndpointSliceHandlers(eventChan chan SyncDataEvent, informer cac
 			if errors.Is(err, ErrIgnored) {
 				return
 			}
-			logger.Tracef("%s %s: %s", ENDPOINTS, item.Status, item.Service)
+			logger.Tracef("[RUNTIME] [K8s] %s %s: %s %s", ENDPOINTS, item.Status, item.Service, item.SliceName)
 			eventChan <- SyncDataEvent{SyncType: ENDPOINTS, Namespace: item.Namespace, Data: item}
 		},
 		DeleteFunc: func(obj interface{}) {
@@ -626,20 +626,17 @@ func (k k8s) addEndpointSliceHandlers(eventChan chan SyncDataEvent, informer cac
 			if errors.Is(err, ErrIgnored) {
 				return
 			}
-			logger.Tracef("%s %s: %s", ENDPOINTS, item.Status, item.Service)
+			logger.Tracef("[RUNTIME] [K8s] %s %s: %s %s", ENDPOINTS, item.Status, item.Service, item.SliceName)
 			eventChan <- SyncDataEvent{SyncType: ENDPOINTS, Namespace: item.Namespace, Data: item}
 		},
 		UpdateFunc: func(oldObj, newObj interface{}) {
-			item1, err := k.convertToEndpoints(oldObj, store.EMPTY)
+			_, err := k.convertToEndpoints(oldObj, store.EMPTY)
 			if errors.Is(err, ErrIgnored) {
 				return
 			}
 			item2, _ := k.convertToEndpoints(newObj, store.MODIFIED)
-			if item2.Equal(item1) {
-				return
-			}
 			// fix modified state for ones that are deleted,new,same
-			logger.Tracef("%s %s: %s", ENDPOINTS, item2.Status, item2.Service)
+			logger.Tracef("[RUNTIME] [K8s] %s %s: %s %s", ENDPOINTS, item2.Status, item2.Service, item2.SliceName)
 			eventChan <- SyncDataEvent{SyncType: ENDPOINTS, Namespace: item2.Namespace, Data: item2}
 		},
 	})
@@ -794,7 +791,7 @@ func manageGatewayClass(gatewayclass *gatewayv1beta1.GatewayClass, eventChan cha
 		Generation:     gatewayclass.Generation,
 		Status:         status,
 	}
-	logger.Tracef("%s %s: %s", GATEWAYCLASS, item.Status, item.Name)
+	logger.Tracef("[RUNTIME] [K8s] %s %s: %s", GATEWAYCLASS, item.Status, item.Name)
 	eventChan <- SyncDataEvent{SyncType: GATEWAYCLASS, Data: &item}
 }
 
@@ -841,7 +838,7 @@ func manageGateway(gateway *gatewayv1beta1.Gateway, eventChan chan SyncDataEvent
 		Generation:       gateway.Generation,
 		Status:           status,
 	}
-	logger.Tracef("%s %s: %s", GATEWAY, item.Status, item.Name)
+	logger.Tracef("[RUNTIME] [K8s] %s %s: %s", GATEWAY, item.Status, item.Name)
 	eventChan <- SyncDataEvent{SyncType: GATEWAY, Namespace: item.Namespace, Data: &item}
 }
 
@@ -904,7 +901,7 @@ func manageTCPRoute(tcproute *gatewayv1alpha2.TCPRoute, eventChan chan SyncDataE
 		Generation:   tcproute.Generation,
 		Status:       status,
 	}
-	logger.Tracef("%s %s: %s", TCPROUTE, item.Status, item.Name)
+	logger.Tracef("[RUNTIME] [K8s] %s %s: %s", TCPROUTE, item.Status, item.Name)
 	eventChan <- SyncDataEvent{SyncType: TCPROUTE, Namespace: item.Namespace, Data: &item}
 }
 
@@ -978,6 +975,6 @@ func manageReferenceGrant(referenceGrant *gatewayv1alpha2.ReferenceGrant, eventC
 		}
 	}
 
-	logger.Tracef("%s %s: %s", REFERENCEGRANT, item.Status, item.Name)
+	logger.Tracef("[RUNTIME] [K8s] %s %s: %s", REFERENCEGRANT, item.Status, item.Name)
 	eventChan <- SyncDataEvent{SyncType: REFERENCEGRANT, Namespace: item.Namespace, Data: &item}
 }
