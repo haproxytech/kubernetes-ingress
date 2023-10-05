@@ -78,7 +78,7 @@ func (k k8s) getNamespaceInfomer(eventChan chan SyncDataEvent, factory informers
 				eventChan <- SyncDataEvent{SyncType: NAMESPACE, Namespace: item.Name, Data: item}
 			},
 			UpdateFunc: func(oldObj, newObj interface{}) {
-				data1, ok := oldObj.(*corev1.Namespace)
+				_, ok := oldObj.(*corev1.Namespace)
 				if !ok {
 					logger.Errorf("%s: Invalid data from k8s api, %s", NAMESPACE, oldObj)
 					return
@@ -89,16 +89,10 @@ func (k k8s) getNamespaceInfomer(eventChan chan SyncDataEvent, factory informers
 					return
 				}
 				status := store.MODIFIED
-				item1 := &store.Namespace{
-					Name:   data1.GetName(),
-					Status: status,
-				}
+
 				item2 := &store.Namespace{
 					Name:   data2.GetName(),
 					Status: status,
-				}
-				if item1.Name == item2.Name {
-					return
 				}
 				logger.Tracef("[RUNTIME] [K8s] %s %s: %s", NAMESPACE, item2.Status, item2.Name)
 				eventChan <- SyncDataEvent{SyncType: NAMESPACE, Namespace: item2.Name, Data: item2}
@@ -201,23 +195,6 @@ func (k k8s) getServiceInformer(eventChan chan SyncDataEvent, factory informers.
 			}
 
 			status := store.MODIFIED
-			item1 := &store.Service{
-				Namespace:   data1.GetNamespace(),
-				Name:        data1.GetName(),
-				Annotations: store.CopyAnnotations(data1.ObjectMeta.Annotations),
-				Ports:       []store.ServicePort{},
-				Status:      status,
-			}
-			if data1.Spec.Type == corev1.ServiceTypeExternalName {
-				item1.DNS = data1.Spec.ExternalName
-			}
-			for _, sp := range data1.Spec.Ports {
-				item1.Ports = append(item1.Ports, store.ServicePort{
-					Name:     sp.Name,
-					Protocol: string(sp.Protocol),
-					Port:     int64(sp.Port),
-				})
-			}
 
 			item2 := &store.Service{
 				Namespace:   data2.GetNamespace(),
@@ -236,9 +213,7 @@ func (k k8s) getServiceInformer(eventChan chan SyncDataEvent, factory informers.
 					Port:     int64(sp.Port),
 				})
 			}
-			if item2.Equal(item1) {
-				return
-			}
+
 			logger.Tracef("[RUNTIME] [K8s] %s %s: %s", SERVICE, item2.Status, item2.Name)
 			eventChan <- SyncDataEvent{SyncType: SERVICE, Namespace: item2.Namespace, Data: item2}
 
@@ -293,7 +268,7 @@ func (k k8s) getSecretInformer(eventChan chan SyncDataEvent, factory informers.S
 				eventChan <- SyncDataEvent{SyncType: SECRET, Namespace: item.Namespace, Data: item}
 			},
 			UpdateFunc: func(oldObj, newObj interface{}) {
-				data1, ok := oldObj.(*corev1.Secret)
+				_, ok := oldObj.(*corev1.Secret)
 				if !ok {
 					logger.Errorf("%s: Invalid data from k8s api, %s", SECRET, oldObj)
 					return
@@ -304,21 +279,14 @@ func (k k8s) getSecretInformer(eventChan chan SyncDataEvent, factory informers.S
 					return
 				}
 				status := store.MODIFIED
-				item1 := &store.Secret{
-					Namespace: data1.GetNamespace(),
-					Name:      data1.GetName(),
-					Data:      data1.Data,
-					Status:    status,
-				}
+
 				item2 := &store.Secret{
 					Namespace: data2.GetNamespace(),
 					Name:      data2.GetName(),
 					Data:      data2.Data,
 					Status:    status,
 				}
-				if item2.Equal(item1) {
-					return
-				}
+
 				logger.Tracef("[RUNTIME] [K8s] %s %s: %s", SECRET, item2.Status, item2.Name)
 				eventChan <- SyncDataEvent{SyncType: SECRET, Namespace: item2.Namespace, Data: item2}
 			},
@@ -368,7 +336,7 @@ func (k k8s) getConfigMapInformer(eventChan chan SyncDataEvent, factory informer
 				eventChan <- SyncDataEvent{SyncType: CONFIGMAP, Namespace: item.Namespace, Data: item}
 			},
 			UpdateFunc: func(oldObj, newObj interface{}) {
-				data1, ok := oldObj.(*corev1.ConfigMap)
+				_, ok := oldObj.(*corev1.ConfigMap)
 				if !ok {
 					logger.Errorf("%s: Invalid data from k8s api, %s", CONFIGMAP, oldObj)
 					return
@@ -379,21 +347,13 @@ func (k k8s) getConfigMapInformer(eventChan chan SyncDataEvent, factory informer
 					return
 				}
 				status := store.MODIFIED
-				item1 := &store.ConfigMap{
-					Namespace:   data1.GetNamespace(),
-					Name:        data1.GetName(),
-					Annotations: store.CopyAnnotations(data1.Data),
-					Status:      status,
-				}
 				item2 := &store.ConfigMap{
 					Namespace:   data2.GetNamespace(),
 					Name:        data2.GetName(),
 					Annotations: store.CopyAnnotations(data2.Data),
 					Status:      status,
 				}
-				if item2.Equal(item1) {
-					return
-				}
+
 				logger.Tracef("[RUNTIME] [K8s] %s %s: %s", CONFIGMAP, item2.Status, item2.Name)
 				eventChan <- SyncDataEvent{SyncType: CONFIGMAP, Namespace: item2.Namespace, Data: item2}
 			},
@@ -513,7 +473,7 @@ func (k *k8s) getPodInformer(namespace, podPrefix string, resyncPeriod time.Dura
 				if prefix != podPrefix {
 					return
 				}
-				eventChan <- SyncDataEvent{SyncType: POD, Namespace: meta.Namespace, Data: store.PodEvent{Created: true}}
+				eventChan <- SyncDataEvent{SyncType: POD, Namespace: meta.Namespace, Data: store.PodEvent{Status: store.ADDED, Name: meta.Name}}
 			},
 			DeleteFunc: func(obj interface{}) {
 				meta := obj.(*corev1.Pod).ObjectMeta //nolint:forcetypeassert
@@ -521,7 +481,15 @@ func (k *k8s) getPodInformer(namespace, podPrefix string, resyncPeriod time.Dura
 				if prefix != podPrefix {
 					return
 				}
-				eventChan <- SyncDataEvent{SyncType: POD, Namespace: meta.Namespace, Data: store.PodEvent{}}
+				eventChan <- SyncDataEvent{SyncType: POD, Namespace: meta.Namespace, Data: store.PodEvent{Status: store.DELETED, Name: meta.Name}}
+			},
+			UpdateFunc: func(oldObj, newObj interface{}) {
+				meta := newObj.(*corev1.Pod).ObjectMeta //nolint:forcetypeassert
+				prefix, _ = utils.GetPodPrefix(meta.Name)
+				if prefix != podPrefix {
+					return
+				}
+				eventChan <- SyncDataEvent{SyncType: POD, Namespace: meta.Namespace, Data: store.PodEvent{Status: store.MODIFIED, Name: meta.Name}}
 			},
 		},
 	)

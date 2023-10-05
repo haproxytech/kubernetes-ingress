@@ -24,7 +24,7 @@ import (
 const DefaultLocalBackend = "default-local-service"
 
 type K8s struct {
-	NbrHAProxyInst          int64
+	HaProxyPods             map[string]struct{}
 	Namespaces              map[string]*Namespace
 	IngressClasses          map[string]*IngressClass
 	NamespacesAccess        NamespacesWatch
@@ -72,6 +72,7 @@ func NewK8sStore(args utils.OSArgs) K8s {
 		},
 		SecretsProcessed: map[string]struct{}{},
 		BackendProcessed: map[string]struct{}{},
+		HaProxyPods:      map[string]struct{}{},
 	}
 	for _, namespace := range args.NamespaceWhitelist {
 		store.NamespacesAccess.Whitelist[namespace] = struct{}{}

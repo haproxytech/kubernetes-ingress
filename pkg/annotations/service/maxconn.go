@@ -35,8 +35,8 @@ func (a *Maxconn) Process(k store.K8s, annotations ...map[string]string) error {
 		return err
 	}
 	// adjust backend maxconn when using multiple HAProxy Instances
-	if k.NbrHAProxyInst != 0 {
-		v /= k.NbrHAProxyInst
+	if len(k.HaProxyPods) != 0 {
+		v /= int64(len(k.HaProxyPods))
 	}
 	if a.backend.DefaultServer == nil {
 		a.backend.DefaultServer = &models.DefaultServer{}
