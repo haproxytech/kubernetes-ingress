@@ -33,7 +33,7 @@ type K8s struct {
 	GatewayClasses          map[string]*GatewayClass
 	GatewayControllerName   string
 	PublishServiceAddresses []string
-	NbrHAProxyInst          int64
+	HaProxyPods             map[string]struct{}
 	UpdateAllIngresses      bool
 }
 
@@ -75,6 +75,7 @@ func NewK8sStore(args utils.OSArgs) K8s {
 		SecretsProcessed: map[string]struct{}{},
 		BackendProcessed: map[string]struct{}{},
 		GatewayClasses:   make(map[string]*GatewayClass),
+		HaProxyPods:      map[string]struct{}{},
 	}
 	for _, namespace := range args.NamespaceWhitelist {
 		store.NamespacesAccess.Whitelist[namespace] = struct{}{}
