@@ -25,10 +25,16 @@ import (
 func (k *K8s) EventNamespace(ns *Namespace, data *Namespace) (updateRequired bool) {
 	updateRequired = false
 	switch data.Status {
-	case ADDED, MODIFIED:
+	case ADDED:
 		nsStore := k.GetNamespace(data.Name)
 		nsStore.Labels = utils.CopyMap(data.Labels)
 		updateRequired = true
+	case MODIFIED:
+		nsStore := k.GetNamespace(data.Name)
+		if updateRequired = nsStore.Equal(data); !updateRequired {
+			return updateRequired
+		}
+		nsStore.Labels = utils.CopyMap(data.Labels)
 	case DELETED:
 		_, ok := k.Namespaces[data.Name]
 		if ok {
@@ -207,6 +213,9 @@ func (k *K8s) EventConfigMap(ns *Namespace, data *ConfigMap) (updateRequired boo
 		updateRequired = true
 		logger.Debugf("configmap '%s/%s' processed", cm.Namespace, cm.Name)
 	case MODIFIED:
+		if cm.Equal(data) {
+			return false
+		}
 		*cm = *data
 		updateRequired = true
 		logger.Infof("configmap '%s/%s' updated", cm.Namespace, cm.Name)
@@ -261,10 +270,17 @@ func (k *K8s) EventSecret(ns *Namespace, data *Secret) (updateRequired bool) {
 }
 
 func (k *K8s) EventPod(podEvent PodEvent) (updateRequired bool) {
-	if podEvent.Created {
-		k.NbrHAProxyInst++
-	} else {
-		k.NbrHAProxyInst--
+	switch podEvent.Status {
+	case ADDED, MODIFIED:
+		if _, ok := k.HaProxyPods[podEvent.Name]; ok {
+			return false
+		}
+		k.HaProxyPods[podEvent.Name] = struct{}{}
+	case DELETED:
+		if _, ok := k.HaProxyPods[podEvent.Name]; !ok {
+			return false
+		}
+		delete(k.HaProxyPods, podEvent.Name)
 	}
 
 	return true
