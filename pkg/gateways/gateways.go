@@ -583,13 +583,13 @@ func (gm GatewayManagerImpl) isTCPRouteAllowedByListener(listener store.Listener
 	if allowedRoutesNamespaces != nil {
 		from := allowedRoutesNamespaces.From
 		if from == nil {
-			v := (string)(v1alpha2.NamespacesFromSame)
+			v := (string)(v1beta1.NamespacesFromSame)
 			from = &v
 		}
 		if *from == "Same" {
 			return routeNamespace == gatewayNamespace
 		}
-		if *from == (string)(v1alpha2.NamespacesFromSelector) {
+		if *from == (string)(v1beta1.NamespacesFromSelector) {
 			if allowedRoutesNamespaces.Selector == nil {
 				return false
 			}

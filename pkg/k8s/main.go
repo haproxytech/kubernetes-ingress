@@ -46,7 +46,7 @@ var logger = utils.GetLogger()
 const (
 	CRSGroupVersionV1alpha1 = "core.haproxy.org/v1alpha1"
 	CRSGroupVersionV1alpha2 = "core.haproxy.org/v1alpha2"
-	GATEWAY_API_VERSION     = "v0.5.1" //nolint:golint,stylecheck
+	GATEWAY_API_VERSION     = "v0.8.1" //nolint:golint,stylecheck
 )
 
 var ErrIgnored = errors.New("ignored resource")
