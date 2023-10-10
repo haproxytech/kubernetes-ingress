@@ -134,6 +134,7 @@ func (c *clientNative) APIStartTransaction() error {
 	if err != nil {
 		return err
 	}
+	utils.GetLogger().WithField(utils.LogFieldTransactionID, transaction.ID)
 	c.activeTransaction = transaction.ID
 	c.activeTransactionHasChanges = false
 	return nil
@@ -155,6 +156,7 @@ func (c *clientNative) APICommitTransaction() error {
 }
 
 func (c *clientNative) APIDisposeTransaction() {
+	utils.GetLogger().ResetFields()
 	c.activeTransaction = ""
 	c.activeTransactionHasChanges = false
 }

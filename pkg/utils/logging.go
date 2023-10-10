@@ -38,6 +38,10 @@ const (
 	Trace   LogLevel = 6
 )
 
+const (
+	LogFieldTransactionID = "transactionID"
+)
+
 // Logger provides functions to writing log messages
 // level can be defined only as `trace`, `debug`, `info`, `warning`, `error`
 // error and panic are always printed, panic also exits application.
@@ -76,16 +80,24 @@ type Logger interface { //nolint:interfacebloat
 
 	SetLevel(level LogLevel)
 	ShowFilename(show bool)
+	WithField(key string, value interface{})
+	ResetFields()
 }
 
 type logger struct {
 	Level    LogLevel
 	FileName bool
+	fields   map[string]interface{}
 }
 
 var (
 	logSingelton *logger
 	doOnce       sync.Once
+)
+
+var (
+	k8slogSingelton *logger
+	k8sdoOnce       sync.Once
 )
 
 //nolint:golint // 'exported func GetLogger returns unexported type , which can be annoying to use' - this is deliberate here
@@ -94,10 +106,24 @@ func GetLogger() *logger {
 		logSingelton = &logger{
 			Level:    Warning,
 			FileName: true,
+			fields:   make(map[string]interface{}),
 		}
 		log.SetFlags(LogTypeShort)
 	})
 	return logSingelton
+}
+
+//nolint:golint // 'exported func GetK8sLogger returns unexported type , which can be annoying to use' - this is deliberate here
+func GetK8sLogger() *logger {
+	k8sdoOnce.Do(func() {
+		k8slogSingelton = &logger{
+			Level:    Warning,
+			FileName: true,
+			fields:   make(map[string]interface{}),
+		}
+		log.SetFlags(LogTypeShort)
+	})
+	return k8slogSingelton
 }
 
 func (l *logger) SetLevel(level LogLevel) {
@@ -106,6 +132,25 @@ func (l *logger) SetLevel(level LogLevel) {
 
 func (l *logger) ShowFilename(show bool) {
 	l.FileName = show
+}
+
+func (l *logger) WithField(key string, value interface{}) {
+	l.fields[key] = value
+}
+
+func (l *logger) ResetFields() {
+	clear(l.fields)
+}
+
+func (l *logger) fieldsAsString() string {
+	var fields strings.Builder
+	fields.WriteString("[")
+	for k, v := range l.fields {
+		fields.WriteString(fmt.Sprintf("%s=%v", k, v))
+	}
+	fields.WriteString("]")
+
+	return fields.String()
 }
 
 func (l *logger) log(logType string, data ...interface{}) {
@@ -134,9 +179,9 @@ func (l *logger) log(logType string, data ...interface{}) {
 			}
 
 			if logType == "" {
-				log.Printf("%s:%d %s\n", file1, no, d)
+				log.Printf("%s:%d %s %s\n", file1, no, l.fieldsAsString(), d)
 			} else {
-				log.Printf("%s%s:%d %s\n", logType, file1, no, d)
+				log.Printf("%s%s:%d %s %s\n", logType, file1, no, l.fieldsAsString(), d)
 			}
 		}
 	}
@@ -159,9 +204,9 @@ func (l *logger) logf(logType string, format string, data ...interface{}) {
 		}
 		// file1 := strings.Replace(file, "/src/", "", 1)
 		if logType == "" {
-			log.Printf("%s:%d %s\n", file1, no, line)
+			log.Printf("%s:%d %s %s\n", file1, no, l.fieldsAsString(), line)
 		} else {
-			log.Printf("%s%s:%d %s\n", logType, file1, no, line)
+			log.Printf("%s%s:%d %s %s\n", logType, file1, no, l.fieldsAsString(), line)
 		}
 	}
 }

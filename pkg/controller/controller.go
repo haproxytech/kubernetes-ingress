@@ -106,6 +106,9 @@ func (c *HAProxyController) updateHAProxy() {
 	defer func() {
 		c.haproxy.APIDisposeTransaction()
 	}()
+	// First log here that will contain the "transactionID" field (added in APIStartTransaction)
+	// All subsequent log line will contain the "transactionID" field.
+	logger.Trace("HAProxy config sync transaction started")
 
 	reload, restart := c.handleGlobalConfig()
 	c.reload = c.reload || reload

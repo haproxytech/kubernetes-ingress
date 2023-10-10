@@ -40,7 +40,7 @@ import (
 	gatewaynetworking "sigs.k8s.io/gateway-api/pkg/client/informers/externalversions"
 )
 
-var logger = utils.GetLogger()
+var logger = utils.GetK8sLogger()
 
 // TRACE_API outputs all k8s events received from k8s API
 const (
@@ -85,6 +85,7 @@ type k8s struct {
 }
 
 func New(osArgs utils.OSArgs, whitelist map[string]struct{}, publishSvc *utils.NamespaceValue) K8s { //nolint:ireturn
+	logger.SetLevel(osArgs.LogLevel.LogLevel)
 	restconfig, err := getRestConfig(osArgs)
 	logger.Panic(err)
 	builtInClient := k8sclientset.NewForConfigOrDie(restconfig)
