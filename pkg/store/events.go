@@ -334,13 +334,11 @@ func (k *K8s) EventPublishService(ns *Namespace, data *Service) (updateRequired 
 		oldService.Addresses = newService.Addresses
 		k.PublishServiceAddresses = newService.Addresses
 		k.UpdateAllIngresses = true
-		updateRequired = true
 	case ADDED:
 		if service, ok := ns.Services[data.Name]; ok {
 			k.PublishServiceAddresses = data.Addresses
 			service.Addresses = data.Addresses
 			k.UpdateAllIngresses = true
-			updateRequired = true
 			return
 		}
 		logger.Errorf("Publish service '%s/%s' not found", data.Namespace, data.Name)
@@ -350,7 +348,6 @@ func (k *K8s) EventPublishService(ns *Namespace, data *Service) (updateRequired 
 			k.PublishServiceAddresses = nil
 			service.Addresses = nil
 			k.UpdateAllIngresses = true
-			updateRequired = true
 		} else {
 			logger.Warningf("Publish service '%s/%s' not registered with controller, cannot delete !", data.Namespace, data.Name)
 		}
