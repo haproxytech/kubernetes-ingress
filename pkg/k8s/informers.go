@@ -714,12 +714,12 @@ func getServiceAddresses(service *corev1.Service) (addresses []string) {
 		addresses = []string{service.Spec.ExternalName}
 	case corev1.ServiceTypeClusterIP:
 		addresses = []string{service.Spec.ClusterIP}
+		addresses = append(addresses, service.Spec.ExternalIPs...)
 	case corev1.ServiceTypeNodePort:
-		if service.Spec.ExternalIPs != nil {
-			addresses = append(addresses, service.Spec.ExternalIPs...)
-		} else {
+		if service.Spec.ClusterIP == "" {
 			addresses = append(addresses, service.Spec.ClusterIP)
 		}
+		addresses = append(addresses, service.Spec.ExternalIPs...)
 	case corev1.ServiceTypeLoadBalancer:
 		for _, ip := range service.Status.LoadBalancer.Ingress {
 			if ip.IP == "" {
