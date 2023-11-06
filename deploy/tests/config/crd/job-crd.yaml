@@ -1,0 +1,16 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: haproxy-ingress-crd # each deploymnent should have a unique name, in example we always recreate the custer
+  namespace: haproxy-controller
+spec:
+  template:
+    spec:
+      serviceAccountName: haproxy-kubernetes-ingress-crd
+      containers:
+      - name: haproxy-ingress-crd
+        image: haproxytech/kubernetes-ingress:latest
+        imagePullPolicy: Never
+        command: ["./haproxy-ingress-controller","--job-check-crd"]
+      restartPolicy: Never
+  backoffLimit: 0
