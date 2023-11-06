@@ -106,4 +106,5 @@ type OSArgs struct { //nolint:maligned
 	PprofEnabled               bool           `long:"pprof" short:"p" description:"enable pprof"`
 	PrometheusEnabled          bool           `long:"prometheus" description:"enable prometheus of IC data"`
 	ChannelSize                int64          `long:"channel-size" description:"sets the size of controller buffers used to receive and send k8s events.NOTE: increase the value to accommodate large number of resources "`
+	JobCheckCRD                bool           `long:"job-check-crd" description:"does not execute IC, but adds/updates CRDs"`
 }

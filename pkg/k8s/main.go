@@ -21,16 +21,16 @@ import (
 	"strconv"
 	"time"
 
+	crclientset "github.com/haproxytech/kubernetes-ingress/crs/generated/clientset/versioned"
+	crinformers "github.com/haproxytech/kubernetes-ingress/crs/generated/informers/externalversions"
+	"github.com/haproxytech/kubernetes-ingress/pkg/ingress"
+	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
+	crdclientset "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	k8sinformers "k8s.io/client-go/informers"
 	k8sclientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/clientcmd"
-
-	crclientset "github.com/haproxytech/kubernetes-ingress/crs/generated/clientset/versioned"
-	crinformers "github.com/haproxytech/kubernetes-ingress/crs/generated/informers/externalversions"
-	"github.com/haproxytech/kubernetes-ingress/pkg/ingress"
-	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
 )
 
 var logger = utils.GetLogger()
@@ -62,6 +62,7 @@ type k8s struct {
 	builtInClient          *k8sclientset.Clientset
 	crClient               *crclientset.Clientset
 	crs                    map[string]CR
+	apiExtensionsClient    *crdclientset.Clientset
 	whiteListedNS          []string
 	publishSvc             *utils.NamespaceValue
 	syncPeriod             time.Duration
@@ -72,7 +73,7 @@ type k8s struct {
 }
 
 func New(osArgs utils.OSArgs, whitelist map[string]struct{}, publishSvc *utils.NamespaceValue) K8s { //nolint:ireturn
-	restconfig, err := getRestConfig(osArgs)
+	restconfig, err := GetRestConfig(osArgs)
 	logger.Panic(err)
 	builtInClient := k8sclientset.NewForConfigOrDie(restconfig)
 	if k8sVersion, errVer := builtInClient.Discovery().ServerVersion(); errVer != nil {
@@ -85,6 +86,7 @@ func New(osArgs utils.OSArgs, whitelist map[string]struct{}, publishSvc *utils.N
 	k := k8s{
 		builtInClient:          builtInClient,
 		crClient:               crclientset.NewForConfigOrDie(restconfig),
+		apiExtensionsClient:    crdclientset.NewForConfigOrDie(restconfig),
 		crs:                    map[string]CR{},
 		whiteListedNS:          getWhitelistedNS(whitelist, osArgs.ConfigMap.Namespace),
 		publishSvc:             publishSvc,
@@ -122,8 +124,10 @@ func (k k8s) MonitorChanges(eventChan chan SyncDataEvent, stop chan struct{}) {
 	k.runPodInformer(eventChan, stop, informersSynced)
 	for _, namespace := range k.whiteListedNS {
 		k.runInformers(eventChan, stop, namespace, informersSynced)
-		k.runCRInformers(eventChan, stop, namespace, informersSynced)
+		k.runCRInformers(eventChan, stop, namespace, informersSynced, k.crs)
 	}
+	// check if we need to also watch CRS creation (in case not all alpha2 definitions are already installed)
+	k.RunCRSCreationMonitoring(eventChan, stop)
 
 	if !cache.WaitForCacheSync(stop, *informersSynced...) {
 		logger.Panic("Caches are not populated due to an underlying error, cannot run the Ingress Controller")
@@ -153,9 +157,9 @@ func (k k8s) registerCoreCR(cr CR, groupVersion string) {
 	}
 }
 
-func (k k8s) runCRInformers(eventChan chan SyncDataEvent, stop chan struct{}, namespace string, informersSynced *[]cache.InformerSynced) {
+func (k k8s) runCRInformers(eventChan chan SyncDataEvent, stop chan struct{}, namespace string, informersSynced *[]cache.InformerSynced, crs map[string]CR) {
 	informerFactory := crinformers.NewSharedInformerFactoryWithOptions(k.crClient, k.cacheResyncPeriod, crinformers.WithNamespace(namespace))
-	for _, cr := range k.crs {
+	for _, cr := range crs {
 		informer := cr.GetInformer(eventChan, informerFactory)
 		go informer.Run(stop)
 		*informersSynced = append(*informersSynced, informer.HasSynced)
@@ -233,7 +237,7 @@ func (k k8s) endpointsMirroring() bool {
 	return true
 }
 
-func getRestConfig(osArgs utils.OSArgs) (restConfig *rest.Config, err error) {
+func GetRestConfig(osArgs utils.OSArgs) (restConfig *rest.Config, err error) {
 	if osArgs.External {
 		kubeconfig := filepath.Join(utils.HomeDir(), ".kube", "config")
 		if osArgs.KubeConfig != "" {
