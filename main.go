@@ -73,11 +73,11 @@ func main() {
 		return
 	}
 	if osArgs.JobCheckCRD {
-		logger.Print(IngressControllerInfo)
+		logger.Print(version.IngressControllerInfo)
 		logger.Print(job.IngressControllerCRDUpdater)
-		logger.Infof("HAProxy Ingress Controller CRD Updater %s %s%s", GitTag, GitCommit, GitDirty)
-		logger.Infof("Build from: %s", GitRepo)
-		logger.Infof("Build date: %s\n", GitCommitDate)
+		logger.Infof("HAProxy Ingress Controller CRD Updater %s %s%s", version.GitTag, version.GitCommit, version.GitDirty)
+		logger.Infof("Build from: %s", version.GitRepo)
+		logger.Infof("Build date: %s\n", version.GitCommitDate)
 
 		err := job.CRDRefresh(logger, osArgs)
 		if err != nil {

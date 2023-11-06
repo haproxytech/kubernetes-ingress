@@ -144,11 +144,15 @@ func (l *logger) ResetFields() {
 
 func (l *logger) fieldsAsString() string {
 	var fields strings.Builder
-	fields.WriteString("[")
+	if len(l.fields) > 0 {
+		fields.WriteString("[")
+	}
 	for k, v := range l.fields {
 		fields.WriteString(fmt.Sprintf("%s=%v", k, v))
 	}
-	fields.WriteString("]")
+	if len(l.fields) > 0 {
+		fields.WriteString("]")
+	}
 
 	return fields.String()
 }
