@@ -12,7 +12,6 @@ if [ -n "${CI_ENV}" ]; then
   echo "building image for ingress controller"
   if [ -n "${GITLAB_CI}" ]; then
     echo "haproxytech/kubernetes-ingress image already available from previous stage"
-    #docker build --build-arg TARGETPLATFORM="linux/amd64" -t haproxytech/kubernetes-ingress -f build/Dockerfile .
   else
     docker build --build-arg TARGETPLATFORM="linux/amd64" -t haproxytech/kubernetes-ingress -f build/Dockerfile .
   fi
@@ -47,10 +46,13 @@ echo "loading image http-echo in kind"
 kind load docker-image haproxytech/http-echo:latest  --name=$clustername
 
 printf %80s |tr " " "="; echo ""
+echo "Create HAProxy namespace ..."
+kubectl apply -f $DIR/config/0.namespace.yaml
+printf %80s |tr " " "="; echo ""
 echo "Install custom resource definitions ..."
-kubectl apply -f $DIR/../../crs/definition/backend.yaml
-kubectl apply -f $DIR/../../crs/definition/defaults.yaml
-kubectl apply -f $DIR/../../crs/definition/global.yaml
+kubectl apply -f $DIR/../../deploy/tests/config/crd/rbac.yaml
+kubectl apply -f $DIR/../../deploy/tests/config/crd/job-crd.yaml
+kubectl wait --for=condition=complete --timeout=60s job/haproxy-ingress-crd -n haproxy-controller
 
 if [ "$EXPERIMENTAL_GWAPI" = "1" ]; then
   printf %80s |tr " " "="; echo ""
@@ -80,7 +82,6 @@ fi
 
 printf %80s |tr " " "="; echo ""
 echo "deploying Ingress Controller ..."
-kubectl apply -f $DIR/config/0.namespace.yaml
 kubectl apply -f $DIR/config/1.rbac.yaml
 if [ "$EXPERIMENTAL_GWAPI" = "1" ]; then
   printf %80s |tr " " "="; echo ""
