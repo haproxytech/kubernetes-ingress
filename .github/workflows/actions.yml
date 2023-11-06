@@ -7,7 +7,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: commit-check
-        uses: docker://ghcr.io/haproxytech/commit-check:3.0.0
+        uses: docker://ghcr.io/haproxytech/commit-check:3.0.1
         env:
           API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   generate:
