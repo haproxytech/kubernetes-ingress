@@ -18,6 +18,7 @@ import (
 	"os"
 
 	corev1alpha2 "github.com/haproxytech/kubernetes-ingress/crs/api/core/v1alpha2"
+	"github.com/haproxytech/kubernetes-ingress/pkg/configuration"
 	"github.com/haproxytech/kubernetes-ingress/pkg/k8s"
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
 )
@@ -31,8 +32,8 @@ func (c *HAProxyController) SyncData() {
 		change := false
 		switch job.SyncType {
 		case k8s.COMMAND:
-			c.restart, c.reload = c.auxCfgManager()
-			if hadChanges || c.reload || c.restart {
+			c.auxCfgManager()
+			if hadChanges || configuration.GetReload() || configuration.GetRestart() {
 				c.updateHAProxy()
 				hadChanges = false
 				continue
@@ -90,7 +91,7 @@ func (c *HAProxyController) SyncData() {
 }
 
 // auxCfgManager returns restart or reload requirement based on state and transition of auxiliary configuration file.
-func (c *HAProxyController) auxCfgManager() (restart, reload bool) {
+func (c *HAProxyController) auxCfgManager() {
 	info, errStat := os.Stat(c.haproxy.AuxCFGFile)
 	var (
 		modifTime  int64
@@ -107,13 +108,8 @@ func (c *HAProxyController) auxCfgManager() (restart, reload bool) {
 		c.haproxy.SetAuxCfgFile(auxCfgFile)
 		c.haproxy.UseAuxFile(useAuxFile)
 		// The file exists now  (modifTime !=0 otherwise nothing changed case).
-		if c.auxCfgModTime == 0 {
-			restart = true
-		} else {
-			// File already exists,
-			// already in command line parameters just need to reload for modifications.
-			reload = true
-		}
+		configuration.RestartIf(c.auxCfgModTime == 0, "auxiliary configuration file created")
+		configuration.ReloadIf(c.auxCfgModTime != 0, "auxiliary configuration file modified")
 		c.auxCfgModTime = modifTime
 		if c.auxCfgModTime != 0 {
 			logger.Infof("Auxiliary HAProxy config '%s' updated", auxCfgFile)
@@ -128,13 +124,10 @@ func (c *HAProxyController) auxCfgManager() (restart, reload bool) {
 			// never existed before
 			return
 		}
-		logger.Infof("Auxiliary HAProxy config '%s' removed", c.haproxy.AuxCFGFile)
-		// but existed so need to restart
-		restart = true
+		configuration.Restart("Auxiliary HAProxy config '%s' removed", c.haproxy.AuxCFGFile)
 		return
 	}
 	// File exists
 	useAuxFile = true
 	modifTime = info.ModTime().Unix()
-	return
 }

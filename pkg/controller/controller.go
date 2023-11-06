@@ -17,11 +17,13 @@ package controller
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/go-test/deep"
 
 	"github.com/haproxytech/client-native/v3/models"
 	"github.com/haproxytech/kubernetes-ingress/pkg/annotations"
+	"github.com/haproxytech/kubernetes-ingress/pkg/configuration"
 	gateway "github.com/haproxytech/kubernetes-ingress/pkg/gateways"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/maps"
@@ -50,8 +52,6 @@ type HAProxyController struct {
 	store                    store.K8s
 	osArgs                   utils.OSArgs
 	auxCfgModTime            int64
-	restart                  bool
-	reload                   bool
 	ready                    bool
 	updateStatusManager      status.UpdateStatusManager
 }
@@ -94,7 +94,6 @@ func (c *HAProxyController) Stop() {
 
 // updateHAProxy is the control loop syncing HAProxy configuration
 func (c *HAProxyController) updateHAProxy() {
-	var reload bool
 	var err error
 	logger.Trace("HAProxy config sync started")
 
@@ -110,9 +109,7 @@ func (c *HAProxyController) updateHAProxy() {
 	// All subsequent log line will contain the "transactionID" field.
 	logger.Trace("HAProxy config sync transaction started")
 
-	reload, restart := c.handleGlobalConfig()
-	c.reload = c.reload || reload
-	c.restart = c.restart || restart
+	c.handleGlobalConfig()
 
 	if len(route.CustomRoutes) != 0 {
 		logger.Error(route.CustomRoutesReset(c.haproxy))
@@ -137,7 +134,7 @@ func (c *HAProxyController) updateHAProxy() {
 			if !i.Supported(c.store, c.annotations) {
 				logger.Debugf("ingress '%s/%s' ignored: no matching", ingResource.Namespace, ingResource.Name)
 			} else {
-				c.reload = i.Update(c.store, c.haproxy, c.annotations) || c.reload
+				i.Update(c.store, c.haproxy, c.annotations)
 			}
 			if ingResource.Status == store.ADDED || ingResource.ClassUpdated {
 				c.updateStatusManager.AddIngress(i)
@@ -148,28 +145,24 @@ func (c *HAProxyController) updateHAProxy() {
 	updated := deep.Equal(route.CurentCustomRoutes, route.CustomRoutes, deep.FLAG_IGNORE_SLICE_ORDER)
 	if len(updated) != 0 {
 		route.CurentCustomRoutes = route.CustomRoutes
-		logger.Debugf("Custom Routes changed: %s, reload required", updated)
-		c.reload = true
+		configuration.Reload("Custom Routes changed: %s, reload required", strings.Join(updated, "\n"))
+
 	}
 
-	gatewayReload := c.gatewayManager.ManageGateway()
-	c.reload = gatewayReload || c.reload
+	c.gatewayManager.ManageGateway()
 
 	for _, handler := range c.updateHandlers {
-		reload, err = handler.Update(c.store, c.haproxy, c.annotations)
-		logger.Error(err)
-		c.reload = c.reload || reload
+		logger.Error(handler.Update(c.store, c.haproxy, c.annotations))
 	}
 
 	err = c.haproxy.APICommitTransaction()
 	if err != nil {
 		logger.Error("unable to Sync HAProxy configuration !!")
 		logger.Error(err)
-		reloadCfgSnippet, errCfgSnippet := annotations.CheckBackendConfigSnippetError(err, c.haproxy.Env.CfgDir)
+		rerun, errCfgSnippet := annotations.CheckBackendConfigSnippetError(err, c.haproxy.Env.CfgDir)
 		logger.Error(errCfgSnippet)
 		c.clean(true)
-		c.reload = c.reload || reloadCfgSnippet
-		if c.reload && errCfgSnippet == nil {
+		if rerun {
 			logger.Debug("disabling some config snippets because of errors, reload required")
 			// We need to replay all these resources.
 			c.store.SecretsProcessed = map[string]struct{}{}
@@ -184,20 +177,20 @@ func (c *HAProxyController) updateHAProxy() {
 	}
 
 	switch {
-	case c.restart:
+	case configuration.GetRestart():
 		if err = c.haproxy.Service("restart"); err != nil {
 			logger.Error(err)
 		} else {
 			logger.Info("HAProxy restarted")
 		}
-	case c.reload:
+	case configuration.GetReload():
 		if err = c.haproxy.Service("reload"); err != nil {
 			logger.Error(err)
 		} else {
 			logger.Info("HAProxy reloaded")
 		}
 	}
-
+	configuration.Reset()
 	c.clean(false)
 
 	logger.Trace("HAProxy config sync ended")
@@ -322,8 +315,6 @@ func (c *HAProxyController) clean(failedSync bool) {
 	if !failedSync {
 		c.store.Clean()
 	}
-	c.reload = false
-	c.restart = false
 }
 
 func (c *HAProxyController) SetGatewayAPIInstalled(gatewayAPIInstalled bool) {

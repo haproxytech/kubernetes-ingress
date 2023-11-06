@@ -22,6 +22,7 @@ import (
 	"github.com/haproxytech/client-native/v3/models"
 
 	"github.com/haproxytech/kubernetes-ingress/pkg/annotations"
+	"github.com/haproxytech/kubernetes-ingress/pkg/configuration"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy"
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
 )
@@ -30,27 +31,24 @@ type ErrorFiles struct {
 	files files
 }
 
-func (handler *ErrorFiles) Update(k store.K8s, h haproxy.HAProxy, a annotations.Annotations) (reload bool, err error) {
+func (handler *ErrorFiles) Update(k store.K8s, h haproxy.HAProxy, a annotations.Annotations) (err error) {
 	handler.files.dir = h.ErrFileDir
 	if k.ConfigMaps.Errorfiles == nil {
-		return false, nil
+		return nil
 	}
 	// Update Files
 	for code, content := range k.ConfigMaps.Errorfiles.Annotations {
 		logger.Error(handler.writeFile(code, content))
 	}
 	var apiInput []*models.Errorfile
-	apiInput, reload = handler.refresh()
+	apiInput = handler.refresh()
 	// Update API
 	defaults, err := h.DefaultsGetConfiguration()
 	if err != nil {
-		return false, err
+		return err
 	}
 	defaults.ErrorFiles = apiInput
-	if err = h.DefaultsPushConfiguration(*defaults); err != nil {
-		return false, err
-	}
-	return reload, nil
+	return h.DefaultsPushConfiguration(*defaults)
 }
 
 func (handler *ErrorFiles) writeFile(code, content string) (err error) {
@@ -68,20 +66,19 @@ func (handler *ErrorFiles) writeFile(code, content string) (err error) {
 	return
 }
 
-func (handler *ErrorFiles) refresh() (result []*models.Errorfile, reload bool) {
+func (handler *ErrorFiles) refresh() (result []*models.Errorfile) {
 	for code, f := range handler.files.data {
 		if !f.inUse {
-			reload = true
+			configuration.Reload("removal of error file for '%s' code", code)
 			err := handler.files.deleteFile(code)
 			if err != nil {
 				logger.Errorf("failed deleting errorfile for code '%s': %s", code, err)
 			}
 			continue
 		}
-		if f.updated {
-			logger.Debugf("updating errorfile for code '%s': reload required", code)
-			reload = true
-		}
+
+		configuration.ReloadIf(f.updated, "update of error file for '%s' code", code)
+
 		c, _ := strconv.Atoi(code) // code already checked in newCode
 		result = append(result, &models.Errorfile{
 			Code: int64(c),

@@ -70,7 +70,7 @@ frontend stats
 type updateStatusManager struct{}
 
 func (m *updateStatusManager) AddIngress(ingress *ingress.Ingress) {}
-func (m *updateStatusManager) Update(k store.K8s, h haproxy.HAProxy, a annotations.Annotations) (reload bool, err error) {
+func (m *updateStatusManager) Update(k store.K8s, h haproxy.HAProxy, a annotations.Annotations) (err error) {
 	return
 }
 

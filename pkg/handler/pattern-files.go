@@ -21,6 +21,7 @@ import (
 	"github.com/google/renameio"
 
 	"github.com/haproxytech/kubernetes-ingress/pkg/annotations"
+	"github.com/haproxytech/kubernetes-ingress/pkg/configuration"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy"
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
@@ -30,10 +31,10 @@ type PatternFiles struct {
 	files files
 }
 
-func (handler *PatternFiles) Update(k store.K8s, h haproxy.HAProxy, a annotations.Annotations) (reload bool, err error) {
+func (handler *PatternFiles) Update(k store.K8s, h haproxy.HAProxy, a annotations.Annotations) (err error) {
 	handler.files.dir = h.Env.PatternDir
 	if k.ConfigMaps.PatternFiles == nil {
-		return false, nil
+		return nil
 	}
 	for name, v := range k.ConfigMaps.PatternFiles.Annotations {
 		err = handler.files.writeFile(name, v)
@@ -50,14 +51,12 @@ func (handler *PatternFiles) Update(k store.K8s, h haproxy.HAProxy, a annotation
 			}
 			continue
 		}
-		if f.updated {
-			logger.Debugf("patternfile '%s' updated: reload required", name)
-			reload = true
-		}
+
+		configuration.ReloadIf(f.updated, "patternfile '%s' updated: reload required", name)
 		f.inUse = false
 		f.updated = false
 	}
-	return reload, nil
+	return nil
 }
 
 type files struct {

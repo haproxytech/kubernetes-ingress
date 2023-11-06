@@ -16,13 +16,14 @@ package handler
 
 import (
 	"github.com/haproxytech/kubernetes-ingress/pkg/annotations"
+	"github.com/haproxytech/kubernetes-ingress/pkg/configuration"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy"
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
 )
 
 type Refresh struct{}
 
-func (handler Refresh) Update(k store.K8s, h haproxy.HAProxy, a annotations.Annotations) (reload bool, err error) {
+func (handler Refresh) Update(k store.K8s, h haproxy.HAProxy, a annotations.Annotations) (err error) {
 	cleanCrts := true
 	cleanCrtsAnn, _ := annotations.ParseBool("clean-certs", k.ConfigMaps.Main.Annotations)
 	// cleanCrtsAnn is empty if clean-certs not set or set with a non boolean value =>  error
@@ -31,15 +32,15 @@ func (handler Refresh) Update(k store.K8s, h haproxy.HAProxy, a annotations.Anno
 	}
 	// Certs
 	if cleanCrts {
-		reload = h.RefreshCerts()
+		h.RefreshCerts()
 	}
 	// Rules
-	reload = h.RefreshRules(h.HAProxyClient) || reload
+	h.RefreshRules(h.HAProxyClient)
 	// Maps
-	reload = h.RefreshMaps(h.HAProxyClient) || reload
+	h.RefreshMaps(h.HAProxyClient)
 	// Backends
 	deleted, err := h.RefreshBackends()
-	reload = len(deleted) > 0 || reload
+	configuration.ReloadIf(len(deleted) > 0, "some backends are deleted")
 	logger.Error(err)
 	for _, backend := range deleted {
 		logger.Debugf("Backend '%s' deleted", backend)

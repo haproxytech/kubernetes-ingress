@@ -22,7 +22,7 @@ import (
 )
 
 type UpdateHandler interface {
-	Update(k store.K8s, h haproxy.HAProxy, a annotations.Annotations) (reload bool, err error)
+	Update(k store.K8s, h haproxy.HAProxy, a annotations.Annotations) error
 }
 
 func (c *HAProxyController) initHandlers() {
@@ -75,7 +75,7 @@ func (c *HAProxyController) startupHandlers() error {
 		handlers = append(handlers, handler.Pprof{})
 	}
 	for _, handler := range handlers {
-		_, err := handler.Update(c.store, c.haproxy, c.annotations)
+		err := handler.Update(c.store, c.haproxy, c.annotations)
 		if err != nil {
 			return err
 		}

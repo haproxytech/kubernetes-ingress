@@ -243,6 +243,7 @@ func (c *clientNative) RefreshBackends() (deleted []string, err error) {
 			if err = c.BackendDelete(backend.Name); err != nil {
 				return
 			}
+			utils.GetLogger().Debugf("backend '%s' deleted", backend.Name)
 			deleted = append(deleted, backend.Name)
 		}
 	}

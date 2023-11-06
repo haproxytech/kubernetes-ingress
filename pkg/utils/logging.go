@@ -153,7 +153,7 @@ func (l *logger) fieldsAsString() string {
 	return fields.String()
 }
 
-func (l *logger) log(logType string, data ...interface{}) {
+func (l *logger) logWithCallerSkip(logType string, callerSkip int, data ...interface{}) {
 	if !l.FileName {
 		for _, d := range data {
 			if d == nil {
@@ -163,7 +163,7 @@ func (l *logger) log(logType string, data ...interface{}) {
 		}
 		return
 	}
-	_, file, no, ok := runtime.Caller(2)
+	_, file, no, ok := runtime.Caller(callerSkip)
 	if ok {
 		f := strings.Split(file, "/")
 		var file1 string
@@ -185,15 +185,20 @@ func (l *logger) log(logType string, data ...interface{}) {
 			}
 		}
 	}
+
 }
 
-func (l *logger) logf(logType string, format string, data ...interface{}) {
+func (l *logger) log(logType string, data ...interface{}) {
+	l.logWithCallerSkip(logType, 2, data...)
+}
+
+func (l *logger) logfWithCallerSkip(logType string, format string, callerSkip int, data ...interface{}) {
 	line := fmt.Sprintf(format, data...)
 	if !l.FileName {
 		log.Printf("%s%s\n", logType, line)
 		return
 	}
-	_, file, no, ok := runtime.Caller(2)
+	_, file, no, ok := runtime.Caller(callerSkip)
 	if ok {
 		f := strings.Split(file, "/")
 		var file1 string
@@ -209,6 +214,10 @@ func (l *logger) logf(logType string, format string, data ...interface{}) {
 			log.Printf("%s%s:%d %s %s\n", logType, file1, no, l.fieldsAsString(), line)
 		}
 	}
+}
+
+func (l *logger) logf(logType string, format string, data ...interface{}) {
+	l.logfWithCallerSkip(logType, format, 2, data...)
 }
 
 func (l *logger) Print(args ...interface{}) {
@@ -246,6 +255,12 @@ func (l *logger) Debugf(format string, args ...interface{}) {
 func (l *logger) Info(args ...interface{}) {
 	if l.Level >= Info {
 		l.log("INFO    ", args...)
+	}
+}
+
+func (l *logger) InfoDelegated(args ...interface{}) {
+	if l.Level >= Info {
+		l.logWithCallerSkip("INFO    ", 3, args...)
 	}
 }
 

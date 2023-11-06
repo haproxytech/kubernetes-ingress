@@ -18,6 +18,7 @@ import (
 	"github.com/haproxytech/client-native/v3/models"
 
 	"github.com/haproxytech/kubernetes-ingress/pkg/annotations"
+	"github.com/haproxytech/kubernetes-ingress/pkg/configuration"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/env"
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
@@ -25,7 +26,7 @@ import (
 
 type GlobalCfg struct{}
 
-func (handler GlobalCfg) Update(k store.K8s, h haproxy.HAProxy, a annotations.Annotations) (reload bool, err error) {
+func (handler GlobalCfg) Update(k store.K8s, h haproxy.HAProxy, a annotations.Annotations) (err error) {
 	global := &models.Global{}
 	logTargets := &models.LogTargets{}
 	env.SetGlobal(global, logTargets, h.Env)
@@ -43,6 +44,6 @@ func (handler GlobalCfg) Update(k store.K8s, h haproxy.HAProxy, a annotations.An
 	if err != nil {
 		return
 	}
-	reload = true
+	configuration.Reload("new global configuration applied")
 	return
 }
