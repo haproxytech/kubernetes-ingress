@@ -18,8 +18,8 @@ import (
 	"github.com/haproxytech/client-native/v3/models"
 
 	"github.com/haproxytech/kubernetes-ingress/pkg/annotations"
-	"github.com/haproxytech/kubernetes-ingress/pkg/configuration"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy"
+	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/instance"
 	"github.com/haproxytech/kubernetes-ingress/pkg/route"
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
 )
@@ -58,6 +58,6 @@ func (handler Pprof) Update(k store.K8s, h haproxy.HAProxy, a annotations.Annota
 	if err != nil {
 		return
 	}
-	configuration.Reload("pprof backend created")
+	instance.Reload("pprof backend created")
 	return
 }

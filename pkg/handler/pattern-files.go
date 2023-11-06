@@ -21,8 +21,8 @@ import (
 	"github.com/google/renameio"
 
 	"github.com/haproxytech/kubernetes-ingress/pkg/annotations"
-	"github.com/haproxytech/kubernetes-ingress/pkg/configuration"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy"
+	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/instance"
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
 )
@@ -52,7 +52,7 @@ func (handler *PatternFiles) Update(k store.K8s, h haproxy.HAProxy, a annotation
 			continue
 		}
 
-		configuration.ReloadIf(f.updated, "patternfile '%s' updated: reload required", name)
+		instance.ReloadIf(f.updated, "patternfile '%s' updated: reload required", name)
 		f.inUse = false
 		f.updated = false
 	}

@@ -18,9 +18,9 @@ import (
 	"github.com/haproxytech/client-native/v3/models"
 
 	"github.com/haproxytech/kubernetes-ingress/pkg/annotations"
-	"github.com/haproxytech/kubernetes-ingress/pkg/configuration"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/env"
+	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/instance"
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
 )
 
@@ -44,6 +44,6 @@ func (handler GlobalCfg) Update(k store.K8s, h haproxy.HAProxy, a annotations.An
 	if err != nil {
 		return
 	}
-	configuration.Reload("new global configuration applied")
+	instance.Reload("new global configuration applied")
 	return
 }

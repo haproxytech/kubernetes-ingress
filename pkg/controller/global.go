@@ -24,9 +24,9 @@ import (
 
 	"github.com/haproxytech/kubernetes-ingress/pkg/annotations"
 	"github.com/haproxytech/kubernetes-ingress/pkg/annotations/common"
-	"github.com/haproxytech/kubernetes-ingress/pkg/configuration"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/certs"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/env"
+	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/instance"
 	"github.com/haproxytech/kubernetes-ingress/pkg/ingress"
 	"github.com/haproxytech/kubernetes-ingress/pkg/service"
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
@@ -42,7 +42,6 @@ func (c *HAProxyController) handleGlobalConfig() {
 		c.handleDefaultService()
 	}
 	ingress.HandleCfgMapAnnotations(c.store, c.haproxy, c.annotations)
-
 }
 
 func (c *HAProxyController) globalCfg() {
@@ -91,13 +90,12 @@ func (c *HAProxyController) globalCfg() {
 	updated = deep.Equal(newGlobal, global)
 	if len(updated) != 0 {
 		logger.Error(c.haproxy.GlobalPushConfiguration(*newGlobal))
-		configuration.Restart("Global config updated: %s")
-
+		instance.Restart("Global config updated: %s", strings.Join(updated, "\n"))
 	}
 	updated = deep.Equal(newLg, lg)
 	if len(updated) != 0 {
 		logger.Error(c.haproxy.GlobalPushLogTargets(newLg))
-		configuration.Restart("Global log targets updated: %s", strings.Join(updated, "\n"))
+		instance.Restart("Global log targets updated: %s", strings.Join(updated, "\n"))
 	}
 	c.globalCfgSnipp()
 }
@@ -112,12 +110,12 @@ func (c *HAProxyController) globalCfgSnipp() {
 	}
 	updatedSnipp, errSnipp := annotations.UpdateGlobalCfgSnippet(c.haproxy)
 	logger.Error(errSnipp)
-	configuration.RestartIf(len(updatedSnipp) != 0,
+	instance.RestartIf(len(updatedSnipp) != 0,
 		"Global config-snippet updated: %s", strings.Join(updatedSnipp, "\n"))
 
 	updatedSnipp, errSnipp = annotations.UpdateFrontendCfgSnippet(c.haproxy, "http", "https", "stats")
 	logger.Error(errSnipp)
-	configuration.ReloadIf(len(updatedSnipp) != 0,
+	instance.ReloadIf(len(updatedSnipp) != 0,
 		"Frontend config-snippet updated: %s", strings.Join(updatedSnipp, "\n"))
 }
 
@@ -147,7 +145,7 @@ func (c *HAProxyController) defaultsCfg() {
 			return
 		}
 
-		configuration.Reload("Defaults config updated: %s", strings.Join(updated, "\n"))
+		instance.Reload("Defaults config updated: %s", strings.Join(updated, "\n"))
 	}
 }
 
@@ -172,7 +170,7 @@ func (c *HAProxyController) handleDefaultService() {
 	if err != nil {
 		logger.Errorf("default service: %s", err)
 	}
-	configuration.Reload("default service created")
+	instance.Reload("default service created")
 }
 
 func populateDefaultLocalBackendResources(k8sStore store.K8s, podNs string, defaultBackendPort int) error {

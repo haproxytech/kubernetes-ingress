@@ -23,8 +23,8 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/haproxytech/kubernetes-ingress/pkg/configuration"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/api"
+	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/instance"
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
 )
 
@@ -143,13 +143,12 @@ func (m mapFiles) RefreshMaps(client api.HAProxyClient) {
 		logger.Error(f.Sync())
 		if err = client.SetMapContent(string(name), content); err != nil {
 			if errors.Is(err, api.ErrMapNotFound) {
-				configuration.Reload("Map file %s created, reload required", string(name))
+				instance.Reload("Map file %s created", string(name))
 			} else {
-				configuration.Reload("Runtime update of map file '%s' failed, reload required: %s", string(name), err.Error())
+				instance.Reload("Runtime update of map file '%s' failed : %s", string(name), err.Error())
 			}
 		}
 	}
-
 }
 
 func GetPath(name Name) Path {

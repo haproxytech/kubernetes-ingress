@@ -18,8 +18,8 @@ import (
 	"github.com/haproxytech/client-native/v3/models"
 
 	"github.com/haproxytech/kubernetes-ingress/pkg/annotations"
-	"github.com/haproxytech/kubernetes-ingress/pkg/configuration"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy"
+	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/instance"
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
 )
@@ -76,6 +76,6 @@ func (handler HTTPBind) Update(k store.K8s, h haproxy.HAProxy, a annotations.Ann
 		}
 	}
 	err = errors.Result()
-	configuration.Reload("New HTTP(S) bindings")
+	instance.Reload("New HTTP(S) bindings")
 	return
 }

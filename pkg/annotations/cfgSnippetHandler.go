@@ -3,9 +3,9 @@ package annotations
 import (
 	"strings"
 
-	"github.com/haproxytech/kubernetes-ingress/pkg/configuration"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/api"
+	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/instance"
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
 )
@@ -76,13 +76,13 @@ func updateConfigSnippet(api api.HAProxyClient, configmapCfgSnippetValue []strin
 		// Then we can iterate over each config snippet coming from different origin.
 		for origin, cfgData := range cfgDataByOrigin {
 			if cfgData.disabled {
-				configuration.ReloadIf(
+				instance.ReloadIf(
 					cfgData.status == store.ADDED || cfgData.status == store.MODIFIED,
-					"config snippet from %s has been disabled, reload required", origin)
+					"config snippet from %s has been disabled", origin)
 				continue
 			}
-			configuration.ReloadIf(cfgData.status != store.EMPTY,
-				"config snippet from %s has been created/modified/deleted, reload required", origin)
+			instance.ReloadIf(cfgData.status != store.EMPTY,
+				"config snippet from %s has been created/modified/deleted", origin)
 
 			// The configsnippet has not been reseen so delete it.
 			if cfgData.status == store.DELETED {
@@ -90,7 +90,7 @@ func updateConfigSnippet(api api.HAProxyClient, configmapCfgSnippetValue []strin
 				continue
 			}
 			if origin != "configmap" && !strings.HasPrefix(origin, SERVICE_NAME_PREFIX) {
-				configuration.ReloadIf(len(cfgData.updated) > 0,
+				instance.ReloadIf(len(cfgData.updated) > 0,
 					"config snippet from %s has been updated", origin)
 
 				cfgSnippetvalue = append(cfgSnippetvalue, cfgData.value...)

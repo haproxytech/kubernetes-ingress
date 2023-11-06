@@ -23,10 +23,10 @@ import (
 	"github.com/haproxytech/client-native/v3/models"
 
 	"github.com/haproxytech/kubernetes-ingress/pkg/annotations"
-	"github.com/haproxytech/kubernetes-ingress/pkg/configuration"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/api"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/certs"
+	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/instance"
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
 )
@@ -155,14 +155,14 @@ func (s *Service) HandleBackend(storeK8s store.K8s, client api.HAProxyClient, a 
 			if err = client.BackendEdit(*newBackend); err != nil {
 				return
 			}
-			configuration.Reload(fmt.Sprintf("Service '%s/%s': backend '%s' updated: %s", s.resource.Namespace, s.resource.Name, newBackend.Name, result))
+			instance.Reload(fmt.Sprintf("Service '%s/%s': backend '%s' updated: %s", s.resource.Namespace, s.resource.Name, newBackend.Name, result))
 		}
 	} else {
 		if err = client.BackendCreate(*newBackend); err != nil {
 			return
 		}
 		s.newBackend = true
-		configuration.Reload(fmt.Sprintf("Service '%s/%s': new backend '%s'", s.resource.Namespace, s.resource.Name, newBackend.Name))
+		instance.Reload(fmt.Sprintf("Service '%s/%s': new backend '%s'", s.resource.Namespace, s.resource.Name, newBackend.Name))
 	}
 	// config-snippet: backend
 	backendCfgSnippetHandler := annotations.NewCfgSnippet(
@@ -246,7 +246,7 @@ func (s *Service) SetDefaultBackend(k store.K8s, h haproxy.HAProxy, frontends []
 			if err != nil {
 				return
 			}
-			configuration.Reload("default backend changed in frontend '%s': from '%s' to '%s'", frontendName, frontend.DefaultBackend, backendName)
+			instance.Reload("default backend changed in frontend '%s': from '%s' to '%s'", frontendName, frontend.DefaultBackend, backendName)
 		}
 	}
 	s.HandleHAProxySrvs(k, h)

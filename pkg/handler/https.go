@@ -21,9 +21,10 @@ import (
 	"github.com/haproxytech/client-native/v3/models"
 
 	"github.com/haproxytech/kubernetes-ingress/pkg/annotations"
-	"github.com/haproxytech/kubernetes-ingress/pkg/configuration"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/certs"
+	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/instance"
+
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/maps"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/rules"
 	"github.com/haproxytech/kubernetes-ingress/pkg/route"
@@ -129,7 +130,7 @@ func (handler HTTPS) handleClientTLSAuth(k store.K8s, h haproxy.HAProxy) (err er
 				return err
 			}
 		}
-		configuration.Reload("removed client TLS authentication")
+		instance.Reload("removed client TLS authentication")
 		return
 	}
 	// Updating config
@@ -141,7 +142,7 @@ func (handler HTTPS) handleClientTLSAuth(k store.K8s, h haproxy.HAProxy) (err er
 			return err
 		}
 	}
-	configuration.Reload("configured client TLS authentication")
+	instance.Reload("configured client TLS authentication")
 	return
 }
 
@@ -162,7 +163,7 @@ func (handler HTTPS) Update(k store.K8s, h haproxy.HAProxy, a annotations.Annota
 	if h.FrontCertsInUse() {
 		if !sslOffloadEnabled {
 			logger.Panic(h.FrontendEnableSSLOffload(h.FrontHTTPS, handler.CertDir, handler.alpn, handler.strictSNI))
-			configuration.Reload("SSL offload enabled")
+			instance.Reload("SSL offload enabled")
 		}
 		err := handler.handleClientTLSAuth(k, h)
 		if err != nil {
@@ -170,7 +171,7 @@ func (handler HTTPS) Update(k store.K8s, h haproxy.HAProxy, a annotations.Annota
 		}
 	} else if sslOffloadEnabled {
 		logger.Panic(h.FrontendDisableSSLOffload(h.FrontHTTPS))
-		configuration.Reload("SSL offload disabled")
+		instance.Reload("SSL offload disabled")
 	}
 	// ssl-passthrough
 	_, errFtSSL := h.FrontendGet(h.FrontSSL)
@@ -178,15 +179,15 @@ func (handler HTTPS) Update(k store.K8s, h haproxy.HAProxy, a annotations.Annota
 	if haproxy.SSLPassthrough {
 		if errFtSSL != nil || errBdSSL != nil {
 			logger.Error(handler.enableSSLPassthrough(h))
-			configuration.Reload("SSLPassthrough enabled")
+			instance.Reload("SSLPassthrough enabled")
 		}
 		logger.Error(handler.sslPassthroughRules(k, h, a))
 	} else if errFtSSL == nil {
 		logger.Error(handler.disableSSLPassthrough(h))
-		configuration.Reload("SSLPassthrough disabled")
+		instance.Reload("SSLPassthrough disabled")
 	}
 
-	configuration.ReloadIf(h.CertsUpdated(), "certificates updated")
+	instance.ReloadIf(h.CertsUpdated(), "certificates updated")
 
 	return nil
 }

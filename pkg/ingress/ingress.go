@@ -241,7 +241,6 @@ func (i *Ingress) Update(k store.K8s, h haproxy.HAProxy, a annotations.Annotatio
 			}
 		}
 	}
-	return
 }
 
 func (i Ingress) GetAddresses() []string {

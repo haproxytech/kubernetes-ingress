@@ -19,8 +19,8 @@ import (
 	"sort"
 
 	"github.com/haproxytech/client-native/v3/models"
-	"github.com/haproxytech/kubernetes-ingress/pkg/configuration"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/api"
+	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/instance"
 	"github.com/haproxytech/kubernetes-ingress/pkg/k8s"
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
@@ -95,7 +95,6 @@ func (gm GatewayManagerImpl) ManageGateway() {
 
 	gm.statusManager.ProcessStatuses()
 	gm.resetStatuses()
-
 }
 
 // clean deletes the frontends created by the gateway controller
@@ -129,7 +128,7 @@ func (gm *GatewayManagerImpl) manageListeners() {
 				logger.Error(gm.createAllListeners(*gw))
 			}
 			_, gwConfigured := gm.gateways[gwName]
-			configuration.ReloadIf(!((!gwConfigured && !gwManaged) || (gwConfigured && gwManaged && gw.Status == store.EMPTY)),
+			instance.ReloadIf(!((!gwConfigured && !gwManaged) || (gwConfigured && gwManaged && gw.Status == store.EMPTY)),
 				"gateway '%s/%s' caused a change", gw.Namespace, gw.Name)
 			if !gwDeleted && gwManaged {
 				gm.gateways[gwName] = struct{}{}
@@ -164,7 +163,7 @@ func (gm GatewayManagerImpl) manageTCPRoutes() {
 				delete(ns.TCPRoutes, tcproute.Name)
 				delete(gm.listenersByRoute, tcpRouteBackendName)
 				delete(gm.backends, tcpRouteBackendName)
-				configuration.Reload("tcproute '%s/%s' deleted", tcproute.Namespace, tcproute.Name)
+				instance.Reload("tcproute '%s/%s' deleted", tcproute.Namespace, tcproute.Name)
 				continue
 			}
 			gm.statusManager.PrepareTCPRouteStatusRecord(*tcproute)
@@ -184,9 +183,9 @@ func (gm GatewayManagerImpl) manageTCPRoutes() {
 			previousAssociatedListeners := gm.listenersByRoute[tcpRouteBackendName]
 			gm.listenersByRoute[tcpRouteBackendName] = listeners
 
-			configuration.ReloadIf(((len(listeners) != 0 || len(listeners) == 0 && len(previousAssociatedListeners) != 0) &&
+			instance.ReloadIf(((len(listeners) != 0 || len(listeners) == 0 && len(previousAssociatedListeners) != 0) &&
 				!utils.EqualSliceByIDFunc(listeners, previousAssociatedListeners, extractNameFromListener)),
-				"modification in listeners for tcproute '%s/%s', reload required", tcproute.Namespace, tcproute.Name)
+				"modification in listeners for tcproute '%s/%s'", tcproute.Namespace, tcproute.Name)
 
 			if len(listeners) == 0 {
 				continue
@@ -195,7 +194,7 @@ func (gm GatewayManagerImpl) manageTCPRoutes() {
 			// Nothing to do to delete the corresponding backend as an automatic mechanism will remove it.
 			if gm.isToBeDeleted(*tcproute) {
 				_, backendExists := gm.backends[tcpRouteBackendName]
-				configuration.ReloadIf(backendExists, "modification in backend for tcproute '%s/%s', reload required", tcproute.Namespace, tcproute.Name)
+				instance.ReloadIf(backendExists, "modification in backend for tcproute '%s/%s'", tcproute.Namespace, tcproute.Name)
 				if backendExists {
 					delete(gm.backends, tcpRouteBackendName)
 				}
@@ -215,7 +214,7 @@ func (gm GatewayManagerImpl) manageTCPRoutes() {
 				continue
 			}
 			_, backendExists := gm.backends[tcpRouteBackendName]
-			configuration.ReloadIf(!backendExists, "modification in backend for tcproute '%s/%s', reload required", tcproute.Namespace, tcproute.Name)
+			instance.ReloadIf(!backendExists, "modification in backend for tcproute '%s/%s'", tcproute.Namespace, tcproute.Name)
 			gm.backends[tcpRouteBackendName] = struct{}{}
 			// Adds the servers to the backends
 			reloadServers, errServers := gm.addServersToRoute(*tcproute)

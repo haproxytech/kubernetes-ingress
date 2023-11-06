@@ -7,7 +7,7 @@ import (
 	"path"
 	"strings"
 
-	"github.com/haproxytech/kubernetes-ingress/pkg/configuration"
+	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/instance"
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
 )
@@ -166,14 +166,13 @@ func (c *certs) RefreshCerts() {
 	refreshCerts(c.frontend, env.FrontendDir)
 	refreshCerts(c.backend, env.BackendDir)
 	refreshCerts(c.ca, env.CaDir)
-	return
 }
 
 func (c *certs) CertsUpdated() (reload bool) {
 	for _, certs := range []map[string]*cert{c.frontend, c.backend, c.ca} {
 		for _, crt := range certs {
 			if crt.updated {
-				logger.Debugf("Secret '%s' was updated, reload required", crt.name)
+				logger.Debugf("Secret '%s' was updated", crt.name)
 				reload = true
 			}
 		}
@@ -198,10 +197,9 @@ func refreshCerts(certs map[string]*cert, certDir string) {
 		if !crtOk || !crt.inUse {
 			logger.Error(os.Remove(path.Join(certDir, filename)))
 			delete(certs, certName)
-			configuration.Reload("secret %s removed, reload required", crt.name)
+			instance.Reload("secret %s removed", crt.name)
 		}
 	}
-	return
 }
 
 func writeSecret(secret *store.Secret, c *cert, privateKeyNull bool) (err error) {

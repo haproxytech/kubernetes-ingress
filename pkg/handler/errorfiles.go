@@ -22,8 +22,9 @@ import (
 	"github.com/haproxytech/client-native/v3/models"
 
 	"github.com/haproxytech/kubernetes-ingress/pkg/annotations"
-	"github.com/haproxytech/kubernetes-ingress/pkg/configuration"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy"
+	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/instance"
+
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
 )
 
@@ -40,8 +41,7 @@ func (handler *ErrorFiles) Update(k store.K8s, h haproxy.HAProxy, a annotations.
 	for code, content := range k.ConfigMaps.Errorfiles.Annotations {
 		logger.Error(handler.writeFile(code, content))
 	}
-	var apiInput []*models.Errorfile
-	apiInput = handler.refresh()
+	apiInput := handler.refresh()
 	// Update API
 	defaults, err := h.DefaultsGetConfiguration()
 	if err != nil {
@@ -69,7 +69,7 @@ func (handler *ErrorFiles) writeFile(code, content string) (err error) {
 func (handler *ErrorFiles) refresh() (result []*models.Errorfile) {
 	for code, f := range handler.files.data {
 		if !f.inUse {
-			configuration.Reload("removal of error file for '%s' code", code)
+			instance.Reload("removal of error file for '%s' code", code)
 			err := handler.files.deleteFile(code)
 			if err != nil {
 				logger.Errorf("failed deleting errorfile for code '%s': %s", code, err)
@@ -77,7 +77,7 @@ func (handler *ErrorFiles) refresh() (result []*models.Errorfile) {
 			continue
 		}
 
-		configuration.ReloadIf(f.updated, "update of error file for '%s' code", code)
+		instance.ReloadIf(f.updated, "update of error file for '%s' code", code)
 
 		c, _ := strconv.Atoi(code) // code already checked in newCode
 		result = append(result, &models.Errorfile{

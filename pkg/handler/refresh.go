@@ -16,8 +16,8 @@ package handler
 
 import (
 	"github.com/haproxytech/kubernetes-ingress/pkg/annotations"
-	"github.com/haproxytech/kubernetes-ingress/pkg/configuration"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy"
+	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/instance"
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
 )
 
@@ -40,7 +40,7 @@ func (handler Refresh) Update(k store.K8s, h haproxy.HAProxy, a annotations.Anno
 	h.RefreshMaps(h.HAProxyClient)
 	// Backends
 	deleted, err := h.RefreshBackends()
-	configuration.ReloadIf(len(deleted) > 0, "some backends are deleted")
+	instance.ReloadIf(len(deleted) > 0, "some backends are deleted")
 	logger.Error(err)
 	for _, backend := range deleted {
 		logger.Debugf("Backend '%s' deleted", backend)

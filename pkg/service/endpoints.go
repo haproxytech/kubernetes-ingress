@@ -22,8 +22,8 @@ import (
 	"github.com/haproxytech/client-native/v3/models"
 
 	"github.com/haproxytech/kubernetes-ingress/pkg/annotations"
-	"github.com/haproxytech/kubernetes-ingress/pkg/configuration"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/api"
+	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/instance"
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
 )
 
@@ -53,9 +53,8 @@ func (s *Service) HandleHAProxySrvs(k8s store.K8s, client api.HAProxyClient) {
 	}
 	if backend.DynUpdateFailed {
 		backend.DynUpdateFailed = false
-		configuration.Reload("backend '%s': dynamic update failed", backend.Name)
+		instance.Reload("backend '%s': dynamic update failed", backend.Name)
 	}
-	return
 }
 
 // updateHAProxySrv updates corresponding HAProxy backend server or creates one if it does not exist
@@ -120,7 +119,7 @@ func (s *Service) scaleHAProxySrvs(backend *store.RuntimeBackend) {
 		disabled = append(disabled, srv)
 		flag = true
 	}
-	configuration.ReloadIf(flag, "[CONFIG] [BACKEND] [SERVER] Server slots in backend '%s' scaled to match scale-server-slots value: %d, reload required", s.backend.Name, strconv.Itoa(srvSlots))
+	instance.ReloadIf(flag, "[CONFIG] [BACKEND] [SERVER] Server slots in backend '%s' scaled to match scale-server-slots value: %s", s.backend.Name, strconv.Itoa(srvSlots))
 	// Configure remaining addresses in available HAProxySrvs
 	flag = false
 	for addr := range backend.Endpoints.Addresses {
@@ -139,7 +138,7 @@ func (s *Service) scaleHAProxySrvs(backend *store.RuntimeBackend) {
 		}
 		delete(backend.Endpoints.Addresses, addr)
 	}
-	configuration.ReloadIf(flag, "[CONFIG] [BACKEND] [SERVER] Server slots in backend '%s' scaled to match available endpoints, reload required", s.backend.Name)
+	instance.ReloadIf(flag, "[CONFIG] [BACKEND] [SERVER] Server slots in backend '%s' scaled to match available endpoints", s.backend.Name)
 }
 
 func (s *Service) getRuntimeBackend(k8s store.K8s) (backend *store.RuntimeBackend, err error) {

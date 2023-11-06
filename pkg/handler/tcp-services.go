@@ -7,8 +7,8 @@ import (
 
 	"github.com/haproxytech/client-native/v3/models"
 	"github.com/haproxytech/kubernetes-ingress/pkg/annotations"
-	"github.com/haproxytech/kubernetes-ingress/pkg/configuration"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy"
+	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/instance"
 	"github.com/haproxytech/kubernetes-ingress/pkg/service"
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
@@ -132,7 +132,7 @@ func (handler TCPServices) clearFrontends(k store.K8s, h haproxy.HAProxy) {
 			if err != nil {
 				logger.Errorf("error deleting tcp frontend '%s': %s", ft.Name, err)
 			}
-			configuration.ReloadIf(err == nil, "TCP frontend '%s' deleted", ft.Name)
+			instance.ReloadIf(err == nil, "TCP frontend '%s' deleted", ft.Name)
 		}
 	}
 }
@@ -164,7 +164,7 @@ func (handler TCPServices) createTCPFrontend(h haproxy.HAProxy, frontend models.
 		err = fmt.Errorf("error configuring tcp frontend: %w", err)
 		return err
 	}
-	configuration.Reload("TCP frontend '%s' created", frontend.Name)
+	instance.Reload("TCP frontend '%s' created", frontend.Name)
 	return
 }
 
@@ -181,7 +181,7 @@ func (handler TCPServices) updateTCPFrontend(k store.K8s, h haproxy.HAProxy, fro
 			return
 		}
 
-		configuration.Reload("log format TCP changed from configmap '%s/%s'", k.ConfigMaps.TCPServices.Namespace, k.ConfigMaps.TCPServices.Name)
+		instance.Reload("log format TCP changed from configmap '%s/%s'", k.ConfigMaps.TCPServices.Namespace, k.ConfigMaps.TCPServices.Name)
 	}
 	binds, err := h.FrontendBindsGet(frontend.Name)
 	if err != nil {
@@ -194,7 +194,7 @@ func (handler TCPServices) updateTCPFrontend(k store.K8s, h haproxy.HAProxy, fro
 			err = fmt.Errorf("failed to enable SSL offload: %w", err)
 			return
 		}
-		configuration.Reload("TCP frontend '%s': ssl offload enabled", frontend.Name)
+		instance.Reload("TCP frontend '%s': ssl offload enabled", frontend.Name)
 	}
 	if binds[0].Ssl && !p.sslOffload {
 		err = h.FrontendDisableSSLOffload(frontend.Name)
@@ -202,12 +202,12 @@ func (handler TCPServices) updateTCPFrontend(k store.K8s, h haproxy.HAProxy, fro
 			err = fmt.Errorf("failed to disable SSL offload: %w", err)
 			return
 		}
-		configuration.Reload("TCP frontend '%s': ssl offload disabled", frontend.Name)
+		instance.Reload("TCP frontend '%s': ssl offload disabled", frontend.Name)
 	}
 	if p.service.Status == store.DELETED {
 		frontend.DefaultBackend = ""
 		err = h.FrontendEdit(frontend)
-		configuration.Reload("TCP frontend '%s': service '%s/%s' deleted", frontend.Name, p.service.Namespace, p.service.Name)
+		instance.Reload("TCP frontend '%s': service '%s/%s' deleted", frontend.Name, p.service.Namespace, p.service.Name)
 		return
 	}
 

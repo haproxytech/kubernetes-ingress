@@ -18,7 +18,7 @@ import (
 	"os"
 
 	corev1alpha2 "github.com/haproxytech/kubernetes-ingress/crs/api/core/v1alpha2"
-	"github.com/haproxytech/kubernetes-ingress/pkg/configuration"
+	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/instance"
 	"github.com/haproxytech/kubernetes-ingress/pkg/k8s"
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
 )
@@ -33,7 +33,8 @@ func (c *HAProxyController) SyncData() {
 		switch job.SyncType {
 		case k8s.COMMAND:
 			c.auxCfgManager()
-			if hadChanges || configuration.GetReload() || configuration.GetRestart() {
+			// create a NeedAction function.
+			if hadChanges || instance.NeedAction() {
 				c.updateHAProxy()
 				hadChanges = false
 				continue
@@ -108,8 +109,8 @@ func (c *HAProxyController) auxCfgManager() {
 		c.haproxy.SetAuxCfgFile(auxCfgFile)
 		c.haproxy.UseAuxFile(useAuxFile)
 		// The file exists now  (modifTime !=0 otherwise nothing changed case).
-		configuration.RestartIf(c.auxCfgModTime == 0, "auxiliary configuration file created")
-		configuration.ReloadIf(c.auxCfgModTime != 0, "auxiliary configuration file modified")
+		instance.RestartIf(c.auxCfgModTime == 0, "auxiliary configuration file created")
+		instance.ReloadIf(c.auxCfgModTime != 0, "auxiliary configuration file modified")
 		c.auxCfgModTime = modifTime
 		if c.auxCfgModTime != 0 {
 			logger.Infof("Auxiliary HAProxy config '%s' updated", auxCfgFile)
@@ -124,7 +125,7 @@ func (c *HAProxyController) auxCfgManager() {
 			// never existed before
 			return
 		}
-		configuration.Restart("Auxiliary HAProxy config '%s' removed", c.haproxy.AuxCFGFile)
+		instance.Restart("Auxiliary HAProxy config '%s' removed", c.haproxy.AuxCFGFile)
 		return
 	}
 	// File exists

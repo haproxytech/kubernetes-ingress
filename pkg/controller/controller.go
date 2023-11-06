@@ -23,9 +23,9 @@ import (
 
 	"github.com/haproxytech/client-native/v3/models"
 	"github.com/haproxytech/kubernetes-ingress/pkg/annotations"
-	"github.com/haproxytech/kubernetes-ingress/pkg/configuration"
 	gateway "github.com/haproxytech/kubernetes-ingress/pkg/gateways"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy"
+	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/instance"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/maps"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/rules"
 	"github.com/haproxytech/kubernetes-ingress/pkg/ingress"
@@ -104,6 +104,7 @@ func (c *HAProxyController) updateHAProxy() {
 	}
 	defer func() {
 		c.haproxy.APIDisposeTransaction()
+		instance.Reset()
 	}()
 	// First log here that will contain the "transactionID" field (added in APIStartTransaction)
 	// All subsequent log line will contain the "transactionID" field.
@@ -145,8 +146,7 @@ func (c *HAProxyController) updateHAProxy() {
 	updated := deep.Equal(route.CurentCustomRoutes, route.CustomRoutes, deep.FLAG_IGNORE_SLICE_ORDER)
 	if len(updated) != 0 {
 		route.CurentCustomRoutes = route.CustomRoutes
-		configuration.Reload("Custom Routes changed: %s, reload required", strings.Join(updated, "\n"))
-
+		instance.Reload("Custom Routes changed: %s", strings.Join(updated, "\n"))
 	}
 
 	c.gatewayManager.ManageGateway()
@@ -163,7 +163,7 @@ func (c *HAProxyController) updateHAProxy() {
 		logger.Error(errCfgSnippet)
 		c.clean(true)
 		if rerun {
-			logger.Debug("disabling some config snippets because of errors, reload required")
+			logger.Debug("disabling some config snippets because of errors")
 			// We need to replay all these resources.
 			c.store.SecretsProcessed = map[string]struct{}{}
 			c.store.BackendsProcessed = map[string]struct{}{}
@@ -177,20 +177,20 @@ func (c *HAProxyController) updateHAProxy() {
 	}
 
 	switch {
-	case configuration.GetRestart():
+	case instance.NeedRestart():
 		if err = c.haproxy.Service("restart"); err != nil {
 			logger.Error(err)
 		} else {
 			logger.Info("HAProxy restarted")
 		}
-	case configuration.GetReload():
+	case instance.NeedReload():
 		if err = c.haproxy.Service("reload"); err != nil {
 			logger.Error(err)
 		} else {
 			logger.Info("HAProxy reloaded")
 		}
 	}
-	configuration.Reset()
+
 	c.clean(false)
 
 	logger.Trace("HAProxy config sync ended")
