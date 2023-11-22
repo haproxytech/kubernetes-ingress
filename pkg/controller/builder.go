@@ -70,6 +70,7 @@ var defaultEnv = env.Env{
 		FrontSSL:   "ssl",
 		BackSSL:    "ssl",
 	},
+	HaproxyStartupTime: 10,
 }
 
 func NewBuilder() *Builder {

@@ -25,8 +25,17 @@ func (d *s6Control) Service(action string) error {
 
 	switch action {
 	case "start":
-		// no need to start it is up already (s6)
-		return nil
+		_, err := os.Stat("/var/run/s6/services/haproxy/down")
+		if err == nil {
+			err = os.Remove("/var/run/s6/services/haproxy/down")
+			if err != nil {
+				return fmt.Errorf("unable to remove down file (s6): %w", err)
+			}
+		}
+		cmd = exec.Command("s6-svc", "-u", "/var/run/s6/services/haproxy")
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		return cmd.Run()
 	case "stop":
 		// no need to stop it (s6)
 		return nil
@@ -36,8 +45,7 @@ func (d *s6Control) Service(action string) error {
 		cmd.Stderr = os.Stderr
 		return cmd.Run()
 	case "restart":
-		// -t terminates and s6 will start it again
-		cmd = exec.Command("s6-svc", "-t", "/var/run/s6/services/haproxy")
+		cmd = exec.Command("s6-svc", "-r", "/var/run/s6/services/haproxy")
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 		return cmd.Run()

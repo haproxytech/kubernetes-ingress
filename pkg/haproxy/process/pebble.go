@@ -25,7 +25,10 @@ func (d *pebbleControl) Service(action string) error {
 	switch action {
 	case "start":
 		// no need to start it is up already (pebble)
-		return nil
+		cmd = exec.Command("pebble", "start", "haproxy")
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		return cmd.Run()
 	case "stop":
 		// no need to stop it (pebble)
 		return nil

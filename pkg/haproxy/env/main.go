@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/google/renameio"
 
@@ -29,19 +30,20 @@ import (
 type Env struct {
 	Certs certs.Env
 	Proxies
-	CfgDir        string
-	RuntimeSocket string
-	MasterSocket  string
-	PIDFile       string
-	AuxCFGFile    string
-	RuntimeDir    string
-	StateDir      string
-	PatternDir    string
-	ErrFileDir    string
-	MapsDir       string
-	Binary        string
-	MainCFGFile   string
-	MainCFGRaw    []byte
+	CfgDir             string
+	RuntimeSocket      string
+	MasterSocket       string
+	PIDFile            string
+	AuxCFGFile         string
+	RuntimeDir         string
+	StateDir           string
+	PatternDir         string
+	ErrFileDir         string
+	MapsDir            string
+	Binary             string
+	MainCFGFile        string
+	MainCFGRaw         []byte
+	HaproxyStartupTime time.Duration
 }
 
 // Proxies contains names of the main proxies of haproxy config
@@ -54,6 +56,7 @@ type Proxies struct {
 
 // Init initializes HAProxy Environment
 func (env *Env) Init(osArgs utils.OSArgs) (err error) {
+	env.HaproxyStartupTime = osArgs.HaproxyStartupTime
 	if osArgs.External {
 		if err = env.external(osArgs); err != nil {
 			return fmt.Errorf("unable to configure environment for external mode: %w", err)

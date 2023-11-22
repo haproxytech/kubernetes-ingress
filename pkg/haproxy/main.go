@@ -2,9 +2,14 @@ package haproxy
 
 import (
 	"fmt"
+	"net"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
+	"time"
 
+	"github.com/fsnotify/fsnotify"
 	"github.com/google/renameio"
 
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/api"
@@ -62,10 +67,15 @@ func New(osArgs utils.OSArgs, env env.Env, cfgFile []byte, p process.Process, cl
 	if p == nil {
 		h.Process = process.New(h.Env, osArgs, h.AuxCFGFile, h.HAProxyClient)
 	}
-	if client == nil {
-		h.HAProxyClient, err = api.New(h.CfgDir, h.MainCFGFile, h.Binary, h.RuntimeSocket)
-		if err != nil {
-			err = fmt.Errorf("failed to initialize haproxy API client: %w", err)
+	if client != nil {
+		h.HAProxyClient = client
+	} else {
+		if err = h.Service("start"); err != nil {
+			err = fmt.Errorf("failed to start haproxy service: %w", err)
+			return
+		}
+		if err = h.ConnectToAPI(); err != nil {
+			err = fmt.Errorf("failed to connect to haproxy API: %w", err)
 			return
 		}
 	}
@@ -79,6 +89,76 @@ func New(osArgs utils.OSArgs, env env.Env, cfgFile []byte, p process.Process, cl
 		logVersion(h.Binary)
 	}
 	return
+}
+
+func (h HAProxy) ConnectToAPI() (err error) {
+	if h.HAProxyClient == nil {
+		timer := time.NewTimer(h.Env.HaproxyStartupTime)
+		_, errStat := os.Stat(h.RuntimeSocket)
+		if errStat != nil {
+			// wait for runtime socket to be available
+			watcher, errWatcher := fsnotify.NewWatcher()
+			if errWatcher != nil {
+				err = fmt.Errorf("unable to initialize fnotify to detect runtime socket creation: %w", errWatcher)
+				return
+			}
+			defer watcher.Close()
+			errRuntimeSocket := make(chan error)
+			go func() {
+				for {
+					select {
+					case event, ok := <-watcher.Events:
+						if !ok {
+							return
+						}
+						if event.Name == h.RuntimeSocket && event.Op == fsnotify.Create {
+							logger.Printf("Runtime socket successfully detected")
+							errRuntimeSocket <- nil
+						}
+					case err, ok := <-watcher.Errors:
+						if !ok {
+							return
+						}
+						errRuntimeSocket <- fmt.Errorf("unable to detect runtime socket startup: %w", err)
+					case <-timer.C:
+						errRuntimeSocket <- fmt.Errorf("runtime socket not found after %g seconds", h.Env.HaproxyStartupTime.Seconds())
+					}
+				}
+			}()
+			err = watcher.Add(filepath.Dir(h.RuntimeSocket))
+			if err != nil {
+				err = fmt.Errorf("unable to create watcher for runtime socket dir: %w", err)
+				return
+			}
+			err = <-errRuntimeSocket
+			if err != nil {
+				return
+			}
+		}
+		// check for successful socket connection
+		for {
+			conn, errRuntimeConnect := net.Dial("unix", h.RuntimeSocket)
+			if errRuntimeConnect == nil {
+				logger.Printf("Runtime socket connection successfully established")
+				conn.Close()
+				break
+			}
+			select {
+			case <-timer.C:
+				err = fmt.Errorf("unable to connect to runtime socket after %g seconds", h.Env.HaproxyStartupTime.Seconds())
+				return
+			case <-time.After(time.Duration(500) * time.Millisecond):
+				continue
+			}
+		}
+		// connect to runtime socket
+		h.HAProxyClient, err = api.New(h.CfgDir, h.MainCFGFile, h.Binary, h.RuntimeSocket)
+		if err != nil {
+			err = fmt.Errorf("failed to initialize haproxy API client: %w", err)
+			return
+		}
+	}
+	return nil
 }
 
 func (h HAProxy) Clean() {

@@ -5,6 +5,7 @@ go 1.21
 require (
 	github.com/Masterminds/semver/v3 v3.2.1
 	github.com/fasthttp/router v1.4.20
+	github.com/fsnotify/fsnotify v1.7.0
 	github.com/go-test/deep v1.1.0
 	github.com/google/renameio v1.0.1
 	github.com/haproxytech/client-native/v2 v2.5.2-0.20220126142624-4a2781a21376
