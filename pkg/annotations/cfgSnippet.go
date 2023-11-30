@@ -224,13 +224,15 @@ func (a *CfgSnippet) Process(k store.K8s, annotations ...map[string]string) erro
 }
 
 func UpdateGlobalCfgSnippet(api api.HAProxyClient) (updated []string, err error) {
-	if len(cfgSnippet.global.updated) == 0 {
-		return
-	}
 	err = api.GlobalCfgSnippet(cfgSnippet.global.value)
 	if err != nil {
 		return
 	}
+
+	if len(cfgSnippet.global.updated) == 0 {
+		return
+	}
+
 	updated = cfgSnippet.global.updated
 	cfgSnippet.global.updated = nil
 	return
@@ -242,13 +244,16 @@ func UpdateFrontendCfgSnippet(api api.HAProxyClient, frontends ...string) (updat
 		if !ok {
 			continue
 		}
-		if len(data.updated) == 0 {
-			continue
-		}
+
 		err = api.FrontendCfgSnippetSet(ft, data.value)
 		if err != nil {
 			return
 		}
+
+		if len(data.updated) == 0 {
+			continue
+		}
+
 		updated = append(updated, data.updated...)
 		data.updated = nil
 		cfgSnippet.frontends[ft] = data
