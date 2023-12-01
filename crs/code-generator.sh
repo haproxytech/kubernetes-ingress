@@ -61,9 +61,9 @@ echo "Generating informers"
 "${gobin}/informer-gen"\
 	--plural-exceptions "Defaults:Defaults"\
 	--input-dirs ${API_PKGS}\
-  --versioned-clientset-package "${CR_PKG}/generated/clientset/versioned"\
-  --listers-package "${CR_PKG}/generated/listers"\
-  --output-package "${CR_PKG}/generated/informers"\
+	--versioned-clientset-package "${CR_PKG}/generated/clientset/versioned"\
+	--listers-package "${CR_PKG}/generated/listers"\
+	--output-package "${CR_PKG}/generated/informers"\
 	--go-header-file ${HDR_FILE}\
 	--output-base ${OUTPUT_DIR}
 
@@ -75,3 +75,6 @@ find  ${OUTPUT_DIR}/${CR_PKG}/api -mindepth 2 -type f -printf "%P\n" | xargs -I{
 mkdir -p ${CR_DIR}/generated
 cp -r ${OUTPUT_DIR}/${CR_PKG}/generated/{clientset,listers,informers} ${CR_DIR}/generated
 rm -rf ${OUTPUT_DIR}
+
+go install sigs.k8s.io/controller-tools/cmd/controller-gen@latest
+controller-gen crd paths=./crs/api/ingress/...  output:crd:dir=./crs/definition

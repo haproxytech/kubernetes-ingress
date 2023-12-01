@@ -85,6 +85,15 @@ rules:
       - watch
       - update
   - apiGroups:
+      - ingress.v1.haproxy.org
+    resources:
+      - "*"
+    verbs:
+      - get
+      - list
+      - watch
+      - update
+  - apiGroups:
       - "discovery.k8s.io"
     resources:
       - endpointslices

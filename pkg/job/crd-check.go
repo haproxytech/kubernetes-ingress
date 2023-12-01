@@ -16,6 +16,7 @@ package job
 import (
 	"context"
 
+	"github.com/Masterminds/semver/v3"
 	"github.com/haproxytech/kubernetes-ingress/crs/definition"
 	"github.com/haproxytech/kubernetes-ingress/pkg/k8s"
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
@@ -38,7 +39,6 @@ func CRDRefresh(log utils.Logger, osArgs utils.OSArgs) error {
 
 	// Check if the CRD exists
 	crds := definition.GetCRDs()
-	crdsUpgrade := definition.GetCRDsUpgrade()
 	for crdName, crdDef := range crds {
 		// CustomResourceDefinition object
 		var crd apiextensionsv1.CustomResourceDefinition
@@ -65,24 +65,46 @@ func CRDRefresh(log utils.Logger, osArgs utils.OSArgs) error {
 		}
 		log.Infof("CRD %s exists", crdName)
 		versions := existingVersion.Spec.Versions
-		if len(versions) == 2 {
-			log.Infof("CRD %s exists as v1alpha1 and v1alpha2, nothing to do", crdName)
+		if len(versions) < 1 {
+			log.Infof("CRD %s empty ?", crdName)
 			continue
 		}
-		// check if we have alpha 2 or we need to upgrade for alpha2
+		// check if we have v1 and newest version
 		crd.ObjectMeta.ResourceVersion = existingVersion.ObjectMeta.ResourceVersion
-		if versions[0].Name == "v1alpha2" {
-			log.Infof("CRD %s exists as v1alpha2, nothing to do", crdName)
+		if versions[0].Name == "v1" {
+			log.Infof("CRD %s exists as v1", crdName)
+			cnInK8s, ok := existingVersion.ObjectMeta.Annotations["haproxy.org/client-native"]
+
+			needUpgrade := false
+			if !ok {
+				needUpgrade = true
+			}
+			cnNew := crd.ObjectMeta.Annotations["haproxy.org/client-native"]
+			vK8s, err := semver.NewVersion(cnInK8s) //nolint:govet
+			if err != nil {
+				needUpgrade = true
+				log.Error(err.Error())
+			}
+			vNew, err := semver.NewVersion(cnNew)
+			if err != nil {
+				needUpgrade = true
+				log.Error(err.Error())
+			}
+			if needUpgrade || vNew.GreaterThan(vK8s) {
+				// Upgrade the CRDl
+				_, err = clientset.ApiextensionsV1().CustomResourceDefinitions().Update(context.Background(), &crd, metav1.UpdateOptions{})
+				if err != nil {
+					return err
+				}
+				log.Infof("CRD %s updated", crdName)
+			}
 			continue
-		}
-		err = yaml.Unmarshal(crdsUpgrade[crdName], &crd)
-		if err != nil {
-			return err
-		}
-		// Upgrade the CRDl
-		_, err = clientset.ApiextensionsV1().CustomResourceDefinitions().Update(context.Background(), &crd, metav1.UpdateOptions{})
-		if err != nil {
-			return err
+		} else {
+			_, err = clientset.ApiextensionsV1().CustomResourceDefinitions().Update(context.Background(), &crd, metav1.UpdateOptions{})
+			if err != nil {
+				return err
+			}
+			log.Infof("CRD %s updated", crdName)
 		}
 	}
 

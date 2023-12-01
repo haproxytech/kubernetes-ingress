@@ -46,6 +46,7 @@ var logger = utils.GetK8sLogger()
 const (
 	CRSGroupVersionV1alpha1 = "core.haproxy.org/v1alpha1"
 	CRSGroupVersionV1alpha2 = "core.haproxy.org/v1alpha2"
+	CRSGroupVersionV1       = "ingress.v1.haproxy.org/v1"
 	GATEWAY_API_VERSION     = "v0.5.1" //nolint:golint,stylecheck
 )
 
@@ -134,9 +135,14 @@ func New(osArgs utils.OSArgs, whitelist map[string]struct{}, publishSvc *utils.N
 	k.registerCoreCR(NewDefaultsCRV1Alpha1(), CRSGroupVersionV1alpha1)
 	k.registerCoreCR(NewBackendCRV1Alpha1(), CRSGroupVersionV1alpha1)
 
-	k.registerCoreCR(NewGlobalCR(), CRSGroupVersionV1alpha2)
-	k.registerCoreCR(NewDefaultsCR(), CRSGroupVersionV1alpha2)
-	k.registerCoreCR(NewBackendCR(), CRSGroupVersionV1alpha2)
+	// alpha2 is deprecated
+	k.registerCoreCR(NewGlobalCRV1Alpha2(), CRSGroupVersionV1alpha2)
+	k.registerCoreCR(NewDefaultsCRV1Alpha2(), CRSGroupVersionV1alpha2)
+	k.registerCoreCR(NewBackendCRV1Alpha2(), CRSGroupVersionV1alpha2)
+
+	k.registerCoreCR(NewGlobalCR(), CRSGroupVersionV1)
+	k.registerCoreCR(NewDefaultsCR(), CRSGroupVersionV1)
+	k.registerCoreCR(NewBackendCR(), CRSGroupVersionV1)
 	return k
 }
 

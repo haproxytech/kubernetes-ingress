@@ -18,7 +18,7 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/haproxytech/client-native/v3/models"
+	"github.com/haproxytech/client-native/v5/models"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/api"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/instance"
 	"github.com/haproxytech/kubernetes-ingress/pkg/k8s"
@@ -207,7 +207,7 @@ func (gm GatewayManagerImpl) manageTCPRoutes() {
 				models.Backend{
 					Name:          getBackendName(*tcproute),
 					Mode:          "tcp",
-					DefaultServer: &models.DefaultServer{Check: "enabled"},
+					DefaultServer: &models.DefaultServer{ServerParams: models.ServerParams{Check: "enabled"}},
 				})
 			if errBackendCreate != nil {
 				logger.Error(errBackendCreate)
@@ -434,10 +434,10 @@ func (gm GatewayManagerImpl) addServersToRoute(route store.TCPRoute) (reload boo
 				for address := range port.Addresses {
 					servers = append(servers, fmt.Sprintf("%s:%d", address, port.Port))
 					err = gm.haproxyClient.BackendServerCreate(backendName, models.Server{
-						Address:     address,
-						Port:        &port.Port,
-						Name:        fmt.Sprintf("SRV_%d", i+1),
-						Maintenance: "disabled",
+						Address:      address,
+						Port:         &port.Port,
+						Name:         fmt.Sprintf("SRV_%d", i+1),
+						ServerParams: models.ServerParams{Maintenance: "disabled"},
 					})
 					if err != nil {
 						return

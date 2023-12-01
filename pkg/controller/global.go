@@ -18,12 +18,11 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/go-test/deep"
-
-	"github.com/haproxytech/client-native/v3/models"
+	"github.com/haproxytech/client-native/v5/models"
 
 	"github.com/haproxytech/kubernetes-ingress/pkg/annotations"
 	"github.com/haproxytech/kubernetes-ingress/pkg/annotations/common"
+	"github.com/haproxytech/kubernetes-ingress/pkg/controller/constants"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/certs"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/env"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/instance"
@@ -87,13 +86,14 @@ func (c *HAProxyController) globalCfg() {
 		}
 	}
 	env.SetGlobal(newGlobal, &newLg, c.haproxy.Env)
-	updated = deep.Equal(newGlobal, global)
-	if len(updated) != 0 {
+	diff := newGlobal.Diff(*global)
+	if len(diff) != 0 {
 		logger.Error(c.haproxy.GlobalPushConfiguration(*newGlobal))
 		instance.Restart("Global config updated: %s", strings.Join(updated, "\n"))
 	}
-	updated = deep.Equal(newLg, lg)
-	if len(updated) != 0 {
+	diff = newLg.Diff(lg)
+	// updated = deep.Equal(newLg, lg)
+	if len(diff) != 0 {
 		logger.Error(c.haproxy.GlobalPushLogTargets(newLg))
 		instance.Restart("Global log targets updated: %s", strings.Join(updated, "\n"))
 	}
@@ -132,20 +132,20 @@ func (c *HAProxyController) defaultsCfg() {
 	}
 	if newDefaults == nil {
 		newDefaults = &models.Defaults{}
+		newDefaults.Name = constants.DefaultsSectionName
 		for _, a := range c.annotations.Defaults(newDefaults) {
 			logger.Error(a.Process(c.store, c.store.ConfigMaps.Main.Annotations))
 		}
 	}
 	env.SetDefaults(newDefaults)
 	newDefaults.ErrorFiles = defaults.ErrorFiles
-	updated := deep.Equal(newDefaults, defaults)
-	if len(updated) != 0 {
+	diff := newDefaults.Diff(*defaults)
+	if len(diff) != 0 {
 		if err = c.haproxy.DefaultsPushConfiguration(*newDefaults); err != nil {
 			logger.Error(err)
 			return
 		}
-
-		instance.Reload("Defaults config updated: %s", strings.Join(updated, "\n"))
+		instance.Reload("Defaults config updated: %v", diff)
 	}
 }
 

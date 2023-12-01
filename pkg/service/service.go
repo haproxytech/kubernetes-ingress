@@ -18,9 +18,8 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/go-test/deep"
-
-	"github.com/haproxytech/client-native/v3/models"
+	"github.com/haproxytech/client-native/v5/misc"
+	"github.com/haproxytech/client-native/v5/models"
 
 	"github.com/haproxytech/kubernetes-ingress/pkg/annotations"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy"
@@ -150,12 +149,12 @@ func (s *Service) HandleBackend(storeK8s store.K8s, client api.HAProxyClient, a 
 	backend, err = client.BackendGet(newBackend.Name)
 	if err == nil {
 		// Update Backend
-		result := deep.Equal(newBackend, backend)
-		if len(result) != 0 {
+		diff := newBackend.Diff(*backend)
+		if len(diff) != 0 {
 			if err = client.BackendEdit(*newBackend); err != nil {
 				return
 			}
-			instance.Reload(fmt.Sprintf("Service '%s/%s': backend '%s' updated: %s", s.resource.Namespace, s.resource.Name, newBackend.Name, result))
+			instance.Reload(fmt.Sprintf("Service '%s/%s': backend '%s' updated: %v", s.resource.Namespace, s.resource.Name, newBackend.Name, diff))
 		}
 	} else {
 		if err = client.BackendCreate(*newBackend); err != nil {
@@ -204,9 +203,9 @@ func (s *Service) getBackendModel(store store.K8s, a annotations.Annotations) (b
 	}
 	if s.resource.DNS != "" {
 		if backend.DefaultServer == nil {
-			backend.DefaultServer = &models.DefaultServer{InitAddr: "last,libc,none"}
-		} else if backend.DefaultServer.InitAddr == "" {
-			backend.DefaultServer.InitAddr = "last,libc,none"
+			backend.DefaultServer = &models.DefaultServer{ServerParams: models.ServerParams{InitAddr: misc.Ptr("last,libc,none")}}
+		} else if backend.DefaultServer.InitAddr == nil {
+			backend.DefaultServer.InitAddr = misc.Ptr("last,libc,none")
 		}
 	}
 	if backend.Cookie != nil && backend.Cookie.Dynamic && backend.DynamicCookieKey == "" {

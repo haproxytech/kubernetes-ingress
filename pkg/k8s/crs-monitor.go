@@ -33,14 +33,14 @@ func (k k8s) runCRDefinitionsInformer(eventChan chan string, stop chan struct{})
 	_, err := informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			crd := obj.(*apiextensionsv1.CustomResourceDefinition)
-			if crd.Spec.Group != "core.haproxy.org" {
+			if !(crd.Spec.Group == "core.haproxy.org" || crd.Spec.Group == "ingress.v1.haproxy.org") {
 				return
 			}
 			if !(crd.Spec.Names.Kind == "Global" || crd.Spec.Names.Kind == "Defaults" || crd.Spec.Names.Kind == "Backend") {
 				return
 			}
 			for _, version := range crd.Spec.Versions {
-				if version.Name == "v1alpha2" {
+				if version.Name == "v1" {
 					time.Sleep(time.Second * 5) // a little delay is needed to let CRD API be created
 					eventChan <- crd.Spec.Names.Kind
 					return
@@ -61,7 +61,7 @@ func (k k8s) runCRDefinitionsInformer(eventChan chan string, stop chan struct{})
 func (k k8s) RunCRSCreationMonitoring(eventChan chan SyncDataEvent, stop chan struct{}) {
 	count := 0
 	for key := range k.crs {
-		if strings.Contains(key, "core.haproxy.org/v1alpha2") {
+		if strings.Contains(key, "ingress.v1.haproxy.org/v1") || strings.Contains(key, "core.haproxy.org/v1alpha2") {
 			count++
 		}
 	}
@@ -76,6 +76,10 @@ func (k k8s) RunCRSCreationMonitoring(eventChan chan SyncDataEvent, stop chan st
 		for {
 			select {
 			case crdName := <-eventCRS:
+				if _, ok := k.crs["ingress.v1.haproxy.org/v1 - "+crdName]; ok {
+					// we have already created watchers for this CRD
+					continue
+				}
 				if _, ok := k.crs["core.haproxy.org/v1alpha2 - "+crdName]; ok {
 					// we have already created watchers for this CRD
 					continue

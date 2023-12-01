@@ -15,13 +15,13 @@
 package converters
 
 import (
-	"github.com/haproxytech/client-native/v3/models"
-	corev1alpha1 "github.com/haproxytech/kubernetes-ingress/crs/api/core/v1alpha1"
+	"github.com/haproxytech/client-native/v5/models"
 	corev1alpha2 "github.com/haproxytech/kubernetes-ingress/crs/api/core/v1alpha2"
+	v1 "github.com/haproxytech/kubernetes-ingress/crs/api/ingress/v1"
 )
 
-func DeepConvertGlobalSpecA1toA2(o corev1alpha1.GlobalSpec) corev1alpha2.GlobalSpec {
-	var cp corev1alpha2.GlobalSpec
+func DeepConvertGlobalSpecA2toV1(o corev1alpha2.GlobalSpec) v1.GlobalSpec {
+	var cp v1.GlobalSpec
 	if o.Config != nil {
 		cp.Config = new(models.Global)
 

@@ -19,7 +19,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/haproxytech/client-native/v3/models"
+	"github.com/haproxytech/client-native/v5/models"
 
 	"github.com/haproxytech/kubernetes-ingress/pkg/annotations"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/api"
@@ -60,10 +60,10 @@ func (s *Service) HandleHAProxySrvs(k8s store.K8s, client api.HAProxyClient) {
 // updateHAProxySrv updates corresponding HAProxy backend server or creates one if it does not exist
 func (s *Service) updateHAProxySrv(client api.HAProxyClient, srvSlot store.HAProxySrv, port int64) {
 	srv := models.Server{
-		Name:        srvSlot.Name,
-		Port:        &port,
-		Address:     "127.0.0.1",
-		Maintenance: "enabled",
+		Name:         srvSlot.Name,
+		Port:         &port,
+		Address:      "127.0.0.1",
+		ServerParams: models.ServerParams{Maintenance: "enabled"},
 	}
 	// Enable Server
 	if srvSlot.Address != "" {

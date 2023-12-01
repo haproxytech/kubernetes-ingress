@@ -3,8 +3,8 @@ package api
 import (
 	"fmt"
 
-	"github.com/haproxytech/client-native/v3/models"
-	"github.com/haproxytech/config-parser/v4/types"
+	"github.com/haproxytech/client-native/v5/models"
+	"github.com/haproxytech/config-parser/v5/types"
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
 )
 
@@ -127,7 +127,7 @@ func (c *clientNative) BackendServerDeleteAll(backendName string) bool {
 		logger.Error(err)
 		return false
 	}
-	_, servers, _ := configuration.GetServers(backendName, c.activeTransaction)
+	_, servers, _ := configuration.GetServers("backend", backendName, c.activeTransaction)
 	for _, srv := range servers {
 		c.activeTransactionHasChanges = true
 		_ = c.BackendServerDelete(backendName, srv.Name)
@@ -157,7 +157,7 @@ func (c *clientNative) BackendServerCreate(backendName string, data models.Serve
 		return err
 	}
 	c.activeTransactionHasChanges = true
-	return configuration.CreateServer(backendName, &data, c.activeTransaction, 0)
+	return configuration.CreateServer("backend", backendName, &data, c.activeTransaction, 0)
 }
 
 func (c *clientNative) BackendServerEdit(backendName string, data models.Server) error {
@@ -166,7 +166,7 @@ func (c *clientNative) BackendServerEdit(backendName string, data models.Server)
 		return err
 	}
 	c.activeTransactionHasChanges = true
-	return configuration.EditServer(data.Name, backendName, &data, c.activeTransaction, 0)
+	return configuration.EditServer(data.Name, "backend", backendName, &data, c.activeTransaction, 0)
 }
 
 func (c *clientNative) BackendServerDelete(backendName string, serverName string) error {
@@ -175,7 +175,7 @@ func (c *clientNative) BackendServerDelete(backendName string, serverName string
 		return err
 	}
 	c.activeTransactionHasChanges = true
-	return configuration.DeleteServer(serverName, backendName, c.activeTransaction, 0)
+	return configuration.DeleteServer(serverName, "backend", backendName, c.activeTransaction, 0)
 }
 
 func (c *clientNative) BackendSwitchingRuleCreate(frontend string, rule models.BackendSwitchingRule) error {
@@ -210,7 +210,7 @@ func (c *clientNative) ServerGet(serverName, backendName string) (models.Server,
 	if err != nil {
 		return models.Server{}, err
 	}
-	_, server, err := configuration.GetServer(serverName, backendName, c.activeTransaction)
+	_, server, err := configuration.GetServer(serverName, "backend", backendName, c.activeTransaction)
 	if err != nil {
 		return models.Server{}, err
 	}
@@ -222,7 +222,7 @@ func (c *clientNative) BackendServersGet(backendName string) (models.Servers, er
 	if err != nil {
 		return nil, err
 	}
-	_, servers, err := configuration.GetServers(backendName, c.activeTransaction)
+	_, servers, err := configuration.GetServers("backend", backendName, c.activeTransaction)
 	if err != nil {
 		return nil, err
 	}

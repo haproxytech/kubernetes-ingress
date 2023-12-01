@@ -15,9 +15,10 @@
 package handler
 
 import (
-	"github.com/haproxytech/client-native/v3/models"
+	"github.com/haproxytech/client-native/v5/models"
 
 	"github.com/haproxytech/kubernetes-ingress/pkg/annotations"
+	"github.com/haproxytech/kubernetes-ingress/pkg/controller/constants"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/env"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/instance"
@@ -40,6 +41,7 @@ func (handler GlobalCfg) Update(k store.K8s, h haproxy.HAProxy, a annotations.An
 	}
 	defaults := &models.Defaults{}
 	env.SetDefaults(defaults)
+	defaults.Name = constants.DefaultsSectionName
 	err = h.DefaultsPushConfiguration(*defaults)
 	if err != nil {
 		return

@@ -18,7 +18,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/haproxytech/client-native/v3/models"
+	"github.com/haproxytech/client-native/v5/models"
 
 	"github.com/haproxytech/kubernetes-ingress/pkg/annotations"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy"
@@ -218,10 +218,10 @@ func (handler HTTPS) enableSSLPassthrough(h haproxy.HAProxy) (err error) {
 			Mode: "tcp",
 		}),
 		h.BackendServerCreate(h.BackSSL, models.Server{
-			Name:        h.FrontHTTPS,
-			Address:     "127.0.0.1",
-			Port:        utils.PtrInt64(handler.Port),
-			SendProxyV2: "enabled",
+			Name:         h.FrontHTTPS,
+			Address:      "127.0.0.1",
+			Port:         utils.PtrInt64(handler.Port),
+			ServerParams: models.ServerParams{SendProxyV2: "enabled"},
 		}),
 		h.BackendSwitchingRuleCreate(h.FrontSSL, models.BackendSwitchingRule{
 			Index: utils.PtrInt64(0),

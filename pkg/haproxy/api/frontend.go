@@ -3,8 +3,8 @@ package api
 import (
 	"fmt"
 
-	"github.com/haproxytech/client-native/v3/models"
-	"github.com/haproxytech/config-parser/v4/types"
+	"github.com/haproxytech/client-native/v5/models"
+	"github.com/haproxytech/config-parser/v5/types"
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
 )
 
@@ -134,7 +134,7 @@ func (c *clientNative) FrontendBindsGet(frontend string) (models.Binds, error) {
 	if err != nil {
 		return nil, err
 	}
-	_, binds, err := configuration.GetBinds(frontend, c.activeTransaction)
+	_, binds, err := configuration.GetBinds("frontend", frontend, c.activeTransaction)
 	return binds, err
 }
 
@@ -144,7 +144,7 @@ func (c *clientNative) FrontendBindCreate(frontend string, bind models.Bind) err
 		return err
 	}
 	c.activeTransactionHasChanges = true
-	return configuration.CreateBind(frontend, &bind, c.activeTransaction, 0)
+	return configuration.CreateBind("frontend", frontend, &bind, c.activeTransaction, 0)
 }
 
 func (c *clientNative) FrontendBindEdit(frontend string, bind models.Bind) error {
@@ -153,7 +153,7 @@ func (c *clientNative) FrontendBindEdit(frontend string, bind models.Bind) error
 		return err
 	}
 	c.activeTransactionHasChanges = true
-	return configuration.EditBind(bind.Name, frontend, &bind, c.activeTransaction, 0)
+	return configuration.EditBind(bind.Name, "frontend", frontend, &bind, c.activeTransaction, 0)
 }
 
 func (c *clientNative) FrontendHTTPRequestRuleCreate(frontend string, rule models.HTTPRequestRule, ingressACL string) error {

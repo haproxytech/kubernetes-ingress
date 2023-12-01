@@ -78,8 +78,6 @@ publish:
 .PHONY: cr_generate
 cr_generate:
 	crs/code-generator.sh
-	grep -lir defaultses crs/* | xargs sed -i 's/Defaultses/Defaults/g'
-	grep -lir defaultses crs/* | xargs sed -i 's/defaultses/defaults/g'
 
 .PHONY: gofumpt
 gofumpt:

@@ -23,6 +23,7 @@ import (
 
 	corev1alpha1 "github.com/haproxytech/kubernetes-ingress/crs/generated/clientset/versioned/typed/core/v1alpha1"
 	corev1alpha2 "github.com/haproxytech/kubernetes-ingress/crs/generated/clientset/versioned/typed/core/v1alpha2"
+	ingressv1 "github.com/haproxytech/kubernetes-ingress/crs/generated/clientset/versioned/typed/ingress/v1"
 	discovery "k8s.io/client-go/discovery"
 	rest "k8s.io/client-go/rest"
 	flowcontrol "k8s.io/client-go/util/flowcontrol"
@@ -32,6 +33,7 @@ type Interface interface {
 	Discovery() discovery.DiscoveryInterface
 	CoreV1alpha2() corev1alpha2.CoreV1alpha2Interface
 	CoreV1alpha1() corev1alpha1.CoreV1alpha1Interface
+	IngressV1() ingressv1.IngressV1Interface
 }
 
 // Clientset contains the clients for groups.
@@ -39,6 +41,7 @@ type Clientset struct {
 	*discovery.DiscoveryClient
 	coreV1alpha2 *corev1alpha2.CoreV1alpha2Client
 	coreV1alpha1 *corev1alpha1.CoreV1alpha1Client
+	ingressV1    *ingressv1.IngressV1Client
 }
 
 // CoreV1alpha2 retrieves the CoreV1alpha2Client
@@ -49,6 +52,11 @@ func (c *Clientset) CoreV1alpha2() corev1alpha2.CoreV1alpha2Interface {
 // CoreV1alpha1 retrieves the CoreV1alpha1Client
 func (c *Clientset) CoreV1alpha1() corev1alpha1.CoreV1alpha1Interface {
 	return c.coreV1alpha1
+}
+
+// IngressV1 retrieves the IngressV1Client
+func (c *Clientset) IngressV1() ingressv1.IngressV1Interface {
+	return c.ingressV1
 }
 
 // Discovery retrieves the DiscoveryClient
@@ -103,6 +111,10 @@ func NewForConfigAndClient(c *rest.Config, httpClient *http.Client) (*Clientset,
 	if err != nil {
 		return nil, err
 	}
+	cs.ingressV1, err = ingressv1.NewForConfigAndClient(&configShallowCopy, httpClient)
+	if err != nil {
+		return nil, err
+	}
 
 	cs.DiscoveryClient, err = discovery.NewDiscoveryClientForConfigAndClient(&configShallowCopy, httpClient)
 	if err != nil {
@@ -126,6 +138,7 @@ func New(c rest.Interface) *Clientset {
 	var cs Clientset
 	cs.coreV1alpha2 = corev1alpha2.New(c)
 	cs.coreV1alpha1 = corev1alpha1.New(c)
+	cs.ingressV1 = ingressv1.New(c)
 
 	cs.DiscoveryClient = discovery.NewDiscoveryClient(c)
 	return &cs

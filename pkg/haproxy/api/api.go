@@ -3,13 +3,13 @@ package api
 import (
 	"context"
 
-	clientnative "github.com/haproxytech/client-native/v3"
-	"github.com/haproxytech/client-native/v3/configuration"
-	cfgoptions "github.com/haproxytech/client-native/v3/configuration/options"
-	"github.com/haproxytech/client-native/v3/models"
-	"github.com/haproxytech/client-native/v3/options"
-	"github.com/haproxytech/client-native/v3/runtime"
-	runtimeoptions "github.com/haproxytech/client-native/v3/runtime/options"
+	clientnative "github.com/haproxytech/client-native/v5"
+	"github.com/haproxytech/client-native/v5/configuration"
+	cfgoptions "github.com/haproxytech/client-native/v5/configuration/options"
+	"github.com/haproxytech/client-native/v5/models"
+	"github.com/haproxytech/client-native/v5/options"
+	"github.com/haproxytech/client-native/v5/runtime"
+	runtimeoptions "github.com/haproxytech/client-native/v5/runtime/options"
 
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"

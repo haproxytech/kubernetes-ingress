@@ -1,0 +1,22 @@
+---
+kind: Ingress
+apiVersion: networking.k8s.io/v1
+metadata:
+  name: http-echo
+  annotations:
+    ingress.class: haproxy
+    {{- range .IngAnnotations}}
+    {{ .Key }}: "{{ .Value }}"
+    {{- end}}
+spec:
+  rules:
+    - host: {{ .Host }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: http-echo
+                port:
+                  name: http
