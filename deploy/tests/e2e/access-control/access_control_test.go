@@ -48,6 +48,7 @@ func (suite *AccessControlSuite) Test_Whitelist() {
 
 		suite.eventuallyReturns("192.168.2.3", http.StatusOK)
 		suite.eventuallyReturns("192.168.5.3", http.StatusForbidden)
+		suite.TearDownSubSuite()
 	})
 
 	suite.Run("Inline deprecated annotation name", func() {
@@ -60,6 +61,7 @@ func (suite *AccessControlSuite) Test_Whitelist() {
 
 		suite.eventuallyReturns("192.168.4.3", http.StatusOK)
 		suite.eventuallyReturns("192.168.5.3", http.StatusForbidden)
+		suite.TearDownSubSuite()
 	})
 
 	suite.Run("Inline: when new and deprecated annotation names are defined then only new name is considered", func() {
@@ -73,6 +75,7 @@ func (suite *AccessControlSuite) Test_Whitelist() {
 
 		suite.eventuallyReturns("192.168.5.3", http.StatusOK)
 		suite.eventuallyReturns("192.168.4.3", http.StatusForbidden)
+		suite.TearDownSubSuite()
 	})
 
 	suite.Run("Patternfile", func() {
@@ -86,6 +89,7 @@ func (suite *AccessControlSuite) Test_Whitelist() {
 
 		suite.eventuallyReturns("192.168.0.3", http.StatusOK)
 		suite.eventuallyReturns("192.168.2.3", http.StatusForbidden)
+		suite.TearDownSubSuite()
 	})
 
 	suite.Run("Patternfile deprecated annotation name", func() {
@@ -99,6 +103,7 @@ func (suite *AccessControlSuite) Test_Whitelist() {
 
 		suite.eventuallyReturns("192.169.0.3", http.StatusOK)
 		suite.eventuallyReturns("192.168.2.3", http.StatusForbidden)
+		suite.TearDownSubSuite()
 	})
 
 	suite.Run("Patternfile: when new and deprecated annotation names are defined then only new name is considered", func() {
@@ -113,6 +118,7 @@ func (suite *AccessControlSuite) Test_Whitelist() {
 
 		suite.eventuallyReturns("192.168.0.3", http.StatusOK)
 		suite.eventuallyReturns("192.168.2.3", http.StatusForbidden)
+		suite.TearDownSubSuite()
 	})
 }
 
@@ -127,6 +133,7 @@ func (suite *AccessControlSuite) Test_Blacklist() {
 
 		suite.eventuallyReturns("192.168.2.3", http.StatusForbidden)
 		suite.eventuallyReturns("192.168.5.3", http.StatusOK)
+		suite.TearDownSubSuite()
 	})
 
 	suite.Run("Inline deprecated annotation name", func() {
@@ -139,6 +146,7 @@ func (suite *AccessControlSuite) Test_Blacklist() {
 
 		suite.eventuallyReturns("192.168.4.3", http.StatusForbidden)
 		suite.eventuallyReturns("192.168.5.3", http.StatusOK)
+		suite.TearDownSubSuite()
 	})
 
 	suite.Run("Inline: when new and deprecated annotation names are defined then only new name is considered", func() {
@@ -152,6 +160,7 @@ func (suite *AccessControlSuite) Test_Blacklist() {
 
 		suite.eventuallyReturns("192.168.5.3", http.StatusForbidden)
 		suite.eventuallyReturns("192.168.4.3", http.StatusOK)
+		suite.TearDownSubSuite()
 	})
 
 	suite.Run("Patternfile", func() {
@@ -165,6 +174,7 @@ func (suite *AccessControlSuite) Test_Blacklist() {
 
 		suite.eventuallyReturns("192.168.0.3", http.StatusForbidden)
 		suite.eventuallyReturns("192.168.2.3", http.StatusOK)
+		suite.TearDownSubSuite()
 	})
 
 	suite.Run("Patternfile deprecated annotation name", func() {
@@ -178,6 +188,7 @@ func (suite *AccessControlSuite) Test_Blacklist() {
 
 		suite.eventuallyReturns("192.169.0.3", http.StatusForbidden)
 		suite.eventuallyReturns("192.168.2.3", http.StatusOK)
+		suite.TearDownSubSuite()
 	})
 	suite.Run("Patternfile: when new and deprecated annotation names are defined then only new name is considered", func() {
 		suite.tmplData.IngAnnotations = []struct{ Key, Value string }{
@@ -191,5 +202,6 @@ func (suite *AccessControlSuite) Test_Blacklist() {
 
 		suite.eventuallyReturns("192.168.0.3", http.StatusForbidden)
 		suite.eventuallyReturns("192.169.2.3", http.StatusOK)
+		suite.TearDownSubSuite()
 	})
 }
