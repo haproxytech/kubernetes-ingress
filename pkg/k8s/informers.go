@@ -716,7 +716,7 @@ func getServiceAddresses(service *corev1.Service) (addresses []string) {
 		addresses = []string{service.Spec.ClusterIP}
 		addresses = append(addresses, service.Spec.ExternalIPs...)
 	case corev1.ServiceTypeNodePort:
-		if service.Spec.ClusterIP == "" {
+		if service.Spec.ClusterIP != "" {
 			addresses = append(addresses, service.Spec.ClusterIP)
 		}
 		addresses = append(addresses, service.Spec.ExternalIPs...)
