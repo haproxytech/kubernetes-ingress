@@ -1,12 +1,4 @@
-#!/usr/bin/with-contenv sh
-
-if [ ! -f /var/run/s6/services/.s6-svscan/SIGUSR1 ]; then
-    cat > /var/run/s6/services/.s6-svscan/SIGUSR1 <<EOF
-#!/bin/sh
-kill -SIGTERM 1
-EOF
-    chmod +x /var/run/s6/services/.s6-svscan/SIGUSR1
-fi
+#!/command/with-contenv sh
 
 MEMLIMIT=$(free -m | awk '/Mem:/ {print int($2 / 3)}')
 

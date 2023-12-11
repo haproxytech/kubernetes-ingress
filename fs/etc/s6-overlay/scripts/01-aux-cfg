@@ -1,4 +1,4 @@
-#!/usr/bin/with-contenv sh
+#!/command/with-contenv sh
 
 if [ ! -e /etc/haproxy/haproxy-aux.cfg ]; then
 	touch /etc/haproxy/haproxy-aux.cfg

@@ -1,4 +1,4 @@
-#!/usr/bin/with-contenv sh
+#!/command/with-contenv sh
 
 MEMLIMIT=$(free -m | awk '/Mem:/ {print int($2 * 2 / 3)}')
 
