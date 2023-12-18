@@ -52,6 +52,7 @@ func (in *GlobalSpec) DeepCopyInto(out *GlobalSpec) {
 		out.LogTargets = make([]*models.LogTarget, len(in.LogTargets))
 		for i, v := range in.LogTargets {
 			b, _ := v.MarshalBinary()
+			out.LogTargets[i] = &models.LogTarget{}
 			_ = out.LogTargets[i].UnmarshalBinary(b)
 		}
 	}
