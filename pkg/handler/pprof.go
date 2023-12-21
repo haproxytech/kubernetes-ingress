@@ -15,6 +15,8 @@
 package handler
 
 import (
+	"fmt"
+
 	"github.com/haproxytech/client-native/v3/models"
 
 	"github.com/haproxytech/kubernetes-ingress/pkg/annotations"
@@ -38,8 +40,8 @@ func (handler Pprof) Update(k store.K8s, h haproxy.HAProxy, a annotations.Annota
 			return
 		}
 		err = h.BackendServerCreate(pprofBackend, models.Server{
-			Name:    "pprof",
-			Address: "127.0.0.1:6060",
+			Name:    pprofBackend,
+			Address: fmt.Sprintf("127.0.0.1:%d", h.Env.ControllerPort),
 		})
 		if err != nil {
 			return
@@ -56,6 +58,6 @@ func (handler Pprof) Update(k store.K8s, h haproxy.HAProxy, a annotations.Annota
 	if err != nil {
 		return
 	}
-	reload = true
+	// instance.Reload("pprof backend created")
 	return
 }

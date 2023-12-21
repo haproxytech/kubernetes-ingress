@@ -29,18 +29,19 @@ import (
 type Env struct {
 	Certs certs.Env
 	Proxies
-	CfgDir        string
-	RuntimeSocket string
-	PIDFile       string
-	AuxCFGFile    string
-	RuntimeDir    string
-	StateDir      string
-	PatternDir    string
-	ErrFileDir    string
-	MapsDir       string
-	Binary        string
-	MainCFGFile   string
-	MainCFGRaw    []byte
+	CfgDir         string
+	RuntimeSocket  string
+	PIDFile        string
+	AuxCFGFile     string
+	RuntimeDir     string
+	StateDir       string
+	PatternDir     string
+	ErrFileDir     string
+	MapsDir        string
+	Binary         string
+	MainCFGFile    string
+	MainCFGRaw     []byte
+	ControllerPort int
 }
 
 // Proxies contains names of the main proxies of haproxy config
@@ -85,7 +86,7 @@ func (env *Env) Init(osArgs utils.OSArgs) (err error) {
 	env.MapsDir = filepath.Join(env.CfgDir, "maps")
 	env.PatternDir = filepath.Join(env.CfgDir, "patterns")
 	env.ErrFileDir = filepath.Join(env.CfgDir, "errorfiles")
-
+	env.ControllerPort = osArgs.ControllerPort
 	for _, d := range []string{
 		env.Certs.MainDir,
 		env.Certs.FrontendDir,

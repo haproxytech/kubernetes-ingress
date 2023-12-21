@@ -55,6 +55,12 @@ func (c *HAProxyController) initHandlers() {
 	}
 
 	c.updateHandlers = append(c.updateHandlers, handler.Refresh{})
+
+	c.beforeUpdateHandlers = []UpdateHandler{}
+	// Need to be before Refresh. If after, maps are refreshed without pprof content
+	if c.osArgs.PprofEnabled {
+		c.beforeUpdateHandlers = append(c.beforeUpdateHandlers, handler.Pprof{})
+	}
 }
 
 func (c *HAProxyController) startupHandlers() error {
@@ -71,9 +77,7 @@ func (c *HAProxyController) startupHandlers() error {
 			IPv6Addr:  c.osArgs.IPV6BindAddr,
 		},
 	}
-	if c.osArgs.PprofEnabled {
-		handlers = append(handlers, handler.Pprof{})
-	}
+
 	for _, handler := range handlers {
 		_, err := handler.Update(c.store, c.haproxy, c.annotations)
 		if err != nil {

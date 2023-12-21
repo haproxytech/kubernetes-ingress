@@ -54,6 +54,7 @@ type HAProxyController struct {
 	reload                   bool
 	ready                    bool
 	updateStatusManager      status.UpdateStatusManager
+	beforeUpdateHandlers     []UpdateHandler
 }
 
 // Wrapping a Native-Client transaction and commit it.
@@ -113,6 +114,12 @@ func (c *HAProxyController) updateHAProxy() {
 
 	if len(route.CustomRoutes) != 0 {
 		logger.Error(route.CustomRoutesReset(c.haproxy))
+	}
+
+	for _, handler := range c.beforeUpdateHandlers {
+		reload, err = handler.Update(c.store, c.haproxy, c.annotations)
+		logger.Error(err)
+		c.reload = c.reload || reload
 	}
 
 	for _, namespace := range c.store.Namespaces {
