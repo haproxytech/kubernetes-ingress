@@ -32,6 +32,8 @@ spec:
             - --configmap-patternfiles=$(POD_NAMESPACE)/patternfiles
             - --ingress.class=haproxy
             - --sync-period=1s
+            - --pprof
+            - --prometheus
           securityContext:
             runAsUser: 1000
             runAsGroup: 1000

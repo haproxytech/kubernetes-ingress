@@ -102,7 +102,7 @@ type OSArgs struct { //nolint:maligned
 	RuntimeDir                 string         `long:"runtime-dir" description:"path to HAProxy runtime directory. NOTE: works only in External mode"`
 	DisableServiceExternalName bool           `long:"disable-service-external-name" description:"disable forwarding to ExternalName Services due to CVE-2021-25740"`
 	UseWiths6Overlay           bool           `long:"with-s6-overlay" description:"use s6 overlay to start/stpop/reload HAProxy"`
-	ControllerPort             int            `long:"controller-port" description:"port to listen on for controller data: prometheus, pprof"`
+	ControllerPort             int            `long:"controller-port" description:"port to listen on for controller data: prometheus, pprof" default:"6060"`
 	PprofEnabled               bool           `long:"pprof" short:"p" description:"enable pprof"`
 	PrometheusEnabled          bool           `long:"prometheus" description:"enable prometheus of IC data"`
 	ChannelSize                int64          `long:"channel-size" description:"sets the size of controller buffers used to receive and send k8s events.NOTE: increase the value to accommodate large number of resources "`

@@ -49,6 +49,7 @@ type HAProxyController struct {
 	podPrefix                string
 	chShutdown               chan struct{}
 	updatePublishServiceFunc func(ingresses []*ingress.Ingress, publishServiceAddresses []string)
+	beforeUpdateHandlers     []UpdateHandler
 }
 
 // Wrapping a Native-Client transaction and commit it.
@@ -111,6 +112,13 @@ func (c *HAProxyController) updateHAProxy() {
 	}
 
 	ingresses := []*ingress.Ingress{}
+
+	for _, handler := range c.beforeUpdateHandlers {
+		reload, err = handler.Update(c.store, c.haproxy, c.annotations)
+		logger.Error(err)
+		c.reload = c.reload || reload
+	}
+
 	for _, namespace := range c.store.Namespaces {
 		if !namespace.Relevant {
 			continue
