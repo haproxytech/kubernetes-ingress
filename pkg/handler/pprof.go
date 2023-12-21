@@ -15,11 +15,12 @@
 package handler
 
 import (
+	"fmt"
+
 	"github.com/haproxytech/client-native/v5/models"
 
 	"github.com/haproxytech/kubernetes-ingress/pkg/annotations"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy"
-	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/instance"
 	"github.com/haproxytech/kubernetes-ingress/pkg/route"
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
 )
@@ -41,7 +42,7 @@ func (handler Pprof) Update(k store.K8s, h haproxy.HAProxy, a annotations.Annota
 		}
 		err = h.BackendServerCreate(pprofBackend, models.Server{
 			Name:    pprofBackend,
-			Address: "127.0.0.1:6060",
+			Address: fmt.Sprintf("127.0.0.1:%d", h.Env.ControllerPort),
 		})
 		if err != nil {
 			return
@@ -58,6 +59,6 @@ func (handler Pprof) Update(k store.K8s, h haproxy.HAProxy, a annotations.Annota
 	if err != nil {
 		return
 	}
-	instance.Reload("pprof backend created")
+	// instance.Reload("pprof backend created")
 	return
 }
