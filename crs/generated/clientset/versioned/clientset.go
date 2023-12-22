@@ -31,27 +31,27 @@ import (
 
 type Interface interface {
 	Discovery() discovery.DiscoveryInterface
-	CoreV1alpha2() corev1alpha2.CoreV1alpha2Interface
 	CoreV1alpha1() corev1alpha1.CoreV1alpha1Interface
+	CoreV1alpha2() corev1alpha2.CoreV1alpha2Interface
 	IngressV1() ingressv1.IngressV1Interface
 }
 
 // Clientset contains the clients for groups.
 type Clientset struct {
 	*discovery.DiscoveryClient
-	coreV1alpha2 *corev1alpha2.CoreV1alpha2Client
 	coreV1alpha1 *corev1alpha1.CoreV1alpha1Client
+	coreV1alpha2 *corev1alpha2.CoreV1alpha2Client
 	ingressV1    *ingressv1.IngressV1Client
-}
-
-// CoreV1alpha2 retrieves the CoreV1alpha2Client
-func (c *Clientset) CoreV1alpha2() corev1alpha2.CoreV1alpha2Interface {
-	return c.coreV1alpha2
 }
 
 // CoreV1alpha1 retrieves the CoreV1alpha1Client
 func (c *Clientset) CoreV1alpha1() corev1alpha1.CoreV1alpha1Interface {
 	return c.coreV1alpha1
+}
+
+// CoreV1alpha2 retrieves the CoreV1alpha2Client
+func (c *Clientset) CoreV1alpha2() corev1alpha2.CoreV1alpha2Interface {
+	return c.coreV1alpha2
 }
 
 // IngressV1 retrieves the IngressV1Client
@@ -103,11 +103,11 @@ func NewForConfigAndClient(c *rest.Config, httpClient *http.Client) (*Clientset,
 
 	var cs Clientset
 	var err error
-	cs.coreV1alpha2, err = corev1alpha2.NewForConfigAndClient(&configShallowCopy, httpClient)
+	cs.coreV1alpha1, err = corev1alpha1.NewForConfigAndClient(&configShallowCopy, httpClient)
 	if err != nil {
 		return nil, err
 	}
-	cs.coreV1alpha1, err = corev1alpha1.NewForConfigAndClient(&configShallowCopy, httpClient)
+	cs.coreV1alpha2, err = corev1alpha2.NewForConfigAndClient(&configShallowCopy, httpClient)
 	if err != nil {
 		return nil, err
 	}
@@ -136,8 +136,8 @@ func NewForConfigOrDie(c *rest.Config) *Clientset {
 // New creates a new Clientset for the given RESTClient.
 func New(c rest.Interface) *Clientset {
 	var cs Clientset
-	cs.coreV1alpha2 = corev1alpha2.New(c)
 	cs.coreV1alpha1 = corev1alpha1.New(c)
+	cs.coreV1alpha2 = corev1alpha2.New(c)
 	cs.ingressV1 = ingressv1.New(c)
 
 	cs.DiscoveryClient = discovery.NewDiscoveryClient(c)

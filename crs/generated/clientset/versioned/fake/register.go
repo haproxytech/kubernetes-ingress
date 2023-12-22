@@ -32,8 +32,8 @@ var scheme = runtime.NewScheme()
 var codecs = serializer.NewCodecFactory(scheme)
 
 var localSchemeBuilder = runtime.SchemeBuilder{
-	corev1alpha2.AddToScheme,
 	corev1alpha1.AddToScheme,
+	corev1alpha2.AddToScheme,
 	ingressv1.AddToScheme,
 }
 

@@ -39,6 +39,7 @@ diff-crd:
   tags:
     - go
   before_script:
+    - go version
     - make cr_generate
   script:
     - git diff

@@ -82,14 +82,14 @@ var (
 	_ testing.FakeClient  = &Clientset{}
 )
 
-// CoreV1alpha2 retrieves the CoreV1alpha2Client
-func (c *Clientset) CoreV1alpha2() corev1alpha2.CoreV1alpha2Interface {
-	return &fakecorev1alpha2.FakeCoreV1alpha2{Fake: &c.Fake}
-}
-
 // CoreV1alpha1 retrieves the CoreV1alpha1Client
 func (c *Clientset) CoreV1alpha1() corev1alpha1.CoreV1alpha1Interface {
 	return &fakecorev1alpha1.FakeCoreV1alpha1{Fake: &c.Fake}
+}
+
+// CoreV1alpha2 retrieves the CoreV1alpha2Client
+func (c *Clientset) CoreV1alpha2() corev1alpha2.CoreV1alpha2Interface {
+	return &fakecorev1alpha2.FakeCoreV1alpha2{Fake: &c.Fake}
 }
 
 // IngressV1 retrieves the IngressV1Client
