@@ -81,8 +81,10 @@ func (c *HAProxyController) globalCfg() {
 		}
 	}
 	if newGlobal.TuneOptions == nil {
-		newGlobal.TuneOptions = &models.GlobalTuneOptions{
-			SslDefaultDhParam: 2048,
+		newGlobal.TuneOptions = &models.GlobalTuneOptions{}
+
+		if newGlobal.TuneSslDefaultDhParam == 0 {
+			newGlobal.TuneOptions.SslDefaultDhParam = 2048
 		}
 	}
 	env.SetGlobal(newGlobal, &newLg, c.haproxy.Env)
