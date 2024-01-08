@@ -16,7 +16,22 @@
 
 package crd
 
-func (suite *CRDSuite) Test_CRD_Deploy_OK() {
+import (
+	"testing"
+
+	"github.com/stretchr/testify/suite"
+)
+
+// Adding GlobalSuite, just to be able to debug directly here and not from CRDSuite
+type DeployCRDSuite struct {
+	CRDSuite
+}
+
+func TestDeployCRDSuite(t *testing.T) {
+	suite.Run(t, new(DeployCRDSuite))
+}
+
+func (suite *DeployCRDSuite) Test_CRD_Deploy_OK() {
 	suite.Run("CRs OK", func() {
 		suite.tmplData.BackendHashTypeFunction = "sdbm"    // enum ok
 		suite.tmplData.GlobalBuffersReserve = 3            // min ok
@@ -28,7 +43,7 @@ func (suite *CRDSuite) Test_CRD_Deploy_OK() {
 	})
 }
 
-func (suite *CRDSuite) Test_CRD_Deploy_NOK() {
+func (suite *DeployCRDSuite) Test_CRD_Deploy_NOK() {
 	suite.Run("CRs Enum NOK", func() {
 		suite.tmplData.BackendHashTypeFunction = "somethingelse" // enum NOK
 		suite.tmplData.GlobalBuffersReserve = 3                  // min ok

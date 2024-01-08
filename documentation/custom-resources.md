@@ -52,6 +52,25 @@ data:
   cr-global: haproxy-controller/myglobal
 ```
 
+### Global CRD: Note of versions compatibility between CRD and haproxy
+
+The `ingress.v1.haproxy.org/Global` CRD `version v1`  is using client-native v5 that contains `haproxy 2.9`` keywords.
+
+An annototation in the CRD is available to specify the version of client-native used: `haproxy.org/client-native`
+
+Ingress Controller is deployed with `haproxy 2.8`.
+Note that the following fields of the CRD are `haproxy 2.9` keywords and cannot be used with this version of Ingress Controller, even if defined the `Globals` CRD:
+- `runtime_api.quic-socket`
+- `tune_options.events_max_events_at_once`
+- `tune_options.max_checks_per_thread`
+- `tune_options.rcvbuf_backend`
+- `tune_options.rcvbuf_frontend`
+- `tune_options.sndbuf_backend`
+- `tune_options.sndbuf_frontend`
+- `tune_options.zlib_memlevel`
+- `tune_options.zlib_windowsize`
+
+
 ### Defaults
 The Defaults resource is used to configure the HAProxy defaults section by referencing the resouce via the `cr-defaults` annotation in the Ingress Controller ConfigMap.
 

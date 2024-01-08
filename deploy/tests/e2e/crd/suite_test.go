@@ -12,15 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:build e2e_parallel
+//go:build e2e_parallel || e2e_sequential
 
 package crd
 
 import (
-	"testing"
+	"strings"
 
 	"github.com/stretchr/testify/suite"
 
+	parser "github.com/haproxytech/config-parser/v5"
+	"github.com/haproxytech/config-parser/v5/options"
+	"github.com/haproxytech/config-parser/v5/types"
 	"github.com/haproxytech/kubernetes-ingress/deploy/tests/e2e"
 )
 
@@ -67,6 +70,15 @@ func (suite *CRDSuite) TearDownSuite() {
 	suite.test.TearDown()
 }
 
-func TestCRDSuite(t *testing.T) {
-	suite.Run(t, new(CRDSuite))
+func (suite *CRDSuite) getVersion() int64 {
+	cfg, err := suite.test.GetIngressControllerFile("/etc/haproxy/haproxy.cfg")
+	suite.NoError(err, "Could not get Haproxy config")
+	reader := strings.NewReader(cfg)
+	p, err := parser.New(options.Reader(reader))
+	suite.NoError(err, "Could not get Haproxy config parser")
+
+	data, _ := p.Get(parser.Comments, parser.CommentsSectionName, "# _version", false)
+
+	ver, _ := data.(*types.ConfigVersion)
+	return ver.Value
 }
