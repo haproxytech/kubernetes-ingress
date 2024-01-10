@@ -77,16 +77,12 @@ func DeepConvertDefaultsSpecA1toA2(o corev1alpha1.DefaultsSpec) corev1alpha2.Def
 			cp.Config.Compression = new(models.Compression)
 			if o.Config.Compression.Algorithms != nil {
 				cp.Config.Compression.Algorithms = make([]string, len(o.Config.Compression.Algorithms))
-				for i6 := range o.Config.Compression.Algorithms { //nolint:gosimple
-					cp.Config.Compression.Algorithms[i6] = o.Config.Compression.Algorithms[i6]
-				}
+				copy(cp.Config.Compression.Algorithms, o.Config.Compression.Algorithms)
 			}
 			cp.Config.Compression.Offload = o.Config.Compression.Offload
 			if o.Config.Compression.Types != nil {
 				cp.Config.Compression.Types = make([]string, len(o.Config.Compression.Types))
-				for i6 := range o.Config.Compression.Types { //nolint:gosimple
-					cp.Config.Compression.Types[i6] = o.Config.Compression.Types[i6]
-				}
+				copy(cp.Config.Compression.Types, o.Config.Compression.Types)
 			}
 		}
 		if o.Config.ConnectTimeout != nil {
@@ -228,9 +224,7 @@ func DeepConvertDefaultsSpecA1toA2(o corev1alpha1.DefaultsSpec) corev1alpha2.Def
 			cp.Config.DefaultServer.Proto = o.Config.DefaultServer.Proto
 			if o.Config.DefaultServer.ProxyV2Options != nil {
 				cp.Config.DefaultServer.ProxyV2Options = make([]string, len(o.Config.DefaultServer.ProxyV2Options))
-				for i6 := range o.Config.DefaultServer.ProxyV2Options { //nolint:gosimple
-					cp.Config.DefaultServer.ProxyV2Options[i6] = o.Config.DefaultServer.ProxyV2Options[i6]
-				}
+				copy(cp.Config.DefaultServer.ProxyV2Options, o.Config.DefaultServer.ProxyV2Options)
 			}
 			cp.Config.DefaultServer.Redir = o.Config.DefaultServer.Redir
 			cp.Config.DefaultServer.ResolveNet = o.Config.DefaultServer.ResolveNet
