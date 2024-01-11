@@ -172,7 +172,6 @@ func (c *HAProxyController) handleDefaultService() {
 	if err != nil {
 		logger.Errorf("default service: %s", err)
 	}
-	instance.Reload("default service created")
 }
 
 func populateDefaultLocalBackendResources(k8sStore store.K8s, podNs string, defaultBackendPort int) error {
