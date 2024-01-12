@@ -218,9 +218,7 @@ func (gm GatewayManagerImpl) manageTCPRoutes() {
 			gm.backends[tcpRouteBackendName] = struct{}{}
 			// Adds the servers to the backends
 			reloadServers, errServers := gm.addServersToRoute(*tcproute)
-			if reloadServers {
-				logger.Debugf("modification in servers of backend '%s' from tcproute '%s/%s'", tcpRouteBackendName, tcproute.Namespace, tcproute.Name)
-			}
+			instance.ReloadIf(reloadServers, "modification in servers of backend '%s' from tcproute '%s/%s'", tcpRouteBackendName, tcproute.Namespace, tcproute.Name)
 			logger.Error(errServers)
 		}
 	}
