@@ -75,7 +75,9 @@ mkdir -p ${CR_DIR}/generated
 cp -r ${OUTPUT_DIR}/${CR_PKG}/generated/{clientset,listers,informers} ${CR_DIR}/generated
 rm -rf ${OUTPUT_DIR}
 
-go install sigs.k8s.io/controller-tools/cmd/controller-gen@latest
+CONTROLLER_GEN_VERSION=$(go list -m  sigs.k8s.io/controller-tools  | cut -d ' ' -f2)
+go install sigs.k8s.io/controller-tools/cmd/controller-gen@${CONTROLLER_GEN_VERSION}
+
 # Controller-gen version
-echo "Controller-gen: " $(controller-gen --version)
+echo "Controller-gen: " ${CONTROLLER_GEN_VERSION}
 controller-gen crd paths=./crs/api/ingress/...  output:crd:dir=./crs/definition
