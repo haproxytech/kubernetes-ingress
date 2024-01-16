@@ -31,13 +31,12 @@ func (d *s6Control) Service(action string) error {
 		// no need to stop it (s6)
 		return nil
 	case "reload":
-		cmd = exec.Command("s6-svc", "-2", "/var/run/s6/services/haproxy")
+		cmd = exec.Command("s6-svc", "-2", "/run/service/haproxy")
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 		return cmd.Run()
 	case "restart":
-		// -t terminates and s6 will start it again
-		cmd = exec.Command("s6-svc", "-t", "/var/run/s6/services/haproxy")
+		cmd = exec.Command("s6-svc", "-t", "/run/service/haproxy")
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 		return cmd.Run()

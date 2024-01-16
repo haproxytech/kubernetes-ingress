@@ -33,35 +33,37 @@ FROM haproxytech/haproxy-alpine:2.8
 
 ARG TARGETPLATFORM
 
-ARG S6_OVERLAY_VERSION=2.2.0.3
+ARG S6_OVERLAY_VERSION=3.1.6.2
 ENV S6_OVERLAY_VERSION $S6_OVERLAY_VERSION
 ENV S6_READ_ONLY_ROOT=1
+ENV S6_USER=haproxy
+ENV S6_GROUP=haproxy
 
 COPY /fs /
 
 RUN apk --no-cache add socat openssl util-linux htop tzdata curl libcap && \
-    rm -f /usr/local/bin/dataplaneapi /usr/bin/dataplaneapi && \
+    rm -f /usr/local/bin/dataplaneapi /usr/bin/dataplaneapi /etc/haproxy/dataplaneapi.yml && \
     chgrp -R haproxy /usr/local/etc/haproxy /run /var && \
     chmod -R ug+rwx /usr/local/etc/haproxy /run /var && \
     setcap 'cap_net_bind_service=+ep' /usr/local/sbin/haproxy && \
     case "${TARGETPLATFORM}" in \
-        "linux/arm64")      S6_ARCH=aarch64     ;; \
-        "linux/amd64")      S6_ARCH=amd64       ;; \
-        "linux/arm/v6")     S6_ARCH=arm         ;; \
-        "linux/arm/v7")     S6_ARCH=armhf       ;; \
-        "linux/ppc64le")    S6_ARCH=ppc64le     ;; \
-        "linux/386")        S6_ARCH=x86         ;; \
+        "linux/arm64")      S6_ARCH=aarch64      ;; \
+        "linux/amd64")      S6_ARCH=x86_64       ;; \
+        "linux/arm/v6")     S6_ARCH=arm          ;; \
+        "linux/arm/v7")     S6_ARCH=armhf        ;; \
+        "linux/ppc64")      S6_ARCH=powerpc64    ;; \
+        "linux/ppc64le")    S6_ARCH=powerpc64le  ;; \
+        "linux/486")        S6_ARCH=i486         ;; \
+        "linux/686")        S6_ARCH=i686         ;; \
         *) echo "ARG TARGETPLATFORM undeclared" >&2 && exit 1 ;; \
     esac && \
-    curl -sS -L -o /tmp/s6-overlay-installer "https://github.com/just-containers/s6-overlay/releases/download/v${S6_OVERLAY_VERSION}/s6-overlay-${S6_ARCH}-installer" && \
-    chmod +x /tmp/s6-overlay-installer && \
-    /tmp/s6-overlay-installer / && \
-    rm -f /tmp/s6-overlay-installer && \
-    mkdir /var/run/s6 && \
-    chown haproxy:haproxy /var/run/s6 && \
-    chmod ug+rwx /var/run/s6 && \
-    sed -i 's/ root / haproxy /g' /etc/s6/init/init-stage2-fixattrs.txt && \
-    chmod ugo+x /etc/services.d/*/run /etc/cont-init.d/* && \
+    curl -sS -L -o /tmp/s6-overlay-scripts.tar.xz "https://github.com/just-containers/s6-overlay/releases/download/v${S6_OVERLAY_VERSION}/s6-overlay-noarch.tar.xz" && \
+    tar -C / -Jxpf /tmp/s6-overlay-scripts.tar.xz && \
+    curl -sS -L -o /tmp/s6-overlay-binaries.tar.xz "https://github.com/just-containers/s6-overlay/releases/download/v${S6_OVERLAY_VERSION}/s6-overlay-${S6_ARCH}.tar.xz" && \
+    tar -C / -Jxpf /tmp/s6-overlay-binaries.tar.xz && \
+    rm -f /tmp/s6-overlay-scripts.tar.xz /tmp/s6-overlay-binaries.tar.xz && \
+    chown -R "${S6_USER}:${S6_GROUP}" /init /etc/s6-overlay && \
+    chmod u+x /init /etc/s6-overlay/scripts/* && \
     rm -rf /var/lib/pebble
 
 COPY --from=builder /src/fs/haproxy-ingress-controller .

@@ -1,0 +1,4 @@
+#!/command/with-contenv sh
+
+echo "Ingress Controller exited with code ${1}, taking down the S6 supervision tree"
+exec /run/s6/basedir/bin/halt

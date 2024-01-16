@@ -1,0 +1,12 @@
+#!/command/with-contenv sh
+
+SVSCAN_PATH="/run/s6/basedir/run-image/service/.s6-svscan"
+
+if [ ! -f "${SVSCAN_PATH}/SIGUSR1" ]; then
+    cat > "${SVSCAN_PATH}/SIGUSR1" <<EOF
+#!/bin/sh
+kill -SIGTERM 1
+EOF
+    chmod +x "${SVSCAN_PATH}/SIGUSR1"
+fi
+
