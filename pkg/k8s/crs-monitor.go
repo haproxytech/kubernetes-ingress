@@ -25,7 +25,12 @@ import (
 	apiextensionsinformers "k8s.io/apiextensions-apiserver/pkg/client/informers/externalversions"
 )
 
-func (k k8s) runCRDefinitionsInformer(eventChan chan string, stop chan struct{}) { //nolint:ireturn
+type GroupKind struct {
+	Group string
+	Kind  string
+}
+
+func (k k8s) runCRDefinitionsInformer(eventChan chan GroupKind, stop chan struct{}) { //nolint:ireturn
 	// Create a new informer factory with the clientset.
 
 	factory := apiextensionsinformers.NewSharedInformerFactoryWithOptions(k.apiExtensionsClient, k.cacheResyncPeriod)
@@ -42,7 +47,10 @@ func (k k8s) runCRDefinitionsInformer(eventChan chan string, stop chan struct{})
 			for _, version := range crd.Spec.Versions {
 				if version.Name == "v1" {
 					time.Sleep(time.Second * 5) // a little delay is needed to let CRD API be created
-					eventChan <- crd.Spec.Names.Kind
+					eventChan <- GroupKind{
+						Group: crd.Spec.Group,
+						Kind:  crd.Spec.Names.Kind,
+					}
 					return
 				}
 			}
@@ -70,32 +78,34 @@ func (k k8s) RunCRSCreationMonitoring(eventChan chan SyncDataEvent, stop chan st
 		return
 	}
 
-	eventCRS := make(chan string)
+	eventCRS := make(chan GroupKind)
 	k.runCRDefinitionsInformer(eventCRS, stop)
-	go func(chan string) {
+	go func(chan GroupKind) {
 		for {
 			select {
-			case crdName := <-eventCRS:
-				if _, ok := k.crs["ingress.v1.haproxy.org/v1 - "+crdName]; ok {
-					// we have already created watchers for this CRD
-					continue
+			case groupKind := <-eventCRS:
+				if groupKind.Group == "ingress.v1.haproxy.org" {
+					if _, ok := k.crs["ingress.v1.haproxy.org/v1 - "+groupKind.Kind]; ok {
+						// we have already created watchers for this CRD
+						continue
+					}
 				}
-				if _, ok := k.crs["core.haproxy.org/v1alpha2 - "+crdName]; ok {
+				if _, ok := k.crs["core.haproxy.org/v1alpha2 - "+groupKind.Kind]; ok {
 					// we have already created watchers for this CRD
 					continue
 				}
 				informersSyncedEvent := &[]cache.InformerSynced{}
 				for _, namespace := range k.whiteListedNS {
 					crs := map[string]CR{}
-					switch crdName {
+					switch groupKind.Kind {
 					case "Backend":
-						crs[crdName] = NewBackendCR()
+						crs[groupKind.Kind] = NewBackendCR()
 					case "Defaults":
-						crs[crdName] = NewDefaultsCR()
+						crs[groupKind.Kind] = NewDefaultsCR()
 					case "Global":
-						crs[crdName] = NewGlobalCR()
+						crs[groupKind.Kind] = NewGlobalCR()
 					}
-					logger.Info("Custom resource definition created, adding CR watcher for " + crs[crdName].GetKind())
+					logger.Info("Custom resource definition created, adding CR watcher for " + crs[groupKind.Kind].GetKind())
 					k.runCRInformers(eventChan, stop, namespace, informersSyncedEvent, crs)
 				}
 
