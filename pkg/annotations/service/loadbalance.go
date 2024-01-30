@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/haproxytech/client-native/v3/models"
+	"github.com/haproxytech/client-native/v5/models"
 
 	"github.com/haproxytech/kubernetes-ingress/pkg/annotations/common"
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"

@@ -17,7 +17,7 @@ package store
 import (
 	"fmt"
 
-	"github.com/haproxytech/client-native/v3/models"
+	"github.com/haproxytech/client-native/v5/models"
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
 )
 

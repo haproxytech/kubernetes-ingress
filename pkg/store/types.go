@@ -18,7 +18,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/haproxytech/client-native/v3/models"
+	"github.com/haproxytech/client-native/v5/models"
 )
 
 // ServicePort describes port of a service

@@ -5,9 +5,10 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/haproxytech/client-native/v3/models"
+	"github.com/haproxytech/client-native/v5/models"
 	"github.com/haproxytech/kubernetes-ingress/pkg/annotations"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy"
+	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/instance"
 	"github.com/haproxytech/kubernetes-ingress/pkg/service"
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
@@ -27,12 +28,11 @@ type tcpSvcParser struct {
 	sslOffload bool
 }
 
-func (handler TCPServices) Update(k store.K8s, h haproxy.HAProxy, a annotations.Annotations) (reload bool, err error) {
+func (handler TCPServices) Update(k store.K8s, h haproxy.HAProxy, a annotations.Annotations) (err error) {
 	if k.ConfigMaps.TCPServices == nil {
-		return false, nil
+		return nil
 	}
-	var r bool
-	reload = handler.clearFrontends(k, h)
+	handler.clearFrontends(k, h)
 	var p tcpSvcParser
 	logFormat := k.ConfigMaps.TCPServices.Annotations["log-format-tcp"]
 
@@ -64,8 +64,7 @@ func (handler TCPServices) Update(k store.K8s, h haproxy.HAProxy, a annotations.
 
 		// Create Frontend
 		if errGet != nil {
-			r, err = handler.createTCPFrontend(h, frontend, port, p.sslOffload)
-			reload = reload || r
+			err = handler.createTCPFrontend(h, frontend, port, p.sslOffload)
 			if err != nil {
 				logger.Error(err)
 				continue
@@ -73,13 +72,12 @@ func (handler TCPServices) Update(k store.K8s, h haproxy.HAProxy, a annotations.
 		}
 
 		// Update  Frontend
-		r, err = handler.updateTCPFrontend(k, h, frontend, p, a)
-		reload = reload || r
+		err = handler.updateTCPFrontend(k, h, frontend, p, a)
 		if err != nil {
 			logger.Errorf("TCP frontend '%s': update failed: %s", frontendName, err)
 		}
 	}
-	return reload, nil
+	return nil
 }
 
 func (handler TCPServices) parseTCPService(store store.K8s, input string) (p tcpSvcParser, err error) {
@@ -120,7 +118,7 @@ func (handler TCPServices) parseTCPService(store store.K8s, input string) (p tcp
 	return p, err
 }
 
-func (handler TCPServices) clearFrontends(k store.K8s, h haproxy.HAProxy) (cleared bool) {
+func (handler TCPServices) clearFrontends(k store.K8s, h haproxy.HAProxy) {
 	frontends, err := h.FrontendsGet()
 	if err != nil {
 		logger.Error(err)
@@ -133,16 +131,13 @@ func (handler TCPServices) clearFrontends(k store.K8s, h haproxy.HAProxy) (clear
 			err = h.FrontendDelete(ft.Name)
 			if err != nil {
 				logger.Errorf("error deleting tcp frontend '%s': %s", ft.Name, err)
-			} else {
-				cleared = true
-				logger.Debugf("TCP frontend '%s' deleted, reload required", ft.Name)
 			}
+			instance.ReloadIf(err == nil, "TCP frontend '%s' deleted", ft.Name)
 		}
 	}
-	return
 }
 
-func (handler TCPServices) createTCPFrontend(h haproxy.HAProxy, frontend models.Frontend, bindPort string, sslOffload bool) (reload bool, err error) {
+func (handler TCPServices) createTCPFrontend(h haproxy.HAProxy, frontend models.Frontend, bindPort string, sslOffload bool) (err error) {
 	var errors utils.Errors
 	errors.Add(h.FrontendCreate(frontend))
 	if handler.IPv4 {
@@ -167,13 +162,13 @@ func (handler TCPServices) createTCPFrontend(h haproxy.HAProxy, frontend models.
 	}
 	if errors.Result() != nil {
 		err = fmt.Errorf("error configuring tcp frontend: %w", err)
-		return false, err
+		return err
 	}
-	logger.Debugf("TCP frontend '%s' created, reload required", frontend.Name)
-	return true, nil
+	instance.Reload("TCP frontend '%s' created", frontend.Name)
+	return
 }
 
-func (handler TCPServices) updateTCPFrontend(k store.K8s, h haproxy.HAProxy, frontend models.Frontend, p tcpSvcParser, a annotations.Annotations) (reload bool, err error) {
+func (handler TCPServices) updateTCPFrontend(k store.K8s, h haproxy.HAProxy, frontend models.Frontend, p tcpSvcParser, a annotations.Annotations) (err error) {
 	prevFrontend, err := h.FrontendGet(frontend.Name)
 	if err != nil {
 		err = fmt.Errorf("failed to get frontend '%s' : %w", frontend.Name, err)
@@ -185,8 +180,8 @@ func (handler TCPServices) updateTCPFrontend(k store.K8s, h haproxy.HAProxy, fro
 		if err != nil {
 			return
 		}
-		logger.Debugf("log format TCP changed from configmap '%s/%s', reload required", k.ConfigMaps.TCPServices.Namespace, k.ConfigMaps.TCPServices.Name)
-		reload = true
+
+		instance.Reload("log format TCP changed from configmap '%s/%s'", k.ConfigMaps.TCPServices.Namespace, k.ConfigMaps.TCPServices.Name)
 	}
 	binds, err := h.FrontendBindsGet(frontend.Name)
 	if err != nil {
@@ -199,8 +194,7 @@ func (handler TCPServices) updateTCPFrontend(k store.K8s, h haproxy.HAProxy, fro
 			err = fmt.Errorf("failed to enable SSL offload: %w", err)
 			return
 		}
-		logger.Debugf("TCP frontend '%s': ssl offload enabled, reload required", frontend.Name)
-		reload = true
+		instance.Reload("TCP frontend '%s': ssl offload enabled", frontend.Name)
 	}
 	if binds[0].Ssl && !p.sslOffload {
 		err = h.FrontendDisableSSLOffload(frontend.Name)
@@ -208,18 +202,16 @@ func (handler TCPServices) updateTCPFrontend(k store.K8s, h haproxy.HAProxy, fro
 			err = fmt.Errorf("failed to disable SSL offload: %w", err)
 			return
 		}
-		logger.Debugf("TCP frontend '%s': ssl offload disabled, reload required", frontend.Name)
-		reload = true
+		instance.Reload("TCP frontend '%s': ssl offload disabled", frontend.Name)
 	}
 	if p.service.Status == store.DELETED {
 		frontend.DefaultBackend = ""
 		err = h.FrontendEdit(frontend)
-		reload = true
+		instance.Reload("TCP frontend '%s': service '%s/%s' deleted", frontend.Name, p.service.Namespace, p.service.Name)
 		return
 	}
 
 	var svc *service.Service
-	var r bool
 	path := &store.IngressPath{
 		SvcNamespace:     p.service.Namespace,
 		SvcName:          p.service.Name,
@@ -227,7 +219,7 @@ func (handler TCPServices) updateTCPFrontend(k store.K8s, h haproxy.HAProxy, fro
 		IsDefaultBackend: true,
 	}
 	if svc, err = service.New(k, path, nil, true, nil); err == nil {
-		r, err = svc.SetDefaultBackend(k, h, []string{frontend.Name}, a)
+		err = svc.SetDefaultBackend(k, h, []string{frontend.Name}, a)
 	}
-	return reload || r, err
+	return err
 }

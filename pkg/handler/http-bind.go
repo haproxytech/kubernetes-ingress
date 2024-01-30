@@ -15,10 +15,11 @@
 package handler
 
 import (
-	"github.com/haproxytech/client-native/v3/models"
+	"github.com/haproxytech/client-native/v5/models"
 
 	"github.com/haproxytech/kubernetes-ingress/pkg/annotations"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy"
+	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/instance"
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
 )
@@ -34,7 +35,7 @@ type HTTPBind struct {
 	IPv6      bool
 }
 
-func (handler HTTPBind) Update(k store.K8s, h haproxy.HAProxy, a annotations.Annotations) (reload bool, err error) {
+func (handler HTTPBind) Update(k store.K8s, h haproxy.HAProxy, a annotations.Annotations) (err error) {
 	var errors utils.Errors
 	frontends := make(map[string]int64, 2)
 	protos := make(map[string]string, 2)
@@ -75,6 +76,6 @@ func (handler HTTPBind) Update(k store.K8s, h haproxy.HAProxy, a annotations.Ann
 		}
 	}
 	err = errors.Result()
-	reload = true
+	instance.Reload("New HTTP(S) bindings")
 	return
 }

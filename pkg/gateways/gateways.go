@@ -18,8 +18,9 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/haproxytech/client-native/v3/models"
+	"github.com/haproxytech/client-native/v5/models"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/api"
+	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/instance"
 	"github.com/haproxytech/kubernetes-ingress/pkg/k8s"
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
@@ -45,7 +46,7 @@ const (
 
 //nolint:golint
 type GatewayManager interface {
-	ManageGateway() bool
+	ManageGateway()
 	SetGatewayAPIInstalled(bool)
 }
 
@@ -81,24 +82,18 @@ type GatewayManagerImpl struct {
 	gatewayAPIInstalled bool
 }
 
-func (gm GatewayManagerImpl) ManageGateway() bool {
+func (gm GatewayManagerImpl) ManageGateway() {
 	if gm.osArgs.GatewayControllerName == "" || !gm.gatewayAPIInstalled {
-		return false
+		return
 	}
 	gm.clean()
 	gm.manageGatewayClass()
 
-	listenersReload := gm.manageListeners()
-	if listenersReload {
-		logger.Debug("gwapi: gateway event, haproxy reload required.")
-	}
-	tcproutesReload := gm.manageTCPRoutes()
-	if tcproutesReload {
-		logger.Debug("gwapi: tcproute event, haproxy reload required.")
-	}
+	gm.manageListeners()
+	gm.manageTCPRoutes()
+
 	gm.statusManager.ProcessStatuses()
 	gm.resetStatuses()
-	return listenersReload || tcproutesReload
 }
 
 // clean deletes the frontends created by the gateway controller
@@ -116,7 +111,7 @@ func (gm GatewayManagerImpl) clean() {
 
 // manageListeners loops over every gateway present in store and if managed gatewayclass matches, it creates the frontend if not marked as deleted .
 // We order a reload only if the status of the gateway suggests an addition, modification or removal.
-func (gm *GatewayManagerImpl) manageListeners() (reload bool) {
+func (gm *GatewayManagerImpl) manageListeners() {
 	for _, ns := range gm.k8sStore.Namespaces {
 		if !ns.Relevant {
 			logger.Debugf("gwapi: skipping namespace '%s'", ns.Name)
@@ -132,7 +127,8 @@ func (gm *GatewayManagerImpl) manageListeners() (reload bool) {
 				logger.Error(gm.createAllListeners(*gw))
 			}
 			_, gwConfigured := gm.gateways[gwName]
-			reload = reload || !((!gwConfigured && !gwManaged) || (gwConfigured && gwManaged && gw.Status == store.EMPTY))
+			instance.ReloadIf(!((!gwConfigured && !gwManaged) || (gwConfigured && gwManaged && gw.Status == store.EMPTY)),
+				"gateway '%s/%s' caused a change", gw.Namespace, gw.Name)
 			if !gwDeleted && gwManaged {
 				gm.gateways[gwName] = struct{}{}
 			}
@@ -143,11 +139,10 @@ func (gm *GatewayManagerImpl) manageListeners() (reload bool) {
 			}
 		}
 	}
-	return
 }
 
 // manageTCPRoutes creates backends from tcproutes and attaches them to corresponding frontends according attachment rules.
-func (gm GatewayManagerImpl) manageTCPRoutes() (reload bool) {
+func (gm GatewayManagerImpl) manageTCPRoutes() {
 	// Multiple routes can refer to the same listener (on the same gateway).
 	// If so we must keep a list of them so that we can elect a single route among them.
 	routesByListeners := map[string]*utils.Pair[store.Listener, store.TCPRoutes]{}
@@ -167,7 +162,7 @@ func (gm GatewayManagerImpl) manageTCPRoutes() (reload bool) {
 				delete(ns.TCPRoutes, tcproute.Name)
 				delete(gm.listenersByRoute, tcpRouteBackendName)
 				delete(gm.backends, tcpRouteBackendName)
-				reload = true
+				instance.Reload("tcproute '%s/%s' deleted", tcproute.Namespace, tcproute.Name)
 				continue
 			}
 			gm.statusManager.PrepareTCPRouteStatusRecord(*tcproute)
@@ -187,13 +182,9 @@ func (gm GatewayManagerImpl) manageTCPRoutes() (reload bool) {
 			previousAssociatedListeners := gm.listenersByRoute[tcpRouteBackendName]
 			gm.listenersByRoute[tcpRouteBackendName] = listeners
 
-			needReload := ((len(listeners) != 0 || len(listeners) == 0 && len(previousAssociatedListeners) != 0) &&
-				!utils.EqualSliceByIDFunc(listeners, previousAssociatedListeners, extractNameFromListener))
-			reload = reload || needReload
-
-			if needReload {
-				logger.Debugf("modification in listeners for tcproute '%s/%s', reload required", tcproute.Namespace, tcproute.Name)
-			}
+			instance.ReloadIf(((len(listeners) != 0 || len(listeners) == 0 && len(previousAssociatedListeners) != 0) &&
+				!utils.EqualSliceByIDFunc(listeners, previousAssociatedListeners, extractNameFromListener)),
+				"modification in listeners for tcproute '%s/%s'", tcproute.Namespace, tcproute.Name)
 
 			if len(listeners) == 0 {
 				continue
@@ -202,10 +193,7 @@ func (gm GatewayManagerImpl) manageTCPRoutes() (reload bool) {
 			// Nothing to do to delete the corresponding backend as an automatic mechanism will remove it.
 			if gm.isToBeDeleted(*tcproute) {
 				_, backendExists := gm.backends[tcpRouteBackendName]
-				if backendExists {
-					logger.Debugf("modification in backend for tcproute '%s/%s', reload required", tcproute.Namespace, tcproute.Name)
-				}
-				reload = reload || backendExists
+				instance.ReloadIf(backendExists, "modification in backend for tcproute '%s/%s'", tcproute.Namespace, tcproute.Name)
 				if backendExists {
 					delete(gm.backends, tcpRouteBackendName)
 				}
@@ -218,25 +206,19 @@ func (gm GatewayManagerImpl) manageTCPRoutes() (reload bool) {
 				models.Backend{
 					Name:          getBackendName(*tcproute),
 					Mode:          "tcp",
-					DefaultServer: &models.DefaultServer{Check: "enabled"},
+					DefaultServer: &models.DefaultServer{ServerParams: models.ServerParams{Check: "enabled"}},
 				})
 			if errBackendCreate != nil {
 				logger.Error(errBackendCreate)
 				continue
 			}
 			_, backendExists := gm.backends[tcpRouteBackendName]
-			if !backendExists {
-				logger.Debugf("modification in backend for tcproute '%s/%s', reload required", tcproute.Namespace, tcproute.Name)
-			}
-			reload = reload || !backendExists
+			instance.ReloadIf(!backendExists, "modification in backend for tcproute '%s/%s'", tcproute.Namespace, tcproute.Name)
 			gm.backends[tcpRouteBackendName] = struct{}{}
 			// Adds the servers to the backends
 			reloadServers, errServers := gm.addServersToRoute(*tcproute)
-			if reloadServers {
-				logger.Debugf("modification in servers of backend '%s' from tcproute '%s/%s'", tcpRouteBackendName, tcproute.Namespace, tcproute.Name)
-			}
+			instance.ReloadIf(reloadServers, "modification in servers of backend '%s' from tcproute '%s/%s'", tcpRouteBackendName, tcproute.Namespace, tcproute.Name)
 			logger.Error(errServers)
-			reload = reload || reloadServers
 		}
 	}
 
@@ -248,7 +230,6 @@ func (gm GatewayManagerImpl) manageTCPRoutes() (reload bool) {
 		sort.SliceStable(rbl.P2, rbl.P2.Less)
 		logger.Error(gm.addRouteToListener(fontendName, rbl.P2[0], rbl.P1))
 	}
-	return
 }
 
 // createAllListeners creates all TCP frontends from gateway and their bindings.
@@ -450,10 +431,10 @@ func (gm GatewayManagerImpl) addServersToRoute(route store.TCPRoute) (reload boo
 				for address := range port.Addresses {
 					servers = append(servers, fmt.Sprintf("%s:%d", address, port.Port))
 					err = gm.haproxyClient.BackendServerCreate(backendName, models.Server{
-						Address:     address,
-						Port:        &port.Port,
-						Name:        fmt.Sprintf("SRV_%d", i+1),
-						Maintenance: "disabled",
+						Address:      address,
+						Port:         &port.Port,
+						Name:         fmt.Sprintf("SRV_%d", i+1),
+						ServerParams: models.ServerParams{Maintenance: "disabled"},
 					})
 					if err != nil {
 						return

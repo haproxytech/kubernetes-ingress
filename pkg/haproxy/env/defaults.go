@@ -1,7 +1,7 @@
 package env
 
 import (
-	"github.com/haproxytech/client-native/v3/models"
+	"github.com/haproxytech/client-native/v5/models"
 
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
 )
@@ -64,6 +64,9 @@ func SetGlobal(global *models.Global, logTargets *models.LogTargets, env Env) {
 	}
 	if global.HardStopAfter == nil {
 		global.HardStopAfter = utils.PtrInt64(1800000) // 30m
+	}
+	global.DefaultPath = &models.GlobalDefaultPath{
+		Type: "config",
 	}
 }
 

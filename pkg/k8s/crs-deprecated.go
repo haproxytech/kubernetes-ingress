@@ -18,7 +18,7 @@ import (
 	"k8s.io/client-go/tools/cache"
 
 	corev1alpha1 "github.com/haproxytech/kubernetes-ingress/crs/api/core/v1alpha1"
-	corev1alpha2 "github.com/haproxytech/kubernetes-ingress/crs/api/core/v1alpha2"
+	v1 "github.com/haproxytech/kubernetes-ingress/crs/api/ingress/v1"
 	"github.com/haproxytech/kubernetes-ingress/crs/converters"
 	informers "github.com/haproxytech/kubernetes-ingress/crs/generated/informers/externalversions"
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
@@ -56,10 +56,11 @@ func (c GlobalCRV1Alpha1) GetInformer(eventChan chan SyncDataEvent, factory info
 			return
 		}
 		logger.Warningf("Global CR defined in API %s is DEPRECATED, please upgrade", CRSGroupVersionV1alpha1)
-		data := &corev1alpha2.Global{}
+		data := &v1.Global{}
 		data.TypeMeta = dataV1Alpha1.TypeMeta
 		data.ObjectMeta = dataV1Alpha1.ObjectMeta
-		data.Spec = converters.DeepConvertGlobalSpecA1toA2(dataV1Alpha1.Spec)
+		spec := converters.DeepConvertGlobalSpecA1toA2(dataV1Alpha1.Spec)
+		data.Spec = converters.DeepConvertGlobalSpecA2toV1(spec)
 
 		logger.Debugf("%s %s: %s", data.GetNamespace(), status, data.GetName())
 		if status == store.DELETED {
@@ -98,10 +99,11 @@ func (c DefaultsCRV1Alpha1) GetInformer(eventChan chan SyncDataEvent, factory in
 			return
 		}
 		logger.Warningf("Defaults CR defined in API %s is DEPRECATED, please upgrade", CRSGroupVersionV1alpha1)
-		data := &corev1alpha2.Defaults{}
+		data := &v1.Defaults{}
 		data.TypeMeta = dataV1Alpha1.TypeMeta
 		data.ObjectMeta = dataV1Alpha1.ObjectMeta
-		data.Spec = converters.DeepConvertDefaultsSpecA1toA2(dataV1Alpha1.Spec)
+		spec := converters.DeepConvertDefaultsSpecA1toA2(dataV1Alpha1.Spec)
+		data.Spec = converters.DeepConvertDefaultsSpecA2toV1(spec)
 		logger.Debugf("%s %s: %s", data.GetNamespace(), status, data.GetName())
 		if status == store.DELETED {
 			eventChan <- SyncDataEvent{SyncType: SyncType(c.GetKind()), Namespace: data.GetNamespace(), Name: data.GetName(), Data: nil}
@@ -139,10 +141,11 @@ func (c BackendCRV1Alpha1) GetInformer(eventChan chan SyncDataEvent, factory inf
 			return
 		}
 		logger.Warningf("Backend CR defined in API %s is DEPRECATED, please upgrade", CRSGroupVersionV1alpha1)
-		data := &corev1alpha2.Backend{}
+		data := &v1.Backend{}
 		data.TypeMeta = dataV1Alpha1.TypeMeta
 		data.ObjectMeta = dataV1Alpha1.ObjectMeta
-		data.Spec = converters.DeepConvertBackendSpecA1toA2(dataV1Alpha1.Spec)
+		spec := converters.DeepConvertBackendSpecA1toA2(dataV1Alpha1.Spec)
+		data.Spec = converters.DeepConvertBackendSpecA2toV1(spec)
 
 		logger.Debugf("%s %s: %s", data.GetNamespace(), status, data.GetName())
 		if status == store.DELETED {

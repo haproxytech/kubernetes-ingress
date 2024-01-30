@@ -40,13 +40,14 @@ import (
 	gatewaynetworking "sigs.k8s.io/gateway-api/pkg/client/informers/externalversions"
 )
 
-var logger = utils.GetLogger()
+var logger = utils.GetK8sLogger()
 
 // TRACE_API outputs all k8s events received from k8s API
 const (
 	CRSGroupVersionV1alpha1 = "core.haproxy.org/v1alpha1"
 	CRSGroupVersionV1alpha2 = "core.haproxy.org/v1alpha2"
 	GATEWAY_API_VERSION     = "v0.8.1" //nolint:golint,stylecheck
+	CRSGroupVersionV1       = "ingress.v1.haproxy.org/v1"
 )
 
 var ErrIgnored = errors.New("ignored resource")
@@ -72,6 +73,7 @@ type k8s struct {
 	crs                    map[string]CR
 	builtInClient          *k8sclientset.Clientset
 	crClient               *crclientset.Clientset
+	apiExtensionsClient    *crdclientset.Clientset
 	publishSvc             *utils.NamespaceValue
 	gatewayClient          *gatewayclientset.Clientset
 	podPrefix              string
@@ -85,7 +87,8 @@ type k8s struct {
 }
 
 func New(osArgs utils.OSArgs, whitelist map[string]struct{}, publishSvc *utils.NamespaceValue) K8s { //nolint:ireturn
-	restconfig, err := getRestConfig(osArgs)
+	logger.SetLevel(osArgs.LogLevel.LogLevel)
+	restconfig, err := GetRestConfig(osArgs)
 	logger.Panic(err)
 	builtInClient := k8sclientset.NewForConfigOrDie(restconfig)
 	if k8sVersion, errVer := builtInClient.Discovery().ServerVersion(); errVer != nil {
@@ -114,6 +117,7 @@ func New(osArgs utils.OSArgs, whitelist map[string]struct{}, publishSvc *utils.N
 	k := k8s{
 		builtInClient:          builtInClient,
 		crClient:               crclientset.NewForConfigOrDie(restconfig),
+		apiExtensionsClient:    crdclientset.NewForConfigOrDie(restconfig),
 		crs:                    map[string]CR{},
 		whiteListedNS:          getWhitelistedNS(whitelist, osArgs.ConfigMap.Namespace),
 		publishSvc:             publishSvc,
@@ -131,9 +135,14 @@ func New(osArgs utils.OSArgs, whitelist map[string]struct{}, publishSvc *utils.N
 	k.registerCoreCR(NewDefaultsCRV1Alpha1(), CRSGroupVersionV1alpha1)
 	k.registerCoreCR(NewBackendCRV1Alpha1(), CRSGroupVersionV1alpha1)
 
-	k.registerCoreCR(NewGlobalCR(), CRSGroupVersionV1alpha2)
-	k.registerCoreCR(NewDefaultsCR(), CRSGroupVersionV1alpha2)
-	k.registerCoreCR(NewBackendCR(), CRSGroupVersionV1alpha2)
+	// alpha2 is deprecated
+	k.registerCoreCR(NewGlobalCRV1Alpha2(), CRSGroupVersionV1alpha2)
+	k.registerCoreCR(NewDefaultsCRV1Alpha2(), CRSGroupVersionV1alpha2)
+	k.registerCoreCR(NewBackendCRV1Alpha2(), CRSGroupVersionV1alpha2)
+
+	k.registerCoreCR(NewGlobalCR(), CRSGroupVersionV1)
+	k.registerCoreCR(NewDefaultsCR(), CRSGroupVersionV1)
+	k.registerCoreCR(NewBackendCR(), CRSGroupVersionV1)
 	return k
 }
 
@@ -150,11 +159,13 @@ func (k k8s) MonitorChanges(eventChan chan SyncDataEvent, stop chan struct{}, os
 	k.runPodInformer(eventChan, stop, informersSynced)
 	for _, namespace := range k.whiteListedNS {
 		k.runInformers(eventChan, stop, namespace, informersSynced)
-		k.runCRInformers(eventChan, stop, namespace, informersSynced)
+		k.runCRInformers(eventChan, stop, namespace, informersSynced, k.crs)
 		if gatewayAPIInstalled {
 			k.runInformersGwAPI(eventChan, stop, namespace, informersSynced)
 		}
 	}
+	// check if we need to also watch CRS creation (in case not all alpha2 definitions are already installed)
+	k.RunCRSCreationMonitoring(eventChan, stop)
 
 	if !cache.WaitForCacheSync(stop, *informersSynced...) {
 		logger.Panic("Caches are not populated due to an underlying error, cannot run the Ingress Controller")
@@ -184,9 +195,9 @@ func (k k8s) registerCoreCR(cr CR, groupVersion string) {
 	}
 }
 
-func (k k8s) runCRInformers(eventChan chan SyncDataEvent, stop chan struct{}, namespace string, informersSynced *[]cache.InformerSynced) {
+func (k k8s) runCRInformers(eventChan chan SyncDataEvent, stop chan struct{}, namespace string, informersSynced *[]cache.InformerSynced, crs map[string]CR) {
 	informerFactory := crinformers.NewSharedInformerFactoryWithOptions(k.crClient, k.cacheResyncPeriod, crinformers.WithNamespace(namespace))
-	for _, cr := range k.crs {
+	for _, cr := range crs {
 		informer := cr.GetInformer(eventChan, informerFactory)
 		go informer.Run(stop)
 		*informersSynced = append(*informersSynced, informer.HasSynced)
@@ -288,7 +299,7 @@ func (k k8s) endpointsMirroring() bool {
 	return true
 }
 
-func getRestConfig(osArgs utils.OSArgs) (restConfig *rest.Config, err error) {
+func GetRestConfig(osArgs utils.OSArgs) (restConfig *rest.Config, err error) {
 	if osArgs.External {
 		kubeconfig := filepath.Join(utils.HomeDir(), ".kube", "config")
 		if osArgs.KubeConfig != "" {

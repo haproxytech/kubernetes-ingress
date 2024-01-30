@@ -3,7 +3,7 @@ package rules
 import (
 	"fmt"
 
-	"github.com/haproxytech/client-native/v3/models"
+	"github.com/haproxytech/client-native/v5/models"
 
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/api"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/maps"
@@ -22,7 +22,7 @@ func (r ReqProxyProtocol) Create(client api.HAProxyClient, frontend *models.Fron
 	tcpRule := models.TCPRequestRule{
 		Index:    utils.PtrInt64(0),
 		Type:     "connection",
-		Action:   models.TCPRequestRuleActionExpectProxy,
+		Action:   models.TCPRequestRuleActionExpectDashProxy,
 		Cond:     "if",
 		CondTest: fmt.Sprintf("{ src -f %s }", r.SrcIPsMap),
 	}

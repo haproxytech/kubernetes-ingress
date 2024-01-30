@@ -24,6 +24,7 @@ import (
 	"strings"
 
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/api"
+	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/instance"
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
 )
 
@@ -32,8 +33,8 @@ type Maps interface {
 	MapAppend(name Name, row string)
 	// Exists returns true if a map exists and is not empty
 	MapExists(name Name) bool
-	// Refresh refreshs maps content and returns true if a map content has changed(crated/deleted/updated)
-	RefreshMaps(client api.HAProxyClient) bool
+	// Refresh refreshs maps content
+	RefreshMaps(client api.HAProxyClient)
 	// Clean cleans maps content
 	CleanMaps()
 }
@@ -114,7 +115,7 @@ func (m mapFiles) CleanMaps() {
 	}
 }
 
-func (m mapFiles) RefreshMaps(client api.HAProxyClient) (reload bool) {
+func (m mapFiles) RefreshMaps(client api.HAProxyClient) {
 	for name, mapFile := range m {
 		content, hash := mapFile.getContent()
 		if mapFile.hash == hash {
@@ -142,14 +143,12 @@ func (m mapFiles) RefreshMaps(client api.HAProxyClient) (reload bool) {
 		logger.Error(f.Sync())
 		if err = client.SetMapContent(string(name), content); err != nil {
 			if errors.Is(err, api.ErrMapNotFound) {
-				logger.Debugf("Map file %s created, reload required", name)
+				instance.Reload("Map file %s created", string(name))
 			} else {
-				logger.Debugf("Runtime update of map file '%s' failed, reload required: %s", name, err)
+				instance.Reload("Runtime update of map file '%s' failed : %s", string(name), err.Error())
 			}
-			reload = true
 		}
 	}
-	return reload
 }
 
 func GetPath(name Name) Path {

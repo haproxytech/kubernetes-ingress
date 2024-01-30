@@ -13,7 +13,7 @@ var logger = utils.GetLogger()
 
 type UpdateStatusManager interface {
 	AddIngress(ingress *ingress.Ingress)
-	Update(k store.K8s, h haproxy.HAProxy, a annotations.Annotations) (reload bool, err error)
+	Update(k store.K8s, h haproxy.HAProxy, a annotations.Annotations) (err error)
 }
 
 type UpdateStatusManagerImpl struct {
@@ -35,7 +35,7 @@ func (m *UpdateStatusManagerImpl) AddIngress(ingress *ingress.Ingress) {
 	m.updateIngresses = append(m.updateIngresses, ingress)
 }
 
-func (m *UpdateStatusManagerImpl) Update(k store.K8s, h haproxy.HAProxy, a annotations.Annotations) (reload bool, err error) {
+func (m *UpdateStatusManagerImpl) Update(k store.K8s, h haproxy.HAProxy, a annotations.Annotations) (err error) {
 	errs := utils.Errors{}
 	defer func() {
 		err = errs.Result()

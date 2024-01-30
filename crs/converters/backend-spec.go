@@ -15,14 +15,15 @@
 package converters
 
 import (
-	"github.com/haproxytech/client-native/v3/models"
+	"github.com/haproxytech/client-native/v5/misc"
+	"github.com/haproxytech/client-native/v5/models"
 
-	corev1alpha1 "github.com/haproxytech/kubernetes-ingress/crs/api/core/v1alpha1"
 	corev1alpha2 "github.com/haproxytech/kubernetes-ingress/crs/api/core/v1alpha2"
+	v1 "github.com/haproxytech/kubernetes-ingress/crs/api/ingress/v1"
 )
 
-func DeepConvertBackendSpecA1toA2(o corev1alpha1.BackendSpec) corev1alpha2.BackendSpec { //nolint:cyclop,maintidx
-	var cp corev1alpha2.BackendSpec
+func DeepConvertBackendSpecA2toV1(o corev1alpha2.BackendSpec) v1.BackendSpec { //nolint:cyclop,maintidx
+	var cp v1.BackendSpec
 	if o.Config != nil {
 		cp.Config = new(models.Backend)
 		cp.Config.Abortonclose = o.Config.Abortonclose
@@ -96,7 +97,7 @@ func DeepConvertBackendSpecA1toA2(o corev1alpha1.BackendSpec) corev1alpha2.Backe
 		}
 		if o.Config.DefaultServer != nil {
 			cp.Config.DefaultServer = new(models.DefaultServer)
-			cp.Config.DefaultServer.Address = o.Config.DefaultServer.Address
+			// cp.Config.DefaultServer.Address = o.Config.DefaultServer.Address // bug in alpha2
 			cp.Config.DefaultServer.AgentAddr = o.Config.DefaultServer.AgentAddr
 			cp.Config.DefaultServer.AgentCheck = o.Config.DefaultServer.AgentCheck
 			if o.Config.DefaultServer.AgentInter != nil {
@@ -111,7 +112,7 @@ func DeepConvertBackendSpecA1toA2(o corev1alpha1.BackendSpec) corev1alpha2.Backe
 			cp.Config.DefaultServer.Allow0rtt = o.Config.DefaultServer.Allow0rtt
 			cp.Config.DefaultServer.Alpn = o.Config.DefaultServer.Alpn
 			cp.Config.DefaultServer.Backup = o.Config.DefaultServer.Backup
-			cp.Config.DefaultServer.CaFile = o.Config.DefaultServer.CaFile
+			cp.Config.DefaultServer.SslCafile = o.Config.DefaultServer.CaFile
 			cp.Config.DefaultServer.Check = o.Config.DefaultServer.Check
 			cp.Config.DefaultServer.CheckSendProxy = o.Config.DefaultServer.CheckSendProxy
 			cp.Config.DefaultServer.CheckSni = o.Config.DefaultServer.CheckSni
@@ -123,12 +124,17 @@ func DeepConvertBackendSpecA1toA2(o corev1alpha1.BackendSpec) corev1alpha2.Backe
 			cp.Config.DefaultServer.Ciphersuites = o.Config.DefaultServer.Ciphersuites
 			cp.Config.DefaultServer.Cookie = o.Config.DefaultServer.Cookie
 			cp.Config.DefaultServer.CrlFile = o.Config.DefaultServer.CrlFile
-			cp.Config.DefaultServer.Disabled = o.Config.DefaultServer.Disabled
+			if o.Config.DefaultServer.Disabled == "enabled" {
+				cp.Config.DefaultServer.Maintenance = "disabled"
+			}
+			if o.Config.DefaultServer.Enabled == "disabled" {
+				cp.Config.DefaultServer.Maintenance = "enabled"
+			}
+
 			if o.Config.DefaultServer.Downinter != nil {
 				cp.Config.DefaultServer.Downinter = new(int64)
 				cp.Config.DefaultServer.Downinter = o.Config.DefaultServer.Downinter
 			}
-			cp.Config.DefaultServer.Enabled = o.Config.DefaultServer.Enabled
 			cp.Config.DefaultServer.ErrorLimit = o.Config.DefaultServer.ErrorLimit
 			if o.Config.DefaultServer.Fall != nil {
 				cp.Config.DefaultServer.Fall = new(int64)
@@ -147,7 +153,7 @@ func DeepConvertBackendSpecA1toA2(o corev1alpha1.BackendSpec) corev1alpha2.Backe
 				cp.Config.DefaultServer.HealthCheckPort = new(int64)
 				cp.Config.DefaultServer.HealthCheckPort = o.Config.DefaultServer.HealthCheckPort
 			}
-			cp.Config.DefaultServer.InitAddr = o.Config.DefaultServer.InitAddr
+			cp.Config.DefaultServer.InitAddr = misc.Ptr(o.Config.DefaultServer.InitAddr)
 			if o.Config.DefaultServer.Inter != nil {
 				cp.Config.DefaultServer.Inter = new(int64)
 				cp.Config.DefaultServer.Inter = o.Config.DefaultServer.Inter
@@ -169,7 +175,7 @@ func DeepConvertBackendSpecA1toA2(o corev1alpha1.BackendSpec) corev1alpha2.Backe
 				cp.Config.DefaultServer.Minconn = new(int64)
 				cp.Config.DefaultServer.Minconn = o.Config.DefaultServer.Minconn
 			}
-			cp.Config.DefaultServer.Name = o.Config.DefaultServer.Name
+			// cp.Config.DefaultServer.Name = o.Config.DefaultServer.Name // bug in alpha2
 			cp.Config.DefaultServer.Namespace = o.Config.DefaultServer.Namespace
 			cp.Config.DefaultServer.NoSslv3 = o.Config.DefaultServer.NoSslv3
 			cp.Config.DefaultServer.NoTlsv10 = o.Config.DefaultServer.NoTlsv10
@@ -194,10 +200,10 @@ func DeepConvertBackendSpecA1toA2(o corev1alpha1.BackendSpec) corev1alpha2.Backe
 				cp.Config.DefaultServer.PoolPurgeDelay = new(int64)
 				cp.Config.DefaultServer.PoolPurgeDelay = o.Config.DefaultServer.PoolPurgeDelay
 			}
-			if o.Config.DefaultServer.Port != nil {
-				cp.Config.DefaultServer.Port = new(int64)
-				cp.Config.DefaultServer.Port = o.Config.DefaultServer.Port
-			}
+			// if o.Config.DefaultServer.Port != nil { // bug in alpha2
+			// 	cp.Config.DefaultServer.Port = new(int64)
+			// 	cp.Config.DefaultServer.Port = o.Config.DefaultServer.Port
+			// }
 			cp.Config.DefaultServer.Proto = o.Config.DefaultServer.Proto
 			if o.Config.DefaultServer.ProxyV2Options != nil {
 				cp.Config.DefaultServer.ProxyV2Options = make([]string, len(o.Config.DefaultServer.ProxyV2Options))
@@ -229,7 +235,7 @@ func DeepConvertBackendSpecA1toA2(o corev1alpha1.BackendSpec) corev1alpha2.Backe
 			cp.Config.DefaultServer.SslMinVer = o.Config.DefaultServer.SslMinVer
 			cp.Config.DefaultServer.SslReuse = o.Config.DefaultServer.SslReuse
 			cp.Config.DefaultServer.Stick = o.Config.DefaultServer.Stick
-			cp.Config.DefaultServer.TCPUt = o.Config.DefaultServer.TCPUt
+			cp.Config.DefaultServer.TCPUt = misc.Ptr(o.Config.DefaultServer.TCPUt)
 			cp.Config.DefaultServer.Tfo = o.Config.DefaultServer.Tfo
 			cp.Config.DefaultServer.TLSTickets = o.Config.DefaultServer.TLSTickets
 			cp.Config.DefaultServer.Track = o.Config.DefaultServer.Track
@@ -256,7 +262,7 @@ func DeepConvertBackendSpecA1toA2(o corev1alpha1.BackendSpec) corev1alpha2.Backe
 		}
 		cp.Config.H1CaseAdjustBogusServer = o.Config.H1CaseAdjustBogusServer
 		if o.Config.HashType != nil {
-			cp.Config.HashType = new(models.BackendHashType)
+			cp.Config.HashType = new(models.HashType)
 			cp.Config.HashType.Function = o.Config.HashType.Function
 			cp.Config.HashType.Method = o.Config.HashType.Method
 			cp.Config.HashType.Modifier = o.Config.HashType.Modifier
@@ -267,8 +273,8 @@ func DeepConvertBackendSpecA1toA2(o corev1alpha1.BackendSpec) corev1alpha2.Backe
 			cp.Config.HTTPCheck.ExclamationMark = o.Config.HTTPCheck.ExclamationMark
 			cp.Config.HTTPCheck.Match = o.Config.HTTPCheck.Match
 			cp.Config.HTTPCheck.Pattern = o.Config.HTTPCheck.Pattern
-			if o.Config.HTTPCheck.Type != nil {
-				cp.Config.HTTPCheck.Type = *o.Config.HTTPCheck.Type
+			if o.Config.HTTPCheck != nil {
+				cp.Config.HTTPCheck.Type = o.Config.HTTPCheck.Type
 			}
 		}
 		cp.Config.HTTPUseHtx = o.Config.HTTPUseHtx

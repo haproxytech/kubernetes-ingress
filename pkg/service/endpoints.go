@@ -16,18 +16,19 @@ package service
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
-	"github.com/haproxytech/client-native/v3/models"
+	"github.com/haproxytech/client-native/v5/models"
 
 	"github.com/haproxytech/kubernetes-ingress/pkg/annotations"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/api"
+	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/instance"
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
 )
 
 // HandleHAProxySrvs handles the haproxy backend servers of the corresponding IngressPath (service + port)
-func (s *Service) HandleHAProxySrvs(k8s store.K8s, client api.HAProxyClient) (reload bool) {
-	var srvsScaled bool
+func (s *Service) HandleHAProxySrvs(k8s store.K8s, client api.HAProxyClient) {
 	backend, err := s.getRuntimeBackend(k8s)
 	if err != nil {
 		if s.backend != nil && s.backend.Name == store.DefaultLocalBackend {
@@ -42,7 +43,7 @@ func (s *Service) HandleHAProxySrvs(k8s store.K8s, client api.HAProxyClient) (re
 	backend.Name = s.backend.Name // set backendName in store.PortEndpoints for runtime updates.
 	// scale servers
 	if s.resource.DNS == "" {
-		srvsScaled = s.scaleHAProxySrvs(backend)
+		s.scaleHAProxySrvs(backend)
 	}
 	// update servers
 	for _, srvSlot := range backend.HAProxySrvs {
@@ -52,18 +53,17 @@ func (s *Service) HandleHAProxySrvs(k8s store.K8s, client api.HAProxyClient) (re
 	}
 	if backend.DynUpdateFailed {
 		backend.DynUpdateFailed = false
-		return true
+		instance.Reload("backend '%s': dynamic update failed", backend.Name)
 	}
-	return srvsScaled
 }
 
 // updateHAProxySrv updates corresponding HAProxy backend server or creates one if it does not exist
 func (s *Service) updateHAProxySrv(client api.HAProxyClient, srvSlot store.HAProxySrv, port int64) {
 	srv := models.Server{
-		Name:        srvSlot.Name,
-		Port:        &port,
-		Address:     "127.0.0.1",
-		Maintenance: "enabled",
+		Name:         srvSlot.Name,
+		Port:         &port,
+		Address:      "127.0.0.1",
+		ServerParams: models.ServerParams{Maintenance: "enabled"},
 	}
 	// Enable Server
 	if srvSlot.Address != "" {
@@ -90,7 +90,7 @@ func (s *Service) updateHAProxySrv(client api.HAProxyClient, srvSlot store.HAPro
 }
 
 // scaleHAproxySrvs adds servers to match available addresses
-func (s *Service) scaleHAProxySrvs(backend *store.RuntimeBackend) (reload bool) {
+func (s *Service) scaleHAProxySrvs(backend *store.RuntimeBackend) {
 	var flag bool
 	var disabled []*store.HAProxySrv
 	var annVal int
@@ -119,10 +119,7 @@ func (s *Service) scaleHAProxySrvs(backend *store.RuntimeBackend) (reload bool) 
 		disabled = append(disabled, srv)
 		flag = true
 	}
-	if flag {
-		reload = true
-		logger.Debugf("[CONFIG] [BACKEND] [SERVER] Server slots in backend '%s' scaled to match scale-server-slots value: %d, reload required", s.backend.Name, srvSlots)
-	}
+	instance.ReloadIf(flag, "[CONFIG] [BACKEND] [SERVER] Server slots in backend '%s' scaled to match scale-server-slots value: %s", s.backend.Name, strconv.Itoa(srvSlots))
 	// Configure remaining addresses in available HAProxySrvs
 	flag = false
 	for addr := range backend.Endpoints.Addresses {
@@ -141,11 +138,7 @@ func (s *Service) scaleHAProxySrvs(backend *store.RuntimeBackend) (reload bool) 
 		}
 		delete(backend.Endpoints.Addresses, addr)
 	}
-	if flag {
-		reload = true
-		logger.Debugf("[CONFIG] [BACKEND] [SERVER] Server slots in backend '%s' scaled to match available endpoints, reload required", s.backend.Name)
-	}
-	return reload
+	instance.ReloadIf(flag, "[CONFIG] [BACKEND] [SERVER] Server slots in backend '%s' scaled to match available endpoints", s.backend.Name)
 }
 
 func (s *Service) getRuntimeBackend(k8s store.K8s) (backend *store.RuntimeBackend, err error) {

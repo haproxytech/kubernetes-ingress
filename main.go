@@ -34,9 +34,11 @@ import (
 
 	"github.com/haproxytech/kubernetes-ingress/pkg/annotations"
 	"github.com/haproxytech/kubernetes-ingress/pkg/controller"
+	"github.com/haproxytech/kubernetes-ingress/pkg/job"
 	"github.com/haproxytech/kubernetes-ingress/pkg/k8s"
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
+	"github.com/haproxytech/kubernetes-ingress/pkg/version"
 
 	_ "go.uber.org/automaxprocs"
 )
@@ -70,6 +72,22 @@ func main() {
 		parser.WriteHelp(os.Stdout)
 		return
 	}
+	if osArgs.JobCheckCRD {
+		logger.Print(version.IngressControllerInfo)
+		logger.Print(job.IngressControllerCRDUpdater)
+		logger.Infof("HAProxy Ingress Controller CRD Updater %s %s%s", version.GitTag, version.GitCommit, version.GitDirty)
+		logger.Infof("Build from: %s", version.GitRepo)
+		logger.Infof("Build date: %s\n", version.GitCommitDate)
+
+		err := job.CRDRefresh(logger, osArgs)
+		if err != nil {
+			logger.Error(err)
+			os.Exit(1) //nolint:gocritic
+		}
+		// exit, this is just a job
+		os.Exit(0)
+	}
+
 	logger.ShowFilename(false)
 	exit := logInfo(logger, osArgs)
 	if exit {
@@ -138,9 +156,9 @@ func main() {
 
 func logInfo(logger utils.Logger, osArgs utils.OSArgs) bool {
 	if len(osArgs.Version) > 0 {
-		fmt.Printf("HAProxy Ingress Controller %s %s%s", GitTag, GitCommit, GitDirty)
-		fmt.Printf("Build from: %s", GitRepo)
-		fmt.Printf("Git commit date: %s", GitCommitDate)
+		fmt.Printf("HAProxy Ingress Controller %s %s%s", version.GitTag, version.GitCommit, version.GitDirty)
+		fmt.Printf("Build from: %s", version.GitRepo)
+		fmt.Printf("Git commit date: %s", version.GitCommitDate)
 		if len(osArgs.Version) > 1 {
 			fmt.Printf("ConfigMap: %s", osArgs.ConfigMap)
 			fmt.Printf("Ingress class: %s", osArgs.IngressClass)
@@ -149,10 +167,10 @@ func logInfo(logger utils.Logger, osArgs utils.OSArgs) bool {
 		return true
 	}
 
-	logger.Print(IngressControllerInfo)
-	logger.Printf("HAProxy Ingress Controller %s %s%s", GitTag, GitCommit, GitDirty)
-	logger.Printf("Build from: %s", GitRepo)
-	logger.Printf("Git commit date: %s", GitCommitDate)
+	logger.Print(version.IngressControllerInfo)
+	logger.Printf("HAProxy Ingress Controller %s %s%s", version.GitTag, version.GitCommit, version.GitDirty)
+	logger.Printf("Build from: %s", version.GitRepo)
+	logger.Printf("Git commit date: %s", version.GitCommitDate)
 	logger.Printf("ConfigMap: %s", osArgs.ConfigMap)
 	logger.Printf("Ingress class: %s", osArgs.IngressClass)
 	logger.Printf("Empty Ingress class: %t", osArgs.EmptyIngressClass)

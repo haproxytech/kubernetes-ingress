@@ -15,13 +15,15 @@
 package converters
 
 import (
-	"github.com/haproxytech/client-native/v3/models"
-	corev1alpha1 "github.com/haproxytech/kubernetes-ingress/crs/api/core/v1alpha1"
+	v3models "github.com/haproxytech/client-native/v3/models"
+	"github.com/haproxytech/client-native/v5/models"
 	corev1alpha2 "github.com/haproxytech/kubernetes-ingress/crs/api/core/v1alpha2"
+	v1 "github.com/haproxytech/kubernetes-ingress/crs/api/ingress/v1"
+	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
 )
 
-func DeepConvertGlobalSpecA1toA2(o corev1alpha1.GlobalSpec) corev1alpha2.GlobalSpec {
-	var cp corev1alpha2.GlobalSpec
+func DeepConvertGlobalSpecA2toV1(o corev1alpha2.GlobalSpec) v1.GlobalSpec {
+	var cp v1.GlobalSpec
 	if o.Config != nil {
 		cp.Config = new(models.Global)
 
@@ -147,11 +149,11 @@ func DeepConvertGlobalSpecA1toA2(o corev1alpha1.GlobalSpec) corev1alpha2.GlobalS
 		cp.Config.SslModeAsync = o.Config.SslModeAsync
 		if o.Config.StatsTimeout != nil {
 			cp.Config.StatsTimeout = new(int64)
-
 			cp.Config.StatsTimeout = o.Config.StatsTimeout
 		}
 		cp.Config.TuneSslDefaultDhParam = o.Config.TuneSslDefaultDhParam
 		cp.Config.User = o.Config.User
+		cp.Config.TuneOptions = Convert(o.Config.TuneOptions)
 	}
 	if o.LogTargets != nil {
 		cp.LogTargets = make([]*models.LogTarget, len(o.LogTargets))
@@ -176,4 +178,68 @@ func DeepConvertGlobalSpecA1toA2(o corev1alpha1.GlobalSpec) corev1alpha2.GlobalS
 		}
 	}
 	return cp
+}
+
+func Convert(globalTuneOptions *v3models.GlobalTuneOptions) *models.GlobalTuneOptions {
+	if globalTuneOptions == nil {
+		return nil
+	}
+
+	globalTuneOptionsV5 := &models.GlobalTuneOptions{}
+
+	globalTuneOptionsV5.BuffersLimit = globalTuneOptions.BuffersLimit
+	globalTuneOptionsV5.BuffersReserve = globalTuneOptions.BuffersReserve
+	globalTuneOptionsV5.Bufsize = globalTuneOptions.Bufsize
+	globalTuneOptionsV5.CompMaxlevel = globalTuneOptions.CompMaxlevel
+	globalTuneOptionsV5.FailAlloc = globalTuneOptions.FailAlloc
+	globalTuneOptionsV5.H2FeMaxConcurrentStreams = globalTuneOptions.H2MaxConcurrentStreams
+	globalTuneOptionsV5.H2BeMaxConcurrentStreams = globalTuneOptions.H2MaxConcurrentStreams
+	globalTuneOptionsV5.H2FeInitialWindowSize = utils.PointerDefaultValueIfNil(globalTuneOptions.H2InitialWindowSize)
+	globalTuneOptionsV5.H2BeInitialWindowSize = utils.PointerDefaultValueIfNil(globalTuneOptions.H2InitialWindowSize)
+	globalTuneOptionsV5.H2HeaderTableSize = globalTuneOptions.H2HeaderTableSize
+	globalTuneOptionsV5.H2InitialWindowSize = globalTuneOptions.H2InitialWindowSize
+	globalTuneOptionsV5.H2MaxConcurrentStreams = globalTuneOptions.H2MaxConcurrentStreams
+	globalTuneOptionsV5.H2MaxFrameSize = globalTuneOptions.H2MaxFrameSize
+	globalTuneOptionsV5.HTTPCookielen = globalTuneOptions.HTTPCookielen
+	globalTuneOptionsV5.HTTPLogurilen = globalTuneOptions.HTTPLogurilen
+	globalTuneOptionsV5.HTTPMaxhdr = globalTuneOptions.HTTPMaxhdr
+	globalTuneOptionsV5.IdlePoolShared = globalTuneOptions.IdlePoolShared
+	globalTuneOptionsV5.Idletimer = globalTuneOptions.Idletimer
+	globalTuneOptionsV5.ListenerMultiQueue = globalTuneOptions.ListenerMultiQueue
+	globalTuneOptionsV5.LuaForcedYield = globalTuneOptions.LuaForcedYield
+	globalTuneOptionsV5.LuaMaxmem = globalTuneOptions.LuaMaxmem
+	globalTuneOptionsV5.LuaServiceTimeout = globalTuneOptions.LuaServiceTimeout
+	globalTuneOptionsV5.LuaSessionTimeout = globalTuneOptions.LuaSessionTimeout
+	globalTuneOptionsV5.LuaTaskTimeout = globalTuneOptions.LuaTaskTimeout
+	globalTuneOptionsV5.Maxaccept = globalTuneOptions.Maxaccept
+	globalTuneOptionsV5.Maxpollevents = globalTuneOptions.Maxpollevents
+	globalTuneOptionsV5.Maxrewrite = globalTuneOptions.Maxrewrite
+	globalTuneOptionsV5.PatternCacheSize = globalTuneOptions.PatternCacheSize
+	globalTuneOptionsV5.Pipesize = globalTuneOptions.Pipesize
+	globalTuneOptionsV5.PoolHighFdRatio = globalTuneOptions.PoolHighFdRatio
+	globalTuneOptionsV5.PoolLowFdRatio = globalTuneOptions.PoolLowFdRatio
+	globalTuneOptionsV5.RcvbufClient = globalTuneOptions.RcvbufClient
+	globalTuneOptionsV5.RcvbufServer = globalTuneOptions.RcvbufServer
+	globalTuneOptionsV5.RecvEnough = globalTuneOptions.RecvEnough
+	globalTuneOptionsV5.RunqueueDepth = globalTuneOptions.RunqueueDepth
+	globalTuneOptionsV5.SchedLowLatency = globalTuneOptions.SchedLowLatency
+	globalTuneOptionsV5.SndbufClient = globalTuneOptions.SndbufClient
+	globalTuneOptionsV5.SndbufServer = globalTuneOptions.SndbufServer
+	globalTuneOptionsV5.SslCachesize = globalTuneOptions.SslCachesize
+	globalTuneOptionsV5.SslCaptureBufferSize = globalTuneOptions.SslCaptureBufferSize
+	globalTuneOptionsV5.SslCtxCacheSize = globalTuneOptions.SslCtxCacheSize
+	globalTuneOptionsV5.SslDefaultDhParam = globalTuneOptions.SslDefaultDhParam
+	globalTuneOptionsV5.SslForcePrivateCache = globalTuneOptions.SslForcePrivateCache
+	globalTuneOptionsV5.SslKeylog = globalTuneOptions.SslKeylog
+	globalTuneOptionsV5.SslLifetime = globalTuneOptions.SslLifetime
+	globalTuneOptionsV5.SslMaxrecord = globalTuneOptions.SslMaxrecord
+	globalTuneOptionsV5.VarsGlobalMaxSize = globalTuneOptions.VarsGlobalMaxSize
+	globalTuneOptionsV5.VarsProcMaxSize = globalTuneOptions.VarsProcMaxSize
+	globalTuneOptionsV5.VarsReqresMaxSize = globalTuneOptions.VarsReqresMaxSize
+	globalTuneOptionsV5.VarsSessMaxSize = globalTuneOptions.VarsSessMaxSize
+	globalTuneOptionsV5.VarsTxnMaxSize = globalTuneOptions.VarsTxnMaxSize
+	globalTuneOptionsV5.ZlibMemlevel = globalTuneOptions.ZlibMemlevel
+	globalTuneOptionsV5.ZlibWindowsize = globalTuneOptions.ZlibWindowsize
+
+	return globalTuneOptionsV5
 }

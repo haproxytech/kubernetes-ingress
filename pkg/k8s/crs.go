@@ -17,8 +17,7 @@ package k8s
 import (
 	"k8s.io/client-go/tools/cache"
 
-	// corev1alpha1 "github.com/haproxytech/kubernetes-ingress/crs/api/core/v1alpha1"
-	corev1alpha2 "github.com/haproxytech/kubernetes-ingress/crs/api/core/v1alpha2"
+	v1 "github.com/haproxytech/kubernetes-ingress/crs/api/ingress/v1"
 	informers "github.com/haproxytech/kubernetes-ingress/crs/generated/informers/externalversions"
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
 )
@@ -46,12 +45,12 @@ func (c GlobalCR) GetKind() string {
 }
 
 func (c GlobalCR) GetInformer(eventChan chan SyncDataEvent, factory informers.SharedInformerFactory) cache.SharedIndexInformer { //nolint:ireturn
-	informer := factory.Core().V1alpha2().Globals().Informer()
+	informer := factory.Ingress().V1().Globals().Informer()
 
 	sendToChannel := func(eventChan chan SyncDataEvent, object interface{}, status store.Status) {
-		data, ok := object.(*corev1alpha2.Global)
+		data, ok := object.(*v1.Global)
 		if !ok {
-			logger.Warning(CRSGroupVersionV1alpha2 + ": type mismatch with Global kind")
+			logger.Warning(CRSGroupVersionV1 + ": type mismatch with Global kind")
 			return
 		}
 		logger.Debugf("%s %s: %s", data.GetNamespace(), status, data.GetName())
@@ -82,12 +81,12 @@ func (c DefaultsCR) GetKind() string {
 }
 
 func (c DefaultsCR) GetInformer(eventChan chan SyncDataEvent, factory informers.SharedInformerFactory) cache.SharedIndexInformer { //nolint:ireturn
-	informer := factory.Core().V1alpha2().Defaults().Informer()
+	informer := factory.Ingress().V1().Defaults().Informer()
 
 	sendToChannel := func(eventChan chan SyncDataEvent, object interface{}, status store.Status) {
-		data, ok := object.(*corev1alpha2.Defaults)
+		data, ok := object.(*v1.Defaults)
 		if !ok {
-			logger.Warning(CRSGroupVersionV1alpha2 + ": type mismatch with Defaults kind")
+			logger.Warning(CRSGroupVersionV1 + ": type mismatch with Defaults kind")
 			return
 		}
 		logger.Debugf("%s %s: %s", data.GetNamespace(), status, data.GetName())
@@ -118,12 +117,12 @@ func (c BackendCR) GetKind() string {
 }
 
 func (c BackendCR) GetInformer(eventChan chan SyncDataEvent, factory informers.SharedInformerFactory) cache.SharedIndexInformer { //nolint:ireturn
-	informer := factory.Core().V1alpha2().Backends().Informer()
+	informer := factory.Ingress().V1().Backends().Informer()
 
 	sendToChannel := func(eventChan chan SyncDataEvent, object interface{}, status store.Status) {
-		data, ok := object.(*corev1alpha2.Backend)
+		data, ok := object.(*v1.Backend)
 		if !ok {
-			logger.Warning(CRSGroupVersionV1alpha2 + ": type mismatch with Backend kind")
+			logger.Warning(CRSGroupVersionV1 + ": type mismatch with Backend kind")
 			return
 		}
 		logger.Debugf("%s %s: %s", data.GetNamespace(), status, data.GetName())

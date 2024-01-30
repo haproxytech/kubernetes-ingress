@@ -11,7 +11,7 @@ CR_DIR=$(dirname "$0")
 OUTPUT_DIR="${CR_DIR}/.generated"
 HDR_FILE="${CR_DIR}/../assets/license-header.txt"
 CR_PKG="github.com/haproxytech/kubernetes-ingress/crs"
-API_PKGS=$(find ${CR_DIR}/api -mindepth 2 -type d -printf "$CR_PKG/api/%P,")
+API_PKGS=$(find ${CR_DIR}/api -mindepth 2 -type d -printf "$CR_PKG/api/%P\n"| sort | tr '\n' ',')
 API_PKGS=${API_PKGS::-1} # remove trailing ","
 
 # Install Kubernetes Code Generators from k8s.io/code-generator
@@ -20,7 +20,6 @@ VERSION=$(go list -m  k8s.io/api  | cut -d ' ' -f2)
 GOBIN="$(go env GOBIN)"
 gobin="${GOBIN:-$(go env GOPATH)/bin}"
 go install k8s.io/code-generator/cmd/{deepcopy-gen,register-gen,client-gen,lister-gen,informer-gen,defaulter-gen}@$VERSION
-
 
 # Generate Code
 echo "Generating code for $API_PKGS"
@@ -61,9 +60,9 @@ echo "Generating informers"
 "${gobin}/informer-gen"\
 	--plural-exceptions "Defaults:Defaults"\
 	--input-dirs ${API_PKGS}\
-  --versioned-clientset-package "${CR_PKG}/generated/clientset/versioned"\
-  --listers-package "${CR_PKG}/generated/listers"\
-  --output-package "${CR_PKG}/generated/informers"\
+	--versioned-clientset-package "${CR_PKG}/generated/clientset/versioned"\
+	--listers-package "${CR_PKG}/generated/listers"\
+	--output-package "${CR_PKG}/generated/informers"\
 	--go-header-file ${HDR_FILE}\
 	--output-base ${OUTPUT_DIR}
 
@@ -75,3 +74,10 @@ find  ${OUTPUT_DIR}/${CR_PKG}/api -mindepth 2 -type f -printf "%P\n" | xargs -I{
 mkdir -p ${CR_DIR}/generated
 cp -r ${OUTPUT_DIR}/${CR_PKG}/generated/{clientset,listers,informers} ${CR_DIR}/generated
 rm -rf ${OUTPUT_DIR}
+
+CONTROLLER_GEN_VERSION=$(go list -m  sigs.k8s.io/controller-tools  | cut -d ' ' -f2)
+go install sigs.k8s.io/controller-tools/cmd/controller-gen@${CONTROLLER_GEN_VERSION}
+
+# Controller-gen version
+echo "Controller-gen: " ${CONTROLLER_GEN_VERSION}
+controller-gen crd paths=./crs/api/ingress/...  output:crd:dir=./crs/definition

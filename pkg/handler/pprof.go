@@ -15,7 +15,9 @@
 package handler
 
 import (
-	"github.com/haproxytech/client-native/v3/models"
+	"fmt"
+
+	"github.com/haproxytech/client-native/v5/models"
 
 	"github.com/haproxytech/kubernetes-ingress/pkg/annotations"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy"
@@ -27,7 +29,7 @@ const pprofBackend = "pprof"
 
 type Pprof struct{}
 
-func (handler Pprof) Update(k store.K8s, h haproxy.HAProxy, a annotations.Annotations) (reload bool, err error) {
+func (handler Pprof) Update(k store.K8s, h haproxy.HAProxy, a annotations.Annotations) (err error) {
 	k.BackendsWithNoConfigSnippets[pprofBackend] = struct{}{}
 	_, err = h.BackendGet(pprofBackend)
 	if err != nil {
@@ -40,7 +42,7 @@ func (handler Pprof) Update(k store.K8s, h haproxy.HAProxy, a annotations.Annota
 		}
 		err = h.BackendServerCreate(pprofBackend, models.Server{
 			Name:    pprofBackend,
-			Address: "127.0.0.1:6060",
+			Address: fmt.Sprintf("127.0.0.1:%d", h.Env.ControllerPort),
 		})
 		if err != nil {
 			return
@@ -57,6 +59,6 @@ func (handler Pprof) Update(k store.K8s, h haproxy.HAProxy, a annotations.Annota
 	if err != nil {
 		return
 	}
-	reload = true
+	// instance.Reload("pprof backend created")
 	return
 }

@@ -1,0 +1,346 @@
+apiVersion: ingress.v1.haproxy.org/v1
+kind: Global
+metadata:
+  name: global-full
+  namespace: haproxy-controller
+spec:
+  config:
+    anonkey: 0
+    busy_polling: false
+    ca_base: ""
+    #chroot: "aword"
+    close_spread_time: 0
+    cluster_secret: ""
+    cpu_maps:
+    - cpu_set: "1/1"
+      process: "1"
+    crt_base: ""
+    daemon: "enabled"
+    #default_path: # Set by Ingress Controller, Cannot change.
+      #path: "aword"
+      #type: "parent"
+    description: "a test globals"
+    device_atlas_options:
+      json_file: ""
+      log_level: ""
+      properties_cookie: ""
+      separator: ""
+    expose_experimental_directives: false
+    external_check: false
+    fifty_one_degrees_options:
+      cache_size: 0
+      data_file: ""
+      property_name_list: ""
+      property_separator: ""
+    gid: 0
+    grace: 0
+    group: "root"
+    h1_case_adjust:
+    - from: "content-length"
+      to: "Content-length"
+    h1_case_adjust_file: ""
+    h2_workaround_bogus_websocket_clients: false
+    hard_stop_after: 0
+    httpclient_resolvers_disabled: "enabled"
+    httpclient_resolvers_id: ""
+    httpclient_resolvers_prefer: "ipv6"
+    httpclient_retries: 0
+    httpclient_ssl_ca_file: ""
+    httpclient_ssl_verify: "none"
+    httpclient_timeout_connect: 0
+    insecure_fork_wanted: false
+    insecure_setuid_wanted: false
+    issuers_chain_path: ""
+    limited_quic: false
+    load_server_state_from_file: "none"
+    #localpeer: ""
+    log_send_hostname:
+      enabled: "enabled"
+      param: "aword"
+    lua_load_per_thread: ""
+    # lua_loads:
+    # - file: "aword"
+    lua_prepend_path:
+    - path: "aword"
+      type: "cpath"
+    #master-worker: false # Set by Ingress Controller, Cannot change.
+    max_spread_checks: 0
+    maxcompcpuusage: 0
+    maxcomprate: 0
+    maxconn: 1007
+    maxconnrate: 0
+    maxpipes: 0
+    maxsessrate: 0
+    maxsslconn: 0
+    maxsslrate: 0
+    maxzlibmem: 0
+    mworker_max_reloads: 0
+    nbproc: 0
+    nbthread: 0
+    no-quic: false
+    node: ""
+    noepoll: false
+    noevports: false
+    nogetaddrinfo: false
+    nokqueue: false
+    nopoll: false
+    noreuseport: false
+    nosplice: false
+    numa_cpu_mapping: "enabled"
+    #pidfile: "" # Set by Ingress Controller, Cannot change.
+    pp2_never_send_local: false
+    prealloc-fd: false
+    presetenv:
+    - name: "test1"
+      value: "test1"
+    profiling_tasks: "auto"
+    quiet: false
+    resetenv: ""
+    runtime_apis:
+    - accept_netscaler_cip: 0
+      accept_proxy: false
+      address: "0.0.0.0:31025"
+      allow_0rtt: false
+      alpn: "aword"
+      backlog: ""
+      ca_ignore_err: ""
+      ca_sign_file: ""
+      ca_sign_pass: ""
+      ca_verify_file: ""
+      ciphers: ""
+      ciphersuites: ""
+      client_sigalgs: ""
+      crl_file: ""
+      crt_ignore_err: ""
+      crt_list: ""
+      curves: ""
+      defer_accept: false
+      ecdhe: ""
+      expose_fd_listeners: false
+      force_sslv3: false
+      force_tlsv10: false
+      force_tlsv11: false
+      force_tlsv12: false
+      force_tlsv13: false
+      generate_certificates: false
+      gid: 0
+      group: ""
+      id: ""
+      interface: ""
+      level: "admin"
+      maxconn: 10005
+      mode: ""
+      mss: ""
+      name: "aword"
+      namespace: ""
+      nbconn: 0
+      nice: 0
+      no_alpn: false
+      no_ca_names: false
+      no_sslv3: false
+      no_tls_tickets: false
+      no_tlsv10: false
+      no_tlsv11: false
+      no_tlsv12: false
+      no_tlsv13: false
+      npn: ""
+      prefer_client_ciphers: false
+      # haproxy error: process
+      # 'stats socket' ''process aword' on 'bind' lines is not supported anymore, please use 'thread' instead.'
+      # process: "aword" #
+      # Deprecated
+      proto: ""
+      quic-cc-algo: "newreno"
+      quic-force-retry: true
+      # haproxy error: quic-socket
+      # 'stats socket' unknown keyword 'quic-socket'. Did you mean 'quic-force-retry' maybe ?"
+      # haproxy >= 2.9
+      #quic-socket: "connection"
+      severity_output: "none"
+      sigalgs: ""
+      ssl: false
+      #ssl_cafile: ""
+      #ssl_certificate: "aword"
+      ssl_max_ver: "SSLv3"
+      ssl_min_ver: "TLSv1.1"
+      strict_sni: false
+      tcp_user_timeout: 0
+      tfo: false
+      thread: "all"
+      tls_ticket_keys: ""
+      transparent: false
+      uid: ""
+      user: ""
+      v4v6: false
+      v6only: false
+      verify: "optional"
+    server_state_base: "ssb_word"
+    #server_state_file: "ssf_word" # no file exists
+    set_dumpable: false
+    set_var:
+    - expr: "int(100)"
+      name: "proc.test2"
+    set_var_fmt:
+    - format: "primary"
+      name: "proc.current_state"
+    setcap: "cap_net_bind_service"
+    setenv:
+    - name: "test3"
+      value: "test3"
+    spread_checks: 0
+    ssl_default_bind_ciphers: ""
+    ssl_default_bind_ciphersuites: ""
+    ssl_default_bind_client_sigalgs: ""
+    ssl_default_bind_curves: ""
+    ssl_default_bind_options: ""
+    ssl_default_bind_sigalgs: ""
+    ssl_default_server_ciphers: ""
+    ssl_default_server_ciphersuites: ""
+    ssl_default_server_client_sigalgs: ""
+    ssl_default_server_curves: ""
+    ssl_default_server_options: ""
+    ssl_default_server_sigalgs: ""
+    ssl_dh_param_file: ""
+    # haproxy error: ssl_engines
+    # unknown keyword 'ssl-engine' in 'global' section"
+    # HAProxy Version 2.6 disabled the support for engines in the default build.
+    # This option is only available when HAProxy has been built with support for it.
+    # In case the ssl-engine is required HAProxy can be rebuild with the USE_ENGINE=1 flag.
+    # ssl_engines:
+    # - algorithms: "RSA,DSA"
+    #   name: "rdrand"
+    ssl_load_extra_files: ""
+    ssl_mode_async: "enabled"
+    ssl_propquery: ""
+    ssl_provider: ""
+    ssl_provider_path: ""
+    ssl_server_verify: "none"
+    ssl_skip_self_issued_ca: false
+    stats_maxconn: 10008
+    stats_timeout: 6000
+    strict_limits: false
+    # thread_group_lines:
+    # - group: ""
+    #   num_or_range: ""
+    #thread_groups: 0
+    tune_options:
+      buffers_limit: 0
+      buffers_reserve: 3
+      bufsize: 0
+      comp_maxlevel: 0
+      disable_zero_copy_forwarding: false
+      # haproxy error
+      # unknown keyword 'tune.events.max-events-at-once' in 'global' section; did you mean 'tune.maxpollevents' maybe ?"
+      # haproxy >= 2.9
+      #events_max_events_at_once: 10000
+      fail_alloc: false
+      # haproxy error: fd_edge_triggered
+      # 'tune.fd.edge-triggered' directive is experimental, must be allowed via a global 'expose-experimental-directives'"
+      # experimental feature
+      #fd_edge_triggered: "disabled"
+      h2_be_initial_window_size: 0
+      h2_be_max_concurrent_streams: 0
+      h2_fe_initial_window_size: 0
+      h2_fe_max_concurrent_streams: 0
+      h2_header_table_size: 0
+      h2_initial_window_size: 0
+      h2_max_concurrent_streams: 0
+      h2_max_frame_size: 0
+      http_cookielen: 0
+      http_logurilen: 0
+      http_maxhdr: 100
+      idle_pool_shared: "disabled"
+      idletimer: 0
+      listener_default_shards: "by-process"
+      listener_multi_queue: "disabled"
+      lua_burst_timeout: 0
+      lua_forced_yield: 0
+      lua_log_loggers: "disabled"
+      lua_log_stderr: "disabled"
+      lua_maxmem: false
+      lua_service_timeout: 0
+      lua_session_timeout: 0
+      lua_task_timeout: 0
+      # haproxy error: max_checks_per_thread
+      # unknown keyword 'tune.max-checks-per-thread' in 'global' section; did you mean 'max-spread-checks' maybe ?"
+      # haproxy >= 2.9
+      #max_checks_per_thread: 0
+      maxaccept: 0
+      maxpollevents: 0
+      maxrewrite: 0
+      memory_hot_size: 7
+      pattern_cache_size: 0
+      peers_max_updates_at_once: 0
+      pipesize: 0
+      pool_high_fd_ratio: 0
+      pool_low_fd_ratio: 0
+      quic_frontend_conn_tx_buffers_limit: 7
+      quic_frontend_max_idle_timeout: 0
+      quic_frontend_max_streams_bidi: 8
+      quic_max_frame_loss: 10
+      quic_retry_threshold: 10
+      quic_socket_owner: "connection"
+      # haproxy error: rcvbuf_backend, rcvbuf_frontend
+      # unknown keyword 'tune.rcvbuf.backend' in 'global' section; did you mean 'tune.rcvbuf.client' maybe ?"
+      # haproxy >= 2.9
+      #rcvbuf_backend: 0
+      rcvbuf_client: 0
+      #rcvbuf_frontend: 0
+      rcvbuf_server: 0
+      recv_enough: 0
+      runqueue_depth: 0
+      sched_low_latency: "disabled"
+      # haproxy error: sndbuf_backend, sndbuf_frontend
+      # unknown keyword 'tune.sndbuf.backend' in 'global' section;
+      # unknown keyword 'tune.sndbuf.frontend' in 'global' section;
+      # haproxy >= 2.9
+      #sndbuf_backend: 0
+      sndbuf_client: 0
+      #sndbuf_frontend: 0
+      sndbuf_server: 0
+      ssl_cachesize: 0
+      ssl_capture_buffer_size: 0
+      ssl_ctx_cache_size: 0
+      ssl_default_dh_param: 0
+      ssl_force_private_cache: false
+      ssl_keylog: "disabled"
+      ssl_lifetime: 0
+      ssl_maxrecord: 0
+      ssl_ocsp_update_max_delay: 0
+      ssl_ocsp_update_min_delay: 0
+      stick_counters: 0
+      vars_global_max_size: 0
+      vars_proc_max_size: 0
+      vars_reqres_max_size: 0
+      vars_sess_max_size: 0
+      vars_txn_max_size: 0
+      # haproxy error: zlib_memlevel, zlib_windowsize
+      # unknown keyword 'tune.zlib.memlevel' in 'global' section;
+      # unknown keyword 'tune.zlib.windowsize' in 'global' section;
+      # haproxy >= 2.9
+      #zlib_memlevel: 1
+      #zlib_windowsize: 8
+    tune_ssl_default_dh_param: 0
+    uid: 0
+    ulimit_n: 0
+    unsetenv: ""
+    user: "root"
+    wurfl_options:
+      cache_size: 0
+      data_file: ""
+      information_list: ""
+      information_list_separator: ""
+      patch_file: ""
+    zero_warning: false
+  log_targets:
+    - address: "1.2.3.4"
+      facility: "mail"
+      format: "rfc3164"
+      global: false
+      index: 0
+      length: 0
+      level: "emerg"
+      minlevel: "debug"
+      nolog: false
+      sample_range: ""
+      sample_size: 0

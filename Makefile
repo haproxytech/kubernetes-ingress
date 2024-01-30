@@ -25,7 +25,7 @@ doc:
 .PHONY: lint
 lint:
 	cd bin;GOLANGCI_LINT_VERSION=${GOLANGCI_LINT_VERSION} sh lint-check.sh
-	bin/golangci-lint run --timeout 5m --color always --max-issues-per-linter 0 --max-same-issues 0
+	bin/golangci-lint run --timeout 10m --color always --max-issues-per-linter 0 --max-same-issues 0
 
 .PHONY: yaml-lint
 yaml-lint:
@@ -78,8 +78,6 @@ publish:
 .PHONY: cr_generate
 cr_generate:
 	crs/code-generator.sh
-	grep -lir defaultses crs/* | xargs sed -i 's/Defaultses/Defaults/g'
-	grep -lir defaultses crs/* | xargs sed -i 's/defaultses/defaults/g'
 
 .PHONY: gofumpt
 gofumpt:

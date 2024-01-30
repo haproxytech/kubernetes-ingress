@@ -1,7 +1,7 @@
 package service
 
 import (
-	"github.com/haproxytech/client-native/v3/models"
+	"github.com/haproxytech/client-native/v5/models"
 
 	"github.com/haproxytech/kubernetes-ingress/pkg/annotations/common"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/certs"
@@ -36,7 +36,7 @@ func (a *CA) Process(k store.K8s, annotations ...map[string]string) error {
 	secret, _ = k.GetSecret(ns, name)
 	if secret == nil {
 		if a.backend.DefaultServer != nil {
-			a.backend.DefaultServer.CaFile = ""
+			a.backend.DefaultServer.SslCafile = ""
 			// Other values from serverSSL annotation are kept
 		}
 		return nil
@@ -51,6 +51,6 @@ func (a *CA) Process(k store.K8s, annotations ...map[string]string) error {
 	a.backend.DefaultServer.Ssl = "enabled"
 	a.backend.DefaultServer.Alpn = "h2,http/1.1"
 	a.backend.DefaultServer.Verify = "required"
-	a.backend.DefaultServer.CaFile = caFile
+	a.backend.DefaultServer.SslCafile = caFile
 	return nil
 }
