@@ -27,7 +27,6 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 )
 
@@ -265,7 +264,7 @@ MAIN_LOOP:
 		if listener.AllowedRoutes != nil {
 			validRGK := []store.RouteGroupKind{}
 			for _, kind := range listener.AllowedRoutes.Kinds {
-				if (kind.Group == nil || *kind.Group == v1alpha2.GroupName) && kind.Kind == K8S_TCPROUTE_KIND {
+				if (kind.Group == nil || *kind.Group == v1beta1.GroupName) && kind.Kind == K8S_TCPROUTE_KIND {
 					validRGK = append(validRGK, kind)
 				}
 			}
@@ -570,7 +569,7 @@ func (gm GatewayManagerImpl) isTCPRouteAllowedByListener(listener store.Listener
 
 	gkAllowed := listener.AllowedRoutes.Kinds == nil || len(listener.AllowedRoutes.Kinds) == 0
 	for _, kind := range listener.AllowedRoutes.Kinds {
-		if (kind.Group != nil && *kind.Group != v1alpha2.GroupName) || kind.Kind != K8S_TCPROUTE_KIND {
+		if (kind.Group != nil && *kind.Group != v1beta1.GroupName) || kind.Kind != K8S_TCPROUTE_KIND {
 			continue
 		}
 		gkAllowed = true

@@ -744,7 +744,7 @@ type InformerGetter interface {
 }
 
 type GatewayRelatedType interface {
-	*gatewayv1beta1.GatewayClass | *gatewayv1beta1.Gateway | *gatewayv1alpha2.TCPRoute | *gatewayv1alpha2.ReferenceGrant
+	*gatewayv1beta1.GatewayClass | *gatewayv1beta1.Gateway | *gatewayv1alpha2.TCPRoute | *gatewayv1beta1.ReferenceGrant
 }
 
 type GatewayInformerFunc[GWType GatewayRelatedType] func(gwObj GWType, eventChan chan SyncDataEvent, status store.Status)
@@ -910,12 +910,12 @@ func PopulateInformer[IT InformerGetter, GWType GatewayRelatedType, GWF GatewayI
 }
 
 func (k k8s) getReferenceGrantInformer(eventChan chan SyncDataEvent, factory gatewaynetworking.SharedInformerFactory) cache.SharedIndexInformer {
-	informer := factory.Gateway().V1alpha2().ReferenceGrants()
-	PopulateInformer(eventChan, informer, GatewayInformerFunc[*gatewayv1alpha2.ReferenceGrant](manageReferenceGrant))
+	informer := factory.Gateway().V1beta1().ReferenceGrants()
+	PopulateInformer(eventChan, informer, GatewayInformerFunc[*gatewayv1beta1.ReferenceGrant](manageReferenceGrant))
 	return informer.Informer()
 }
 
-func manageReferenceGrant(referenceGrant *gatewayv1alpha2.ReferenceGrant, eventChan chan SyncDataEvent, status store.Status) {
+func manageReferenceGrant(referenceGrant *gatewayv1beta1.ReferenceGrant, eventChan chan SyncDataEvent, status store.Status) {
 	logger.Debugf("gwapi: referencegrant: informers: got '%s/%s'", referenceGrant.Namespace, referenceGrant.Name)
 	item := store.ReferenceGrant{
 		Name:       referenceGrant.Name,
