@@ -46,7 +46,7 @@ var logger = utils.GetK8sLogger()
 const (
 	CRSGroupVersionV1alpha1 = "core.haproxy.org/v1alpha1"
 	CRSGroupVersionV1alpha2 = "core.haproxy.org/v1alpha2"
-	GATEWAY_API_VERSION     = "v0.8.1" //nolint:golint,stylecheck
+	GATEWAY_API_VERSION     = "v1.0.0" //nolint:golint,stylecheck
 	CRSGroupVersionV1       = "ingress.v1.haproxy.org/v1"
 )
 
