@@ -24,6 +24,7 @@ import (
 
 	versioned "github.com/haproxytech/kubernetes-ingress/crs/generated/clientset/versioned"
 	core "github.com/haproxytech/kubernetes-ingress/crs/generated/informers/externalversions/core"
+	ingress "github.com/haproxytech/kubernetes-ingress/crs/generated/informers/externalversions/ingress"
 	internalinterfaces "github.com/haproxytech/kubernetes-ingress/crs/generated/informers/externalversions/internalinterfaces"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
@@ -243,8 +244,13 @@ type SharedInformerFactory interface {
 	InformerFor(obj runtime.Object, newFunc internalinterfaces.NewInformerFunc) cache.SharedIndexInformer
 
 	Core() core.Interface
+	Ingress() ingress.Interface
 }
 
 func (f *sharedInformerFactory) Core() core.Interface {
 	return core.New(f, f.namespace, f.tweakListOptions)
+}
+
+func (f *sharedInformerFactory) Ingress() ingress.Interface {
+	return ingress.New(f, f.namespace, f.tweakListOptions)
 }

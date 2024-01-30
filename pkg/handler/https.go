@@ -18,11 +18,13 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/haproxytech/client-native/v3/models"
+	"github.com/haproxytech/client-native/v5/models"
 
 	"github.com/haproxytech/kubernetes-ingress/pkg/annotations"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/certs"
+	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/instance"
+
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/maps"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/rules"
 	"github.com/haproxytech/kubernetes-ingress/pkg/route"
@@ -79,7 +81,7 @@ func (handler HTTPS) bindList(passhthrough bool) (binds []models.Bind) {
 	return binds
 }
 
-func (handler HTTPS) handleClientTLSAuth(k store.K8s, h haproxy.HAProxy) (reload bool, err error) {
+func (handler HTTPS) handleClientTLSAuth(k store.K8s, h haproxy.HAProxy) (err error) {
 	// Parsing
 	var caFile string
 	var notFound store.ErrNotFound
@@ -125,10 +127,10 @@ func (handler HTTPS) handleClientTLSAuth(k store.K8s, h haproxy.HAProxy) (reload
 			binds[i].SslCafile = ""
 			binds[i].Verify = ""
 			if err = h.FrontendBindEdit(h.FrontHTTPS, *binds[i]); err != nil {
-				return false, err
+				return err
 			}
 		}
-		reload = true
+		instance.Reload("removed client TLS authentication")
 		return
 	}
 	// Updating config
@@ -137,17 +139,17 @@ func (handler HTTPS) handleClientTLSAuth(k store.K8s, h haproxy.HAProxy) (reload
 		binds[i].SslCafile = caFile
 		binds[i].Verify = verify
 		if err = h.FrontendBindEdit(h.FrontHTTPS, *binds[i]); err != nil {
-			return false, err
+			return err
 		}
 	}
-	reload = true
+	instance.Reload("configured client TLS authentication")
 	return
 }
 
-func (handler HTTPS) Update(k store.K8s, h haproxy.HAProxy, a annotations.Annotations) (reload bool, err error) {
+func (handler HTTPS) Update(k store.K8s, h haproxy.HAProxy, a annotations.Annotations) (err error) {
 	if !handler.Enabled {
 		logger.Debug("Cannot proceed with SSL Passthrough update, HTTPS is disabled")
-		return false, nil
+		return nil
 	}
 
 	// Fetch tls-alpn value for when SSL offloading is enabled
@@ -161,18 +163,15 @@ func (handler HTTPS) Update(k store.K8s, h haproxy.HAProxy, a annotations.Annota
 	if h.FrontCertsInUse() {
 		if !sslOffloadEnabled {
 			logger.Panic(h.FrontendEnableSSLOffload(h.FrontHTTPS, handler.CertDir, handler.alpn, handler.strictSNI))
-			reload = true
-			logger.Debug("SSLOffload enabled, reload required")
+			instance.Reload("SSL offload enabled")
 		}
-		r, err := handler.handleClientTLSAuth(k, h)
+		err := handler.handleClientTLSAuth(k, h)
 		if err != nil {
-			return r, err
+			return err
 		}
-		reload = reload || r
 	} else if sslOffloadEnabled {
 		logger.Panic(h.FrontendDisableSSLOffload(h.FrontHTTPS))
-		reload = true
-		logger.Debug("SSLOffload disabled, reload required")
+		instance.Reload("SSL offload disabled")
 	}
 	// ssl-passthrough
 	_, errFtSSL := h.FrontendGet(h.FrontSSL)
@@ -180,20 +179,17 @@ func (handler HTTPS) Update(k store.K8s, h haproxy.HAProxy, a annotations.Annota
 	if haproxy.SSLPassthrough {
 		if errFtSSL != nil || errBdSSL != nil {
 			logger.Error(handler.enableSSLPassthrough(h))
-			reload = true
-			logger.Debug("SSLPassthrough enabled, reload required")
+			instance.Reload("SSLPassthrough enabled")
 		}
 		logger.Error(handler.sslPassthroughRules(k, h, a))
 	} else if errFtSSL == nil {
 		logger.Error(handler.disableSSLPassthrough(h))
-		reload = true
-		logger.Debug("SSLPassthrough disabled, reload required")
-	}
-	if h.CertsUpdated() {
-		reload = true
+		instance.Reload("SSLPassthrough disabled")
 	}
 
-	return reload, nil
+	instance.ReloadIf(h.CertsUpdated(), "certificates updated")
+
+	return nil
 }
 
 func (handler HTTPS) enableSSLPassthrough(h haproxy.HAProxy) (err error) {
@@ -222,10 +218,10 @@ func (handler HTTPS) enableSSLPassthrough(h haproxy.HAProxy) (err error) {
 			Mode: "tcp",
 		}),
 		h.BackendServerCreate(h.BackSSL, models.Server{
-			Name:        h.FrontHTTPS,
-			Address:     "127.0.0.1",
-			Port:        utils.PtrInt64(handler.Port),
-			SendProxyV2: "enabled",
+			Name:         h.FrontHTTPS,
+			Address:      "127.0.0.1",
+			Port:         utils.PtrInt64(handler.Port),
+			ServerParams: models.ServerParams{SendProxyV2: "enabled"},
 		}),
 		h.BackendSwitchingRuleCreate(h.FrontSSL, models.BackendSwitchingRule{
 			Index: utils.PtrInt64(0),

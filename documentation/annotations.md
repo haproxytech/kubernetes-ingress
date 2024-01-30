@@ -1451,6 +1451,11 @@ haproxy.org/response-set-header: |
 
   :information_source: In order for the service to be handled by the Ingress Controller, it is still mandatory to put it in an ingress rule. Using only `route-acl` won't be enough.
 
+  :information_source: Note that this annotation is not compatible with an Ingress having multiple paths that will match a request.
+Without this annotation, the precedence  is given first to the longest matching path.
+But with the annotation, the first use_backend rule in the config that matches the request will be used.
+
+
 Possible values:
 
 - A string describing an in-line [HAProxy ACL](https://www.haproxy.com/blog/introduction-to-haproxy-acls/).

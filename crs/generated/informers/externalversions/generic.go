@@ -22,6 +22,7 @@ import (
 
 	v1alpha1 "github.com/haproxytech/kubernetes-ingress/crs/api/core/v1alpha1"
 	v1alpha2 "github.com/haproxytech/kubernetes-ingress/crs/api/core/v1alpha2"
+	v1 "github.com/haproxytech/kubernetes-ingress/crs/api/ingress/v1"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	cache "k8s.io/client-go/tools/cache"
 )
@@ -67,6 +68,14 @@ func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Core().V1alpha2().Defaults().Informer()}, nil
 	case v1alpha2.SchemeGroupVersion.WithResource("globals"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Core().V1alpha2().Globals().Informer()}, nil
+
+		// Group=ingress.v1.haproxy.org, Version=v1
+	case v1.SchemeGroupVersion.WithResource("backends"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Ingress().V1().Backends().Informer()}, nil
+	case v1.SchemeGroupVersion.WithResource("defaults"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Ingress().V1().Defaults().Informer()}, nil
+	case v1.SchemeGroupVersion.WithResource("globals"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Ingress().V1().Globals().Informer()}, nil
 
 	}
 

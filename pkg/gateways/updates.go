@@ -177,15 +177,15 @@ func (statusMgr *StatusManagerImpl) UpdateStatusTCPRoutes(routesStatusRecords []
 		for _, parentStatusRecord := range tcprouteStatusRecord.parentsStatusesRecords {
 			parentStatusRecord := parentStatusRecord
 			conditions := []metav1.Condition{}
-			routeParentStatus := v1alpha2.RouteParentStatus{
-				ControllerName: v1alpha2.GatewayController(statusMgr.gatewayControllerName),
-				ParentRef: v1alpha2.ParentReference{
-					Group:       (*v1alpha2.Group)(&parentStatusRecord.parentRef.Group),
-					Kind:        (*v1alpha2.Kind)(&parentStatusRecord.parentRef.Kind),
-					Namespace:   (*v1alpha2.Namespace)(parentStatusRecord.parentRef.Namespace),
-					Name:        v1alpha2.ObjectName(parentStatusRecord.parentRef.Name),
-					SectionName: (*v1alpha2.SectionName)(parentStatusRecord.parentRef.SectionName),
-					Port:        (*v1alpha2.PortNumber)(parentStatusRecord.parentRef.Port),
+			routeParentStatus := v1beta1.RouteParentStatus{
+				ControllerName: v1beta1.GatewayController(statusMgr.gatewayControllerName),
+				ParentRef: v1beta1.ParentReference{
+					Group:       (*v1beta1.Group)(&parentStatusRecord.parentRef.Group),
+					Kind:        (*v1beta1.Kind)(&parentStatusRecord.parentRef.Kind),
+					Namespace:   (*v1beta1.Namespace)(parentStatusRecord.parentRef.Namespace),
+					Name:        v1beta1.ObjectName(parentStatusRecord.parentRef.Name),
+					SectionName: (*v1beta1.SectionName)(parentStatusRecord.parentRef.SectionName),
+					Port:        (*v1beta1.PortNumber)(parentStatusRecord.parentRef.Port),
 				},
 			}
 

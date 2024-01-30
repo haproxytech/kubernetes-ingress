@@ -18,7 +18,7 @@ import (
 	"strings"
 
 	"github.com/go-test/deep"
-	corev1alpha2 "github.com/haproxytech/kubernetes-ingress/crs/api/core/v1alpha2"
+	v1 "github.com/haproxytech/kubernetes-ingress/crs/api/ingress/v1"
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
 )
 
@@ -31,10 +31,10 @@ func (k *K8s) EventNamespace(ns *Namespace, data *Namespace) (updateRequired boo
 		updateRequired = true
 	case MODIFIED:
 		nsStore := k.GetNamespace(data.Name)
-		if updateRequired = nsStore.Equal(data); !updateRequired {
-			return updateRequired
+		updateRequired = !EqualMap(nsStore.Labels, data.Labels)
+		if updateRequired {
+			nsStore.Labels = utils.CopyMap(data.Labels)
 		}
-		nsStore.Labels = utils.CopyMap(data.Labels)
 	case DELETED:
 		_, ok := k.Namespaces[data.Name]
 		if ok {
@@ -286,7 +286,7 @@ func (k *K8s) EventPod(podEvent PodEvent) (updateRequired bool) {
 	return true
 }
 
-func (k *K8s) EventGlobalCR(namespace, name string, data *corev1alpha2.Global) bool {
+func (k *K8s) EventGlobalCR(namespace, name string, data *v1.Global) bool {
 	ns := k.GetNamespace(namespace)
 	if data == nil {
 		delete(ns.CRs.Global, name)
@@ -298,7 +298,7 @@ func (k *K8s) EventGlobalCR(namespace, name string, data *corev1alpha2.Global) b
 	return true
 }
 
-func (k *K8s) EventDefaultsCR(namespace, name string, data *corev1alpha2.Defaults) bool {
+func (k *K8s) EventDefaultsCR(namespace, name string, data *v1.Defaults) bool {
 	ns := k.GetNamespace(namespace)
 	if data == nil {
 		delete(ns.CRs.Defaults, name)
@@ -308,7 +308,7 @@ func (k *K8s) EventDefaultsCR(namespace, name string, data *corev1alpha2.Default
 	return true
 }
 
-func (k *K8s) EventBackendCR(namespace, name string, data *corev1alpha2.Backend) bool {
+func (k *K8s) EventBackendCR(namespace, name string, data *v1.Backend) bool {
 	ns := k.GetNamespace(namespace)
 	if data == nil {
 		delete(ns.CRs.Backends, name)
@@ -334,11 +334,13 @@ func (k *K8s) EventPublishService(ns *Namespace, data *Service) (updateRequired 
 		oldService.Addresses = newService.Addresses
 		k.PublishServiceAddresses = newService.Addresses
 		k.UpdateAllIngresses = true
+		updateRequired = true
 	case ADDED:
 		if service, ok := ns.Services[data.Name]; ok {
 			k.PublishServiceAddresses = data.Addresses
 			service.Addresses = data.Addresses
 			k.UpdateAllIngresses = true
+			updateRequired = true
 			return
 		}
 		logger.Errorf("Publish service '%s/%s' not found", data.Namespace, data.Name)
@@ -348,6 +350,7 @@ func (k *K8s) EventPublishService(ns *Namespace, data *Service) (updateRequired 
 			k.PublishServiceAddresses = nil
 			service.Addresses = nil
 			k.UpdateAllIngresses = true
+			updateRequired = true
 		} else {
 			logger.Warningf("Publish service '%s/%s' not registered with controller, cannot delete !", data.Namespace, data.Name)
 		}

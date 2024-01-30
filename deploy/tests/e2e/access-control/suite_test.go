@@ -52,6 +52,10 @@ func (suite *AccessControlSuite) TearDownSuite() {
 	suite.test.TearDown()
 }
 
+func (suite *AccessControlSuite) TearDownSubSuite() {
+	suite.test.Apply("config/patternfile-empty.yml", "", nil)
+}
+
 func TestAccessControlSuite(t *testing.T) {
 	suite.Run(t, new(AccessControlSuite))
 }

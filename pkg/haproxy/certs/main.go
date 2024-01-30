@@ -7,6 +7,7 @@ import (
 	"path"
 	"strings"
 
+	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/instance"
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
 )
@@ -24,9 +25,8 @@ type Certificates interface {
 	FrontCertsInUse() bool
 	// Updated returns true if there is any updadted/created certificate
 	CertsUpdated() bool
-	// Refresh removes unused certs from HAProxyCertDir and returns false if
-	// no certificates were removed, otherwise returns true
-	RefreshCerts() bool
+	// Refresh removes unused certs from HAProxyCertDir
+	RefreshCerts()
 	// Clean cleans certificates state
 	CleanCerts()
 }
@@ -162,18 +162,17 @@ func (c *certs) FrontCertsInUse() bool {
 	return false
 }
 
-func (c *certs) RefreshCerts() (removed bool) {
-	removed = refreshCerts(c.frontend, env.FrontendDir)
-	removed = refreshCerts(c.backend, env.BackendDir) || removed
-	removed = refreshCerts(c.ca, env.CaDir) || removed
-	return
+func (c *certs) RefreshCerts() {
+	refreshCerts(c.frontend, env.FrontendDir)
+	refreshCerts(c.backend, env.BackendDir)
+	refreshCerts(c.ca, env.CaDir)
 }
 
 func (c *certs) CertsUpdated() (reload bool) {
 	for _, certs := range []map[string]*cert{c.frontend, c.backend, c.ca} {
 		for _, crt := range certs {
 			if crt.updated {
-				logger.Debugf("Secret '%s' was updated, reload required", crt.name)
+				logger.Debugf("Secret '%s' was updated", crt.name)
 				reload = true
 			}
 		}
@@ -181,11 +180,11 @@ func (c *certs) CertsUpdated() (reload bool) {
 	return reload
 }
 
-func refreshCerts(certs map[string]*cert, certDir string) (removed bool) {
+func refreshCerts(certs map[string]*cert, certDir string) {
 	files, err := os.ReadDir(certDir)
 	if err != nil {
 		logger.Error(err)
-		return false
+		return
 	}
 	for _, f := range files {
 		if f.IsDir() {
@@ -198,11 +197,9 @@ func refreshCerts(certs map[string]*cert, certDir string) (removed bool) {
 		if !crtOk || !crt.inUse {
 			logger.Error(os.Remove(path.Join(certDir, filename)))
 			delete(certs, certName)
-			removed = true
-			logger.Debugf("secret %s removed, reload required", crt.name)
+			instance.Reload("secret %s removed", crt.name)
 		}
 	}
-	return
 }
 
 func writeSecret(secret *store.Secret, c *cert, privateKeyNull bool) (err error) {

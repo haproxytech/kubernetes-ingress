@@ -17,13 +17,15 @@ package controller
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/go-test/deep"
 
-	"github.com/haproxytech/client-native/v3/models"
+	"github.com/haproxytech/client-native/v5/models"
 	"github.com/haproxytech/kubernetes-ingress/pkg/annotations"
 	gateway "github.com/haproxytech/kubernetes-ingress/pkg/gateways"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy"
+	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/instance"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/maps"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/rules"
 	"github.com/haproxytech/kubernetes-ingress/pkg/ingress"
@@ -50,10 +52,9 @@ type HAProxyController struct {
 	store                    store.K8s
 	osArgs                   utils.OSArgs
 	auxCfgModTime            int64
-	restart                  bool
-	reload                   bool
 	ready                    bool
 	updateStatusManager      status.UpdateStatusManager
+	beforeUpdateHandlers     []UpdateHandler
 }
 
 // Wrapping a Native-Client transaction and commit it.
@@ -94,7 +95,6 @@ func (c *HAProxyController) Stop() {
 
 // updateHAProxy is the control loop syncing HAProxy configuration
 func (c *HAProxyController) updateHAProxy() {
-	var reload bool
 	var err error
 	logger.Trace("HAProxy config sync started")
 
@@ -105,11 +105,13 @@ func (c *HAProxyController) updateHAProxy() {
 	}
 	defer func() {
 		c.haproxy.APIDisposeTransaction()
+		instance.Reset()
 	}()
+	// First log here that will contain the "transactionID" field (added in APIStartTransaction)
+	// All subsequent log line will contain the "transactionID" field.
+	logger.Trace("HAProxy config sync transaction started")
 
-	reload, restart := c.handleGlobalConfig()
-	c.reload = c.reload || reload
-	c.restart = c.restart || restart
+	c.handleGlobalConfig()
 
 	if len(route.CustomRoutes) != 0 {
 		logger.Error(route.CustomRoutesReset(c.haproxy))
@@ -124,6 +126,11 @@ func (c *HAProxyController) updateHAProxy() {
 		}).
 		Process(c.store, c.store.ConfigMaps.Main.Annotations))
 
+	for _, handler := range c.beforeUpdateHandlers {
+		err = handler.Update(c.store, c.haproxy, c.annotations)
+		logger.Error(err)
+	}
+
 	for _, namespace := range c.store.Namespaces {
 		if !namespace.Relevant {
 			continue
@@ -134,7 +141,7 @@ func (c *HAProxyController) updateHAProxy() {
 			if !i.Supported(c.store, c.annotations) {
 				logger.Debugf("ingress '%s/%s' ignored: no matching", ingResource.Namespace, ingResource.Name)
 			} else {
-				c.reload = i.Update(c.store, c.haproxy, c.annotations) || c.reload
+				i.Update(c.store, c.haproxy, c.annotations)
 			}
 			if ingResource.Status == store.ADDED || ingResource.ClassUpdated {
 				c.updateStatusManager.AddIngress(i)
@@ -145,29 +152,24 @@ func (c *HAProxyController) updateHAProxy() {
 	updated := deep.Equal(route.CurentCustomRoutes, route.CustomRoutes, deep.FLAG_IGNORE_SLICE_ORDER)
 	if len(updated) != 0 {
 		route.CurentCustomRoutes = route.CustomRoutes
-		logger.Debugf("Custom Routes changed: %s, reload required", updated)
-		c.reload = true
+		instance.Reload("Custom Routes changed: %s", strings.Join(updated, "\n"))
 	}
 
-	gatewayReload := c.gatewayManager.ManageGateway()
-	c.reload = gatewayReload || c.reload
+	c.gatewayManager.ManageGateway()
 
 	for _, handler := range c.updateHandlers {
-		reload, err = handler.Update(c.store, c.haproxy, c.annotations)
-		logger.Error(err)
-		c.reload = c.reload || reload
+		logger.Error(handler.Update(c.store, c.haproxy, c.annotations))
 	}
 
 	err = c.haproxy.APICommitTransaction()
 	if err != nil {
 		logger.Error("unable to Sync HAProxy configuration !!")
 		logger.Error(err)
-		reloadCfgSnippet, errCfgSnippet := annotations.CheckBackendConfigSnippetError(err, c.haproxy.Env.CfgDir)
+		rerun, errCfgSnippet := annotations.CheckBackendConfigSnippetError(err, c.haproxy.Env.CfgDir)
 		logger.Error(errCfgSnippet)
 		c.clean(true)
-		c.reload = c.reload || reloadCfgSnippet
-		if c.reload && errCfgSnippet == nil {
-			logger.Debug("disabling some config snippets because of errors, reload required")
+		if rerun {
+			logger.Debug("disabling some config snippets because of errors")
 			// We need to replay all these resources.
 			c.store.SecretsProcessed = map[string]struct{}{}
 			c.store.BackendsProcessed = map[string]struct{}{}
@@ -181,13 +183,13 @@ func (c *HAProxyController) updateHAProxy() {
 	}
 
 	switch {
-	case c.restart:
+	case instance.NeedRestart():
 		if err = c.haproxy.Service("restart"); err != nil {
 			logger.Error(err)
 		} else {
 			logger.Info("HAProxy restarted")
 		}
-	case c.reload:
+	case instance.NeedReload():
 		if err = c.haproxy.Service("reload"); err != nil {
 			logger.Error(err)
 		} else {
@@ -204,7 +206,7 @@ func (c *HAProxyController) updateHAProxy() {
 func (c *HAProxyController) setToReady() {
 	healthzPort := c.osArgs.HealthzBindPort
 	logger.Panic(c.clientAPIClosure(func() error {
-		return c.haproxy.FrontendBindEdit("healthz",
+		return c.haproxy.FrontendBindCreate("healthz",
 			models.Bind{
 				BindParams: models.BindParams{
 					Name: "v4",
@@ -237,7 +239,7 @@ func (c *HAProxyController) setToReady() {
 	}))
 
 	logger.Panic(c.clientAPIClosure(func() error {
-		return c.haproxy.FrontendBindEdit("stats",
+		return c.haproxy.FrontendBindCreate("stats",
 			models.Bind{
 				BindParams: models.BindParams{
 					Name: "stats",
@@ -319,8 +321,6 @@ func (c *HAProxyController) clean(failedSync bool) {
 	if !failedSync {
 		c.store.Clean()
 	}
-	c.reload = false
-	c.restart = false
 }
 
 func (c *HAProxyController) SetGatewayAPIInstalled(gatewayAPIInstalled bool) {

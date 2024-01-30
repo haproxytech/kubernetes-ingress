@@ -40,7 +40,7 @@ type UseBackendSuite struct {
 type updateStatusManager struct{}
 
 func (m *updateStatusManager) AddIngress(ingress *ingress.Ingress) {}
-func (m *updateStatusManager) Update(k store.K8s, h haproxy.HAProxy, a annotations.Annotations) (reload bool, err error) {
+func (m *updateStatusManager) Update(k store.K8s, h haproxy.HAProxy, a annotations.Annotations) (err error) {
 	return
 }
 
@@ -62,7 +62,6 @@ func (suite *UseBackendSuite) BeforeTest(suiteName, testName string) {
 	suite.T().Logf("temporary configuration dir %s", suite.test.TempDir)
 }
 
-//nolint:dupword
 var haproxyConfig = `global
 daemon
 master-worker
@@ -75,25 +74,21 @@ peers localinstance
 
 frontend https
 mode http
-bind 127.0.0.1:8080 name v4
 http-request set-var(txn.base) base
 use_backend %[var(txn.path_match),field(1,.)]
 
 frontend http
 mode http
-bind 127.0.0.1:4443 name v4
 http-request set-var(txn.base) base
 use_backend %[var(txn.path_match),field(1,.)]
 
 frontend healthz
-bind 127.0.0.1:1042 name v4
 mode http
 monitor-uri /healthz
 option dontlog-normal
 
 frontend stats
   mode http
-  bind *:1024 name stats
   stats enable
   stats uri /
   stats refresh 10s

@@ -7,7 +7,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: commit-check
-        uses: docker://ghcr.io/haproxytech/commit-check:3.0.0
+        uses: docker://ghcr.io/haproxytech/commit-check:3.0.1
         env:
           API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   generate:
@@ -23,6 +23,7 @@ jobs:
         uses: actions/setup-go@v4
         with:
           go-version-file: 'go.mod'
+          check-latest: true
       - name: generating documentation
         run: cd documentation/gen && go run .
       - name: changes
@@ -39,6 +40,7 @@ jobs:
         uses: actions/setup-go@v4
         with:
           go-version-file: 'go.mod'
+          check-latest: true
       - uses: actions/cache@v2
         with:
           path: |
@@ -61,6 +63,7 @@ jobs:
         uses: actions/setup-go@v4
         with:
           go-version-file: 'go.mod'
+          check-latest: true
       - uses: actions/cache@v2
         with:
           path: |
@@ -84,6 +87,7 @@ jobs:
         uses: actions/setup-go@v4
         with:
           go-version-file: 'go.mod'
+          check-latest: true
       - uses: actions/cache@v2
         with:
           path: |
@@ -106,6 +110,7 @@ jobs:
       uses: actions/setup-go@v4
       with:
         go-version-file: 'go.mod'
+        check-latest: true
     - uses: actions/cache@v2
       with:
         path: |
@@ -133,6 +138,7 @@ jobs:
       uses: actions/setup-go@v4
       with:
         go-version-file: 'go.mod'
+        check-latest: true
     - uses: actions/cache@v2
       with:
         path: |

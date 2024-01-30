@@ -5,21 +5,21 @@ import (
 
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/api"
+	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/instance"
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
 )
 
 type ConfigSnippetHandler struct{}
 
-func (h ConfigSnippetHandler) Update(k store.K8s, api haproxy.HAProxy, ann Annotations) (reload bool, err error) {
+func (h ConfigSnippetHandler) Update(k store.K8s, api haproxy.HAProxy, ann Annotations) (err error) {
 	// We get the configmap configsnippet value
 	configmapCfgSnippetValue, errConfigmapCfgSnippet := getConfigmapConfigSnippet(k.BackendsWithNoConfigSnippets, api)
 	if errConfigmapCfgSnippet != nil {
-		return false, errConfigmapCfgSnippet
+		return errConfigmapCfgSnippet
 	}
 	// We pass the configmap config snippet value to be inserted at top of the comment section for every config snippet section
-	reload, err = updateConfigSnippet(api, configmapCfgSnippetValue)
-	return
+	return updateConfigSnippet(api, configmapCfgSnippetValue)
 }
 
 func getConfigmapConfigSnippet(backendsWithNoConfigSnippets map[string]struct{}, api api.HAProxyClient) (configmapCfgSnippetValue []string, err error) {
@@ -50,9 +50,8 @@ func getConfigmapConfigSnippet(backendsWithNoConfigSnippets map[string]struct{},
 	return
 }
 
-func updateConfigSnippet(api api.HAProxyClient, configmapCfgSnippetValue []string) (reload bool, err error) {
+func updateConfigSnippet(api api.HAProxyClient, configmapCfgSnippetValue []string) (err error) {
 	errs := utils.Errors{}
-	updated := []string{}
 	// Then we iterate over each backend
 	for backend, cfgDataByOrigin := range cfgSnippet.backends {
 		// We must remove any previous cfgSnippet insertion.
@@ -77,26 +76,23 @@ func updateConfigSnippet(api api.HAProxyClient, configmapCfgSnippetValue []strin
 		// Then we can iterate over each config snippet coming from different origin.
 		for origin, cfgData := range cfgDataByOrigin {
 			if cfgData.disabled {
-				if cfgData.status == store.ADDED || cfgData.status == store.MODIFIED {
-					logger.Debugf("config snippet from %s has been disabled, reload required", origin)
-					reload = true
-				}
+				instance.ReloadIf(
+					cfgData.status == store.ADDED || cfgData.status == store.MODIFIED,
+					"config snippet from %s has been disabled", origin)
 				continue
 			}
-			if cfgData.status != store.EMPTY {
-				logger.Debugf("config snippet from %s has been created/modified/deleted, reload required", origin)
-				reload = true
-			}
+			instance.ReloadIf(cfgData.status != store.EMPTY,
+				"config snippet from %s has been created/modified/deleted", origin)
+
 			// The configsnippet has not been reseen so delete it.
 			if cfgData.status == store.DELETED {
 				delete(cfgSnippet.backends[backend], origin)
 				continue
 			}
 			if origin != "configmap" && !strings.HasPrefix(origin, SERVICE_NAME_PREFIX) {
-				updated = append(updated, cfgData.updated...)
-				if len(cfgData.updated) > 0 {
-					logger.Debugf("config snippet from %s has been updated, reload required", origin)
-				}
+				instance.ReloadIf(len(cfgData.updated) > 0,
+					"config snippet from %s has been updated", origin)
+
 				cfgSnippetvalue = append(cfgSnippetvalue, cfgData.value...)
 			}
 			cfgData.updated = nil
@@ -116,6 +112,5 @@ func updateConfigSnippet(api api.HAProxyClient, configmapCfgSnippetValue []strin
 			delete(cfgSnippet.backends, backend)
 		}
 	}
-	reload = reload || len(updated) > 0
-	return
+	return errs.Result()
 }

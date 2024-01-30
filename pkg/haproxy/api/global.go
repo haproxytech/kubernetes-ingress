@@ -1,12 +1,15 @@
 package api
 
 import (
+	"errors"
 	"fmt"
 
-	"github.com/haproxytech/client-native/v3/models"
-	parser "github.com/haproxytech/config-parser/v4"
-	"github.com/haproxytech/config-parser/v4/types"
+	cnConfiguration "github.com/haproxytech/client-native/v5/configuration"
+	"github.com/haproxytech/client-native/v5/models"
+	parser "github.com/haproxytech/config-parser/v5"
+	"github.com/haproxytech/config-parser/v5/types"
 
+	"github.com/haproxytech/kubernetes-ingress/pkg/controller/constants"
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
 )
 
@@ -15,7 +18,7 @@ func (c *clientNative) DefaultsGetConfiguration() (defaults *models.Defaults, er
 	if err != nil {
 		return nil, err
 	}
-	_, defaults, err = configuration.GetDefaultsConfiguration(c.activeTransaction)
+	_, defaults, err = configuration.GetDefaultsSection("haproxytech", c.activeTransaction)
 	if err != nil {
 		return nil, fmt.Errorf("unable to get HAProxy's defaults section: %w", err)
 	}
@@ -27,6 +30,15 @@ func (c *clientNative) DefaultsPushConfiguration(defaults models.Defaults) (err 
 	if err != nil {
 		return err
 	}
+	defaults.Name = constants.DefaultsSectionName
+	_, _, err = configuration.GetDefaultsSection(defaults.Name, c.activeTransaction)
+	if errors.Is(err, cnConfiguration.ErrObjectDoesNotExist) {
+		err = configuration.CreateDefaultsSection(&defaults, c.activeTransaction, 0)
+		if err != nil {
+			return fmt.Errorf("unable to create HAProxy's defaults section: %w", err)
+		}
+	}
+
 	err = configuration.PushDefaultsConfiguration(&defaults, c.activeTransaction, 0)
 	if err != nil {
 		return fmt.Errorf("unable to update HAProxy's defaults section: %w", err)

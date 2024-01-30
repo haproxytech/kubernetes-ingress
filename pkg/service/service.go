@@ -18,14 +18,14 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/go-test/deep"
-
-	"github.com/haproxytech/client-native/v3/models"
+	"github.com/haproxytech/client-native/v5/misc"
+	"github.com/haproxytech/client-native/v5/models"
 
 	"github.com/haproxytech/kubernetes-ingress/pkg/annotations"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/api"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/certs"
+	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/instance"
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
 )
@@ -138,7 +138,7 @@ func (s *Service) GetBackendName() (name string, err error) {
 }
 
 // HandleBackend processes a Service and creates/updates corresponding backend configuration in HAProxy
-func (s *Service) HandleBackend(storeK8s store.K8s, client api.HAProxyClient, a annotations.Annotations) (reload bool, err error) {
+func (s *Service) HandleBackend(storeK8s store.K8s, client api.HAProxyClient, a annotations.Annotations) (err error) {
 	var backend, newBackend *models.Backend
 	newBackend, err = s.getBackendModel(storeK8s, a)
 	s.backend = newBackend
@@ -149,21 +149,19 @@ func (s *Service) HandleBackend(storeK8s store.K8s, client api.HAProxyClient, a 
 	backend, err = client.BackendGet(newBackend.Name)
 	if err == nil {
 		// Update Backend
-		result := deep.Equal(newBackend, backend)
-		if len(result) != 0 {
+		diff := newBackend.Diff(*backend)
+		if len(diff) != 0 {
 			if err = client.BackendEdit(*newBackend); err != nil {
 				return
 			}
-			reload = true
-			logger.Debugf("Service '%s/%s': backend '%s' updated: %s\nReload required", s.resource.Namespace, s.resource.Name, newBackend.Name, result)
+			instance.Reload(fmt.Sprintf("Service '%s/%s': backend '%s' updated: %v", s.resource.Namespace, s.resource.Name, newBackend.Name, diff))
 		}
 	} else {
 		if err = client.BackendCreate(*newBackend); err != nil {
 			return
 		}
 		s.newBackend = true
-		reload = true
-		logger.Debugf("Service '%s/%s': new backend '%s', reload required", s.resource.Namespace, s.resource.Name, newBackend.Name)
+		instance.Reload(fmt.Sprintf("Service '%s/%s': new backend '%s'", s.resource.Namespace, s.resource.Name, newBackend.Name))
 	}
 	// config-snippet: backend
 	backendCfgSnippetHandler := annotations.NewCfgSnippet(
@@ -205,9 +203,9 @@ func (s *Service) getBackendModel(store store.K8s, a annotations.Annotations) (b
 	}
 	if s.resource.DNS != "" {
 		if backend.DefaultServer == nil {
-			backend.DefaultServer = &models.DefaultServer{InitAddr: "last,libc,none"}
-		} else if backend.DefaultServer.InitAddr == "" {
-			backend.DefaultServer.InitAddr = "last,libc,none"
+			backend.DefaultServer = &models.DefaultServer{ServerParams: models.ServerParams{InitAddr: misc.Ptr("last,libc,none")}}
+		} else if backend.DefaultServer.InitAddr == nil {
+			backend.DefaultServer.InitAddr = misc.Ptr("last,libc,none")
 		}
 	}
 	if backend.Cookie != nil && backend.Cookie.Dynamic && backend.DynamicCookieKey == "" {
@@ -217,13 +215,12 @@ func (s *Service) getBackendModel(store store.K8s, a annotations.Annotations) (b
 }
 
 // SetDefaultBackend configures the default service in kubernetes ingress resource as haproxy default backend of the frontends in params.
-func (s *Service) SetDefaultBackend(k store.K8s, h haproxy.HAProxy, frontends []string, a annotations.Annotations) (reload bool, err error) {
+func (s *Service) SetDefaultBackend(k store.K8s, h haproxy.HAProxy, frontends []string, a annotations.Annotations) (err error) {
 	if !s.path.IsDefaultBackend {
 		err = fmt.Errorf("service '%s/%s' is not marked as default backend", s.resource.Namespace, s.resource.Name)
 		return
 	}
 	var frontend models.Frontend
-	var ftReload bool
 	frontend, err = h.FrontendGet(frontends[0])
 	if err != nil {
 		return
@@ -235,7 +232,7 @@ func (s *Service) SetDefaultBackend(k store.K8s, h haproxy.HAProxy, frontends []
 	if s.path.SvcPortInt == 0 && s.path.SvcPortString == "" {
 		s.path.SvcPortString = s.resource.Ports[0].Name
 	}
-	bdReload, err := s.HandleBackend(k, h, a)
+	err = s.HandleBackend(k, h, a)
 	if err != nil {
 		return
 	}
@@ -248,10 +245,9 @@ func (s *Service) SetDefaultBackend(k store.K8s, h haproxy.HAProxy, frontends []
 			if err != nil {
 				return
 			}
-			ftReload = true
+			instance.Reload("default backend changed in frontend '%s': from '%s' to '%s'", frontendName, frontend.DefaultBackend, backendName)
 		}
 	}
-	endpointsReload := s.HandleHAProxySrvs(k, h)
-	reload = bdReload || ftReload || endpointsReload
-	return reload, err
+	s.HandleHAProxySrvs(k, h)
+	return
 }

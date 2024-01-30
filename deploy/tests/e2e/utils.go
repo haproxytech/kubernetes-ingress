@@ -145,7 +145,7 @@ func (t *Test) GetK8sVersion() (major, minor int, err error) {
 	return major, minor, nil
 }
 
-func (t *Test) execute(entry, command string, args ...string) (string, error) {
+func (t *Test) execute(entry, command string, args ...string) (string, error) { //nolint: unparam
 	cmd := exec.Command(command, args...)
 	var b bytes.Buffer
 	b.WriteString(entry)

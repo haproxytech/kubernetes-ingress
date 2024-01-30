@@ -17,3 +17,4 @@ data:
   timeout-queue: 5s
   timeout-server: 50s
   timeout-tunnel: 1h
+  cr-global: haproxy-controller/global-full

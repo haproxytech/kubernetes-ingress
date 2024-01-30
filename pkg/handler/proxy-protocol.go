@@ -28,11 +28,11 @@ import (
 
 type ProxyProtocol struct{}
 
-func (handler ProxyProtocol) Update(k store.K8s, h haproxy.HAProxy, a annotations.Annotations) (reload bool, err error) {
+func (handler ProxyProtocol) Update(k store.K8s, h haproxy.HAProxy, a annotations.Annotations) (err error) {
 	//  Get annotation status
 	annProxyProtocol := a.String("proxy-protocol", k.ConfigMaps.Main.Annotations)
 	if annProxyProtocol == "" {
-		return false, nil
+		return nil
 	}
 	// Validate annotation
 	mapName := maps.Name("proxy-protocol-" + utils.Hash([]byte(annProxyProtocol)))

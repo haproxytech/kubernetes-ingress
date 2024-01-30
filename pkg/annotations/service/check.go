@@ -1,7 +1,7 @@
 package service
 
 import (
-	"github.com/haproxytech/client-native/v3/models"
+	"github.com/haproxytech/client-native/v5/models"
 
 	"github.com/haproxytech/kubernetes-ingress/pkg/annotations/common"
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
@@ -42,7 +42,7 @@ func (a *Check) Process(k store.K8s, annotations ...map[string]string) error {
 		return nil
 	}
 	if a.backend.DefaultServer == nil {
-		a.backend.DefaultServer = &models.DefaultServer{Check: "enabled"}
+		a.backend.DefaultServer = &models.DefaultServer{ServerParams: models.ServerParams{Check: "enabled"}}
 	} else {
 		a.backend.DefaultServer.Check = "enabled"
 	}

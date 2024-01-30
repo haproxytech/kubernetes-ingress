@@ -47,6 +47,7 @@ func (a *AccessControl) Process(k store.K8s, annotations ...map[string]string) (
 
 	if strings.HasPrefix(input, "patterns/") {
 		a.rules.Add(&rules.ReqDeny{
+			// SrcIPsMap: "/etc/haproxy/" + maps.Path(input),
 			SrcIPsMap: maps.Path(input),
 			AllowList: a.allowList,
 		})

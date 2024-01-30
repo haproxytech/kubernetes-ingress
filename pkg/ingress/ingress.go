@@ -89,19 +89,18 @@ func (i Ingress) Supported(k8s store.K8s, a annotations.Annotations) (supported 
 	return
 }
 
-func (i *Ingress) handlePath(k store.K8s, h haproxy.HAProxy, host string, path *store.IngressPath, a annotations.Annotations) (reload bool, err error) {
+func (i *Ingress) handlePath(k store.K8s, h haproxy.HAProxy, host string, path *store.IngressPath, a annotations.Annotations) (err error) {
 	svc, err := service.New(k, path, h.Certificates, i.sslPassthrough, i.resource, i.resource.Annotations, k.ConfigMaps.Main.Annotations)
 	if err != nil {
 		return
 	}
 	// Backend
-	backendReload, err := svc.HandleBackend(k, h, a)
+	err = svc.HandleBackend(k, h, a)
 	if err != nil {
 		return
 	}
 	backendName, _ := svc.GetBackendName()
 	// Route
-	var routeReload bool
 	ingRoute := route.Route{
 		Host:           host,
 		Path:           path,
@@ -114,18 +113,17 @@ func (i *Ingress) handlePath(k store.K8s, h haproxy.HAProxy, host string, path *
 	if routeACLAnn == "" {
 		err = route.AddHostPathRoute(ingRoute, h.Maps)
 	} else {
-		routeReload, err = route.AddCustomRoute(ingRoute, routeACLAnn, h)
+		err = route.AddCustomRoute(ingRoute, routeACLAnn, h)
 	}
 	if err != nil {
 		return
 	}
 	// Endpoints
-	var endpointsReload bool
 	if _, ok := k.BackendsProcessed[backendName]; !ok {
-		endpointsReload = svc.HandleHAProxySrvs(k, h)
+		svc.HandleHAProxySrvs(k, h)
 		k.BackendsProcessed[backendName] = struct{}{}
 	}
-	return backendReload || endpointsReload || routeReload, err
+	return err
 }
 
 // HandleAnnotations processes ingress annotations to create HAProxy Rules and constructs
@@ -191,12 +189,12 @@ func addRules(list rules.List, h haproxy.HAProxy, ingressRule bool) []rules.Rule
 
 // Update processes a Kubernetes ingress resource and configures HAProxy accordingly
 // by creating corresponding backend, route and HTTP rules.
-func (i *Ingress) Update(k store.K8s, h haproxy.HAProxy, a annotations.Annotations) (reload bool) {
+func (i *Ingress) Update(k store.K8s, h haproxy.HAProxy, a annotations.Annotations) {
 	// Default Backend
 	if i.resource.DefaultBackend != nil {
 		svc, err := service.New(k, i.resource.DefaultBackend, h.Certificates, false, i.resource, i.resource.Annotations, k.ConfigMaps.Main.Annotations)
 		if svc != nil {
-			reload, err = svc.SetDefaultBackend(k, h, []string{h.FrontHTTP, h.FrontHTTPS}, a)
+			err = svc.SetDefaultBackend(k, h, []string{h.FrontHTTP, h.FrontHTTPS}, a)
 		}
 		if err != nil {
 			logger.Errorf("Ingress '%s/%s': default backend: %s", i.resource.Namespace, i.resource.Name, err)
@@ -238,14 +236,11 @@ func (i *Ingress) Update(k store.K8s, h haproxy.HAProxy, a annotations.Annotatio
 	logger.Tracef("ingress '%s/%s': processing rules...", i.resource.Namespace, i.resource.Name)
 	for _, rule := range i.resource.Rules {
 		for _, path := range rule.Paths {
-			if r, err := i.handlePath(k, h, rule.Host, path, a); err != nil {
+			if err := i.handlePath(k, h, rule.Host, path, a); err != nil {
 				logger.Errorf("Ingress '%s/%s': %s", i.resource.Namespace, i.resource.Name, err)
-			} else {
-				reload = reload || r
 			}
 		}
 	}
-	return
 }
 
 func (i Ingress) GetAddresses() []string {

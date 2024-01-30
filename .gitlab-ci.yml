@@ -28,6 +28,23 @@ diff:
   script:
     - test -z "$(git diff 2> /dev/null)" || exit "Documentation is not generated, issue \`cd documentation/gen && go run .\` and commit the result"
     - test -z "$(git ls-files --others --exclude-standard 2> /dev/null)" || exit "Documentation created untracked files, cannot proceed"
+diff-crd:
+  stage: diff
+  rules:
+    - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
+    - if: $CI_PIPELINE_SOURCE == 'push'
+  image:
+    name: $CI_REGISTRY_GO/golang:$GO_VERSION
+    entrypoint: [ "" ]
+  tags:
+    - go
+  before_script:
+    - go version
+    - make cr_generate
+  script:
+    - git diff
+    - test -z "$(git diff 2> /dev/null)" || exit "CRD generation was not generated, issue \`make cr_generate\` and commit the result"
+    - test -z "$(git ls-files --others --exclude-standard 2> /dev/null)" || exit "CRD generation created untracked files, cannot proceed"
 tidy:
   stage: lint
   needs: []
@@ -108,7 +125,7 @@ docker-build:
   tags:
     - go
   before_script:
-    - docker login -u gitlab-ci-token -p $CI_BUILD_TOKEN $CI_REGISTRY_GO
+    - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN $CI_REGISTRY_GO
     - go version
     - docker pull -q $CI_REGISTRY_GO/alpine:3
     - docker image tag $CI_REGISTRY_GO/alpine:3 alpine:3
@@ -137,7 +154,7 @@ docker-build-sch:
   tags:
     - go
   before_script:
-    - docker login -u gitlab-ci-token -p $CI_BUILD_TOKEN $CI_REGISTRY_GO
+    - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN $CI_REGISTRY_GO
     - go version
     - docker pull -q $CI_REGISTRY_GO/alpine:3
     - docker image tag $CI_REGISTRY_GO/alpine:3 alpine:3
@@ -174,7 +191,7 @@ docker-build-sch:
     exclude:
       - tar/*
   before_script:
-    - docker login -u gitlab-ci-token -p $CI_BUILD_TOKEN $CI_REGISTRY_GO
+    - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN $CI_REGISTRY_GO
     - docker load -i tar/k8sIC.tar
     - go version
     - go mod download &

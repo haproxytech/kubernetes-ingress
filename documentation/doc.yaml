@@ -1383,6 +1383,10 @@ annotations:
       - Insert a custom route (use_backend rule) to route ingress traffic to the annotated service based on the provided ACL.
     tip:
       - In order for the service to be handled by the Ingress Controller, it is still mandatory to put it in an ingress rule. Using only `route-acl` won't be enough.
+      - |
+          Note that this annotation is not compatible with an Ingress having multiple paths that will match a request.
+          Without this annotation, the precedence  is given first to the longest matching path.
+          But with the annotation, the first use_backend rule in the config that matches the request will be used.
     values:
       - A string describing an in-line [HAProxy ACL](https://www.haproxy.com/blog/introduction-to-haproxy-acls/).
     applies_to:
