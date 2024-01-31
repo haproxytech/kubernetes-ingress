@@ -874,13 +874,13 @@ func manageTCPRoute(tcproute *gatewayv1alpha2.TCPRoute, eventChan chan SyncDataE
 }
 
 func (k k8s) getGatewayClassesInformer(eventChan chan SyncDataEvent, factory gatewaynetworking.SharedInformerFactory) cache.SharedIndexInformer {
-	informer := factory.Gateway().V1beta1().GatewayClasses()
+	informer := factory.Gateway().V1().GatewayClasses()
 	PopulateInformer(eventChan, informer, GatewayInformerFunc[*gatewayv1.GatewayClass](manageGatewayClass))
 	return informer.Informer()
 }
 
 func (k k8s) getGatewayInformer(eventChan chan SyncDataEvent, factory gatewaynetworking.SharedInformerFactory) cache.SharedIndexInformer {
-	informer := factory.Gateway().V1beta1().Gateways()
+	informer := factory.Gateway().V1().Gateways()
 	PopulateInformer(eventChan, informer, GatewayInformerFunc[*gatewayv1.Gateway](manageGateway))
 	return informer.Informer()
 }
