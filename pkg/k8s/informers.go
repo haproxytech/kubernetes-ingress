@@ -17,6 +17,7 @@ import (
 
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 	gatewaynetworking "sigs.k8s.io/gateway-api/pkg/client/informers/externalversions"
@@ -744,12 +745,12 @@ type InformerGetter interface {
 }
 
 type GatewayRelatedType interface {
-	*gatewayv1beta1.GatewayClass | *gatewayv1beta1.Gateway | *gatewayv1alpha2.TCPRoute | *gatewayv1alpha2.ReferenceGrant
+	*gatewayv1.GatewayClass | *gatewayv1.Gateway | *gatewayv1beta1.GatewayClass | *gatewayv1beta1.Gateway | *gatewayv1alpha2.TCPRoute | *gatewayv1beta1.ReferenceGrant
 }
 
 type GatewayInformerFunc[GWType GatewayRelatedType] func(gwObj GWType, eventChan chan SyncDataEvent, status store.Status)
 
-func manageGatewayClass(gatewayclass *gatewayv1beta1.GatewayClass, eventChan chan SyncDataEvent, status store.Status) {
+func manageGatewayClass(gatewayclass *gatewayv1.GatewayClass, eventChan chan SyncDataEvent, status store.Status) {
 	logger.Infof("gwapi: gatewayclass: informers: got '%s'", gatewayclass.Name)
 	item := store.GatewayClass{
 		Name:           gatewayclass.Name,
@@ -762,7 +763,7 @@ func manageGatewayClass(gatewayclass *gatewayv1beta1.GatewayClass, eventChan cha
 	eventChan <- SyncDataEvent{SyncType: GATEWAYCLASS, Data: &item}
 }
 
-func manageGateway(gateway *gatewayv1beta1.Gateway, eventChan chan SyncDataEvent, status store.Status) {
+func manageGateway(gateway *gatewayv1.Gateway, eventChan chan SyncDataEvent, status store.Status) {
 	logger.Infof("gwapi: gateway: informers: got '%s/%s'", gateway.Namespace, gateway.Name)
 	listeners := make([]store.Listener, len(gateway.Spec.Listeners))
 	for i, listener := range gateway.Spec.Listeners {
@@ -873,14 +874,14 @@ func manageTCPRoute(tcproute *gatewayv1alpha2.TCPRoute, eventChan chan SyncDataE
 }
 
 func (k k8s) getGatewayClassesInformer(eventChan chan SyncDataEvent, factory gatewaynetworking.SharedInformerFactory) cache.SharedIndexInformer {
-	informer := factory.Gateway().V1beta1().GatewayClasses()
-	PopulateInformer(eventChan, informer, GatewayInformerFunc[*gatewayv1beta1.GatewayClass](manageGatewayClass))
+	informer := factory.Gateway().V1().GatewayClasses()
+	PopulateInformer(eventChan, informer, GatewayInformerFunc[*gatewayv1.GatewayClass](manageGatewayClass))
 	return informer.Informer()
 }
 
 func (k k8s) getGatewayInformer(eventChan chan SyncDataEvent, factory gatewaynetworking.SharedInformerFactory) cache.SharedIndexInformer {
-	informer := factory.Gateway().V1beta1().Gateways()
-	PopulateInformer(eventChan, informer, GatewayInformerFunc[*gatewayv1beta1.Gateway](manageGateway))
+	informer := factory.Gateway().V1().Gateways()
+	PopulateInformer(eventChan, informer, GatewayInformerFunc[*gatewayv1.Gateway](manageGateway))
 	return informer.Informer()
 }
 
@@ -910,12 +911,12 @@ func PopulateInformer[IT InformerGetter, GWType GatewayRelatedType, GWF GatewayI
 }
 
 func (k k8s) getReferenceGrantInformer(eventChan chan SyncDataEvent, factory gatewaynetworking.SharedInformerFactory) cache.SharedIndexInformer {
-	informer := factory.Gateway().V1alpha2().ReferenceGrants()
-	PopulateInformer(eventChan, informer, GatewayInformerFunc[*gatewayv1alpha2.ReferenceGrant](manageReferenceGrant))
+	informer := factory.Gateway().V1beta1().ReferenceGrants()
+	PopulateInformer(eventChan, informer, GatewayInformerFunc[*gatewayv1beta1.ReferenceGrant](manageReferenceGrant))
 	return informer.Informer()
 }
 
-func manageReferenceGrant(referenceGrant *gatewayv1alpha2.ReferenceGrant, eventChan chan SyncDataEvent, status store.Status) {
+func manageReferenceGrant(referenceGrant *gatewayv1beta1.ReferenceGrant, eventChan chan SyncDataEvent, status store.Status) {
 	logger.Debugf("gwapi: referencegrant: informers: got '%s/%s'", referenceGrant.Namespace, referenceGrant.Name)
 	item := store.ReferenceGrant{
 		Name:       referenceGrant.Name,

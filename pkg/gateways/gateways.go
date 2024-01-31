@@ -28,8 +28,7 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/gateway-api/apis/v1alpha2"
-	"sigs.k8s.io/gateway-api/apis/v1beta1"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
 var logger = utils.GetLogger()
@@ -40,7 +39,7 @@ var logger = utils.GetLogger()
 const (
 	K8S_CORE_GROUP       = ""
 	K8S_NETWORKING_GROUP = networkingv1.GroupName
-	K8S_GATEWAY_GROUP    = v1beta1.GroupName
+	K8S_GATEWAY_GROUP    = gatewayv1.GroupName
 	K8S_TCPROUTE_KIND    = "TCPRoute"
 	K8S_SERVICE_KIND     = "Service"
 )
@@ -246,7 +245,7 @@ MAIN_LOOP:
 		if listener.AllowedRoutes != nil {
 			validRGK := []store.RouteGroupKind{}
 			for _, kind := range listener.AllowedRoutes.Kinds {
-				if (kind.Group == nil || *kind.Group == v1alpha2.GroupName) && kind.Kind == K8S_TCPROUTE_KIND {
+				if (kind.Group == nil || *kind.Group == gatewayv1.GroupName) && kind.Kind == K8S_TCPROUTE_KIND {
 					validRGK = append(validRGK, kind)
 				}
 			}
@@ -551,7 +550,7 @@ func (gm GatewayManagerImpl) isTCPRouteAllowedByListener(listener store.Listener
 
 	gkAllowed := listener.AllowedRoutes.Kinds == nil || len(listener.AllowedRoutes.Kinds) == 0
 	for _, kind := range listener.AllowedRoutes.Kinds {
-		if (kind.Group != nil && *kind.Group != v1alpha2.GroupName) || kind.Kind != K8S_TCPROUTE_KIND {
+		if (kind.Group != nil && *kind.Group != gatewayv1.GroupName) || kind.Kind != K8S_TCPROUTE_KIND {
 			continue
 		}
 		gkAllowed = true
@@ -564,13 +563,13 @@ func (gm GatewayManagerImpl) isTCPRouteAllowedByListener(listener store.Listener
 	if allowedRoutesNamespaces != nil {
 		from := allowedRoutesNamespaces.From
 		if from == nil {
-			v := (string)(v1alpha2.NamespacesFromSame)
+			v := (string)(gatewayv1.NamespacesFromSame)
 			from = &v
 		}
 		if *from == "Same" {
 			return routeNamespace == gatewayNamespace
 		}
-		if *from == (string)(v1alpha2.NamespacesFromSelector) {
+		if *from == (string)(gatewayv1.NamespacesFromSelector) {
 			if allowedRoutesNamespaces.Selector == nil {
 				return false
 			}
