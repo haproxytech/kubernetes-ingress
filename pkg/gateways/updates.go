@@ -21,8 +21,8 @@ import (
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	v1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
-	"sigs.k8s.io/gateway-api/apis/v1beta1"
 )
 
 // UpdateStatusGatewayclasses is responsible of updating the statuses of the accepted gateway classes.
@@ -32,7 +32,7 @@ func (statusMgr *StatusManagerImpl) UpdateStatusGatewayclasses(gatewayclasses []
 		if gwClass.Status == store.EMPTY || gwClass.Status == store.DELETED {
 			continue
 		}
-		gwc := &v1beta1.GatewayClass{}
+		gwc := &v1.GatewayClass{}
 		err := statusMgr.k8sRestClient.Get(context.TODO(), types.NamespacedName{
 			Name: gwClass.Name,
 		}, gwc)
@@ -41,7 +41,7 @@ func (statusMgr *StatusManagerImpl) UpdateStatusGatewayclasses(gatewayclasses []
 			continue
 		}
 
-		gwc.Status = v1beta1.GatewayClassStatus{
+		gwc.Status = v1.GatewayClassStatus{
 			Conditions: []metav1.Condition{{
 				Type:               GatewayClassConditionStatusAccepted,
 				ObservedGeneration: gwc.Generation,
@@ -66,8 +66,8 @@ func (statusMgr *StatusManagerImpl) UpdateStatusGateways(gatewayStatusRecords []
 			continue
 		}
 
-		gwStatus := v1beta1.GatewayStatus{
-			Listeners: make([]v1beta1.ListenerStatus, len(gatewayStatusRecord.listenersStatusesRecords)),
+		gwStatus := v1.GatewayStatus{
+			Listeners: make([]v1.ListenerStatus, len(gatewayStatusRecord.listenersStatusesRecords)),
 			Conditions: []metav1.Condition{{
 				Type:               GatewayConditionReady,
 				ObservedGeneration: gatewayStatusRecord.generation,
@@ -82,8 +82,8 @@ func (statusMgr *StatusManagerImpl) UpdateStatusGateways(gatewayStatusRecords []
 			if numRoutesByListener := numRoutesByListenerByGateway[gatewayStatusRecord.namespace+"/"+gatewayStatusRecord.name]; numRoutesByListener != nil {
 				numRoutes = numRoutesByListener[listenerStatusRecord.name]
 			}
-			gwStatus.Listeners[i] = v1beta1.ListenerStatus{
-				Name:           v1beta1.SectionName(listenerStatusRecord.name),
+			gwStatus.Listeners[i] = v1.ListenerStatus{
+				Name:           v1.SectionName(listenerStatusRecord.name),
 				SupportedKinds: RouteGroupKinds(listenerStatusRecord.validRGK).asK8SGroupKind(),
 				AttachedRoutes: numRoutes,
 			}
@@ -134,7 +134,7 @@ func (statusMgr *StatusManagerImpl) UpdateStatusGateways(gatewayStatusRecords []
 			gwStatus.Listeners[i].Conditions = listenerConditions
 		}
 
-		gw := &v1beta1.Gateway{}
+		gw := &v1.Gateway{}
 		err := statusMgr.k8sRestClient.Get(context.TODO(), types.NamespacedName{
 			Namespace: gatewayStatusRecord.namespace,
 			Name:      gatewayStatusRecord.name,
@@ -177,15 +177,15 @@ func (statusMgr *StatusManagerImpl) UpdateStatusTCPRoutes(routesStatusRecords []
 		for _, parentStatusRecord := range tcprouteStatusRecord.parentsStatusesRecords {
 			parentStatusRecord := parentStatusRecord
 			conditions := []metav1.Condition{}
-			routeParentStatus := v1beta1.RouteParentStatus{
-				ControllerName: v1beta1.GatewayController(statusMgr.gatewayControllerName),
-				ParentRef: v1beta1.ParentReference{
-					Group:       (*v1beta1.Group)(&parentStatusRecord.parentRef.Group),
-					Kind:        (*v1beta1.Kind)(&parentStatusRecord.parentRef.Kind),
-					Namespace:   (*v1beta1.Namespace)(parentStatusRecord.parentRef.Namespace),
-					Name:        v1beta1.ObjectName(parentStatusRecord.parentRef.Name),
-					SectionName: (*v1beta1.SectionName)(parentStatusRecord.parentRef.SectionName),
-					Port:        (*v1beta1.PortNumber)(parentStatusRecord.parentRef.Port),
+			routeParentStatus := v1.RouteParentStatus{
+				ControllerName: v1.GatewayController(statusMgr.gatewayControllerName),
+				ParentRef: v1.ParentReference{
+					Group:       (*v1.Group)(&parentStatusRecord.parentRef.Group),
+					Kind:        (*v1.Kind)(&parentStatusRecord.parentRef.Kind),
+					Namespace:   (*v1.Namespace)(parentStatusRecord.parentRef.Namespace),
+					Name:        v1.ObjectName(parentStatusRecord.parentRef.Name),
+					SectionName: (*v1.SectionName)(parentStatusRecord.parentRef.SectionName),
+					Port:        (*v1.PortNumber)(parentStatusRecord.parentRef.Port),
 				},
 			}
 
@@ -267,12 +267,12 @@ func hasNumberOfRoutesForAnyListenerChanged(gatewayStatusRecord gatewayStatusRec
 
 type RouteGroupKinds []store.RouteGroupKind
 
-func (rgk RouteGroupKinds) asK8SGroupKind() []v1beta1.RouteGroupKind {
-	routeGroupKind := make([]v1beta1.RouteGroupKind, len(rgk))
+func (rgk RouteGroupKinds) asK8SGroupKind() []v1.RouteGroupKind {
+	routeGroupKind := make([]v1.RouteGroupKind, len(rgk))
 	for i, rgk := range rgk {
-		routeGroupKind[i] = v1beta1.RouteGroupKind{
-			Group: (*v1beta1.Group)(rgk.Group),
-			Kind:  v1beta1.Kind(rgk.Kind),
+		routeGroupKind[i] = v1.RouteGroupKind{
+			Group: (*v1.Group)(rgk.Group),
+			Kind:  v1.Kind(rgk.Kind),
 		}
 	}
 	return routeGroupKind
