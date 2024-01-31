@@ -202,12 +202,18 @@ func (gm GatewayManagerImpl) manageTCPRoutes() {
 				continue
 			}
 
+			useProxyV2 := getBackendUseProxyV2(*tcproute)
+			serverParams := models.ServerParams{Check: "enabled"}
+			if useProxyV2 {
+				serverParams.SendProxyV2 = "enabled"
+			}
+
 			// If not called on the route, the afferent backend will be automatically deleted.
 			errBackendCreate := gm.haproxyClient.BackendCreateIfNotExist(
 				models.Backend{
 					Name:          getBackendName(*tcproute),
 					Mode:          "tcp",
-					DefaultServer: &models.DefaultServer{ServerParams: models.ServerParams{Check: "enabled"}},
+					DefaultServer: &models.DefaultServer{ServerParams: serverParams},
 				})
 			if errBackendCreate != nil {
 				logger.Error(errBackendCreate)
@@ -603,6 +609,11 @@ func (gm GatewayManagerImpl) manageGatewayClass() {
 // getBackendName provides backend name from tcproute attributes.
 func getBackendName(tcproute store.TCPRoute) string {
 	return tcproute.Namespace + "_" + tcproute.Name
+}
+
+// getBackendUseProxyV2 provides backend send-proxy-v2 from backend attributes.
+func getBackendUseProxyV2(tcproute store.TCPRoute) bool {
+	return tcproute.BackendRefs[0].ProxyV2
 }
 
 // getFrontendName provides frontend name from the listener attributes.

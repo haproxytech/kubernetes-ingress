@@ -810,7 +810,14 @@ func manageGateway(gateway *gatewayv1beta1.Gateway, eventChan chan SyncDataEvent
 }
 
 func manageTCPRoute(tcproute *gatewayv1alpha2.TCPRoute, eventChan chan SyncDataEvent, status store.Status) {
-	logger.Debugf("gwapi: tcproute: informers: got '%s/%s'", tcproute.Namespace, tcproute.Name)
+	proxyV2 := false
+	for key, value := range tcproute.Annotations {
+		logger.Debugf("gwapi: tcproute: annotations: %s: %s", key, value)
+		if key == "haproxy.org/send-proxy-v2" && value == "true" || value == "True" {
+			logger.Debugf("gwapi: tcproute: informers: got '%s/%s': send-proxy-v2 annotation found tcp route will use HAProxy v2 protocol", tcproute.Namespace, tcproute.Name)
+			proxyV2 = true
+		}
+	}
 	backendRefs := []store.BackendRef{}
 	for _, rule := range tcproute.Spec.Rules {
 		for _, backendref := range rule.BackendRefs {
@@ -822,10 +829,11 @@ func manageTCPRoute(tcproute *gatewayv1alpha2.TCPRoute, eventChan chan SyncDataE
 					}
 					return nil
 				}(),
-				Port:   (*int32)(backendref.Port),
-				Group:  (*string)(backendref.Group),
-				Kind:   (*string)(backendref.Kind),
-				Weight: backendref.Weight,
+				Port:    (*int32)(backendref.Port),
+				Group:   (*string)(backendref.Group),
+				Kind:    (*string)(backendref.Kind),
+				Weight:  backendref.Weight,
+				ProxyV2: proxyV2,
 			})
 		}
 	}

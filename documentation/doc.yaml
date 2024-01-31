@@ -1878,3 +1878,17 @@ annotations:
     version_min: "1.7"
     example:
       - "tls-alpn: http/1.1"
+  - title: send-proxy-v2
+    type: string
+    group: gateway
+    dependencies: ""
+    default: "false"
+    description:
+      - For TCPRoutes only send HAProxy v2 protocol to the backend.
+    values:
+      - anything not 'True' or 'true' will be considered false
+    applies_to:
+      - gateway
+    version_min: "1.10"
+    example:
+      - "send-proxy-v2: 'true'"
