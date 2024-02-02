@@ -4,6 +4,15 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
+# set client native version
+client_native_version=$(go list -m -f "{{.Version}}" github.com/haproxytech/client-native/v5)
+echo "Client Native Version: $client_native_version"
+for file in crs/api/ingress/v1/*.go; do
+    echo "$file"
+    # Use sed to replace the version string in Go files with the new version
+    sed -i  "s@// +kubebuilder:metadata:annotations=\"haproxy.org/client-native=.*\"@// +kubebuilder:metadata:annotations=\"haproxy.org/client-native=$client_native_version\"@" $file
+done
+
 # code-generator build native, versioned clients, informers and other helpers
 # via Kubernetes code generators from k8s.oi/code-generator
 
