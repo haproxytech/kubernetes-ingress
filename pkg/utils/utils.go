@@ -205,3 +205,12 @@ func EqualSliceByIDFunc[T any](a, b []T, id func(x T) string) bool {
 	}
 	return true
 }
+
+// PointerIfNotDefault returns a pointer to the argument if it's not a default value for type T
+func PointerIfNotDefault[T comparable](arg T) *T {
+	var def T
+	if arg != def {
+		return &arg
+	}
+	return nil
+}
