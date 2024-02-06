@@ -67,11 +67,18 @@ func main() {
 
 	// Set Logger
 	logger := utils.GetLogger()
+	err = version.Set()
+	if err != nil {
+		logger.Error(err)
+		os.Exit(1) //nolint:gocritic
+	}
+
 	logger.SetLevel(osArgs.LogLevel.LogLevel)
 	if len(osArgs.Help) > 0 && osArgs.Help[0] {
 		parser.WriteHelp(os.Stdout)
 		return
 	}
+
 	if osArgs.JobCheckCRD {
 		logger.Print(version.IngressControllerInfo)
 		logger.Print(job.IngressControllerCRDUpdater)
@@ -82,7 +89,7 @@ func main() {
 		err := job.CRDRefresh(logger, osArgs)
 		if err != nil {
 			logger.Error(err)
-			os.Exit(1) //nolint:gocritic
+			os.Exit(1)
 		}
 		// exit, this is just a job
 		os.Exit(0)
@@ -156,13 +163,13 @@ func main() {
 
 func logInfo(logger utils.Logger, osArgs utils.OSArgs) bool {
 	if len(osArgs.Version) > 0 {
-		fmt.Printf("HAProxy Ingress Controller %s %s%s", version.GitTag, version.GitCommit, version.GitDirty)
-		fmt.Printf("Build from: %s", version.GitRepo)
-		fmt.Printf("Git commit date: %s", version.GitCommitDate)
+		fmt.Printf("HAProxy Ingress Controller %s %s%s\n", version.GitTag, version.GitCommit, version.GitDirty)
+		fmt.Printf("Build from: %s\n", version.GitRepo)
+		fmt.Printf("Git commit date: %s\n", version.GitCommitDate)
 		if len(osArgs.Version) > 1 {
-			fmt.Printf("ConfigMap: %s", osArgs.ConfigMap)
-			fmt.Printf("Ingress class: %s", osArgs.IngressClass)
-			fmt.Printf("Empty Ingress class: %t", osArgs.EmptyIngressClass)
+			fmt.Printf("ConfigMap: %s\n", osArgs.ConfigMap)
+			fmt.Printf("Ingress class: %s\n", osArgs.IngressClass)
+			fmt.Printf("Empty Ingress class: %t\n", osArgs.EmptyIngressClass)
 		}
 		return true
 	}

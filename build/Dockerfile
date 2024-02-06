@@ -24,16 +24,9 @@ COPY / /src
 
 RUN mkdir -p /var/run/vars && \
     cd /src && \
-    git config --get remote.origin.url > /var/run/vars/GIT_REPO && \
-    git rev-parse --short HEAD > /var/run/vars/GIT_HEAD_COMMIT && \
-    git log -1 --date=format:"%Y/%m/%d %T" --format="%ad" > /var/run/vars/GIT_DATE_LAST_COMMIT && \
     git describe --abbrev=0 --tags > /var/run/vars/GIT_LAST_TAG && \
-    git rev-parse --short $(cat /var/run/vars/GIT_LAST_TAG) > /var/run/vars/GIT_TAG_COMMIT && \
-    git diff $(cat /var/run/vars/GIT_HEAD_COMMIT) $(cat /var/run/vars/GIT_TAG_COMMIT) --quiet > /var/run/vars/GIT_MODIFIED1 || echo '.dev' > /var/run/vars/GIT_MODIFIED1 && \
-    git diff --quiet > /var/run/vars/GIT_MODIFIED2 || echo '.dirty' > /var/run/vars/GIT_MODIFIED2 && \
-    cat /var/run/vars/GIT_MODIFIED1 /var/run/vars/GIT_MODIFIED2 | tr -d '\n' > /var/run/vars/GIT_MODIFIED && \
     CGO_ENABLED=0 go build \
-        -ldflags "-X pkg.version.GitRepo=$(cat /var/run/vars/GIT_REPO) -X pkg.version.GitTag=$(cat /var/run/vars/GIT_LAST_TAG) -X pkg.version.GitCommit=$(cat /var/run/vars/GIT_HEAD_COMMIT) -X pkg.version.GitDirty=$(cat /var/run/vars/GIT_MODIFIED) -X \"pkg.version.GitCommitDate=$(cat /var/run/vars/GIT_DATE_LAST_COMMIT)\"" \
+        -ldflags "-X github.com/haproxytech/kubernetes-ingress/pkg/version.GitTag=$(cat /var/run/vars/GIT_LAST_TAG)" \
         -o fs/haproxy-ingress-controller .
 
 FROM haproxytech/haproxy-alpine:2.8
