@@ -154,7 +154,7 @@ func (suite *UseBackendSuite) UseBackendFixture() (eventChan chan k8s.SyncDataEv
 			{
 				Name:     "https",
 				Protocol: "TCP",
-				Port:     443,
+				Port:     8443,
 				Status:   store.ADDED,
 			},
 		},

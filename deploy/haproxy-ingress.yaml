@@ -153,6 +153,8 @@ spec:
         args:
           - --configmap=haproxy-controller/haproxy-kubernetes-ingress
         securityContext:
+          runAsNonRoot: true
+          allowPrivilegeEscalation: false
           runAsUser:  1000
           runAsGroup: 1000
           capabilities:
@@ -160,6 +162,8 @@ spec:
               - ALL
             add:
               - NET_BIND_SERVICE
+          seccompProfile:
+            type: RuntimeDefault
         resources:
           limits:
             memory: 2560Mi

@@ -56,7 +56,7 @@ var DefaultValues = map[string]string{
 	"request-capture-len":    "128",
 	"ssl-redirect-code":      "302",
 	"request-redirect-code":  "302",
-	"ssl-redirect-port":      "443",
+	"ssl-redirect-port":      "8443",
 	"ssl-passthrough":        "false",
 	"server-ssl":             "false",
 	"scale-server-slots":     "42",

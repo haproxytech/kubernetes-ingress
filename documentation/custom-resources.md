@@ -165,5 +165,5 @@ spec:
   - protocol: TCP
     port: 443
     name: https
-    targetPort: 443
+    targetPort: 8443
 ```

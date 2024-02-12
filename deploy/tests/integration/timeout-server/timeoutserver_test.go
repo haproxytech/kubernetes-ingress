@@ -132,7 +132,7 @@ func newAppSvc() *store.Service {
 			{
 				Name:     "https",
 				Protocol: "TCP",
-				Port:     443,
+				Port:     8443,
 				Status:   store.ADDED,
 			},
 		},

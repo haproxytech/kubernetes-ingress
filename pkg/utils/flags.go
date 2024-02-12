@@ -90,8 +90,8 @@ type OSArgs struct {
 	DefaultBackendPort         int            `long:"default-backend-port" description:"port to use for default service" default:"6061"`
 	ChannelSize                int64          `long:"channel-size" description:"sets the size of controller buffers used to receive and send k8s events.NOTE: increase the value to accommodate large number of resources "`
 	ControllerPort             int            `long:"controller-port" description:"port to listen on for controller data: prometheus, pprof" default:"6060"`
-	HTTPBindPort               int64          `long:"http-bind-port" default:"80" description:"port to listen on for HTTP traffic"`
-	HTTPSBindPort              int64          `long:"https-bind-port" default:"443" description:"port to listen on for HTTPS traffic"`
+	HTTPBindPort               int64          `long:"http-bind-port" default:"8080" description:"port to listen on for HTTP traffic"`
+	HTTPSBindPort              int64          `long:"https-bind-port" default:"8443" description:"port to listen on for HTTPS traffic"`
 	SyncPeriod                 time.Duration  `long:"sync-period" default:"5s" description:"Sets the period at which the controller syncs HAProxy configuration file"`
 	CacheResyncPeriod          time.Duration  `long:"cache-resync-period" default:"10m" description:"Sets the underlying Shared Informer resync period: resyncing controller with informers cache"`
 	HealthzBindPort            int64          `long:"healthz-bind-port" default:"1042" description:"port to listen on for probes"`

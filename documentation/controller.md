@@ -28,8 +28,8 @@ Image can be run with arguments:
 | [`--disable-ipv6`](#--disable-ipv6) | `false` |
 | [`--ipv4-bind-address`](#--ipv4-bind-address) | `0.0.0.0` |
 | [`--ipv6-bind-address`](#--ipv6-bind-address) | `::` |
-| [`--http-bind-port`](#--http-bind-port) | `80` |
-| [`--https-bind-port`](#--https-bind-port) | `443` |
+| [`--http-bind-port`](#--http-bind-port) | `8080` |
+| [`--https-bind-port`](#--https-bind-port) | `8443` |
 | [`--disable-http`](#--disable-http) | `false` |
 | [`--disable-https`](#--disable-https) | `false` |
 | [`--sync-period`](#--sync-period) | `5s` |
@@ -478,7 +478,7 @@ Example:
 
 Possible values:
 
-- A valid port in the range. Default: 80
+- A valid port in the range. Default: 8080
 
 Example:
 
@@ -496,7 +496,7 @@ Example:
 
 Possible values:
 
-- A valid port in the range. Default: 443
+- A valid port in the range. Default: 8443
 
 Example:
 

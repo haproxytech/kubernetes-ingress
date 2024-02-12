@@ -241,8 +241,8 @@ image_arguments:
   - argument: --http-bind-port
     description: Customize the HTTP frontend binding port.
     values:
-      - "A valid port in the range. Default: 80"
-    default: 80
+      - "A valid port in the range. Default: 8080"
+    default: 8080
     version_min: "1.5"
     example: --http-bind-port=8080
     helm: |-
@@ -251,8 +251,8 @@ image_arguments:
   - argument: --https-bind-port
     description: Customize the HTTPS frontend binding port.
     values:
-      - "A valid port in the range. Default: 443"
-    default: 443
+      - "A valid port in the range. Default: 8443"
+    default: 8443
     version_min: "1.5"
     example: --http-bind-port=8443
     helm: |-
@@ -1605,7 +1605,7 @@ annotations:
     type: number
     group: https
     dependencies: ssl-redirect
-    default: "443"
+    default: "8443"
     description:
       - Sets the HTTPS port to redirect to when HTTP to HTTPS traffic redirection is enabled  when `ssl-redirect` is true.
     tip:
