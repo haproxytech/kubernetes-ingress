@@ -15,11 +15,11 @@
 package converters
 
 import (
-	"github.com/haproxytech/client-native/v5/misc"
 	"github.com/haproxytech/client-native/v5/models"
 
 	corev1alpha2 "github.com/haproxytech/kubernetes-ingress/crs/api/core/v1alpha2"
 	v1 "github.com/haproxytech/kubernetes-ingress/crs/api/ingress/v1"
+	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
 )
 
 func DeepConvertBackendSpecA2toV1(o corev1alpha2.BackendSpec) v1.BackendSpec { //nolint:cyclop,maintidx
@@ -153,7 +153,7 @@ func DeepConvertBackendSpecA2toV1(o corev1alpha2.BackendSpec) v1.BackendSpec { /
 				cp.Config.DefaultServer.HealthCheckPort = new(int64)
 				cp.Config.DefaultServer.HealthCheckPort = o.Config.DefaultServer.HealthCheckPort
 			}
-			cp.Config.DefaultServer.InitAddr = misc.Ptr(o.Config.DefaultServer.InitAddr)
+			cp.Config.DefaultServer.InitAddr = utils.PointerIfNotDefault(o.Config.DefaultServer.InitAddr)
 			if o.Config.DefaultServer.Inter != nil {
 				cp.Config.DefaultServer.Inter = new(int64)
 				cp.Config.DefaultServer.Inter = o.Config.DefaultServer.Inter
@@ -235,7 +235,7 @@ func DeepConvertBackendSpecA2toV1(o corev1alpha2.BackendSpec) v1.BackendSpec { /
 			cp.Config.DefaultServer.SslMinVer = o.Config.DefaultServer.SslMinVer
 			cp.Config.DefaultServer.SslReuse = o.Config.DefaultServer.SslReuse
 			cp.Config.DefaultServer.Stick = o.Config.DefaultServer.Stick
-			cp.Config.DefaultServer.TCPUt = misc.Ptr(o.Config.DefaultServer.TCPUt)
+			cp.Config.DefaultServer.TCPUt = utils.PointerIfNotDefault(o.Config.DefaultServer.TCPUt)
 			cp.Config.DefaultServer.Tfo = o.Config.DefaultServer.Tfo
 			cp.Config.DefaultServer.TLSTickets = o.Config.DefaultServer.TLSTickets
 			cp.Config.DefaultServer.Track = o.Config.DefaultServer.Track

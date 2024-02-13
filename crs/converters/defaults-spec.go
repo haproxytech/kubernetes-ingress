@@ -20,6 +20,7 @@ import (
 
 	corev1alpha2 "github.com/haproxytech/kubernetes-ingress/crs/api/core/v1alpha2"
 	v1 "github.com/haproxytech/kubernetes-ingress/crs/api/ingress/v1"
+	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
 )
 
 func DeepConvertDefaultsSpecA2toV1(o corev1alpha2.DefaultsSpec) v1.DefaultsSpec { //nolint:cyclop,maintidx
@@ -176,7 +177,7 @@ func DeepConvertDefaultsSpecA2toV1(o corev1alpha2.DefaultsSpec) v1.DefaultsSpec 
 				cp.Config.DefaultServer.HealthCheckPort = new(int64)
 				cp.Config.DefaultServer.HealthCheckPort = o.Config.DefaultServer.HealthCheckPort
 			}
-			cp.Config.DefaultServer.InitAddr = misc.Ptr(o.Config.DefaultServer.InitAddr)
+			cp.Config.DefaultServer.InitAddr = utils.PointerIfNotDefault(o.Config.DefaultServer.InitAddr)
 			if o.Config.DefaultServer.Inter != nil {
 				cp.Config.DefaultServer.Inter = new(int64)
 				cp.Config.DefaultServer.Inter = o.Config.DefaultServer.Inter
