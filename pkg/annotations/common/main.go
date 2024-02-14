@@ -62,6 +62,7 @@ var DefaultValues = map[string]string{
 	"scale-server-slots":     "42",
 	"client-crt-optional":    "false",
 	"tls-alpn":               "h2,http/1.1",
+	"quic-alt-svc-max-age":   "60",
 }
 
 // Returns the first annotation value in the set of maps of annotations along with the indice of which map in argument provided the value.

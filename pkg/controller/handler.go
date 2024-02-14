@@ -54,12 +54,30 @@ func (c *HAProxyController) initHandlers() {
 		c.updateStatusManager,
 	}
 
-	c.updateHandlers = append(c.updateHandlers, handler.Refresh{})
+	defer func() { c.updateHandlers = append(c.updateHandlers, handler.Refresh{}) }()
 
 	c.beforeUpdateHandlers = []UpdateHandler{}
 	// Need to be before Refresh. If after, maps are refreshed without pprof content
 	if c.osArgs.PprofEnabled {
 		c.beforeUpdateHandlers = append(c.beforeUpdateHandlers, handler.Pprof{})
+	}
+
+	if !c.osArgs.DisableQuic {
+		c.updateHandlers = append(c.updateHandlers, &handler.Quic{
+			IPv4:     !c.osArgs.DisableIPV4,
+			AddrIPv4: c.osArgs.IPV4BindAddr,
+			IPv6:     !c.osArgs.DisableIPV6,
+			AddrIPv6: c.osArgs.IPV6BindAddr,
+			Port:     c.osArgs.HTTPSBindPort,
+			CertDir:  c.haproxy.Certs.FrontendDir,
+			QuicAnnouncePort: func() int64 {
+				if c.osArgs.QuicAnnouncePort != 0 {
+					return c.osArgs.QuicAnnouncePort
+				}
+				return c.osArgs.HTTPSBindPort
+			}(),
+			MaxAge: "0",
+		})
 	}
 }
 

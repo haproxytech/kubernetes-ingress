@@ -68,6 +68,7 @@ func SetGlobal(global *models.Global, logTargets *models.LogTargets, env Env) {
 	global.DefaultPath = &models.GlobalDefaultPath{
 		Type: "config",
 	}
+	global.LimitedQuic = true
 }
 
 // SetDefaults will set default values for Defaults section config.

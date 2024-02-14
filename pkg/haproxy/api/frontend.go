@@ -156,6 +156,15 @@ func (c *clientNative) FrontendBindEdit(frontend string, bind models.Bind) error
 	return configuration.EditBind(bind.Name, "frontend", frontend, &bind, c.activeTransaction, 0)
 }
 
+func (c *clientNative) FrontendBindDelete(frontend string, bind string) error {
+	configuration, err := c.nativeAPI.Configuration()
+	if err != nil {
+		return err
+	}
+	c.activeTransactionHasChanges = true
+	return configuration.DeleteBind(bind, "frontend", frontend, c.activeTransaction, 0)
+}
+
 func (c *clientNative) FrontendHTTPRequestRuleCreate(frontend string, rule models.HTTPRequestRule, ingressACL string) error {
 	configuration, err := c.nativeAPI.Configuration()
 	if err != nil {

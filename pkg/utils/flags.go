@@ -110,4 +110,6 @@ type OSArgs struct {
 	DisableConfigSnippets      string         `long:"disable-config-snippets" description:"Allow to disable config snippets. List of comma separated values (possible values: all/global/backend/frontend)"`
 	UseWithPebble              bool           `long:"with-pebble" description:"use pebble to start/stop/reload HAProxy"`
 	JobCheckCRD                bool           `long:"job-check-crd" description:"does not execute IC, but adds/updates CRDs"`
+	DisableQuic                bool           `long:"disable-quic" description:"disable quic protocol in http frontend bindings"`
+	QuicAnnouncePort           int64          `long:"quick-announce-port" description:""`
 }
