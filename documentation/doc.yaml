@@ -370,6 +370,19 @@ image_arguments:
       - If 'all' is present then all (backend, frontend, global) config snippets are disabled.
     version_min: "1.11"
     example: --disable-config-snippets=backend,frontend
+  - argument: --disable-quic
+    description: option to disable the quic binding used by default if a certificate is provided throug ssl-certificate annotation. Please be aware that the quic implementation is activated with the "limited-quic" global option. Please refer to the documentation for details.
+    default: false
+    version_min: "1.11"
+    example: |-
+      args:
+        - --disable-quic
+  - argument: --quick-announce-port
+    description: adjust the port in the alt-svc header to redirect to the exposed port in case it differs from the quic binding port.
+    version_min: "1.11"
+    example: |-
+      args:
+        - --quick-announce-port=10443    
 groups:
   config-snippet:
     header: |-
@@ -1151,6 +1164,20 @@ annotations:
       - configmap
     version_min: "1.4"
     example: ['proxy-protocol: "192.168.1.0/24, 192.168.2.100"']
+  - title: quic-alt-svc-max-age
+    type: number
+    dependencies: "ssl-certificate"
+    default: ""
+    description:
+      - Sets the max age in seconds for the alt-svc header as defined by the standard.
+    tip:
+      - Too high a number can lead to issues. The clients could fail to connect because the services is no more available.
+    values:
+      - number of seconds for cache retention.
+    applies_to:
+      - configmap
+    version_min: "1.11"
+    example: ['quic-alt-svc-max-age: "900"']    
   - title: rate-limit-period
     type: "[time](#time)"
     group: rate-limit
@@ -1534,6 +1561,7 @@ annotations:
       - Sets the name of the Kubernetes secret that contains both the TLS key and certificate.
     tip:
       - this replaces default certificate
+      - this is used as the certificate for quic binding
     values:
       - Name of Kubernetes secret
     applies_to:
