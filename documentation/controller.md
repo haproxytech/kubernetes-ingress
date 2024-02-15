@@ -43,7 +43,7 @@ Image can be run with arguments:
 | [`--channel-size`](#--channel-size) | `600` |
 | [`--disable-config-snippets`](#--disable-config-snippets) :construction:(dev) |  |
 | [`--disable-quic`](#--disable-quic) :construction:(dev) | `false` |
-| [`--quick-announce-port`](#--quick-announce-port) :construction:(dev) |  |
+| [`--quic-announce-port`](#--quic-announce-port) :construction:(dev) |  |
 
 
 ### `--configmap`
@@ -767,7 +767,7 @@ args:
 
 ***
 
-### `--quick-announce-port`
+### `--quic-announce-port`
 
 
   > :construction: this is only available from next version, currently available in dev build
@@ -781,7 +781,7 @@ Example:
 
 ```yaml
 args:
-  - --quick-announce-port=10443    
+  - --quic-announce-port=10443    
 ```
 
 <p align='right'><a href='#haproxy-kubernetes-ingress-controller'>:arrow_up_small: back to top</a></p>

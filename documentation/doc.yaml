@@ -377,12 +377,12 @@ image_arguments:
     example: |-
       args:
         - --disable-quic
-  - argument: --quick-announce-port
+  - argument: --quic-announce-port
     description: adjust the port in the alt-svc header to redirect to the exposed port in case it differs from the quic binding port.
     version_min: "1.11"
     example: |-
       args:
-        - --quick-announce-port=10443    
+        - --quic-announce-port=10443    
 groups:
   config-snippet:
     header: |-
