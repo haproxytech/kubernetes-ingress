@@ -382,7 +382,13 @@ image_arguments:
     version_min: "1.11"
     example: |-
       args:
-        - --quic-announce-port=10443    
+        - --quic-announce-port=10443
+  - argument: --quic-bind-port
+    description: sets the binding port for quic in HTTPS frontend.
+    version_min: "1.11"
+    example: |-
+      args:
+        - --quic-bind-port=4443        
 groups:
   config-snippet:
     header: |-

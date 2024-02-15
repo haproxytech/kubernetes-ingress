@@ -44,6 +44,7 @@ Image can be run with arguments:
 | [`--disable-config-snippets`](#--disable-config-snippets) :construction:(dev) |  |
 | [`--disable-quic`](#--disable-quic) :construction:(dev) | `false` |
 | [`--quic-announce-port`](#--quic-announce-port) :construction:(dev) |  |
+| [`--quic-bind-port`](#--quic-bind-port) :construction:(dev) |  |
 
 
 ### `--configmap`
@@ -781,7 +782,28 @@ Example:
 
 ```yaml
 args:
-  - --quic-announce-port=10443    
+  - --quic-announce-port=10443
+```
+
+<p align='right'><a href='#haproxy-kubernetes-ingress-controller'>:arrow_up_small: back to top</a></p>
+
+***
+
+### `--quic-bind-port`
+
+
+  > :construction: this is only available from next version, currently available in dev build
+
+  sets the binding port for quic in HTTPS frontend.
+
+Possible values:
+
+
+Example:
+
+```yaml
+args:
+  - --quic-bind-port=4443        
 ```
 
 <p align='right'><a href='#haproxy-kubernetes-ingress-controller'>:arrow_up_small: back to top</a></p>

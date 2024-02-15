@@ -23,10 +23,10 @@ type Quic struct {
 	AddrIPv6         string
 	IPv4             bool
 	IPv6             bool
-	Port             int64
 	CertDir          string
 	QuicAnnouncePort int64
 	MaxAge           string
+	QuicBindPort     int64
 }
 
 func (q *Quic) Update(k store.K8s, h haproxy.HAProxy, a annotations.Annotations) (err error) {
@@ -56,7 +56,7 @@ func (q *Quic) Update(k store.K8s, h haproxy.HAProxy, a annotations.Annotations)
 				addr = "quic4@" + q.AddrIPv4
 				return
 			}(),
-			Port: utils.PtrInt64(q.Port),
+			Port: utils.PtrInt64(q.QuicBindPort),
 			BindParams: models.BindParams{
 				Name:           QUIC4BIND,
 				Ssl:            true,
@@ -77,7 +77,7 @@ func (q *Quic) Update(k store.K8s, h haproxy.HAProxy, a annotations.Annotations)
 				addr = "quic6@" + q.AddrIPv6
 				return
 			}(),
-			Port: utils.PtrInt64(q.Port),
+			Port: utils.PtrInt64(q.QuicBindPort),
 			BindParams: models.BindParams{
 				Name:           QUIC6BIND,
 				Ssl:            true,

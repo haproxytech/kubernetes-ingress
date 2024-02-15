@@ -68,11 +68,16 @@ func (c *HAProxyController) initHandlers() {
 			AddrIPv4: c.osArgs.IPV4BindAddr,
 			IPv6:     !c.osArgs.DisableIPV6,
 			AddrIPv6: c.osArgs.IPV6BindAddr,
-			Port:     c.osArgs.HTTPSBindPort,
 			CertDir:  c.haproxy.Certs.FrontendDir,
 			QuicAnnouncePort: func() int64 {
 				if c.osArgs.QuicAnnouncePort != 0 {
 					return c.osArgs.QuicAnnouncePort
+				}
+				return c.osArgs.HTTPSBindPort
+			}(),
+			QuicBindPort: func() int64 {
+				if c.osArgs.QuicBindPort != 0 {
+					return c.osArgs.QuicBindPort
 				}
 				return c.osArgs.HTTPSBindPort
 			}(),
