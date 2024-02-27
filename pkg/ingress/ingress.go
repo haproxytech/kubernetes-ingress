@@ -49,6 +49,10 @@ func New(k store.K8s, resource *store.Ingress, class string, emptyClass bool, a 
 // ingress.class annotation should have precedence over the IngressClass mechanism implemented
 // in "networking.k8s.io".
 func (i Ingress) Supported(k8s store.K8s, a annotations.Annotations) (supported bool) {
+	if i.resource != nil && i.resource.Faked {
+		return true
+	}
+
 	var igClassAnn, igClassSpec string
 	igClassAnn = a.String("ingress.class", i.resource.Annotations)
 	if igClassResource := k8s.IngressClasses[i.resource.Class]; igClassResource != nil {

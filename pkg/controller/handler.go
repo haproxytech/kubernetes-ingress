@@ -56,7 +56,12 @@ func (c *HAProxyController) initHandlers() {
 
 	defer func() { c.updateHandlers = append(c.updateHandlers, handler.Refresh{}) }()
 
-	c.beforeUpdateHandlers = []UpdateHandler{}
+	c.beforeUpdateHandlers = []UpdateHandler{
+		handler.PrometheusEndpoint{
+			EventChan: c.eventChan,
+			PodNs:     c.podNamespace,
+		},
+	}
 	// Need to be before Refresh. If after, maps are refreshed without pprof content
 	if c.osArgs.PprofEnabled {
 		c.beforeUpdateHandlers = append(c.beforeUpdateHandlers, handler.Pprof{})

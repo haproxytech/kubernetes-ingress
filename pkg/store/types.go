@@ -71,6 +71,7 @@ type Service struct {
 	Status      Status
 	Ports       []ServicePort
 	Addresses   []string // Used only for publish-service
+	Faked       bool
 }
 
 // RuntimeBackend holds the runtime state of an HAProxy backend
@@ -139,6 +140,7 @@ type Ingress struct {
 	Addresses    []string
 	Ignored      bool // true if resource ignored because of non matching Controller Class
 	ClassUpdated bool
+	Faked        bool
 }
 
 // IngressTLS describes the transport layer security associated with an Ingress.

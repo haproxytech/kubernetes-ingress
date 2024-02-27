@@ -29,6 +29,7 @@ import (
 
 	"github.com/haproxytech/kubernetes-ingress/pkg/annotations"
 	gateway "github.com/haproxytech/kubernetes-ingress/pkg/gateways"
+	"github.com/haproxytech/kubernetes-ingress/pkg/handler"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/api"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/env"
@@ -198,7 +199,7 @@ func addControllerMetricData(builder *Builder, chShutdown chan struct{}) {
 		runningServices += " pprof"
 	}
 	if builder.osArgs.PrometheusEnabled {
-		rtr.GET("/metrics", fasthttpadaptor.NewFastHTTPHandler(promhttp.Handler()))
+		rtr.GET(handler.PROMETHEUS_URL_PATH, fasthttpadaptor.NewFastHTTPHandler(promhttp.Handler()))
 		runningServices += ", prometheus"
 	}
 	rtr.GET("/healtz", requestHandler)

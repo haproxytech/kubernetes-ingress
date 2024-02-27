@@ -188,7 +188,7 @@ func (a *CfgSnippet) Process(k store.K8s, annotations ...map[string]string) erro
 				processConfigSnippet(a.backend, origin, data)
 			}
 		} else {
-			if a.service != nil && anns[0] != "" {
+			if a.service != nil && a.service.Name != "" && !a.service.Faked && anns[0] != "" {
 				origin := a.service.Namespace + "/" + a.service.Name
 				comment := COMMMENT_SERVICE_PREFIX + a.backend + "/" + origin + COMMENT_ENDING
 				data := strings.Split(strings.Trim(anns[0], "\n"), "\n")
