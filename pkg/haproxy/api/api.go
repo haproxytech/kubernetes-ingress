@@ -86,7 +86,7 @@ type clientNative struct {
 func New(transactionDir, configFile, programPath, runtimeSocket string) (client HAProxyClient, err error) { //nolint:ireturn
 	var runtimeClient runtime.Runtime
 	if runtimeSocket != "" {
-		runtimeClient, err = runtime.New(context.Background(), runtimeoptions.Socket(runtimeSocket))
+		runtimeClient, err = runtime.New(context.Background(), runtimeoptions.Socket(runtimeSocket), runtimeoptions.DoNotCheckRuntimeOnInit)
 	} else {
 		runtimeClient, err = runtime.New(context.Background())
 	}
