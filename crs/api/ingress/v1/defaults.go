@@ -22,7 +22,7 @@ import (
 
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-// +kubebuilder:metadata:annotations="haproxy.org/client-native=v5.1.3-0.20240213005611-75890279f890"
+// +kubebuilder:metadata:annotations="haproxy.org/client-native=v5.1.4-0.20240227141919-86be1f81bd90"
 
 // Defaults is a specification for a Defaults resource
 type Defaults struct {

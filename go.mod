@@ -9,8 +9,8 @@ require (
 	github.com/google/renameio v1.0.1
 	github.com/haproxytech/client-native/v2 v2.5.2-0.20220126142624-4a2781a21376
 	github.com/haproxytech/client-native/v3 v3.1.2-0.20230607075433-231591da68ed
-	github.com/haproxytech/client-native/v5 v5.1.3-0.20240213005611-75890279f890
-	github.com/haproxytech/config-parser/v5 v5.1.0
+	github.com/haproxytech/client-native/v5 v5.1.4-0.20240227141919-86be1f81bd90
+	github.com/haproxytech/config-parser/v5 v5.1.1-0.20240221073837-5b782186def2
 	github.com/jessevdk/go-flags v1.4.0
 	github.com/pires/go-proxyproto v0.7.0
 	github.com/prometheus/client_golang v1.18.0

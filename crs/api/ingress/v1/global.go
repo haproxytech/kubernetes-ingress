@@ -22,7 +22,7 @@ import (
 
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-// +kubebuilder:metadata:annotations="haproxy.org/client-native=v5.1.3-0.20240213005611-75890279f890"
+// +kubebuilder:metadata:annotations="haproxy.org/client-native=v5.1.4-0.20240227141919-86be1f81bd90"
 // +kubebuilder:validation:XValidation:rule="!has(self.spec.config.default_path)", message="spec.config.default_path is set by ingress controller internally"
 // +kubebuilder:validation:XValidation:rule="!has(self.spec.config.master__dash__worker)", message="spec.config.master-worker is set by ingress controller internally"
 // +kubebuilder:validation:XValidation:rule="!has(self.spec.config.pidfile)", message="spec.config.pidfile is set by ingress controller internally"

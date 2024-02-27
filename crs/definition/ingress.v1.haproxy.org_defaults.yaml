@@ -4,7 +4,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.14.0
-    haproxy.org/client-native: v5.1.3-0.20240213005611-75890279f890
+    haproxy.org/client-native: v5.1.4-0.20240227141919-86be1f81bd90
   name: defaults.ingress.v1.haproxy.org
 spec:
   group: ingress.v1.haproxy.org
@@ -223,16 +223,50 @@ spec:
                   compression:
                     description: compression
                     properties:
+                      algo-req:
+                        description: |-
+                          algo req
+                          Enum: [identity gzip deflate raw-deflate]
+                        enum:
+                        - identity
+                        - gzip
+                        - deflate
+                        - raw-deflate
+                        type: string
                       algorithms:
                         description: algorithms
                         items:
                           type: string
                         type: array
+                      algos-res:
+                        description: algos res
+                        items:
+                          type: string
+                        type: array
+                      direction:
+                        description: |-
+                          direction
+                          Enum: [request response both]
+                        enum:
+                        - request
+                        - response
+                        - both
+                        type: string
                       offload:
                         description: offload
                         type: boolean
                       types:
                         description: types
+                        items:
+                          type: string
+                        type: array
+                      types-req:
+                        description: types req
+                        items:
+                          type: string
+                        type: array
+                      types-res:
+                        description: types res
                         items:
                           type: string
                         type: array
