@@ -8,6 +8,7 @@
 - [Controller options](controller.md)
 - [Custom resource definitions](custom-resources.md)
 - [Annotations](annotations.md)
+- [Prometheus](prometheus.md)
 
 #### Experimental
 - [Gateway API](gateway-api.md)
