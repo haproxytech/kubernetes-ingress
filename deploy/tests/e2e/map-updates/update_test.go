@@ -24,11 +24,13 @@ import (
 
 func (suite *MapUpdateSuite) Test_Update() {
 	suite.Run("Update", func() {
-		suite.tmplData.Paths = make([]string, 0, 700)
-		for i := 0; i < 700; i++ {
+		n := 700
+		suite.tmplData.Paths = make([]string, 0, n)
+		for i := 0; i < n; i++ {
 			suite.tmplData.Paths = append(suite.tmplData.Paths, strconv.Itoa(i))
 		}
 		oldInfo, err := e2e.GetGlobalHAProxyInfo()
+		oldCount, err := e2e.GetHAProxyMapCount("path-prefix")
 		suite.NoError(err)
 		suite.NoError(suite.test.Apply("config/ingress.yaml.tmpl", suite.test.GetNS(), suite.tmplData))
 		suite.Require().Eventually(func() bool {
@@ -36,8 +38,9 @@ func (suite *MapUpdateSuite) Test_Update() {
 			suite.NoError(err)
 			count, err := e2e.GetHAProxyMapCount("path-prefix")
 			suite.NoError(err)
-			suite.T().Logf("oldInfo.Pid(%s) == newInfo.Pid(%s) && count(%d) == 702", oldInfo.Pid, newInfo.Pid, count)
-			return oldInfo.Pid == newInfo.Pid && count == 702 // 700 + default_http-echo_http + pprof
+			numOfAddedEntries := count - oldCount + 1 // We add one because there's already an entry at the begining which will be removed
+			suite.T().Logf("oldInfo.Pid(%s) == newInfo.Pid(%s) && additional path-prefix.count(%d) == %d", oldInfo.Pid, newInfo.Pid, numOfAddedEntries, n)
+			return oldInfo.Pid == newInfo.Pid && numOfAddedEntries == n
 		}, e2e.WaitDuration, e2e.TickDuration)
 	})
 }
