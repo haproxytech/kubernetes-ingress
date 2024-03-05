@@ -16,7 +16,6 @@ package service
 
 import (
 	"fmt"
-	"strconv"
 	"strings"
 
 	"github.com/haproxytech/client-native/v5/models"
@@ -91,8 +90,6 @@ func (s *Service) updateHAProxySrv(client api.HAProxyClient, srvSlot store.HAPro
 
 // scaleHAproxySrvs adds servers to match available addresses
 func (s *Service) scaleHAProxySrvs(backend *store.RuntimeBackend) {
-	var flag bool
-	var disabled []*store.HAProxySrv
 	var annVal int
 	var annErr error
 	// Add disabled HAProxySrvs to match "scale-server-slots"
@@ -108,37 +105,59 @@ func (s *Service) scaleHAProxySrvs(backend *store.RuntimeBackend) {
 			break
 		}
 	}
-	logger.Tracef("[CONFIG] [BACKEND] [SERVER] backend %s: number of slots %d", backend.Name, srvSlots)
-	for len(backend.HAProxySrvs) < srvSlots {
+	// We expect to have these slots : the already existing ones from backend.HAProxySrvs and the new ones to be added backend.Endpoints.Addresses
+	// Keep in mind this is about slots not servers. New servers can be already added to backend.HAProxySrvs if the room is sufficient.
+	// The name backend.Endpoints.Addresses is misleading, it's really about new slots that are parts of new servers and can't have been added directly.
+	expectedSrvSlots := len(backend.Endpoints.Addresses) + len(backend.HAProxySrvs)
+	// We want at least the expected number of slots ...
+	newSrvSlots := expectedSrvSlots
+	// ... but if it's not a modulo srvSlots or if it's zero (shouldn't happen) ...
+	if expectedSrvSlots%srvSlots != 0 || expectedSrvSlots == 0 {
+		// ... we compute the nearest number of slots greather than expectedSrvSlots and being a modulo of srvSlots
+		newSrvSlots = expectedSrvSlots - (expectedSrvSlots % srvSlots) + srvSlots
+	}
+
+	// Get the number of enabled servers in the current list of servers.
+	enabledSlots := 0
+	for _, server := range backend.HAProxySrvs {
+		if server.Address != "" {
+			enabledSlots++
+		}
+	}
+	// If we have to add new slots we'll have to reload, so we can expand the number of free slots by the number srvSlots.
+	// But we should add any only if there is no room left in the existing list of servers.
+	if enabledSlots+len(backend.Endpoints.Addresses) > len(backend.HAProxySrvs) &&
+		newSrvSlots-(enabledSlots+len(backend.Endpoints.Addresses)) < srvSlots && newSrvSlots > srvSlots {
+		newSrvSlots += srvSlots
+	}
+
+	// Create the future slice of slots of the size newSrvSlots ...
+	slots := make([]*store.HAProxySrv, newSrvSlots)
+	// ... copy the existing servers into ...
+	copy(slots, backend.HAProxySrvs)
+	i := len(backend.HAProxySrvs)
+	// ... then add the new slots ...
+	for addr := range backend.Endpoints.Addresses {
 		srv := &store.HAProxySrv{
-			Name:     fmt.Sprintf("SRV_%d", len(backend.HAProxySrvs)+1),
+			Name:     fmt.Sprintf("SRV_%d", i+1),
+			Address:  addr,
+			Modified: true,
+		}
+		slots[i] = srv
+		i++
+	}
+	// ... fill in the remaining slots with disabled (empty address) slots.
+	for j := i; j < len(slots); j++ {
+		srv := &store.HAProxySrv{
+			Name:     fmt.Sprintf("SRV_%d", j+1),
 			Address:  "",
 			Modified: true,
 		}
-		backend.HAProxySrvs = append(backend.HAProxySrvs, srv)
-		disabled = append(disabled, srv)
-		flag = true
+		slots[j] = srv
 	}
-	instance.ReloadIf(flag, "[CONFIG] [BACKEND] [SERVER] Server slots in backend '%s' scaled to match scale-server-slots value: %s", s.backend.Name, strconv.Itoa(srvSlots))
-	// Configure remaining addresses in available HAProxySrvs
-	flag = false
-	for addr := range backend.Endpoints.Addresses {
-		if len(disabled) != 0 {
-			disabled[0].Address = addr
-			disabled[0].Modified = true
-			disabled = disabled[1:]
-		} else {
-			srv := &store.HAProxySrv{
-				Name:     fmt.Sprintf("SRV_%d", len(backend.HAProxySrvs)+1),
-				Address:  addr,
-				Modified: true,
-			}
-			backend.HAProxySrvs = append(backend.HAProxySrvs, srv)
-			flag = true
-		}
-		delete(backend.Endpoints.Addresses, addr)
-	}
-	instance.ReloadIf(flag, "[CONFIG] [BACKEND] [SERVER] Server slots in backend '%s' scaled to match available endpoints", s.backend.Name)
+	instance.ReloadIf(len(backend.HAProxySrvs) < len(slots), "[CONFIG] [BACKEND] [SERVER] Server slots in backend '%s' scaled to match available endpoints", s.backend.Name)
+	backend.Endpoints.Addresses = map[string]struct{}{}
+	backend.HAProxySrvs = slots
 }
 
 func (s *Service) getRuntimeBackend(k8s store.K8s) (backend *store.RuntimeBackend, err error) {
