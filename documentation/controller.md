@@ -41,10 +41,10 @@ Image can be run with arguments:
 | [`--runtime-dir`](#--runtime-dir) | `/tmp/haproxy-ingress/run` |
 | [`--disable-service-external-name`](#--disable-service-external-name) | `false` |
 | [`--channel-size`](#--channel-size) | `600` |
-| [`--disable-config-snippets`](#--disable-config-snippets) :construction:(dev) |  |
-| [`--disable-quic`](#--disable-quic) :construction:(dev) | `false` |
-| [`--quic-announce-port`](#--quic-announce-port) :construction:(dev) |  |
-| [`--quic-bind-port`](#--quic-bind-port) :construction:(dev) |  |
+| [`--disable-config-snippets`](#--disable-config-snippets) |  |
+| [`--disable-quic`](#--disable-quic) | `false` |
+| [`--quic-announce-port`](#--quic-announce-port) |  |
+| [`--quic-bind-port`](#--quic-bind-port) |  |
 
 
 ### `--configmap`
@@ -726,9 +726,6 @@ Example:
 
 ### `--disable-config-snippets`
 
-
-  > :construction: this is only available from next version, currently available in dev build
-
   Allow to disable one or several of the following config snippets: backend, frontend, global.
 
 Possible values:
@@ -749,9 +746,6 @@ Example:
 
 ### `--disable-quic`
 
-
-  > :construction: this is only available from next version, currently available in dev build
-
   option to disable the quic binding used by default if a certificate is provided throug ssl-certificate annotation. Please be aware that the quic implementation is activated with the "limited-quic" global option. Please refer to the documentation for details.
 
 Possible values:
@@ -770,9 +764,6 @@ args:
 
 ### `--quic-announce-port`
 
-
-  > :construction: this is only available from next version, currently available in dev build
-
   adjust the port in the alt-svc header to redirect to the exposed port in case it differs from the quic binding port.
 
 Possible values:
@@ -790,9 +781,6 @@ args:
 ***
 
 ### `--quic-bind-port`
-
-
-  > :construction: this is only available from next version, currently available in dev build
 
   sets the binding port for quic in HTTPS frontend.
 
