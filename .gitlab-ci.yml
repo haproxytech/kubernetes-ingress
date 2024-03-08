@@ -11,8 +11,8 @@ variables:
   KIND: v0.21.0
   DOCKER_HOST: tcp://docker:2375
   DOCKER_DRIVER: overlay2
-  GO_VERSION: "1.21"
-  DOCKER_VERSION: "24.0"
+  GO_VERSION: "1.22"
+  DOCKER_VERSION: "24.0.6"
 diff:
   stage: diff
   rules:
@@ -196,6 +196,7 @@ docker-build:
     matrix:
       - TEST_PART: ["parallel", "https", "sequential-1", "sequential-2"]
   script:
+    - gotest --version
     - CI_ENV=gitlab deploy/tests/create.sh
     - kubectl get pods -A
     - echo "running make -f Makefile.ci ci-e2e-$TEST_PART tests" && make -f Makefile.ci ci-e2e-$TEST_PART
