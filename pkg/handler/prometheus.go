@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/haproxytech/kubernetes-ingress/pkg/annotations"
@@ -17,8 +18,7 @@ type PrometheusEndpoint struct {
 
 //nolint:golint, stylecheck
 const (
-	PROMETHEUS_BACKEND_NAME = "haproxy-controller_prometheus_http"
-	PROMETHEUS_URL_PATH     = "/metrics"
+	PROMETHEUS_URL_PATH = "/metrics"
 )
 
 func (handler PrometheusEndpoint) Update(k store.K8s, h haproxy.HAProxy, a annotations.Annotations) (err error) {
@@ -26,9 +26,12 @@ func (handler PrometheusEndpoint) Update(k store.K8s, h haproxy.HAProxy, a annot
 		return
 	}
 
+	prometheusSvcName := "prometheus"
+	prometheusBackendName := fmt.Sprintf("%s_%s_http", handler.PodNs, prometheusSvcName)
+
 	status := store.EMPTY
 	var secret *store.Secret
-	_, errBackend := h.BackendGet(PROMETHEUS_BACKEND_NAME)
+	_, errBackend := h.BackendGet(prometheusBackendName)
 	backendExists := errBackend == nil
 
 	annSecret := annotations.String("prometheus-endpoint-auth-secret", k.ConfigMaps.Main.Annotations)
@@ -59,7 +62,6 @@ func (handler PrometheusEndpoint) Update(k store.K8s, h haproxy.HAProxy, a annot
 		return
 	}
 
-	prometheusSvcName := "prometheus"
 	svc := &store.Service{
 		Namespace:   handler.PodNs,
 		Name:        prometheusSvcName,
