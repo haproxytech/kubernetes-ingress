@@ -17,7 +17,7 @@ type PrometheusEndpoint struct {
 
 //nolint:golint, stylecheck
 const (
-	PROMETHEUS_BACKEND_NAME = "haproxy-controller_prometheus_http"
+	PROMETHEUS_BACKEND_NAME = "haproxy-ingress_prometheus_http"
 	PROMETHEUS_URL_PATH     = "/metrics"
 )
 
