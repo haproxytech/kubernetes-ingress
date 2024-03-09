@@ -141,6 +141,7 @@ func (c *HAProxyController) defaultsCfg() {
 	}
 	env.SetDefaults(newDefaults)
 	newDefaults.ErrorFiles = defaults.ErrorFiles
+	newDefaults.Name = constants.DefaultsSectionName
 	diff := newDefaults.Diff(*defaults)
 	if len(diff) != 0 {
 		if err = c.haproxy.DefaultsPushConfiguration(*newDefaults); err != nil {
