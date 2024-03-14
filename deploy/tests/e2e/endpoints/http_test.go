@@ -61,7 +61,7 @@ func (suite *EndpointsSuite) Test_HTTP_Reach() {
 					}
 				default:
 					if pid != suite.getPID() {
-						suite.Error(fmt.Errorf("Uncessary reload of HAproxy"))
+						suite.Error(fmt.Errorf("Unnecessary reload of HAproxy"))
 						return false
 					}
 				}
