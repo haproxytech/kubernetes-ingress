@@ -28,7 +28,7 @@ import (
 )
 
 func CRDRefresh(log utils.Logger, osArgs utils.OSArgs) error {
-	log.Info("checking CRDS")
+	log.Info("checking CRDs")
 	config, err := k8s.GetRestConfig(osArgs)
 	if err != nil {
 		return err
@@ -72,7 +72,6 @@ func CRDRefresh(log utils.Logger, osArgs utils.OSArgs) error {
 		// check if we have v1 and newest version
 		crd.ObjectMeta.ResourceVersion = existingVersion.ObjectMeta.ResourceVersion
 		if versions[0].Name == "v1" {
-			log.Infof("CRD %s exists as v1", crdName)
 			cnInK8s, ok := existingVersion.ObjectMeta.Annotations["haproxy.org/client-native"]
 
 			needUpgrade := false
@@ -90,13 +89,14 @@ func CRDRefresh(log utils.Logger, osArgs utils.OSArgs) error {
 				needUpgrade = true
 				log.Error(err.Error())
 			}
+			log.Infof("CRD %s exists as v1, CN[v%s]", crdName, vK8s.String())
 			if needUpgrade || vNew.GreaterThan(vK8s) {
 				// Upgrade the CRDl
 				_, err = clientset.ApiextensionsV1().CustomResourceDefinitions().Update(context.Background(), &crd, metav1.UpdateOptions{})
 				if err != nil {
 					return err
 				}
-				log.Infof("CRD %s updated", crdName)
+				log.Infof("CRD %s updated, CN[v%s] -> CN[v%s]", crdName, vK8s.String(), vNew.String())
 			}
 			continue
 		} else {

@@ -13,8 +13,8 @@ var Backends []byte
 
 func GetCRDs() map[string][]byte {
 	return map[string][]byte{
-		"ingress.v1.haproxy.org_defaults.yaml": Defaults,
-		"ingress.v1.haproxy.org_globals.yaml":  Globals,
-		"ingress.v1.haproxy.org_backends.yaml": Backends,
+		"defaults.ingress.v1.haproxy.org": Defaults,
+		"globals.ingress.v1.haproxy.org":  Globals,
+		"backends.ingress.v1.haproxy.org": Backends,
 	}
 }
