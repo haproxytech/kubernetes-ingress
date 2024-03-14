@@ -61,6 +61,10 @@ func (c GlobalCR) GetInformer(eventChan chan SyncDataEvent, factory informers.Sh
 		eventChan <- SyncDataEvent{SyncType: SyncType(c.GetKind()), Namespace: data.GetNamespace(), Name: data.GetName(), Data: data}
 	}
 
+	errW := informer.SetWatchErrorHandler(func(r *cache.Reflector, err error) {
+		go logger.Debug("Global CR informer error: %s", err)
+	})
+	logger.Error(errW)
 	_, err := informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			sendToChannel(eventChan, obj, store.ADDED)
@@ -97,6 +101,10 @@ func (c DefaultsCR) GetInformer(eventChan chan SyncDataEvent, factory informers.
 		eventChan <- SyncDataEvent{SyncType: SyncType(c.GetKind()), Namespace: data.GetNamespace(), Name: data.GetName(), Data: data}
 	}
 
+	errW := informer.SetWatchErrorHandler(func(r *cache.Reflector, err error) {
+		go logger.Debug("Defaults CR informer error: %s", err)
+	})
+	logger.Error(errW)
 	_, err := informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			sendToChannel(eventChan, obj, store.ADDED)
@@ -133,6 +141,10 @@ func (c BackendCR) GetInformer(eventChan chan SyncDataEvent, factory informers.S
 		eventChan <- SyncDataEvent{SyncType: SyncType(c.GetKind()), Namespace: data.GetNamespace(), Name: data.GetName(), Data: data}
 	}
 
+	errW := informer.SetWatchErrorHandler(func(r *cache.Reflector, err error) {
+		go logger.Debug("Backend CR informer error: %s", err)
+	})
+	logger.Error(errW)
 	_, err := informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			sendToChannel(eventChan, obj, store.ADDED)

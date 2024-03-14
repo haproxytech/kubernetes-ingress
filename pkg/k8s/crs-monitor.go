@@ -35,6 +35,10 @@ func (k k8s) runCRDefinitionsInformer(eventChan chan GroupKind, stop chan struct
 
 	factory := apiextensionsinformers.NewSharedInformerFactoryWithOptions(k.apiExtensionsClient, k.cacheResyncPeriod)
 	informer := factory.Apiextensions().V1().CustomResourceDefinitions().Informer()
+	errW := informer.SetWatchErrorHandler(func(r *cache.Reflector, err error) {
+		go logger.Debug("CRD Definitions informer error: %s", err)
+	})
+	logger.Error(errW)
 	_, err := informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			crd := obj.(*apiextensionsv1.CustomResourceDefinition)

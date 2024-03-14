@@ -24,6 +24,10 @@ import (
 
 func (k k8s) getNamespaceInfomer(eventChan chan SyncDataEvent, factory informers.SharedInformerFactory) cache.SharedIndexInformer { //nolint:ireturn
 	informer := factory.Core().V1().Namespaces().Informer()
+	errW := informer.SetWatchErrorHandler(func(r *cache.Reflector, err error) {
+		go logger.Debug("Namespace informer error: %s", err)
+	})
+	logger.Error(errW)
 	_, err := informer.AddEventHandler(
 		cache.ResourceEventHandlerFuncs{
 			AddFunc: func(obj interface{}) {
@@ -118,6 +122,10 @@ func (k k8s) getNamespaceInfomer(eventChan chan SyncDataEvent, factory informers
 
 func (k k8s) getServiceInformer(eventChan chan SyncDataEvent, factory informers.SharedInformerFactory) cache.SharedIndexInformer { //nolint:ireturn
 	informer := factory.Core().V1().Services().Informer()
+	errW := informer.SetWatchErrorHandler(func(r *cache.Reflector, err error) {
+		go logger.Debug("Service informer error: %s", err)
+	})
+	logger.Error(errW)
 	_, err := informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			data, ok := obj.(*corev1.Service)
@@ -244,6 +252,10 @@ func (k k8s) getServiceInformer(eventChan chan SyncDataEvent, factory informers.
 
 func (k k8s) getSecretInformer(eventChan chan SyncDataEvent, factory informers.SharedInformerFactory) cache.SharedIndexInformer { //nolint:ireturn
 	informer := factory.Core().V1().Secrets().Informer()
+	errW := informer.SetWatchErrorHandler(func(r *cache.Reflector, err error) {
+		go logger.Debug("Secret informer error: %s", err)
+	})
+	logger.Error(errW)
 	_, err := informer.AddEventHandler(
 		cache.ResourceEventHandlerFuncs{
 			AddFunc: func(obj interface{}) {
@@ -313,6 +325,10 @@ func (k k8s) getSecretInformer(eventChan chan SyncDataEvent, factory informers.S
 
 func (k k8s) getConfigMapInformer(eventChan chan SyncDataEvent, factory informers.SharedInformerFactory) cache.SharedIndexInformer { //nolint:ireturn
 	informer := factory.Core().V1().ConfigMaps().Informer()
+	errW := informer.SetWatchErrorHandler(func(r *cache.Reflector, err error) {
+		go logger.Debug("ConfigMap informer error: %s", err)
+	})
+	logger.Error(errW)
 	_, err := informer.AddEventHandler(
 		cache.ResourceEventHandlerFuncs{
 			AddFunc: func(obj interface{}) {
@@ -433,6 +449,10 @@ func (k k8s) getEndpointSliceInformer(eventChan chan SyncDataEvent, factory info
 
 func (k k8s) getEndpointsInformer(eventChan chan SyncDataEvent, factory informers.SharedInformerFactory) cache.SharedIndexInformer { //nolint:ireturn
 	informer := factory.Core().V1().Endpoints().Informer()
+	errW := informer.SetWatchErrorHandler(func(r *cache.Reflector, err error) {
+		go logger.Debug("Endpoints informer error: %s", err)
+	})
+	logger.Error(errW)
 	_, err := informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			item, err := k.convertToEndpoints(obj, store.ADDED)
@@ -503,6 +523,10 @@ func (k *k8s) getPodInformer(namespace, podPrefix string, resyncPeriod time.Dura
 }
 
 func (k k8s) addIngressClassHandlers(eventChan chan SyncDataEvent, informer cache.SharedIndexInformer) {
+	errW := informer.SetWatchErrorHandler(func(r *cache.Reflector, err error) {
+		go logger.Debug("IngressClass informer error: %s", err)
+	})
+	logger.Error(errW)
 	_, err := informer.AddEventHandler(
 		cache.ResourceEventHandlerFuncs{
 			AddFunc: func(obj interface{}) {
@@ -541,6 +565,10 @@ func (k k8s) addIngressClassHandlers(eventChan chan SyncDataEvent, informer cach
 }
 
 func (k k8s) addIngressHandlers(eventChan chan SyncDataEvent, informer cache.SharedIndexInformer) {
+	errW := informer.SetWatchErrorHandler(func(r *cache.Reflector, err error) {
+		go logger.Debug("Ingress informer error: %s", err)
+	})
+	logger.Error(errW)
 	_, err := informer.AddEventHandler(
 		cache.ResourceEventHandlerFuncs{
 			AddFunc: func(obj interface{}) {
@@ -579,6 +607,10 @@ func (k k8s) addIngressHandlers(eventChan chan SyncDataEvent, informer cache.Sha
 }
 
 func (k k8s) addEndpointSliceHandlers(eventChan chan SyncDataEvent, informer cache.SharedIndexInformer) {
+	errW := informer.SetWatchErrorHandler(func(r *cache.Reflector, err error) {
+		go logger.Debug("EndpoitSlice informer error: %s", err)
+	})
+	logger.Error(errW)
 	_, err := informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			item, err := k.convertToEndpoints(obj, store.ADDED)
