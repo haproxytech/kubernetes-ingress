@@ -15,6 +15,10 @@ import (
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
 )
 
+// BufferSize is the default value of HAproxy tune.bufsize. Not recommended to change it
+// Map payload or socket data cannot be bigger than tune.bufsize
+const BufferSize = 16000
+
 type HAProxyClient interface { //nolint:interfacebloat
 	APIStartTransaction() error
 	APICommitTransaction() error
