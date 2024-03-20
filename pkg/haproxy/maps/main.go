@@ -50,10 +50,6 @@ var logger = utils.GetLogger()
 
 var mapDir string
 
-// bufsize is the default value of HAproxy tune.bufsize.
-// Map payload cannot be bigger than tune.bufsize
-const bufSize = 16000
-
 type mapFile struct {
 	rows       []string
 	hash       uint64
@@ -69,7 +65,7 @@ func (mf *mapFile) getContent() (result []string, hash uint64) {
 	sort.Strings(mf.rows)
 	h := fnv.New64a()
 	for _, r := range mf.rows {
-		if chunk.Len()+len(r) >= bufSize {
+		if chunk.Len()+len(r) >= api.BufferSize {
 			result = append(result, chunk.String())
 			chunk.Reset()
 		}

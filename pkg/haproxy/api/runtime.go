@@ -15,10 +15,6 @@ import (
 
 var ErrMapNotFound = fmt.Errorf("map not found")
 
-// bufsize is the default value of HAproxy tune.bufsize. Not recommended to change it
-// Map payload cannot be bigger than tune.bufsize
-const bufSize = 16000
-
 type RuntimeServerData struct {
 	BackendName string
 	ServerName  string
@@ -46,8 +42,8 @@ func (c *clientNative) SetServerAddrAndState(servers []RuntimeServerData) error 
 	backendNameSize := len(servers[0].BackendName)
 	oneServerCommandSize := 65 + 2*backendNameSize
 	size := oneServerCommandSize * len(servers)
-	if size > bufSize {
-		size = bufSize
+	if size > BufferSize {
+		size = BufferSize
 	}
 
 	var sb strings.Builder
@@ -106,7 +102,8 @@ func (c *clientNative) runRaw(runtime runtime.Runtime, sb strings.Builder, backe
 		if len(result[i]) > 5 {
 			switch result[i][1:5] {
 			case "[3]:", "[2]:", "[1]:", "[0]:":
-				logger.Errorf("[RUNTIME] [BACKEND] [SOCKET] backend %s: Error: '%s', server slots adjustment ?", backendName, result[i])
+				logger.Errorf("[RUNTIME] [BACKEND] [SOCKET] backend %s', server slots adjustment ?", backendName)
+				logger.Tracef("[RUNTIME] [BACKEND] [SOCKET] backend %s: Error: '%s', server slots adjustment ?", backendName, result[i])
 				return errors.New("runtime update failed for " + backendName)
 			}
 		}
