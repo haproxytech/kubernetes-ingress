@@ -37,6 +37,7 @@ import (
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/rules"
 	"github.com/haproxytech/kubernetes-ingress/pkg/ingress"
 	"github.com/haproxytech/kubernetes-ingress/pkg/k8s"
+	"github.com/haproxytech/kubernetes-ingress/pkg/metrics"
 	"github.com/haproxytech/kubernetes-ingress/pkg/status"
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
@@ -188,6 +189,7 @@ func (builder *Builder) Build() *HAProxyController {
 		updatePublishServiceFunc: builder.updatePublishServiceFunc,
 		gatewayManager:           gatewayManager,
 		updateStatusManager:      updateStatusManager,
+		prometheusMetricsManager: metrics.New(),
 	}
 }
 

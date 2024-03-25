@@ -30,6 +30,7 @@ import (
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/rules"
 	"github.com/haproxytech/kubernetes-ingress/pkg/ingress"
 	"github.com/haproxytech/kubernetes-ingress/pkg/k8s"
+	"github.com/haproxytech/kubernetes-ingress/pkg/metrics"
 	"github.com/haproxytech/kubernetes-ingress/pkg/route"
 	"github.com/haproxytech/kubernetes-ingress/pkg/status"
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
@@ -55,6 +56,7 @@ type HAProxyController struct {
 	ready                    bool
 	updateStatusManager      status.UpdateStatusManager
 	beforeUpdateHandlers     []UpdateHandler
+	prometheusMetricsManager metrics.PrometheusMetricsManager
 }
 
 // Wrapping a Native-Client transaction and commit it.
@@ -189,12 +191,14 @@ func (c *HAProxyController) updateHAProxy() {
 		} else {
 			logger.Info("HAProxy restarted")
 		}
+		c.prometheusMetricsManager.UpdateRestartMetrics(err)
 	case instance.NeedReload():
 		if err = c.haproxy.Service("reload"); err != nil {
 			logger.Error(err)
 		} else {
 			logger.Info("HAProxy reloaded")
 		}
+		c.prometheusMetricsManager.UpdateReloadMetrics(err)
 	}
 
 	c.clean(false)

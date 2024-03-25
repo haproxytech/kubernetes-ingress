@@ -9,11 +9,12 @@ import (
 	"github.com/haproxytech/client-native/v5/models"
 	"github.com/haproxytech/client-native/v5/runtime"
 
+	"github.com/haproxytech/kubernetes-ingress/pkg/metrics"
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
 )
 
-var ErrMapNotFound = fmt.Errorf("map not found")
+var ErrMapNotFound = errors.New("map not found")
 
 type RuntimeServerData struct {
 	BackendName string
@@ -28,7 +29,8 @@ func (c *clientNative) ExecuteRaw(command string) (result []string, err error) {
 	if err != nil {
 		return nil, err
 	}
-	return runtime.ExecuteRaw(command)
+	result, err = runtime.ExecuteRaw(command)
+	return result, err
 }
 
 func (c *clientNative) SetServerAddrAndState(servers []RuntimeServerData) error {
@@ -94,8 +96,10 @@ func (c *clientNative) SetServerAddrAndState(servers []RuntimeServerData) error 
 
 func (c *clientNative) runRaw(runtime runtime.Runtime, sb strings.Builder, backendName string) error {
 	logger := utils.GetLogger()
+	pmm := metrics.New()
 	result, err := runtime.ExecuteRaw(sb.String())
 	if err != nil {
+		pmm.UpdateRuntimeMetrics(metrics.ObjectServer, err)
 		return err
 	}
 	for i := 0; i < len(result); i++ {
@@ -104,15 +108,19 @@ func (c *clientNative) runRaw(runtime runtime.Runtime, sb strings.Builder, backe
 			case "[3]:", "[2]:", "[1]:", "[0]:":
 				logger.Errorf("[RUNTIME] [BACKEND] [SOCKET] backend %s', server slots adjustment ?", backendName)
 				logger.Tracef("[RUNTIME] [BACKEND] [SOCKET] backend %s: Error: '%s', server slots adjustment ?", backendName, result[i])
-				return errors.New("runtime update failed for " + backendName)
+				err := errors.New("runtime update failed for " + backendName)
+				pmm.UpdateRuntimeMetrics(metrics.ObjectServer, err)
+				return err
 			}
 		}
 	}
+	pmm.UpdateRuntimeMetrics(metrics.ObjectServer, nil)
 	return nil
 }
 
 func (c *clientNative) SetMapContent(mapFile string, payload []string) error {
 	var mapVer, mapPath string
+	pmm := metrics.New()
 	runtime, err := c.nativeAPI.Runtime()
 	if err != nil {
 		return err
@@ -132,6 +140,7 @@ func (c *clientNative) SetMapContent(mapFile string, payload []string) error {
 	}
 	for i := 0; i < len(payload); i++ {
 		_, err = runtime.ExecuteRaw(fmt.Sprintf("add map @%s %s <<\n%s\n", mapVer, mapPath, payload[i]))
+		pmm.UpdateRuntimeMetrics(metrics.ObjectMap, err)
 		if err != nil {
 			err = fmt.Errorf("error loading map payload: %w", err)
 			return err
