@@ -17,3 +17,33 @@ Then point the controller to this secret by adding the `prometheus-endpoint-auth
 ```
 prometheus-endpoint-auth-secret: haproxy-controller/prometheus-credentials
 ```
+
+
+## Metrics
+
+On top of the prometheus provided metrics, we added these three ones:
+```
+haproxy_reloads_total: The number of haproxy reloads partitioned by result (success/failure)
+haproxy_restarts_total: The number of haproxy restarts partitioned by result (success/failure)
+haproxy_runtime_socket_connections_total: The number of haproxy runtime socket connections partitioned by object (server/map) and result (success/failure)
+```
+
+
+### Example
+
+Metrics are exposed outside on the haproxy-kubernetes-ingress service, http nodePort, on the `/mterics` endpoint.
+
+```
+curl <nodeIP>:<haproxy-kubernetes-ingress svc http nodePort>/metrics|grep haproxy_
+
+# HELP haproxy_reloads_total The number of haproxy reloads partitioned by result (success/failure)
+# TYPE haproxy_reloads_total counter
+haproxy_reloads_total{result="success"} 4
+# HELP haproxy_restarts_total The number of haproxy restarts partitioned by result (success/failure)
+# TYPE haproxy_restarts_total counter
+haproxy_restarts_total{result="success"} 1
+# HELP haproxy_runtime_socket_connections_total The number of haproxy runtime socket connections partitioned by object (server/map) and result (success/failure)
+# TYPE haproxy_runtime_socket_connections_total counter
+haproxy_runtime_socket_connections_total{object="map",result="success"} 4
+haproxy_runtime_socket_connections_total{object="server",result="success"} 50
+```
