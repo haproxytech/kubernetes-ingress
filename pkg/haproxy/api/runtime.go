@@ -40,7 +40,7 @@ func (c *clientNative) SetServerAddrAndState(servers []RuntimeServerData) error 
 		return nil
 	}
 	backendNameSize := len(servers[0].BackendName)
-	oneServerCommandSize := 65 + 2*backendNameSize
+	oneServerCommandSize := 75 + 2*backendNameSize
 	size := oneServerCommandSize * len(servers)
 	if size > BufferSize {
 		size = BufferSize
@@ -71,7 +71,7 @@ func (c *clientNative) SetServerAddrAndState(servers []RuntimeServerData) error 
 		cmdBuilder.WriteString(";")
 		// if new commands are added recalculate oneServerCommandSize
 
-		if sb.Len()+cmdBuilder.Len() >= size {
+		if sb.Len()+cmdBuilder.Len() >= BufferSize {
 			err = c.runRaw(runtime, sb, server.BackendName)
 			if err != nil {
 				return err
