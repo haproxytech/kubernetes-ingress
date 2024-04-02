@@ -28,3 +28,10 @@ nodes:
       controllerManager:
           extraArgs:
             max-endpoints-per-slice: "5"
+            node-cidr-mask-size-ipv4: "21"
+    - |
+      apiVersion: kubelet.config.k8s.io/v1beta1
+      kind: KubeletConfiguration
+      metadata:
+              name: config
+      maxPods: 2048
