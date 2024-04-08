@@ -22,9 +22,14 @@ import (
 	"sync"
 )
 
+//nolint:stylecheck
 const (
-	LogTypeShort = log.LstdFlags
-	LogType      = log.LstdFlags | log.Lshortfile
+	LogTypeShort       = log.LstdFlags
+	LogType            = log.LstdFlags | log.Lshortfile
+	PKG_SUBPATH        = "/pkg/"
+	CONTROLLER_SUBPATH = "/controller"
+	IC_REPO            = "kubernetes-ingress/"
+	IC_EE_REPO         = "kubernetes-ingress-ee/"
 )
 
 type LogLevel int8
@@ -65,18 +70,20 @@ type Logger interface { //nolint:interfacebloat
 	Trace(args ...interface{}) // used for heavy duty output everything, not recommended for production
 	Debug(args ...interface{}) // used to have detailed output of application flow
 	Info(args ...interface{})
+	InfoSkipCaller(args ...interface{})
 	Warning(args ...interface{})
 	Error(args ...interface{})
 	Err(args ...interface{}) []error
 	Panic(args ...interface{})
 
-	Printf(format string, args ...interface{})   // similar to fmt.SPrintf function
-	Tracef(format string, args ...interface{})   // similar to fmt.SPrintf function
-	Debugf(format string, args ...interface{})   // similar to fmt.SPrintf function
-	Infof(format string, args ...interface{})    // similar to fmt.SPrintf function
-	Warningf(format string, args ...interface{}) // similar to fmt.SPrintf function
-	Errorf(format string, args ...interface{})   // similar to fmt.SPrintf function
-	Panicf(format string, args ...interface{})   // similar to fmt.SPrintf function
+	Printf(format string, args ...interface{})          // similar to fmt.SPrintf function
+	Tracef(format string, args ...interface{})          // similar to fmt.SPrintf function
+	Debugf(format string, args ...interface{})          // similar to fmt.SPrintf function
+	Infof(format string, args ...interface{})           // similar to fmt.SPrintf function
+	InfoSkipCallerf(format string, args ...interface{}) // similar to fmt.SPrintf function
+	Warningf(format string, args ...interface{})        // similar to fmt.SPrintf function
+	Errorf(format string, args ...interface{})          // similar to fmt.SPrintf function
+	Panicf(format string, args ...interface{})          // similar to fmt.SPrintf function
 
 	SetLevel(level LogLevel)
 	ShowFilename(show bool)
@@ -157,7 +164,15 @@ func (l *logger) fieldsAsString() string {
 	return fields.String()
 }
 
+func (l *logger) logSkipCaller(logType string, data ...interface{}) {
+	l.logImp(logType, 2, data...)
+}
+
 func (l *logger) log(logType string, data ...interface{}) {
+	l.logImp(logType, 0, data...)
+}
+
+func (l *logger) logImp(logType string, skipMore int, data ...interface{}) {
 	if !l.FileName {
 		for _, d := range data {
 			if d == nil {
@@ -167,50 +182,46 @@ func (l *logger) log(logType string, data ...interface{}) {
 		}
 		return
 	}
-	_, file, no, ok := runtime.Caller(3)
+	_, file, no, ok := runtime.Caller(3 + skipMore)
 	if ok {
-		f := strings.Split(file, "/")
-		var file1 string
-		if f[len(f)-2] == "controller" || f[len(f)-2] == "kubernetes-ingress" {
-			file1 = f[len(f)-1]
-		} else {
-			file1 = fmt.Sprintf("%s/%s", f[len(f)-2], f[len(f)-1])
-		}
-		// file1 := strings.Replace(file, "/src/", "", 1)
-		for _, d := range data {
+		origin := getFileCaller(file)
+
+		for _, d := range data { //nolint:varnamelen
 			if d == nil {
 				continue
 			}
 
 			if logType == "" {
-				log.Printf("%s:%d %s %s\n", file1, no, l.fieldsAsString(), d)
+				log.Printf("%s:%d %s %s\n", origin, no, l.fieldsAsString(), d)
 			} else {
-				log.Printf("%s%s:%d %s %s\n", logType, file1, no, l.fieldsAsString(), d)
+				log.Printf("%s%s:%d %s %s\n", logType, origin, no, l.fieldsAsString(), d)
 			}
 		}
 	}
 }
 
+func (l *logger) logfSkipCallerf(logType string, format string, data ...interface{}) {
+	l.logfImpl(logType, format, 2, data...)
+}
+
 func (l *logger) logf(logType string, format string, data ...interface{}) {
+	l.logfImpl(logType, format, 0, data...)
+}
+
+func (l *logger) logfImpl(logType string, format string, skipMore int, data ...interface{}) {
 	line := fmt.Sprintf(format, data...)
 	if !l.FileName {
 		log.Printf("%s%s\n", logType, line)
 		return
 	}
-	_, file, no, ok := runtime.Caller(2)
+	_, file, no, ok := runtime.Caller(3 + skipMore)
+
 	if ok {
-		f := strings.Split(file, "/")
-		var file1 string
-		if f[len(f)-2] == "controller" || f[len(f)-2] == "kubernetes-ingress" {
-			file1 = f[len(f)-1]
-		} else {
-			file1 = fmt.Sprintf("%s/%s", f[len(f)-2], f[len(f)-1])
-		}
-		// file1 := strings.Replace(file, "/src/", "", 1)
+		origin := getFileCaller(file)
 		if logType == "" {
-			log.Printf("%s:%d %s %s\n", file1, no, l.fieldsAsString(), line)
+			log.Printf("%s:%d %s %s\n", origin, no, l.fieldsAsString(), line)
 		} else {
-			log.Printf("%s%s:%d %s %s\n", logType, file1, no, l.fieldsAsString(), line)
+			log.Printf("%s%s:%d %s %s\n", logType, origin, no, l.fieldsAsString(), line)
 		}
 	}
 }
@@ -253,9 +264,21 @@ func (l *logger) Info(args ...interface{}) {
 	}
 }
 
+func (l *logger) InfoSkipCaller(args ...interface{}) {
+	if l.Level >= Info {
+		l.logSkipCaller("INFO    ", args...)
+	}
+}
+
 func (l *logger) Infof(format string, args ...interface{}) {
 	if l.Level >= Info {
 		l.logf("INFO    ", format, args...)
+	}
+}
+
+func (l *logger) InfoSkipCallerf(format string, args ...interface{}) {
+	if l.Level >= Info {
+		l.logfSkipCallerf("INFO    ", format, args...)
 	}
 }
 
@@ -328,4 +351,38 @@ func (l *logger) HandleWarningHeader(code int, agent string, text string) {
 		}
 	}
 	l.logf("K8s API ", " %d %s %s", code, agent, text)
+}
+
+func getFileCaller(path string) string {
+	pkgIndex := strings.Index(path, PKG_SUBPATH)
+	icIndex := strings.Index(path, CONTROLLER_SUBPATH)
+
+	var origin string
+	switch {
+	case pkgIndex != -1:
+		origin = path[pkgIndex+len(PKG_SUBPATH):]
+	case icIndex != -1:
+		origin = path[icIndex+len(CONTROLLER_SUBPATH):]
+	default:
+		offset := 0
+		// do we have IC repo in path ?
+		repoIndex := strings.Index(path, IC_REPO)
+		if repoIndex == -1 {
+			// if not do we have IC EE repo in path ?
+			repoIndex = strings.Index(path, IC_EE_REPO)
+			if repoIndex == -1 {
+				// if not start reset the repo index to 0
+				repoIndex = 0
+			} else {
+				// we have IC EE repo in path
+				offset = len(IC_EE_REPO)
+			}
+		} else {
+			// we have IC repo in path.
+			offset = len(IC_REPO)
+		}
+		idx := repoIndex + offset
+		origin = path[idx:]
+	}
+	return origin
 }

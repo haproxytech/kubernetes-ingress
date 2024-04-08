@@ -2,7 +2,7 @@ package instance
 
 import (
 	"fmt"
-	"runtime/debug"
+	"runtime"
 
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
 )
@@ -54,22 +54,18 @@ func NewConfigurationManager() *configurationManagerImpl {
 
 func (cmi *configurationManagerImpl) SetReload(reason string, args ...any) {
 	cmi.reload = true
-	if reason == "" {
-		cmi.logger.Error("empty reason for reload")
-		cmi.logger.Debug(debug.Stack())
+	if !cmi.validReason(reason) {
 		return
 	}
-	cmi.logger.Info("reload required : " + fmt.Sprintf(reason, args...))
+	cmi.logger.InfoSkipCallerf("reload required : "+reason, args...)
 }
 
 func (cmi *configurationManagerImpl) SetRestart(reason string, args ...any) {
 	cmi.restart = true
-	if reason == "" {
-		cmi.logger.Error("empty reason for restart")
-		cmi.logger.Debug(debug.Stack())
+	if !cmi.validReason(reason) {
 		return
 	}
-	cmi.logger.Info("restart required : " + fmt.Sprintf(reason, args...))
+	cmi.logger.InfoSkipCallerf("restart required : "+reason, args...)
 }
 
 func (cmi *configurationManagerImpl) Reset() {
@@ -90,12 +86,10 @@ func (cmi *configurationManagerImpl) SetReloadIf(reload bool, reason string, arg
 		return
 	}
 	cmi.reload = true
-	if reason == "" {
-		cmi.logger.Error("empty reason for reload")
-		cmi.logger.Debug(debug.Stack())
+	if !cmi.validReason(reason) {
 		return
 	}
-	cmi.logger.Info("reload required : " + fmt.Sprintf(reason, args...))
+	cmi.logger.InfoSkipCallerf("reload required : "+reason, args...)
 }
 
 func (cmi *configurationManagerImpl) SetRestartIf(restart bool, reason string, args ...any) {
@@ -103,14 +97,25 @@ func (cmi *configurationManagerImpl) SetRestartIf(restart bool, reason string, a
 		return
 	}
 	cmi.restart = true
-	if reason == "" {
-		cmi.logger.Error("empty reason for restart")
-		cmi.logger.Debug(debug.Stack())
+	if !cmi.validReason(reason) {
 		return
 	}
-	cmi.logger.Info("restart required : " + fmt.Sprintf(reason, args...))
+	cmi.logger.InfoSkipCallerf("restart required : "+reason, args...)
 }
 
 func (cmi *configurationManagerImpl) NeedAction() bool {
 	return cmi.NeedReload() || cmi.NeedRestart()
+}
+
+func (cmi *configurationManagerImpl) validReason(reason string) bool {
+	if reason == "" {
+		errMsg := "empty reason for reload"
+		_, file, line, ok := runtime.Caller(3)
+		if ok {
+			errMsg += fmt.Sprintf(" from %s:%d", file, line)
+		}
+		cmi.logger.Error(errMsg)
+		return false
+	}
+	return true
 }
