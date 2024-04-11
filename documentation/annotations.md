@@ -796,6 +796,8 @@ http-server-close: "true"
 
   :information_source: Traffic is proxied in TCP mode which makes unavailable a number of the controller annotations (requiring HTTP mode).
 
+  :information_source: HTTPS frontend is conserved and still listening at port 8444 when previous HTTPS port is moved to SSL Frontend.
+
 Possible values:
 
 - true

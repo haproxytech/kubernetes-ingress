@@ -1585,6 +1585,7 @@ annotations:
     tip:
       - Traffic is proxied in TCP mode which makes unavailable a number of the controller
         annotations (requiring HTTP mode).
+      - HTTPS frontend is conserved and still listening at port 8444 when previous HTTPS port is moved to SSL Frontend.        
     values:
       - "true"
       - "false"
