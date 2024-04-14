@@ -607,7 +607,7 @@ Example:
 
 ### `--external`
 
-  Run as external Ingress Controller (out of kubernetes cluster). This can be done by cloning Ingress Controller project and building Controller with `go build`. Or using `export GO111MODULE=on;  go get github.com/haproxytech/kubernetes-ingress`. More information about external mode can be found in this [announcement blog post](https://www.haproxy.com/blog/announcing-haproxy-kubernetes-ingress-controller-1-5/#external-ingress-controller)
+  Run as external Ingress Controller (out of kubernetes cluster). This can be done by cloning Ingress Controller project and building Controller with `go build`. Or using `export GO111MODULE=on;  go get github.com/haproxytech/kubernetes-ingress`.
 
 Possible values:
 
