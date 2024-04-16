@@ -127,6 +127,7 @@ metadata:
   name: haproxy-kubernetes-ingress
   namespace: haproxy-controller
 data:
+  ssl-redirect-port: "443"
 
 ---
 apiVersion: apps/v1
@@ -207,11 +208,11 @@ spec:
   - name: http
     port: 80
     protocol: TCP
-    targetPort: 80
+    targetPort: 8080
   - name: https
     port: 443
     protocol: TCP
-    targetPort: 443
+    targetPort: 8443
   - name: stat
     port: 1024
     protocol: TCP
