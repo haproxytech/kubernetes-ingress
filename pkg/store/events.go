@@ -152,8 +152,11 @@ func (k *K8s) EventService(ns *Namespace, data *Service) (updateRequired bool) {
 		newService := data
 		oldService, ok := ns.Services[data.Name]
 		if !ok {
-			// intentionally do not add it. TODO see if our idea of only watching is ok
+			// It can happen (resync) that we receive an UPDATE on a item that is not yet registered
+			// We should treat it as a CREATE.
 			logger.Warningf("Service '%s' not registered with controller !", data.Name)
+			data.Status = ADDED
+			return k.EventService(ns, data)
 		}
 		if oldService.Equal(newService) {
 			return updateRequired
@@ -235,9 +238,11 @@ func (k *K8s) EventSecret(ns *Namespace, data *Secret) (updateRequired bool) {
 		newSecret := data
 		oldSecret, ok := ns.Secret[data.Name]
 		if !ok {
-			// intentionally do not add it. TODO see if our idea of only watching is ok
+			// It can happen (resync) that we receive an UPDATE on a item that is not yet registered
+			// We should treat it as a CREATE.
 			logger.Warningf("Secret '%s' not registered with controller !", data.Name)
-			return updateRequired
+			data.Status = ADDED
+			return k.EventSecret(ns, data)
 		}
 		if oldSecret.Equal(data) {
 			return updateRequired
@@ -325,8 +330,11 @@ func (k *K8s) EventPublishService(ns *Namespace, data *Service) (updateRequired 
 		newService := data
 		oldService, ok := ns.Services[data.Name]
 		if !ok {
-			// intentionally do not add it. TODO see if our idea of only watching is ok
+			// It can happen (resync) that we receive an UPDATE on a item that is not yet registered
+			// We should treat it as a CREATE.
 			logger.Warningf("Service '%s' not registered with controller !", data.Name)
+			data.Status = ADDED
+			return k.EventPublishService(ns, data)
 		}
 		if oldService.EqualWithAddresses(newService) {
 			return
@@ -381,7 +389,11 @@ func (k *K8s) EventGatewayClass(data *GatewayClass) (updateRequired bool) {
 		newGatewayClass := data
 		oldGatewayClass, ok := k.GatewayClasses[data.Name]
 		if !ok {
+			// It can happen (resync) that we receive an UPDATE on a item that is not yet registered
+			// We should treat it as a CREATE.
 			logger.Warningf("Modification of unexisting gatewayclass %s", data.Name)
+			data.Status = ADDED
+			return k.EventGatewayClass(data)
 		}
 		if ok && oldGatewayClass.Generation == newGatewayClass.Generation ||
 			newGatewayClass.Equal(oldGatewayClass) {
@@ -412,7 +424,11 @@ func (k *K8s) EventGateway(ns *Namespace, data *Gateway) (updateRequired bool) {
 		newGateway := data
 		oldGateway, ok := ns.Gateways[data.Name]
 		if !ok {
+			// It can happen (resync) that we receive an UPDATE on a item that is not yet registered
+			// We should treat it as a CREATE.
 			logger.Warningf("Modification of unexisting gateway %s", data.Name)
+			data.Status = ADDED
+			return k.EventGateway(ns, data)
 		}
 		if ok && newGateway.Generation == oldGateway.Generation ||
 			newGateway.Equal(oldGateway) {
@@ -444,7 +460,11 @@ func (k *K8s) EventTCPRoute(ns *Namespace, data *TCPRoute) (updateRequired bool)
 		newTCPRoute := data
 		oldTCPRoute, ok := ns.TCPRoutes[data.Name]
 		if !ok {
+			// It can happen (resync) that we receive an UPDATE on a item that is not yet registered
+			// We should treat it as a CREATE.
 			logger.Warningf("Modification of unexisting tcproute %s", data.Name)
+			data.Status = ADDED
+			return k.EventTCPRoute(ns, data)
 		}
 		if ok && newTCPRoute.Generation == oldTCPRoute.Generation ||
 			newTCPRoute.Equal(oldTCPRoute) {
@@ -475,8 +495,11 @@ func (k *K8s) EventReferenceGrant(ns *Namespace, data *ReferenceGrant) (updateRe
 		newReferenceGrant := data
 		oldReferenceGrant, ok := ns.ReferenceGrants[data.Name]
 		if !ok {
+			// It can happen (resync) that we receive an UPDATE on a item that is not yet registered
+			// We should treat it as a CREATE.
 			logger.Warningf("Modification of unexisting referencegrant %s", data.Name)
-			return
+			data.Status = ADDED
+			return k.EventReferenceGrant(ns, data)
 		}
 		if ok && newReferenceGrant.Generation == oldReferenceGrant.Generation ||
 			newReferenceGrant.Equal(oldReferenceGrant) {
