@@ -254,10 +254,10 @@ image_arguments:
       - "A valid port in the range. Default: 8443"
     default: 8443
     version_min: "1.5"
-    example: --http-bind-port=8443
+    example: --https-bind-port=8443
     helm: |-
       helm install haproxy haproxytech/kubernetes-ingress \
-        --set-string "controller.extraArgs={--http-bind-port=8443}"
+        --set-string "controller.extraArgs={--https-bind-port=8443}"
   - argument: --disable-http
     description: Disabling the HTTP frontend.
     values:
@@ -1653,7 +1653,7 @@ annotations:
     version_min: "1.5"
     example:
       - 'ssl-redirect: "true"'
-      - "ssl-redirect-port: 8443"
+      - 'ssl-redirect-port: "8443"'
   - title: syslog-server
     type: "[syslog](#syslog-fields)"
     group: logging

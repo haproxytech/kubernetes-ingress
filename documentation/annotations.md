@@ -867,7 +867,7 @@ Example:
 
 ```yaml
 ssl-redirect: "true"
-ssl-redirect-port: 8443
+ssl-redirect-port: "8443"
 ```
 
 ##### `tls-alpn`
