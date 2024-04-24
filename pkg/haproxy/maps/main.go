@@ -23,6 +23,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/google/renameio"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/api"
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
 )
@@ -120,7 +121,6 @@ func (m mapFiles) RefreshMaps(client api.HAProxyClient) (reload bool) {
 		if mapFile.hash == hash {
 			continue
 		}
-		mapFile.hash = hash
 		var f *os.File
 		var err error
 		filename := GetPath(name)
@@ -132,14 +132,18 @@ func (m mapFiles) RefreshMaps(client api.HAProxyClient) (reload bool) {
 			logger.Error(err)
 			continue
 		}
-		defer f.Close()
+		f.Close()
+		var buff strings.Builder
+		buff.Grow(bufSize * len(content))
 		for _, d := range content {
-			if _, err = f.WriteString(d); err != nil {
-				logger.Error(err)
-				return
-			}
+			buff.WriteString(d)
 		}
-		logger.Error(f.Sync())
+		err = renameio.WriteFile(string(filename), []byte(buff.String()), 0o666)
+		if err != nil {
+			logger.Error(err)
+			continue
+		}
+		mapFile.hash = hash
 		if err = client.SetMapContent(string(name), content); err != nil {
 			if errors.Is(err, api.ErrMapNotFound) {
 				logger.Debugf("Map file %s created, reload required", name)
