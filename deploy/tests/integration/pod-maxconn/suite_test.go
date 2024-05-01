@@ -18,7 +18,7 @@ import (
 	"testing"
 
 	"github.com/haproxytech/kubernetes-ingress/deploy/tests/integration"
-	"github.com/haproxytech/kubernetes-ingress/pkg/k8s"
+	k8ssync "github.com/haproxytech/kubernetes-ingress/pkg/k8s/sync"
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
 	"github.com/stretchr/testify/suite"
 )
@@ -63,26 +63,26 @@ func (suite *PodMaxConnSuite) setupTest() *store.ConfigMap {
 
 	ns := store.Namespace{Name: appNs, Status: store.ADDED}
 	cm := newConfigMap()
-	testController.EventChan <- k8s.SyncDataEvent{SyncType: k8s.NAMESPACE, Namespace: ns.Name, Data: &ns}
-	testController.EventChan <- k8s.SyncDataEvent{
-		SyncType: k8s.CONFIGMAP, Namespace: configMapNamespace, Name: configMapName, Data: newConfigMap(),
+	testController.EventChan <- k8ssync.SyncDataEvent{SyncType: k8ssync.NAMESPACE, Namespace: ns.Name, Data: &ns}
+	testController.EventChan <- k8ssync.SyncDataEvent{
+		SyncType: k8ssync.CONFIGMAP, Namespace: configMapNamespace, Name: configMapName, Data: newConfigMap(),
 	}
-	testController.EventChan <- k8s.SyncDataEvent{SyncType: k8s.COMMAND}
+	testController.EventChan <- k8ssync.SyncDataEvent{SyncType: k8ssync.COMMAND}
 	controllerHasWorked := make(chan struct{})
-	testController.EventChan <- k8s.SyncDataEvent{SyncType: k8s.COMMAND, EventProcessed: controllerHasWorked}
+	testController.EventChan <- k8ssync.SyncDataEvent{SyncType: k8ssync.COMMAND, EventProcessed: controllerHasWorked}
 	<-controllerHasWorked
 	return cm
 }
 
-func (suite *PodMaxConnSuite) fixture(events ...k8s.SyncDataEvent) {
+func (suite *PodMaxConnSuite) fixture(events ...k8ssync.SyncDataEvent) {
 	testController := suite.TestControllers[suite.T().Name()]
 
 	// Now sending store events for test setup
 	for _, e := range events {
 		testController.EventChan <- e
 	}
-	testController.EventChan <- k8s.SyncDataEvent{SyncType: k8s.COMMAND}
+	testController.EventChan <- k8ssync.SyncDataEvent{SyncType: k8ssync.COMMAND}
 	controllerHasWorked := make(chan struct{})
-	testController.EventChan <- k8s.SyncDataEvent{SyncType: k8s.COMMAND, EventProcessed: controllerHasWorked}
+	testController.EventChan <- k8ssync.SyncDataEvent{SyncType: k8ssync.COMMAND, EventProcessed: controllerHasWorked}
 	<-controllerHasWorked
 }

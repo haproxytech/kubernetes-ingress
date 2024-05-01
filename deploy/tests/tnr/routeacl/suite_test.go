@@ -23,7 +23,7 @@ import (
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/env"
 	"github.com/haproxytech/kubernetes-ingress/pkg/ingress"
-	"github.com/haproxytech/kubernetes-ingress/pkg/k8s"
+	k8ssync "github.com/haproxytech/kubernetes-ingress/pkg/k8s/sync"
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
 	"github.com/jessevdk/go-flags"
@@ -96,7 +96,7 @@ frontend stats
   http-request use-service prometheus-exporter if { path /metrics }
  `
 
-func (suite *UseBackendSuite) UseBackendFixture() (eventChan chan k8s.SyncDataEvent) {
+func (suite *UseBackendSuite) UseBackendFixture() (eventChan chan k8ssync.SyncDataEvent) {
 	var osArgs utils.OSArgs
 	os.Args = []string{os.Args[0], "-e", "-t", "--config-dir=" + suite.test.TempDir}
 	parser := flags.NewParser(&osArgs, flags.IgnoreUnknown)
@@ -116,7 +116,7 @@ func (suite *UseBackendSuite) UseBackendFixture() (eventChan chan k8s.SyncDataEv
 		},
 	}
 
-	eventChan = make(chan k8s.SyncDataEvent, watch.DefaultChanSize*6)
+	eventChan = make(chan k8ssync.SyncDataEvent, watch.DefaultChanSize*6)
 	controller := c.NewBuilder().
 		WithHaproxyCfgFile([]byte(haproxyConfig)).
 		WithEventChan(eventChan).
@@ -129,7 +129,7 @@ func (suite *UseBackendSuite) UseBackendFixture() (eventChan chan k8s.SyncDataEv
 
 	// Now sending store events for test setup
 	ns := store.Namespace{Name: "ns", Status: store.ADDED}
-	eventChan <- k8s.SyncDataEvent{SyncType: k8s.NAMESPACE, Namespace: ns.Name, Data: &ns}
+	eventChan <- k8ssync.SyncDataEvent{SyncType: k8ssync.NAMESPACE, Namespace: ns.Name, Data: &ns}
 
 	endpoints := &store.Endpoints{
 		SliceName: "myappservice",
@@ -144,7 +144,7 @@ func (suite *UseBackendSuite) UseBackendFixture() (eventChan chan k8s.SyncDataEv
 		Status: store.ADDED,
 	}
 
-	eventChan <- k8s.SyncDataEvent{SyncType: k8s.ENDPOINTS, Namespace: endpoints.Namespace, Data: endpoints}
+	eventChan <- k8ssync.SyncDataEvent{SyncType: k8ssync.ENDPOINTS, Namespace: endpoints.Namespace, Data: endpoints}
 
 	service := &store.Service{
 		Name:        "myappservice",
@@ -160,7 +160,7 @@ func (suite *UseBackendSuite) UseBackendFixture() (eventChan chan k8s.SyncDataEv
 		},
 		Status: store.ADDED,
 	}
-	eventChan <- k8s.SyncDataEvent{SyncType: k8s.SERVICE, Namespace: service.Namespace, Data: service}
+	eventChan <- k8ssync.SyncDataEvent{SyncType: k8ssync.SERVICE, Namespace: service.Namespace, Data: service}
 
 	prefixPathType := networkingv1.PathTypePrefix
 	ingress := &store.Ingress{
@@ -186,17 +186,17 @@ func (suite *UseBackendSuite) UseBackendFixture() (eventChan chan k8s.SyncDataEv
 		Status: store.ADDED,
 	}
 
-	eventChan <- k8s.SyncDataEvent{SyncType: k8s.INGRESS, Namespace: ingress.Namespace, Data: ingress}
-	eventChan <- k8s.SyncDataEvent{SyncType: k8s.COMMAND}
+	eventChan <- k8ssync.SyncDataEvent{SyncType: k8ssync.INGRESS, Namespace: ingress.Namespace, Data: ingress}
+	eventChan <- k8ssync.SyncDataEvent{SyncType: k8ssync.COMMAND}
 	// The service is modified by the addition of an annotation.
 	// It should not duplicate this line in haproxy.cfg:
 	// use_backend ns_myappservice_https if { path -m beg / } { cookie(staging) -m found }
 	serviceClone := *service
 	serviceClone.Status = store.MODIFIED
 	serviceClone.Annotations["anyannotation"] = "anyvalue"
-	eventChan <- k8s.SyncDataEvent{SyncType: k8s.SERVICE, Namespace: serviceClone.Namespace, Data: &serviceClone}
+	eventChan <- k8ssync.SyncDataEvent{SyncType: k8ssync.SERVICE, Namespace: serviceClone.Namespace, Data: &serviceClone}
 	controllerHasWorked := make(chan struct{})
-	eventChan <- k8s.SyncDataEvent{SyncType: k8s.COMMAND, EventProcessed: controllerHasWorked}
+	eventChan <- k8ssync.SyncDataEvent{SyncType: k8ssync.COMMAND, EventProcessed: controllerHasWorked}
 	<-controllerHasWorked
 	return
 }

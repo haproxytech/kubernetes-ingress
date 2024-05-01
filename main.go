@@ -36,6 +36,7 @@ import (
 	"github.com/haproxytech/kubernetes-ingress/pkg/controller"
 	"github.com/haproxytech/kubernetes-ingress/pkg/job"
 	"github.com/haproxytech/kubernetes-ingress/pkg/k8s"
+	k8ssync "github.com/haproxytech/kubernetes-ingress/pkg/k8s/sync"
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
 	"github.com/haproxytech/kubernetes-ingress/pkg/version"
@@ -127,7 +128,7 @@ func main() {
 	if osArgs.ChannelSize > 0 {
 		chanSize = osArgs.ChannelSize
 	}
-	eventChan := make(chan k8s.SyncDataEvent, chanSize)
+	eventChan := make(chan k8ssync.SyncDataEvent, chanSize)
 	stop := make(chan struct{})
 
 	publishService := getNamespaceValue(osArgs.PublishService)

@@ -19,7 +19,7 @@ import (
 
 	v1 "github.com/haproxytech/kubernetes-ingress/crs/api/ingress/v1"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/instance"
-	"github.com/haproxytech/kubernetes-ingress/pkg/k8s"
+	k8ssync "github.com/haproxytech/kubernetes-ingress/pkg/k8s/sync"
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
 )
 
@@ -31,7 +31,7 @@ func (c *HAProxyController) SyncData() {
 		ns := c.store.GetNamespace(job.Namespace)
 		change := false
 		switch job.SyncType {
-		case k8s.COMMAND:
+		case k8ssync.COMMAND:
 			c.auxCfgManager()
 			// create a NeedAction function.
 			if hadChanges || instance.NeedAction() {
@@ -39,49 +39,49 @@ func (c *HAProxyController) SyncData() {
 				hadChanges = false
 				continue
 			}
-		case k8s.CR_GLOBAL:
+		case k8ssync.CR_GLOBAL:
 			var data *v1.Global
 			if job.Data != nil {
 				data = job.Data.(*v1.Global) //nolint:forcetypeassert
 			}
 			change = c.store.EventGlobalCR(job.Namespace, job.Name, data)
-		case k8s.CR_DEFAULTS:
+		case k8ssync.CR_DEFAULTS:
 			var data *v1.Defaults
 			if job.Data != nil {
 				data = job.Data.(*v1.Defaults) //nolint:forcetypeassert
 			}
 			change = c.store.EventDefaultsCR(job.Namespace, job.Name, data)
-		case k8s.CR_BACKEND:
+		case k8ssync.CR_BACKEND:
 			var data *v1.Backend
 			if job.Data != nil {
 				data = job.Data.(*v1.Backend) //nolint:forcetypeassert
 			}
 			change = c.store.EventBackendCR(job.Namespace, job.Name, data)
-		case k8s.NAMESPACE:
+		case k8ssync.NAMESPACE:
 			change = c.store.EventNamespace(ns, job.Data.(*store.Namespace)) //nolint:forcetypeassert
-		case k8s.INGRESS:
+		case k8ssync.INGRESS:
 			change = c.store.EventIngress(ns, job.Data.(*store.Ingress)) //nolint:forcetypeassert
-		case k8s.INGRESS_CLASS:
+		case k8ssync.INGRESS_CLASS:
 			change = c.store.EventIngressClass(job.Data.(*store.IngressClass)) //nolint:forcetypeassert
-		case k8s.ENDPOINTS:
+		case k8ssync.ENDPOINTS:
 			change = c.store.EventEndpoints(ns, job.Data.(*store.Endpoints), c.haproxy.SyncBackendSrvs) //nolint:forcetypeassert
-		case k8s.SERVICE:
+		case k8ssync.SERVICE:
 			change = c.store.EventService(ns, job.Data.(*store.Service)) //nolint:forcetypeassert
-		case k8s.CONFIGMAP:
+		case k8ssync.CONFIGMAP:
 			change = c.store.EventConfigMap(ns, job.Data.(*store.ConfigMap)) //nolint:forcetypeassert
-		case k8s.SECRET:
+		case k8ssync.SECRET:
 			change = c.store.EventSecret(ns, job.Data.(*store.Secret)) //nolint:forcetypeassert
-		case k8s.POD:
+		case k8ssync.POD:
 			change = c.store.EventPod(job.Data.(store.PodEvent)) //nolint:forcetypeassert
-		case k8s.PUBLISH_SERVICE:
+		case k8ssync.PUBLISH_SERVICE:
 			change = c.store.EventPublishService(ns, job.Data.(*store.Service)) //nolint:forcetypeassert
-		case k8s.GATEWAYCLASS:
+		case k8ssync.GATEWAYCLASS:
 			change = c.store.EventGatewayClass(job.Data.(*store.GatewayClass))
-		case k8s.GATEWAY:
+		case k8ssync.GATEWAY:
 			change = c.store.EventGateway(ns, job.Data.(*store.Gateway))
-		case k8s.TCPROUTE:
+		case k8ssync.TCPROUTE:
 			change = c.store.EventTCPRoute(ns, job.Data.(*store.TCPRoute))
-		case k8s.REFERENCEGRANT:
+		case k8ssync.REFERENCEGRANT:
 			change = c.store.EventReferenceGrant(ns, job.Data.(*store.ReferenceGrant))
 		}
 		hadChanges = hadChanges || change

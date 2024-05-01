@@ -25,7 +25,7 @@ import (
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/env"
 	"github.com/haproxytech/kubernetes-ingress/pkg/ingress"
-	"github.com/haproxytech/kubernetes-ingress/pkg/k8s"
+	k8ssync "github.com/haproxytech/kubernetes-ingress/pkg/k8s/sync"
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
 	"github.com/jessevdk/go-flags"
@@ -78,7 +78,7 @@ type TestController struct {
 	TempDir    string
 	Controller *c.HAProxyController
 	Store      store.K8s
-	EventChan  chan k8s.SyncDataEvent
+	EventChan  chan k8ssync.SyncDataEvent
 	OSArgs     utils.OSArgs
 }
 
@@ -141,7 +141,7 @@ func (suite *BaseSuite) StartController() {
 		},
 	}
 
-	testController.EventChan = make(chan k8s.SyncDataEvent, watch.DefaultChanSize*6)
+	testController.EventChan = make(chan k8ssync.SyncDataEvent, watch.DefaultChanSize*6)
 	testController.Controller = c.NewBuilder().
 		WithHaproxyCfgFile([]byte(haproxyConfig)).
 		WithEventChan(testController.EventChan).

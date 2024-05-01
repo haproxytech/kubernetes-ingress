@@ -21,6 +21,7 @@ import (
 	v1 "github.com/haproxytech/kubernetes-ingress/crs/api/ingress/v1"
 	"github.com/haproxytech/kubernetes-ingress/crs/converters"
 	informers "github.com/haproxytech/kubernetes-ingress/crs/generated/informers/externalversions"
+	k8ssync "github.com/haproxytech/kubernetes-ingress/pkg/k8s/sync"
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
 )
 
@@ -46,10 +47,10 @@ func (c GlobalCRV1Alpha1) GetKind() string {
 	return "Global"
 }
 
-func (c GlobalCRV1Alpha1) GetInformer(eventChan chan SyncDataEvent, factory informers.SharedInformerFactory) cache.SharedIndexInformer { //nolint:ireturn
+func (c GlobalCRV1Alpha1) GetInformer(eventChan chan k8ssync.SyncDataEvent, factory informers.SharedInformerFactory) cache.SharedIndexInformer { //nolint:ireturn
 	informer := factory.Core().V1alpha1().Globals().Informer()
 
-	sendToChannel := func(eventChan chan SyncDataEvent, object interface{}, status store.Status) {
+	sendToChannel := func(eventChan chan k8ssync.SyncDataEvent, object interface{}, status store.Status) {
 		dataV1Alpha1, ok := object.(*corev1alpha1.Global)
 		if !ok {
 			logger.Warning(CRSGroupVersionV1alpha1 + ": type mismatch with Global kind")
@@ -64,10 +65,10 @@ func (c GlobalCRV1Alpha1) GetInformer(eventChan chan SyncDataEvent, factory info
 
 		logger.Debugf("%s %s: %s", data.GetNamespace(), status, data.GetName())
 		if status == store.DELETED {
-			eventChan <- SyncDataEvent{SyncType: SyncType(c.GetKind()), Namespace: data.GetNamespace(), Name: data.GetName(), Data: nil}
+			eventChan <- k8ssync.SyncDataEvent{SyncType: k8ssync.SyncType(c.GetKind()), Namespace: data.GetNamespace(), Name: data.GetName(), Data: nil}
 			return
 		}
-		eventChan <- SyncDataEvent{SyncType: SyncType(c.GetKind()), Namespace: data.GetNamespace(), Name: data.GetName(), Data: data}
+		eventChan <- k8ssync.SyncDataEvent{SyncType: k8ssync.SyncType(c.GetKind()), Namespace: data.GetNamespace(), Name: data.GetName(), Data: data}
 	}
 
 	_, err := informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
@@ -89,10 +90,10 @@ func (c DefaultsCRV1Alpha1) GetKind() string {
 	return "Defaults"
 }
 
-func (c DefaultsCRV1Alpha1) GetInformer(eventChan chan SyncDataEvent, factory informers.SharedInformerFactory) cache.SharedIndexInformer { //nolint:ireturn
+func (c DefaultsCRV1Alpha1) GetInformer(eventChan chan k8ssync.SyncDataEvent, factory informers.SharedInformerFactory) cache.SharedIndexInformer { //nolint:ireturn
 	informer := factory.Core().V1alpha1().Defaults().Informer()
 
-	sendToChannel := func(eventChan chan SyncDataEvent, object interface{}, status store.Status) {
+	sendToChannel := func(eventChan chan k8ssync.SyncDataEvent, object interface{}, status store.Status) {
 		dataV1Alpha1, ok := object.(*corev1alpha1.Defaults)
 		if !ok {
 			logger.Warning(CRSGroupVersionV1alpha1 + ": type mismatch with Defaults kind")
@@ -106,10 +107,10 @@ func (c DefaultsCRV1Alpha1) GetInformer(eventChan chan SyncDataEvent, factory in
 		data.Spec = converters.DeepConvertDefaultsSpecA2toV1(spec)
 		logger.Debugf("%s %s: %s", data.GetNamespace(), status, data.GetName())
 		if status == store.DELETED {
-			eventChan <- SyncDataEvent{SyncType: SyncType(c.GetKind()), Namespace: data.GetNamespace(), Name: data.GetName(), Data: nil}
+			eventChan <- k8ssync.SyncDataEvent{SyncType: k8ssync.SyncType(c.GetKind()), Namespace: data.GetNamespace(), Name: data.GetName(), Data: nil}
 			return
 		}
-		eventChan <- SyncDataEvent{SyncType: SyncType(c.GetKind()), Namespace: data.GetNamespace(), Name: data.GetName(), Data: data}
+		eventChan <- k8ssync.SyncDataEvent{SyncType: k8ssync.SyncType(c.GetKind()), Namespace: data.GetNamespace(), Name: data.GetName(), Data: data}
 	}
 
 	_, err := informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
@@ -131,10 +132,10 @@ func (c BackendCRV1Alpha1) GetKind() string {
 	return "Backend"
 }
 
-func (c BackendCRV1Alpha1) GetInformer(eventChan chan SyncDataEvent, factory informers.SharedInformerFactory) cache.SharedIndexInformer { //nolint:ireturn
+func (c BackendCRV1Alpha1) GetInformer(eventChan chan k8ssync.SyncDataEvent, factory informers.SharedInformerFactory) cache.SharedIndexInformer { //nolint:ireturn
 	informer := factory.Core().V1alpha1().Backends().Informer()
 
-	sendToChannel := func(eventChan chan SyncDataEvent, object interface{}, status store.Status) {
+	sendToChannel := func(eventChan chan k8ssync.SyncDataEvent, object interface{}, status store.Status) {
 		dataV1Alpha1, ok := object.(*corev1alpha1.Backend)
 		if !ok {
 			logger.Warning(CRSGroupVersionV1alpha1 + ": type mismatch with Backend kind")
@@ -149,10 +150,10 @@ func (c BackendCRV1Alpha1) GetInformer(eventChan chan SyncDataEvent, factory inf
 
 		logger.Debugf("%s %s: %s", data.GetNamespace(), status, data.GetName())
 		if status == store.DELETED {
-			eventChan <- SyncDataEvent{SyncType: SyncType(c.GetKind()), Namespace: data.GetNamespace(), Name: data.GetName(), Data: nil}
+			eventChan <- k8ssync.SyncDataEvent{SyncType: k8ssync.SyncType(c.GetKind()), Namespace: data.GetNamespace(), Name: data.GetName(), Data: nil}
 			return
 		}
-		eventChan <- SyncDataEvent{SyncType: SyncType(c.GetKind()), Namespace: data.GetNamespace(), Name: data.GetName(), Data: data}
+		eventChan <- k8ssync.SyncDataEvent{SyncType: k8ssync.SyncType(c.GetKind()), Namespace: data.GetNamespace(), Name: data.GetName(), Data: data}
 	}
 
 	_, err := informer.AddEventHandler(cache.ResourceEventHandlerFuncs{

@@ -36,7 +36,7 @@ import (
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/process"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/rules"
 	"github.com/haproxytech/kubernetes-ingress/pkg/ingress"
-	"github.com/haproxytech/kubernetes-ingress/pkg/k8s"
+	k8ssync "github.com/haproxytech/kubernetes-ingress/pkg/k8s/sync"
 	"github.com/haproxytech/kubernetes-ingress/pkg/metrics"
 	"github.com/haproxytech/kubernetes-ingress/pkg/status"
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
@@ -51,7 +51,7 @@ type Builder struct {
 	haproxyRules             rules.Rules
 	restClientSet            client.Client
 	updatePublishServiceFunc func(ingresses []*ingress.Ingress, publishServiceAddresses []string)
-	eventChan                chan k8s.SyncDataEvent
+	eventChan                chan k8ssync.SyncDataEvent
 	clientSet                *kubernetes.Clientset
 	haproxyEnv               env.Env
 	haproxyCfgFile           []byte
@@ -102,7 +102,7 @@ func (builder *Builder) WithHaproxyClient(haproxyClient api.HAProxyClient) *Buil
 	return builder
 }
 
-func (builder *Builder) WithEventChan(eventChan chan k8s.SyncDataEvent) *Builder {
+func (builder *Builder) WithEventChan(eventChan chan k8ssync.SyncDataEvent) *Builder {
 	builder.eventChan = eventChan
 	return builder
 }

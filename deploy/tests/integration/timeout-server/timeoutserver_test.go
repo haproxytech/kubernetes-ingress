@@ -15,7 +15,7 @@
 package timeoutserver
 
 import (
-	"github.com/haproxytech/kubernetes-ingress/pkg/k8s"
+	k8ssync "github.com/haproxytech/kubernetes-ingress/pkg/k8s/sync"
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
 	networkingv1 "k8s.io/api/networking/v1"
 )
@@ -34,10 +34,10 @@ func (suite *TimeoutServerSuite) TestTimeoutServerConfigMap() {
 	cm.Annotations["timeout-server"] = "77000"
 	svc := newAppSvc()
 	ing := newAppIngress()
-	events := []k8s.SyncDataEvent{
-		{SyncType: k8s.CONFIGMAP, Namespace: configMapNamespace, Name: configMapName, Data: cm},
-		{SyncType: k8s.SERVICE, Namespace: appNs, Name: serviceName, Data: svc},
-		{SyncType: k8s.INGRESS, Namespace: appNs, Name: ingressName, Data: ing},
+	events := []k8ssync.SyncDataEvent{
+		{SyncType: k8ssync.CONFIGMAP, Namespace: configMapNamespace, Name: configMapName, Data: cm},
+		{SyncType: k8ssync.SERVICE, Namespace: appNs, Name: serviceName, Data: svc},
+		{SyncType: k8ssync.INGRESS, Namespace: appNs, Name: ingressName, Data: ing},
 	}
 	suite.fixture(events...)
 	// Expected occurrences of "timeout server 77000"
@@ -68,10 +68,10 @@ func (suite *TimeoutServerSuite) TestTimeoutServerService() {
 	svc := newAppSvc()
 	svc.Annotations["timeout-server"] = "75000"
 
-	events := []k8s.SyncDataEvent{
-		{SyncType: k8s.CONFIGMAP, Namespace: configMapNamespace, Name: configMapName, Data: cm},
-		{SyncType: k8s.SERVICE, Namespace: appNs, Name: serviceName, Data: svc},
-		{SyncType: k8s.INGRESS, Namespace: appNs, Name: ingressName, Data: ing},
+	events := []k8ssync.SyncDataEvent{
+		{SyncType: k8ssync.CONFIGMAP, Namespace: configMapNamespace, Name: configMapName, Data: cm},
+		{SyncType: k8ssync.SERVICE, Namespace: appNs, Name: serviceName, Data: svc},
+		{SyncType: k8ssync.INGRESS, Namespace: appNs, Name: ingressName, Data: ing},
 	}
 	suite.fixture(events...)
 	// Expected occurrences of "timeout server 77000": #2
@@ -104,10 +104,10 @@ func (suite *TimeoutServerSuite) TestTimeoutServerIngress() {
 	ing.Annotations["timeout-server"] = "76000"
 	svc := newAppSvc()
 
-	events := []k8s.SyncDataEvent{
-		{SyncType: k8s.CONFIGMAP, Namespace: configMapNamespace, Name: configMapName, Data: cm},
-		{SyncType: k8s.SERVICE, Namespace: appNs, Name: serviceName, Data: svc},
-		{SyncType: k8s.INGRESS, Namespace: appNs, Name: ingressName, Data: ing},
+	events := []k8ssync.SyncDataEvent{
+		{SyncType: k8ssync.CONFIGMAP, Namespace: configMapNamespace, Name: configMapName, Data: cm},
+		{SyncType: k8ssync.SERVICE, Namespace: appNs, Name: serviceName, Data: svc},
+		{SyncType: k8ssync.INGRESS, Namespace: appNs, Name: ingressName, Data: ing},
 	}
 	suite.fixture(events...)
 	// Expected occurrences of "timeout server 77000": #2

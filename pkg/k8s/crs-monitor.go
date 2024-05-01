@@ -18,6 +18,7 @@ import (
 	"strings"
 	"time"
 
+	k8ssync "github.com/haproxytech/kubernetes-ingress/pkg/k8s/sync"
 	"k8s.io/client-go/tools/cache"
 
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -70,7 +71,7 @@ func (k k8s) runCRDefinitionsInformer(eventChan chan GroupKind, stop chan struct
 	logger.Error(err)
 }
 
-func (k k8s) RunCRSCreationMonitoring(eventChan chan SyncDataEvent, stop chan struct{}) {
+func (k k8s) RunCRSCreationMonitoring(eventChan chan k8ssync.SyncDataEvent, stop chan struct{}) {
 	count := 0
 	for key := range k.crs {
 		if strings.Contains(key, "ingress.v1.haproxy.org/v1") || strings.Contains(key, "core.haproxy.org/v1alpha2") {

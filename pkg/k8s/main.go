@@ -30,6 +30,7 @@ import (
 
 	crclientset "github.com/haproxytech/kubernetes-ingress/crs/generated/clientset/versioned"
 	crinformers "github.com/haproxytech/kubernetes-ingress/crs/generated/informers/externalversions"
+	k8ssync "github.com/haproxytech/kubernetes-ingress/pkg/k8s/sync"
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
 	crdclientset "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	errGw "k8s.io/apimachinery/pkg/api/errors"
@@ -55,7 +56,7 @@ var ErrIgnored = errors.New("ignored resource")
 type K8s interface {
 	GetRestClientset() client.Client
 	GetClientset() *k8sclientset.Clientset
-	MonitorChanges(eventChan chan SyncDataEvent, stop chan struct{}, osArgs utils.OSArgs, gatewayAPIInstalled bool)
+	MonitorChanges(eventChan chan k8ssync.SyncDataEvent, stop chan struct{}, osArgs utils.OSArgs, gatewayAPIInstalled bool)
 	IsGatewayAPIInstalled(gatewayControllerName string) bool
 }
 
@@ -64,7 +65,7 @@ type K8s interface {
 // and a method to process the update of a CR
 type CR interface {
 	GetKind() string
-	GetInformer(chan SyncDataEvent, crinformers.SharedInformerFactory) cache.SharedIndexInformer
+	GetInformer(chan k8ssync.SyncDataEvent, crinformers.SharedInformerFactory) cache.SharedIndexInformer
 }
 
 // k8s is structure with all data required to synchronize with k8s
@@ -154,7 +155,7 @@ func (k k8s) GetClientset() *k8sclientset.Clientset {
 	return k.builtInClient
 }
 
-func (k k8s) MonitorChanges(eventChan chan SyncDataEvent, stop chan struct{}, osArgs utils.OSArgs, gatewayAPIInstalled bool) {
+func (k k8s) MonitorChanges(eventChan chan k8ssync.SyncDataEvent, stop chan struct{}, osArgs utils.OSArgs, gatewayAPIInstalled bool) {
 	informersSynced := &[]cache.InformerSynced{}
 	k.runPodInformer(eventChan, stop, informersSynced)
 	for _, namespace := range k.whiteListedNS {
@@ -175,7 +176,7 @@ func (k k8s) MonitorChanges(eventChan chan SyncDataEvent, stop chan struct{}, os
 	logger.Debugf("Executing syncPeriod every %s", syncPeriod.String())
 	for {
 		time.Sleep(syncPeriod)
-		eventChan <- SyncDataEvent{SyncType: COMMAND}
+		eventChan <- k8ssync.SyncDataEvent{SyncType: k8ssync.COMMAND}
 	}
 }
 
@@ -195,7 +196,7 @@ func (k k8s) registerCoreCR(cr CR, groupVersion string) {
 	}
 }
 
-func (k k8s) runCRInformers(eventChan chan SyncDataEvent, stop chan struct{}, namespace string, informersSynced *[]cache.InformerSynced, crs map[string]CR) {
+func (k k8s) runCRInformers(eventChan chan k8ssync.SyncDataEvent, stop chan struct{}, namespace string, informersSynced *[]cache.InformerSynced, crs map[string]CR) {
 	informerFactory := crinformers.NewSharedInformerFactoryWithOptions(k.crClient, k.cacheResyncPeriod, crinformers.WithNamespace(namespace))
 	for _, cr := range crs {
 		informer := cr.GetInformer(eventChan, informerFactory)
@@ -204,7 +205,7 @@ func (k k8s) runCRInformers(eventChan chan SyncDataEvent, stop chan struct{}, na
 	}
 }
 
-func (k k8s) runInformers(eventChan chan SyncDataEvent, stop chan struct{}, namespace string, informersSynced *[]cache.InformerSynced) {
+func (k k8s) runInformers(eventChan chan k8ssync.SyncDataEvent, stop chan struct{}, namespace string, informersSynced *[]cache.InformerSynced) {
 	factory := k8sinformers.NewSharedInformerFactoryWithOptions(k.builtInClient, k.cacheResyncPeriod, k8sinformers.WithNamespace(namespace))
 	// Core.V1 Resources
 	nsi := k.getNamespaceInfomer(eventChan, factory)
@@ -244,7 +245,7 @@ func (k k8s) runInformers(eventChan chan SyncDataEvent, stop chan struct{}, name
 	}
 }
 
-func (k k8s) runInformersGwAPI(eventChan chan SyncDataEvent, stop chan struct{}, namespace string, informersSynced *[]cache.InformerSynced) {
+func (k k8s) runInformersGwAPI(eventChan chan k8ssync.SyncDataEvent, stop chan struct{}, namespace string, informersSynced *[]cache.InformerSynced) {
 	factory := gatewaynetworking.NewSharedInformerFactoryWithOptions(k.gatewayClient, k.cacheResyncPeriod, gatewaynetworking.WithNamespace(namespace))
 	gwclassInf := k.getGatewayClassesInformer(eventChan, factory)
 	if gwclassInf != nil {
@@ -268,7 +269,7 @@ func (k k8s) runInformersGwAPI(eventChan chan SyncDataEvent, stop chan struct{},
 	}
 }
 
-func (k k8s) runPodInformer(eventChan chan SyncDataEvent, stop chan struct{}, informersSynced *[]cache.InformerSynced) {
+func (k k8s) runPodInformer(eventChan chan k8ssync.SyncDataEvent, stop chan struct{}, informersSynced *[]cache.InformerSynced) {
 	if k.podPrefix != "" {
 		pi := k.getPodInformer(k.podNamespace, k.podPrefix, k.cacheResyncPeriod, eventChan)
 		go pi.Run(stop)

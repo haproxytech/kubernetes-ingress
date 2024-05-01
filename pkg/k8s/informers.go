@@ -15,6 +15,7 @@ import (
 
 	"github.com/haproxytech/client-native/v5/models"
 
+	k8ssync "github.com/haproxytech/kubernetes-ingress/pkg/k8s/sync"
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
@@ -22,7 +23,7 @@ import (
 	gatewaynetworking "sigs.k8s.io/gateway-api/pkg/client/informers/externalversions"
 )
 
-func (k k8s) getNamespaceInfomer(eventChan chan SyncDataEvent, factory informers.SharedInformerFactory) cache.SharedIndexInformer { //nolint:ireturn
+func (k k8s) getNamespaceInfomer(eventChan chan k8ssync.SyncDataEvent, factory informers.SharedInformerFactory) cache.SharedIndexInformer { //nolint:ireturn
 	informer := factory.Core().V1().Namespaces().Informer()
 	errW := informer.SetWatchErrorHandler(func(r *cache.Reflector, err error) {
 		go logger.Debug("Namespace informer error: %s", err)
@@ -33,7 +34,7 @@ func (k k8s) getNamespaceInfomer(eventChan chan SyncDataEvent, factory informers
 			AddFunc: func(obj interface{}) {
 				data, ok := obj.(*corev1.Namespace)
 				if !ok {
-					logger.Errorf("%s: Invalid data from k8s api, %s", NAMESPACE, obj)
+					logger.Errorf("%s: Invalid data from k8s api, %s", k8ssync.NAMESPACE, obj)
 					return
 				}
 				status := store.ADDED
@@ -61,13 +62,13 @@ func (k k8s) getNamespaceInfomer(eventChan chan SyncDataEvent, factory informers
 					Labels:          utils.CopyMap(data.Labels),
 					Status:          status,
 				}
-				logger.Tracef("[RUNTIME] [K8s] %s %s: %s", NAMESPACE, item.Status, item.Name)
-				eventChan <- SyncDataEvent{SyncType: NAMESPACE, Namespace: item.Name, Data: item}
+				logger.Tracef("[RUNTIME] [K8s] %s %s: %s", k8ssync.NAMESPACE, item.Status, item.Name)
+				eventChan <- k8ssync.SyncDataEvent{SyncType: k8ssync.NAMESPACE, Namespace: item.Name, Data: item}
 			},
 			DeleteFunc: func(obj interface{}) {
 				data, ok := obj.(*corev1.Namespace)
 				if !ok {
-					logger.Errorf("%s: Invalid data from k8s api, %s", NAMESPACE, obj)
+					logger.Errorf("%s: Invalid data from k8s api, %s", k8ssync.NAMESPACE, obj)
 					return
 				}
 				status := store.DELETED
@@ -90,18 +91,18 @@ func (k k8s) getNamespaceInfomer(eventChan chan SyncDataEvent, factory informers
 					Labels:          utils.CopyMap(data.Labels),
 					Status:          status,
 				}
-				logger.Tracef("[RUNTIME] [K8s] %s %s: %s", NAMESPACE, item.Status, item.Name)
-				eventChan <- SyncDataEvent{SyncType: NAMESPACE, Namespace: item.Name, Data: item}
+				logger.Tracef("[RUNTIME] [K8s] %s %s: %s", k8ssync.NAMESPACE, item.Status, item.Name)
+				eventChan <- k8ssync.SyncDataEvent{SyncType: k8ssync.NAMESPACE, Namespace: item.Name, Data: item}
 			},
 			UpdateFunc: func(oldObj, newObj interface{}) {
 				_, ok := oldObj.(*corev1.Namespace)
 				if !ok {
-					logger.Errorf("%s: Invalid data from k8s api, %s", NAMESPACE, oldObj)
+					logger.Errorf("%s: Invalid data from k8s api, %s", k8ssync.NAMESPACE, oldObj)
 					return
 				}
 				data2, ok := newObj.(*corev1.Namespace)
 				if !ok {
-					logger.Errorf("%s: Invalid data from k8s api, %s", NAMESPACE, newObj)
+					logger.Errorf("%s: Invalid data from k8s api, %s", k8ssync.NAMESPACE, newObj)
 					return
 				}
 				status := store.MODIFIED
@@ -111,8 +112,8 @@ func (k k8s) getNamespaceInfomer(eventChan chan SyncDataEvent, factory informers
 					Status: status,
 					Labels: utils.CopyMap(data2.Labels),
 				}
-				logger.Tracef("[RUNTIME] [K8s] %s %s: %s", NAMESPACE, item2.Status, item2.Name)
-				eventChan <- SyncDataEvent{SyncType: NAMESPACE, Namespace: item2.Name, Data: item2}
+				logger.Tracef("[RUNTIME] [K8s] %s %s: %s", k8ssync.NAMESPACE, item2.Status, item2.Name)
+				eventChan <- k8ssync.SyncDataEvent{SyncType: k8ssync.NAMESPACE, Namespace: item2.Name, Data: item2}
 			},
 		},
 	)
@@ -120,7 +121,7 @@ func (k k8s) getNamespaceInfomer(eventChan chan SyncDataEvent, factory informers
 	return informer
 }
 
-func (k k8s) getServiceInformer(eventChan chan SyncDataEvent, factory informers.SharedInformerFactory) cache.SharedIndexInformer { //nolint:ireturn
+func (k k8s) getServiceInformer(eventChan chan k8ssync.SyncDataEvent, factory informers.SharedInformerFactory) cache.SharedIndexInformer { //nolint:ireturn
 	informer := factory.Core().V1().Services().Informer()
 	errW := informer.SetWatchErrorHandler(func(r *cache.Reflector, err error) {
 		go logger.Debug("Service informer error: %s", err)
@@ -130,7 +131,7 @@ func (k k8s) getServiceInformer(eventChan chan SyncDataEvent, factory informers.
 		AddFunc: func(obj interface{}) {
 			data, ok := obj.(*corev1.Service)
 			if !ok {
-				logger.Errorf("%s: Invalid data from k8s api, %s", SERVICE, obj)
+				logger.Errorf("%s: Invalid data from k8s api, %s", k8ssync.SERVICE, obj)
 				return
 			}
 			if data.Spec.Type == corev1.ServiceTypeExternalName && k.disableSvcExternalName {
@@ -159,20 +160,20 @@ func (k k8s) getServiceInformer(eventChan chan SyncDataEvent, factory informers.
 					Port:     int64(sp.Port),
 				})
 			}
-			logger.Tracef("[RUNTIME] [K8s] %s %s: %s", SERVICE, item.Status, item.Name)
-			eventChan <- SyncDataEvent{SyncType: SERVICE, Namespace: item.Namespace, Data: item}
+			logger.Tracef("[RUNTIME] [K8s] %s %s: %s", k8ssync.SERVICE, item.Status, item.Name)
+			eventChan <- k8ssync.SyncDataEvent{SyncType: k8ssync.SERVICE, Namespace: item.Namespace, Data: item}
 			if k.publishSvc != nil && k.publishSvc.Namespace == item.Namespace && k.publishSvc.Name == item.Name {
 				// item copy because of ADDED handler in events.go which must modify the STATUS based solely on addresses
 				itemCopy := *item
 				itemCopy.Addresses = getServiceAddresses(data)
-				logger.Tracef("[RUNTIME] [K8s] %s %s: %s", PUBLISH_SERVICE, item.Status, item.Name)
-				eventChan <- SyncDataEvent{SyncType: PUBLISH_SERVICE, Namespace: item.Namespace, Data: &itemCopy}
+				logger.Tracef("[RUNTIME] [K8s] %s %s: %s", k8ssync.PUBLISH_SERVICE, item.Status, item.Name)
+				eventChan <- k8ssync.SyncDataEvent{SyncType: k8ssync.PUBLISH_SERVICE, Namespace: item.Namespace, Data: &itemCopy}
 			}
 		},
 		DeleteFunc: func(obj interface{}) {
 			data, ok := obj.(*corev1.Service)
 			if !ok {
-				logger.Errorf("%s: Invalid data from k8s api, %s", SERVICE, obj)
+				logger.Errorf("%s: Invalid data from k8s api, %s", k8ssync.SERVICE, obj)
 				return
 			}
 			if data.Spec.Type == corev1.ServiceTypeExternalName && k.disableSvcExternalName {
@@ -188,18 +189,18 @@ func (k k8s) getServiceInformer(eventChan chan SyncDataEvent, factory informers.
 			if data.Spec.Type == corev1.ServiceTypeExternalName {
 				item.DNS = data.Spec.ExternalName
 			}
-			logger.Tracef("[RUNTIME] [K8s] %s %s: %s", SERVICE, item.Status, item.Name)
-			eventChan <- SyncDataEvent{SyncType: SERVICE, Namespace: item.Namespace, Data: item}
+			logger.Tracef("[RUNTIME] [K8s] %s %s: %s", k8ssync.SERVICE, item.Status, item.Name)
+			eventChan <- k8ssync.SyncDataEvent{SyncType: k8ssync.SERVICE, Namespace: item.Namespace, Data: item}
 			if k.publishSvc != nil && k.publishSvc.Namespace == item.Namespace && k.publishSvc.Name == item.Name {
 				item.Addresses = getServiceAddresses(data)
-				logger.Tracef("[RUNTIME] [K8s] %s %s: %s", PUBLISH_SERVICE, item.Status, item.Name)
-				eventChan <- SyncDataEvent{SyncType: PUBLISH_SERVICE, Namespace: data.Namespace, Data: item}
+				logger.Tracef("[RUNTIME] [K8s] %s %s: %s", k8ssync.PUBLISH_SERVICE, item.Status, item.Name)
+				eventChan <- k8ssync.SyncDataEvent{SyncType: k8ssync.PUBLISH_SERVICE, Namespace: data.Namespace, Data: item}
 			}
 		},
 		UpdateFunc: func(oldObj, newObj interface{}) {
 			data1, ok := oldObj.(*corev1.Service)
 			if !ok {
-				logger.Errorf("%s: Invalid data from k8s api, %s", SERVICE, oldObj)
+				logger.Errorf("%s: Invalid data from k8s api, %s", k8ssync.SERVICE, oldObj)
 				return
 			}
 			if data1.Spec.Type == corev1.ServiceTypeExternalName && k.disableSvcExternalName {
@@ -208,7 +209,7 @@ func (k k8s) getServiceInformer(eventChan chan SyncDataEvent, factory informers.
 			}
 			data2, ok := newObj.(*corev1.Service)
 			if !ok {
-				logger.Errorf("%s: Invalid data from k8s api, %s", SERVICE, newObj)
+				logger.Errorf("%s: Invalid data from k8s api, %s", k8ssync.SERVICE, newObj)
 				return
 			}
 			if data2.Spec.Type == corev1.ServiceTypeExternalName && k.disableSvcExternalName {
@@ -236,13 +237,13 @@ func (k k8s) getServiceInformer(eventChan chan SyncDataEvent, factory informers.
 				})
 			}
 
-			logger.Tracef("[RUNTIME] [K8s] %s %s: %s", SERVICE, item2.Status, item2.Name)
-			eventChan <- SyncDataEvent{SyncType: SERVICE, Namespace: item2.Namespace, Data: item2}
+			logger.Tracef("[RUNTIME] [K8s] %s %s: %s", k8ssync.SERVICE, item2.Status, item2.Name)
+			eventChan <- k8ssync.SyncDataEvent{SyncType: k8ssync.SERVICE, Namespace: item2.Namespace, Data: item2}
 
 			if k.publishSvc != nil && k.publishSvc.Namespace == item2.Namespace && k.publishSvc.Name == item2.Name {
 				item2.Addresses = getServiceAddresses(data2)
-				logger.Tracef("[RUNTIME] [K8s] %s %s: %s", PUBLISH_SERVICE, item2.Status, item2.Name)
-				eventChan <- SyncDataEvent{SyncType: PUBLISH_SERVICE, Namespace: item2.Namespace, Data: item2}
+				logger.Tracef("[RUNTIME] [K8s] %s %s: %s", k8ssync.PUBLISH_SERVICE, item2.Status, item2.Name)
+				eventChan <- k8ssync.SyncDataEvent{SyncType: k8ssync.PUBLISH_SERVICE, Namespace: item2.Namespace, Data: item2}
 			}
 		},
 	})
@@ -250,7 +251,7 @@ func (k k8s) getServiceInformer(eventChan chan SyncDataEvent, factory informers.
 	return informer
 }
 
-func (k k8s) getSecretInformer(eventChan chan SyncDataEvent, factory informers.SharedInformerFactory) cache.SharedIndexInformer { //nolint:ireturn
+func (k k8s) getSecretInformer(eventChan chan k8ssync.SyncDataEvent, factory informers.SharedInformerFactory) cache.SharedIndexInformer { //nolint:ireturn
 	informer := factory.Core().V1().Secrets().Informer()
 	errW := informer.SetWatchErrorHandler(func(r *cache.Reflector, err error) {
 		go logger.Debug("Secret informer error: %s", err)
@@ -261,7 +262,7 @@ func (k k8s) getSecretInformer(eventChan chan SyncDataEvent, factory informers.S
 			AddFunc: func(obj interface{}) {
 				data, ok := obj.(*corev1.Secret)
 				if !ok {
-					logger.Errorf("%s: Invalid data from k8s api, %s", SECRET, obj)
+					logger.Errorf("%s: Invalid data from k8s api, %s", k8ssync.SECRET, obj)
 					return
 				}
 				status := store.ADDED
@@ -275,13 +276,13 @@ func (k k8s) getSecretInformer(eventChan chan SyncDataEvent, factory informers.S
 					Data:      data.Data,
 					Status:    status,
 				}
-				logger.Tracef("[RUNTIME] [K8s] %s %s: %s", SECRET, item.Status, item.Name)
-				eventChan <- SyncDataEvent{SyncType: SECRET, Namespace: item.Namespace, Data: item}
+				logger.Tracef("[RUNTIME] [K8s] %s %s: %s", k8ssync.SECRET, item.Status, item.Name)
+				eventChan <- k8ssync.SyncDataEvent{SyncType: k8ssync.SECRET, Namespace: item.Namespace, Data: item}
 			},
 			DeleteFunc: func(obj interface{}) {
 				data, ok := obj.(*corev1.Secret)
 				if !ok {
-					logger.Errorf("%s: Invalid data from k8s api, %s", SECRET, obj)
+					logger.Errorf("%s: Invalid data from k8s api, %s", k8ssync.SECRET, obj)
 					return
 				}
 				status := store.DELETED
@@ -291,18 +292,18 @@ func (k k8s) getSecretInformer(eventChan chan SyncDataEvent, factory informers.S
 					Data:      data.Data,
 					Status:    status,
 				}
-				logger.Tracef("[RUNTIME] [K8s] %s %s: %s", SECRET, item.Status, item.Name)
-				eventChan <- SyncDataEvent{SyncType: SECRET, Namespace: item.Namespace, Data: item}
+				logger.Tracef("[RUNTIME] [K8s] %s %s: %s", k8ssync.SECRET, item.Status, item.Name)
+				eventChan <- k8ssync.SyncDataEvent{SyncType: k8ssync.SECRET, Namespace: item.Namespace, Data: item}
 			},
 			UpdateFunc: func(oldObj, newObj interface{}) {
 				_, ok := oldObj.(*corev1.Secret)
 				if !ok {
-					logger.Errorf("%s: Invalid data from k8s api, %s", SECRET, oldObj)
+					logger.Errorf("%s: Invalid data from k8s api, %s", k8ssync.SECRET, oldObj)
 					return
 				}
 				data2, ok := newObj.(*corev1.Secret)
 				if !ok {
-					logger.Errorf("%s: Invalid data from k8s api, %s", SECRET, newObj)
+					logger.Errorf("%s: Invalid data from k8s api, %s", k8ssync.SECRET, newObj)
 					return
 				}
 				status := store.MODIFIED
@@ -314,8 +315,8 @@ func (k k8s) getSecretInformer(eventChan chan SyncDataEvent, factory informers.S
 					Status:    status,
 				}
 
-				logger.Tracef("[RUNTIME] [K8s] %s %s: %s", SECRET, item2.Status, item2.Name)
-				eventChan <- SyncDataEvent{SyncType: SECRET, Namespace: item2.Namespace, Data: item2}
+				logger.Tracef("[RUNTIME] [K8s] %s %s: %s", k8ssync.SECRET, item2.Status, item2.Name)
+				eventChan <- k8ssync.SyncDataEvent{SyncType: k8ssync.SECRET, Namespace: item2.Namespace, Data: item2}
 			},
 		},
 	)
@@ -323,7 +324,7 @@ func (k k8s) getSecretInformer(eventChan chan SyncDataEvent, factory informers.S
 	return informer
 }
 
-func (k k8s) getConfigMapInformer(eventChan chan SyncDataEvent, factory informers.SharedInformerFactory) cache.SharedIndexInformer { //nolint:ireturn
+func (k k8s) getConfigMapInformer(eventChan chan k8ssync.SyncDataEvent, factory informers.SharedInformerFactory) cache.SharedIndexInformer { //nolint:ireturn
 	informer := factory.Core().V1().ConfigMaps().Informer()
 	errW := informer.SetWatchErrorHandler(func(r *cache.Reflector, err error) {
 		go logger.Debug("ConfigMap informer error: %s", err)
@@ -334,7 +335,7 @@ func (k k8s) getConfigMapInformer(eventChan chan SyncDataEvent, factory informer
 			AddFunc: func(obj interface{}) {
 				data, ok := obj.(*corev1.ConfigMap)
 				if !ok {
-					logger.Errorf("%s: Invalid data from k8s api, %s", CONFIGMAP, obj)
+					logger.Errorf("%s: Invalid data from k8s api, %s", k8ssync.CONFIGMAP, obj)
 					return
 				}
 				status := store.ADDED
@@ -348,13 +349,13 @@ func (k k8s) getConfigMapInformer(eventChan chan SyncDataEvent, factory informer
 					Annotations: store.CopyAnnotations(data.Data),
 					Status:      status,
 				}
-				logger.Tracef("[RUNTIME] [K8s] %s %s: %s", CONFIGMAP, item.Status, item.Name)
-				eventChan <- SyncDataEvent{SyncType: CONFIGMAP, Namespace: item.Namespace, Data: item}
+				logger.Tracef("[RUNTIME] [K8s] %s %s: %s", k8ssync.CONFIGMAP, item.Status, item.Name)
+				eventChan <- k8ssync.SyncDataEvent{SyncType: k8ssync.CONFIGMAP, Namespace: item.Namespace, Data: item}
 			},
 			DeleteFunc: func(obj interface{}) {
 				data, ok := obj.(*corev1.ConfigMap)
 				if !ok {
-					logger.Errorf("%s: Invalid data from k8s api, %s", CONFIGMAP, obj)
+					logger.Errorf("%s: Invalid data from k8s api, %s", k8ssync.CONFIGMAP, obj)
 					return
 				}
 				status := store.DELETED
@@ -364,18 +365,18 @@ func (k k8s) getConfigMapInformer(eventChan chan SyncDataEvent, factory informer
 					Annotations: store.CopyAnnotations(data.Data),
 					Status:      status,
 				}
-				logger.Tracef("[RUNTIME] [K8s] %s %s: %s", CONFIGMAP, item.Status, item.Name)
-				eventChan <- SyncDataEvent{SyncType: CONFIGMAP, Namespace: item.Namespace, Data: item}
+				logger.Tracef("[RUNTIME] [K8s] %s %s: %s", k8ssync.CONFIGMAP, item.Status, item.Name)
+				eventChan <- k8ssync.SyncDataEvent{SyncType: k8ssync.CONFIGMAP, Namespace: item.Namespace, Data: item}
 			},
 			UpdateFunc: func(oldObj, newObj interface{}) {
 				_, ok := oldObj.(*corev1.ConfigMap)
 				if !ok {
-					logger.Errorf("%s: Invalid data from k8s api, %s", CONFIGMAP, oldObj)
+					logger.Errorf("%s: Invalid data from k8s api, %s", k8ssync.CONFIGMAP, oldObj)
 					return
 				}
 				data2, ok := newObj.(*corev1.ConfigMap)
 				if !ok {
-					logger.Errorf("%s: Invalid data from k8s api, %s", CONFIGMAP, newObj)
+					logger.Errorf("%s: Invalid data from k8s api, %s", k8ssync.CONFIGMAP, newObj)
 					return
 				}
 				status := store.MODIFIED
@@ -386,8 +387,8 @@ func (k k8s) getConfigMapInformer(eventChan chan SyncDataEvent, factory informer
 					Status:      status,
 				}
 
-				logger.Tracef("[RUNTIME] [K8s] %s %s: %s", CONFIGMAP, item2.Status, item2.Name)
-				eventChan <- SyncDataEvent{SyncType: CONFIGMAP, Namespace: item2.Namespace, Data: item2}
+				logger.Tracef("[RUNTIME] [K8s] %s %s: %s", k8ssync.CONFIGMAP, item2.Status, item2.Name)
+				eventChan <- k8ssync.SyncDataEvent{SyncType: k8ssync.CONFIGMAP, Namespace: item2.Namespace, Data: item2}
 			},
 		},
 	)
@@ -395,7 +396,7 @@ func (k k8s) getConfigMapInformer(eventChan chan SyncDataEvent, factory informer
 	return informer
 }
 
-func (k k8s) getIngressInformers(eventChan chan SyncDataEvent, factory informers.SharedInformerFactory) (ii, ici cache.SharedIndexInformer) { //nolint:ireturn
+func (k k8s) getIngressInformers(eventChan chan k8ssync.SyncDataEvent, factory informers.SharedInformerFactory) (ii, ici cache.SharedIndexInformer) { //nolint:ireturn
 	apiGroup := "networking.k8s.io/v1"
 
 	resources, err := k.builtInClient.ServerResourcesForGroupVersion(apiGroup)
@@ -421,7 +422,7 @@ func (k k8s) getIngressInformers(eventChan chan SyncDataEvent, factory informers
 	return
 }
 
-func (k k8s) getEndpointSliceInformer(eventChan chan SyncDataEvent, factory informers.SharedInformerFactory) cache.SharedIndexInformer { //nolint:ireturn
+func (k k8s) getEndpointSliceInformer(eventChan chan k8ssync.SyncDataEvent, factory informers.SharedInformerFactory) cache.SharedIndexInformer { //nolint:ireturn
 	for i, apiGroup := range []string{"discovery.k8s.io/v1", "discovery.k8s.io/v1beta1"} {
 		resources, err := k.builtInClient.ServerResourcesForGroupVersion(apiGroup)
 		if err != nil {
@@ -447,7 +448,7 @@ func (k k8s) getEndpointSliceInformer(eventChan chan SyncDataEvent, factory info
 	return nil
 }
 
-func (k k8s) getEndpointsInformer(eventChan chan SyncDataEvent, factory informers.SharedInformerFactory) cache.SharedIndexInformer { //nolint:ireturn
+func (k k8s) getEndpointsInformer(eventChan chan k8ssync.SyncDataEvent, factory informers.SharedInformerFactory) cache.SharedIndexInformer { //nolint:ireturn
 	informer := factory.Core().V1().Endpoints().Informer()
 	errW := informer.SetWatchErrorHandler(func(r *cache.Reflector, err error) {
 		go logger.Debug("Endpoints informer error: %s", err)
@@ -459,16 +460,16 @@ func (k k8s) getEndpointsInformer(eventChan chan SyncDataEvent, factory informer
 			if errors.Is(err, ErrIgnored) {
 				return
 			}
-			logger.Tracef("[RUNTIME] [K8s] %s %s: %s %s", ENDPOINTS, item.Status, item.Service, item.SliceName)
-			eventChan <- SyncDataEvent{SyncType: ENDPOINTS, Namespace: item.Namespace, Data: item}
+			logger.Tracef("[RUNTIME] [K8s] %s %s: %s %s", k8ssync.ENDPOINTS, item.Status, item.Service, item.SliceName)
+			eventChan <- k8ssync.SyncDataEvent{SyncType: k8ssync.ENDPOINTS, Namespace: item.Namespace, Data: item}
 		},
 		DeleteFunc: func(obj interface{}) {
 			item, err := k.convertToEndpoints(obj, store.DELETED)
 			if errors.Is(err, ErrIgnored) {
 				return
 			}
-			logger.Tracef("[RUNTIME] [K8s] %s %s: %s %s", ENDPOINTS, item.Status, item.Service, item.SliceName)
-			eventChan <- SyncDataEvent{SyncType: ENDPOINTS, Namespace: item.Namespace, Data: item}
+			logger.Tracef("[RUNTIME] [K8s] %s %s: %s %s", k8ssync.ENDPOINTS, item.Status, item.Service, item.SliceName)
+			eventChan <- k8ssync.SyncDataEvent{SyncType: k8ssync.ENDPOINTS, Namespace: item.Namespace, Data: item}
 		},
 		UpdateFunc: func(oldObj, newObj interface{}) {
 			_, err := k.convertToEndpoints(oldObj, store.EMPTY)
@@ -477,15 +478,15 @@ func (k k8s) getEndpointsInformer(eventChan chan SyncDataEvent, factory informer
 			}
 			item2, _ := k.convertToEndpoints(newObj, store.MODIFIED)
 			// fix modified state for ones that are deleted,new,same
-			logger.Tracef("[RUNTIME] [K8s] %s %s: %s %s", ENDPOINTS, item2.Status, item2.Service, item2.SliceName)
-			eventChan <- SyncDataEvent{SyncType: ENDPOINTS, Namespace: item2.Namespace, Data: item2}
+			logger.Tracef("[RUNTIME] [K8s] %s %s: %s %s", k8ssync.ENDPOINTS, item2.Status, item2.Service, item2.SliceName)
+			eventChan <- k8ssync.SyncDataEvent{SyncType: k8ssync.ENDPOINTS, Namespace: item2.Namespace, Data: item2}
 		},
 	})
 	logger.Error(err)
 	return informer
 }
 
-func (k *k8s) getPodInformer(namespace, podPrefix string, resyncPeriod time.Duration, eventChan chan SyncDataEvent) cache.Controller { //nolint:ireturn
+func (k *k8s) getPodInformer(namespace, podPrefix string, resyncPeriod time.Duration, eventChan chan k8ssync.SyncDataEvent) cache.Controller { //nolint:ireturn
 	var prefix string
 	watchlist := cache.NewListWatchFromClient(k.builtInClient.CoreV1().RESTClient(), "pods", namespace, fields.Nothing())
 	_, eController := cache.NewInformer(
@@ -499,7 +500,7 @@ func (k *k8s) getPodInformer(namespace, podPrefix string, resyncPeriod time.Dura
 				if prefix != podPrefix {
 					return
 				}
-				eventChan <- SyncDataEvent{SyncType: POD, Namespace: meta.Namespace, Data: store.PodEvent{Status: store.ADDED, Name: meta.Name}}
+				eventChan <- k8ssync.SyncDataEvent{SyncType: k8ssync.POD, Namespace: meta.Namespace, Data: store.PodEvent{Status: store.ADDED, Name: meta.Name}}
 			},
 			DeleteFunc: func(obj interface{}) {
 				meta := obj.(*corev1.Pod).ObjectMeta //nolint:forcetypeassert
@@ -507,7 +508,7 @@ func (k *k8s) getPodInformer(namespace, podPrefix string, resyncPeriod time.Dura
 				if prefix != podPrefix {
 					return
 				}
-				eventChan <- SyncDataEvent{SyncType: POD, Namespace: meta.Namespace, Data: store.PodEvent{Status: store.DELETED, Name: meta.Name}}
+				eventChan <- k8ssync.SyncDataEvent{SyncType: k8ssync.POD, Namespace: meta.Namespace, Data: store.PodEvent{Status: store.DELETED, Name: meta.Name}}
 			},
 			UpdateFunc: func(oldObj, newObj interface{}) {
 				meta := newObj.(*corev1.Pod).ObjectMeta //nolint:forcetypeassert
@@ -515,14 +516,14 @@ func (k *k8s) getPodInformer(namespace, podPrefix string, resyncPeriod time.Dura
 				if prefix != podPrefix {
 					return
 				}
-				eventChan <- SyncDataEvent{SyncType: POD, Namespace: meta.Namespace, Data: store.PodEvent{Status: store.MODIFIED, Name: meta.Name}}
+				eventChan <- k8ssync.SyncDataEvent{SyncType: k8ssync.POD, Namespace: meta.Namespace, Data: store.PodEvent{Status: store.MODIFIED, Name: meta.Name}}
 			},
 		},
 	)
 	return eController
 }
 
-func (k k8s) addIngressClassHandlers(eventChan chan SyncDataEvent, informer cache.SharedIndexInformer) {
+func (k k8s) addIngressClassHandlers(eventChan chan k8ssync.SyncDataEvent, informer cache.SharedIndexInformer) {
 	errW := informer.SetWatchErrorHandler(func(r *cache.Reflector, err error) {
 		go logger.Debug("IngressClass informer error: %s", err)
 	})
@@ -532,39 +533,39 @@ func (k k8s) addIngressClassHandlers(eventChan chan SyncDataEvent, informer cach
 			AddFunc: func(obj interface{}) {
 				item, err := store.ConvertToIngressClass(obj)
 				if err != nil {
-					logger.Errorf("%s: Invalid data from k8s api, %s", INGRESS_CLASS, obj)
+					logger.Errorf("%s: Invalid data from k8s api, %s", k8ssync.INGRESS_CLASS, obj)
 					return
 				}
-				logger.Tracef("[RUNTIME] [K8s] %s %s: %s", INGRESS_CLASS, item.Status, item.Name)
-				eventChan <- SyncDataEvent{SyncType: INGRESS_CLASS, Data: item}
+				logger.Tracef("[RUNTIME] [K8s] %s %s: %s", k8ssync.INGRESS_CLASS, item.Status, item.Name)
+				eventChan <- k8ssync.SyncDataEvent{SyncType: k8ssync.INGRESS_CLASS, Data: item}
 			},
 			DeleteFunc: func(obj interface{}) {
 				item, err := store.ConvertToIngressClass(obj)
 				if err != nil {
-					logger.Errorf("%s: Invalid data from k8s api, %s", INGRESS_CLASS, obj)
+					logger.Errorf("%s: Invalid data from k8s api, %s", k8ssync.INGRESS_CLASS, obj)
 					return
 				}
 				item.Status = store.DELETED
-				logger.Tracef("[RUNTIME] [K8s] %s %s: %s", INGRESS_CLASS, item.Status, item.Name)
-				eventChan <- SyncDataEvent{SyncType: INGRESS_CLASS, Data: item}
+				logger.Tracef("[RUNTIME] [K8s] %s %s: %s", k8ssync.INGRESS_CLASS, item.Status, item.Name)
+				eventChan <- k8ssync.SyncDataEvent{SyncType: k8ssync.INGRESS_CLASS, Data: item}
 			},
 			UpdateFunc: func(oldObj, newObj interface{}) {
 				item, err := store.ConvertToIngressClass(newObj)
 				if err != nil {
-					logger.Errorf("%s: Invalid data from k8s api, %s", INGRESS_CLASS, oldObj)
+					logger.Errorf("%s: Invalid data from k8s api, %s", k8ssync.INGRESS_CLASS, oldObj)
 					return
 				}
 				item.Status = store.MODIFIED
 
-				logger.Tracef("[RUNTIME] [K8s] %s %s: %s", INGRESS_CLASS, item.Status, item.Name)
-				eventChan <- SyncDataEvent{SyncType: INGRESS_CLASS, Data: item}
+				logger.Tracef("[RUNTIME] [K8s] %s %s: %s", k8ssync.INGRESS_CLASS, item.Status, item.Name)
+				eventChan <- k8ssync.SyncDataEvent{SyncType: k8ssync.INGRESS_CLASS, Data: item}
 			},
 		},
 	)
 	logger.Error(err)
 }
 
-func (k k8s) addIngressHandlers(eventChan chan SyncDataEvent, informer cache.SharedIndexInformer) {
+func (k k8s) addIngressHandlers(eventChan chan k8ssync.SyncDataEvent, informer cache.SharedIndexInformer) {
 	errW := informer.SetWatchErrorHandler(func(r *cache.Reflector, err error) {
 		go logger.Debug("Ingress informer error: %s", err)
 	})
@@ -574,39 +575,39 @@ func (k k8s) addIngressHandlers(eventChan chan SyncDataEvent, informer cache.Sha
 			AddFunc: func(obj interface{}) {
 				item, err := store.ConvertToIngress(obj)
 				if err != nil {
-					logger.Errorf("%s: Invalid data from k8s api, %s", INGRESS, obj)
+					logger.Errorf("%s: Invalid data from k8s api, %s", k8ssync.INGRESS, obj)
 					return
 				}
 				item.Status = store.ADDED
-				logger.Tracef("[RUNTIME] [K8s] %s %s: %s", INGRESS, item.Status, item.Name)
-				eventChan <- SyncDataEvent{SyncType: INGRESS, Namespace: item.Namespace, Data: item}
+				logger.Tracef("[RUNTIME] [K8s] %s %s: %s", k8ssync.INGRESS, item.Status, item.Name)
+				eventChan <- k8ssync.SyncDataEvent{SyncType: k8ssync.INGRESS, Namespace: item.Namespace, Data: item}
 			},
 			DeleteFunc: func(obj interface{}) {
 				item, err := store.ConvertToIngress(obj)
 				if err != nil {
-					logger.Errorf("%s: Invalid data from k8s api, %s", INGRESS, obj)
+					logger.Errorf("%s: Invalid data from k8s api, %s", k8ssync.INGRESS, obj)
 					return
 				}
 				item.Status = store.DELETED
-				logger.Tracef("[RUNTIME] [K8s] %s %s: %s", INGRESS, item.Status, item.Name)
-				eventChan <- SyncDataEvent{SyncType: INGRESS, Namespace: item.Namespace, Data: item}
+				logger.Tracef("[RUNTIME] [K8s] %s %s: %s", k8ssync.INGRESS, item.Status, item.Name)
+				eventChan <- k8ssync.SyncDataEvent{SyncType: k8ssync.INGRESS, Namespace: item.Namespace, Data: item}
 			},
 			UpdateFunc: func(oldObj, newObj interface{}) {
 				item, err := store.ConvertToIngress(newObj)
 				if err != nil {
-					logger.Errorf("%s: Invalid data from k8s api, %s", INGRESS, oldObj)
+					logger.Errorf("%s: Invalid data from k8s api, %s", k8ssync.INGRESS, oldObj)
 					return
 				}
 				item.Status = store.MODIFIED
-				logger.Tracef("[RUNTIME] [K8s] %s %s: %s", INGRESS, item.Status, item.Name)
-				eventChan <- SyncDataEvent{SyncType: INGRESS, Namespace: item.Namespace, Data: item}
+				logger.Tracef("[RUNTIME] [K8s] %s %s: %s", k8ssync.INGRESS, item.Status, item.Name)
+				eventChan <- k8ssync.SyncDataEvent{SyncType: k8ssync.INGRESS, Namespace: item.Namespace, Data: item}
 			},
 		},
 	)
 	logger.Error(err)
 }
 
-func (k k8s) addEndpointSliceHandlers(eventChan chan SyncDataEvent, informer cache.SharedIndexInformer) {
+func (k k8s) addEndpointSliceHandlers(eventChan chan k8ssync.SyncDataEvent, informer cache.SharedIndexInformer) {
 	errW := informer.SetWatchErrorHandler(func(r *cache.Reflector, err error) {
 		go logger.Debug("EndpoitSlice informer error: %s", err)
 	})
@@ -617,16 +618,16 @@ func (k k8s) addEndpointSliceHandlers(eventChan chan SyncDataEvent, informer cac
 			if errors.Is(err, ErrIgnored) {
 				return
 			}
-			logger.Tracef("[RUNTIME] [K8s] %s %s: %s %s", ENDPOINTS, item.Status, item.Service, item.SliceName)
-			eventChan <- SyncDataEvent{SyncType: ENDPOINTS, Namespace: item.Namespace, Data: item}
+			logger.Tracef("[RUNTIME] [K8s] %s %s: %s %s", k8ssync.ENDPOINTS, item.Status, item.Service, item.SliceName)
+			eventChan <- k8ssync.SyncDataEvent{SyncType: k8ssync.ENDPOINTS, Namespace: item.Namespace, Data: item}
 		},
 		DeleteFunc: func(obj interface{}) {
 			item, err := k.convertToEndpoints(obj, store.DELETED)
 			if errors.Is(err, ErrIgnored) {
 				return
 			}
-			logger.Tracef("[RUNTIME] [K8s] %s %s: %s %s", ENDPOINTS, item.Status, item.Service, item.SliceName)
-			eventChan <- SyncDataEvent{SyncType: ENDPOINTS, Namespace: item.Namespace, Data: item}
+			logger.Tracef("[RUNTIME] [K8s] %s %s: %s %s", k8ssync.ENDPOINTS, item.Status, item.Service, item.SliceName)
+			eventChan <- k8ssync.SyncDataEvent{SyncType: k8ssync.ENDPOINTS, Namespace: item.Namespace, Data: item}
 		},
 		UpdateFunc: func(oldObj, newObj interface{}) {
 			_, err := k.convertToEndpoints(oldObj, store.EMPTY)
@@ -635,8 +636,8 @@ func (k k8s) addEndpointSliceHandlers(eventChan chan SyncDataEvent, informer cac
 			}
 			item2, _ := k.convertToEndpoints(newObj, store.MODIFIED)
 			// fix modified state for ones that are deleted,new,same
-			logger.Tracef("[RUNTIME] [K8s] %s %s: %s %s", ENDPOINTS, item2.Status, item2.Service, item2.SliceName)
-			eventChan <- SyncDataEvent{SyncType: ENDPOINTS, Namespace: item2.Namespace, Data: item2}
+			logger.Tracef("[RUNTIME] [K8s] %s %s: %s %s", k8ssync.ENDPOINTS, item2.Status, item2.Service, item2.SliceName)
+			eventChan <- k8ssync.SyncDataEvent{SyncType: k8ssync.ENDPOINTS, Namespace: item2.Namespace, Data: item2}
 		},
 	})
 	logger.Error(err)
@@ -674,6 +675,9 @@ func (k k8s) convertToEndpoints(obj interface{}, status store.Status) (*store.En
 		addresses := make(map[string]struct{})
 		for _, endpoints := range data.Endpoints {
 			if endpoints.Conditions.Ready == nil || !*endpoints.Conditions.Ready {
+				continue
+			}
+			if endpoints.Conditions.Terminating != nil && *endpoints.Conditions.Terminating {
 				continue
 			}
 			for _, address := range endpoints.Addresses {
@@ -735,7 +739,7 @@ func (k k8s) convertToEndpoints(obj interface{}, status store.Status) (*store.En
 		}
 		return item, nil
 	default:
-		logger.Errorf("%s: Invalid data from k8s api, %s", ENDPOINTS, obj)
+		logger.Errorf("%s: Invalid data from k8s api, %s", k8ssync.ENDPOINTS, obj)
 		return nil, ErrIgnored
 	}
 }
@@ -779,9 +783,9 @@ type GatewayRelatedType interface {
 	*gatewayv1beta1.GatewayClass | *gatewayv1beta1.Gateway | *gatewayv1alpha2.TCPRoute | *gatewayv1alpha2.ReferenceGrant
 }
 
-type GatewayInformerFunc[GWType GatewayRelatedType] func(gwObj GWType, eventChan chan SyncDataEvent, status store.Status)
+type GatewayInformerFunc[GWType GatewayRelatedType] func(gwObj GWType, eventChan chan k8ssync.SyncDataEvent, status store.Status)
 
-func manageGatewayClass(gatewayclass *gatewayv1beta1.GatewayClass, eventChan chan SyncDataEvent, status store.Status) {
+func manageGatewayClass(gatewayclass *gatewayv1beta1.GatewayClass, eventChan chan k8ssync.SyncDataEvent, status store.Status) {
 	logger.Infof("gwapi: gatewayclass: informers: got '%s'", gatewayclass.Name)
 	item := store.GatewayClass{
 		Name:           gatewayclass.Name,
@@ -790,11 +794,11 @@ func manageGatewayClass(gatewayclass *gatewayv1beta1.GatewayClass, eventChan cha
 		Generation:     gatewayclass.Generation,
 		Status:         status,
 	}
-	logger.Tracef("[RUNTIME] [K8s] %s %s: %s", GATEWAYCLASS, item.Status, item.Name)
-	eventChan <- SyncDataEvent{SyncType: GATEWAYCLASS, Data: &item}
+	logger.Tracef("[RUNTIME] [K8s] %s %s: %s", k8ssync.GATEWAYCLASS, item.Status, item.Name)
+	eventChan <- k8ssync.SyncDataEvent{SyncType: k8ssync.GATEWAYCLASS, Data: &item}
 }
 
-func manageGateway(gateway *gatewayv1beta1.Gateway, eventChan chan SyncDataEvent, status store.Status) {
+func manageGateway(gateway *gatewayv1beta1.Gateway, eventChan chan k8ssync.SyncDataEvent, status store.Status) {
 	logger.Infof("gwapi: gateway: informers: got '%s/%s'", gateway.Namespace, gateway.Name)
 	listeners := make([]store.Listener, len(gateway.Spec.Listeners))
 	for i, listener := range gateway.Spec.Listeners {
@@ -837,11 +841,11 @@ func manageGateway(gateway *gatewayv1beta1.Gateway, eventChan chan SyncDataEvent
 		Generation:       gateway.Generation,
 		Status:           status,
 	}
-	logger.Tracef("[RUNTIME] [K8s] %s %s: %s", GATEWAY, item.Status, item.Name)
-	eventChan <- SyncDataEvent{SyncType: GATEWAY, Namespace: item.Namespace, Data: &item}
+	logger.Tracef("[RUNTIME] [K8s] %s %s: %s", k8ssync.GATEWAY, item.Status, item.Name)
+	eventChan <- k8ssync.SyncDataEvent{SyncType: k8ssync.GATEWAY, Namespace: item.Namespace, Data: &item}
 }
 
-func manageTCPRoute(tcproute *gatewayv1alpha2.TCPRoute, eventChan chan SyncDataEvent, status store.Status) {
+func manageTCPRoute(tcproute *gatewayv1alpha2.TCPRoute, eventChan chan k8ssync.SyncDataEvent, status store.Status) {
 	logger.Debugf("gwapi: tcproute: informers: got '%s/%s'", tcproute.Namespace, tcproute.Name)
 	backendRefs := []store.BackendRef{}
 	for _, rule := range tcproute.Spec.Rules {
@@ -900,29 +904,29 @@ func manageTCPRoute(tcproute *gatewayv1alpha2.TCPRoute, eventChan chan SyncDataE
 		Generation:   tcproute.Generation,
 		Status:       status,
 	}
-	logger.Tracef("[RUNTIME] [K8s] %s %s: %s", TCPROUTE, item.Status, item.Name)
-	eventChan <- SyncDataEvent{SyncType: TCPROUTE, Namespace: item.Namespace, Data: &item}
+	logger.Tracef("[RUNTIME] [K8s] %s %s: %s", k8ssync.TCPROUTE, item.Status, item.Name)
+	eventChan <- k8ssync.SyncDataEvent{SyncType: k8ssync.TCPROUTE, Namespace: item.Namespace, Data: &item}
 }
 
-func (k k8s) getGatewayClassesInformer(eventChan chan SyncDataEvent, factory gatewaynetworking.SharedInformerFactory) cache.SharedIndexInformer {
+func (k k8s) getGatewayClassesInformer(eventChan chan k8ssync.SyncDataEvent, factory gatewaynetworking.SharedInformerFactory) cache.SharedIndexInformer {
 	informer := factory.Gateway().V1beta1().GatewayClasses()
 	PopulateInformer(eventChan, informer, GatewayInformerFunc[*gatewayv1beta1.GatewayClass](manageGatewayClass))
 	return informer.Informer()
 }
 
-func (k k8s) getGatewayInformer(eventChan chan SyncDataEvent, factory gatewaynetworking.SharedInformerFactory) cache.SharedIndexInformer {
+func (k k8s) getGatewayInformer(eventChan chan k8ssync.SyncDataEvent, factory gatewaynetworking.SharedInformerFactory) cache.SharedIndexInformer {
 	informer := factory.Gateway().V1beta1().Gateways()
 	PopulateInformer(eventChan, informer, GatewayInformerFunc[*gatewayv1beta1.Gateway](manageGateway))
 	return informer.Informer()
 }
 
-func (k k8s) getTCPRouteInformer(eventChan chan SyncDataEvent, factory gatewaynetworking.SharedInformerFactory) cache.SharedIndexInformer {
+func (k k8s) getTCPRouteInformer(eventChan chan k8ssync.SyncDataEvent, factory gatewaynetworking.SharedInformerFactory) cache.SharedIndexInformer {
 	informer := factory.Gateway().V1alpha2().TCPRoutes()
 	PopulateInformer(eventChan, informer, GatewayInformerFunc[*gatewayv1alpha2.TCPRoute](manageTCPRoute))
 	return informer.Informer()
 }
 
-func PopulateInformer[IT InformerGetter, GWType GatewayRelatedType, GWF GatewayInformerFunc[GWType]](eventChan chan SyncDataEvent, informer IT, handler GWF) cache.SharedIndexInformer {
+func PopulateInformer[IT InformerGetter, GWType GatewayRelatedType, GWF GatewayInformerFunc[GWType]](eventChan chan k8ssync.SyncDataEvent, informer IT, handler GWF) cache.SharedIndexInformer {
 	_, err := informer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			gatewaytype := obj.(GWType)
@@ -941,13 +945,13 @@ func PopulateInformer[IT InformerGetter, GWType GatewayRelatedType, GWF GatewayI
 	return informer.Informer()
 }
 
-func (k k8s) getReferenceGrantInformer(eventChan chan SyncDataEvent, factory gatewaynetworking.SharedInformerFactory) cache.SharedIndexInformer {
+func (k k8s) getReferenceGrantInformer(eventChan chan k8ssync.SyncDataEvent, factory gatewaynetworking.SharedInformerFactory) cache.SharedIndexInformer {
 	informer := factory.Gateway().V1alpha2().ReferenceGrants()
 	PopulateInformer(eventChan, informer, GatewayInformerFunc[*gatewayv1alpha2.ReferenceGrant](manageReferenceGrant))
 	return informer.Informer()
 }
 
-func manageReferenceGrant(referenceGrant *gatewayv1alpha2.ReferenceGrant, eventChan chan SyncDataEvent, status store.Status) {
+func manageReferenceGrant(referenceGrant *gatewayv1alpha2.ReferenceGrant, eventChan chan k8ssync.SyncDataEvent, status store.Status) {
 	logger.Debugf("gwapi: referencegrant: informers: got '%s/%s'", referenceGrant.Namespace, referenceGrant.Name)
 	item := store.ReferenceGrant{
 		Name:       referenceGrant.Name,
@@ -974,6 +978,6 @@ func manageReferenceGrant(referenceGrant *gatewayv1alpha2.ReferenceGrant, eventC
 		}
 	}
 
-	logger.Tracef("[RUNTIME] [K8s] %s %s: %s", REFERENCEGRANT, item.Status, item.Name)
-	eventChan <- SyncDataEvent{SyncType: REFERENCEGRANT, Namespace: item.Namespace, Data: &item}
+	logger.Tracef("[RUNTIME] [K8s] %s %s: %s", k8ssync.REFERENCEGRANT, item.Status, item.Name)
+	eventChan <- k8ssync.SyncDataEvent{SyncType: k8ssync.REFERENCEGRANT, Namespace: item.Namespace, Data: &item}
 }

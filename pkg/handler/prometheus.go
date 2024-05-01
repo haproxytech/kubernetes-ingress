@@ -7,12 +7,12 @@ import (
 	"github.com/haproxytech/kubernetes-ingress/pkg/annotations"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/instance"
-	"github.com/haproxytech/kubernetes-ingress/pkg/k8s"
+	k8ssync "github.com/haproxytech/kubernetes-ingress/pkg/k8s/sync"
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
 )
 
 type PrometheusEndpoint struct {
-	EventChan chan k8s.SyncDataEvent
+	EventChan chan k8ssync.SyncDataEvent
 	PodNs     string
 }
 

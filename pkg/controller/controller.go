@@ -29,7 +29,7 @@ import (
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/maps"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/rules"
 	"github.com/haproxytech/kubernetes-ingress/pkg/ingress"
-	"github.com/haproxytech/kubernetes-ingress/pkg/k8s"
+	k8ssync "github.com/haproxytech/kubernetes-ingress/pkg/k8s/sync"
 	"github.com/haproxytech/kubernetes-ingress/pkg/metrics"
 	"github.com/haproxytech/kubernetes-ingress/pkg/route"
 	"github.com/haproxytech/kubernetes-ingress/pkg/status"
@@ -43,7 +43,7 @@ var logger = utils.GetLogger()
 type HAProxyController struct {
 	gatewayManager           gateway.GatewayManager
 	annotations              annotations.Annotations
-	eventChan                chan k8s.SyncDataEvent
+	eventChan                chan k8ssync.SyncDataEvent
 	updatePublishServiceFunc func(ingresses []*ingress.Ingress, publishServiceAddresses []string)
 	chShutdown               chan struct{}
 	podNamespace             string

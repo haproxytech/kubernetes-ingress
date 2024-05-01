@@ -20,14 +20,14 @@ import (
 	"github.com/haproxytech/client-native/v5/models"
 	v1 "github.com/haproxytech/kubernetes-ingress/crs/api/ingress/v1"
 	"github.com/haproxytech/kubernetes-ingress/deploy/tests/integration"
-	"github.com/haproxytech/kubernetes-ingress/pkg/k8s"
+	k8ssync "github.com/haproxytech/kubernetes-ingress/pkg/k8s/sync"
 	"github.com/stretchr/testify/suite"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 type CustomResourceSuite struct {
 	integration.BaseSuite
-	globalCREvt k8s.SyncDataEvent
+	globalCREvt k8ssync.SyncDataEvent
 }
 
 func TestCustomResource(t *testing.T) {
@@ -35,8 +35,8 @@ func TestCustomResource(t *testing.T) {
 }
 
 func (suite *CustomResourceSuite) GlobalCRFixture() {
-	suite.globalCREvt = k8s.SyncDataEvent{
-		SyncType: k8s.CR_GLOBAL,
+	suite.globalCREvt = k8ssync.SyncDataEvent{
+		SyncType: k8ssync.CR_GLOBAL,
 		Data: &v1.Global{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "fake",

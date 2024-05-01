@@ -20,7 +20,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/haproxytech/kubernetes-ingress/pkg/k8s"
+	k8ssync "github.com/haproxytech/kubernetes-ingress/pkg/k8s/sync"
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
 	networkingv1 "k8s.io/api/networking/v1"
 )
@@ -134,8 +134,8 @@ func (suite *DisableConfigSnippetSuite) TestDisableGlobalConfigSnippet() {
 		suite.setupControllerSnippetArg(tt.controllerSnippetArg)
 		suite.StartController()
 		suite.setupTest()
-		event := k8s.SyncDataEvent{
-			SyncType: k8s.CONFIGMAP, Namespace: configMapNamespace, Name: configMapName, Data: newConfigMapWithGlobalSnippet(),
+		event := k8ssync.SyncDataEvent{
+			SyncType: k8ssync.CONFIGMAP, Namespace: configMapNamespace, Name: configMapName, Data: newConfigMapWithGlobalSnippet(),
 		}
 		suite.disableConfigSnippetFixture(event)
 		suite.expectSnippet(tt.expectedSnippets)
@@ -206,8 +206,8 @@ func (suite *DisableConfigSnippetSuite) TestDisableFrontendConfigSnippet() {
 		suite.setupControllerSnippetArg(tt.controllerSnippetArg)
 		suite.StartController()
 		suite.setupTest()
-		event := k8s.SyncDataEvent{
-			SyncType: k8s.CONFIGMAP, Namespace: configMapNamespace, Name: configMapName, Data: newConfigMapWithFrontendSnippet(),
+		event := k8ssync.SyncDataEvent{
+			SyncType: k8ssync.CONFIGMAP, Namespace: configMapNamespace, Name: configMapName, Data: newConfigMapWithFrontendSnippet(),
 		}
 		suite.disableConfigSnippetFixture(event)
 		suite.expectSnippet(tt.expectedSnippets)
@@ -219,39 +219,39 @@ func (suite *DisableConfigSnippetSuite) TestDisableBackendConfigSnippet() {
 	tests := []struct {
 		name                 string
 		controllerSnippetArg string
-		events               []k8s.SyncDataEvent
+		events               []k8ssync.SyncDataEvent
 		expectedSnippets     []exceptedSnippet
 	}{
 		{
 			name:                 "Backend config snippet enabled - Configmap",
 			controllerSnippetArg: "",
-			events:               []k8s.SyncDataEvent{{SyncType: k8s.CONFIGMAP, Namespace: configMapNamespace, Name: configMapName, Data: newConfigMapWithBackendSnippet()}},
+			events:               []k8ssync.SyncDataEvent{{SyncType: k8ssync.CONFIGMAP, Namespace: configMapNamespace, Name: configMapName, Data: newConfigMapWithBackendSnippet()}},
 			expectedSnippets:     []exceptedSnippet{{count: 1, comment: getConfigMapComment()}},
 		},
 		{
 			name:                 "Backend config snippet disabled - 'backend' - Configmap",
 			controllerSnippetArg: "--disable-config-snippets=backend",
-			events:               []k8s.SyncDataEvent{{SyncType: k8s.CONFIGMAP, Namespace: configMapNamespace, Name: configMapName, Data: newConfigMapWithBackendSnippet()}},
+			events:               []k8ssync.SyncDataEvent{{SyncType: k8ssync.CONFIGMAP, Namespace: configMapNamespace, Name: configMapName, Data: newConfigMapWithBackendSnippet()}},
 			expectedSnippets:     []exceptedSnippet{{count: 0, comment: getConfigMapComment()}},
 		},
 		{
 			name:                 "Backend config snippet disabled - 'all' - Configmap",
 			controllerSnippetArg: "--disable-config-snippets=all",
-			events:               []k8s.SyncDataEvent{{SyncType: k8s.CONFIGMAP, Namespace: configMapNamespace, Name: configMapName, Data: newConfigMapWithBackendSnippet()}},
+			events:               []k8ssync.SyncDataEvent{{SyncType: k8ssync.CONFIGMAP, Namespace: configMapNamespace, Name: configMapName, Data: newConfigMapWithBackendSnippet()}},
 			expectedSnippets:     []exceptedSnippet{{count: 0, comment: getConfigMapComment()}},
 		},
 		{
 			name:                 "Backend config snippet disabled - 'global', should not disable - Configmap",
 			controllerSnippetArg: "--disable-config-snippets=global",
-			events:               []k8s.SyncDataEvent{{SyncType: k8s.CONFIGMAP, Namespace: configMapNamespace, Name: configMapName, Data: newConfigMapWithBackendSnippet()}},
+			events:               []k8ssync.SyncDataEvent{{SyncType: k8ssync.CONFIGMAP, Namespace: configMapNamespace, Name: configMapName, Data: newConfigMapWithBackendSnippet()}},
 			expectedSnippets:     []exceptedSnippet{{count: 1, comment: getConfigMapComment()}},
 		},
 		{
 			name:                 "Backend config snippet enabled - Service, Ingress",
 			controllerSnippetArg: "",
-			events: []k8s.SyncDataEvent{
-				{SyncType: k8s.SERVICE, Namespace: appNs, Name: serviceName, Data: newAppSvc()},
-				{SyncType: k8s.INGRESS, Namespace: appNs, Name: ingressName, Data: newAppIngress()},
+			events: []k8ssync.SyncDataEvent{
+				{SyncType: k8ssync.SERVICE, Namespace: appNs, Name: serviceName, Data: newAppSvc()},
+				{SyncType: k8ssync.INGRESS, Namespace: appNs, Name: ingressName, Data: newAppIngress()},
 			},
 			expectedSnippets: []exceptedSnippet{
 				{count: 1, comment: getSvcSnippetComment(appNs, serviceName)},
@@ -261,9 +261,9 @@ func (suite *DisableConfigSnippetSuite) TestDisableBackendConfigSnippet() {
 		{
 			name:                 "Backend config snippet disabled - 'backend' - Service, Ingress",
 			controllerSnippetArg: "--disable-config-snippets=backend",
-			events: []k8s.SyncDataEvent{
-				{SyncType: k8s.SERVICE, Namespace: appNs, Name: serviceName, Data: newAppSvc()},
-				{SyncType: k8s.INGRESS, Namespace: appNs, Name: ingressName, Data: newAppIngress()},
+			events: []k8ssync.SyncDataEvent{
+				{SyncType: k8ssync.SERVICE, Namespace: appNs, Name: serviceName, Data: newAppSvc()},
+				{SyncType: k8ssync.INGRESS, Namespace: appNs, Name: ingressName, Data: newAppIngress()},
 			},
 			expectedSnippets: []exceptedSnippet{
 				{count: 0, comment: getSvcSnippetComment(appNs, serviceName)},
@@ -273,9 +273,9 @@ func (suite *DisableConfigSnippetSuite) TestDisableBackendConfigSnippet() {
 		{
 			name:                 "Backend config snippet disabled - 'frontend' should not disable - Service, Ingress",
 			controllerSnippetArg: "--disable-config-snippets=frontend",
-			events: []k8s.SyncDataEvent{
-				{SyncType: k8s.SERVICE, Namespace: appNs, Name: serviceName, Data: newAppSvc()},
-				{SyncType: k8s.INGRESS, Namespace: appNs, Name: ingressName, Data: newAppIngress()},
+			events: []k8ssync.SyncDataEvent{
+				{SyncType: k8ssync.SERVICE, Namespace: appNs, Name: serviceName, Data: newAppSvc()},
+				{SyncType: k8ssync.INGRESS, Namespace: appNs, Name: ingressName, Data: newAppIngress()},
 			},
 			expectedSnippets: []exceptedSnippet{
 				{count: 1, comment: getSvcSnippetComment(appNs, serviceName)},

@@ -15,7 +15,7 @@
 package podmaxconn
 
 import (
-	"github.com/haproxytech/kubernetes-ingress/pkg/k8s"
+	k8ssync "github.com/haproxytech/kubernetes-ingress/pkg/k8s/sync"
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
 	networkingv1 "k8s.io/api/networking/v1"
 )
@@ -31,18 +31,18 @@ func (suite *PodMaxConnSuite) TestPodMaxConnConfigMap() {
 	cm.Annotations["pod-maxconn"] = "128"
 	svc := newAppSvc()
 	ing := newAppIngress()
-	events := []k8s.SyncDataEvent{
-		{SyncType: k8s.CONFIGMAP, Namespace: configMapNamespace, Name: configMapName, Data: cm},
-		{SyncType: k8s.POD, Namespace: configMapName, Name: "ic1", Data: store.PodEvent{
+	events := []k8ssync.SyncDataEvent{
+		{SyncType: k8ssync.CONFIGMAP, Namespace: configMapNamespace, Name: configMapName, Data: cm},
+		{SyncType: k8ssync.POD, Namespace: configMapName, Name: "ic1", Data: store.PodEvent{
 			Status: store.ADDED,
 			Name:   "ic1",
 		}},
-		{SyncType: k8s.POD, Namespace: configMapName, Name: "ic2", Data: store.PodEvent{
+		{SyncType: k8ssync.POD, Namespace: configMapName, Name: "ic2", Data: store.PodEvent{
 			Status: store.ADDED,
 			Name:   "ic2",
 		}},
-		{SyncType: k8s.SERVICE, Namespace: appNs, Name: serviceName, Data: svc},
-		{SyncType: k8s.INGRESS, Namespace: appNs, Name: ingressName, Data: ing},
+		{SyncType: k8ssync.SERVICE, Namespace: appNs, Name: serviceName, Data: svc},
+		{SyncType: k8ssync.INGRESS, Namespace: appNs, Name: ingressName, Data: ing},
 	}
 	suite.fixture(events...)
 	// Expected occurrences of "default-server check maxconn 64"
@@ -65,18 +65,18 @@ func (suite *PodMaxConnSuite) TestPodMaxConnConfigMapMisc() {
 	cm.Annotations["pod-maxconn"] = "128"
 	svc := newAppSvc()
 	ing := newAppIngress()
-	events := []k8s.SyncDataEvent{
-		{SyncType: k8s.CONFIGMAP, Namespace: configMapNamespace, Name: configMapName, Data: cm},
-		{SyncType: k8s.POD, Namespace: configMapName, Name: "ic1", Data: store.PodEvent{
+	events := []k8ssync.SyncDataEvent{
+		{SyncType: k8ssync.CONFIGMAP, Namespace: configMapNamespace, Name: configMapName, Data: cm},
+		{SyncType: k8ssync.POD, Namespace: configMapName, Name: "ic1", Data: store.PodEvent{
 			Status: store.ADDED,
 			Name:   "ic1",
 		}},
-		{SyncType: k8s.POD, Namespace: configMapName, Name: "ic2", Data: store.PodEvent{
+		{SyncType: k8ssync.POD, Namespace: configMapName, Name: "ic2", Data: store.PodEvent{
 			Status: store.ADDED,
 			Name:   "ic2",
 		}},
-		{SyncType: k8s.SERVICE, Namespace: appNs, Name: serviceName, Data: svc},
-		{SyncType: k8s.INGRESS, Namespace: appNs, Name: ingressName, Data: ing},
+		{SyncType: k8ssync.SERVICE, Namespace: appNs, Name: serviceName, Data: svc},
+		{SyncType: k8ssync.INGRESS, Namespace: appNs, Name: ingressName, Data: ing},
 	}
 	suite.fixture(events...)
 	// Expected occurrences of "default-server check maxconn 64"
@@ -87,12 +87,12 @@ func (suite *PodMaxConnSuite) TestPodMaxConnConfigMapMisc() {
 
 	// -------------------------------------
 	// Resend ADDED => should change nothing
-	events = []k8s.SyncDataEvent{
-		{SyncType: k8s.POD, Namespace: configMapName, Name: "ic1", Data: store.PodEvent{
+	events = []k8ssync.SyncDataEvent{
+		{SyncType: k8ssync.POD, Namespace: configMapName, Name: "ic1", Data: store.PodEvent{
 			Status: store.ADDED,
 			Name:   "ic1",
 		}},
-		{SyncType: k8s.POD, Namespace: configMapName, Name: "ic2", Data: store.PodEvent{
+		{SyncType: k8ssync.POD, Namespace: configMapName, Name: "ic2", Data: store.PodEvent{
 			Status: store.ADDED,
 			Name:   "ic2",
 		}},
@@ -106,12 +106,12 @@ func (suite *PodMaxConnSuite) TestPodMaxConnConfigMapMisc() {
 
 	// -------------------------------------
 	// SEND MODIFIED => should change nothing
-	events = []k8s.SyncDataEvent{
-		{SyncType: k8s.POD, Namespace: configMapName, Name: "ic1", Data: store.PodEvent{
+	events = []k8ssync.SyncDataEvent{
+		{SyncType: k8ssync.POD, Namespace: configMapName, Name: "ic1", Data: store.PodEvent{
 			Status: store.MODIFIED,
 			Name:   "ic1",
 		}},
-		{SyncType: k8s.POD, Namespace: configMapName, Name: "ic2", Data: store.PodEvent{
+		{SyncType: k8ssync.POD, Namespace: configMapName, Name: "ic2", Data: store.PodEvent{
 			Status: store.MODIFIED,
 			Name:   "ic2",
 		}},
@@ -125,12 +125,12 @@ func (suite *PodMaxConnSuite) TestPodMaxConnConfigMapMisc() {
 
 	// --------------------------------------------------
 	// Send MODIFIED on a non-existing POD -> should increment
-	events = []k8s.SyncDataEvent{
-		{SyncType: k8s.POD, Namespace: configMapName, Name: "ic3", Data: store.PodEvent{
+	events = []k8ssync.SyncDataEvent{
+		{SyncType: k8ssync.POD, Namespace: configMapName, Name: "ic3", Data: store.PodEvent{
 			Status: store.MODIFIED,
 			Name:   "ic3",
 		}},
-		{SyncType: k8s.POD, Namespace: configMapName, Name: "ic4", Data: store.PodEvent{
+		{SyncType: k8ssync.POD, Namespace: configMapName, Name: "ic4", Data: store.PodEvent{
 			Status: store.MODIFIED,
 			Name:   "ic4",
 		}},
@@ -161,18 +161,18 @@ func (suite *PodMaxConnSuite) TestPodMaxConnService() {
 	svc := newAppSvc()
 	svc.Annotations["pod-maxconn"] = "124"
 
-	events := []k8s.SyncDataEvent{
-		{SyncType: k8s.CONFIGMAP, Namespace: configMapNamespace, Name: configMapName, Data: cm},
-		{SyncType: k8s.POD, Namespace: configMapName, Name: "ic1", Data: store.PodEvent{
+	events := []k8ssync.SyncDataEvent{
+		{SyncType: k8ssync.CONFIGMAP, Namespace: configMapNamespace, Name: configMapName, Data: cm},
+		{SyncType: k8ssync.POD, Namespace: configMapName, Name: "ic1", Data: store.PodEvent{
 			Status: store.ADDED,
 			Name:   "ic1",
 		}},
-		{SyncType: k8s.POD, Namespace: configMapName, Name: "ic2", Data: store.PodEvent{
+		{SyncType: k8ssync.POD, Namespace: configMapName, Name: "ic2", Data: store.PodEvent{
 			Status: store.ADDED,
 			Name:   "ic2",
 		}},
-		{SyncType: k8s.SERVICE, Namespace: appNs, Name: serviceName, Data: svc},
-		{SyncType: k8s.INGRESS, Namespace: appNs, Name: ingressName, Data: ing},
+		{SyncType: k8ssync.SERVICE, Namespace: appNs, Name: serviceName, Data: svc},
+		{SyncType: k8ssync.INGRESS, Namespace: appNs, Name: ingressName, Data: ing},
 	}
 	suite.fixture(events...)
 	// -- Expected occurrences of "default-server check maxconn 64" #1 (from configmap)
@@ -200,18 +200,18 @@ func (suite *PodMaxConnSuite) TestPodMaxConnIngress() {
 	ing.Annotations["pod-maxconn"] = "126"
 	svc := newAppSvc()
 
-	events := []k8s.SyncDataEvent{
-		{SyncType: k8s.CONFIGMAP, Namespace: configMapNamespace, Name: configMapName, Data: cm},
-		{SyncType: k8s.POD, Namespace: configMapName, Name: "ic1", Data: store.PodEvent{
+	events := []k8ssync.SyncDataEvent{
+		{SyncType: k8ssync.CONFIGMAP, Namespace: configMapNamespace, Name: configMapName, Data: cm},
+		{SyncType: k8ssync.POD, Namespace: configMapName, Name: "ic1", Data: store.PodEvent{
 			Status: store.ADDED,
 			Name:   "ic1",
 		}},
-		{SyncType: k8s.POD, Namespace: configMapName, Name: "ic2", Data: store.PodEvent{
+		{SyncType: k8ssync.POD, Namespace: configMapName, Name: "ic2", Data: store.PodEvent{
 			Status: store.ADDED,
 			Name:   "ic2",
 		}},
-		{SyncType: k8s.SERVICE, Namespace: appNs, Name: serviceName, Data: svc},
-		{SyncType: k8s.INGRESS, Namespace: appNs, Name: ingressName, Data: ing},
+		{SyncType: k8ssync.SERVICE, Namespace: appNs, Name: serviceName, Data: svc},
+		{SyncType: k8ssync.INGRESS, Namespace: appNs, Name: ingressName, Data: ing},
 	}
 	suite.fixture(events...)
 	// -- Expected occurrences of "default-server check maxconn 64" #1 (from configmap)
