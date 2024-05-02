@@ -25,7 +25,7 @@ func (a *Proto) GetName() string {
 func (a *Proto) Process(k store.K8s, annotations ...map[string]string) error {
 	input := common.GetValue(a.GetName(), annotations...)
 	if input == "h2" {
-		if a.backend.DefaultServer != nil {
+		if a.backend.DefaultServer == nil {
 			a.backend.DefaultServer = &models.DefaultServer{}
 		}
 		a.backend.DefaultServer.Proto = "h2"
