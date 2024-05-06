@@ -68,7 +68,7 @@ func (suite *EndpointsSuite) BeforeTest(suiteName, testName string) {
 		suite.tmplData.Replicas = 4
 		suite.NoError(test.Apply("config/endpoints.yaml.tmpl", test.GetNS(), suite.tmplData))
 		suite.NoError(test.Apply("config/tcp.yaml", "", nil))
-		test.AddTearDown(func() error {
+		suite.test.AddTearDown(func() error {
 			return suite.test.Delete("config/tcp.yaml")
 		})
 		suite.Require().Eventually(func() bool {
