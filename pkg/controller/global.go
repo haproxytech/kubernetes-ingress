@@ -47,7 +47,6 @@ func (c *HAProxyController) globalCfg() {
 	var newGlobal, global *models.Global
 	var newLg models.LogTargets
 	var err error
-	var updated []string
 	global, err = c.haproxy.GlobalGetConfiguration()
 	if err != nil {
 		logger.Error(err)
@@ -91,13 +90,12 @@ func (c *HAProxyController) globalCfg() {
 	diff := newGlobal.Diff(*global)
 	if len(diff) != 0 {
 		logger.Error(c.haproxy.GlobalPushConfiguration(*newGlobal))
-		instance.Restart("Global config updated: %s", strings.Join(updated, "\n"))
+		instance.Restart("Global config updated: %v", diff)
 	}
 	diff = newLg.Diff(lg)
-	// updated = deep.Equal(newLg, lg)
 	if len(diff) != 0 {
 		logger.Error(c.haproxy.GlobalPushLogTargets(newLg))
-		instance.Restart("Global log targets updated: %s", strings.Join(updated, "\n"))
+		instance.Restart("Global log targets updated: %v", diff)
 	}
 	c.globalCfgSnipp()
 }
