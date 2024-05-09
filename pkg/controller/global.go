@@ -90,12 +90,12 @@ func (c *HAProxyController) globalCfg() {
 	diff := newGlobal.Diff(*global)
 	if len(diff) != 0 {
 		logger.Error(c.haproxy.GlobalPushConfiguration(*newGlobal))
-		instance.Restart("Global config updated: %v", diff)
+		instance.Restart("Global config updated: %+v", diff)
 	}
 	diff = newLg.Diff(lg)
 	if len(diff) != 0 {
 		logger.Error(c.haproxy.GlobalPushLogTargets(newLg))
-		instance.Restart("Global log targets updated: %v", diff)
+		instance.Restart("Global log targets updated: %+v", diff)
 	}
 	c.globalCfgSnipp()
 }
@@ -146,7 +146,7 @@ func (c *HAProxyController) defaultsCfg() {
 			logger.Error(err)
 			return
 		}
-		instance.Reload("Defaults config updated: %v", diff)
+		instance.Reload("Defaults config updated: %+v", diff)
 	}
 }
 
