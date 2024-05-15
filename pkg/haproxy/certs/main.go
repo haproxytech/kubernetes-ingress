@@ -197,7 +197,7 @@ func refreshCerts(certs map[string]*cert, certDir string) {
 		if !crtOk || !crt.inUse {
 			logger.Error(os.Remove(path.Join(certDir, filename)))
 			delete(certs, certName)
-			instance.Reload("secret %s removed", crt.name)
+			instance.Reload("secret %s removed", certName)
 		}
 	}
 }
