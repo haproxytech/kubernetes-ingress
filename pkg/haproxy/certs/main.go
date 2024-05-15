@@ -199,7 +199,7 @@ func refreshCerts(certs map[string]*cert, certDir string) (removed bool) {
 			logger.Error(os.Remove(path.Join(certDir, filename)))
 			delete(certs, certName)
 			removed = true
-			logger.Debugf("secret %s removed, reload required", crt.name)
+			logger.Debugf("secret %s removed, reload required", certName)
 		}
 	}
 	return
