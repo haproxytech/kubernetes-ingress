@@ -240,12 +240,13 @@ func (s *Service) SetDefaultBackend(k store.K8s, h haproxy.HAProxy, frontends []
 	if frontend.DefaultBackend != backendName {
 		for _, frontendName := range frontends {
 			frontend, _ := h.FrontendGet(frontendName)
+			oldDefaultBackend := frontend.DefaultBackend
 			frontend.DefaultBackend = backendName
 			err = h.FrontendEdit(frontend)
 			if err != nil {
 				return
 			}
-			instance.Reload("default backend changed in frontend '%s': from '%s' to '%s'", frontendName, frontend.DefaultBackend, backendName)
+			instance.Reload("default backend changed in frontend '%s': from '%s' to '%s'", frontendName, oldDefaultBackend, backendName)
 		}
 	}
 	s.HandleHAProxySrvs(k, h)
