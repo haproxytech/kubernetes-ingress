@@ -40,3 +40,11 @@ type GlobalListerExpansion interface{}
 // GlobalNamespaceListerExpansion allows custom methods to be added to
 // GlobalNamespaceLister.
 type GlobalNamespaceListerExpansion interface{}
+
+// TCPListerExpansion allows custom methods to be added to
+// TCPLister.
+type TCPListerExpansion interface{}
+
+// TCPNamespaceListerExpansion allows custom methods to be added to
+// TCPNamespaceLister.
+type TCPNamespaceListerExpansion interface{}

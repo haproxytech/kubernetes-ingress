@@ -30,6 +30,7 @@ type IngressV1Interface interface {
 	BackendsGetter
 	DefaultsGetter
 	GlobalsGetter
+	TCPsGetter
 }
 
 // IngressV1Client is used to interact with features provided by the ingress.v1.haproxy.org group.
@@ -47,6 +48,10 @@ func (c *IngressV1Client) Defaults(namespace string) DefaultsInterface {
 
 func (c *IngressV1Client) Globals(namespace string) GlobalInterface {
 	return newGlobals(c, namespace)
+}
+
+func (c *IngressV1Client) TCPs(namespace string) TCPInterface {
+	return newTCPs(c, namespace)
 }
 
 // NewForConfig creates a new IngressV1Client for the given config.

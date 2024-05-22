@@ -42,6 +42,7 @@ const (
 	CR_GLOBAL       SyncType = "Global"
 	CR_DEFAULTS     SyncType = "Defaults"
 	CR_BACKEND      SyncType = "Backend"
+	CR_TCP          SyncType = "TCP"
 	PUBLISH_SERVICE SyncType = "PUBLISH_SERVICE"
 	GATEWAYCLASS    SyncType = "GATEWAYCLASS"
 	GATEWAY         SyncType = "GATEWAY"

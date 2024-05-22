@@ -76,6 +76,8 @@ func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Ingress().V1().Defaults().Informer()}, nil
 	case v1.SchemeGroupVersion.WithResource("globals"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Ingress().V1().Globals().Informer()}, nil
+	case v1.SchemeGroupVersion.WithResource("tcps"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Ingress().V1().TCPs().Informer()}, nil
 
 	}
 

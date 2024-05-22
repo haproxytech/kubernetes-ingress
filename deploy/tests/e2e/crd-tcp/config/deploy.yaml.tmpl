@@ -1,0 +1,91 @@
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: http-echo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: http-echo
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: http-echo
+    spec:
+      containers:
+        - name: http-echo
+          image: haproxytech/http-echo:latest
+          imagePullPolicy: Never
+          args:
+          - --default-response=hostname
+          ports:
+            - name: http
+              containerPort: 8888
+              protocol: TCP
+            - name: https
+              containerPort: 8443
+              protocol: TCP
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: http-echo
+  annotations:
+    cr-backend: {{ .BackendCrNamespace }}/mybackend
+spec:
+  ipFamilyPolicy: RequireDualStack
+  ports:
+    - name: http
+      protocol: TCP
+      port: 80
+      targetPort: http
+    - name: https
+      protocol: TCP
+      port: 443
+      targetPort: https
+    - name: https2
+      protocol: TCP
+      port: 444
+      targetPort: https
+    - name: https3
+      protocol: TCP
+      port: 445
+      targetPort: https
+  selector:
+    app: http-echo
+---
+---
+kind: Ingress
+apiVersion: networking.k8s.io/v1
+metadata:
+  name: http-echo
+  annotations:
+    ingress.class: haproxy
+spec:
+  rules:
+    - host: {{ .Host }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: http-echo
+                port:
+                  name: http
+          - path: /foo_s
+            pathType: Prefix
+            backend:
+              service:
+                name: http-echo
+                port:
+                  name: https
+          - path: /foo_s2
+            pathType: Prefix
+            backend:
+              service:
+                name: http-echo
+                port:
+                  name: https2

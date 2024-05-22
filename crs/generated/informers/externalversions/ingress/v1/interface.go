@@ -29,6 +29,8 @@ type Interface interface {
 	Defaults() DefaultsInformer
 	// Globals returns a GlobalInformer.
 	Globals() GlobalInformer
+	// TCPs returns a TCPInformer.
+	TCPs() TCPInformer
 }
 
 type version struct {
@@ -55,4 +57,9 @@ func (v *version) Defaults() DefaultsInformer {
 // Globals returns a GlobalInformer.
 func (v *version) Globals() GlobalInformer {
 	return &globalInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
+}
+
+// TCPs returns a TCPInformer.
+func (v *version) TCPs() TCPInformer {
+	return &tCPInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }

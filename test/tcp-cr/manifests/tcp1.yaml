@@ -1,0 +1,15 @@
+---
+tcpmodel:
+  name: service1
+  frontend:
+    name: fe1
+    binds:
+    - port: 1
+      name: acceptproxy
+      accept_proxy: true
+    - port: 11
+  service:
+    name: service1
+    port: 443
+namespace: ns
+creation_timestamp: '2024-05-16T11:45:26.371Z'

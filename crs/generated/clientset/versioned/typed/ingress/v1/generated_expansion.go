@@ -22,3 +22,5 @@ type BackendExpansion interface{}
 type DefaultsExpansion interface{}
 
 type GlobalExpansion interface{}
+
+type TCPExpansion interface{}

@@ -52,6 +52,7 @@ func (c *HAProxyController) initHandlers() {
 		&handler.PatternFiles{},
 		annotations.ConfigSnippetHandler{},
 		c.updateStatusManager,
+		handler.TCPCustomResource{},
 	}
 
 	defer func() { c.updateHandlers = append(c.updateHandlers, handler.Refresh{}) }()

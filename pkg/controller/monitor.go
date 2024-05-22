@@ -83,6 +83,12 @@ func (c *HAProxyController) SyncData() {
 			change = c.store.EventTCPRoute(ns, job.Data.(*store.TCPRoute))
 		case k8ssync.REFERENCEGRANT:
 			change = c.store.EventReferenceGrant(ns, job.Data.(*store.ReferenceGrant))
+		case k8ssync.CR_TCP:
+			var data *store.TCPs
+			if job.Data != nil {
+				data = job.Data.(*store.TCPs) //nolint:forcetypeassert
+			}
+			change = c.store.EventTCPCR(job.Namespace, job.Name, data)
 		}
 		hadChanges = hadChanges || change
 		if job.EventProcessed != nil {

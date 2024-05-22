@@ -17,6 +17,7 @@ package store
 import (
 	"bytes"
 
+	"github.com/haproxytech/client-native/v5/models"
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
 )
 
@@ -152,7 +153,7 @@ func (gwc *GatewayClass) Equal(other *GatewayClass) bool {
 	return gwc == nil && other == nil || (NoNilPointer(gwc, other) &&
 		gwc.Name == other.Name &&
 		gwc.ControllerName == other.ControllerName &&
-		EqualPointers(gwc.Description, other.Description))
+		utils.EqualPointers(gwc.Description, other.Description))
 }
 
 func (gw *Gateway) Equal(other *Gateway) bool {
@@ -202,7 +203,7 @@ func (listener *Listener) Equal(other *Listener) bool {
 		listener.Name == other.Name &&
 		listener.Port == other.Port &&
 		listener.Protocol == other.Protocol &&
-		EqualPointers(listener.Hostname, other.Hostname) &&
+		utils.EqualPointers(listener.Hostname, other.Hostname) &&
 		listener.AllowedRoutes.Equal(other.AllowedRoutes))
 }
 
@@ -212,13 +213,13 @@ func (ar *AllowedRoutes) Equal(other *AllowedRoutes) bool {
 }
 
 func (rn *RouteNamespaces) Equal(other *RouteNamespaces) bool {
-	return rn == nil && other == nil || (NoNilPointer(rn, other) && EqualPointers(rn.From, other.From) && rn.Selector.Equal(other.Selector))
+	return rn == nil && other == nil || (NoNilPointer(rn, other) && utils.EqualPointers(rn.From, other.From) && rn.Selector.Equal(other.Selector))
 }
 
 func (backref *BackendRef) Equal(other *BackendRef) bool {
 	return backref == nil && other == nil ||
 		(NoNilPointer(backref, other) && backref.Name == other.Name && backref.Namespace == other.Namespace &&
-			EqualPointers(backref.Port, other.Port) && EqualPointers(backref.Weight, other.Weight))
+			utils.EqualPointers(backref.Port, other.Port) && utils.EqualPointers(backref.Weight, other.Weight))
 }
 
 func (tcp *TCPRoute) Equal(other *TCPRoute) bool {
@@ -271,24 +272,24 @@ func (refs BackendRefs) Equal(other BackendRefs) bool {
 }
 
 func (labelSelector *LabelSelector) Equal(other *LabelSelector) bool {
-	return labelSelector == nil && other == nil || (NoNilPointer(labelSelector, other) && EqualMap(labelSelector.MatchLabels, other.MatchLabels) && EqualSlice(labelSelector.MatchExpressions, other.MatchExpressions))
+	return labelSelector == nil && other == nil || (NoNilPointer(labelSelector, other) && utils.EqualMap(labelSelector.MatchLabels, other.MatchLabels) && utils.EqualSlice(labelSelector.MatchExpressions, other.MatchExpressions))
 }
 
-func (lsr LabelSelectorRequirement) Equal(other LabelSelectorRequirement) bool {
-	return lsr.Key == other.Key && lsr.Operator == other.Operator && EqualSliceComparable(lsr.Values, other.Values)
+func (lsr LabelSelectorRequirement) Equal(other LabelSelectorRequirement, opt ...models.Options) bool {
+	return lsr.Key == other.Key && lsr.Operator == other.Operator && utils.EqualSliceComparable(lsr.Values, other.Values)
 }
 
 func (ns *Namespace) Equal(other *Namespace) bool {
-	return ns == nil && other == nil || (NoNilPointer(ns, other) && ns.Name == other.Name && EqualMap(ns.Labels, other.Labels))
+	return ns == nil && other == nil || (NoNilPointer(ns, other) && ns.Name == other.Name && utils.EqualMap(ns.Labels, other.Labels))
 }
 
-func (refto ReferenceGrantTo) Equal(other ReferenceGrantTo) bool {
-	return refto.Group == other.Group && refto.Kind == other.Kind && EqualPointers(refto.Name, other.Name)
+func (refto ReferenceGrantTo) Equal(other ReferenceGrantTo, opt ...models.Options) bool {
+	return refto.Group == other.Group && refto.Kind == other.Kind && utils.EqualPointers(refto.Name, other.Name)
 }
 
 func (rf *ReferenceGrant) Equal(other *ReferenceGrant) bool {
 	return rf == nil && other == nil ||
-		(NoNilPointer(rf, other) && rf.Namespace == other.Namespace && rf.Name == other.Name && EqualSliceComparable(rf.From, other.From) && EqualSlice(rf.To, other.To))
+		(NoNilPointer(rf, other) && rf.Namespace == other.Namespace && rf.Name == other.Name && utils.EqualSliceComparable(rf.From, other.From) && utils.EqualSlice(rf.To, other.To))
 }
 
 type ParentRefs []ParentRef
@@ -333,7 +334,7 @@ func (refs ParentRefs) Equal(other ParentRefs) bool {
 }
 
 func (pr ParentRef) Equal(other ParentRef) bool {
-	return pr.Name == other.Name && EqualPointers(pr.Namespace, other.Namespace) && EqualPointers(pr.Port, other.Port) && EqualPointers(pr.SectionName, other.SectionName)
+	return pr.Name == other.Name && utils.EqualPointers(pr.Namespace, other.Namespace) && utils.EqualPointers(pr.Port, other.Port) && utils.EqualPointers(pr.SectionName, other.SectionName)
 }
 
 type RouteGroupKinds []RouteGroupKind
@@ -382,60 +383,6 @@ func (rgks RouteGroupKinds) Equal(other RouteGroupKinds) bool {
 func NoNilPointer[P any](pointers ...*P) bool {
 	for _, pointer := range pointers {
 		if pointer == nil {
-			return false
-		}
-	}
-	return true
-}
-
-type Literal interface {
-	~int | ~uint | ~float32 | ~float64 | ~complex64 | ~complex128 | ~int32 | ~int64 | ~string | ~bool
-}
-
-func EqualPointers[P Literal](a, b *P) bool {
-	return (a == nil && b == nil) || (a != nil && b != nil) && *a == *b
-}
-
-func EqualMap[T, V Literal](mapA, mapB map[T]V) bool {
-	if mapA == nil && mapB == nil {
-		return true
-	}
-	if mapA == nil || mapB == nil {
-		return false
-	}
-	if len(mapA) != len(mapB) {
-		return false
-	}
-	for k, v := range mapA {
-		if mapB[k] != v {
-			return false
-		}
-	}
-	return true
-}
-
-type Equalizer[T any] interface {
-	Equal(t T) bool
-}
-
-func EqualSlice[T Equalizer[T]](sliceA, sliceB []T) bool {
-	if len(sliceA) != len(sliceB) {
-		return false
-	}
-	for i, value := range sliceA {
-		if !value.Equal(sliceB[i]) {
-			return false
-		}
-	}
-	return true
-}
-
-func EqualSliceComparable[T comparable](sliceA, sliceB []T) bool {
-	if len(sliceA) != len(sliceB) {
-		return false
-	}
-	for i, value := range sliceA {
-		if value != sliceB[i] {
 			return false
 		}
 	}

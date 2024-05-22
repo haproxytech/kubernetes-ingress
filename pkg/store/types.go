@@ -105,6 +105,8 @@ type CustomResources struct {
 	Defaults   map[string]*models.Defaults
 	LogTargets map[string]models.LogTargets
 	Backends   map[string]*models.Backend
+	TCPsPerCR  map[string]*TCPs // key is the TCP CR name
+	AllTCPs    TCPResourceList
 }
 
 type IngressClass struct {
@@ -285,7 +287,3 @@ type ReferenceGrantTo struct {
 	Group string
 	Kind  string
 }
-
-const (
-	TCPProtocolType string = "TCP"
-)

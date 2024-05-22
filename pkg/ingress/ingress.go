@@ -22,8 +22,10 @@ import (
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/certs"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/rules"
 	"github.com/haproxytech/kubernetes-ingress/pkg/route"
+	"github.com/haproxytech/kubernetes-ingress/pkg/secret"
 	"github.com/haproxytech/kubernetes-ingress/pkg/service"
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
+	"k8s.io/apimachinery/pkg/types"
 )
 
 type Ingress struct {
@@ -209,18 +211,15 @@ func (i *Ingress) Update(k store.K8s, h haproxy.HAProxy, a annotations.Annotatio
 	}
 	// Ingress secrets
 	logger.Tracef("Ingress '%s/%s': processing secrets...", i.resource.Namespace, i.resource.Name)
+	secretManager := secret.NewManager(k, h)
 	for _, tls := range i.resource.TLS {
-		if _, ok := k.SecretsProcessed[i.resource.Namespace+"/"+tls.SecretName]; ok {
-			continue
+		sec := secret.Secret{
+			Name:       types.NamespacedName{Namespace: i.resource.Namespace, Name: tls.SecretName},
+			SecretType: certs.FT_CERT,
+			OwnerType:  secret.OWNERTYPE_INGRESS,
+			OwnerName:  i.resource.Name,
 		}
-		secret, secErr := k.GetSecret(i.resource.Namespace, tls.SecretName)
-		if secErr != nil {
-			logger.Warningf("Ingress '%s/%s': %s", i.resource.Namespace, i.resource.Name, secErr)
-			continue
-		}
-		k.SecretsProcessed[i.resource.Namespace+"/"+tls.SecretName] = struct{}{}
-		_, err := h.AddSecret(secret, certs.FT_CERT)
-		logger.Error(err)
+		secretManager.Store(sec)
 	}
 	// Ingress annotations
 	if len(i.resource.Rules) == 0 {

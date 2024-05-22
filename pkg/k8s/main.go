@@ -144,6 +144,7 @@ func New(osArgs utils.OSArgs, whitelist map[string]struct{}, publishSvc *utils.N
 	k.registerCoreCR(NewGlobalCR(), CRSGroupVersionV1)
 	k.registerCoreCR(NewDefaultsCR(), CRSGroupVersionV1)
 	k.registerCoreCR(NewBackendCR(), CRSGroupVersionV1)
+	k.registerCoreCR(NewTCPCR(), CRSGroupVersionV1)
 	return k
 }
 

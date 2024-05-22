@@ -1,0 +1,15 @@
+apiVersion: ingress.v1.haproxy.org/v1
+kind: Backend
+metadata:
+  name: mybackend
+spec:
+  config:
+    balance:
+      algorithm: "leastconn"
+    abortonclose: disabled
+    name: foo
+    default_server:
+      verify: none
+      resolve-prefer: ipv4
+      check-sni: example.com
+      sni: str(example.com)

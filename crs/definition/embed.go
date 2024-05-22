@@ -11,10 +11,14 @@ var Globals []byte
 //go:embed ingress.v1.haproxy.org_backends.yaml
 var Backends []byte
 
+//go:embed ingress.v1.haproxy.org_tcps.yaml
+var TCPs []byte
+
 func GetCRDs() map[string][]byte {
 	return map[string][]byte{
 		"defaults.ingress.v1.haproxy.org": Defaults,
 		"globals.ingress.v1.haproxy.org":  Globals,
 		"backends.ingress.v1.haproxy.org": Backends,
+		"tcps.ingress.v1.haproxy.org":     TCPs,
 	}
 }

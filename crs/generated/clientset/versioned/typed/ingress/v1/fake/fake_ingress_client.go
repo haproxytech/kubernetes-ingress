@@ -39,6 +39,10 @@ func (c *FakeIngressV1) Globals(namespace string) v1.GlobalInterface {
 	return &FakeGlobals{c, namespace}
 }
 
+func (c *FakeIngressV1) TCPs(namespace string) v1.TCPInterface {
+	return &FakeTCPs{c, namespace}
+}
+
 // RESTClient returns a RESTClient that is used to communicate
 // with API server by this client implementation.
 func (c *FakeIngressV1) RESTClient() rest.Interface {
