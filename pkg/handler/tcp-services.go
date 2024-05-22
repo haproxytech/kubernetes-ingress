@@ -218,7 +218,7 @@ func (handler TCPServices) updateTCPFrontend(k store.K8s, h haproxy.HAProxy, fro
 		SvcPortInt:       p.port,
 		IsDefaultBackend: true,
 	}
-	if svc, err = service.New(k, path, nil, true, nil); err == nil {
+	if svc, err = service.New(k, path, nil, true, nil, k.ConfigMaps.Main.Annotations); err == nil {
 		err = svc.SetDefaultBackend(k, h, []string{frontend.Name}, a)
 	}
 	return err
