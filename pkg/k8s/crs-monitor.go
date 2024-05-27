@@ -94,9 +94,11 @@ func (k k8s) RunCRSCreationMonitoring(eventChan chan SyncDataEvent, stop chan st
 						continue
 					}
 				}
-				if _, ok := k.crs["core.haproxy.org/v1alpha2 - "+groupKind.Kind]; ok {
-					// we have already created watchers for this CRD
-					continue
+				if groupKind.Group == "core.haproxy.org" {
+					if _, ok := k.crs["core.haproxy.org/v1alpha2 - "+groupKind.Kind]; ok {
+						// we have already created watchers for this CRD
+						continue
+					}
 				}
 				informersSyncedEvent := &[]cache.InformerSynced{}
 				for _, namespace := range k.whiteListedNS {
