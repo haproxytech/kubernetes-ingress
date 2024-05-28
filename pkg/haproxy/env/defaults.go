@@ -11,7 +11,6 @@ func SetGlobal(global *models.Global, logTargets *models.LogTargets, env Env) {
 	// Enforced values
 	global.MasterWorker = true
 	global.Pidfile = env.PIDFile
-	global.Localpeer = "local"
 	runtimeAPIs := []*models.RuntimeAPI{}
 	if env.RuntimeSocket != "" {
 		runtimeAPIs = append(runtimeAPIs, &models.RuntimeAPI{

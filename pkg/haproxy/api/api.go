@@ -67,6 +67,7 @@ type HAProxyClient interface { //nolint:interfacebloat
 	GlobalCfgSnippet(snippet []string) error
 	GetMap(mapFile string) (*models.Map, error)
 	PeerEntryEdit(peerSection string, peer models.PeerEntry) error
+	PeerEntryCreateOrEdit(peerSection string, peer models.PeerEntry) error
 	RefreshBackends() (deleted []string, err error)
 	SetMapContent(mapFile string, payload []string) error
 	SetServerAddrAndState([]RuntimeServerData) error

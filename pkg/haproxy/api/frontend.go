@@ -242,3 +242,16 @@ func (c *clientNative) PeerEntryEdit(peerSection string, peerEntry models.PeerEn
 	c.activeTransactionHasChanges = true
 	return configuration.EditPeerEntry(peerEntry.Name, peerSection, &peerEntry, c.activeTransaction, 0)
 }
+
+func (c *clientNative) PeerEntryCreateOrEdit(peerSection string, peerEntry models.PeerEntry) error {
+	configuration, err := c.nativeAPI.Configuration()
+	if err != nil {
+		return err
+	}
+	c.activeTransactionHasChanges = true
+	err = configuration.EditPeerEntry(peerEntry.Name, peerSection, &peerEntry, c.activeTransaction, 0)
+	if err != nil {
+		err = configuration.CreatePeerEntry(peerSection, &peerEntry, c.activeTransaction, 0)
+	}
+	return err
+}

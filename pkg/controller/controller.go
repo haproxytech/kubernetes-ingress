@@ -57,6 +57,8 @@ type HAProxyController struct {
 	updateStatusManager      status.UpdateStatusManager
 	beforeUpdateHandlers     []UpdateHandler
 	prometheusMetricsManager metrics.PrometheusMetricsManager
+	PodIP                    string
+	Hostname                 string
 }
 
 // Wrapping a Native-Client transaction and commit it.
@@ -80,6 +82,15 @@ func (c *HAProxyController) clientAPIClosure(fn func() error) (err error) {
 
 // Start initializes and runs HAProxyController
 func (c *HAProxyController) Start() {
+	logger.Panic(c.clientAPIClosure(func() error {
+		return c.haproxy.PeerEntryCreateOrEdit("localinstance",
+			models.PeerEntry{
+				Name:    c.Hostname,
+				Address: &c.PodIP,
+				Port:    &c.osArgs.LocalPeerPort,
+			},
+		)
+	}))
 	c.initHandlers()
 	logger.Error(c.setupHAProxyRules())
 	logger.Error(os.Chdir(c.haproxy.Env.CfgDir))
@@ -230,17 +241,6 @@ func (c *HAProxyController) setToReady() {
 				})
 		}))
 	}
-
-	logger.Panic(c.clientAPIClosure(func() error {
-		ip := "127.0.0.1"
-		return c.haproxy.PeerEntryEdit("localinstance",
-			models.PeerEntry{
-				Name:    "local",
-				Address: &ip,
-				Port:    &c.osArgs.LocalPeerPort,
-			},
-		)
-	}))
 
 	logger.Panic(c.clientAPIClosure(func() error {
 		return c.haproxy.FrontendBindCreate("stats",

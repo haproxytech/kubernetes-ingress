@@ -214,3 +214,7 @@ func PointerIfNotDefault[T comparable](arg T) *T {
 	}
 	return nil
 }
+
+func GetIP() string {
+	return os.Getenv("POD_IP")
+}

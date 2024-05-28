@@ -177,6 +177,11 @@ func (builder *Builder) Build() *HAProxyController {
 	if updateStatusManager == nil {
 		updateStatusManager = status.New(builder.clientSet, builder.osArgs.IngressClass, builder.osArgs.EmptyIngressClass)
 	}
+	hostname, _ := os.Hostname()
+	podIP := utils.GetIP()
+	if podIP == "" {
+		podIP = "127.0.0.1"
+	}
 	return &HAProxyController{
 		osArgs:                   builder.osArgs,
 		haproxy:                  haproxy,
@@ -190,6 +195,8 @@ func (builder *Builder) Build() *HAProxyController {
 		gatewayManager:           gatewayManager,
 		updateStatusManager:      updateStatusManager,
 		prometheusMetricsManager: metrics.New(),
+		PodIP:                    podIP,
+		Hostname:                 hostname,
 	}
 }
 
