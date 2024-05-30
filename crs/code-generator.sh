@@ -28,7 +28,9 @@ API_PKGS=${API_PKGS::-1} # remove trailing ","
 VERSION=$(go list -m  k8s.io/api  | cut -d ' ' -f2)
 GOBIN="$(go env GOBIN)"
 gobin="${GOBIN:-$(go env GOPATH)/bin}"
-go install k8s.io/code-generator/cmd/{deepcopy-gen,register-gen,client-gen,lister-gen,informer-gen,defaulter-gen}@$VERSION
+# new version is completly broken (with breaking changes \o/) use old one
+#go install k8s.io/code-generator/cmd/{deepcopy-gen,register-gen,client-gen,lister-gen,informer-gen,defaulter-gen}@$VERSION
+go install k8s.io/code-generator/cmd/{deepcopy-gen,register-gen,client-gen,lister-gen,informer-gen,defaulter-gen}@v0.29.5
 
 # Generate Code
 echo "Generating code for $API_PKGS"
