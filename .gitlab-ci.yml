@@ -75,6 +75,7 @@ gofumpt:
     - test -z "$(git diff 2> /dev/null)" || exit 'Go code not formatted, issue \`make gofumpt\` and commit the result'
 golangci_lint:
   stage: lint
+  retry: 2
   needs: []
   rules:
     - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
