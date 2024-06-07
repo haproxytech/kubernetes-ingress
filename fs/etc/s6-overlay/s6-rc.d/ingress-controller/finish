@@ -1,4 +1,9 @@
 #!/command/with-contenv sh
 
-echo "Ingress Controller exited with code ${1}, taking down the S6 supervision tree"
-exec /run/s6/basedir/bin/halt
+if [ "${1}" -ne 0 ] && [ "${1}" -ne 256 ]; then
+    echo "Ingress Controller exited with fatal code ${1}, taking down the S6 supervision tree"
+
+    exec /run/s6/basedir/bin/halt
+fi
+
+echo "Ingress Controller exited with code ${1}, restarting..."
