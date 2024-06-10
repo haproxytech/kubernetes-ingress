@@ -76,7 +76,7 @@ func convertToStoreTCP(k8sData interface{}, status store.Status) *store.TCPs {
 		Name:      data.GetName(),
 		Items:     make([]*store.TCPResource, 0),
 	}
-	for _, tcp := range data.Spec.TCPs {
+	for _, tcp := range data.Spec {
 		storeTCP.Items = append(storeTCP.Items, &store.TCPResource{
 			CreationTimestamp: data.CreationTimestamp.Time,
 			TCPModel:          tcp,

@@ -35,38 +35,38 @@ kind: TCP
 metadata:
   name: tcp-2
 spec:
-  tcps:
-    - name: tcp-http-echo-445
-      frontend:
-        name: fe-http-echo-445
-        tcplog: true
-        log_format: "%{+Q}o %t %s"
-        binds:
-          - name: v4ssl
-            #address: 1.2.3.4
-            port: 32769
-            ssl: true
-            ssl_certificate: tcp-test-cert
-          - name: v4acceptproxy
-            #address: 172.0.0.2
-            port: 32769
-            accept_proxy: true
-      service:
-        name: "http-echo"
-        port: 445
-    - name: tcp-http-echo-444
-      frontend:
-        name: fe-http-echo-444
-        tcplog: true
-        log_format: "%{+Q}o %t %s %v"
-        binds:
-          - name: v4acceptproxy-2
-            port: 32768
-            accept_proxy: true
-      service:
-        name: "http-echo"
-        port: 444
+  - name: tcp-http-echo-445
+    frontend:
+      name: fe-http-echo-445
+      tcplog: true
+      log_format: "%{+Q}o %t %s"
+      binds:
+        - name: v4ssl
+          #address: 1.2.3.4
+          port: 32769
+          ssl: true
+          ssl_certificate: tcp-test-cert
+        - name: v4acceptproxy
+          #address: 172.0.0.2
+          port: 32769
+          accept_proxy: true
+    service:
+      name: "http-echo"
+      port: 445
+  - name: tcp-http-echo-444
+    frontend:
+      name: fe-http-echo-444
+      tcplog: true
+      log_format: "%{+Q}o %t %s %v"
+      binds:
+        - name: v4acceptproxy-2
+          port: 32768
+          accept_proxy: true
+    service:
+      name: "http-echo"
+      port: 444
 ```
+
 A `TCP` CR contains a list of TCP services definitions.
 Each of them has:
 - a `name`
@@ -102,6 +102,7 @@ The frontend name `tcpcr_test_fe-http-echo-443` follow the pattern:
 - tcpcr_\<namespace\>_\<tcpcr.frontend.name\>
 
 #### Backend sections
+
 ```
 backend test_http-echo_https
   mode tcp
@@ -131,7 +132,6 @@ with the following Kubernetes Service and Ingress manifests:
 <summary>Service</summary>
 
 ```yaml
-
 kind: Service
 apiVersion: v1
 metadata:
@@ -281,24 +281,23 @@ kind: TCP
 metadata:
   name: tcp-1
 spec:
-  tcps:
-    - name: tcp-http-echo-443
-      frontend:
-        name: fe-http-echo-443
-        tcplog: true
-        log_format: "%{+Q}o %t %s"
-        binds:
-          - name: v4
-            ssl: true
-            ssl_certificate: tcp-test-cert
-            port: 32766
-          - name: v4v6
-            address: "::"
-            port: 32766
-            v4v6: true
-      service:
-        name: "http-echo"
-        port: 443
+  - name: tcp-http-echo-443
+    frontend:
+      name: fe-http-echo-443
+      tcplog: true
+      log_format: "%{+Q}o %t %s"
+      binds:
+        - name: v4
+          ssl: true
+          ssl_certificate: tcp-test-cert
+          port: 32766
+        - name: v4v6
+          address: "::"
+          port: 32766
+          v4v6: true
+    service:
+      name: "http-echo"
+      port: 443
 ```
 
 Note that `ssl_certificate` can be:

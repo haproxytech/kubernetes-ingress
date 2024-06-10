@@ -39,1168 +39,1165 @@ spec:
             type: object
           spec:
             description: TCPSpec defines the desired state of a TCPService
-            properties:
-              tcps:
-                items:
+            items:
+              properties:
+                frontend:
                   properties:
-                    frontend:
-                      properties:
-                        accept_invalid_http_request:
-                          description: |-
-                            accept invalid http request
-                            Enum: [enabled disabled]
-                          enum:
-                          - enabled
-                          - disabled
-                          type: string
-                        backlog:
-                          description: backlog
-                          format: int64
-                          type: integer
-                        bind_process:
-                          description: |-
-                            bind process
-                            Pattern: ^[^\s]+$
-                          pattern: ^[^\s]+$
-                          type: string
-                        binds:
-                          items:
+                    accept_invalid_http_request:
+                      description: |-
+                        accept invalid http request
+                        Enum: [enabled disabled]
+                      enum:
+                      - enabled
+                      - disabled
+                      type: string
+                    backlog:
+                      description: backlog
+                      format: int64
+                      type: integer
+                    bind_process:
+                      description: |-
+                        bind process
+                        Pattern: ^[^\s]+$
+                      pattern: ^[^\s]+$
+                      type: string
+                    binds:
+                      items:
+                        description: |-
+                          Bind Bind
+
+
+                          # HAProxy frontend bind configuration
+
+
+                          swagger:model bind
+                        properties:
+                          accept_netscaler_cip:
+                            description: accept netscaler cip
+                            format: int64
+                            type: integer
+                          accept_proxy:
+                            description: accept proxy
+                            type: boolean
+                          address:
                             description: |-
-                              Bind Bind
-
-
-                              # HAProxy frontend bind configuration
-
-
-                              swagger:model bind
-                            properties:
-                              accept_netscaler_cip:
-                                description: accept netscaler cip
-                                format: int64
-                                type: integer
-                              accept_proxy:
-                                description: accept proxy
-                                type: boolean
-                              address:
-                                description: |-
-                                  address
-                                  Example: 127.0.0.1
-                                  Pattern: ^[^\s]+$
-                                pattern: ^[^\s]+$
-                                type: string
-                              allow_0rtt:
-                                description: allow 0rtt
-                                type: boolean
-                              alpn:
-                                description: |-
-                                  alpn
-                                  Pattern: ^[^\s]+$
-                                pattern: ^[^\s]+$
-                                type: string
-                              backlog:
-                                description: backlog
-                                type: string
-                              ca_ignore_err:
-                                description: ca ignore err
-                                type: string
-                              ca_sign_file:
-                                description: ca sign file
-                                type: string
-                              ca_sign_pass:
-                                description: ca sign pass
-                                type: string
-                              ca_verify_file:
-                                description: ca verify file
-                                type: string
-                              ciphers:
-                                description: ciphers
-                                type: string
-                              ciphersuites:
-                                description: ciphersuites
-                                type: string
-                              client_sigalgs:
-                                description: client sigalgs
-                                type: string
-                              crl_file:
-                                description: crl file
-                                type: string
-                              crt_ignore_err:
-                                description: crt ignore err
-                                type: string
-                              crt_list:
-                                description: crt list
-                                type: string
-                              curves:
-                                description: curves
-                                type: string
-                              defer_accept:
-                                description: defer accept
-                                type: boolean
-                              ecdhe:
-                                description: ecdhe
-                                type: string
-                              expose_fd_listeners:
-                                description: expose fd listeners
-                                type: boolean
-                              force_sslv3:
-                                description: force sslv3
-                                type: boolean
-                              force_tlsv10:
-                                description: force tlsv10
-                                type: boolean
-                              force_tlsv11:
-                                description: force tlsv11
-                                type: boolean
-                              force_tlsv12:
-                                description: force tlsv12
-                                type: boolean
-                              force_tlsv13:
-                                description: force tlsv13
-                                type: boolean
-                              generate_certificates:
-                                description: generate certificates
-                                type: boolean
-                              gid:
-                                description: gid
-                                format: int64
-                                type: integer
-                              group:
-                                description: group
-                                type: string
-                              id:
-                                description: id
-                                type: string
-                              interface:
-                                description: interface
-                                type: string
-                              level:
-                                description: |-
-                                  level
-                                  Example: user
-                                  Enum: [user operator admin]
-                                enum:
-                                - user
-                                - operator
-                                - admin
-                                type: string
-                              maxconn:
-                                description: |-
-                                  maxconn
-                                  Example: 1234
-                                format: int64
-                                type: integer
-                              mode:
-                                description: mode
-                                type: string
-                              mss:
-                                description: mss
-                                type: string
-                              name:
-                                description: |-
-                                  name
-                                  Pattern: ^[^\s]+$
-                                pattern: ^[^\s]+$
-                                type: string
-                              namespace:
-                                description: |-
-                                  namespace
-                                  Example: app
-                                type: string
-                              nbconn:
-                                description: nbconn
-                                format: int64
-                                type: integer
-                              nice:
-                                description: |-
-                                  nice
-                                  Example: 1
-                                format: int64
-                                type: integer
-                              no_alpn:
-                                description: no alpn
-                                type: boolean
-                              no_ca_names:
-                                description: no ca names
-                                type: boolean
-                              no_sslv3:
-                                description: no sslv3
-                                type: boolean
-                              no_tls_tickets:
-                                description: no tls tickets
-                                type: boolean
-                              no_tlsv10:
-                                description: no tlsv10
-                                type: boolean
-                              no_tlsv11:
-                                description: no tlsv11
-                                type: boolean
-                              no_tlsv12:
-                                description: no tlsv12
-                                type: boolean
-                              no_tlsv13:
-                                description: no tlsv13
-                                type: boolean
-                              npn:
-                                description: npn
-                                type: string
-                              port:
-                                description: |-
-                                  port
-                                  Example: 80
-                                  Maximum: 65535
-                                  Minimum: 1
-                                format: int64
-                                maximum: 65535
-                                minimum: 1
-                                type: integer
-                              port-range-end:
-                                description: |-
-                                  port range end
-                                  Example: 81
-                                  Maximum: 65535
-                                  Minimum: 1
-                                format: int64
-                                maximum: 65535
-                                minimum: 1
-                                type: integer
-                              prefer_client_ciphers:
-                                description: prefer client ciphers
-                                type: boolean
-                              process:
-                                description: |-
-                                  process
-                                  Pattern: ^[^\s]+$
-                                pattern: ^[^\s]+$
-                                type: string
-                              proto:
-                                description: proto
-                                type: string
-                              quic-cc-algo:
-                                description: |-
-                                  quic cc algo
-                                  Enum: [cubic newreno]
-                                enum:
-                                - cubic
-                                - newreno
-                                type: string
-                              quic-force-retry:
-                                description: quic force retry
-                                type: boolean
-                              quic-socket:
-                                description: |-
-                                  quic socket
-                                  Enum: [connection listener]
-                                enum:
-                                - connection
-                                - listener
-                                type: string
-                              severity_output:
-                                description: |-
-                                  severity output
-                                  Example: none
-                                  Enum: [none number string]
-                                enum:
-                                - none
-                                - number
-                                - string
-                                type: string
-                              sigalgs:
-                                description: sigalgs
-                                type: string
-                              ssl:
-                                description: ssl
-                                type: boolean
-                              ssl_cafile:
-                                description: |-
-                                  ssl cafile
-                                  Pattern: ^[^\s]+$
-                                pattern: ^[^\s]+$
-                                type: string
-                              ssl_certificate:
-                                description: |-
-                                  ssl certificate
-                                  Pattern: ^[^\s]+$
-                                pattern: ^[^\s]+$
-                                type: string
-                              ssl_max_ver:
-                                description: |-
-                                  ssl max ver
-                                  Enum: [SSLv3 TLSv1.0 TLSv1.1 TLSv1.2 TLSv1.3]
-                                enum:
-                                - SSLv3
-                                - TLSv1.0
-                                - TLSv1.1
-                                - TLSv1.2
-                                - TLSv1.3
-                                type: string
-                              ssl_min_ver:
-                                description: |-
-                                  ssl min ver
-                                  Enum: [SSLv3 TLSv1.0 TLSv1.1 TLSv1.2 TLSv1.3]
-                                enum:
-                                - SSLv3
-                                - TLSv1.0
-                                - TLSv1.1
-                                - TLSv1.2
-                                - TLSv1.3
-                                type: string
-                              strict_sni:
-                                description: strict sni
-                                type: boolean
-                              tcp_user_timeout:
-                                description: tcp user timeout
-                                format: int64
-                                type: integer
-                              tfo:
-                                description: tfo
-                                type: boolean
-                              thread:
-                                description: thread
-                                type: string
-                              tls_ticket_keys:
-                                description: tls ticket keys
-                                type: string
-                              transparent:
-                                description: transparent
-                                type: boolean
-                              uid:
-                                description: uid
-                                type: string
-                              user:
-                                description: user
-                                type: string
-                              v4v6:
-                                description: v4v6
-                                type: boolean
-                              v6only:
-                                description: v6only
-                                type: boolean
-                              verify:
-                                description: |-
-                                  verify
-                                  Example: none
-                                  Enum: [none optional required]
-                                enum:
-                                - none
-                                - optional
-                                - required
-                                type: string
-                            type: object
-                          type: array
-                        clflog:
-                          description: clflog
-                          type: boolean
-                        client_fin_timeout:
-                          description: client fin timeout
-                          format: int64
-                          type: integer
-                        client_timeout:
-                          description: client timeout
-                          format: int64
-                          type: integer
-                        clitcpka:
+                              address
+                              Example: 127.0.0.1
+                              Pattern: ^[^\s]+$
+                            pattern: ^[^\s]+$
+                            type: string
+                          allow_0rtt:
+                            description: allow 0rtt
+                            type: boolean
+                          alpn:
+                            description: |-
+                              alpn
+                              Pattern: ^[^\s]+$
+                            pattern: ^[^\s]+$
+                            type: string
+                          backlog:
+                            description: backlog
+                            type: string
+                          ca_ignore_err:
+                            description: ca ignore err
+                            type: string
+                          ca_sign_file:
+                            description: ca sign file
+                            type: string
+                          ca_sign_pass:
+                            description: ca sign pass
+                            type: string
+                          ca_verify_file:
+                            description: ca verify file
+                            type: string
+                          ciphers:
+                            description: ciphers
+                            type: string
+                          ciphersuites:
+                            description: ciphersuites
+                            type: string
+                          client_sigalgs:
+                            description: client sigalgs
+                            type: string
+                          crl_file:
+                            description: crl file
+                            type: string
+                          crt_ignore_err:
+                            description: crt ignore err
+                            type: string
+                          crt_list:
+                            description: crt list
+                            type: string
+                          curves:
+                            description: curves
+                            type: string
+                          defer_accept:
+                            description: defer accept
+                            type: boolean
+                          ecdhe:
+                            description: ecdhe
+                            type: string
+                          expose_fd_listeners:
+                            description: expose fd listeners
+                            type: boolean
+                          force_sslv3:
+                            description: force sslv3
+                            type: boolean
+                          force_tlsv10:
+                            description: force tlsv10
+                            type: boolean
+                          force_tlsv11:
+                            description: force tlsv11
+                            type: boolean
+                          force_tlsv12:
+                            description: force tlsv12
+                            type: boolean
+                          force_tlsv13:
+                            description: force tlsv13
+                            type: boolean
+                          generate_certificates:
+                            description: generate certificates
+                            type: boolean
+                          gid:
+                            description: gid
+                            format: int64
+                            type: integer
+                          group:
+                            description: group
+                            type: string
+                          id:
+                            description: id
+                            type: string
+                          interface:
+                            description: interface
+                            type: string
+                          level:
+                            description: |-
+                              level
+                              Example: user
+                              Enum: [user operator admin]
+                            enum:
+                            - user
+                            - operator
+                            - admin
+                            type: string
+                          maxconn:
+                            description: |-
+                              maxconn
+                              Example: 1234
+                            format: int64
+                            type: integer
+                          mode:
+                            description: mode
+                            type: string
+                          mss:
+                            description: mss
+                            type: string
+                          name:
+                            description: |-
+                              name
+                              Pattern: ^[^\s]+$
+                            pattern: ^[^\s]+$
+                            type: string
+                          namespace:
+                            description: |-
+                              namespace
+                              Example: app
+                            type: string
+                          nbconn:
+                            description: nbconn
+                            format: int64
+                            type: integer
+                          nice:
+                            description: |-
+                              nice
+                              Example: 1
+                            format: int64
+                            type: integer
+                          no_alpn:
+                            description: no alpn
+                            type: boolean
+                          no_ca_names:
+                            description: no ca names
+                            type: boolean
+                          no_sslv3:
+                            description: no sslv3
+                            type: boolean
+                          no_tls_tickets:
+                            description: no tls tickets
+                            type: boolean
+                          no_tlsv10:
+                            description: no tlsv10
+                            type: boolean
+                          no_tlsv11:
+                            description: no tlsv11
+                            type: boolean
+                          no_tlsv12:
+                            description: no tlsv12
+                            type: boolean
+                          no_tlsv13:
+                            description: no tlsv13
+                            type: boolean
+                          npn:
+                            description: npn
+                            type: string
+                          port:
+                            description: |-
+                              port
+                              Example: 80
+                              Maximum: 65535
+                              Minimum: 1
+                            format: int64
+                            maximum: 65535
+                            minimum: 1
+                            type: integer
+                          port-range-end:
+                            description: |-
+                              port range end
+                              Example: 81
+                              Maximum: 65535
+                              Minimum: 1
+                            format: int64
+                            maximum: 65535
+                            minimum: 1
+                            type: integer
+                          prefer_client_ciphers:
+                            description: prefer client ciphers
+                            type: boolean
+                          process:
+                            description: |-
+                              process
+                              Pattern: ^[^\s]+$
+                            pattern: ^[^\s]+$
+                            type: string
+                          proto:
+                            description: proto
+                            type: string
+                          quic-cc-algo:
+                            description: |-
+                              quic cc algo
+                              Enum: [cubic newreno]
+                            enum:
+                            - cubic
+                            - newreno
+                            type: string
+                          quic-force-retry:
+                            description: quic force retry
+                            type: boolean
+                          quic-socket:
+                            description: |-
+                              quic socket
+                              Enum: [connection listener]
+                            enum:
+                            - connection
+                            - listener
+                            type: string
+                          severity_output:
+                            description: |-
+                              severity output
+                              Example: none
+                              Enum: [none number string]
+                            enum:
+                            - none
+                            - number
+                            - string
+                            type: string
+                          sigalgs:
+                            description: sigalgs
+                            type: string
+                          ssl:
+                            description: ssl
+                            type: boolean
+                          ssl_cafile:
+                            description: |-
+                              ssl cafile
+                              Pattern: ^[^\s]+$
+                            pattern: ^[^\s]+$
+                            type: string
+                          ssl_certificate:
+                            description: |-
+                              ssl certificate
+                              Pattern: ^[^\s]+$
+                            pattern: ^[^\s]+$
+                            type: string
+                          ssl_max_ver:
+                            description: |-
+                              ssl max ver
+                              Enum: [SSLv3 TLSv1.0 TLSv1.1 TLSv1.2 TLSv1.3]
+                            enum:
+                            - SSLv3
+                            - TLSv1.0
+                            - TLSv1.1
+                            - TLSv1.2
+                            - TLSv1.3
+                            type: string
+                          ssl_min_ver:
+                            description: |-
+                              ssl min ver
+                              Enum: [SSLv3 TLSv1.0 TLSv1.1 TLSv1.2 TLSv1.3]
+                            enum:
+                            - SSLv3
+                            - TLSv1.0
+                            - TLSv1.1
+                            - TLSv1.2
+                            - TLSv1.3
+                            type: string
+                          strict_sni:
+                            description: strict sni
+                            type: boolean
+                          tcp_user_timeout:
+                            description: tcp user timeout
+                            format: int64
+                            type: integer
+                          tfo:
+                            description: tfo
+                            type: boolean
+                          thread:
+                            description: thread
+                            type: string
+                          tls_ticket_keys:
+                            description: tls ticket keys
+                            type: string
+                          transparent:
+                            description: transparent
+                            type: boolean
+                          uid:
+                            description: uid
+                            type: string
+                          user:
+                            description: user
+                            type: string
+                          v4v6:
+                            description: v4v6
+                            type: boolean
+                          v6only:
+                            description: v6only
+                            type: boolean
+                          verify:
+                            description: |-
+                              verify
+                              Example: none
+                              Enum: [none optional required]
+                            enum:
+                            - none
+                            - optional
+                            - required
+                            type: string
+                        type: object
+                      type: array
+                    clflog:
+                      description: clflog
+                      type: boolean
+                    client_fin_timeout:
+                      description: client fin timeout
+                      format: int64
+                      type: integer
+                    client_timeout:
+                      description: client timeout
+                      format: int64
+                      type: integer
+                    clitcpka:
+                      description: |-
+                        clitcpka
+                        Enum: [enabled disabled]
+                      enum:
+                      - enabled
+                      - disabled
+                      type: string
+                    clitcpka_cnt:
+                      description: clitcpka cnt
+                      format: int64
+                      type: integer
+                    clitcpka_idle:
+                      description: clitcpka idle
+                      format: int64
+                      type: integer
+                    clitcpka_intvl:
+                      description: clitcpka intvl
+                      format: int64
+                      type: integer
+                    compression:
+                      description: compression
+                      properties:
+                        algo-req:
                           description: |-
-                            clitcpka
-                            Enum: [enabled disabled]
+                            algo req
+                            Enum: [identity gzip deflate raw-deflate]
                           enum:
-                          - enabled
-                          - disabled
+                          - identity
+                          - gzip
+                          - deflate
+                          - raw-deflate
                           type: string
-                        clitcpka_cnt:
-                          description: clitcpka cnt
-                          format: int64
-                          type: integer
-                        clitcpka_idle:
-                          description: clitcpka idle
-                          format: int64
-                          type: integer
-                        clitcpka_intvl:
-                          description: clitcpka intvl
-                          format: int64
-                          type: integer
-                        compression:
-                          description: compression
-                          properties:
-                            algo-req:
-                              description: |-
-                                algo req
-                                Enum: [identity gzip deflate raw-deflate]
-                              enum:
-                              - identity
-                              - gzip
-                              - deflate
-                              - raw-deflate
-                              type: string
-                            algorithms:
-                              description: algorithms
-                              items:
-                                type: string
-                              type: array
-                            algos-res:
-                              description: algos res
-                              items:
-                                type: string
-                              type: array
-                            direction:
-                              description: |-
-                                direction
-                                Enum: [request response both]
-                              enum:
-                              - request
-                              - response
-                              - both
-                              type: string
-                            offload:
-                              description: offload
-                              type: boolean
-                            types:
-                              description: types
-                              items:
-                                type: string
-                              type: array
-                            types-req:
-                              description: types req
-                              items:
-                                type: string
-                              type: array
-                            types-res:
-                              description: types res
-                              items:
-                                type: string
-                              type: array
-                          type: object
-                        contstats:
+                        algorithms:
+                          description: algorithms
+                          items:
+                            type: string
+                          type: array
+                        algos-res:
+                          description: algos res
+                          items:
+                            type: string
+                          type: array
+                        direction:
                           description: |-
-                            contstats
+                            direction
+                            Enum: [request response both]
+                          enum:
+                          - request
+                          - response
+                          - both
+                          type: string
+                        offload:
+                          description: offload
+                          type: boolean
+                        types:
+                          description: types
+                          items:
+                            type: string
+                          type: array
+                        types-req:
+                          description: types req
+                          items:
+                            type: string
+                          type: array
+                        types-res:
+                          description: types res
+                          items:
+                            type: string
+                          type: array
+                      type: object
+                    contstats:
+                      description: |-
+                        contstats
+                        Enum: [enabled]
+                      enum:
+                      - enabled
+                      type: string
+                    default_backend:
+                      description: |-
+                        default backend
+                        Pattern: ^[A-Za-z0-9-_.:]+$
+                      pattern: ^[A-Za-z0-9-_.:]+$
+                      type: string
+                    description:
+                      description: description
+                      type: string
+                    disable_h2_upgrade:
+                      description: |-
+                        disable h2 upgrade
+                        Enum: [enabled disabled]
+                      enum:
+                      - enabled
+                      - disabled
+                      type: string
+                    disabled:
+                      description: disabled
+                      type: boolean
+                    dontlog_normal:
+                      description: |-
+                        dontlog normal
+                        Enum: [enabled disabled]
+                      enum:
+                      - enabled
+                      - disabled
+                      type: string
+                    dontlognull:
+                      description: |-
+                        dontlognull
+                        Enum: [enabled disabled]
+                      enum:
+                      - enabled
+                      - disabled
+                      type: string
+                    email_alert:
+                      description: email alert
+                      properties:
+                        from:
+                          description: |-
+                            from
+                            Required: true
+                            Pattern: ^\S+@\S+$
+                          pattern: ^\S+@\S+$
+                          type: string
+                        level:
+                          description: |-
+                            level
+                            Enum: [emerg alert crit err warning notice info debug]
+                          enum:
+                          - emerg
+                          - alert
+                          - crit
+                          - err
+                          - warning
+                          - notice
+                          - info
+                          - debug
+                          type: string
+                        mailers:
+                          description: |-
+                            mailers
+                            Required: true
+                          type: string
+                        myhostname:
+                          description: myhostname
+                          type: string
+                        to:
+                          description: |-
+                            to
+                            Required: true
+                            Pattern: ^\S+@\S+$
+                          pattern: ^\S+@\S+$
+                          type: string
+                      required:
+                      - from
+                      - mailers
+                      - to
+                      type: object
+                    enabled:
+                      description: enabled
+                      type: boolean
+                    error_files:
+                      description: error files
+                      items:
+                        description: |-
+                          Errorfile errorfile
+
+
+                          swagger:model errorfile
+                        properties:
+                          code:
+                            description: |-
+                              code
+                              Enum: [200 400 401 403 404 405 407 408 410 413 425 429 500 501 502 503 504]
+                            enum:
+                            - 200
+                            - 400
+                            - 401
+                            - 403
+                            - 404
+                            - 405
+                            - 407
+                            - 408
+                            - 410
+                            - 413
+                            - 425
+                            - 429
+                            - 500
+                            - 501
+                            - 502
+                            - 503
+                            - 504
+                            format: int64
+                            type: integer
+                          file:
+                            description: file
+                            type: string
+                        type: object
+                      type: array
+                    error_log_format:
+                      description: error log format
+                      type: string
+                    errorfiles_from_http_errors:
+                      description: error files from HTTP errors
+                      items:
+                        description: |-
+                          Errorfiles errorfiles
+
+
+                          swagger:model errorfiles
+                        properties:
+                          codes:
+                            description: codes
+                            items:
+                              format: int64
+                              type: integer
+                            type: array
+                          name:
+                            description: name
+                            type: string
+                        type: object
+                      type: array
+                    errorloc302:
+                      description: errorloc302
+                      properties:
+                        code:
+                          description: |-
+                            code
+                            Required: true
+                            Enum: [200 400 401 403 404 405 407 408 410 413 425 429 500 501 502 503 504]
+                          enum:
+                          - 200
+                          - 400
+                          - 401
+                          - 403
+                          - 404
+                          - 405
+                          - 407
+                          - 408
+                          - 410
+                          - 413
+                          - 425
+                          - 429
+                          - 500
+                          - 501
+                          - 502
+                          - 503
+                          - 504
+                          format: int64
+                          type: integer
+                        url:
+                          description: |-
+                            url
+                            Required: true
+                          type: string
+                      required:
+                      - code
+                      - url
+                      type: object
+                    errorloc303:
+                      description: errorloc303
+                      properties:
+                        code:
+                          description: |-
+                            code
+                            Required: true
+                            Enum: [200 400 401 403 404 405 407 408 410 413 425 429 500 501 502 503 504]
+                          enum:
+                          - 200
+                          - 400
+                          - 401
+                          - 403
+                          - 404
+                          - 405
+                          - 407
+                          - 408
+                          - 410
+                          - 413
+                          - 425
+                          - 429
+                          - 500
+                          - 501
+                          - 502
+                          - 503
+                          - 504
+                          format: int64
+                          type: integer
+                        url:
+                          description: |-
+                            url
+                            Required: true
+                          type: string
+                      required:
+                      - code
+                      - url
+                      type: object
+                    forwardfor:
+                      description: forwardfor
+                      properties:
+                        enabled:
+                          description: |-
+                            enabled
+                            Required: true
                             Enum: [enabled]
                           enum:
                           - enabled
                           type: string
-                        default_backend:
+                        except:
                           description: |-
-                            default backend
-                            Pattern: ^[A-Za-z0-9-_.:]+$
-                          pattern: ^[A-Za-z0-9-_.:]+$
+                            except
+                            Pattern: ^[^\s]+$
+                          pattern: ^[^\s]+$
                           type: string
-                        description:
-                          description: description
-                          type: string
-                        disable_h2_upgrade:
+                        header:
                           description: |-
-                            disable h2 upgrade
-                            Enum: [enabled disabled]
-                          enum:
-                          - enabled
-                          - disabled
+                            header
+                            Pattern: ^[^\s]+$
+                          pattern: ^[^\s]+$
                           type: string
-                        disabled:
-                          description: disabled
+                        ifnone:
+                          description: ifnone
                           type: boolean
-                        dontlog_normal:
+                      required:
+                      - enabled
+                      type: object
+                    from:
+                      description: |-
+                        from
+                        Pattern: ^[A-Za-z0-9-_.:]+$
+                      pattern: ^[A-Za-z0-9-_.:]+$
+                      type: string
+                    h1_case_adjust_bogus_client:
+                      description: |-
+                        h1 case adjust bogus client
+                        Enum: [enabled disabled]
+                      enum:
+                      - enabled
+                      - disabled
+                      type: string
+                    http-buffer-request:
+                      description: |-
+                        http buffer request
+                        Enum: [enabled disabled]
+                      enum:
+                      - enabled
+                      - disabled
+                      type: string
+                    http-use-htx:
+                      description: |-
+                        http use htx
+                        Enum: [enabled disabled]
+                      enum:
+                      - enabled
+                      - disabled
+                      type: string
+                    http_connection_mode:
+                      description: |-
+                        http connection mode
+                        Enum: [httpclose http-server-close http-keep-alive]
+                      enum:
+                      - httpclose
+                      - http-server-close
+                      - http-keep-alive
+                      type: string
+                    http_ignore_probes:
+                      description: |-
+                        http ignore probes
+                        Enum: [enabled disabled]
+                      enum:
+                      - enabled
+                      - disabled
+                      type: string
+                    http_keep_alive_timeout:
+                      description: http keep alive timeout
+                      format: int64
+                      type: integer
+                    http_no_delay:
+                      description: |-
+                        http no delay
+                        Enum: [enabled disabled]
+                      enum:
+                      - enabled
+                      - disabled
+                      type: string
+                    http_request_timeout:
+                      description: http request timeout
+                      format: int64
+                      type: integer
+                    http_restrict_req_hdr_names:
+                      description: |-
+                        http restrict req hdr names
+                        Enum: [preserve delete reject]
+                      enum:
+                      - preserve
+                      - delete
+                      - reject
+                      type: string
+                    http_use_proxy_header:
+                      description: |-
+                        http use proxy header
+                        Enum: [enabled disabled]
+                      enum:
+                      - enabled
+                      - disabled
+                      type: string
+                    httplog:
+                      description: httplog
+                      type: boolean
+                    httpslog:
+                      description: |-
+                        httpslog
+                        Enum: [enabled disabled]
+                      enum:
+                      - enabled
+                      - disabled
+                      type: string
+                    id:
+                      description: id
+                      format: int64
+                      type: integer
+                    idle_close_on_response:
+                      description: |-
+                        idle close on response
+                        Enum: [enabled disabled]
+                      enum:
+                      - enabled
+                      - disabled
+                      type: string
+                    independent_streams:
+                      description: |-
+                        independent streams
+                        Enum: [enabled disabled]
+                      enum:
+                      - enabled
+                      - disabled
+                      type: string
+                    log_format:
+                      description: log format
+                      type: string
+                    log_format_sd:
+                      description: log format sd
+                      type: string
+                    log_separate_errors:
+                      description: |-
+                        log separate errors
+                        Enum: [enabled disabled]
+                      enum:
+                      - enabled
+                      - disabled
+                      type: string
+                    log_tag:
+                      description: |-
+                        log tag
+                        Pattern: ^[A-Za-z0-9-_.:]+$
+                      pattern: ^[A-Za-z0-9-_.:]+$
+                      type: string
+                    logasap:
+                      description: |-
+                        logasap
+                        Enum: [enabled disabled]
+                      enum:
+                      - enabled
+                      - disabled
+                      type: string
+                    maxconn:
+                      description: maxconn
+                      format: int64
+                      type: integer
+                    mode:
+                      description: |-
+                        mode
+                        Enum: [http tcp]
+                      enum:
+                      - http
+                      - tcp
+                      type: string
+                    monitor_fail:
+                      description: monitor fail
+                      properties:
+                        cond:
                           description: |-
-                            dontlog normal
-                            Enum: [enabled disabled]
-                          enum:
-                          - enabled
-                          - disabled
-                          type: string
-                        dontlognull:
-                          description: |-
-                            dontlognull
-                            Enum: [enabled disabled]
-                          enum:
-                          - enabled
-                          - disabled
-                          type: string
-                        email_alert:
-                          description: email alert
-                          properties:
-                            from:
-                              description: |-
-                                from
-                                Required: true
-                                Pattern: ^\S+@\S+$
-                              pattern: ^\S+@\S+$
-                              type: string
-                            level:
-                              description: |-
-                                level
-                                Enum: [emerg alert crit err warning notice info debug]
-                              enum:
-                              - emerg
-                              - alert
-                              - crit
-                              - err
-                              - warning
-                              - notice
-                              - info
-                              - debug
-                              type: string
-                            mailers:
-                              description: |-
-                                mailers
-                                Required: true
-                              type: string
-                            myhostname:
-                              description: myhostname
-                              type: string
-                            to:
-                              description: |-
-                                to
-                                Required: true
-                                Pattern: ^\S+@\S+$
-                              pattern: ^\S+@\S+$
-                              type: string
-                          required:
-                          - from
-                          - mailers
-                          - to
-                          type: object
-                        enabled:
-                          description: enabled
-                          type: boolean
-                        error_files:
-                          description: error files
-                          items:
-                            description: |-
-                              Errorfile errorfile
-
-
-                              swagger:model errorfile
-                            properties:
-                              code:
-                                description: |-
-                                  code
-                                  Enum: [200 400 401 403 404 405 407 408 410 413 425 429 500 501 502 503 504]
-                                enum:
-                                - 200
-                                - 400
-                                - 401
-                                - 403
-                                - 404
-                                - 405
-                                - 407
-                                - 408
-                                - 410
-                                - 413
-                                - 425
-                                - 429
-                                - 500
-                                - 501
-                                - 502
-                                - 503
-                                - 504
-                                format: int64
-                                type: integer
-                              file:
-                                description: file
-                                type: string
-                            type: object
-                          type: array
-                        error_log_format:
-                          description: error log format
-                          type: string
-                        errorfiles_from_http_errors:
-                          description: error files from HTTP errors
-                          items:
-                            description: |-
-                              Errorfiles errorfiles
-
-
-                              swagger:model errorfiles
-                            properties:
-                              codes:
-                                description: codes
-                                items:
-                                  format: int64
-                                  type: integer
-                                type: array
-                              name:
-                                description: name
-                                type: string
-                            type: object
-                          type: array
-                        errorloc302:
-                          description: errorloc302
-                          properties:
-                            code:
-                              description: |-
-                                code
-                                Required: true
-                                Enum: [200 400 401 403 404 405 407 408 410 413 425 429 500 501 502 503 504]
-                              enum:
-                              - 200
-                              - 400
-                              - 401
-                              - 403
-                              - 404
-                              - 405
-                              - 407
-                              - 408
-                              - 410
-                              - 413
-                              - 425
-                              - 429
-                              - 500
-                              - 501
-                              - 502
-                              - 503
-                              - 504
-                              format: int64
-                              type: integer
-                            url:
-                              description: |-
-                                url
-                                Required: true
-                              type: string
-                          required:
-                          - code
-                          - url
-                          type: object
-                        errorloc303:
-                          description: errorloc303
-                          properties:
-                            code:
-                              description: |-
-                                code
-                                Required: true
-                                Enum: [200 400 401 403 404 405 407 408 410 413 425 429 500 501 502 503 504]
-                              enum:
-                              - 200
-                              - 400
-                              - 401
-                              - 403
-                              - 404
-                              - 405
-                              - 407
-                              - 408
-                              - 410
-                              - 413
-                              - 425
-                              - 429
-                              - 500
-                              - 501
-                              - 502
-                              - 503
-                              - 504
-                              format: int64
-                              type: integer
-                            url:
-                              description: |-
-                                url
-                                Required: true
-                              type: string
-                          required:
-                          - code
-                          - url
-                          type: object
-                        forwardfor:
-                          description: forwardfor
-                          properties:
-                            enabled:
-                              description: |-
-                                enabled
-                                Required: true
-                                Enum: [enabled]
-                              enum:
-                              - enabled
-                              type: string
-                            except:
-                              description: |-
-                                except
-                                Pattern: ^[^\s]+$
-                              pattern: ^[^\s]+$
-                              type: string
-                            header:
-                              description: |-
-                                header
-                                Pattern: ^[^\s]+$
-                              pattern: ^[^\s]+$
-                              type: string
-                            ifnone:
-                              description: ifnone
-                              type: boolean
-                          required:
-                          - enabled
-                          type: object
-                        from:
-                          description: |-
-                            from
-                            Pattern: ^[A-Za-z0-9-_.:]+$
-                          pattern: ^[A-Za-z0-9-_.:]+$
-                          type: string
-                        h1_case_adjust_bogus_client:
-                          description: |-
-                            h1 case adjust bogus client
-                            Enum: [enabled disabled]
-                          enum:
-                          - enabled
-                          - disabled
-                          type: string
-                        http-buffer-request:
-                          description: |-
-                            http buffer request
-                            Enum: [enabled disabled]
-                          enum:
-                          - enabled
-                          - disabled
-                          type: string
-                        http-use-htx:
-                          description: |-
-                            http use htx
-                            Enum: [enabled disabled]
-                          enum:
-                          - enabled
-                          - disabled
-                          type: string
-                        http_connection_mode:
-                          description: |-
-                            http connection mode
-                            Enum: [httpclose http-server-close http-keep-alive]
-                          enum:
-                          - httpclose
-                          - http-server-close
-                          - http-keep-alive
-                          type: string
-                        http_ignore_probes:
-                          description: |-
-                            http ignore probes
-                            Enum: [enabled disabled]
-                          enum:
-                          - enabled
-                          - disabled
-                          type: string
-                        http_keep_alive_timeout:
-                          description: http keep alive timeout
-                          format: int64
-                          type: integer
-                        http_no_delay:
-                          description: |-
-                            http no delay
-                            Enum: [enabled disabled]
-                          enum:
-                          - enabled
-                          - disabled
-                          type: string
-                        http_request_timeout:
-                          description: http request timeout
-                          format: int64
-                          type: integer
-                        http_restrict_req_hdr_names:
-                          description: |-
-                            http restrict req hdr names
-                            Enum: [preserve delete reject]
-                          enum:
-                          - preserve
-                          - delete
-                          - reject
-                          type: string
-                        http_use_proxy_header:
-                          description: |-
-                            http use proxy header
-                            Enum: [enabled disabled]
-                          enum:
-                          - enabled
-                          - disabled
-                          type: string
-                        httplog:
-                          description: httplog
-                          type: boolean
-                        httpslog:
-                          description: |-
-                            httpslog
-                            Enum: [enabled disabled]
-                          enum:
-                          - enabled
-                          - disabled
-                          type: string
-                        id:
-                          description: id
-                          format: int64
-                          type: integer
-                        idle_close_on_response:
-                          description: |-
-                            idle close on response
-                            Enum: [enabled disabled]
-                          enum:
-                          - enabled
-                          - disabled
-                          type: string
-                        independent_streams:
-                          description: |-
-                            independent streams
-                            Enum: [enabled disabled]
-                          enum:
-                          - enabled
-                          - disabled
-                          type: string
-                        log_format:
-                          description: log format
-                          type: string
-                        log_format_sd:
-                          description: log format sd
-                          type: string
-                        log_separate_errors:
-                          description: |-
-                            log separate errors
-                            Enum: [enabled disabled]
-                          enum:
-                          - enabled
-                          - disabled
-                          type: string
-                        log_tag:
-                          description: |-
-                            log tag
-                            Pattern: ^[A-Za-z0-9-_.:]+$
-                          pattern: ^[A-Za-z0-9-_.:]+$
-                          type: string
-                        logasap:
-                          description: |-
-                            logasap
-                            Enum: [enabled disabled]
-                          enum:
-                          - enabled
-                          - disabled
-                          type: string
-                        maxconn:
-                          description: maxconn
-                          format: int64
-                          type: integer
-                        mode:
-                          description: |-
-                            mode
-                            Enum: [http tcp]
-                          enum:
-                          - http
-                          - tcp
-                          type: string
-                        monitor_fail:
-                          description: monitor fail
-                          properties:
-                            cond:
-                              description: |-
-                                cond
-                                Required: true
-                                Enum: [if unless]
-                              enum:
-                              - if
-                              - unless
-                              type: string
-                            cond_test:
-                              description: |-
-                                cond test
-                                Required: true
-                              type: string
-                          required:
-                          - cond
-                          - cond_test
-                          type: object
-                        monitor_uri:
-                          description: monitor uri
-                          type: string
-                        name:
-                          description: |-
-                            name
+                            cond
                             Required: true
-                            Pattern: ^[A-Za-z0-9-_.:]+$
-                          pattern: ^[A-Za-z0-9-_.:]+$
-                          type: string
-                        nolinger:
-                          description: |-
-                            nolinger
-                            Enum: [enabled disabled]
+                            Enum: [if unless]
                           enum:
-                          - enabled
-                          - disabled
+                          - if
+                          - unless
                           type: string
-                        originalto:
-                          description: originalto
-                          properties:
-                            enabled:
-                              description: |-
-                                enabled
-                                Required: true
-                                Enum: [enabled]
-                              enum:
-                              - enabled
-                              type: string
-                            except:
-                              description: |-
-                                except
-                                Pattern: ^[^\s]+$
-                              pattern: ^[^\s]+$
-                              type: string
-                            header:
-                              description: |-
-                                header
-                                Pattern: ^[^\s]+$
-                              pattern: ^[^\s]+$
-                              type: string
-                          required:
-                          - enabled
-                          type: object
-                        socket_stats:
+                        cond_test:
                           description: |-
-                            socket stats
-                            Enum: [enabled disabled]
-                          enum:
-                          - enabled
-                          - disabled
-                          type: string
-                        splice_auto:
-                          description: |-
-                            splice auto
-                            Enum: [enabled disabled]
-                          enum:
-                          - enabled
-                          - disabled
-                          type: string
-                        splice_request:
-                          description: |-
-                            splice request
-                            Enum: [enabled disabled]
-                          enum:
-                          - enabled
-                          - disabled
-                          type: string
-                        splice_response:
-                          description: |-
-                            splice response
-                            Enum: [enabled disabled]
-                          enum:
-                          - enabled
-                          - disabled
-                          type: string
-                        stats_options:
-                          description: stats options
-                          properties:
-                            stats_admin:
-                              description: stats admin
-                              type: boolean
-                            stats_admin_cond:
-                              description: |-
-                                stats admin cond
-                                Enum: [if unless]
-                              enum:
-                              - if
-                              - unless
-                              type: string
-                            stats_admin_cond_test:
-                              description: stats admin cond test
-                              type: string
-                            stats_auths:
-                              description: stats auths
-                              items:
-                                description: |-
-                                  StatsAuth stats auth
-
-
-                                  swagger:model stats_auth
-                                properties:
-                                  passwd:
-                                    description: |-
-                                      passwd
-                                      Required: true
-                                    type: string
-                                  user:
-                                    description: |-
-                                      user
-                                      Required: true
-                                    type: string
-                                required:
-                                - passwd
-                                - user
-                                type: object
-                              type: array
-                            stats_enable:
-                              description: stats enable
-                              type: boolean
-                            stats_hide_version:
-                              description: stats hide version
-                              type: boolean
-                            stats_http_requests:
-                              description: stats http requests
-                              items:
-                                description: |-
-                                  StatsHTTPRequest stats http request
-
-
-                                  swagger:model stats_http_request
-                                properties:
-                                  cond:
-                                    description: cond
-                                    type: string
-                                  cond_test:
-                                    description: cond test
-                                    type: string
-                                  realm:
-                                    description: realm
-                                    type: string
-                                  type:
-                                    description: |-
-                                      type
-                                      Required: true
-                                      Enum: [allow deny auth]
-                                    enum:
-                                    - allow
-                                    - deny
-                                    - auth
-                                    type: string
-                                required:
-                                - type
-                                type: object
-                              type: array
-                            stats_maxconn:
-                              description: |-
-                                stats maxconn
-                                Minimum: 1
-                              format: int64
-                              minimum: 1
-                              type: integer
-                            stats_realm:
-                              description: stats realm
-                              type: boolean
-                            stats_realm_realm:
-                              description: stats realm realm
-                              type: string
-                            stats_refresh_delay:
-                              description: stats refresh delay
-                              format: int64
-                              type: integer
-                            stats_show_desc:
-                              description: stats show desc
-                              type: string
-                            stats_show_legends:
-                              description: stats show legends
-                              type: boolean
-                            stats_show_modules:
-                              description: stats show modules
-                              type: boolean
-                            stats_show_node_name:
-                              description: |-
-                                stats show node name
-                                Pattern: ^[^\s]+$
-                              pattern: ^[^\s]+$
-                              type: string
-                            stats_uri_prefix:
-                              description: |-
-                                stats uri prefix
-                                Pattern: ^[^\s]+$
-                              pattern: ^[^\s]+$
-                              type: string
-                          required:
-                          - stats_show_node_name
-                          type: object
-                        stick_table:
-                          description: stick table
-                          properties:
-                            expire:
-                              description: expire
-                              format: int64
-                              type: integer
-                            keylen:
-                              description: keylen
-                              format: int64
-                              type: integer
-                            nopurge:
-                              description: nopurge
-                              type: boolean
-                            peers:
-                              description: |-
-                                peers
-                                Pattern: ^[^\s]+$
-                              pattern: ^[^\s]+$
-                              type: string
-                            size:
-                              description: size
-                              format: int64
-                              type: integer
-                            srvkey:
-                              description: |-
-                                srvkey
-                                Enum: [addr name]
-                              enum:
-                              - addr
-                              - name
-                              type: string
-                            store:
-                              description: |-
-                                store
-                                Pattern: ^[^\s]+$
-                              pattern: ^[^\s]+$
-                              type: string
-                            type:
-                              description: |-
-                                type
-                                Enum: [ip ipv6 integer string binary]
-                              enum:
-                              - ip
-                              - ipv6
-                              - integer
-                              - string
-                              - binary
-                              type: string
-                            write_to:
-                              description: |-
-                                write to
-                                Pattern: ^[^\s]+$
-                              pattern: ^[^\s]+$
-                              type: string
-                          type: object
-                        tarpit_timeout:
-                          description: tarpit timeout
-                          format: int64
-                          type: integer
-                        tcp_smart_accept:
-                          description: |-
-                            tcp smart accept
-                            Enum: [enabled disabled]
-                          enum:
-                          - enabled
-                          - disabled
-                          type: string
-                        tcpka:
-                          description: |-
-                            tcpka
-                            Enum: [enabled disabled]
-                          enum:
-                          - enabled
-                          - disabled
-                          type: string
-                        tcplog:
-                          description: tcplog
-                          type: boolean
-                        unique_id_format:
-                          description: unique id format
-                          type: string
-                        unique_id_header:
-                          description: unique id header
+                            cond test
+                            Required: true
                           type: string
                       required:
-                      - binds
-                      - name
+                      - cond
+                      - cond_test
                       type: object
-                    name:
+                    monitor_uri:
+                      description: monitor uri
                       type: string
-                    service:
+                    name:
+                      description: |-
+                        name
+                        Required: true
+                        Pattern: ^[A-Za-z0-9-_.:]+$
+                      pattern: ^[A-Za-z0-9-_.:]+$
+                      type: string
+                    nolinger:
+                      description: |-
+                        nolinger
+                        Enum: [enabled disabled]
+                      enum:
+                      - enabled
+                      - disabled
+                      type: string
+                    originalto:
+                      description: originalto
                       properties:
-                        name:
+                        enabled:
+                          description: |-
+                            enabled
+                            Required: true
+                            Enum: [enabled]
+                          enum:
+                          - enabled
                           type: string
-                        port:
-                          maximum: 65535
+                        except:
+                          description: |-
+                            except
+                            Pattern: ^[^\s]+$
+                          pattern: ^[^\s]+$
+                          type: string
+                        header:
+                          description: |-
+                            header
+                            Pattern: ^[^\s]+$
+                          pattern: ^[^\s]+$
+                          type: string
+                      required:
+                      - enabled
+                      type: object
+                    socket_stats:
+                      description: |-
+                        socket stats
+                        Enum: [enabled disabled]
+                      enum:
+                      - enabled
+                      - disabled
+                      type: string
+                    splice_auto:
+                      description: |-
+                        splice auto
+                        Enum: [enabled disabled]
+                      enum:
+                      - enabled
+                      - disabled
+                      type: string
+                    splice_request:
+                      description: |-
+                        splice request
+                        Enum: [enabled disabled]
+                      enum:
+                      - enabled
+                      - disabled
+                      type: string
+                    splice_response:
+                      description: |-
+                        splice response
+                        Enum: [enabled disabled]
+                      enum:
+                      - enabled
+                      - disabled
+                      type: string
+                    stats_options:
+                      description: stats options
+                      properties:
+                        stats_admin:
+                          description: stats admin
+                          type: boolean
+                        stats_admin_cond:
+                          description: |-
+                            stats admin cond
+                            Enum: [if unless]
+                          enum:
+                          - if
+                          - unless
+                          type: string
+                        stats_admin_cond_test:
+                          description: stats admin cond test
+                          type: string
+                        stats_auths:
+                          description: stats auths
+                          items:
+                            description: |-
+                              StatsAuth stats auth
+
+
+                              swagger:model stats_auth
+                            properties:
+                              passwd:
+                                description: |-
+                                  passwd
+                                  Required: true
+                                type: string
+                              user:
+                                description: |-
+                                  user
+                                  Required: true
+                                type: string
+                            required:
+                            - passwd
+                            - user
+                            type: object
+                          type: array
+                        stats_enable:
+                          description: stats enable
+                          type: boolean
+                        stats_hide_version:
+                          description: stats hide version
+                          type: boolean
+                        stats_http_requests:
+                          description: stats http requests
+                          items:
+                            description: |-
+                              StatsHTTPRequest stats http request
+
+
+                              swagger:model stats_http_request
+                            properties:
+                              cond:
+                                description: cond
+                                type: string
+                              cond_test:
+                                description: cond test
+                                type: string
+                              realm:
+                                description: realm
+                                type: string
+                              type:
+                                description: |-
+                                  type
+                                  Required: true
+                                  Enum: [allow deny auth]
+                                enum:
+                                - allow
+                                - deny
+                                - auth
+                                type: string
+                            required:
+                            - type
+                            type: object
+                          type: array
+                        stats_maxconn:
+                          description: |-
+                            stats maxconn
+                            Minimum: 1
+                          format: int64
                           minimum: 1
                           type: integer
+                        stats_realm:
+                          description: stats realm
+                          type: boolean
+                        stats_realm_realm:
+                          description: stats realm realm
+                          type: string
+                        stats_refresh_delay:
+                          description: stats refresh delay
+                          format: int64
+                          type: integer
+                        stats_show_desc:
+                          description: stats show desc
+                          type: string
+                        stats_show_legends:
+                          description: stats show legends
+                          type: boolean
+                        stats_show_modules:
+                          description: stats show modules
+                          type: boolean
+                        stats_show_node_name:
+                          description: |-
+                            stats show node name
+                            Pattern: ^[^\s]+$
+                          pattern: ^[^\s]+$
+                          type: string
+                        stats_uri_prefix:
+                          description: |-
+                            stats uri prefix
+                            Pattern: ^[^\s]+$
+                          pattern: ^[^\s]+$
+                          type: string
                       required:
-                      - name
-                      - port
+                      - stats_show_node_name
                       type: object
+                    stick_table:
+                      description: stick table
+                      properties:
+                        expire:
+                          description: expire
+                          format: int64
+                          type: integer
+                        keylen:
+                          description: keylen
+                          format: int64
+                          type: integer
+                        nopurge:
+                          description: nopurge
+                          type: boolean
+                        peers:
+                          description: |-
+                            peers
+                            Pattern: ^[^\s]+$
+                          pattern: ^[^\s]+$
+                          type: string
+                        size:
+                          description: size
+                          format: int64
+                          type: integer
+                        srvkey:
+                          description: |-
+                            srvkey
+                            Enum: [addr name]
+                          enum:
+                          - addr
+                          - name
+                          type: string
+                        store:
+                          description: |-
+                            store
+                            Pattern: ^[^\s]+$
+                          pattern: ^[^\s]+$
+                          type: string
+                        type:
+                          description: |-
+                            type
+                            Enum: [ip ipv6 integer string binary]
+                          enum:
+                          - ip
+                          - ipv6
+                          - integer
+                          - string
+                          - binary
+                          type: string
+                        write_to:
+                          description: |-
+                            write to
+                            Pattern: ^[^\s]+$
+                          pattern: ^[^\s]+$
+                          type: string
+                      type: object
+                    tarpit_timeout:
+                      description: tarpit timeout
+                      format: int64
+                      type: integer
+                    tcp_smart_accept:
+                      description: |-
+                        tcp smart accept
+                        Enum: [enabled disabled]
+                      enum:
+                      - enabled
+                      - disabled
+                      type: string
+                    tcpka:
+                      description: |-
+                        tcpka
+                        Enum: [enabled disabled]
+                      enum:
+                      - enabled
+                      - disabled
+                      type: string
+                    tcplog:
+                      description: tcplog
+                      type: boolean
+                    unique_id_format:
+                      description: unique id format
+                      type: string
+                    unique_id_header:
+                      description: unique id header
+                      type: string
                   required:
-                  - frontend
+                  - binds
                   - name
-                  - service
                   type: object
-                type: array
-            type: object
+                name:
+                  type: string
+                service:
+                  properties:
+                    name:
+                      type: string
+                    port:
+                      maximum: 65535
+                      minimum: 1
+                      type: integer
+                  required:
+                  - name
+                  - port
+                  type: object
+              required:
+              - frontend
+              - name
+              - service
+              type: object
+            type: array
         required:
         - spec
         type: object

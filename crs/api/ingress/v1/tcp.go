@@ -52,9 +52,7 @@ type TCPModel struct {
 }
 
 // TCPSpec defines the desired state of a TCPService
-type TCPSpec struct {
-	TCPs []TCPModel `json:"tcps,omitempty"`
-}
+type TCPSpec []TCPModel
 
 // DeepCopyInto deepcopying  the receiver into out. in must be non-nil.
 func (a *TCPModel) DeepCopyInto(out *TCPModel) {

@@ -3,21 +3,20 @@ kind: TCP
 metadata:
   name: tcp-1
 spec:
-  tcps:
-    - name: tcp-http-echo-443
-      frontend:
-        name: fe-http-echo-443
-        tcplog: true
-        log_format: "%{+Q}o %t %s"
-        binds:
-          - name: v4
-            ssl: true
-            ssl_certificate: tcp-test-cert
-            port: 32766
-          - name: v4v6
-            address: "::"
-            port: 32766
-            v4v6: true
-      service:
-        name: "http-echo"
-        port: 443
+  - name: tcp-http-echo-443
+    frontend:
+      name: fe-http-echo-443
+      tcplog: true
+      log_format: "%{+Q}o %t %s"
+      binds:
+        - name: v4
+          ssl: true
+          ssl_certificate: tcp-test-cert
+          port: 32766
+        - name: v4v6
+          address: "::"
+          port: 32766
+          v4v6: true
+    service:
+      name: "http-echo"
+      port: 443
