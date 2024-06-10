@@ -18,7 +18,6 @@
 package scheme
 
 import (
-	corev1alpha1 "github.com/haproxytech/kubernetes-ingress/crs/api/core/v1alpha1"
 	corev1alpha2 "github.com/haproxytech/kubernetes-ingress/crs/api/core/v1alpha2"
 	ingressv1 "github.com/haproxytech/kubernetes-ingress/crs/api/ingress/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -32,7 +31,6 @@ var Scheme = runtime.NewScheme()
 var Codecs = serializer.NewCodecFactory(Scheme)
 var ParameterCodec = runtime.NewParameterCodec(Scheme)
 var localSchemeBuilder = runtime.SchemeBuilder{
-	corev1alpha1.AddToScheme,
 	corev1alpha2.AddToScheme,
 	ingressv1.AddToScheme,
 }

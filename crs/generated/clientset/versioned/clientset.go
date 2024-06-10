@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"net/http"
 
-	corev1alpha1 "github.com/haproxytech/kubernetes-ingress/crs/generated/clientset/versioned/typed/core/v1alpha1"
 	corev1alpha2 "github.com/haproxytech/kubernetes-ingress/crs/generated/clientset/versioned/typed/core/v1alpha2"
 	ingressv1 "github.com/haproxytech/kubernetes-ingress/crs/generated/clientset/versioned/typed/ingress/v1"
 	discovery "k8s.io/client-go/discovery"
@@ -31,7 +30,6 @@ import (
 
 type Interface interface {
 	Discovery() discovery.DiscoveryInterface
-	CoreV1alpha1() corev1alpha1.CoreV1alpha1Interface
 	CoreV1alpha2() corev1alpha2.CoreV1alpha2Interface
 	IngressV1() ingressv1.IngressV1Interface
 }
@@ -39,14 +37,8 @@ type Interface interface {
 // Clientset contains the clients for groups.
 type Clientset struct {
 	*discovery.DiscoveryClient
-	coreV1alpha1 *corev1alpha1.CoreV1alpha1Client
 	coreV1alpha2 *corev1alpha2.CoreV1alpha2Client
 	ingressV1    *ingressv1.IngressV1Client
-}
-
-// CoreV1alpha1 retrieves the CoreV1alpha1Client
-func (c *Clientset) CoreV1alpha1() corev1alpha1.CoreV1alpha1Interface {
-	return c.coreV1alpha1
 }
 
 // CoreV1alpha2 retrieves the CoreV1alpha2Client
@@ -103,10 +95,6 @@ func NewForConfigAndClient(c *rest.Config, httpClient *http.Client) (*Clientset,
 
 	var cs Clientset
 	var err error
-	cs.coreV1alpha1, err = corev1alpha1.NewForConfigAndClient(&configShallowCopy, httpClient)
-	if err != nil {
-		return nil, err
-	}
 	cs.coreV1alpha2, err = corev1alpha2.NewForConfigAndClient(&configShallowCopy, httpClient)
 	if err != nil {
 		return nil, err
@@ -136,7 +124,6 @@ func NewForConfigOrDie(c *rest.Config) *Clientset {
 // New creates a new Clientset for the given RESTClient.
 func New(c rest.Interface) *Clientset {
 	var cs Clientset
-	cs.coreV1alpha1 = corev1alpha1.New(c)
 	cs.coreV1alpha2 = corev1alpha2.New(c)
 	cs.ingressV1 = ingressv1.New(c)
 
