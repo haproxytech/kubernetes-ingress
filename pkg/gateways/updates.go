@@ -175,7 +175,6 @@ func (statusMgr *StatusManagerImpl) UpdateStatusTCPRoutes(routesStatusRecords []
 		}
 
 		for _, parentStatusRecord := range tcprouteStatusRecord.parentsStatusesRecords {
-			parentStatusRecord := parentStatusRecord
 			conditions := []metav1.Condition{}
 			routeParentStatus := v1alpha2.RouteParentStatus{
 				ControllerName: v1alpha2.GatewayController(statusMgr.gatewayControllerName),

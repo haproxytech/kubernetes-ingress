@@ -2,6 +2,7 @@ package rules
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"github.com/haproxytech/client-native/v5/models"
@@ -73,7 +74,7 @@ func (rules *List) Add(rule Rule) {
 
 func (r SectionRules) AddRule(frontend string, rule Rule, ingressRule bool) error {
 	if rule == nil || frontend == "" {
-		return fmt.Errorf("invalid params")
+		return errors.New("invalid params")
 	}
 	// Create frontend ruleSet
 	ftRuleSet, ok := r[frontend]

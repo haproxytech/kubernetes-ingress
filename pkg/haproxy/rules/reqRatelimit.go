@@ -1,6 +1,7 @@
 package rules
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/haproxytech/client-native/v5/models"
@@ -21,7 +22,7 @@ func (r ReqRateLimit) GetType() Type {
 
 func (r ReqRateLimit) Create(client api.HAProxyClient, frontend *models.Frontend, ingressACL string) error {
 	if frontend.Mode == "tcp" {
-		return fmt.Errorf("request Track cannot be configured in TCP mode")
+		return errors.New("request Track cannot be configured in TCP mode")
 	}
 	httpRule := models.HTTPRequestRule{
 		Index:      utils.PtrInt64(0),

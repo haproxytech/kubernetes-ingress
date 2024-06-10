@@ -1,7 +1,7 @@
 package service
 
 import (
-	"fmt"
+	"errors"
 	"strings"
 
 	"github.com/haproxytech/client-native/v5/models"
@@ -34,7 +34,7 @@ func (a *CheckHTTP) Process(k store.K8s, annotations ...map[string]string) error
 	checkHTTPParams := strings.Fields(strings.TrimSpace(input))
 	switch len(checkHTTPParams) {
 	case 0:
-		return fmt.Errorf("httpchk option: incorrect number of params")
+		return errors.New("httpchk option: incorrect number of params")
 	case 1:
 		params = &models.HttpchkParams{
 			URI: checkHTTPParams[0],

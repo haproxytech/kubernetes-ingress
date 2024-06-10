@@ -1,7 +1,7 @@
 package rules
 
 import (
-	"fmt"
+	"errors"
 
 	"github.com/haproxytech/client-native/v5/models"
 
@@ -19,7 +19,7 @@ func (r ReqInspectDelay) GetType() Type {
 
 func (r ReqInspectDelay) Create(client api.HAProxyClient, frontend *models.Frontend, ingressACL string) error {
 	if frontend.Mode == "http" {
-		return fmt.Errorf("tcp inspect-delay rule is only available in TCP frontends")
+		return errors.New("tcp inspect-delay rule is only available in TCP frontends")
 	}
 	tcpRule := models.TCPRequestRule{
 		Type:    "inspect-delay",

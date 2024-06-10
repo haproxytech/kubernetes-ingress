@@ -131,7 +131,7 @@ func (t *Test) GetK8sVersion() (major, minor int, err error) {
 	if err != nil {
 		return 0, 0, err
 	}
-	config, err := clientcmd.BuildConfigFromFlags("", fmt.Sprintf("%s/.kube/config", home))
+	config, err := clientcmd.BuildConfigFromFlags("", home+"/.kube/config")
 	if err != nil {
 		return 0, 0, err
 	}

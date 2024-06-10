@@ -15,6 +15,7 @@
 package route
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
@@ -55,7 +56,7 @@ type Route struct {
 // AddHostPathRoute adds Host/Path ingress route to haproxy Map files used for backend switching.
 func AddHostPathRoute(route Route, mapFiles maps.Maps) error {
 	if route.BackendName == "" {
-		return fmt.Errorf("backendName missing")
+		return errors.New("backendName missing")
 	}
 	// Wildcard host
 	if route.Host != "" && route.Host[0] == '*' {

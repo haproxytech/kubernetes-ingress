@@ -45,8 +45,8 @@ func (suite *CustomResourceSuite) TestGlobalCR() {
 		suite.globalCREvt.EventProcessed = eventProcessedChan
 		testController.EventChan <- suite.globalCREvt
 		<-eventProcessedChan
-		assert.Len(t, globals, 0, "No Global CR should be present")
-		assert.Len(t, logtrargets, 0, "No LogTargets should be present")
+		assert.Empty(t, globals, "No Global CR should be present")
+		assert.Empty(t, logtrargets, "No LogTargets should be present")
 	})
 
 	suite.StopController()

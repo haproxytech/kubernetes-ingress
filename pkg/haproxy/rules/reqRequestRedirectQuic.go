@@ -1,7 +1,7 @@
 package rules
 
 import (
-	"fmt"
+	"errors"
 
 	"github.com/haproxytech/client-native/v5/models"
 
@@ -17,7 +17,7 @@ func (r RequestRedirectQuic) GetType() Type {
 
 func (r RequestRedirectQuic) Create(client api.HAProxyClient, frontend *models.Frontend, ingressACL string) error {
 	if frontend.Mode == "tcp" {
-		return fmt.Errorf("request redirection cannot be configured in TCP mode")
+		return errors.New("request redirection cannot be configured in TCP mode")
 	}
 
 	httpRule := models.HTTPRequestRule{

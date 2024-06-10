@@ -79,7 +79,7 @@ func CRDRefresh(log utils.Logger, osArgs utils.OSArgs) error {
 				needUpgrade = true
 			}
 			cnNew := crd.ObjectMeta.Annotations["haproxy.org/client-native"]
-			vK8s, err := semver.NewVersion(cnInK8s) //nolint:govet
+			vK8s, err := semver.NewVersion(cnInK8s)
 			if err != nil {
 				needUpgrade = true
 				log.Error(err.Error())

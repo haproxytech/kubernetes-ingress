@@ -65,7 +65,7 @@ type K8s interface {
 // and a method to process the update of a CR
 type CR interface {
 	GetKind() string
-	GetInformer(chan k8ssync.SyncDataEvent, crinformers.SharedInformerFactory) cache.SharedIndexInformer
+	GetInformer(chan k8ssync.SyncDataEvent, crinformers.SharedInformerFactory) cache.SharedIndexInformer //nolint:inamedparam
 }
 
 // k8s is structure with all data required to synchronize with k8s

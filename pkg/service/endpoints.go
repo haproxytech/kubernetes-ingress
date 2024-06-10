@@ -15,7 +15,9 @@
 package service
 
 import (
+	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/haproxytech/client-native/v5/models"
@@ -170,7 +172,7 @@ func (s *Service) getRuntimeBackend(k8s store.K8s) (backend *store.RuntimeBacken
 		if s.resource.DNS != "" {
 			return s.getExternalNameEndpoints()
 		}
-		return nil, fmt.Errorf("no available endpoints")
+		return nil, errors.New("no available endpoints")
 	}
 	svcPort := s.path.SvcPortResolved
 	if svcPort != nil && backends[svcPort.Name] != nil {
@@ -193,7 +195,7 @@ func (s *Service) getExternalNameEndpoints() (endpoints *store.RuntimeBackend, e
 	if port == 0 {
 		ingressPort := s.path.SvcPortString
 		if s.path.SvcPortInt != 0 {
-			ingressPort = fmt.Sprintf("%d", s.path.SvcPortInt)
+			ingressPort = strconv.FormatInt(s.path.SvcPortInt, 10)
 		}
 		return nil, fmt.Errorf("service '%s': service port '%s' not found", s.resource.Name, ingressPort)
 	}

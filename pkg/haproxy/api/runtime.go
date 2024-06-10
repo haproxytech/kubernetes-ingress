@@ -102,7 +102,7 @@ func (c *clientNative) runRaw(runtime runtime.Runtime, sb strings.Builder, backe
 		pmm.UpdateRuntimeMetrics(metrics.ObjectServer, err)
 		return err
 	}
-	for i := 0; i < len(result); i++ {
+	for i := range len(result) {
 		if len(result[i]) > 5 {
 			switch result[i][1:5] {
 			case "[3]:", "[2]:", "[1]:", "[0]:":
@@ -138,7 +138,7 @@ func (c *clientNative) SetMapContent(mapFile string, payload []string) error {
 		err = fmt.Errorf("error getting map path: %w", err)
 		return err
 	}
-	for i := 0; i < len(payload); i++ {
+	for i := range len(payload) {
 		_, err = runtime.ExecuteRaw(fmt.Sprintf("add map @%s %s <<\n%s\n", mapVer, mapPath, payload[i]))
 		pmm.UpdateRuntimeMetrics(metrics.ObjectMap, err)
 		if err != nil {

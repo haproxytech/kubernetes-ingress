@@ -1,6 +1,7 @@
 package service
 
 import (
+	"errors"
 	"fmt"
 	"regexp"
 	"strconv"
@@ -49,7 +50,7 @@ func getParamsFromInput(value string) (*models.Balance, error) {
 	balance := &models.Balance{}
 	tokens := strings.Split(value, " ")
 	if len(tokens) == 0 {
-		return nil, fmt.Errorf("missing algorithm name")
+		return nil, errors.New("missing algorithm name")
 	}
 
 	reg := regexp.MustCompile(`(\(|\))`)
