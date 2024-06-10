@@ -279,7 +279,7 @@ image_arguments:
       helm install haproxy haproxytech/kubernetes-ingress \
         --set-string "controller.extraArgs={--disable-https}"
   - argument: --sync-period
-    description: The interval at which the controller syncs its configuration with updated Kubernetes objects.
+    description: The interval at which the controller syncs its configuration with updated Kubernetes objects. In the case where the ingress controller is reloading too frequently, a higher value may be required. Note, if using helm charts you must also adjust the `startupProbe`'s `initialDelaySeconds` value. Its value must be higher than the `--sync-period` value.
     values:
       - An integer with unit of time (1s = 1 second, 1m = 1 minute, 1h = 1 hour); Defaults to 5s
     default: 5s
@@ -287,7 +287,8 @@ image_arguments:
     example: --sync-period=10s
     helm: |-
       helm install haproxy haproxytech/kubernetes-ingress \
-        --set-string "controller.extraArgs={--sync-period=10s}"
+        --set-string "controller.extraArgs={--sync-period=60s}" \
+        --set controller.startupProbe.initialDelaySeconds=80
   - argument: --cache-resync-period
     description: Sets the default re-synchronization period at which the controller will re-apply the desired state.
     values:
@@ -388,7 +389,7 @@ image_arguments:
     version_min: "1.11"
     example: |-
       args:
-        - --quic-bind-port=4443        
+        - --quic-bind-port=4443
 groups:
   config-snippet:
     header: |-
@@ -1183,7 +1184,7 @@ annotations:
     applies_to:
       - configmap
     version_min: "1.11"
-    example: ['quic-alt-svc-max-age: "900"']    
+    example: ['quic-alt-svc-max-age: "900"']
   - title: rate-limit-period
     type: "[time](#time)"
     group: rate-limit
@@ -1585,7 +1586,7 @@ annotations:
     tip:
       - Traffic is proxied in TCP mode which makes unavailable a number of the controller
         annotations (requiring HTTP mode).
-      - HTTPS frontend is conserved and still listening at port 8444 when previous HTTPS port is moved to SSL Frontend.        
+      - HTTPS frontend is conserved and still listening at port 8444 when previous HTTPS port is moved to SSL Frontend.
     values:
       - "true"
       - "false"
