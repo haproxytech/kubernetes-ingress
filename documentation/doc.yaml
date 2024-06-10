@@ -7,6 +7,13 @@ image_arguments:
     default: default/haproxy-configmap
     version_min: "1.4"
     example: --configmap=default/my-configmap
+  - argument: --job-check-crd
+    description: Special mode for controller that checks if the CRDs are installed and are on latest version. Note that this will not run ingress controller, it just checks if CRDs are OK and exits
+    values:
+      - this is boolean flag
+    default: false
+    version_min: "1.9"
+    example: --job-check-crd
   - argument: --configmap-tcp-services
     tip:
       - Ports of TCP services should be exposed on the controller's Kubernetes service
