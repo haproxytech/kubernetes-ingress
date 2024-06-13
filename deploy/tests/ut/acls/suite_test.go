@@ -12,12 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package routeacl
+package acls
 
 import (
+	_ "embed"
 	"os"
 	"testing"
 
+	"github.com/haproxytech/client-native/v5/models"
+	v1 "github.com/haproxytech/kubernetes-ingress/crs/api/ingress/v1"
 	"github.com/haproxytech/kubernetes-ingress/pkg/annotations"
 	c "github.com/haproxytech/kubernetes-ingress/pkg/controller"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy"
@@ -27,25 +30,27 @@ import (
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
 	"github.com/jessevdk/go-flags"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 	networkingv1 "k8s.io/api/networking/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/watch"
 )
 
-type UseBackendSuite struct {
+type FakeUpdateSatusManager struct{}
+
+func (m *FakeUpdateSatusManager) AddIngress(ingress *ingress.Ingress) {}
+func (m *FakeUpdateSatusManager) Update(k store.K8s, h haproxy.HAProxy, a annotations.Annotations) (err error) {
+	return
+}
+
+type ACLSuite struct {
 	suite.Suite
 	test Test
 }
 
-type updateStatusManager struct{}
-
-func (m *updateStatusManager) AddIngress(ingress *ingress.Ingress) {}
-func (m *updateStatusManager) Update(k store.K8s, h haproxy.HAProxy, a annotations.Annotations) (err error) {
-	return
-}
-
-func TestUseBackend(t *testing.T) {
-	suite.Run(t, new(UseBackendSuite))
+func TestACL(t *testing.T) {
+	suite.Run(t, new(ACLSuite))
 }
 
 type Test struct {
@@ -53,7 +58,7 @@ type Test struct {
 	TempDir    string
 }
 
-func (suite *UseBackendSuite) BeforeTest(suiteName, testName string) {
+func (suite *ACLSuite) BeforeTest(suiteName, testName string) {
 	tempDir, err := os.MkdirTemp("", "tnr-"+testName+"-*")
 	if err != nil {
 		suite.T().Fatalf("Suite '%s': Test '%s' : error : %s", suiteName, testName, err)
@@ -62,41 +67,7 @@ func (suite *UseBackendSuite) BeforeTest(suiteName, testName string) {
 	suite.T().Logf("temporary configuration dir %s", suite.test.TempDir)
 }
 
-var haproxyConfig = `global
-daemon
-master-worker
-pidfile /var/run/haproxy.pid
-stats socket /var/run/haproxy-runtime-api.sock level admin expose-fd listeners
-default-path config
-
-peers localinstance
- peer local 127.0.0.1:10000
-
-frontend https
-mode http
-http-request set-var(txn.base) base
-use_backend %[var(txn.path_match),field(1,.)]
-
-frontend http
-mode http
-http-request set-var(txn.base) base
-use_backend %[var(txn.path_match),field(1,.)]
-
-frontend healthz
-mode http
-monitor-uri /healthz
-option dontlog-normal
-
-frontend stats
-  mode http
-  stats enable
-  stats uri /
-  stats refresh 10s
-  http-request set-var(txn.base) base
-  http-request use-service prometheus-exporter if { path /metrics }
- `
-
-func (suite *UseBackendSuite) UseBackendFixture() (eventChan chan k8ssync.SyncDataEvent) {
+func (suite *ACLSuite) UseACLFixture() (eventChan chan k8ssync.SyncDataEvent) {
 	var osArgs utils.OSArgs
 	os.Args = []string{os.Args[0], "-e", "-t", "--config-dir=" + suite.test.TempDir}
 	parser := flags.NewParser(&osArgs, flags.IgnoreUnknown)
@@ -106,6 +77,7 @@ func (suite *UseBackendSuite) UseBackendFixture() (eventChan chan k8ssync.SyncDa
 	}
 
 	s := store.NewK8sStore(osArgs)
+	os.Setenv("POD_NAME", "haproxy-kubernetes-ingress-68c9fc6d86-zn9qz")
 
 	haproxyEnv := env.Env{
 		CfgDir: suite.test.TempDir,
@@ -116,17 +88,50 @@ func (suite *UseBackendSuite) UseBackendFixture() (eventChan chan k8ssync.SyncDa
 			BackSSL:    "ssl",
 		},
 	}
+	haproxyConfig, err := os.ReadFile("../../../../fs/usr/local/etc/haproxy/haproxy.cfg")
+	if err != nil {
+		//nolint:testifylint
+		assert.Failf(suite.T(), "error in opening init haproxy configuration file", err.Error())
+	}
 
 	eventChan = make(chan k8ssync.SyncDataEvent, watch.DefaultChanSize*6)
 	controller := c.NewBuilder().
-		WithHaproxyCfgFile([]byte(haproxyConfig)).
+		WithHaproxyCfgFile(haproxyConfig).
 		WithEventChan(eventChan).
 		WithStore(s).
 		WithHaproxyEnv(haproxyEnv).
-		WithUpdateStatusManager(&updateStatusManager{}).
+		WithUpdateStatusManager(&FakeUpdateSatusManager{}).
 		WithArgs(osArgs).Build()
 
 	go controller.Start()
+
+	backend := v1.Backend{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "backend1cr",
+			Namespace: "ns1",
+		},
+		Spec: v1.BackendSpec{
+			Config: &models.Backend{
+				Name: "backend1",
+			},
+			Acls: models.Acls{
+				{
+					ACLName:   "cookie_found",
+					Criterion: "cook(JSESSIONID)",
+					Index:     utils.Ptr[int64](0),
+					Value:     "-m found",
+				},
+				{
+					ACLName:   "is_ticket",
+					Criterion: "path_beg",
+					Index:     utils.Ptr[int64](1),
+					Value:     "-i /ticket",
+				},
+			},
+		},
+	}
+
+	eventChan <- k8ssync.SyncDataEvent{SyncType: k8ssync.CR_BACKEND, Namespace: backend.Namespace, Name: backend.Name, Data: &backend}
 
 	// Now sending store events for test setup
 	ns := store.Namespace{Name: "ns", Status: store.ADDED}
@@ -150,7 +155,7 @@ func (suite *UseBackendSuite) UseBackendFixture() (eventChan chan k8ssync.SyncDa
 	service := &store.Service{
 		Name:        "myappservice",
 		Namespace:   ns.Name,
-		Annotations: map[string]string{"route-acl": "cookie(staging) -m found"},
+		Annotations: map[string]string{"cr-backend": backend.Namespace + "/" + backend.Name},
 		Ports: []store.ServicePort{
 			{
 				Name:     "https",
@@ -163,7 +168,6 @@ func (suite *UseBackendSuite) UseBackendFixture() (eventChan chan k8ssync.SyncDa
 	}
 	eventChan <- k8ssync.SyncDataEvent{SyncType: k8ssync.SERVICE, Namespace: service.Namespace, Data: service}
 
-	prefixPathType := networkingv1.PathTypePrefix
 	ingress := &store.Ingress{
 		IngressCore: store.IngressCore{
 			APIVersion:  store.NETWORKINGV1,
@@ -173,9 +177,9 @@ func (suite *UseBackendSuite) UseBackendFixture() (eventChan chan k8ssync.SyncDa
 			Rules: map[string]*store.IngressRule{
 				"": {
 					Paths: map[string]*store.IngressPath{
-						string(prefixPathType) + "-/": {
+						string(networkingv1.PathTypePrefix) + "-/": {
 							Path:          "/",
-							PathTypeMatch: string(prefixPathType),
+							PathTypeMatch: string(networkingv1.PathTypePrefix),
 							SvcNamespace:  service.Namespace,
 							SvcPortString: "https",
 							SvcName:       service.Name,
@@ -188,16 +192,9 @@ func (suite *UseBackendSuite) UseBackendFixture() (eventChan chan k8ssync.SyncDa
 	}
 
 	eventChan <- k8ssync.SyncDataEvent{SyncType: k8ssync.INGRESS, Namespace: ingress.Namespace, Data: ingress}
-	eventChan <- k8ssync.SyncDataEvent{SyncType: k8ssync.COMMAND}
-	// The service is modified by the addition of an annotation.
-	// It should not duplicate this line in haproxy.cfg:
-	// use_backend ns_myappservice_https if { path -m beg / } { cookie(staging) -m found }
-	serviceClone := *service
-	serviceClone.Status = store.MODIFIED
-	serviceClone.Annotations["anyannotation"] = "anyvalue"
-	eventChan <- k8ssync.SyncDataEvent{SyncType: k8ssync.SERVICE, Namespace: serviceClone.Namespace, Data: &serviceClone}
 	controllerHasWorked := make(chan struct{})
-	eventChan <- k8ssync.SyncDataEvent{SyncType: k8ssync.COMMAND, EventProcessed: controllerHasWorked}
+	eventChan <- k8ssync.SyncDataEvent{SyncType: k8ssync.COMMAND}
+	eventChan <- k8ssync.SyncDataEvent{EventProcessed: controllerHasWorked}
 	<-controllerHasWorked
 	return
 }
