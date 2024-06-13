@@ -33,7 +33,9 @@ type Backend struct {
 
 // BackendSpec defines the desired state of Backend
 type BackendSpec struct {
-	Config *models.Backend `json:"config"`
+	Config       *models.Backend         `json:"config"`
+	Acls         models.Acls             `json:"acls,omitempty"`
+	HTTPRequests models.HTTPRequestRules `json:"http-requests,omitempty"`
 }
 
 // DeepCopyInto deepcopying  the receiver into out. in must be non-nil.

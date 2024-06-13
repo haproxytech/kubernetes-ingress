@@ -40,6 +40,56 @@ spec:
           spec:
             description: BackendSpec defines the desired state of Backend
             properties:
+              acls:
+                description: |-
+                  Acls ACL Lines Array
+
+
+                  HAProxy ACL lines array (corresponds to acl directives)
+
+
+                  swagger:model acls
+                items:
+                  description: |-
+                    ACL ACL Lines
+
+
+                    The use of Access Control Lists (ACL) provides a flexible solution to perform
+                    content switching and generally to take decisions based on content extracted
+                    from the request, the response or any environmental status.
+
+
+                    swagger:model acl
+                  properties:
+                    acl_name:
+                      description: |-
+                        acl name
+                        Required: true
+                        Pattern: ^[^\s]+$
+                      pattern: ^[^\s]+$
+                      type: string
+                    criterion:
+                      description: |-
+                        criterion
+                        Required: true
+                        Pattern: ^[^\s]+$
+                      pattern: ^[^\s]+$
+                      type: string
+                    index:
+                      description: |-
+                        index
+                        Required: true
+                      format: int64
+                      type: integer
+                    value:
+                      description: value
+                      type: string
+                  required:
+                  - acl_name
+                  - criterion
+                  - index
+                  type: object
+                type: array
               config:
                 description: |-
                   Backend Backend
@@ -2069,6 +2119,529 @@ spec:
                 required:
                 - name
                 type: object
+              http-requests:
+                description: |-
+                  HTTPRequestRules HTTP Request Rules Array
+
+
+                  HAProxy HTTP request rules array (corresponds to http-request directives)
+
+
+                  swagger:model http_request_rules
+                items:
+                  description: |-
+                    HTTPRequestRule HTTP Request Rule
+
+
+                    HAProxy HTTP request rule configuration (corresponds to http-request directives)
+                    Example: {"cond":"unless","cond_test":"{ src 192.168.0.0/16 }","hdr_format":"%T","hdr_name":"X-Haproxy-Current-Date","index":0,"type":"add-header"}
+
+
+                    swagger:model http_request_rule
+                  properties:
+                    acl_file:
+                      description: |-
+                        acl file
+                        Pattern: ^[^\s]+$
+                      pattern: ^[^\s]+$
+                      type: string
+                    acl_keyfmt:
+                      description: |-
+                        acl keyfmt
+                        Pattern: ^[^\s]+$
+                      pattern: ^[^\s]+$
+                      type: string
+                    auth_realm:
+                      description: |-
+                        auth realm
+                        Pattern: ^[^\s]+$
+                      pattern: ^[^\s]+$
+                      type: string
+                    bandwidth_limit_limit:
+                      description: bandwidth limit limit
+                      type: string
+                    bandwidth_limit_name:
+                      description: bandwidth limit name
+                      type: string
+                    bandwidth_limit_period:
+                      description: bandwidth limit period
+                      type: string
+                    cache_name:
+                      description: |-
+                        cache name
+                        Pattern: ^[^\s]+$
+                      pattern: ^[^\s]+$
+                      type: string
+                    capture_id:
+                      description: capture id
+                      format: int64
+                      type: integer
+                    capture_len:
+                      description: capture len
+                      format: int64
+                      type: integer
+                    capture_sample:
+                      description: |-
+                        capture sample
+                        Pattern: ^[^\s]+$
+                      pattern: ^[^\s]+$
+                      type: string
+                    cond:
+                      description: |-
+                        cond
+                        Enum: [if unless]
+                      enum:
+                      - if
+                      - unless
+                      type: string
+                    cond_test:
+                      description: cond test
+                      type: string
+                    deny_status:
+                      description: |-
+                        deny status
+                        Maximum: 599
+                        Minimum: 200
+                      format: int64
+                      maximum: 599
+                      minimum: 200
+                      type: integer
+                    expr:
+                      description: expr
+                      type: string
+                    hdr_format:
+                      description: hdr format
+                      type: string
+                    hdr_match:
+                      description: hdr match
+                      type: string
+                    hdr_method:
+                      description: hdr method
+                      type: string
+                    hdr_name:
+                      description: hdr name
+                      type: string
+                    hint_format:
+                      description: |-
+                        hint format
+                        Pattern: ^[^\s]+$
+                      pattern: ^[^\s]+$
+                      type: string
+                    hint_name:
+                      description: |-
+                        hint name
+                        Pattern: ^[^\s]+$
+                      pattern: ^[^\s]+$
+                      type: string
+                    index:
+                      description: |-
+                        index
+                        Required: true
+                      format: int64
+                      type: integer
+                    log_level:
+                      description: |-
+                        log level
+                        Enum: [emerg alert crit err warning notice info debug silent]
+                      enum:
+                      - emerg
+                      - alert
+                      - crit
+                      - err
+                      - warning
+                      - notice
+                      - info
+                      - debug
+                      - silent
+                      type: string
+                    lua_action:
+                      description: |-
+                        lua action
+                        Pattern: ^[^\s]+$
+                      pattern: ^[^\s]+$
+                      type: string
+                    lua_params:
+                      description: lua params
+                      type: string
+                    map_file:
+                      description: |-
+                        map file
+                        Pattern: ^[^\s]+$
+                      pattern: ^[^\s]+$
+                      type: string
+                    map_keyfmt:
+                      description: |-
+                        map keyfmt
+                        Pattern: ^[^\s]+$
+                      pattern: ^[^\s]+$
+                      type: string
+                    map_valuefmt:
+                      description: |-
+                        map valuefmt
+                        Pattern: ^[^\s]+$
+                      pattern: ^[^\s]+$
+                      type: string
+                    mark_value:
+                      description: |-
+                        mark value
+                        Pattern: ^(0x[0-9A-Fa-f]+|[0-9]+)$
+                      pattern: ^(0x[0-9A-Fa-f]+|[0-9]+)$
+                      type: string
+                    method_fmt:
+                      description: |-
+                        method fmt
+                        Pattern: ^[^\s]+$
+                      pattern: ^[^\s]+$
+                      type: string
+                    nice_value:
+                      description: |-
+                        nice value
+                        Maximum: 1024
+                        Minimum: -1024
+                      format: int64
+                      maximum: 1024
+                      minimum: -1024
+                      type: integer
+                    normalizer:
+                      description: |-
+                        normalizer
+                        Enum: [fragment-encode fragment-strip path-merge-slashes path-strip-dot path-strip-dotdot percent-decode-unreserved percent-to-upercase query-sort-by-name]
+                      enum:
+                      - fragment-encode
+                      - fragment-strip
+                      - path-merge-slashes
+                      - path-strip-dot
+                      - path-strip-dotdot
+                      - percent-decode-unreserved
+                      - percent-to-upercase
+                      - query-sort-by-name
+                      type: string
+                    normalizer_full:
+                      description: normalizer full
+                      type: boolean
+                    normalizer_strict:
+                      description: normalizer strict
+                      type: boolean
+                    path_fmt:
+                      description: |-
+                        path fmt
+                        Pattern: ^[^\s]+$
+                      pattern: ^[^\s]+$
+                      type: string
+                    path_match:
+                      description: |-
+                        path match
+                        Pattern: ^[^\s]+$
+                      pattern: ^[^\s]+$
+                      type: string
+                    protocol:
+                      description: |-
+                        protocol
+                        Enum: [ipv4 ipv6]
+                      enum:
+                      - ipv4
+                      - ipv6
+                      type: string
+                    query-fmt:
+                      description: query fmt
+                      type: string
+                    redir_code:
+                      description: |-
+                        redir code
+                        Enum: [301 302 303 307 308]
+                      enum:
+                      - 301
+                      - 302
+                      - 303
+                      - 307
+                      - 308
+                      format: int64
+                      type: integer
+                    redir_option:
+                      description: redir option
+                      type: string
+                    redir_type:
+                      description: |-
+                        redir type
+                        Enum: [location prefix scheme]
+                      enum:
+                      - location
+                      - prefix
+                      - scheme
+                      type: string
+                    redir_value:
+                      description: |-
+                        redir value
+                        Pattern: ^[^\s]+$
+                      pattern: ^[^\s]+$
+                      type: string
+                    resolvers:
+                      description: resolvers
+                      type: string
+                    return_content:
+                      description: return content
+                      type: string
+                    return_content_format:
+                      description: |-
+                        return content format
+                        Enum: [default-errorfiles errorfile errorfiles file lf-file string lf-string]
+                      enum:
+                      - default-errorfiles
+                      - errorfile
+                      - errorfiles
+                      - file
+                      - lf-file
+                      - string
+                      - lf-string
+                      type: string
+                    return_content_type:
+                      description: return content type
+                      type: string
+                    return_hdrs:
+                      description: return headers
+                      items:
+                        description: |-
+                          ReturnHeader return header
+
+
+                          swagger:model ReturnHeader
+                        properties:
+                          fmt:
+                            description: |-
+                              fmt
+                              Required: true
+                            type: string
+                          name:
+                            description: |-
+                              name
+                              Required: true
+                            type: string
+                        required:
+                        - fmt
+                        - name
+                        type: object
+                      type: array
+                    return_status_code:
+                      description: |-
+                        return status code
+                        Maximum: 599
+                        Minimum: 200
+                      format: int64
+                      maximum: 599
+                      minimum: 200
+                      type: integer
+                    sc_expr:
+                      description: sc expr
+                      type: string
+                    sc_id:
+                      description: sc id
+                      format: int64
+                      type: integer
+                    sc_idx:
+                      description: sc idx
+                      format: int64
+                      type: integer
+                    sc_int:
+                      description: sc int
+                      format: int64
+                      type: integer
+                    service_name:
+                      description: service name
+                      type: string
+                    spoe_engine:
+                      description: |-
+                        spoe engine
+                        Pattern: ^[^\s]+$
+                      pattern: ^[^\s]+$
+                      type: string
+                    spoe_group:
+                      description: |-
+                        spoe group
+                        Pattern: ^[^\s]+$
+                      pattern: ^[^\s]+$
+                      type: string
+                    strict_mode:
+                      description: |-
+                        strict mode
+                        Enum: [on off]
+                      enum:
+                      - "on"
+                      - "off"
+                      type: string
+                    timeout:
+                      description: timeout
+                      type: string
+                    timeout_type:
+                      description: |-
+                        timeout type
+                        Enum: [server tunnel client]
+                      enum:
+                      - server
+                      - tunnel
+                      - client
+                      type: string
+                    tos_value:
+                      description: |-
+                        tos value
+                        Pattern: ^(0x[0-9A-Fa-f]+|[0-9]+)$
+                      pattern: ^(0x[0-9A-Fa-f]+|[0-9]+)$
+                      type: string
+                    track-sc0-key:
+                      description: |-
+                        track sc0 key
+                        Pattern: ^[^\s]+$
+                      pattern: ^[^\s]+$
+                      type: string
+                    track-sc0-table:
+                      description: |-
+                        track sc0 table
+                        Pattern: ^[^\s]+$
+                      pattern: ^[^\s]+$
+                      type: string
+                    track-sc1-key:
+                      description: |-
+                        track sc1 key
+                        Pattern: ^[^\s]+$
+                      pattern: ^[^\s]+$
+                      type: string
+                    track-sc1-table:
+                      description: |-
+                        track sc1 table
+                        Pattern: ^[^\s]+$
+                      pattern: ^[^\s]+$
+                      type: string
+                    track-sc2-key:
+                      description: |-
+                        track sc2 key
+                        Pattern: ^[^\s]+$
+                      pattern: ^[^\s]+$
+                      type: string
+                    track-sc2-table:
+                      description: |-
+                        track sc2 table
+                        Pattern: ^[^\s]+$
+                      pattern: ^[^\s]+$
+                      type: string
+                    track_sc_key:
+                      description: |-
+                        track sc key
+                        Pattern: ^[^\s]+$
+                      pattern: ^[^\s]+$
+                      type: string
+                    track_sc_stick_counter:
+                      description: track sc stick counter
+                      format: int64
+                      type: integer
+                    track_sc_table:
+                      description: |-
+                        track sc table
+                        Pattern: ^[^\s]+$
+                      pattern: ^[^\s]+$
+                      type: string
+                    type:
+                      description: |-
+                        type
+                        Required: true
+                        Enum: [add-acl add-header allow auth cache-use capture del-acl del-header del-map deny disable-l7-retry do-resolve early-hint lua normalize-uri redirect reject replace-header replace-path replace-pathq replace-uri replace-value return sc-add-gpc sc-inc-gpc sc-inc-gpc0 sc-inc-gpc1 sc-set-gpt0 send-spoe-group set-dst set-dst-port set-header set-log-level set-map set-mark set-method set-nice set-path set-pathq set-priority-class set-priority-offset set-query set-src set-src-port set-timeout set-tos set-uri set-var silent-drop strict-mode tarpit track-sc0 track-sc1 track-sc2 track-sc unset-var use-service wait-for-body wait-for-handshake set-bandwidth-limit]
+                      enum:
+                      - add-acl
+                      - add-header
+                      - allow
+                      - auth
+                      - cache-use
+                      - capture
+                      - del-acl
+                      - del-header
+                      - del-map
+                      - deny
+                      - disable-l7-retry
+                      - do-resolve
+                      - early-hint
+                      - lua
+                      - normalize-uri
+                      - redirect
+                      - reject
+                      - replace-header
+                      - replace-path
+                      - replace-pathq
+                      - replace-uri
+                      - replace-value
+                      - return
+                      - sc-add-gpc
+                      - sc-inc-gpc
+                      - sc-inc-gpc0
+                      - sc-inc-gpc1
+                      - sc-set-gpt0
+                      - send-spoe-group
+                      - set-dst
+                      - set-dst-port
+                      - set-header
+                      - set-log-level
+                      - set-map
+                      - set-mark
+                      - set-method
+                      - set-nice
+                      - set-path
+                      - set-pathq
+                      - set-priority-class
+                      - set-priority-offset
+                      - set-query
+                      - set-src
+                      - set-src-port
+                      - set-timeout
+                      - set-tos
+                      - set-uri
+                      - set-var
+                      - silent-drop
+                      - strict-mode
+                      - tarpit
+                      - track-sc0
+                      - track-sc1
+                      - track-sc2
+                      - track-sc
+                      - unset-var
+                      - use-service
+                      - wait-for-body
+                      - wait-for-handshake
+                      - set-bandwidth-limit
+                      type: string
+                    uri-fmt:
+                      description: uri fmt
+                      type: string
+                    uri-match:
+                      description: uri match
+                      type: string
+                    var_expr:
+                      description: var expr
+                      type: string
+                    var_format:
+                      description: var format
+                      type: string
+                    var_name:
+                      description: |-
+                        var name
+                        Pattern: ^[^\s]+$
+                      pattern: ^[^\s]+$
+                      type: string
+                    var_scope:
+                      description: |-
+                        var scope
+                        Pattern: ^[^\s]+$
+                      pattern: ^[^\s]+$
+                      type: string
+                    wait_at_least:
+                      description: wait at least
+                      format: int64
+                      type: integer
+                    wait_time:
+                      description: wait time
+                      format: int64
+                      type: integer
+                  required:
+                  - index
+                  - type
+                  type: object
+                type: array
             required:
             - config
             type: object

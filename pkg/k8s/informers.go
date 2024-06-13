@@ -15,6 +15,7 @@ import (
 
 	"github.com/haproxytech/client-native/v5/models"
 
+	v1 "github.com/haproxytech/kubernetes-ingress/crs/api/ingress/v1"
 	k8ssync "github.com/haproxytech/kubernetes-ingress/pkg/k8s/sync"
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
@@ -54,7 +55,7 @@ func (k k8s) getNamespaceInfomer(eventChan chan k8ssync.SyncDataEvent, factory i
 						Global:     make(map[string]*models.Global),
 						Defaults:   make(map[string]*models.Defaults),
 						LogTargets: make(map[string]models.LogTargets),
-						Backends:   make(map[string]*models.Backend),
+						Backends:   make(map[string]*v1.BackendSpec),
 					},
 					Gateways:        make(map[string]*store.Gateway),
 					TCPRoutes:       make(map[string]*store.TCPRoute),
@@ -83,7 +84,7 @@ func (k k8s) getNamespaceInfomer(eventChan chan k8ssync.SyncDataEvent, factory i
 						Global:     make(map[string]*models.Global),
 						Defaults:   make(map[string]*models.Defaults),
 						LogTargets: make(map[string]models.LogTargets),
-						Backends:   make(map[string]*models.Backend),
+						Backends:   make(map[string]*v1.BackendSpec),
 					},
 					Gateways:        make(map[string]*store.Gateway),
 					TCPRoutes:       make(map[string]*store.TCPRoute),
