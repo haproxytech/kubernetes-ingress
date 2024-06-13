@@ -21,11 +21,14 @@ import (
 	"github.com/haproxytech/client-native/v5/misc"
 	"github.com/haproxytech/client-native/v5/models"
 
+	v1 "github.com/haproxytech/kubernetes-ingress/crs/api/ingress/v1"
 	"github.com/haproxytech/kubernetes-ingress/pkg/annotations"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/api"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/certs"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/instance"
+	"github.com/haproxytech/kubernetes-ingress/pkg/rules/acls"
+	"github.com/haproxytech/kubernetes-ingress/pkg/rules/httprequests"
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
 )
@@ -139,35 +142,40 @@ func (s *Service) GetBackendName() (name string, err error) {
 
 // HandleBackend processes a Service and creates/updates corresponding backend configuration in HAProxy
 func (s *Service) HandleBackend(storeK8s store.K8s, client api.HAProxyClient, a annotations.Annotations) (err error) {
-	var backend, newBackend *models.Backend
+	var backend *models.Backend
+	var newBackend *v1.BackendSpec
 	newBackend, err = s.getBackendModel(storeK8s, a)
-	s.backend = newBackend
+	s.backend = newBackend.Config
 	if err != nil {
 		return
 	}
 	// Get/Create Backend
-	backend, err = client.BackendGet(newBackend.Name)
+	backend, err = client.BackendGet(newBackend.Config.Name)
 	if err == nil {
 		// Update Backend
-		diff := newBackend.Diff(*backend)
+		diff := newBackend.Config.Diff(*backend)
 		if len(diff) != 0 {
-			if err = client.BackendEdit(*newBackend); err != nil {
+			if err = client.BackendEdit(*newBackend.Config); err != nil {
 				return
 			}
-			instance.Reload(fmt.Sprintf("Service '%s/%s': backend '%s' updated: %v", s.resource.Namespace, s.resource.Name, newBackend.Name, diff))
+			instance.Reload("Service '%s/%s': backend '%s' updated: %v", s.resource.Namespace, s.resource.Name, newBackend.Config.Name, diff)
 		}
 	} else {
-		if err = client.BackendCreate(*newBackend); err != nil {
+		if err = client.BackendCreate(*newBackend.Config); err != nil {
 			return
 		}
 		s.newBackend = true
-		instance.Reload(fmt.Sprintf("Service '%s/%s': new backend '%s'", s.resource.Namespace, s.resource.Name, newBackend.Name))
+		instance.Reload(fmt.Sprintf("Service '%s/%s': new backend '%s'", s.resource.Namespace, s.resource.Name, newBackend.Config.Name))
 	}
+	// acls
+	acls.PopulateBackend(client, newBackend.Config.Name, newBackend.Acls)
+	// HTTP requests
+	httprequests.PopulateBackend(client, newBackend.Config.Name, newBackend.HTTPRequests)
 	// config-snippet: backend
 	backendCfgSnippetHandler := annotations.NewCfgSnippet(
 		annotations.ConfigSnippetOptions{
 			Name:    "backend-config-snippet",
-			Backend: utils.PtrString(newBackend.Name),
+			Backend: utils.PtrString(newBackend.Config.Name),
 			Ingress: s.ingress,
 		})
 	backendCfgSnippetHandler.SetService(s.resource)
@@ -176,7 +184,7 @@ func (s *Service) HandleBackend(storeK8s store.K8s, client api.HAProxyClient, a 
 }
 
 // getBackendModel checks for a corresponding custom resource before falling back to annotations
-func (s *Service) getBackendModel(store store.K8s, a annotations.Annotations) (backend *models.Backend, err error) {
+func (s *Service) getBackendModel(store store.K8s, a annotations.Annotations) (backend *v1.BackendSpec, err error) {
 	// Backend mode
 	mode := "http"
 	if s.modeTCP {
@@ -186,8 +194,10 @@ func (s *Service) getBackendModel(store store.K8s, a annotations.Annotations) (b
 	backend, err = annotations.ModelBackend("cr-backend", s.resource.Namespace, store, s.annotations...)
 	logger.Warning(err)
 	if backend == nil {
-		backend = &models.Backend{Mode: mode}
-		for _, a := range a.Backend(backend, store, s.certs) {
+		backend = &v1.BackendSpec{
+			Config: &models.Backend{Mode: mode},
+		}
+		for _, a := range a.Backend(backend.Config, store, s.certs) {
 			err = a.Process(store, s.annotations...)
 			if err != nil {
 				logger.Errorf("service '%s/%s': annotation '%s': %s", s.resource.Namespace, s.resource.Name, a.GetName(), err)
@@ -196,20 +206,20 @@ func (s *Service) getBackendModel(store store.K8s, a annotations.Annotations) (b
 	}
 
 	// Manadatory backend params
-	backend.Mode = mode
-	backend.Name, err = s.GetBackendName()
+	backend.Config.Mode = mode
+	backend.Config.Name, err = s.GetBackendName()
 	if err != nil {
 		return nil, err
 	}
 	if s.resource.DNS != "" {
-		if backend.DefaultServer == nil {
-			backend.DefaultServer = &models.DefaultServer{ServerParams: models.ServerParams{InitAddr: misc.Ptr("last,libc,none")}}
-		} else if backend.DefaultServer.InitAddr == nil {
-			backend.DefaultServer.InitAddr = misc.Ptr("last,libc,none")
+		if backend.Config.DefaultServer == nil {
+			backend.Config.DefaultServer = &models.DefaultServer{ServerParams: models.ServerParams{InitAddr: misc.Ptr("last,libc,none")}}
+		} else if backend.Config.DefaultServer.InitAddr == nil {
+			backend.Config.DefaultServer.InitAddr = misc.Ptr("last,libc,none")
 		}
 	}
-	if backend.Cookie != nil && backend.Cookie.Dynamic && backend.DynamicCookieKey == "" {
-		backend.DynamicCookieKey = cookieKey
+	if backend.Config.Cookie != nil && backend.Config.Cookie.Dynamic && backend.Config.DynamicCookieKey == "" {
+		backend.Config.DynamicCookieKey = cookieKey
 	}
 	return backend, nil
 }

@@ -18,6 +18,7 @@ import (
 	"fmt"
 
 	"github.com/haproxytech/client-native/v5/models"
+	v1 "github.com/haproxytech/kubernetes-ingress/crs/api/ingress/v1"
 	rc "github.com/haproxytech/kubernetes-ingress/pkg/reference-counter"
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
 )
@@ -173,7 +174,7 @@ func (k K8s) GetNamespace(name string) *Namespace {
 			Global:     make(map[string]*models.Global),
 			Defaults:   make(map[string]*models.Defaults),
 			LogTargets: make(map[string]models.LogTargets),
-			Backends:   make(map[string]*models.Backend),
+			Backends:   make(map[string]*v1.BackendSpec),
 			TCPsPerCR:  make(map[string]*TCPs),
 		},
 		Gateways:        make(map[string]*Gateway),

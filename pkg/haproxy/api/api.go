@@ -23,6 +23,12 @@ type HAProxyClient interface { //nolint:interfacebloat
 	APIStartTransaction() error
 	APICommitTransaction() error
 	APIDisposeTransaction()
+	ACLsGet(parentType, parentName string, aclName ...string) (models.Acls, error)
+	ACLGet(id int64, parentType, parentName string) (*models.ACL, error)
+	ACLDelete(id int64, parentType string, parentName string) error
+	ACLDeleteAll(parentType string, parentName string) error
+	ACLCreate(parentType string, parentName string, data *models.ACL) error
+	ACLEdit(id int64, parentType string, parentName string, data *models.ACL) error
 	BackendsGet() (models.Backends, error)
 	BackendGet(backendName string) (*models.Backend, error)
 	BackendCreate(backend models.Backend) error
@@ -66,6 +72,12 @@ type HAProxyClient interface { //nolint:interfacebloat
 	GlobalPushConfiguration(models.Global) error
 	GlobalCfgSnippet(snippet []string) error
 	GetMap(mapFile string) (*models.Map, error)
+	HTTPRequestRulesGet(parentType, parentName string) (models.HTTPRequestRules, error)
+	HTTPRequestRuleGet(id int64, parentType, parentName string) (*models.HTTPRequestRule, error)
+	HTTPRequestRuleDelete(id int64, parentType string, parentName string) error
+	HTTPRequestRuleDeleteAll(parentType string, parentName string) error
+	HTTPRequestRuleCreate(parentType string, parentName string, data *models.HTTPRequestRule) error
+	HTTPRequestRuleEdit(id int64, parentType string, parentName string, data *models.HTTPRequestRule) error
 	PeerEntryEdit(peerSection string, peer models.PeerEntry) error
 	PeerEntryCreateOrEdit(peerSection string, peer models.PeerEntry) error
 	RefreshBackends() (deleted []string, err error)

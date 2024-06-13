@@ -27,6 +27,7 @@ API_PKGS=${API_PKGS::-1} # remove trailing ","
 
 VERSION=$(go list -m  k8s.io/api  | cut -d ' ' -f2)
 GOBIN="$(go env GOBIN)"
+gopath="$(go env GOPATH)"
 gobin="${GOBIN:-$(go env GOPATH)/bin}"
 # new version is completly broken (with breaking changes \o/) use old one
 #go install k8s.io/code-generator/cmd/{deepcopy-gen,register-gen,client-gen,lister-gen,informer-gen,defaulter-gen}@$VERSION
@@ -36,21 +37,21 @@ go install k8s.io/code-generator/cmd/{deepcopy-gen,register-gen,client-gen,liste
 echo "Generating code for $API_PKGS"
 
 echo "Generating deepcopy funcs"
-"${gobin}/deepcopy-gen"\
+GOPATH=$gopath "${gobin}/deepcopy-gen"\
   -O zz_generated.deepcopy\
 	--input-dirs ${API_PKGS}\
 	--go-header-file ${HDR_FILE}\
 	--output-base ${OUTPUT_DIR}
 
 echo "Generating register funcs"
-"${gobin}/register-gen"\
+GOPATH=$gopath "${gobin}/register-gen"\
   -O zz_generated.register\
 	--input-dirs ${API_PKGS}\
 	--go-header-file ${HDR_FILE}\
 	--output-base ${OUTPUT_DIR}
 
 echo "Generating clientset"
-"${gobin}/client-gen"\
+GOPATH=$gopath "${gobin}/client-gen"\
 	--plural-exceptions "Defaults:Defaults"\
 	--clientset-name "versioned"\
 	--input ${API_PKGS}\
@@ -60,7 +61,7 @@ echo "Generating clientset"
 	--output-base ${OUTPUT_DIR}
 
 echo "Generating listers"
-"${gobin}/lister-gen"\
+GOPATH=$gopath "${gobin}/lister-gen"\
 	--plural-exceptions "Defaults:Defaults"\
 	--input-dirs ${API_PKGS}\
 	--output-package "${CR_PKG}/generated/listers"\
@@ -68,7 +69,7 @@ echo "Generating listers"
 	--output-base ${OUTPUT_DIR}
 
 echo "Generating informers"
-"${gobin}/informer-gen"\
+GOPATH=$gopath "${gobin}/informer-gen"\
 	--plural-exceptions "Defaults:Defaults"\
 	--input-dirs ${API_PKGS}\
 	--versioned-clientset-package "${CR_PKG}/generated/clientset/versioned"\
