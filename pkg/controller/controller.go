@@ -176,6 +176,7 @@ func (c *HAProxyController) updateHAProxy() {
 			c.updateHAProxy()
 			return
 		}
+		return
 	}
 
 	if !c.ready {
