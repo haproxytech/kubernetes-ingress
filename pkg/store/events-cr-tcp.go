@@ -43,7 +43,8 @@ func (k *K8s) EventTCPCR(namespace, name string, data *TCPs) bool {
 			ns.CRs.AllTCPs = append(ns.CRs.AllTCPs, v.Items...)
 		}
 		ns.CRs.AllTCPs.Order()
-		ns.CRs.AllTCPs.CheckCollision()
+		// Check collisions with TCP in all namespaces
+		k.checkCollisionsAllNamespaces()
 		updateRequired = true
 	case ADDED:
 		// ADDED received, but we already have it
@@ -65,7 +66,8 @@ func (k *K8s) EventTCPCR(namespace, name string, data *TCPs) bool {
 			ns.CRs.AllTCPs = append(ns.CRs.AllTCPs, v.Items...)
 		}
 		ns.CRs.AllTCPs.Order()
-		ns.CRs.AllTCPs.CheckCollision()
+		// Check collisions with TCP in all namespaces
+		k.checkCollisionsAllNamespaces()
 		updateRequired = true
 	case DELETED:
 		tcp, ok := ns.CRs.TCPsPerCR[data.Name]
@@ -78,7 +80,8 @@ func (k *K8s) EventTCPCR(namespace, name string, data *TCPs) bool {
 				ns.CRs.AllTCPs = append(ns.CRs.AllTCPs, v.Items...)
 			}
 			ns.CRs.AllTCPs.Order()
-			ns.CRs.AllTCPs.CheckCollision()
+			// Check collisions with TCP in all namespaces
+			k.checkCollisionsAllNamespaces()
 			updateRequired = true
 		} else {
 			logger.Warningf("TCP CR '%s' not registered with controller, cannot delete !", data.Name)
@@ -103,4 +106,20 @@ func (k *K8s) handleDeletedTCPs(oldTCP, newTCP *TCPs) {
 			k.FrontendRC.RemoveOwner(owner)
 		}
 	}
+}
+
+func (k *K8s) checkCollisionsAllNamespaces() {
+	tcpAllNamespaces := k.tcpsAllNamespaces()
+	tcpAllNamespaces.Order()
+	tcpAllNamespaces.CheckCollision()
+}
+
+func (k *K8s) tcpsAllNamespaces() TCPResourceList {
+	allTCPs := make(TCPResourceList, 0)
+	for _, ns := range k.Namespaces {
+		for _, v := range ns.CRs.TCPsPerCR {
+			allTCPs = append(allTCPs, v.Items...)
+		}
+	}
+	return allTCPs
 }
