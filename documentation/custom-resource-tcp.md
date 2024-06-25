@@ -289,14 +289,61 @@ type: kubernetes.io/tls
 
 Note that `ssl_certificate` can be:
 - the name of a Kubernetes Secret (**in the same namespace as the TCP CR**) containing the certificated and key
-- or a filename on the pod local filesystem
-- or a folder on the pod local filesystem
+- or a filename/folder on the pod local filesystem
+
+More details below on both use cases
+
+**1. Using a Kubernetes Secret name**
+
+You can use a Secret name in `ssl_certificate`.
+Then the cert + key will be written in the Pod filesystem in the below paths and used from there:
+
+| IC in cluster mode     | IC out of cluster mode (external mode) |
+|------------------------|----------------------------------------|
+| /etc/haproxy/certs/tcp | \<config-dir\>/certs/tcp                 |
+
+where `<config-dir>` is:
+- `/tmp/haproxy-ingress/etc` by default
+- `--config-dir` IC start argument if set.
 
 
-It's for example possible to mount a SSL Secret in the Ingress Controller Pod on a volume and reference the volume mount path in `ssl_certificate`.
-Without change the Pod (/deployment manifest), you can use a Secret name in `ssl_certificate`.
-Then the cert + key will be written in the Pod filesystem in:
-- `/etc/haproxy/certs/tcp`
+
+
+**2. Using a Folder/filename**
+
+2-1. In cluster mode (IC Pod) : with a Kubernetes Secret
+
+The recommanded way of using a folder (or a filename) is to mount a secret volume like below in the Ingress Controller Pod (it's possible to use `extraVolumes` and `extraVolumeMounts` in the Helm Charts):
+
+```
+spec:
+  template:
+    spec:
+      containers:
+        ...
+        volumeMounts:
+          - mountPath: "/var/certs"
+            name: certs
+            readOnly: true
+      volumes:
+        - name: certs
+          secret:
+            secretName: tcp-test-cert
+```
+
+In the TCP CR, reference the volume mount path in `ssl_certificate`:
+```
+ssl_certificate: /var/certs
+```
+
+**Note that storing the certificates in the Pod image and using for `ssl_certificate` a path to it, is NOT recommanded.**
+
+
+2-2. External mode
+
+Using as `ssl_certificate` with a Kubernetes Secret name as presented above in 1- also works in external mode.
+It's also possibe to use a folder/filename in `external mode`, store the certificates there and reference this path as `ssl_certificate`.
+
 
 
 ### Generated Frontend and Backend configuration:
