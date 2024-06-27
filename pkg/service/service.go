@@ -145,10 +145,11 @@ func (s *Service) HandleBackend(storeK8s store.K8s, client api.HAProxyClient, a 
 	var backend *models.Backend
 	var newBackend *v1.BackendSpec
 	newBackend, err = s.getBackendModel(storeK8s, a)
-	s.backend = newBackend.Config
 	if err != nil {
+		s.backend = nil
 		return
 	}
+	s.backend = newBackend.Config
 	// Get/Create Backend
 	backend, err = client.BackendGet(newBackend.Config.Name)
 	if err == nil {
