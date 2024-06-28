@@ -57,7 +57,7 @@ A `TCP` CR contains a list of TCP services definitions.
 Each of them has:
 - a `name`
 - a `frontend` section that contains:
-  - a `frontend`: any setting from client-native frontend model is allowed
+  - a `frontend`: any setting from client-native frontend model is allowed (**except the `mode` that is forced to `tcp`**)
   - a list of `binds`: any setting from client-native bind model is allowed
 - a `service` defintion that is an Kubernetes upstream Service/Port (the K8s Service has to be in the same namespace as the TCP CR is deployed)
 
