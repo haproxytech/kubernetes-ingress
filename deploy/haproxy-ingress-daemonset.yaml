@@ -175,11 +175,11 @@ spec:
             port: 1042
         ports:
         - name: http
-          containerPort: 80
-          hostPort: 80
+          containerPort: 8080
+          hostPort: 8080
         - name: https
-          containerPort: 443
-          hostPort: 443
+          containerPort: 8443
+          hostPort: 8443
         - name: stat
           containerPort: 1024
           hostPort: 1024
