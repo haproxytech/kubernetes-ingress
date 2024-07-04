@@ -213,6 +213,9 @@ func (i *Ingress) Update(k store.K8s, h haproxy.HAProxy, a annotations.Annotatio
 	logger.Tracef("Ingress '%s/%s': processing secrets...", i.resource.Namespace, i.resource.Name)
 	secretManager := secret.NewManager(k, h)
 	for _, tls := range i.resource.TLS {
+		if tls.SecretName == "" {
+			continue
+		}
 		sec := secret.Secret{
 			Name:       types.NamespacedName{Namespace: i.resource.Namespace, Name: tls.SecretName},
 			SecretType: certs.FT_CERT,
