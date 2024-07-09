@@ -92,9 +92,12 @@ type OSArgs struct {
 	ControllerPort             int            `long:"controller-port" description:"port to listen on for controller data: prometheus, pprof" default:"6060"`
 	HTTPBindPort               int64          `long:"http-bind-port" default:"8080" description:"port to listen on for HTTP traffic"`
 	HTTPSBindPort              int64          `long:"https-bind-port" default:"8443" description:"port to listen on for HTTPS traffic"`
+	HTTPBindThread             string         `long:"http-bind-thread" description:"default http service bind thread params eg: 1-1" default:""`
+	HTTPSBindThread            string         `long:"https-bind-thread" description:"default https service bind thread params eg: 1-1" default:""`
 	SyncPeriod                 time.Duration  `long:"sync-period" default:"5s" description:"Sets the period at which the controller syncs HAProxy configuration file"`
 	CacheResyncPeriod          time.Duration  `long:"cache-resync-period" default:"10m" description:"Sets the underlying Shared Informer resync period: resyncing controller with informers cache"`
 	HealthzBindPort            int64          `long:"healthz-bind-port" default:"1042" description:"port to listen on for probes"`
+	HealthzBindThread          string         `long:"healthz-bind-thread" description:"default healthz service bind thread params eg: 1-1" default:""`
 	LogLevel                   LogLevelValue  `long:"log" default:"info" description:"level of log messages you can see"`
 	DisableIPV4                bool           `long:"disable-ipv4" description:"toggle to disable the IPv4 protocol from all frontends"`
 	External                   bool           `short:"e" long:"external" description:"use as external Ingress Controller (out of k8s cluster)"`

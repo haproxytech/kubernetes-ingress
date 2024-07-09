@@ -225,7 +225,8 @@ func (c *HAProxyController) setToReady() {
 		return c.haproxy.FrontendBindCreate("healthz",
 			models.Bind{
 				BindParams: models.BindParams{
-					Name: "v4",
+					Name:   "v4",
+					Thread: c.osArgs.HealthzBindThread,
 				},
 				Address: fmt.Sprintf("0.0.0.0:%d", healthzPort),
 			})
@@ -235,8 +236,9 @@ func (c *HAProxyController) setToReady() {
 			return c.haproxy.FrontendBindCreate("healthz",
 				models.Bind{
 					BindParams: models.BindParams{
-						Name: "v6",
-						V4v6: true,
+						Name:   "v6",
+						V4v6:   true,
+						Thread: c.osArgs.HealthzBindThread,
 					},
 					Address: fmt.Sprintf(":::%d", healthzPort),
 				})
