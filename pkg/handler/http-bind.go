@@ -25,25 +25,38 @@ import (
 )
 
 type HTTPBind struct {
-	IPv4Addr  string
-	IPv6Addr  string
-	HTTPPort  int64
-	HTTPSPort int64
-	HTTP      bool
-	HTTPS     bool
-	IPv4      bool
-	IPv6      bool
+	IPv4Addr        string
+	IPv6Addr        string
+	HTTPPort        int64
+	HTTPSPort       int64
+	HTTP            bool
+	HTTPS           bool
+	IPv4            bool
+	IPv6            bool
+	HTTPBindThread  string
+	HTTPSBindThread string
+}
+
+type PortAndThread struct {
+	Port   int64
+	Thread string
 }
 
 func (handler HTTPBind) Update(k store.K8s, h haproxy.HAProxy, a annotations.Annotations) (err error) {
 	var errors utils.Errors
-	frontends := make(map[string]int64, 2)
+	frontends := make(map[string]PortAndThread, 2)
 	protos := make(map[string]string, 2)
 	if handler.HTTP {
-		frontends[h.FrontHTTP] = handler.HTTPPort
+		frontends[h.FrontHTTP] = PortAndThread{
+			Port:   handler.HTTPPort,
+			Thread: handler.HTTPBindThread,
+		}
 	}
 	if handler.HTTPS {
-		frontends[h.FrontHTTPS] = handler.HTTPSPort
+		frontends[h.FrontHTTPS] = PortAndThread{
+			Port:   handler.HTTPSPort,
+			Thread: handler.HTTPSBindThread,
+		}
 	}
 	if handler.IPv4 {
 		protos["v4"] = handler.IPv4Addr
@@ -61,11 +74,14 @@ func (handler HTTPBind) Update(k store.K8s, h haproxy.HAProxy, a annotations.Ann
 				Address: ":::1024",
 			}))
 	}
-	for ftName, ftPort := range frontends {
+	for ftName, ftPortAndThread := range frontends {
+		ftPort := ftPortAndThread.Port
+		thread := ftPortAndThread.Thread
 		for proto, addr := range protos {
 			bind := models.Bind{
 				BindParams: models.BindParams{
-					Name: proto,
+					Name:   proto,
+					Thread: thread,
 				},
 				Address: addr,
 				Port:    utils.PtrInt64(ftPort),
