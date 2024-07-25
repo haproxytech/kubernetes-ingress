@@ -1,6 +1,6 @@
 #!/command/with-contenv sh
 
-MEMLIMIT=$(free -m | awk '/Mem:/ {print int($2 / 3)}')
+MEMLIMIT=$(free -m | awk '/Mem:/ {printf "%d\n", int($2 / 3)}')
 
 CG_LIMIT_FILE="/sys/fs/cgroup/memory/memory.limit_in_bytes"
 if [ -f "/sys/fs/cgroup/cgroup.controllers" ]; then
@@ -8,7 +8,11 @@ if [ -f "/sys/fs/cgroup/cgroup.controllers" ]; then
 fi
 
 if [ -r "${CG_LIMIT_FILE}" ]; then
-    MEMLIMIT_CG=$(awk '{print int($1 / 1024 / 1024 / 3)}' "${CG_LIMIT_FILE}")
+    if grep -q '^max$' "${CG_LIMIT_FILE}"; then
+        MEMLIMIT_CG="${MEMLIMIT}"
+    else
+        MEMLIMIT_CG=$(awk '{printf "%d\n", int($1 / 1024 / 1024 / 3)}' "${CG_LIMIT_FILE}")
+    fi
 
     if [ "${MEMLIMIT_CG}" -gt 0 ]; then
         if [ "${MEMLIMIT_CG}" -lt "${MEMLIMIT}" ]; then
