@@ -44,11 +44,18 @@ type HAProxyClient interface { //nolint:interfacebloat
 	BackendServerEdit(backendName string, data models.Server) error
 	BackendServerDelete(backendName string, serverName string) error
 	BackendServersGet(backendName string) (models.Servers, error)
+	BackendSwitchingRulesGet(frontendName string) (models.BackendSwitchingRules, error)
 	BackendSwitchingRuleCreate(frontend string, rule models.BackendSwitchingRule) error
+	CaptureCreate(frontend string, rule models.Capture) error
+	CaptureDeleteAll(frontend string) (err error)
+	CapturesGet(frontend string) (models.Captures, error)
 	BackendSwitchingRuleDeleteAll(frontend string) error
 	DefaultsGetConfiguration() (*models.Defaults, error)
 	DefaultsPushConfiguration(models.Defaults) error
 	ExecuteRaw(command string) (result []string, err error)
+	FilterCreate(parentType, parentName string, rule models.Filter) error
+	FiltersGet(parentType, parentName string) (models.Filters, error)
+	FilterDeleteAll(parentType, parentName string) (err error)
 	FrontendCfgSnippetSet(frontendName string, value []string) error
 	FrontendCreate(frontend models.Frontend) error
 	FrontendDelete(frontendName string) error
@@ -78,6 +85,12 @@ type HAProxyClient interface { //nolint:interfacebloat
 	HTTPRequestRuleDeleteAll(parentType string, parentName string) error
 	HTTPRequestRuleCreate(parentType string, parentName string, data *models.HTTPRequestRule) error
 	HTTPRequestRuleEdit(id int64, parentType string, parentName string, data *models.HTTPRequestRule) error
+	LogTargetCreate(parentType, parentName string, rule models.LogTarget) error
+	LogTargetsGet(parentType, parentName string) (models.LogTargets, error)
+	LogTargetDeleteAll(parentType, parentName string) (err error)
+	TCPRequestRuleCreate(parentType, parentName string, rule models.TCPRequestRule) error
+	TCPRequestRulesGet(parentType, parentName string) (models.TCPRequestRules, error)
+	TCPRequestRuleDeleteAll(parentType, parentName string) (err error)
 	PeerEntryEdit(peerSection string, peer models.PeerEntry) error
 	PeerEntryCreateOrEdit(peerSection string, peer models.PeerEntry) error
 	RefreshBackends() (deleted []string, err error)

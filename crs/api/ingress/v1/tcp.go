@@ -40,16 +40,27 @@ type TCPService struct {
 }
 
 type SectionFrontend struct {
-	models.Frontend `json:",inline"`
-	Binds           []*models.Bind `json:"binds"`
+	models.Frontend       `json:",inline"`
+	Acls                  models.Acls                  `json:"acl_list,omitempty"`
+	Binds                 []*models.Bind               `json:"binds"`
+	BackendSwitchingRules models.BackendSwitchingRules `json:"backend_switching_rule_list,omitempty"`
+	Captures              models.Captures              `json:"capture_list,omitempty"`
+	Filters               models.Filters               `json:"filter_list,omitempty"`
+	LogTargets            models.LogTargets            `json:"log_target_list,omitempty"`
+	TCPRequestRules       models.TCPRequestRules       `json:"tcp_request_rule_list,omitempty"`
 }
 
 type TCPModel struct {
 	// +kubebuilder:validation:Required
 	Name     string          `json:"name"`
 	Frontend SectionFrontend `json:"frontend"`
-	Service  TCPService      `json:"service"`
+	// Service defines the name of the default service (default_backend)
+	Service TCPService `json:"service"`
+	// Services defines additional services for additional backends
+	Services TCPServices `json:"services,omitempty"`
 }
+
+type TCPServices []*TCPService
 
 // TCPSpec defines the desired state of a TCPService
 type TCPSpec []TCPModel
@@ -60,6 +71,10 @@ func (a *TCPModel) DeepCopyInto(out *TCPModel) {
 	a.Frontend.DeepCopyInto(&out.Frontend)
 	s, _ := a.Service.MarshalBinary()
 	_ = out.Service.UnmarshalBinary(s)
+
+	if a.Services != nil {
+		a.Services.DeepCopyInto(&out.Services)
+	}
 }
 
 func (a *SectionFrontend) DeepCopyInto(out *SectionFrontend) {
@@ -73,6 +88,60 @@ func (a *SectionFrontend) DeepCopyInto(out *SectionFrontend) {
 			b, _ := v.MarshalBinary()
 			out.Binds[i] = &models.Bind{}
 			_ = out.Binds[i].UnmarshalBinary(b)
+		}
+	}
+
+	if a.Acls != nil {
+		out.Acls = make(models.Acls, len(a.Acls))
+		for i, v := range a.Acls {
+			b, _ := v.MarshalBinary()
+			out.Acls[i] = &models.ACL{}
+			_ = out.Acls[i].UnmarshalBinary(b)
+		}
+	}
+
+	if len(a.BackendSwitchingRules) > 0 {
+		out.BackendSwitchingRules = make([]*models.BackendSwitchingRule, len(a.BackendSwitchingRules))
+		for i, v := range a.BackendSwitchingRules {
+			b, _ := v.MarshalBinary()
+			out.BackendSwitchingRules[i] = &models.BackendSwitchingRule{}
+			_ = out.BackendSwitchingRules[i].UnmarshalBinary(b)
+		}
+	}
+
+	if len(a.Captures) > 0 {
+		out.Captures = make([]*models.Capture, len(a.Captures))
+		for i, v := range a.Captures {
+			b, _ := v.MarshalBinary()
+			out.Captures[i] = &models.Capture{}
+			_ = out.Captures[i].UnmarshalBinary(b)
+		}
+	}
+
+	if len(a.Filters) > 0 {
+		out.Filters = make([]*models.Filter, len(a.Filters))
+		for i, v := range a.Filters {
+			b, _ := v.MarshalBinary()
+			out.Filters[i] = &models.Filter{}
+			_ = out.Filters[i].UnmarshalBinary(b)
+		}
+	}
+
+	if len(a.LogTargets) > 0 {
+		out.LogTargets = make([]*models.LogTarget, len(a.LogTargets))
+		for i, v := range a.LogTargets {
+			b, _ := v.MarshalBinary()
+			out.LogTargets[i] = &models.LogTarget{}
+			_ = out.LogTargets[i].UnmarshalBinary(b)
+		}
+	}
+
+	if len(a.TCPRequestRules) > 0 {
+		out.TCPRequestRules = make([]*models.TCPRequestRule, len(a.TCPRequestRules))
+		for i, v := range a.TCPRequestRules {
+			b, _ := v.MarshalBinary()
+			out.TCPRequestRules[i] = &models.TCPRequestRule{}
+			_ = out.TCPRequestRules[i].UnmarshalBinary(b)
 		}
 	}
 }
@@ -120,15 +189,76 @@ func (a TCPModel) Equal(b TCPModel, opt ...models.Options) bool {
 			return false
 		}
 		for i, value := range a.Frontend.Binds {
-			if !value.Equal(*b.Frontend.Binds[i], opt...) {
+			if (value == nil && b.Frontend.Binds[i] != nil) || (value != nil && b.Frontend.Binds[i] == nil) {
+				return false
+			}
+			if value != nil &&
+				b.Frontend.Binds[i] != nil &&
+				!value.Equal(*b.Frontend.Binds[i], opt...) {
 				return false
 			}
 		}
 	}
 
+	if !a.Frontend.Acls.Equal(b.Frontend.Acls, models.Options{
+		NilSameAsEmpty: true,
+	}) {
+		return false
+	}
+
+	if !a.Frontend.BackendSwitchingRules.Equal(b.Frontend.BackendSwitchingRules, models.Options{
+		NilSameAsEmpty: true,
+	}) {
+		return false
+	}
+
+	if !a.Frontend.Captures.Equal(b.Frontend.Captures, models.Options{
+		NilSameAsEmpty: true,
+	}) {
+		return false
+	}
+
+	if !a.Frontend.Filters.Equal(b.Frontend.Filters, models.Options{
+		NilSameAsEmpty: true,
+	}) {
+		return false
+	}
+
+	if !a.Frontend.LogTargets.Equal(b.Frontend.LogTargets, models.Options{
+		NilSameAsEmpty: true,
+	}) {
+		return false
+	}
+
+	if !a.Frontend.TCPRequestRules.Equal(b.Frontend.TCPRequestRules, models.Options{
+		NilSameAsEmpty: true,
+	}) {
+		return false
+	}
+
 	if !a.Service.Equal(b.Service, opt...) {
 		return false
 	}
+
+	if (a.Services == nil && b.Services != nil) || (a.Services != nil && b.Services == nil) {
+		return false
+	}
+	if a.Services != nil && b.Services != nil {
+		if len(a.Services) != len(b.Services) {
+			return false
+		}
+		for i, value := range a.Services {
+			if (value == nil && b.Services[i] != nil) || (value != nil && b.Services[i] == nil) {
+				return false
+			}
+			if value != nil &&
+				b.Services[i] != nil &&
+				!value.Equal(*b.Services[i], opt...) {
+				return false
+			}
+		}
+	}
+
 	return true
 }
 

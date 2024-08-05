@@ -51,6 +51,105 @@ spec:
                       - enabled
                       - disabled
                       type: string
+                    acl_list:
+                      description: |-
+                        Acls ACL Lines Array
+
+
+                        HAProxy ACL lines array (corresponds to acl directives)
+
+
+                        swagger:model acls
+                      items:
+                        description: |-
+                          ACL ACL Lines
+
+
+                          The use of Access Control Lists (ACL) provides a flexible solution to perform
+                          content switching and generally to take decisions based on content extracted
+                          from the request, the response or any environmental status.
+
+
+                          swagger:model acl
+                        properties:
+                          acl_name:
+                            description: |-
+                              acl name
+                              Required: true
+                              Pattern: ^[^\s]+$
+                            pattern: ^[^\s]+$
+                            type: string
+                          criterion:
+                            description: |-
+                              criterion
+                              Required: true
+                              Pattern: ^[^\s]+$
+                            pattern: ^[^\s]+$
+                            type: string
+                          index:
+                            description: |-
+                              index
+                              Required: true
+                            format: int64
+                            type: integer
+                          value:
+                            description: value
+                            type: string
+                        required:
+                        - acl_name
+                        - criterion
+                        - index
+                        type: object
+                      type: array
+                    backend_switching_rule_list:
+                      description: |-
+                        BackendSwitchingRules Backend Switching Rules Array
+
+
+                        HAProxy backend switching rules array (corresponds to use_backend directives)
+
+
+                        swagger:model backend_switching_rules
+                      items:
+                        description: |-
+                          BackendSwitchingRule Backend Switching Rule
+
+
+                          HAProxy backend switching rule configuration (corresponds to use_backend directive)
+                          Example: {"cond":"if","cond_test":"{ req_ssl_sni -i www.example.com }","index":0,"name":"test_backend"}
+
+
+                          swagger:model backend_switching_rule
+                        properties:
+                          cond:
+                            description: |-
+                              cond
+                              Enum: [if unless]
+                            enum:
+                            - if
+                            - unless
+                            type: string
+                          cond_test:
+                            description: cond test
+                            type: string
+                          index:
+                            description: |-
+                              index
+                              Required: true
+                            format: int64
+                            type: integer
+                          name:
+                            description: |-
+                              name
+                              Required: true
+                              Pattern: ^[^\s]+$
+                            pattern: ^[^\s]+$
+                            type: string
+                        required:
+                        - index
+                        - name
+                        type: object
+                      type: array
                     backlog:
                       description: backlog
                       format: int64
@@ -385,6 +484,46 @@ spec:
                             type: string
                         type: object
                       type: array
+                    capture_list:
+                      description: |-
+                        Captures Declare capture array
+
+
+                        swagger:model captures
+                      items:
+                        description: |-
+                          Capture Declare Capture
+
+
+                          swagger:model capture
+                        properties:
+                          index:
+                            description: |-
+                              index
+                              Required: true
+                            format: int64
+                            type: integer
+                          length:
+                            description: |-
+                              length
+                              Required: true
+                            format: int64
+                            type: integer
+                          type:
+                            description: |-
+                              type
+                              Required: true
+                              Enum: [request response]
+                            enum:
+                            - request
+                            - response
+                            type: string
+                        required:
+                        - index
+                        - length
+                        - type
+                        type: object
+                      type: array
                     clflog:
                       description: clflog
                       type: boolean
@@ -692,6 +831,135 @@ spec:
                       - code
                       - url
                       type: object
+                    filter_list:
+                      description: |-
+                        Filters Filters Array
+
+
+                        HAProxy filters array (corresponds to filter directive)
+
+
+                        swagger:model filters
+                      items:
+                        description: |-
+                          Filter Filter
+
+
+                          HAProxy filters
+                          Example: {"index":0,"trace_name":"name","trace_rnd_parsing":true,"type":"trace"}
+
+
+                          swagger:model filter
+                        properties:
+                          app_name:
+                            description: |-
+                              Name of the fcgi-app section this filter will use.
+                              Pattern: ^[^\s]+$
+                            pattern: ^[^\s]+$
+                            type: string
+                          bandwidth_limit_name:
+                            description: |-
+                              Filter name that will be used by 'set-bandwidth-limit' actions to reference a specific bandwidth limitation filter
+                              Pattern: ^[^\s]+$
+                            pattern: ^[^\s]+$
+                            type: string
+                          cache_name:
+                            description: |-
+                              cache name
+                              Pattern: ^[^\s]+$
+                            pattern: ^[^\s]+$
+                            type: string
+                          default_limit:
+                            description: |-
+                              The max number of bytes that can be forwarded over the period.
+                              The value must be specified for per-stream and shared bandwidth limitation filters.
+                              It follows the HAProxy size format and is expressed in bytes.
+                            format: int64
+                            type: integer
+                          default_period:
+                            description: |-
+                              The default time period used to evaluate the bandwidth limitation rate.
+                              It can be specified for per-stream bandwidth limitation filters only.
+                              It follows the HAProxy time format and is expressed in milliseconds.
+                            format: int64
+                            type: integer
+                          index:
+                            description: |-
+                              index
+                              Required: true
+                            format: int64
+                            type: integer
+                          key:
+                            description: |-
+                              A sample expression rule.
+                              It describes what elements will be analyzed, extracted, combined, and used to select which table entry to update the counters.
+                              It must be specified for shared bandwidth limitation filters only.
+                            type: string
+                          limit:
+                            description: |-
+                              The max number of bytes that can be forwarded over the period.
+                              The value must be specified for per-stream and shared bandwidth limitation filters.
+                              It follows the HAProxy size format and is expressed in bytes.
+                            format: int64
+                            type: integer
+                          min_size:
+                            description: |-
+                              The optional minimum number of bytes forwarded at a time by a stream excluding the last packet that may be smaller.
+                              This value can be specified for per-stream and shared bandwidth limitation filters.
+                              It follows the HAProxy size format and is expressed in bytes.
+                            format: int64
+                            type: integer
+                          spoe_config:
+                            description: |-
+                              spoe config
+                              Pattern: ^[^\s]+$
+                            pattern: ^[^\s]+$
+                            type: string
+                          spoe_engine:
+                            description: |-
+                              spoe engine
+                              Pattern: ^[^\s]+$
+                            pattern: ^[^\s]+$
+                            type: string
+                          table:
+                            description: |-
+                              An optional table to be used instead of the default one, which is the stick-table declared in the current proxy.
+                              It can be specified for shared bandwidth limitation filters only.
+                            type: string
+                          trace_hexdump:
+                            description: trace hexdump
+                            type: boolean
+                          trace_name:
+                            description: |-
+                              trace name
+                              Pattern: ^[^\s]+$
+                            pattern: ^[^\s]+$
+                            type: string
+                          trace_rnd_forwarding:
+                            description: trace rnd forwarding
+                            type: boolean
+                          trace_rnd_parsing:
+                            description: trace rnd parsing
+                            type: boolean
+                          type:
+                            description: |-
+                              type
+                              Required: true
+                              Enum: [trace compression spoe cache fcgi-app bwlim-in bwlim-out]
+                            enum:
+                            - trace
+                            - compression
+                            - spoe
+                            - cache
+                            - fcgi-app
+                            - bwlim-in
+                            - bwlim-out
+                            type: string
+                        required:
+                        - index
+                        - type
+                        type: object
+                      type: array
                     forwardfor:
                       description: forwardfor
                       properties:
@@ -852,6 +1120,130 @@ spec:
                         Pattern: ^[A-Za-z0-9-_.:]+$
                       pattern: ^[A-Za-z0-9-_.:]+$
                       type: string
+                    log_target_list:
+                      description: |-
+                        LogTargets Log Target Array
+
+
+                        HAProxy log target array (corresponds to log directives)
+
+
+                        swagger:model log_targets
+                      items:
+                        description: |-
+                          LogTarget Log Target
+
+
+                          Per-instance logging of events and traffic.
+
+
+                          swagger:model log_target
+                        properties:
+                          address:
+                            description: |-
+                              address
+                              Pattern: ^[^\s]+$
+                            pattern: ^[^\s]+$
+                            type: string
+                          facility:
+                            description: |-
+                              facility
+                              Enum: [kern user mail daemon auth syslog lpr news uucp cron auth2 ftp ntp audit alert cron2 local0 local1 local2 local3 local4 local5 local6 local7]
+                            enum:
+                            - kern
+                            - user
+                            - mail
+                            - daemon
+                            - auth
+                            - syslog
+                            - lpr
+                            - news
+                            - uucp
+                            - cron
+                            - auth2
+                            - ftp
+                            - ntp
+                            - audit
+                            - alert
+                            - cron2
+                            - local0
+                            - local1
+                            - local2
+                            - local3
+                            - local4
+                            - local5
+                            - local6
+                            - local7
+                            type: string
+                          format:
+                            description: |-
+                              format
+                              Enum: [local rfc3164 rfc5424 priority short timed iso raw]
+                            enum:
+                            - local
+                            - rfc3164
+                            - rfc5424
+                            - priority
+                            - short
+                            - timed
+                            - iso
+                            - raw
+                            type: string
+                          global:
+                            description: global
+                            type: boolean
+                          index:
+                            description: |-
+                              index
+                              Required: true
+                            format: int64
+                            type: integer
+                          length:
+                            description: length
+                            format: int64
+                            type: integer
+                          level:
+                            description: |-
+                              level
+                              Enum: [emerg alert crit err warning notice info debug]
+                            enum:
+                            - emerg
+                            - alert
+                            - crit
+                            - err
+                            - warning
+                            - notice
+                            - info
+                            - debug
+                            type: string
+                          minlevel:
+                            description: |-
+                              minlevel
+                              Enum: [emerg alert crit err warning notice info debug]
+                            enum:
+                            - emerg
+                            - alert
+                            - crit
+                            - err
+                            - warning
+                            - notice
+                            - info
+                            - debug
+                            type: string
+                          nolog:
+                            description: nolog
+                            type: boolean
+                          sample_range:
+                            description: sample range
+                            type: string
+                          sample_size:
+                            description: sample size
+                            format: int64
+                            type: integer
+                        required:
+                        - index
+                        type: object
+                      type: array
                     logasap:
                       description: |-
                         logasap
@@ -1149,6 +1541,245 @@ spec:
                       description: tarpit timeout
                       format: int64
                       type: integer
+                    tcp_request_rule_list:
+                      description: |-
+                        TCPRequestRules TCP Request Rules Array
+
+
+                        HAProxy TCP request rules array (corresponds to tcp-request directive)
+
+
+                        swagger:model tcp_request_rules
+                      items:
+                        description: |-
+                          TCPRequestRule TCP Request Rule
+
+
+                          HAProxy TCP Request Rule configuration (corresponds to tcp-request)
+                          Example: {"cond":"if","cond_test":"{ src 192.168.0.0/16 }","index":0,"type":"connection"}
+
+
+                          swagger:model tcp_request_rule
+                        properties:
+                          action:
+                            description: |-
+                              action
+                              Enum: [accept attach-srv capture do-resolve expect-netscaler-cip expect-proxy reject sc-add-gpc sc-inc-gpc sc-inc-gpc0 sc-inc-gpc1 sc-set-gpt0 send-spoe-group set-dst-port set-dst set-priority set-src set-var silent-drop track-sc0 track-sc1 track-sc2 track-sc unset-var use-service lua set-bandwidth-limit set-src-port set-mark set-tos set-var-fmt set-log-level set-nice switch-mode]
+                            enum:
+                            - accept
+                            - attach-srv
+                            - capture
+                            - do-resolve
+                            - expect-netscaler-cip
+                            - expect-proxy
+                            - reject
+                            - sc-add-gpc
+                            - sc-inc-gpc
+                            - sc-inc-gpc0
+                            - sc-inc-gpc1
+                            - sc-set-gpt0
+                            - send-spoe-group
+                            - set-dst-port
+                            - set-dst
+                            - set-priority
+                            - set-src
+                            - set-var
+                            - silent-drop
+                            - track-sc0
+                            - track-sc1
+                            - track-sc2
+                            - track-sc
+                            - unset-var
+                            - use-service
+                            - lua
+                            - set-bandwidth-limit
+                            - set-src-port
+                            - set-mark
+                            - set-tos
+                            - set-var-fmt
+                            - set-log-level
+                            - set-nice
+                            - switch-mode
+                            type: string
+                          bandwidth_limit_limit:
+                            description: bandwidth limit limit
+                            type: string
+                          bandwidth_limit_name:
+                            description: bandwidth limit name
+                            type: string
+                          bandwidth_limit_period:
+                            description: bandwidth limit period
+                            type: string
+                          capture_len:
+                            description: capture len
+                            format: int64
+                            type: integer
+                          capture_sample:
+                            description: |-
+                              capture sample
+                              Pattern: ^[^\s]+$
+                            pattern: ^[^\s]+$
+                            type: string
+                          cond:
+                            description: |-
+                              cond
+                              Enum: [if unless]
+                            enum:
+                            - if
+                            - unless
+                            type: string
+                          cond_test:
+                            description: cond test
+                            type: string
+                          expr:
+                            description: expr
+                            type: string
+                          gpt_value:
+                            description: gpt value
+                            type: string
+                          index:
+                            description: |-
+                              index
+                              Required: true
+                            format: int64
+                            type: integer
+                          log_level:
+                            description: |-
+                              log level
+                              Enum: [emerg alert crit err warning notice info debug silent]
+                            enum:
+                            - emerg
+                            - alert
+                            - crit
+                            - err
+                            - warning
+                            - notice
+                            - info
+                            - debug
+                            - silent
+                            type: string
+                          lua_action:
+                            description: |-
+                              lua action
+                              Pattern: ^[^\s]+$
+                            pattern: ^[^\s]+$
+                            type: string
+                          lua_params:
+                            description: lua params
+                            type: string
+                          mark_value:
+                            description: |-
+                              mark value
+                              Pattern: ^(0x[0-9A-Fa-f]+|[0-9]+)$
+                            pattern: ^(0x[0-9A-Fa-f]+|[0-9]+)$
+                            type: string
+                          nice_value:
+                            description: |-
+                              nice value
+                              Maximum: 1024
+                              Minimum: -1024
+                            format: int64
+                            maximum: 1024
+                            minimum: -1024
+                            type: integer
+                          priority_type:
+                            description: |-
+                              priority type
+                              Enum: [class offset]
+                            enum:
+                            - class
+                            - offset
+                            type: string
+                          resolve_protocol:
+                            description: |-
+                              resolve protocol
+                              Enum: [ipv4 ipv6]
+                            enum:
+                            - ipv4
+                            - ipv6
+                            type: string
+                          resolve_resolvers:
+                            description: resolve resolvers
+                            type: string
+                          resolve_var:
+                            description: resolve var
+                            type: string
+                          sc_idx:
+                            description: sc idx
+                            type: string
+                          sc_inc_id:
+                            description: sc inc id
+                            type: string
+                          sc_int:
+                            description: sc int
+                            format: int64
+                            type: integer
+                          server_name:
+                            description: server name
+                            type: string
+                          service_name:
+                            description: service name
+                            type: string
+                          spoe_engine_name:
+                            description: spoe engine name
+                            type: string
+                          spoe_group_name:
+                            description: spoe group name
+                            type: string
+                          switch_mode_proto:
+                            description: switch mode proto
+                            type: string
+                          timeout:
+                            description: timeout
+                            format: int64
+                            type: integer
+                          tos_value:
+                            description: |-
+                              tos value
+                              Pattern: ^(0x[0-9A-Fa-f]+|[0-9]+)$
+                            pattern: ^(0x[0-9A-Fa-f]+|[0-9]+)$
+                            type: string
+                          track_key:
+                            description: track key
+                            type: string
+                          track_stick_counter:
+                            description: track stick counter
+                            format: int64
+                            type: integer
+                          track_table:
+                            description: track table
+                            type: string
+                          type:
+                            description: |-
+                              type
+                              Required: true
+                              Enum: [connection content inspect-delay session]
+                            enum:
+                            - connection
+                            - content
+                            - inspect-delay
+                            - session
+                            type: string
+                          var_format:
+                            description: var format
+                            type: string
+                          var_name:
+                            description: |-
+                              var name
+                              Pattern: ^[^\s]+$
+                            pattern: ^[^\s]+$
+                            type: string
+                          var_scope:
+                            description: |-
+                              var scope
+                              Pattern: ^[^\s]+$
+                            pattern: ^[^\s]+$
+                            type: string
+                        required:
+                        - index
+                        - type
+                        type: object
+                      type: array
                     tcp_smart_accept:
                       description: |-
                         tcp smart accept
@@ -1181,6 +1812,7 @@ spec:
                 name:
                   type: string
                 service:
+                  description: Service defines the name of the default service (default_backend)
                   properties:
                     name:
                       type: string
@@ -1192,6 +1824,22 @@ spec:
                   - name
                   - port
                   type: object
+                services:
+                  description: Services defines additional services for additional
+                    backends
+                  items:
+                    properties:
+                      name:
+                        type: string
+                      port:
+                        maximum: 65535
+                        minimum: 1
+                        type: integer
+                    required:
+                    - name
+                    - port
+                    type: object
+                  type: array
               required:
               - frontend
               - name

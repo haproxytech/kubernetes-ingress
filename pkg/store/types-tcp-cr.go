@@ -122,6 +122,9 @@ func (a TCPResourceList) Order() {
 
 func (a TCPResourceList) OrderByCreationTime() {
 	sort.SliceStable(a, func(i, j int) bool {
+		if a[i].CreationTimestamp.Equal(a[j].CreationTimestamp) {
+			return a[i].Name < a[j].Name
+		}
 		return (a)[i].CreationTimestamp.After((a)[j].CreationTimestamp)
 	})
 }
@@ -139,78 +142,125 @@ func (a TCPResourceList) resetCollisionStatus() {
 
 func (a TCPResourceList) CheckCollision() {
 	a.resetCollisionStatus()
-	for i, atcp := range a {
-		nextelems := a[i+1:]
-		hasCollAddPort, bCollAddPorts := atcp.HasCollisionAddressPort(nextelems)
-		hasCollFeName, bCollFeNames := atcp.HasCollisionFrontendName(nextelems)
-		if hasCollAddPort || hasCollFeName {
-			collisions := make(TCPResourceList, 0)
-			collisions = append(collisions, atcp)
-			collisions = append(collisions, bCollAddPorts...)
-			collisions = append(collisions, bCollFeNames...)
-			collisions.OrderByCreationTime()
+	hasCollAddPort, collAddPorts := a.HasCollisionAddressPort()
+	if hasCollAddPort {
+		for _, collOneAddPort := range collAddPorts {
 			// Set all Items to ERROR except the oldest one
-			if len(collisions) > 0 {
-				collisions[len(collisions)-1].CollisionStatus = ""
-				collisions[len(collisions)-1].Reason = ""
+			if len(collOneAddPort) > 0 {
+				collOneAddPort[len(collOneAddPort)-1].CollisionStatus = ""
+				collOneAddPort[len(collOneAddPort)-1].Reason = ""
+			}
+		}
+	}
+
+	hasCollFeName, collFeNames := a.HasCollisionFrontendName()
+	if hasCollFeName {
+		for _, collOneFeName := range collFeNames {
+			// Set all Items to ERROR except the oldest one
+			if len(collOneFeName) > 0 {
+				collOneFeName[len(collOneFeName)-1].CollisionStatus = ""
+				collOneFeName[len(collOneFeName)-1].Reason = ""
 			}
 		}
 	}
 }
 
-func (a *TCPResource) HasCollisionAddressPort(b TCPResourceList) (bool, []*TCPResource) {
-	res := make(map[string]*TCPResource)
+type bindWithResource struct {
+	bind     *models.Bind
+	resource *TCPResource
+}
 
-	for _, btcp := range b {
-		// Collision on Address Port
-		for i, aBind := range a.TCPModel.Frontend.Binds {
-			bBinds := btcp.TCPModel.Frontend.Binds[i:]
-			for _, bBind := range bBinds {
-				aAddressPort := AddressPort(aBind)
-				bAddressPort := AddressPort(bBind)
-				if aAddressPort == bAddressPort {
-					areEqual := a.Equal(btcp)
-					if !areEqual {
-						// Collision detected
-						res[btcp.Name] = btcp
-						a.CollisionStatus = ERROR
-						a.Reason += fmt.Sprintf("- Collistion AddPort %s with %s/%s ", bAddressPort, btcp.Namespace, btcp.WithParentName())
-						btcp.CollisionStatus = ERROR
-						btcp.Reason += fmt.Sprintf("- Collistion AddPort %s with %s/%s ", aAddressPort, a.Namespace, a.WithParentName())
+func (a *TCPResourceList) HasCollisionAddressPort() (bool, map[string]TCPResourceList) {
+	// map [address:port] -> (map[resource name] *resource)
+	collisions := make(map[string]map[string]*TCPResource)
+
+	bindsWithResourcesMap := make(map[string]bindWithResource)
+
+	for _, atcp := range *a {
+		for _, aBind := range atcp.Frontend.Binds {
+			if bBindWithResource, ok := bindsWithResourcesMap[AddressPort(aBind)]; ok {
+				btcp := bBindWithResource.resource
+				areEqual := atcp.Equal(btcp)
+				if !areEqual {
+					// Collision detected
+					resKey := AddressPort(aBind)
+					if _, ok := collisions[resKey]; !ok {
+						collisions[resKey] = make(map[string]*TCPResource)
 					}
+					collisions[resKey][atcp.Name] = atcp
+					collisions[resKey][btcp.Name] = btcp
+					// res[res_key] = append(res[res_key], atcp, btcp)
+					atcp.CollisionStatus = ERROR
+					atcp.Reason += fmt.Sprintf("- Collision AddPort %s with %s/%s ", AddressPort(bBindWithResource.bind), btcp.Namespace, btcp.WithParentName())
+					btcp.CollisionStatus = ERROR
+					btcp.Reason += fmt.Sprintf("- Collision AddPort %s with %s/%s ", AddressPort(aBind), atcp.Namespace, atcp.WithParentName())
 				}
+				continue
 			}
+			bindsWithResourcesMap[AddressPort(aBind)] = bindWithResource{bind: aBind, resource: atcp}
 		}
 	}
-	if len(res) != 0 {
-		return true, mapValuesToSlice(res)
+
+	if len(collisions) != 0 {
+		res := make(map[string]TCPResourceList)
+		for k, v := range collisions {
+			sl := mapValuesToSlice(v)
+			sl.OrderByCreationTime()
+			if _, ok := res[k]; !ok {
+				res[k] = make([]*TCPResource, 0)
+			}
+			res[k] = append(res[k], sl...)
+		}
+		return true, res
 	}
 
 	return false, nil
 }
 
-func (a *TCPResource) HasCollisionFrontendName(b TCPResourceList) (bool, []*TCPResource) {
-	res := make(map[string]*TCPResource)
-	for _, btcp := range b {
-		// Collision on Frontend Name
-		if a.Frontend.Name == btcp.Frontend.Name && !a.Equal(btcp) {
-			// Collision detected
-			res[btcp.Name] = btcp
-			a.CollisionStatus = ERROR
-			a.Reason += "- Collistion FE.Name with " + btcp.Namespace + "/" + btcp.WithParentName()
-			btcp.CollisionStatus = ERROR
-			btcp.Reason += "- Collistion FE.Name with " + a.Namespace + "/" + a.WithParentName()
+type frontendNameWithResource struct {
+	feName   string
+	resource *TCPResource
+}
+
+func (a *TCPResourceList) HasCollisionFrontendName() (bool, map[string]TCPResourceList) {
+	// map [feName] -> []resource
+	res := make(map[string]TCPResourceList)
+	feNameWithResource := make(map[string]frontendNameWithResource)
+
+	for _, atcp := range *a {
+		if bBindWithResource, ok := feNameWithResource[atcp.Frontend.Name]; ok {
+			btcp := bBindWithResource.resource
+			areEqual := atcp.Equal(btcp)
+			if !areEqual {
+				// Collision detected
+				resKey := atcp.Frontend.Name
+				if _, ok := res[resKey]; !ok {
+					res[resKey] = make([]*TCPResource, 0)
+				}
+				res[resKey] = append(res[resKey], atcp, btcp)
+				atcp.CollisionStatus = ERROR
+				atcp.Reason += "- Collision FE.Name with " + btcp.Namespace + "/" + btcp.WithParentName()
+				btcp.CollisionStatus = ERROR
+				btcp.Reason += "- Collision FE.Name with " + atcp.Namespace + "/" + atcp.WithParentName()
+			}
+			continue
 		}
+		feNameWithResource[atcp.Frontend.Name] = frontendNameWithResource{feName: atcp.Frontend.Name, resource: atcp}
 	}
+
 	if len(res) != 0 {
-		return true, mapValuesToSlice(res)
+		for _, v := range res {
+			v.OrderByCreationTime()
+		}
+		return true, res
 	}
 
 	return false, nil
 }
 
-func mapValuesToSlice(m map[string]*TCPResource) []*TCPResource {
-	res := make([]*TCPResource, 0)
+func mapValuesToSlice(m map[string]*TCPResource) TCPResourceList {
+	res := make(TCPResourceList, 0)
+	// res := make([]*TCPResource, 0)
 	for _, v := range m {
 		res = append(res, v)
 	}

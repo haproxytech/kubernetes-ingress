@@ -178,33 +178,6 @@ func (c *clientNative) BackendServerDelete(backendName string, serverName string
 	return configuration.DeleteServer(serverName, "backend", backendName, c.activeTransaction, 0)
 }
 
-func (c *clientNative) BackendSwitchingRuleCreate(frontend string, rule models.BackendSwitchingRule) error {
-	configuration, err := c.nativeAPI.Configuration()
-	if err != nil {
-		return err
-	}
-	c.activeTransactionHasChanges = true
-	return configuration.CreateBackendSwitchingRule(frontend, &rule, c.activeTransaction, 0)
-}
-
-func (c *clientNative) BackendSwitchingRuleDeleteAll(frontend string) (err error) {
-	configuration, err := c.nativeAPI.Configuration()
-	if err != nil {
-		return
-	}
-	c.activeTransactionHasChanges = true
-	_, switchingRules, err := configuration.GetBackendSwitchingRules(frontend, c.activeTransaction)
-	if err != nil {
-		return
-	}
-	for range len(switchingRules) {
-		if err = configuration.DeleteBackendSwitchingRule(0, frontend, c.activeTransaction, 0); err != nil {
-			break
-		}
-	}
-	return
-}
-
 func (c *clientNative) ServerGet(serverName, backendName string) (models.Server, error) {
 	configuration, err := c.nativeAPI.Configuration()
 	if err != nil {
