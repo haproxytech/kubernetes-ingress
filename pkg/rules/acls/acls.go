@@ -43,7 +43,7 @@ func Populate(client api.HAProxyClient, name string, acls models.Acls, resource 
 				}
 			}
 			// ... we reload because we created some acls.
-			instance.Reload("%s '%s', acls updated: %+v", resource, name, diffAcls)
+			instance.Reload("%s '%s', acls updated: %+v", resource, name, utils.JSONDiff(diffAcls))
 		}
 	}
 }

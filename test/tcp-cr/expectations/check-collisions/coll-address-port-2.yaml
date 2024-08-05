@@ -1,3 +1,21 @@
+---
+- tcpmodel:
+    name: service1CollAddPort2
+    frontend:
+      name: fe111
+      binds:
+      - accept_proxy: true
+        name: acceptproxy
+        port: 1
+      - port: 111
+    service:
+      name: service1
+      port: 443
+  parent_name: tcp-1
+  namespace: ns
+  collision_status: ERROR
+  reason: "- Collision AddPort :1 with ns/tcp-1/service1 "
+  creation_timestamp: '2024-08-16T11:45:26.371Z'
 - tcpmodel:
     name: service1CollAddPort
     frontend:

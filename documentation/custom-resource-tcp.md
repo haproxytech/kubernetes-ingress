@@ -58,8 +58,50 @@ Each of them has:
 - a `name`
 - a `frontend` section that contains:
   - a `frontend`: any setting from client-native frontend model is allowed (**except the `mode` that is forced to `tcp`**)
-  - a list of `binds`: any setting from client-native bind model is allowed
+  - a list of `binds`: any setting from client-native `models.Bind` model is allowed
+  - `acl_list`
+  - `backend_switching_rule_list`
+  - `capture_list`
+  - `filter_list`
+  - `log_target_list`
+  - `tcp_request_rule_list`
 - a `service` defintion that is an Kubernetes upstream Service/Port (the K8s Service has to be in the same namespace as the TCP CR is deployed)
+- a `services`: a list of additional Kubernetes upstream Service/Port that will generated addition backends in the haproxy configuration (use `backend_switching_rule_list` to add switching rules between those backends)
+
+The following table explains what is configurable is the Frontend section, what model it is from client-native and what keywords it generates in the haproxy configuration.
+
+| Frontend section | client-native model | haproxy keyword |
+|------------------|---------------------|-----------------|
+| acl_list | `models.Acls`   | `acl`|
+| backend_switching_rule_list| `models.AcBackendSwitchingRules`   | `use_backend` |
+| capture_list| `models.Captures` | `declare capture` |
+| filter_list | `models.Filters` | `filter` |
+| log_target_list | `models.LogTargets` | `log` |
+| tcp_request_rule_list | `models.TCPRequestRules` | `tcp-request` |
+
+
+### Full example and corresponding haproxy configuration
+
+For a full example with all sections, please refere to [Full example)](./tcp-cr-full-example)
+
+In this folder, you will find a complete example:
+- [echo](./tcp-cr-full-example/echo.yaml): an application deployment + service that will be the default backend
+- [echo-0](./tcp-cr-full-example/echo-0.yaml)/[echo-1](./tcp-cr-full-example/echo-1.yaml): 2 application deployment + services that will be used for backend switching rules with acl
+- the corresponding [generated haproxy configuration](./tcp-cr-full-example/haproxy.cfg)
+
+In the example, the resources have been deployed in a namespace `tests`.
+
+
+Note that in the TCP CR :
+- `.spec.service` will create:
+  - the backend `backend tests_http-echo_https`
+  - the frontend `default_backend`
+- `.spec.services` will create 2 additional backends:
+  - `tests_http-echo-0_https`
+  - `tests_http-echo-1_https`
+- The `acl` and `use_backend` are handled by the TCP CR `.spec.acl_list` and `.spec.backend_switching_rule_list`.
+
+Except the frontend keyword `default_backend`, all other lines are not automatically generated but are in a flexible way handled by the `frontend` section in the TCP CR.
 
 ## Pod and Service definitions
 
@@ -234,13 +276,14 @@ spec:
 There will also be an ERROR log
 ```
  2024/06/19 13:47:05 ERROR   handler/tcp-cr.go:61 [transactionID=dab63ebf-238d-4e04-b844-af668a86b024] tcp-cr: skipping tcp 'test/tcp-2/tcp-http-echo-test2-8443' due to collision - Colli │
-│ stion AddPort :32766 with test/tcp-1/tcp-http-echo-8443
+│ sion AddPort :32766 with test/tcp-1/tcp-http-echo-8443
 ```
 
 explaining that :
-- the TCP (in namespace `test`) named `tcp2` that a tcp service specification named `tcp-htt-echo-444`
+- the TCP (in namespace `test`) named `tcp2` that has a tcp service specification named `tcp-http-echo-test2-8443`
  will not be applied
- -in favor of the oldest one in namespace `test` in TCP CR `tcp1` named `tcp-http-echo-444`) due a collision on frontend names (`FE.Name`)
+- in favor of the oldest one (in namespace `test`) named `tcp1` with a tcp service specification named `tcp-http-echo-8443`
+- due a collision on AddressPort (`AddPort`)
 
 *This works accross all namespaces*
 

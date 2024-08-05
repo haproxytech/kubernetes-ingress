@@ -16,6 +16,7 @@ package utils
 
 import (
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"hash/fnv"
 	"os"
@@ -217,4 +218,14 @@ func PointerIfNotDefault[T comparable](arg T) *T {
 
 func GetIP() string {
 	return os.Getenv("POD_IP")
+}
+
+func JSONDiff(diffs map[string][]interface{}) string {
+	var diffRule []byte
+	var errM error
+	if diffRule, errM = json.Marshal(diffs); errM != nil {
+		GetLogger().Errorf("Error marshalling diffs: %v", errM)
+		return ""
+	}
+	return string(diffRule)
 }

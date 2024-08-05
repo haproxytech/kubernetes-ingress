@@ -15,7 +15,8 @@
     parent_name: tcp-1
     namespace: ns
     collision_status: ERROR
-    reason: "- Collision AddPort :1 with ns/tcp-1/service1 - Collision AddPort :11 with ns/tcp-1/service1 "
+    reason: "- Collision AddPort :1 with ns/tcp-1/service1 - Collision AddPort :11
+      with ns/tcp-1/service1 "
     creation_timestamp: '2024-06-16T11:45:26.371Z'
   - tcpmodel:
       name: service1
@@ -32,7 +33,8 @@
     parent_name: tcp-1
     namespace: ns
     collision_status: ERROR
-    reason: "- Collision AddPort :1 with ns/tcp-1/service1CollAddPort - Collision AddPort :11 with ns/tcp-1/service1CollAddPort "
+    reason: "- Collision AddPort :1 with ns/tcp-1/service1CollAddPort - Collision
+      AddPort :11 with ns/tcp-1/service1CollAddPort "
     creation_timestamp: '2024-05-16T11:45:26.371Z'
 ":11":
   - tcpmodel:
@@ -50,7 +52,8 @@
     parent_name: tcp-1
     namespace: ns
     collision_status: ERROR
-    reason: "- Collision AddPort :1 with ns/tcp-1/service1 - Collision AddPort :11 with ns/tcp-1/service1 "
+    reason: "- Collision AddPort :1 with ns/tcp-1/service1 - Collision AddPort :11
+      with ns/tcp-1/service1 "
     creation_timestamp: '2024-06-16T11:45:26.371Z'
   - tcpmodel:
       name: service1
@@ -67,5 +70,41 @@
     parent_name: tcp-1
     namespace: ns
     collision_status: ERROR
-    reason: "- Collision AddPort :1 with ns/tcp-1/service1CollAddPort - Collision AddPort :11 with ns/tcp-1/service1CollAddPort "
+    reason: "- Collision AddPort :1 with ns/tcp-1/service1CollAddPort - Collision
+      AddPort :11 with ns/tcp-1/service1CollAddPort "
+    creation_timestamp: '2024-05-16T11:45:26.371Z'
+":2":
+  - tcpmodel:
+      name: service2CollAddrPort
+      frontend:
+        name: fe2
+        binds:
+        - accept_proxy: true
+          name: acceptproxy
+          port: 2
+        - port: 234567
+      service:
+        name: service2
+        port: 443
+    parent_name: tcp-1
+    namespace: ns
+    collision_status: ERROR
+    reason: "- Collision AddPort :2 with ns/tcp-1/service2 "
+    creation_timestamp: '2024-06-16T11:45:26.371Z'
+  - tcpmodel:
+      name: service2
+      frontend:
+        name: fe2
+        binds:
+        - accept_proxy: true
+          name: acceptproxy
+          port: 2
+        - port: 22
+      service:
+        name: service2
+        port: 443
+    parent_name: tcp-1
+    namespace: ns
+    collision_status: ERROR
+    reason: "- Collision AddPort :2 with ns/tcp-1/service2CollAddrPort "
     creation_timestamp: '2024-05-16T11:45:26.371Z'
