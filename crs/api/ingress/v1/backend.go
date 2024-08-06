@@ -45,6 +45,23 @@ func (in *BackendSpec) DeepCopyInto(out *BackendSpec) {
 		b, _ := in.Config.MarshalBinary()
 		_ = out.Config.UnmarshalBinary(b)
 	}
+	if in.Acls != nil {
+		out.Acls = make(models.Acls, len(in.Acls))
+		for i, v := range in.Acls {
+			b, _ := v.MarshalBinary()
+			out.Acls[i] = &models.ACL{}
+			_ = out.Acls[i].UnmarshalBinary(b)
+		}
+	}
+
+	if in.HTTPRequests != nil {
+		out.HTTPRequests = make(models.HTTPRequestRules, len(in.HTTPRequests))
+		for i, v := range in.HTTPRequests {
+			b, _ := v.MarshalBinary()
+			out.HTTPRequests[i] = &models.HTTPRequestRule{}
+			_ = out.HTTPRequests[i].UnmarshalBinary(b)
+		}
+	}
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
