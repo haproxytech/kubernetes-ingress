@@ -249,7 +249,8 @@ func (c *HAProxyController) setToReady() {
 		return c.haproxy.FrontendBindCreate("stats",
 			models.Bind{
 				BindParams: models.BindParams{
-					Name: "stats",
+					Name:   "stats",
+					Thread: c.osArgs.StatsBindThread,
 				},
 				Address: fmt.Sprintf("*:%d", c.osArgs.StatsBindPort),
 			},
