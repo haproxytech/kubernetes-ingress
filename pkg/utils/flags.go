@@ -87,6 +87,7 @@ type OSArgs struct {
 	Help                       []bool         `short:"h" long:"help" description:"show this help message"`
 	LocalPeerPort              int64          `long:"localpeer-port" default:"10000" description:"port to listen on for local peer"`
 	StatsBindPort              int64          `long:"stats-bind-port" default:"1024" description:"port to listen on for stats page"`
+	StatsBindThread            string         `long:"stats-bind-thread" description:"default stats service bind thread params eg: 1-1" default:""`
 	DefaultBackendPort         int            `long:"default-backend-port" description:"port to use for default service" default:"6061"`
 	ChannelSize                int64          `long:"channel-size" description:"sets the size of controller buffers used to receive and send k8s events.NOTE: increase the value to accommodate large number of resources "`
 	ControllerPort             int            `long:"controller-port" description:"port to listen on for controller data: prometheus, pprof" default:"6060"`
