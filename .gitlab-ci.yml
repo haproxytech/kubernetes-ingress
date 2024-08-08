@@ -87,13 +87,13 @@ golangci_lint:
     - go
   script:
     - make lint
-lint-commit-msg:
+commit-policy:
   stage: lint
   needs: []
   rules:
     - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
   image:
-    name: $CI_REGISTRY_GO/commit-check:3.0.0
+    name: $CI_REGISTRY_GO/commit-check:5.0.2
     entrypoint: [""]
   tags:
     - go

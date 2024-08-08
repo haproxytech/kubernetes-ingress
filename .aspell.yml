@@ -1,0 +1,21 @@
+mode: commit
+min_length: 3
+ignore:
+  - '*_test.go'
+allowed:
+  - aspell
+  - repo
+  - yaml
+  - config
+  - Github
+  - Gitlab
+  - env
+  - failsafe
+  - golang
+  - mkdir
+  - WORKDIR
+  - apk
+  - ENTRYPOINT
+  - ubuntu
+  - golangci
+  - sudo

@@ -3,6 +3,7 @@ TARGETPLATFORM?=linux/amd64
 GOOS?=linux
 GOARCH?=amd64
 GOLANGCI_LINT_VERSION=1.59.1
+CHECK_COMMIT=5.0.2
 
 .PHONY: test
 test:
@@ -26,6 +27,11 @@ doc:
 lint:
 	cd bin;GOLANGCI_LINT_VERSION=${GOLANGCI_LINT_VERSION} sh lint-check.sh
 	bin/golangci-lint run --timeout 20m --color always --max-issues-per-linter 0 --max-same-issues 0
+
+.PHONY: check-commit
+check-commit:
+	cd bin;CHECK_COMMIT=${CHECK_COMMIT} sh check-commit.sh
+	check-commit
 
 .PHONY: yaml-lint
 yaml-lint:
