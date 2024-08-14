@@ -21,12 +21,12 @@ const (
 type Quic struct {
 	AddrIPv4         string
 	AddrIPv6         string
+	CertDir          string
+	MaxAge           string
+	QuicAnnouncePort int64
+	QuicBindPort     int64
 	IPv4             bool
 	IPv6             bool
-	CertDir          string
-	QuicAnnouncePort int64
-	MaxAge           string
-	QuicBindPort     int64
 }
 
 func (q *Quic) Update(k store.K8s, h haproxy.HAProxy, a annotations.Annotations) (err error) {

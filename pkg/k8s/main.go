@@ -77,13 +77,13 @@ type k8s struct {
 	apiExtensionsClient    *crdclientset.Clientset
 	publishSvc             *utils.NamespaceValue
 	gatewayClient          *gatewayclientset.Clientset
+	crdClient              *crdclientset.Clientset
 	podPrefix              string
 	podNamespace           string
 	whiteListedNS          []string
 	syncPeriod             time.Duration
 	cacheResyncPeriod      time.Duration
 	disableSvcExternalName bool // CVE-2021-25740
-	crdClient              *crdclientset.Clientset
 	gatewayAPIInstalled    bool
 }
 

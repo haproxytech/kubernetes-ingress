@@ -41,24 +41,24 @@ var logger = utils.GetLogger()
 
 // HAProxyController is ingress controller
 type HAProxyController struct {
+	store                    store.K8s
+	prometheusMetricsManager metrics.PrometheusMetricsManager
 	gatewayManager           gateway.GatewayManager
 	annotations              annotations.Annotations
+	updateStatusManager      status.UpdateStatusManager
 	eventChan                chan k8ssync.SyncDataEvent
 	updatePublishServiceFunc func(ingresses []*ingress.Ingress, publishServiceAddresses []string)
 	chShutdown               chan struct{}
 	podNamespace             string
 	podPrefix                string
-	haproxy                  haproxy.HAProxy
+	PodIP                    string
+	Hostname                 string
 	updateHandlers           []UpdateHandler
-	store                    store.K8s
+	beforeUpdateHandlers     []UpdateHandler
+	haproxy                  haproxy.HAProxy
 	osArgs                   utils.OSArgs
 	auxCfgModTime            int64
 	ready                    bool
-	updateStatusManager      status.UpdateStatusManager
-	beforeUpdateHandlers     []UpdateHandler
-	prometheusMetricsManager metrics.PrometheusMetricsManager
-	PodIP                    string
-	Hostname                 string
 }
 
 // Wrapping a Native-Client transaction and commit it.

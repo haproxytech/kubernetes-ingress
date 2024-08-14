@@ -43,9 +43,9 @@ type (
 )
 
 type ResourceCounter struct {
-	mu     sync.Mutex
 	owners map[HaproxyCfgResourceName]Owners
 	owned  map[OwnerKey]Owned
+	mu     sync.Mutex
 }
 
 func NewResourceCounter() *ResourceCounter {

@@ -38,8 +38,8 @@ type TCPCustomResource struct{}
 
 type tcpcontext struct {
 	k         store.K8s
-	h         haproxy.HAProxy
 	namespace string
+	h         haproxy.HAProxy
 }
 
 func (handler TCPCustomResource) Update(k store.K8s, h haproxy.HAProxy, a annotations.Annotations) (err error) {

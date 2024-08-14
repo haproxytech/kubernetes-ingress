@@ -27,19 +27,19 @@ import (
 type HTTPBind struct {
 	IPv4Addr        string
 	IPv6Addr        string
+	HTTPBindThread  string
+	HTTPSBindThread string
 	HTTPPort        int64
 	HTTPSPort       int64
 	HTTP            bool
 	HTTPS           bool
 	IPv4            bool
 	IPv6            bool
-	HTTPBindThread  string
-	HTTPSBindThread string
 }
 
 type PortAndThread struct {
-	Port   int64
 	Thread string
+	Port   int64
 }
 
 func (handler HTTPBind) Update(k store.K8s, h haproxy.HAProxy, a annotations.Annotations) (err error) {
