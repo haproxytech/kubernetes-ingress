@@ -44,20 +44,20 @@ import (
 )
 
 type Builder struct {
+	store                    store.K8s
 	annotations              annotations.Annotations
 	haproxyClient            api.HAProxyClient
 	gatewayManager           gateway.GatewayManager
 	haproxyProcess           process.Process
 	haproxyRules             rules.Rules
 	restClientSet            client.Client
+	updateStatusManager      status.UpdateStatusManager
 	updatePublishServiceFunc func(ingresses []*ingress.Ingress, publishServiceAddresses []string)
 	eventChan                chan k8ssync.SyncDataEvent
 	clientSet                *kubernetes.Clientset
-	haproxyEnv               env.Env
 	haproxyCfgFile           []byte
-	store                    store.K8s
+	haproxyEnv               env.Env
 	osArgs                   utils.OSArgs
-	updateStatusManager      status.UpdateStatusManager
 }
 
 var defaultEnv = env.Env{

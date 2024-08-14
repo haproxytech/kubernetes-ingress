@@ -29,9 +29,9 @@ type Manager struct {
 
 type Secret struct {
 	Name       types.NamespacedName
-	SecretType certs.SecretType
 	OwnerType  OwnerType
 	OwnerName  string
+	SecretType certs.SecretType
 }
 
 // module logger

@@ -17,9 +17,9 @@ type UpdateStatusManager interface {
 }
 
 type UpdateStatusManagerImpl struct {
-	updateIngresses   []*ingress.Ingress
 	client            *kubernetes.Clientset
 	ingressClass      string
+	updateIngresses   []*ingress.Ingress
 	emptyIngressClass bool
 }
 

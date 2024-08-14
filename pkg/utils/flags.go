@@ -81,6 +81,7 @@ type OSArgs struct {
 	CfgDir                     string         `long:"config-dir" description:"path to HAProxy configuration directory. NOTE: works only in External mode"`
 	Program                    string         `long:"program" description:"path to HAProxy program. NOTE: works only with External mode"`
 	KubeConfig                 string         `long:"kubeconfig" default:"" description:"combined with -e. location of kube config file"`
+	DisableConfigSnippets      string         `long:"disable-config-snippets" description:"Allow to disable config snippets. List of comma separated values (possible values: all/global/backend/frontend)"`
 	Version                    []bool         `short:"v" long:"version" description:"version"`
 	NamespaceWhitelist         []string       `long:"namespace-whitelist" description:"whitelisted namespaces"`
 	NamespaceBlacklist         []string       `long:"namespace-blacklist" description:"blacklisted namespaces"`
@@ -95,6 +96,8 @@ type OSArgs struct {
 	SyncPeriod                 time.Duration  `long:"sync-period" default:"5s" description:"Sets the period at which the controller syncs HAProxy configuration file"`
 	CacheResyncPeriod          time.Duration  `long:"cache-resync-period" default:"10m" description:"Sets the underlying Shared Informer resync period: resyncing controller with informers cache"`
 	HealthzBindPort            int64          `long:"healthz-bind-port" default:"1042" description:"port to listen on for probes"`
+	QuicAnnouncePort           int64          `long:"quic-announce-port" description:"sets the port in the alt-svc header"`
+	QuicBindPort               int64          `long:"quic-bind-port" description:"sets the binding port for quic in HTTPS frontend"`
 	LogLevel                   LogLevelValue  `long:"log" default:"info" description:"level of log messages you can see"`
 	DisableIPV4                bool           `long:"disable-ipv4" description:"toggle to disable the IPv4 protocol from all frontends"`
 	External                   bool           `short:"e" long:"external" description:"use as external Ingress Controller (out of k8s cluster)"`
@@ -107,10 +110,7 @@ type OSArgs struct {
 	PrometheusEnabled          bool           `long:"prometheus" description:"enable prometheus of IC data"`
 	DisableHTTP                bool           `long:"disable-http" description:"toggle to disable the HTTP frontend"`
 	DisableIPV6                bool           `long:"disable-ipv6" description:"toggle to disable the IPv6 protocol from all frontends"`
-	DisableConfigSnippets      string         `long:"disable-config-snippets" description:"Allow to disable config snippets. List of comma separated values (possible values: all/global/backend/frontend)"`
 	UseWithPebble              bool           `long:"with-pebble" description:"use pebble to start/stop/reload HAProxy"`
 	JobCheckCRD                bool           `long:"job-check-crd" description:"does not execute IC, but adds/updates CRDs"`
 	DisableQuic                bool           `long:"disable-quic" description:"disable quic protocol in http frontend bindings"`
-	QuicAnnouncePort           int64          `long:"quic-announce-port" description:"sets the port in the alt-svc header"`
-	QuicBindPort               int64          `long:"quic-bind-port" description:"sets the binding port for quic in HTTPS frontend"`
 }

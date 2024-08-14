@@ -28,18 +28,18 @@ const (
 )
 
 type CfgSnippet struct {
+	ingress  *store.Ingress
+	service  *store.Service
 	name     string
 	frontend string
 	backend  string
-	ingress  *store.Ingress
-	service  *store.Service
 }
 
 type cfgData struct {
+	status   store.Status
 	value    []string
 	updated  []string
 	disabled bool
-	status   store.Status
 }
 
 // CfgSnippetType represents type of a config snippet
@@ -82,10 +82,10 @@ func InitCfgSnippet() {
 }
 
 type ConfigSnippetOptions struct {
-	Name     string
 	Backend  *string
 	Frontend *string
 	Ingress  *store.Ingress
+	Name     string
 }
 
 // DisableConfigSnippets fills a map[cfgSnippetType]struct{} of disabled config snippet types:

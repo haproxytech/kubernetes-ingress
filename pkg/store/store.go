@@ -32,12 +32,12 @@ type K8s struct {
 	SecretsProcessed             map[string]struct{}
 	BackendsProcessed            map[string]struct{}
 	GatewayClasses               map[string]*GatewayClass
-	GatewayControllerName        string
-	PublishServiceAddresses      []string
 	HaProxyPods                  map[string]struct{}
-	UpdateAllIngresses           bool
 	BackendsWithNoConfigSnippets map[string]struct{}
 	FrontendRC                   *rc.ResourceCounter
+	GatewayControllerName        string
+	PublishServiceAddresses      []string
+	UpdateAllIngresses           bool
 }
 
 type NamespacesWatch struct {

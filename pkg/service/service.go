@@ -35,17 +35,17 @@ var logger = utils.GetLogger()
 const cookieKey = "ohph7OoGhong"
 
 type Service struct {
-	path        *store.IngressPath
-	resource    *store.Service
-	backend     *models.Backend
-	certs       certs.Certificates
+	certs    certs.Certificates
+	path     *store.IngressPath
+	resource *store.Service
+	backend  *models.Backend
+	// ingressName      string
+	// ingressNamespace string
+	ingress     *store.Ingress
 	annotations []map[string]string
 	modeTCP     bool
 	newBackend  bool
 	standalone  bool
-	// ingressName      string
-	// ingressNamespace string
-	ingress *store.Ingress
 }
 
 // New returns a Service instance to handle the k8s IngressPath resource given in params.

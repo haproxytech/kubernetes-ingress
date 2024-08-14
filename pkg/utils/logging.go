@@ -92,9 +92,9 @@ type Logger interface { //nolint:interfacebloat
 }
 
 type logger struct {
+	fields   map[string]interface{}
 	Level    LogLevel
 	FileName bool
-	fields   map[string]interface{}
 }
 
 var (

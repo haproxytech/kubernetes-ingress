@@ -31,15 +31,15 @@ const (
 )
 
 type TCPResource struct {
-	v1.TCPModel `json:"tcpmodel"`
+	CreationTimestamp time.Time `json:"creation_timestamp"` //nolint: tagliatelle
 	// ParentName is the name of TCP CR containing this TCP resource
 	ParentName      string `json:"parent_name,omitempty"` //nolint: tagliatelle
 	Namespace       string `json:"namespace,omitempty"`
 	CollisionStatus Status `json:"collision_status,omitempty"` //nolint: tagliatelle
 	// If Status is ERROR, Reason will contain the reason
 	// Leave it as a fully flexible string
-	Reason            string    `json:"reason,omitempty"`
-	CreationTimestamp time.Time `json:"creation_timestamp"` //nolint: tagliatelle
+	Reason      string `json:"reason,omitempty"`
+	v1.TCPModel `json:"tcpmodel"`
 }
 
 type TCPResourceList []*TCPResource
