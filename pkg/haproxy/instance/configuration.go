@@ -42,8 +42,8 @@ func NeedAction() bool {
 }
 
 type configurationManagerImpl struct {
-	reload, restart bool
 	logger          utils.Logger
+	reload, restart bool
 }
 
 func NewConfigurationManager() *configurationManagerImpl {

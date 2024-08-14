@@ -31,11 +31,11 @@ type K8s struct {
 	SecretsProcessed             map[string]struct{}
 	BackendsProcessed            map[string]struct{}
 	GatewayClasses               map[string]*GatewayClass
+	HaProxyPods                  map[string]struct{}
+	BackendsWithNoConfigSnippets map[string]struct{}
 	GatewayControllerName        string
 	PublishServiceAddresses      []string
-	HaProxyPods                  map[string]struct{}
 	UpdateAllIngresses           bool
-	BackendsWithNoConfigSnippets map[string]struct{}
 }
 
 type NamespacesWatch struct {

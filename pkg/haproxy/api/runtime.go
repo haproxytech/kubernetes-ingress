@@ -19,8 +19,8 @@ type RuntimeServerData struct {
 	BackendName string
 	ServerName  string
 	IP          string
-	Port        int
 	State       string
+	Port        int
 }
 
 func (c *clientNative) ExecuteRaw(command string) (result []string, err error) {
