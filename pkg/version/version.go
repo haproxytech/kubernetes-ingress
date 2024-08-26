@@ -23,9 +23,6 @@ var GitTag = "dev"
 // GitCommit ...
 var GitCommit = ""
 
-// GitDirty ...
-var GitDirty = "dirty"
-
 // GitCommitDate ...
 var GitCommitDate = ""
 

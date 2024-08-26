@@ -83,7 +83,7 @@ func main() {
 	if osArgs.JobCheckCRD {
 		logger.Print(version.IngressControllerInfo)
 		logger.Print(job.IngressControllerCRDUpdater)
-		logger.Infof("HAProxy Ingress Controller CRD Updater %s %s%s", version.GitTag, version.GitCommit, version.GitDirty)
+		logger.Infof("HAProxy Ingress Controller CRD Updater %s %s", version.GitTag, version.GitCommit)
 		logger.Infof("Build from: %s", version.GitRepo)
 		logger.Infof("Build date: %s\n", version.GitCommitDate)
 
@@ -164,7 +164,7 @@ func main() {
 
 func logInfo(logger utils.Logger, osArgs utils.OSArgs) bool {
 	if len(osArgs.Version) > 0 {
-		fmt.Printf("HAProxy Ingress Controller %s %s%s\n", version.GitTag, version.GitCommit, version.GitDirty)
+		fmt.Printf("HAProxy Ingress Controller %s %s\n", version.GitTag, version.GitCommit)
 		fmt.Printf("Build from: %s\n", version.GitRepo)
 		fmt.Printf("Git commit date: %s\n", version.GitCommitDate)
 		if len(osArgs.Version) > 1 {
@@ -176,7 +176,7 @@ func logInfo(logger utils.Logger, osArgs utils.OSArgs) bool {
 	}
 
 	logger.Print(version.IngressControllerInfo)
-	logger.Printf("HAProxy Ingress Controller %s %s%s", version.GitTag, version.GitCommit, version.GitDirty)
+	logger.Printf("HAProxy Ingress Controller %s %s", version.GitTag, version.GitCommit)
 	logger.Printf("Build from: %s", version.GitRepo)
 	logger.Printf("Git commit date: %s", version.GitCommitDate)
 	logger.Printf("ConfigMap: %s", osArgs.ConfigMap)

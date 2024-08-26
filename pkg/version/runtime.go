@@ -30,11 +30,6 @@ func Set() error {
 	if len(GitCommit) > 8 {
 		GitCommit = GitCommit[:8]
 	}
-	if get(buildinfo, "vcs.modified") == "true" {
-		GitDirty = ".dirty"
-	} else {
-		GitDirty = ""
-	}
 
 	return nil
 }
