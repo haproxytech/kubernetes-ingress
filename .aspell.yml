@@ -1,7 +1,5 @@
 mode: commit
 min_length: 3
-ignore:
-  - '*_test.go'
 allowed:
   - aspell
   - repo
@@ -19,3 +17,4 @@ allowed:
   - ubuntu
   - golangci
   - sudo
+  - releaser
