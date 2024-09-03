@@ -18,3 +18,9 @@ allowed:
   - golangci
   - sudo
   - releaser
+  - backend
+  - backends
+  - frontend
+  - frontends
+  - tcp
+  - crd
