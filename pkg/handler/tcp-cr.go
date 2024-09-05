@@ -42,7 +42,10 @@ import (
 
 const tcpServicePrefix = "tcpcr"
 
-type TCPCustomResource struct{}
+type TCPCustomResource struct {
+	controllerIngressClass string
+	allowEmptyIngressClass bool
+}
 
 type tcpcontext struct {
 	k         store.K8s
@@ -50,11 +53,51 @@ type tcpcontext struct {
 	h         haproxy.HAProxy
 }
 
+// var syncIngressClassLog sync.Once
+func NewTCPCustomResource(controllerIngressClass string, allowEmptyIngressClass bool) TCPCustomResource {
+	return TCPCustomResource{
+		controllerIngressClass: controllerIngressClass,
+		allowEmptyIngressClass: allowEmptyIngressClass,
+	}
+}
+
+// func logTCPMigration30To31Warning() {
+// 	logger := utils.GetLogger()
+// 	// For 3.0, (WARNING)
+// 	// Starting from 3.1, if ingress.class is set for controller, you will need to set the ingress.class annotation in the TCP CRD
+// 	// - Setting the ingress.class annotation in the TCP CRD in 3.0 is highly recommended before migration to 3.1
+// 	// - empty-ingress-class controller option will also impact TCP CRD starting 3.1
+// 	logger.Warning("Using TCP CRD without ingress.class annotation will work only in 3.0")
+// 	logger.Warning("If you are using TCP CRDS without ingress.class annotation and ingress.class is set for the controller,an action is required before migrating to 3.1")
+// 	logger.Warning("Please read https://github.com/haproxytech/kubernetes-ingress/blob/master/documentation/custom-resource-tcp.md for more information")
+// }
+
 func (handler TCPCustomResource) Update(k store.K8s, h haproxy.HAProxy, a annotations.Annotations) (err error) {
 	var errs utils.Errors
 
 	for _, ns := range k.Namespaces {
 		for _, tcpCR := range ns.CRs.TCPsPerCR {
+			//----------------------------------
+			// ingress.class migration
+			// To log in 3.0
+			// Not in 3.1
+			// syncIngressClassLog.Do(func() {
+			// 	logTCPMigration30To31Warning()
+			// })
+
+			// >= v3.1 for ingress.class
+			// Not in 3.0
+			supported := handler.isSupportedIngressClass(tcpCR)
+			if !supported {
+				for _, atcp := range tcpCR.Items {
+					owner := atcp.Owner()
+					k.FrontendRC.RemoveOwner(owner)
+				}
+				continue
+			}
+			// end ingress.class migration
+			//----------------------------
+
 			// Cleanup will done after Haproxy config transaction succeeds
 			if tcpCR.Status == store.DELETED {
 				continue
@@ -301,4 +344,26 @@ func (handler TCPCustomResource) reconcileAdditionalBackends(ctx tcpcontext, ser
 		}
 	}
 	return errors.Result()
+}
+
+func (handler TCPCustomResource) isSupportedIngressClass(tcps *store.TCPs) bool {
+	var supported bool
+	tcpIgClassAnn := tcps.IngressClass
+
+	switch handler.controllerIngressClass {
+	case "", tcpIgClassAnn:
+		supported = true
+	default: // mismatch osArgs.Ingress and TCP IngressClass annotation
+		if tcpIgClassAnn == "" {
+			supported = handler.allowEmptyIngressClass
+			if !supported {
+				utils.GetLogger().Warningf("[SKIP] TCP %s/%s ingress.class annotation='%s' does not match with controller ingress.class flag '%s' and controller flag 'empty-ingress-class' is false",
+					tcps.Namespace, tcps.Name, tcpIgClassAnn, handler.controllerIngressClass)
+			}
+		} else {
+			utils.GetLogger().Warningf("[SKIP] TCP %s/%s ingress.class annotation='%s' does not match with controller ingress.class flag '%s'",
+				tcps.Namespace, tcps.Name, tcpIgClassAnn, handler.controllerIngressClass)
+		}
+	}
+	return supported
 }

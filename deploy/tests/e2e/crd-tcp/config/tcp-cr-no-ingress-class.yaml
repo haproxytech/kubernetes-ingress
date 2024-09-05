@@ -2,8 +2,6 @@ apiVersion: ingress.v1.haproxy.org/v1
 kind: TCP
 metadata:
   name: tcp-1
-  annotations:
-    ingress.class: haproxy
 spec:
   - name: tcp-http-echo-80
     frontend:
@@ -20,15 +18,8 @@ spec:
     service:
       name: "http-echo"
       port: 80
-  - name: tcp-http-echo-81
-    frontend:
-      name: fe-http-echo-81
-      tcplog: true
-      log_format: "%{+Q}o %t %s"
-      binds:
-        - name: v4acceptproxy
-          port: 32767
-          accept_proxy: true
-    service:
-      name: "http-echo"
-      port: 81
+    services:
+      - name: "http-echo-2"
+        port: 443
+      - name: "http-echo-2"
+        port: 80

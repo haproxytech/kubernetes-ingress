@@ -35,6 +35,8 @@ kind: TCP
 metadata:
   name: tcp-1
   namespace: test
+  annotations:
+    ingress.class: haproxy
 spec:
   - name: tcp-http-echo-8443
     frontend:
@@ -102,6 +104,30 @@ Note that in the TCP CR :
 - The `acl` and `use_backend` are handled by the TCP CR `.spec.acl_list` and `.spec.backend_switching_rule_list`.
 
 Except the frontend keyword `default_backend`, all other lines are not automatically generated but are in a flexible way handled by the `frontend` section in the TCP CR.
+
+## ingress.class
+
+Starting `3.1`, the TCP Custom Resource managed by the Ingress Controller can be filtered using the `ingress.class` annotation.
+It behaves the same way as `Ingress`:
+
+| ingress.class controller flag | TCP CR ingress.class annotation | Behavior |
+|------------------|---------------------|-----------------|
+| '' (not set) |  * (any value) | TCP CR managed by IC |
+| \<igclass\> | Same value as controller  | TCP CR managed by IC |
+| \<igclass\> | Value different from controller  | TCP CR not managed by IC, frontend and backend deleted if existing |
+| \<igclass\> | '' (empty, not set)| if controller `empty-ingress-class` flag is set, TCP CR managed by IC, otherwise ignored (and frontend and backend are deleted)|
+
+
+### Migration 3.0 to 3.1: action required regarding ingress.class annotation
+
+If some TCP CRs were deployed with Ingress Controller version <= v3.0, and the Ingress Controller has a `ingress.class` flag for the controller, the TCP CRs need to have the same value for the `ingress.class` annotation in the TCP CR.
+
+If the annotation is not set, the corresponding backends and frontends in the haproxy configuration would be deleted:
+- except if the controller `empty-ingress-class` flag is set (same behavior as for `Ingress`).
+
+The setting of the `ingress.class` to the TCP CRs should be done **prior to the upgrade to** `v3.1`. It will not be used in v3.0 but needs to be there starting v3.1.
+
+
 
 ## Pod and Service definitions
 
@@ -258,6 +284,8 @@ kind: TCP
 metadata:
   name: tcp-2
   namespace: test
+  annotations:
+    ingress.class: haproxy
 spec:
   - name: tcp-http-echo-test2-8443
     frontend:
@@ -297,6 +325,8 @@ kind: TCP
 metadata:
   name: tcp-1
   namespace: test
+  annotations:
+    ingress.class: haproxy
 spec:
   - name: tcp-http-echo-443
     frontend:

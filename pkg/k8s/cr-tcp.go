@@ -71,10 +71,11 @@ func convertToStoreTCP(k8sData interface{}, status store.Status) *store.TCPs {
 		return nil
 	}
 	storeTCP := store.TCPs{
-		Status:    status,
-		Namespace: data.GetNamespace(),
-		Name:      data.GetName(),
-		Items:     make([]*store.TCPResource, 0),
+		Status:       status,
+		Namespace:    data.GetNamespace(),
+		IngressClass: data.Annotations["ingress.class"],
+		Name:         data.GetName(),
+		Items:        make([]*store.TCPResource, 0),
 	}
 	for _, tcp := range data.Spec {
 		storeTCP.Items = append(storeTCP.Items, &store.TCPResource{

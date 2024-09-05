@@ -2,6 +2,8 @@ apiVersion: ingress.v1.haproxy.org/v1
 kind: TCP
 metadata:
   name: tcp-1
+  annotations:
+    ingress.class: haproxy
 spec:
   - name: tcp-http-echo-443
     frontend:
