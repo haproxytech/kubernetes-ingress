@@ -45,10 +45,11 @@ type TCPResource struct {
 type TCPResourceList []*TCPResource
 
 type TCPs struct {
-	Status    Status          `json:"status,omitempty"`
-	Namespace string          `json:"namespace,omitempty"`
-	Name      string          `json:"name,omitempty"`
-	Items     TCPResourceList `json:"items"`
+	Status       Status          `json:"status,omitempty"`
+	IngressClass string          `json:"ingress_class,omitempty"`
+	Namespace    string          `json:"namespace,omitempty"`
+	Name         string          `json:"name,omitempty"`
+	Items        TCPResourceList `json:"items"`
 }
 
 func (a *TCPs) Equal(b *TCPs, opt ...models.Options) bool {
@@ -62,6 +63,9 @@ func (a *TCPs) Equal(b *TCPs, opt ...models.Options) bool {
 		return false
 	}
 	if a.Namespace != b.Namespace {
+		return false
+	}
+	if a.IngressClass != b.IngressClass {
 		return false
 	}
 	// Always ordered before being added into the store, so no need to order here
