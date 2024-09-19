@@ -64,10 +64,16 @@ func (c GlobalCRV1Alpha2) GetInformer(eventChan chan k8ssync.SyncDataEvent, fact
 
 		logger.Debugf("%s %s: %s", data.GetNamespace(), status, data.GetName())
 		if status == store.DELETED {
-			eventChan <- k8ssync.SyncDataEvent{SyncType: k8ssync.SyncType(c.GetKind()), Namespace: data.GetNamespace(), Name: data.GetName(), Data: nil}
+			eventChan <- k8ssync.SyncDataEvent{
+				SyncType:  k8ssync.SyncType(c.GetKind()),
+				Namespace: data.GetNamespace(), Name: data.GetName(), Data: nil,
+			}
 			return
 		}
-		eventChan <- k8ssync.SyncDataEvent{SyncType: k8ssync.SyncType(c.GetKind()), Namespace: data.GetNamespace(), Name: data.GetName(), Data: data}
+		eventChan <- k8ssync.SyncDataEvent{
+			SyncType:  k8ssync.SyncType(c.GetKind()),
+			Namespace: data.GetNamespace(), Name: data.GetName(), Data: data,
+		}
 	}
 
 	_, err := informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
@@ -105,10 +111,16 @@ func (c DefaultsCRV1Alpha2) GetInformer(eventChan chan k8ssync.SyncDataEvent, fa
 		data.Spec = converters.DeepConvertDefaultsSpecA2toV1(dataV1Alpha2.Spec)
 		logger.Debugf("%s %s: %s", data.GetNamespace(), status, data.GetName())
 		if status == store.DELETED {
-			eventChan <- k8ssync.SyncDataEvent{SyncType: k8ssync.SyncType(c.GetKind()), Namespace: data.GetNamespace(), Name: data.GetName(), Data: nil}
+			eventChan <- k8ssync.SyncDataEvent{
+				SyncType:  k8ssync.SyncType(c.GetKind()),
+				Namespace: data.GetNamespace(), Name: data.GetName(), Data: nil,
+			}
 			return
 		}
-		eventChan <- k8ssync.SyncDataEvent{SyncType: k8ssync.SyncType(c.GetKind()), Namespace: data.GetNamespace(), Name: data.GetName(), Data: data}
+		eventChan <- k8ssync.SyncDataEvent{
+			SyncType:  k8ssync.SyncType(c.GetKind()),
+			Namespace: data.GetNamespace(), Name: data.GetName(), Data: data,
+		}
 	}
 
 	_, err := informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
@@ -147,10 +159,16 @@ func (c BackendCRV1Alpha2) GetInformer(eventChan chan k8ssync.SyncDataEvent, fac
 
 		logger.Debugf("%s %s: %s", data.GetNamespace(), status, data.GetName())
 		if status == store.DELETED {
-			eventChan <- k8ssync.SyncDataEvent{SyncType: k8ssync.SyncType(c.GetKind()), Namespace: data.GetNamespace(), Name: data.GetName(), Data: nil}
+			eventChan <- k8ssync.SyncDataEvent{
+				SyncType:  k8ssync.SyncType(c.GetKind()),
+				Namespace: data.GetNamespace(), Name: data.GetName(), Data: nil,
+			}
 			return
 		}
-		eventChan <- k8ssync.SyncDataEvent{SyncType: k8ssync.SyncType(c.GetKind()), Namespace: data.GetNamespace(), Name: data.GetName(), Data: data}
+		eventChan <- k8ssync.SyncDataEvent{
+			SyncType:  k8ssync.SyncType(c.GetKind()),
+			Namespace: data.GetNamespace(), Name: data.GetName(), Data: data,
+		}
 	}
 
 	_, err := informer.AddEventHandler(cache.ResourceEventHandlerFuncs{

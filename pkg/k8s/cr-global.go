@@ -44,10 +44,16 @@ func (c GlobalCR) GetInformer(eventChan chan k8ssync.SyncDataEvent, factory info
 		}
 		logger.Debugf("%s %s: %s", data.GetNamespace(), status, data.GetName())
 		if status == store.DELETED {
-			eventChan <- k8ssync.SyncDataEvent{SyncType: k8ssync.SyncType(c.GetKind()), Namespace: data.GetNamespace(), Name: data.GetName(), Data: nil}
+			eventChan <- k8ssync.SyncDataEvent{
+				SyncType:  k8ssync.SyncType(c.GetKind()),
+				Namespace: data.GetNamespace(), Name: data.GetName(), Data: nil,
+			}
 			return
 		}
-		eventChan <- k8ssync.SyncDataEvent{SyncType: k8ssync.SyncType(c.GetKind()), Namespace: data.GetNamespace(), Name: data.GetName(), Data: data}
+		eventChan <- k8ssync.SyncDataEvent{
+			SyncType:  k8ssync.SyncType(c.GetKind()),
+			Namespace: data.GetNamespace(), Name: data.GetName(), Data: data,
+		}
 	}
 
 	errW := informer.SetWatchErrorHandler(func(r *cache.Reflector, err error) {
