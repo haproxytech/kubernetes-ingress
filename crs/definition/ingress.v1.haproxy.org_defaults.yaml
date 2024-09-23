@@ -4,7 +4,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.14.0
-    haproxy.org/client-native: v5.1.4
+    haproxy.org/client-native: v5.1.11
   name: defaults.ingress.v1.haproxy.org
 spec:
   group: ingress.v1.haproxy.org
@@ -77,16 +77,16 @@ spec:
                   adv_check:
                     description: |-
                       adv check
-                      Enum: [ssl-hello-chk smtpchk ldap-check mysql-check pgsql-check tcp-check redis-check httpchk]
+                      Enum: [httpchk ldap-check mysql-check pgsql-check redis-check smtpchk ssl-hello-chk tcp-check]
                     enum:
-                    - ssl-hello-chk
-                    - smtpchk
+                    - httpchk
                     - ldap-check
                     - mysql-check
                     - pgsql-check
-                    - tcp-check
                     - redis-check
-                    - httpchk
+                    - smtpchk
+                    - ssl-hello-chk
+                    - tcp-check
                     type: string
                   allbackups:
                     description: |-
@@ -107,19 +107,19 @@ spec:
                         description: |-
                           algorithm
                           Required: true
-                          Enum: [roundrobin static-rr leastconn first source uri url_param hdr random rdp-cookie hash]
+                          Enum: [first hash hdr leastconn random rdp-cookie roundrobin source static-rr uri url_param]
                         enum:
-                        - roundrobin
-                        - static-rr
-                        - leastconn
                         - first
-                        - source
-                        - uri
-                        - url_param
+                        - hash
                         - hdr
+                        - leastconn
                         - random
                         - rdp-cookie
-                        - hash
+                        - roundrobin
+                        - source
+                        - static-rr
+                        - uri
+                        - url_param
                         type: string
                       hash_expression:
                         description: hash expression
@@ -1224,6 +1224,10 @@ spec:
                     - enabled
                     - disabled
                     type: string
+                  hash_balance_factor:
+                    description: hash balance factor
+                    format: int64
+                    type: integer
                   hash_type:
                     description: hash type
                     properties:
@@ -1471,7 +1475,6 @@ spec:
                         description: via socks4
                         type: boolean
                     required:
-                    - index
                     - type
                     type: object
                   http-use-htx:

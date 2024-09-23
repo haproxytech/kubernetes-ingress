@@ -4,7 +4,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.14.0
-    haproxy.org/client-native: v5.1.4
+    haproxy.org/client-native: v5.1.11
   name: globals.ingress.v1.haproxy.org
 spec:
   group: ingress.v1.haproxy.org
@@ -192,6 +192,9 @@ spec:
                       Pattern: ^[^\s]+$
                     pattern: ^[^\s]+$
                     type: string
+                  h1_accept_payload_with_any_method:
+                    description: h1 accept payload with any method
+                    type: boolean
                   h1_case_adjust:
                     description: h1 case adjusts
                     items:
@@ -219,6 +222,9 @@ spec:
                   h1_case_adjust_file:
                     description: h1 case adjust file
                     type: string
+                  h1_do_not_close_on_insecure_transfer_encoding:
+                    description: h1 do not close on insecure transfer encoding
+                    type: boolean
                   h2_workaround_bogus_websocket_clients:
                     description: h2 workaround bogus websocket clients
                     type: boolean
@@ -1606,8 +1612,6 @@ spec:
                       description: sample size
                       format: int64
                       type: integer
-                  required:
-                  - index
                   type: object
                 type: array
             required:

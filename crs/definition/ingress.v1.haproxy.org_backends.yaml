@@ -4,7 +4,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.14.0
-    haproxy.org/client-native: v5.1.4
+    haproxy.org/client-native: v5.1.11
   name: backends.ingress.v1.haproxy.org
 spec:
   group: ingress.v1.haproxy.org
@@ -87,7 +87,6 @@ spec:
                   required:
                   - acl_name
                   - criterion
-                  - index
                   type: object
                 type: array
               config:
@@ -120,16 +119,16 @@ spec:
                   adv_check:
                     description: |-
                       adv check
-                      Enum: [ssl-hello-chk smtpchk ldap-check mysql-check pgsql-check tcp-check redis-check httpchk]
+                      Enum: [httpchk ldap-check mysql-check pgsql-check redis-check smtpchk ssl-hello-chk tcp-check]
                     enum:
-                    - ssl-hello-chk
-                    - smtpchk
+                    - httpchk
                     - ldap-check
                     - mysql-check
                     - pgsql-check
-                    - tcp-check
                     - redis-check
-                    - httpchk
+                    - smtpchk
+                    - ssl-hello-chk
+                    - tcp-check
                     type: string
                   allbackups:
                     description: |-
@@ -146,19 +145,19 @@ spec:
                         description: |-
                           algorithm
                           Required: true
-                          Enum: [roundrobin static-rr leastconn first source uri url_param hdr random rdp-cookie hash]
+                          Enum: [first hash hdr leastconn random rdp-cookie roundrobin source static-rr uri url_param]
                         enum:
-                        - roundrobin
-                        - static-rr
-                        - leastconn
                         - first
-                        - source
-                        - uri
-                        - url_param
+                        - hash
                         - hdr
+                        - leastconn
                         - random
                         - rdp-cookie
-                        - hash
+                        - roundrobin
+                        - source
+                        - static-rr
+                        - uri
+                        - url_param
                         type: string
                       hash_expression:
                         description: hash expression
@@ -1161,6 +1160,34 @@ spec:
                     - cond
                     - cond_test
                     type: object
+                  force_persist_list:
+                    description: force persist list
+                    items:
+                      description: |-
+                        ForcePersist force persist
+
+
+                        swagger:model ForcePersist
+                      properties:
+                        cond:
+                          description: |-
+                            cond
+                            Required: true
+                            Enum: [if unless]
+                          enum:
+                          - if
+                          - unless
+                          type: string
+                        cond_test:
+                          description: |-
+                            cond test
+                            Required: true
+                          type: string
+                      required:
+                      - cond
+                      - cond_test
+                      type: object
+                    type: array
                   forwardfor:
                     description: forwardfor
                     properties:
@@ -1208,6 +1235,10 @@ spec:
                     - enabled
                     - disabled
                     type: string
+                  hash_balance_factor:
+                    description: hash balance factor
+                    format: int64
+                    type: integer
                   hash_type:
                     description: hash type
                     properties:
@@ -1455,7 +1486,6 @@ spec:
                         description: via socks4
                         type: boolean
                     required:
-                    - index
                     - type
                     type: object
                   http-keep-alive:
@@ -1608,6 +1638,34 @@ spec:
                     - cond
                     - cond_test
                     type: object
+                  ignore_persist_list:
+                    description: ignore persist list
+                    items:
+                      description: |-
+                        IgnorePersist ignore persist
+
+
+                        swagger:model IgnorePersist
+                      properties:
+                        cond:
+                          description: |-
+                            cond
+                            Required: true
+                            Enum: [if unless]
+                          enum:
+                          - if
+                          - unless
+                          type: string
+                        cond_test:
+                          description: |-
+                            cond test
+                            Required: true
+                          type: string
+                      required:
+                      - cond
+                      - cond_test
+                      type: object
+                    type: array
                   independent_streams:
                     description: |-
                       independent streams
@@ -2305,7 +2363,7 @@ spec:
                     normalizer:
                       description: |-
                         normalizer
-                        Enum: [fragment-encode fragment-strip path-merge-slashes path-strip-dot path-strip-dotdot percent-decode-unreserved percent-to-upercase query-sort-by-name]
+                        Enum: [fragment-encode fragment-strip path-merge-slashes path-strip-dot path-strip-dotdot percent-decode-unreserved percent-to-uppercase query-sort-by-name]
                       enum:
                       - fragment-encode
                       - fragment-strip
@@ -2313,7 +2371,7 @@ spec:
                       - path-strip-dot
                       - path-strip-dotdot
                       - percent-decode-unreserved
-                      - percent-to-upercase
+                      - percent-to-uppercase
                       - query-sort-by-name
                       type: string
                     normalizer_full:
@@ -2542,7 +2600,7 @@ spec:
                       description: |-
                         type
                         Required: true
-                        Enum: [add-acl add-header allow auth cache-use capture del-acl del-header del-map deny disable-l7-retry do-resolve early-hint lua normalize-uri redirect reject replace-header replace-path replace-pathq replace-uri replace-value return sc-add-gpc sc-inc-gpc sc-inc-gpc0 sc-inc-gpc1 sc-set-gpt0 send-spoe-group set-dst set-dst-port set-header set-log-level set-map set-mark set-method set-nice set-path set-pathq set-priority-class set-priority-offset set-query set-src set-src-port set-timeout set-tos set-uri set-var silent-drop strict-mode tarpit track-sc0 track-sc1 track-sc2 track-sc unset-var use-service wait-for-body wait-for-handshake set-bandwidth-limit]
+                        Enum: [add-acl add-header allow auth cache-use capture del-acl del-header del-map deny disable-l7-retry do-resolve early-hint lua normalize-uri redirect reject replace-header replace-path replace-pathq replace-uri replace-value return sc-add-gpc sc-inc-gpc sc-inc-gpc0 sc-inc-gpc1 sc-set-gpt sc-set-gpt0 send-spoe-group set-dst set-dst-port set-header set-log-level set-map set-mark set-method set-nice set-path set-pathq set-priority-class set-priority-offset set-query set-src set-src-port set-timeout set-tos set-uri set-var silent-drop strict-mode tarpit track-sc0 track-sc1 track-sc2 track-sc unset-var use-service wait-for-body wait-for-handshake set-bandwidth-limit]
                       enum:
                       - add-acl
                       - add-header
@@ -2571,6 +2629,7 @@ spec:
                       - sc-inc-gpc
                       - sc-inc-gpc0
                       - sc-inc-gpc1
+                      - sc-set-gpt
                       - sc-set-gpt0
                       - send-spoe-group
                       - set-dst
@@ -2638,7 +2697,6 @@ spec:
                       format: int64
                       type: integer
                   required:
-                  - index
                   - type
                   type: object
                 type: array

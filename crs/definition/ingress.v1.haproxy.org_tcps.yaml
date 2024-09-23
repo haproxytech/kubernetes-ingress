@@ -4,7 +4,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.14.0
-    haproxy.org/client-native: v5.1.4
+    haproxy.org/client-native: v5.1.11
   name: tcps.ingress.v1.haproxy.org
 spec:
   group: ingress.v1.haproxy.org
@@ -98,7 +98,6 @@ spec:
                         required:
                         - acl_name
                         - criterion
-                        - index
                         type: object
                       type: array
                     backend_switching_rule_list:
@@ -146,7 +145,6 @@ spec:
                             pattern: ^[^\s]+$
                             type: string
                         required:
-                        - index
                         - name
                         type: object
                       type: array
@@ -519,7 +517,6 @@ spec:
                             - response
                             type: string
                         required:
-                        - index
                         - length
                         - type
                         type: object
@@ -945,18 +942,17 @@ spec:
                             description: |-
                               type
                               Required: true
-                              Enum: [trace compression spoe cache fcgi-app bwlim-in bwlim-out]
+                              Enum: [bwlim-in bwlim-out cache compression fcgi-app spoe trace]
                             enum:
-                            - trace
-                            - compression
-                            - spoe
-                            - cache
-                            - fcgi-app
                             - bwlim-in
                             - bwlim-out
+                            - cache
+                            - compression
+                            - fcgi-app
+                            - spoe
+                            - trace
                             type: string
                         required:
-                        - index
                         - type
                         type: object
                       type: array
@@ -1240,8 +1236,6 @@ spec:
                             description: sample size
                             format: int64
                             type: integer
-                        required:
-                        - index
                         type: object
                       type: array
                     logasap:
@@ -1564,7 +1558,7 @@ spec:
                           action:
                             description: |-
                               action
-                              Enum: [accept attach-srv capture do-resolve expect-netscaler-cip expect-proxy reject sc-add-gpc sc-inc-gpc sc-inc-gpc0 sc-inc-gpc1 sc-set-gpt0 send-spoe-group set-dst-port set-dst set-priority set-src set-var silent-drop track-sc0 track-sc1 track-sc2 track-sc unset-var use-service lua set-bandwidth-limit set-src-port set-mark set-tos set-var-fmt set-log-level set-nice switch-mode]
+                              Enum: [accept attach-srv capture do-resolve expect-netscaler-cip expect-proxy lua reject sc-add-gpc sc-inc-gpc sc-inc-gpc0 sc-inc-gpc1 sc-set-gpt sc-set-gpt0 send-spoe-group set-bandwidth-limit set-dst-port set-dst set-log-level set-mark set-nice set-priority-class set-priority-offset set-src set-src-port set-tos set-var set-var-fmt silent-drop switch-mode track-sc0 track-sc1 track-sc2 track-sc unset-var use-service]
                             enum:
                             - accept
                             - attach-srv
@@ -1572,34 +1566,36 @@ spec:
                             - do-resolve
                             - expect-netscaler-cip
                             - expect-proxy
+                            - lua
                             - reject
                             - sc-add-gpc
                             - sc-inc-gpc
                             - sc-inc-gpc0
                             - sc-inc-gpc1
+                            - sc-set-gpt
                             - sc-set-gpt0
                             - send-spoe-group
+                            - set-bandwidth-limit
                             - set-dst-port
                             - set-dst
-                            - set-priority
+                            - set-log-level
+                            - set-mark
+                            - set-nice
+                            - set-priority-class
+                            - set-priority-offset
                             - set-src
+                            - set-src-port
+                            - set-tos
                             - set-var
+                            - set-var-fmt
                             - silent-drop
+                            - switch-mode
                             - track-sc0
                             - track-sc1
                             - track-sc2
                             - track-sc
                             - unset-var
                             - use-service
-                            - lua
-                            - set-bandwidth-limit
-                            - set-src-port
-                            - set-mark
-                            - set-tos
-                            - set-var-fmt
-                            - set-log-level
-                            - set-nice
-                            - switch-mode
                             type: string
                           bandwidth_limit_limit:
                             description: bandwidth limit limit
@@ -1682,14 +1678,6 @@ spec:
                             maximum: 1024
                             minimum: -1024
                             type: integer
-                          priority_type:
-                            description: |-
-                              priority type
-                              Enum: [class offset]
-                            enum:
-                            - class
-                            - offset
-                            type: string
                           resolve_protocol:
                             description: |-
                               resolve protocol
@@ -1776,7 +1764,6 @@ spec:
                             pattern: ^[^\s]+$
                             type: string
                         required:
-                        - index
                         - type
                         type: object
                       type: array
