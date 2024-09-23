@@ -1,7 +1,7 @@
 package rules
 
 import (
-	"fmt"
+	"errors"
 
 	"github.com/haproxytech/client-native/v5/models"
 
@@ -31,7 +31,7 @@ func (r SetHdr) GetType() Type {
 
 func (r SetHdr) Create(client api.HAProxyClient, frontend *models.Frontend, ingressACL string) error {
 	if frontend.Mode == "tcp" {
-		return fmt.Errorf("HTTP headers cannot be set in TCP mode")
+		return errors.New("HTTP headers cannot be set in TCP mode")
 	}
 	// REQ_FORWARDED_PROTO
 	if r.ForwardedProto {

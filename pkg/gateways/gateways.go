@@ -549,7 +549,7 @@ func (gm GatewayManagerImpl) isTCPRouteAllowedByListener(listener store.Listener
 		return routeNamespace != gatewayNamespace
 	}
 
-	gkAllowed := listener.AllowedRoutes.Kinds == nil || len(listener.AllowedRoutes.Kinds) == 0
+	gkAllowed := len(listener.AllowedRoutes.Kinds) == 0
 	for _, kind := range listener.AllowedRoutes.Kinds {
 		if (kind.Group != nil && *kind.Group != v1alpha2.GroupName) || kind.Kind != K8S_TCPROUTE_KIND {
 			continue

@@ -15,6 +15,7 @@
 package env
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -62,7 +63,7 @@ func (env *Env) Init(osArgs utils.OSArgs) (err error) {
 	}
 	for _, dir := range []string{env.CfgDir, env.RuntimeDir, env.StateDir} {
 		if dir == "" {
-			return fmt.Errorf("failed to init controller config: missing config directories")
+			return errors.New("failed to init controller config: missing config directories")
 		}
 	}
 	// Binary and main files

@@ -29,7 +29,7 @@ func (d *directControl) Service(action string) (err error) {
 	// hold information about a running Master HAproxy process
 	process, processErr := haproxyProcess(d.Env.PIDFile)
 
-	masterSocketArg := fmt.Sprintf("%s,level,admin", d.Env.MasterSocket)
+	masterSocketArg := d.Env.MasterSocket + ",level,admin"
 
 	//nolint:gosec //checks on HAProxyBinary should be done in configuration module.
 	switch action {

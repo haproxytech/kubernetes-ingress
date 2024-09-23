@@ -1,7 +1,7 @@
 package rules
 
 import (
-	"fmt"
+	"errors"
 
 	"github.com/haproxytech/client-native/v5/models"
 
@@ -17,7 +17,7 @@ func (r ReqAcceptContent) GetType() Type {
 
 func (r ReqAcceptContent) Create(client api.HAProxyClient, frontend *models.Frontend, ingressACL string) error {
 	if frontend.Mode == "http" {
-		return fmt.Errorf("tcp accept-content rule is only available in TCP frontends")
+		return errors.New("tcp accept-content rule is only available in TCP frontends")
 	}
 	tcpRule := models.TCPRequestRule{
 		Index:    utils.PtrInt64(0),

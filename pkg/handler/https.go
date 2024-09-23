@@ -225,7 +225,7 @@ func (handler HTTPS) enableSSLPassthrough(h haproxy.HAProxy) (err error) {
 		}),
 		h.BackendSwitchingRuleCreate(h.FrontSSL, models.BackendSwitchingRule{
 			Index: utils.PtrInt64(0),
-			Name:  fmt.Sprintf("%%[var(txn.sni_match),field(1,.)]"),
+			Name:  fmt.Sprintf("%%[var(txn.sni_match),field(1,.)]"), //nolint:perfsprint
 		}),
 		handler.toggleSSLPassthrough(true, h))
 	return errors.Result()

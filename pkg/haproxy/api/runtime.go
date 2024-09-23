@@ -13,7 +13,7 @@ import (
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
 )
 
-var ErrMapNotFound = fmt.Errorf("map not found")
+var ErrMapNotFound = errors.New("map not found")
 
 type RuntimeServerData struct {
 	BackendName string
@@ -98,7 +98,7 @@ func (c *clientNative) runRaw(runtime runtime.Runtime, sb strings.Builder, backe
 	if err != nil {
 		return err
 	}
-	for i := 0; i < len(result); i++ {
+	for i := range result {
 		if len(result[i]) > 5 {
 			switch result[i][1:5] {
 			case "[3]:", "[2]:", "[1]:", "[0]:":
@@ -130,7 +130,7 @@ func (c *clientNative) SetMapContent(mapFile string, payload []string) error {
 		err = fmt.Errorf("error getting map path: %w", err)
 		return err
 	}
-	for i := 0; i < len(payload); i++ {
+	for i := range payload {
 		_, err = runtime.ExecuteRaw(fmt.Sprintf("add map @%s %s <<\n%s\n", mapVer, mapPath, payload[i]))
 		if err != nil {
 			err = fmt.Errorf("error loading map payload: %w", err)

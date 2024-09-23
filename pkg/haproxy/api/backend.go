@@ -1,7 +1,7 @@
 package api
 
 import (
-	"fmt"
+	"errors"
 
 	"github.com/haproxytech/client-native/v5/models"
 	"github.com/haproxytech/config-parser/v5/types"
@@ -197,7 +197,7 @@ func (c *clientNative) BackendSwitchingRuleDeleteAll(frontend string) (err error
 	if err != nil {
 		return
 	}
-	for i := 0; i < len(switchingRules); i++ {
+	for range switchingRules {
 		if err = configuration.DeleteBackendSwitchingRule(0, frontend, c.activeTransaction, 0); err != nil {
 			break
 		}
@@ -232,7 +232,7 @@ func (c *clientNative) BackendServersGet(backendName string) (models.Servers, er
 func (c *clientNative) RefreshBackends() (deleted []string, err error) {
 	backends, errAPI := c.BackendsGet()
 	if errAPI != nil {
-		err = fmt.Errorf("unable to get configured backends")
+		err = errors.New("unable to get configured backends")
 		return
 	}
 	for _, backend := range backends {

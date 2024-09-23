@@ -16,7 +16,6 @@ package maps
 
 import (
 	"errors"
-	"fmt"
 	"hash/fnv"
 	"os"
 	"path"
@@ -82,7 +81,7 @@ func (mf *mapFile) getContent() (result []string, hash uint64) {
 
 func New(dir string, persistentMaps []Name) (Maps, error) { //nolint:ireturn
 	if dir == "" {
-		return nil, fmt.Errorf("empty name for map directory")
+		return nil, errors.New("empty name for map directory")
 	}
 	mapDir = dir
 	var maps mapFiles = make(map[Name]*mapFile, len(persistentMaps))

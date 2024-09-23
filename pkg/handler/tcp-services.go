@@ -40,7 +40,7 @@ func (handler TCPServices) Update(k store.K8s, h haproxy.HAProxy, a annotations.
 		if port == "log-format-tcp" {
 			continue
 		}
-		frontendName := fmt.Sprintf("tcp-%s", port)
+		frontendName := "tcp-" + port
 		p, err = handler.parseTCPService(k, tcpSvcAnn)
 		if err != nil {
 			logger.Error(err)

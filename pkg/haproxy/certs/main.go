@@ -70,13 +70,13 @@ type SecretCtx struct {
 func New(envParam Env) (Certificates, error) { //nolint:ireturn
 	env = envParam
 	if env.FrontendDir == "" {
-		return nil, fmt.Errorf("empty name for Frontend Cert Directory")
+		return nil, errors.New("empty name for Frontend Cert Directory")
 	}
 	if env.BackendDir == "" {
-		return nil, fmt.Errorf("empty name for Backend Cert Directory")
+		return nil, errors.New("empty name for Backend Cert Directory")
 	}
 	if env.CaDir == "" {
-		return nil, fmt.Errorf("empty name for CA Cert Directory")
+		return nil, errors.New("empty name for CA Cert Directory")
 	}
 	return &certs{
 		frontend: make(map[string]*cert),
@@ -211,7 +211,7 @@ func writeSecret(secret *store.Secret, c *cert, privateKeyNull bool) (err error)
 		if !crtOk {
 			return fmt.Errorf("certificate missing in %s/%s", secret.Namespace, secret.Name)
 		}
-		c.path = fmt.Sprintf("%s.pem", c.path)
+		c.path += ".pem"
 		return writeCert(c.path, []byte(""), crtValue)
 	}
 	for _, k := range []string{"tls", "rsa", "ecdsa", "dsa"} {
@@ -219,7 +219,7 @@ func writeSecret(secret *store.Secret, c *cert, privateKeyNull bool) (err error)
 		crtValue, crtOk = secret.Data[k+".crt"]
 		if keyOk && crtOk {
 			pemOk = true
-			certPath = fmt.Sprintf("%s.pem", c.path)
+			certPath = c.path + ".pem"
 			if k != "tls" {
 				// HAProxy "cert bundle"
 				certPath = fmt.Sprintf("%s.%s", certPath, k)
