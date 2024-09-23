@@ -44,6 +44,7 @@ linters:
     - mnd
     - inamedparam
     - err113 # maybe tmp disable
+    - exportloopref #deprecated
 issues:
   exclude:
     - "tag is not aligned, should be:" # this is harder to read
