@@ -490,37 +490,38 @@ func (k k8s) getEndpointsInformer(eventChan chan k8ssync.SyncDataEvent, factory 
 func (k *k8s) getPodInformer(namespace, podPrefix string, resyncPeriod time.Duration, eventChan chan k8ssync.SyncDataEvent) cache.Controller { //nolint:ireturn
 	var prefix string
 	watchlist := cache.NewListWatchFromClient(k.builtInClient.CoreV1().RESTClient(), "pods", namespace, fields.Nothing())
-	_, eController := cache.NewInformer(
-		watchlist,
-		&corev1.Pod{},
-		resyncPeriod,
-		cache.ResourceEventHandlerFuncs{
-			AddFunc: func(obj interface{}) {
-				meta := obj.(*corev1.Pod).ObjectMeta
-				prefix, _ = utils.GetPodPrefix(meta.Name)
-				if prefix != podPrefix {
-					return
-				}
-				eventChan <- k8ssync.SyncDataEvent{SyncType: k8ssync.POD, Namespace: meta.Namespace, Data: store.PodEvent{Status: store.ADDED, Name: meta.Name}}
+	_, eController := cache.NewInformerWithOptions(
+		cache.InformerOptions{
+			ListerWatcher: watchlist,
+			ObjectType:    &corev1.Pod{},
+			ResyncPeriod:  resyncPeriod,
+			Handler: cache.ResourceEventHandlerFuncs{
+				AddFunc: func(obj interface{}) {
+					meta := obj.(*corev1.Pod).ObjectMeta
+					prefix, _ = utils.GetPodPrefix(meta.Name)
+					if prefix != podPrefix {
+						return
+					}
+					eventChan <- k8ssync.SyncDataEvent{SyncType: k8ssync.POD, Namespace: meta.Namespace, Data: store.PodEvent{Status: store.ADDED, Name: meta.Name}}
+				},
+				DeleteFunc: func(obj interface{}) {
+					meta := obj.(*corev1.Pod).ObjectMeta //nolint:forcetypeassert
+					prefix, _ = utils.GetPodPrefix(meta.Name)
+					if prefix != podPrefix {
+						return
+					}
+					eventChan <- k8ssync.SyncDataEvent{SyncType: k8ssync.POD, Namespace: meta.Namespace, Data: store.PodEvent{Status: store.DELETED, Name: meta.Name}}
+				},
+				UpdateFunc: func(oldObj, newObj interface{}) {
+					meta := newObj.(*corev1.Pod).ObjectMeta //nolint:forcetypeassert
+					prefix, _ = utils.GetPodPrefix(meta.Name)
+					if prefix != podPrefix {
+						return
+					}
+					eventChan <- k8ssync.SyncDataEvent{SyncType: k8ssync.POD, Namespace: meta.Namespace, Data: store.PodEvent{Status: store.MODIFIED, Name: meta.Name}}
+				},
 			},
-			DeleteFunc: func(obj interface{}) {
-				meta := obj.(*corev1.Pod).ObjectMeta //nolint:forcetypeassert
-				prefix, _ = utils.GetPodPrefix(meta.Name)
-				if prefix != podPrefix {
-					return
-				}
-				eventChan <- k8ssync.SyncDataEvent{SyncType: k8ssync.POD, Namespace: meta.Namespace, Data: store.PodEvent{Status: store.DELETED, Name: meta.Name}}
-			},
-			UpdateFunc: func(oldObj, newObj interface{}) {
-				meta := newObj.(*corev1.Pod).ObjectMeta //nolint:forcetypeassert
-				prefix, _ = utils.GetPodPrefix(meta.Name)
-				if prefix != podPrefix {
-					return
-				}
-				eventChan <- k8ssync.SyncDataEvent{SyncType: k8ssync.POD, Namespace: meta.Namespace, Data: store.PodEvent{Status: store.MODIFIED, Name: meta.Name}}
-			},
-		},
-	)
+		})
 	return eController
 }
 
