@@ -128,7 +128,7 @@ jobs:
   e2e:
     strategy:
       matrix:
-        k8s-version: ["v1.30.0"]
+        k8s-version: ["v1.31.0"]
     needs: ["build"]
     runs-on: ubuntu-latest
     steps:
@@ -152,7 +152,7 @@ jobs:
           name: dev
           config: deploy/tests/kind-config.yaml
           image: kindest/node:${{ matrix.k8s-version }}
-          version: v0.23.0
+          version: v0.24.0
       - name: Setup
         run: CI_ENV=github deploy/tests/create.sh
       - name: Run parallel e2e tests
