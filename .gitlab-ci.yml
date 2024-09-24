@@ -85,7 +85,7 @@ golangci_lint:
   tags:
     - go
   script:
-    - make lint
+    - make lint-seq
 lint-commit-msg:
   stage: lint
   needs: []
