@@ -24,3 +24,5 @@ allowed:
   - frontends
   - tcp
   - crd
+  - linter
+  - linters

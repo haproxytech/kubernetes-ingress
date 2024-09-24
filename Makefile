@@ -28,6 +28,11 @@ lint:
 	cd bin;GOLANGCI_LINT_VERSION=${GOLANGCI_LINT_VERSION} sh lint-check.sh
 	bin/golangci-lint run --timeout 20m --color always --max-issues-per-linter 0 --max-same-issues 0
 
+.PHONY: lint-seq
+lint-seq:
+	cd bin;GOLANGCI_LINT_VERSION=${GOLANGCI_LINT_VERSION} sh lint-check.sh
+	go run cmd/linters/*
+
 .PHONY: check-commit
 check-commit:
 	cd bin;CHECK_COMMIT=${CHECK_COMMIT} sh check-commit.sh
