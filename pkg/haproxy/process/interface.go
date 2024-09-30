@@ -13,6 +13,9 @@ import (
 
 var logger = utils.GetLogger()
 
+// MUST be the same as in fs/etc/s6-overlay/s6-rc.d/haproxy/run
+const MASTER_SOCKET_PATH = "/var/run/haproxy-master.sock" //nolint:stylecheck
+
 type Process interface {
 	Service(action string) (err error)
 	UseAuxFile(useAuxFile bool)
@@ -22,16 +25,9 @@ type Process interface {
 func New(env env.Env, osArgs utils.OSArgs, auxCfgFile string, api api.HAProxyClient) (p Process) { //nolint:ireturn
 	switch {
 	case osArgs.UseWiths6Overlay:
-		p = &s6Control{
-			Env:    env,
-			OSArgs: osArgs,
-			API:    api,
-		}
+		p = newS6Control(api, env, osArgs)
 	case osArgs.UseWithPebble:
-		p = &pebbleControl{
-			Env:    env,
-			OSArgs: osArgs,
-		}
+		p = newPebbleControl(env, osArgs)
 	default:
 		p = &directControl{
 			Env:    env,
