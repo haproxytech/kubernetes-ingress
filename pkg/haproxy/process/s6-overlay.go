@@ -1,19 +1,44 @@
 package process
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
 
+	"github.com/haproxytech/client-native/v5/runtime"
+	"github.com/haproxytech/client-native/v5/runtime/options"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/api"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/env"
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
 )
 
 type s6Control struct {
-	API    api.HAProxyClient
-	Env    env.Env
-	OSArgs utils.OSArgs
+	API               api.HAProxyClient
+	Env               env.Env
+	OSArgs            utils.OSArgs
+	masterSocket      runtime.Runtime
+	masterSocketValid bool
+	logger            utils.Logger
+}
+
+func newS6Control(api api.HAProxyClient, env env.Env, osArgs utils.OSArgs) *s6Control {
+	sc := s6Control{
+		API:    api,
+		Env:    env,
+		OSArgs: osArgs,
+		logger: utils.GetLogger(),
+	}
+
+	masterSocket, err := runtime.New(context.Background(), options.MasterSocket(MASTER_SOCKET_PATH, 1))
+	if err != nil {
+		sc.logger.Error(err)
+		return &sc
+	}
+	sc.masterSocketValid = true
+	sc.masterSocket = masterSocket
+
+	return &sc
 }
 
 func (d *s6Control) Service(action string) error {
@@ -31,6 +56,15 @@ func (d *s6Control) Service(action string) error {
 		// no need to stop it (s6)
 		return nil
 	case "reload":
+		if d.masterSocketValid {
+			msg, err := d.masterSocket.Reload()
+			if err != nil {
+				d.logger.Error(err)
+			}
+			d.logger.Debug(msg)
+			return err
+		}
+
 		cmd = exec.Command("s6-svc", "-2", "/run/service/haproxy")
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
