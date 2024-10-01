@@ -19,6 +19,8 @@ import (
 	"strings"
 
 	networkingv1 "k8s.io/api/networking/v1"
+	ammeta "k8s.io/apimachinery/pkg/api/meta"
+	"k8s.io/apimachinery/pkg/types"
 )
 
 //nolint:golint,stylecheck
@@ -39,6 +41,26 @@ func ConvertToIngress(resource interface{}) (ingress *Ingress, err error) {
 	default:
 		err = fmt.Errorf("unrecognized type for: %T", t)
 	}
+	return
+}
+
+func GetIngress(resource interface{}) (ingress *networkingv1.Ingress, err error) {
+	switch t := resource.(type) {
+	case *networkingv1.Ingress:
+		return resource.(*networkingv1.Ingress), nil
+	default:
+		err = fmt.Errorf("unrecognized type for: %T", t)
+	}
+	return
+}
+
+func GetUIDResourceVersion(resource interface{}) (uid types.UID, resourceVersion string, err error) {
+	v, err := ammeta.Accessor(resource)
+	if err != nil {
+		return
+	}
+	uid = v.GetUID()
+	resourceVersion = v.GetResourceVersion()
 	return
 }
 

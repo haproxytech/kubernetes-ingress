@@ -123,7 +123,7 @@ func (handler PrometheusEndpoint) Update(k store.K8s, h haproxy.HAProxy, a annot
 	}
 
 	if userListChanged || status != store.EMPTY || secretExists && secret.Status != store.EMPTY {
-		k.EventIngress(k.GetNamespace(ing.Namespace), ing)
+		k.EventIngress(k.GetNamespace(ing.Namespace), ing, "fakeUID", "fakeResourceVersion")
 	}
 
 	instance.ReloadIf(status != store.EMPTY, "creation/modification of prometheus endpoint")

@@ -60,7 +60,7 @@ func (c *HAProxyController) SyncData() {
 		case k8ssync.NAMESPACE:
 			change = c.store.EventNamespace(ns, job.Data.(*store.Namespace)) //nolint:forcetypeassert
 		case k8ssync.INGRESS:
-			change = c.store.EventIngress(ns, job.Data.(*store.Ingress)) //nolint:forcetypeassert
+			change = c.store.EventIngress(ns, job.Data.(*store.Ingress), job.UID, job.ResourceVersion) //nolint:forcetypeassert
 		case k8ssync.INGRESS_CLASS:
 			change = c.store.EventIngressClass(job.Data.(*store.IngressClass)) //nolint:forcetypeassert
 		case k8ssync.ENDPOINTS:

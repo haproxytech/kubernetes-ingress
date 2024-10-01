@@ -14,6 +14,8 @@
 
 package k8ssync
 
+import "k8s.io/apimachinery/pkg/types"
+
 // SyncType represents type of k8s received message
 type SyncType string
 
@@ -23,8 +25,10 @@ type SyncDataEvent struct {
 	Data           interface{}
 	EventProcessed chan struct{}
 	SyncType
-	Namespace string
-	Name      string
+	Namespace       string
+	Name            string
+	UID             types.UID
+	ResourceVersion string
 }
 
 //nolint:golint,stylecheck

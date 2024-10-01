@@ -1,0 +1,38 @@
+---
+- host: "test.haproxy"
+  http:
+    paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: foo1
+            port:
+              name: http
+- host: "test.haproxy"
+  http:
+    paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: foo1
+            port:
+              name: http
+      - path: /foo12
+        pathType: Prefix
+        backend:
+          service:
+            name: foo12
+            port:
+              name: http
+- host: "test2.haproxy"
+  http:
+    paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: foo2
+            port:
+              name: http

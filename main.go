@@ -36,6 +36,7 @@ import (
 	"github.com/haproxytech/kubernetes-ingress/pkg/controller"
 	"github.com/haproxytech/kubernetes-ingress/pkg/job"
 	"github.com/haproxytech/kubernetes-ingress/pkg/k8s"
+	"github.com/haproxytech/kubernetes-ingress/pkg/k8s/meta"
 	k8ssync "github.com/haproxytech/kubernetes-ingress/pkg/k8s/sync"
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
@@ -139,6 +140,10 @@ func main() {
 		s.NamespacesAccess.Whitelist,
 		publishService,
 	)
+
+	if osArgs.Test {
+		meta.GetMetaStore().ProcessedResourceVersion.SetTestMode()
+	}
 
 	c := controller.NewBuilder().
 		WithHaproxyCfgFile(haproxyConf).

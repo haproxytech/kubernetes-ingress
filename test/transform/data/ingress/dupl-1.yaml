@@ -1,0 +1,57 @@
+kind: Ingress
+apiVersion: networking.k8s.io/v1
+metadata:
+  name: testingress
+  annotations:
+    ingress.class: haproxy
+spec:
+  tls:
+    - hosts:
+        - test1.haproxy
+        - test1.haproxy
+        - test1.haproxy
+      secretName: test1
+    - hosts:
+        - test2.haproxy
+      secretName: test2
+  rules:
+    - host: "test.haproxy"
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: foo1
+                port:
+                  name: http
+    - host: "test.haproxy"
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: foo1
+                port:
+                  name: http
+    - host: "test.haproxy"
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: foo1
+                port:
+                  name: http
+    - host: "test2.haproxy"
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: foo2
+                port:
+                  name: http

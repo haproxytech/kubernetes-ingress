@@ -18,7 +18,9 @@ import (
 	"strings"
 
 	"github.com/go-test/deep"
+	"github.com/haproxytech/kubernetes-ingress/pkg/k8s/meta"
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
+	"k8s.io/apimachinery/pkg/types"
 )
 
 func (k *K8s) EventNamespace(ns *Namespace, data *Namespace) (updateRequired bool) {
@@ -57,11 +59,12 @@ func (k *K8s) EventIngressClass(data *IngressClass) (updateRequired bool) {
 	return
 }
 
-func (k *K8s) EventIngress(ns *Namespace, data *Ingress) (updateRequired bool) {
+func (k *K8s) EventIngress(ns *Namespace, data *Ingress, uid types.UID, resourceVersion string) (updateRequired bool) {
 	updateRequired = true
 
 	if data.Status == DELETED {
 		delete(ns.Ingresses, data.Name)
+		meta.GetMetaStore().ProcessedResourceVersion.Delete(data, uid)
 	} else {
 		if oldIngress, ok := ns.Ingresses[data.Name]; ok {
 			updated := deep.Equal(data.IngressCore, oldIngress.IngressCore)
@@ -80,6 +83,7 @@ func (k *K8s) EventIngress(ns *Namespace, data *Ingress) (updateRequired bool) {
 			}
 		}
 		ns.Ingresses[data.Name] = data
+		meta.GetMetaStore().ProcessedResourceVersion.Set(data, uid, resourceVersion)
 	}
 	return
 }

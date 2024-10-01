@@ -1,0 +1,11 @@
+---
+# tls:
+- hosts:
+    - test1.haproxy
+    - test1.haproxy
+    - test1.haproxy
+    - test1.haproxy
+  secretName: test1
+- hosts:
+    -  test2.haproxy
+  secretName: test2

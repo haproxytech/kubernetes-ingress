@@ -131,6 +131,7 @@ func New(osArgs utils.OSArgs, whitelist map[string]struct{}, publishSvc *utils.N
 		gatewayRestClient:      gatewayRestClient,
 		crdClient:              crdClient,
 	}
+
 	// alpha2 is deprecated
 	k.registerCoreCR(NewGlobalCRV1Alpha2(), CRSGroupVersionV1alpha2)
 	k.registerCoreCR(NewDefaultsCRV1Alpha2(), CRSGroupVersionV1alpha2)
