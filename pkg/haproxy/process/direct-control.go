@@ -73,7 +73,7 @@ func (d *directControl) Service(action string) (err error) {
 		}
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
-		return cmd.Run()
+		return cmd.Start()
 	default:
 		return fmt.Errorf("unknown command '%s'", action)
 	}
