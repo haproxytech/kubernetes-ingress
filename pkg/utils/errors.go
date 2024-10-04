@@ -24,3 +24,9 @@ func (e *Errors) Result() error {
 	}
 	return errors.New(result)
 }
+
+func (e *Errors) AddErrors(errors Errors) {
+	for _, err := range errors {
+		e.Add((err))
+	}
+}

@@ -36,7 +36,7 @@ func (s *Service) HandleHAProxySrvs(k8s store.K8s, client api.HAProxyClient) {
 		}
 		logger.Warningf("Ingress '%s/%s': %s", s.resource.Namespace, s.resource.Name, err)
 		if servers, _ := client.BackendServersGet(s.backend.Name); servers != nil {
-			client.BackendServerDeleteAll(s.backend.Name)
+			_ = client.BackendServerDeleteAll(s.backend.Name)
 		}
 		return
 	}
@@ -74,7 +74,7 @@ func (s *Service) updateHAProxySrv(client api.HAProxyClient, srvSlot store.HAPro
 	}
 	logger.Tracef("[CONFIG] [BACKEND] [SERVER] backend %s: about to update server in configuration file :  models.Server { Name: %s, Port: %d, Address: %s, Maintenance: %s }", s.backend.Name, srv.Name, *srv.Port, srv.Address, srv.Maintenance)
 
-	errAPI := client.BackendServerCreateOrEdit(s.backend.Name, srv)
+	errAPI := client.BackendServerCreateOrUpdate(s.backend.Name, srv)
 	if errAPI == nil {
 		logger.Tracef("[CONFIG] [BACKEND] [SERVER] Creating/Updating server '%s/%s'", s.backend.Name, srv.Name)
 	}

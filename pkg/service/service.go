@@ -141,7 +141,6 @@ func (s *Service) GetBackendName() (name string, err error) {
 
 // HandleBackend processes a Service and creates/updates corresponding backend configuration in HAProxy
 func (s *Service) HandleBackend(storeK8s store.K8s, client api.HAProxyClient, a annotations.Annotations) (err error) {
-	var backend *models.Backend
 	var newBackend *v1.BackendSpec
 	newBackend, err = s.getBackendModel(storeK8s, a)
 	if err != nil {
@@ -149,27 +148,14 @@ func (s *Service) HandleBackend(storeK8s store.K8s, client api.HAProxyClient, a 
 		return
 	}
 	s.backend = newBackend.Config
+	backend, _ := client.BackendGet(newBackend.Config.Name)
 	// Get/Create Backend
-	backend, err = client.BackendGet(newBackend.Config.Name)
-	if err == nil {
-		// Update Backend
-		diff := newBackend.Config.Diff(*backend)
-		if len(diff) != 0 {
-			// Detect if we have a diff on the server line
-			if isServersToEdit(newBackend.Config, backend) {
-				s.serversToEdit = true
-			}
-			if err = client.BackendEdit(*newBackend.Config); err != nil {
-				return
-			}
-			instance.Reload("Service '%s/%s': backend '%s' updated: %v", s.resource.Namespace, s.resource.Name, newBackend.Config.Name, diff)
-		}
-	} else {
-		if err = client.BackendCreate(*newBackend.Config); err != nil {
-			return
-		}
-		s.newBackend = true
-		instance.Reload(fmt.Sprintf("Service '%s/%s': new backend '%s'", s.resource.Namespace, s.resource.Name, newBackend.Config.Name))
+	diff, created := client.BackendCreateOrUpdate(*newBackend.Config)
+	instance.ReloadIf(len(diff) > 0 || created, "Service '%s/%s': backend '%s' upserted: %v", s.resource.Namespace, s.resource.Name, newBackend.Config.Name, diff)
+	s.newBackend = created
+	// if updated but not created
+	if len(diff) > 0 && !created {
+		s.serversToEdit = isServersToEdit(newBackend.Config, backend)
 	}
 	// acls
 	acls.PopulateBackend(client, newBackend.Config.Name, newBackend.Acls)

@@ -31,8 +31,7 @@ func (handler PrometheusEndpoint) Update(k store.K8s, h haproxy.HAProxy, a annot
 
 	status := store.EMPTY
 	var secret *store.Secret
-	_, errBackend := h.BackendGet(prometheusBackendName)
-	backendExists := errBackend == nil
+	backendExists := h.BackendExists(prometheusBackendName)
 
 	annSecret := annotations.String("prometheus-endpoint-auth-secret", k.ConfigMaps.Main.Annotations)
 	var secretExists, secretChanged, userListChanged bool

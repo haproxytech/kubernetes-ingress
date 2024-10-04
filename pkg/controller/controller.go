@@ -181,7 +181,7 @@ func (c *HAProxyController) updateHAProxy() {
 		c.setToReady()
 	}
 
-	err = c.haproxy.APICommitTransaction()
+	err = c.haproxy.APIFinalCommitTransaction()
 	if err != nil {
 		logger.Error("unable to Sync HAProxy configuration !!")
 		logger.Error(err)
@@ -196,6 +196,8 @@ func (c *HAProxyController) updateHAProxy() {
 			c.updateHAProxy()
 			return
 		}
+		// If any error not from config snippet then pop the previous state of backends
+		logger.Error(c.haproxy.PopPreviousBackends())
 		return
 	}
 
@@ -213,7 +215,8 @@ func (c *HAProxyController) updateHAProxy() {
 	}
 
 	c.clean(false)
-
+	// If transaction succeeds thenpush backends state for any future recover.
+	logger.Error(c.haproxy.PushPreviousBackends())
 	logger.Trace("HAProxy config sync ended")
 }
 

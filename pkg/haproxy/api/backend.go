@@ -2,137 +2,112 @@ package api
 
 import (
 	"errors"
+	"fmt"
+	"slices"
+	"strings"
 
-	"github.com/haproxytech/client-native/v5/config-parser/types"
 	"github.com/haproxytech/client-native/v5/models"
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
 )
 
-func (c *clientNative) BackendsGet() (models.Backends, error) {
-	configuration, err := c.nativeAPI.Configuration()
-	if err != nil {
-		return nil, err
+var ErrNotFound = errors.New("not found")
+
+func (c *clientNative) BackendsGet() models.Backends {
+	backends := models.Backends(make([]*models.Backend, len(c.backends)))
+	i := 0
+	for _, backend := range c.backends {
+		backends[i] = &backend.BackendBase
+		i++
 	}
-	_, backends, err := configuration.GetBackends(c.activeTransaction)
-	return backends, err
+	return backends
 }
 
 func (c *clientNative) BackendGet(backendName string) (*models.Backend, error) {
-	configuration, err := c.nativeAPI.Configuration()
-	if err != nil {
-		return nil, err
+	oldBackend, ok := c.backends[backendName]
+	if ok {
+		return &oldBackend.BackendBase, nil
 	}
-	_, backend, err := configuration.GetBackend(backendName, c.activeTransaction)
-	if err != nil {
-		return nil, err
-	}
-	c.activeBackends[backend.Name] = struct{}{}
-	return backend, nil
+	return nil, fmt.Errorf("backend %s not found", backendName)
 }
 
-func (c *clientNative) BackendCreate(backend models.Backend) error {
-	configuration, err := c.nativeAPI.Configuration()
-	if err != nil {
-		return err
-	}
-	c.activeTransactionHasChanges = true
-	err = configuration.CreateBackend(&backend, c.activeTransaction, 0)
-	if err != nil {
-		return err
-	}
-	c.activeBackends[backend.Name] = struct{}{}
-	return nil
+func (c *clientNative) BackendCreatePermanently(backend models.Backend) {
+	c.BackendCreateOrUpdate(backend)
+	newBackend := c.backends[backend.Name]
+	newBackend.Permanent = true
+	c.backends[backend.Name] = newBackend
 }
 
-func (c *clientNative) BackendCreatePermanently(backend models.Backend) error {
-	err := c.BackendCreate(backend)
-	if err != nil {
-		return err
-	}
-	c.permanentBackends[backend.Name] = struct{}{}
-	return nil
-}
-
-func (c *clientNative) BackendCreateIfNotExist(backend models.Backend) (err error) {
-	configuration, err := c.nativeAPI.Configuration()
-	if err != nil {
+func (c *clientNative) BackendCreateIfNotExist(backend models.Backend) {
+	existingBackend := c.backends[backend.Name]
+	existingBackend.Used = true
+	c.backends[backend.Name] = existingBackend
+	if c.BackendExists(backend.Name) {
 		return
 	}
-	c.activeTransactionHasChanges = true
-	defer func() {
-		if err == nil {
-			c.activeBackends[backend.Name] = struct{}{}
+	c.BackendCreateOrUpdate(backend)
+}
+
+func (c *clientNative) BackendCreateOrUpdate(backend models.Backend) (diff map[string][]interface{}, created bool) {
+	oldBackend, ok := c.backends[backend.Name]
+	if !ok {
+		c.backends[backend.Name] = Backend{
+			BackendBase: backend,
+			Used:        true,
 		}
-	}()
+		return nil, true
+	}
 
-	_, _, err = configuration.GetBackend(backend.Name, c.activeTransaction)
-	if err == nil {
+	diff = oldBackend.BackendBase.Diff(backend)
+
+	c.activeTransactionHasChanges = len(diff) > 0
+
+	oldBackend.BackendBase = backend
+	oldBackend.Used = true
+	c.backends[backend.Name] = oldBackend
+	return diff, false
+}
+
+func (c *clientNative) BackendDelete(backendName string) {
+	backend, exists := c.backends[backendName]
+	if !exists {
 		return
 	}
-
-	return configuration.CreateBackend(&backend, c.activeTransaction, 0)
-}
-
-func (c *clientNative) BackendEdit(backend models.Backend) error {
-	configuration, err := c.nativeAPI.Configuration()
-	if err != nil {
-		return err
-	}
-	c.activeTransactionHasChanges = true
-	return configuration.EditBackend(backend.Name, &backend, c.activeTransaction, 0)
-}
-
-func (c *clientNative) BackendDelete(backendName string) error {
-	configuration, err := c.nativeAPI.Configuration()
-	if err != nil {
-		return err
-	}
-	c.activeTransactionHasChanges = true
-	return configuration.DeleteBackend(backendName, c.activeTransaction, 0)
+	backend.Used = false
+	backend.Permanent = false
+	c.backends[backendName] = backend
 }
 
 func (c *clientNative) BackendCfgSnippetSet(backendName string, value []string) error {
-	configuration, err := c.nativeAPI.Configuration()
-	if err != nil {
-		return err
+	backend, exists := c.backends[backendName]
+	if !exists {
+		return fmt.Errorf("backend %s : %w", backendName, ErrNotFound)
 	}
-	config, err := configuration.GetParser(c.activeTransaction)
-	if err != nil {
-		return err
-	}
-	if len(value) == 0 {
-		err = config.Set("backend", backendName, "config-snippet", nil)
-	} else {
-		err = config.Set("backend", backendName, "config-snippet", types.StringSliceC{Value: value})
-	}
-	if err != nil {
-		c.activeTransactionHasChanges = true
-	}
-	return err
+
+	c.activeTransactionHasChanges = slices.Compare(backend.ConfigSnippets, value) != 0
+	backend.ConfigSnippets = value
+	c.backends[backendName] = backend
+	return nil
 }
 
-func (c *clientNative) BackendHTTPRequestRuleCreate(backend string, rule models.HTTPRequestRule) error {
-	configuration, err := c.nativeAPI.Configuration()
-	if err != nil {
-		return err
+// To remove ?
+func (c *clientNative) BackendHTTPRequestRuleCreate(backendName string, rule models.HTTPRequestRule) error {
+	backend, exists := c.backends[backendName]
+	if !exists {
+		return fmt.Errorf("can't add http request rule for unexisting backend %s, %w", backendName, ErrNotFound)
 	}
-	c.activeTransactionHasChanges = true
-	return configuration.CreateHTTPRequestRule("backend", backend, &rule, c.activeTransaction, 0)
+	backend.HTTPRequestsRules = append(backend.HTTPRequestsRules, &rule)
+	c.backends[backendName] = backend
+	return nil
 }
 
-func (c *clientNative) BackendServerDeleteAll(backendName string) bool {
-	configuration, err := c.nativeAPI.Configuration()
-	if err != nil {
-		logger := utils.GetLogger()
-		logger.Error(err)
-		return false
+func (c *clientNative) BackendServerDeleteAll(backendName string) error {
+	backend, exists := c.backends[backendName]
+	if !exists {
+		return fmt.Errorf("can't delete servers from unexisting backend %s", backendName)
 	}
-	_, servers, _ := configuration.GetServers("backend", backendName, c.activeTransaction)
-	for _, srv := range servers {
-		c.activeTransactionHasChanges = true
-		_ = c.BackendServerDelete(backendName, srv.Name)
-	}
-	return c.activeTransactionHasChanges
+	backend.Servers = nil
+	c.backends[backendName] = backend
+	return nil
 }
 
 func (c *clientNative) BackendRuleDeleteAll(backend string) {
@@ -151,84 +126,143 @@ func (c *clientNative) BackendRuleDeleteAll(backend string) {
 	}
 }
 
-func (c *clientNative) BackendServerCreate(backendName string, data models.Server) error {
-	configuration, err := c.nativeAPI.Configuration()
-	if err != nil {
-		return err
+func (c *clientNative) BackendServerCreateOrUpdate(backendName string, data models.Server) error {
+	backend, exists := c.backends[backendName]
+	if !exists {
+		return fmt.Errorf("can't create server for unexisting backend %s", backendName)
 	}
-	c.activeTransactionHasChanges = true
-	return configuration.CreateServer("backend", backendName, &data, c.activeTransaction, 0)
+	if data.Name == "" {
+		return fmt.Errorf("can't create unnamed server in backend %s", backendName)
+	}
+
+	if backend.Servers == nil {
+		backend.Servers = map[string]models.Server{}
+	}
+	backend.Servers[data.Name] = data
+	c.backends[backendName] = backend
+	return nil
+}
+
+func (c *clientNative) BackendServerCreate(backendName string, data models.Server) error {
+	backend, exists := c.backends[backendName]
+	if !exists {
+		return fmt.Errorf("can't create server for unexisting backend %s", backendName)
+	}
+	if data.Name == "" {
+		return fmt.Errorf("can't create unnamed server in backend %s", backendName)
+	}
+
+	_, exists = backend.Servers[data.Name]
+	if exists {
+		return fmt.Errorf("can't create already existing server %s in backend %s", data.Name, backendName)
+	}
+	if backend.Servers == nil {
+		backend.Servers = map[string]models.Server{}
+	}
+	backend.Servers[data.Name] = data
+	c.backends[backendName] = backend
+	return nil
 }
 
 func (c *clientNative) BackendServerEdit(backendName string, data models.Server) error {
-	configuration, err := c.nativeAPI.Configuration()
-	if err != nil {
-		return err
+	backend, exists := c.backends[backendName]
+	if !exists {
+		return fmt.Errorf("can't edit server for unexisting backend %s, %w", backendName, ErrNotFound)
 	}
-	c.activeTransactionHasChanges = true
-	return configuration.EditServer(data.Name, "backend", backendName, &data, c.activeTransaction, 0)
-}
+	if data.Name == "" {
+		return fmt.Errorf("can't edit unnamed server in backend %s", backendName)
+	}
 
-func (c *clientNative) BackendServerCreateOrEdit(backendName string, data models.Server) error {
-	configuration, err := c.nativeAPI.Configuration()
-	if err != nil {
-		return err
+	if backend.Servers == nil {
+		return fmt.Errorf("can't edit unexisting server %s in backend %s, %w", data.Name, backendName, ErrNotFound)
 	}
-	c.activeTransactionHasChanges = true
-	return configuration.CreateOrEditServer("backend", backendName, &data, c.activeTransaction, 0)
+	_, exists = backend.Servers[data.Name]
+	if !exists {
+		return fmt.Errorf("can't edit unexisting server %s in backend %s, %w", data.Name, backendName, ErrNotFound)
+	}
+	backend.Servers[data.Name] = data
+	c.backends[backendName] = backend
+	return nil
 }
 
 func (c *clientNative) BackendServerDelete(backendName string, serverName string) error {
-	configuration, err := c.nativeAPI.Configuration()
-	if err != nil {
-		return err
+	backend, exists := c.backends[backendName]
+	if !exists {
+		return fmt.Errorf("can't edit server for unexisting backend %s", backendName)
 	}
-	c.activeTransactionHasChanges = true
-	return configuration.DeleteServer(serverName, "backend", backendName, c.activeTransaction, 0)
+	if serverName == "" {
+		return fmt.Errorf("can't edit unnamed server in backend %s", backendName)
+	}
+
+	_, exists = backend.Servers[serverName]
+	if !exists {
+		return fmt.Errorf("can't delete unexisting server %s in backend %s", serverName, backendName)
+	}
+	delete(backend.Servers, serverName)
+	c.backends[backendName] = backend
+	return nil
 }
 
-func (c *clientNative) ServerGet(serverName, backendName string) (models.Server, error) {
-	configuration, err := c.nativeAPI.Configuration()
-	if err != nil {
-		return models.Server{}, err
+func (c *clientNative) BackendServerGet(serverName, backendName string) (*models.Server, error) {
+	backend, exists := c.backends[backendName]
+	if !exists {
+		return nil, fmt.Errorf("can't get server %s for unexisting backend %s", serverName, backendName)
 	}
-	_, server, err := configuration.GetServer(serverName, "backend", backendName, c.activeTransaction)
-	if err != nil {
-		return models.Server{}, err
+	if serverName == "" {
+		return nil, fmt.Errorf("can't get unnamed server in backend %s", backendName)
 	}
-	return *server, nil
+
+	server, exists := backend.Servers[serverName]
+	if !exists {
+		return nil, nil //nolint:golint,nilnil
+	}
+	return &server, nil
 }
 
 func (c *clientNative) BackendServersGet(backendName string) (models.Servers, error) {
+	backend, exists := c.backends[backendName]
+	if !exists {
+		return nil, fmt.Errorf("can't get server for unexisting backend %s", backendName)
+	}
+	servers := models.Servers(make([]*models.Server, len(backend.Servers)))
+	i := 0
+	for _, server := range backend.Servers {
+		servers[i] = &server
+		i++
+	}
+	slices.SortFunc(servers, func(a, b *models.Server) int {
+		lenDiff := len(a.Name) - len(b.Name)
+		if lenDiff != 0 {
+			return lenDiff
+		}
+		return strings.Compare(a.Name, b.Name)
+	})
+	return servers, nil
+}
+
+func (c *clientNative) BackendExists(backendName string) (exists bool) {
+	_, exists = c.backends[backendName]
+	return
+}
+
+func (c *clientNative) BackendDeleteAllUnnecessary() ([]string, error) {
 	configuration, err := c.nativeAPI.Configuration()
 	if err != nil {
 		return nil, err
 	}
-	_, servers, err := configuration.GetServers("backend", backendName, c.activeTransaction)
-	if err != nil {
-		return nil, err
-	}
-	return servers, nil
-}
 
-func (c *clientNative) RefreshBackends() (deleted []string, err error) {
-	backends, errAPI := c.BackendsGet()
-	if errAPI != nil {
-		err = errors.New("unable to get configured backends")
-		return
-	}
-	for _, backend := range backends {
-		if _, ok := c.permanentBackends[backend.Name]; ok {
+	c.activeTransactionHasChanges = true
+	var errs utils.Errors
+	var backendDeleted []string //nolint:prealloc
+	for _, backend := range c.backends {
+		// if a backend is not permanent and has not been "viewed" in the transacton then remove it.
+		if backend.Used || backend.Permanent {
 			continue
 		}
-		if _, ok := c.activeBackends[backend.Name]; !ok {
-			if err = c.BackendDelete(backend.Name); err != nil {
-				return
-			}
-			utils.GetLogger().Debugf("backend '%s' deleted", backend.Name)
-			deleted = append(deleted, backend.Name)
-		}
+		backendName := backend.BackendBase.Name
+		delete(c.backends, backendName)
+		_ = configuration.DeleteBackend(backendName, c.activeTransaction, 0)
+		backendDeleted = append(backendDeleted, backendName)
 	}
-	c.activeBackends = map[string]struct{}{}
-	return
+	return backendDeleted, errs.Result()
 }

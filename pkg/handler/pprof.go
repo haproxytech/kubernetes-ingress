@@ -31,16 +31,14 @@ type Pprof struct{}
 
 func (handler Pprof) Update(k store.K8s, h haproxy.HAProxy, a annotations.Annotations) (err error) {
 	k.BackendsWithNoConfigSnippets[pprofBackend] = struct{}{}
-	_, err = h.BackendGet(pprofBackend)
-	if err != nil {
-		err = h.BackendCreatePermanently(models.Backend{
+
+	if !h.BackendExists(pprofBackend) {
+		h.BackendCreatePermanently(models.Backend{
 			Name: pprofBackend,
 			Mode: "http",
 		})
-		if err != nil {
-			return
-		}
-		err = h.BackendServerCreate(pprofBackend, models.Server{
+
+		err = h.BackendServerCreateOrUpdate(pprofBackend, models.Server{
 			Name:    pprofBackend,
 			Address: fmt.Sprintf("127.0.0.1:%d", h.Env.ControllerPort),
 		})
@@ -49,6 +47,7 @@ func (handler Pprof) Update(k store.K8s, h haproxy.HAProxy, a annotations.Annota
 		}
 		logger.Debug("pprof backend created")
 	}
+
 	err = route.AddHostPathRoute(route.Route{
 		BackendName: pprofBackend,
 		Path: &store.IngressPath{
@@ -59,6 +58,6 @@ func (handler Pprof) Update(k store.K8s, h haproxy.HAProxy, a annotations.Annota
 	if err != nil {
 		return
 	}
-	// instance.Reload("pprof backend created")
+
 	return
 }

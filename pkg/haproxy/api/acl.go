@@ -1,12 +1,25 @@
 package api
 
-import "github.com/haproxytech/client-native/v5/models"
+import (
+	"fmt"
+
+	"github.com/haproxytech/client-native/v5/models"
+)
 
 func (c *clientNative) ACLsGet(parentType, parentName string, aclName ...string) (models.Acls, error) {
 	configuration, err := c.nativeAPI.Configuration()
 	if err != nil {
 		return nil, err
 	}
+
+	if parentType == "backend" {
+		backend, exists := c.backends[parentName]
+		if !exists {
+			return nil, fmt.Errorf("can't get acls for unexisting backend %s : %w", parentName, ErrNotFound)
+		}
+		return backend.ACLList, nil
+	}
+
 	_, acls, err := configuration.GetACLs(parentType, parentName, c.activeTransaction, aclName...)
 	if err != nil {
 		return nil, err
@@ -39,6 +52,17 @@ func (c *clientNative) ACLDeleteAll(parentType string, parentName string) error 
 	if err != nil {
 		return err
 	}
+
+	if parentType == "backend" {
+		backend, exists := c.backends[parentName]
+		if !exists {
+			return fmt.Errorf("can't delete acls for unexisting backend %s : %w", parentName, ErrNotFound)
+		}
+		backend.ACLList = nil
+		c.backends[parentName] = backend
+		return nil
+	}
+
 	_, acls, errGet := configuration.GetACLs(parentType, parentName, c.activeTransaction)
 	if errGet != nil {
 		return errGet
@@ -57,6 +81,15 @@ func (c *clientNative) ACLCreate(parentType string, parentName string, data *mod
 	configuration, err := c.nativeAPI.Configuration()
 	if err != nil {
 		return err
+	}
+	if parentType == "backend" {
+		backend, exists := c.backends[parentName]
+		if !exists {
+			return fmt.Errorf("can't create acl for unexisting backend %s : %w", parentName, ErrNotFound)
+		}
+		backend.ACLList = append(backend.ACLList, data)
+		c.backends[parentName] = backend
+		return nil
 	}
 	return configuration.CreateACL(parentType, parentName, data, c.activeTransaction, 0)
 }

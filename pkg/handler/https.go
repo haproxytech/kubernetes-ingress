@@ -187,9 +187,8 @@ func (handler HTTPS) Update(k store.K8s, h haproxy.HAProxy, a annotations.Annota
 	}
 	// ssl-passthrough
 	_, errFtSSL := h.FrontendGet(h.FrontSSL)
-	_, errBdSSL := h.BackendGet(h.BackSSL)
 	if haproxy.SSLPassthrough {
-		if errFtSSL != nil || errBdSSL != nil {
+		if errFtSSL != nil || !h.BackendExists(h.BackSSL) {
 			logger.Error(handler.enableSSLPassthrough(h))
 			instance.Reload("SSLPassthrough enabled")
 		}
@@ -223,13 +222,13 @@ func (handler HTTPS) enableSSLPassthrough(h haproxy.HAProxy) (err error) {
 	}
 	// Create backend for proxy chaining (chaining
 	// ssl-passthrough frontend to ssl-offload backend)
+	h.BackendCreatePermanently(models.Backend{
+		Name: h.BackSSL,
+		Mode: "tcp",
+	})
 	var errors utils.Errors
 	errors.Add(
-		h.BackendCreate(models.Backend{
-			Name: h.BackSSL,
-			Mode: "tcp",
-		}),
-		h.BackendServerCreate(h.BackSSL, models.Server{
+		h.BackendServerCreateOrUpdate(h.BackSSL, models.Server{
 			Name:         h.FrontHTTPS,
 			Address:      "unix@" + handler.unixSocketPath(h),
 			ServerParams: models.ServerParams{SendProxyV2: "enabled"},
@@ -248,10 +247,7 @@ func (handler HTTPS) disableSSLPassthrough(h haproxy.HAProxy) (err error) {
 		return err
 	}
 	h.DeleteFTRules(h.FrontSSL)
-	err = h.BackendDelete(h.BackSSL)
-	if err != nil {
-		return err
-	}
+	h.BackendDelete(h.BackSSL)
 	if err = handler.toggleSSLPassthrough(false, h); err != nil {
 		return err
 	}
