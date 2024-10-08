@@ -3,7 +3,7 @@ TARGETPLATFORM?=linux/amd64
 GOOS?=linux
 GOARCH?=amd64
 GOLANGCI_LINT_VERSION=1.61.0
-CHECK_COMMIT=5.0.2
+CHECK_COMMIT=5.0.4
 
 .PHONY: test
 test:
@@ -36,7 +36,7 @@ lint-seq:
 .PHONY: check-commit
 check-commit:
 	cd bin;CHECK_COMMIT=${CHECK_COMMIT} sh check-commit.sh
-	check-commit
+	bin/check-commit
 
 .PHONY: yaml-lint
 yaml-lint:
