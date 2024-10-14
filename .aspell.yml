@@ -27,3 +27,4 @@ allowed:
   - linter
   - linters
   - tls
+  - lifecycle

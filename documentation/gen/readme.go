@@ -22,6 +22,10 @@ var headerREADME = `
 - [Annotations](annotations.md)
 - [Prometheus](prometheus.md)
 
+### Lifecycle
+
+- [Lifecycle](lifecycle.md)
+
 #### Experimental
 - [Gateway API](gateway-api.md)
 

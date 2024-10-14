@@ -1,8 +1,8 @@
 package main
 
 import (
-	"io/ioutil"
 	"log"
+	"os"
 
 	"gopkg.in/yaml.v3"
 )
@@ -50,10 +50,11 @@ type Conf struct {
 	Arguments     []*ConfArg           `yaml:"image_arguments"`
 	Groups        map[string]ConfGroup `yaml:"groups"`
 	Items         []*ConfItem          `yaml:"annotations"`
+	Support       []*SupportVersion    `yaml:"versions"`
 }
 
 func (c *Conf) getConf() *Conf {
-	yamlFile, err := ioutil.ReadFile("../doc.yaml")
+	yamlFile, err := os.ReadFile("../doc.yaml")
 	if err != nil {
 		log.Printf("yamlFile.Get err   #%v ", err)
 	}
@@ -61,6 +62,17 @@ func (c *Conf) getConf() *Conf {
 	if err != nil {
 		log.Fatalf("Unmarshal: %v", err)
 	}
+
+	yamlFile, err = os.ReadFile("../lifecycle.yaml")
+	if err != nil {
+		log.Printf("yamlFile.Get err   #%v ", err)
+	}
+	support := Support{}
+	err = yaml.Unmarshal(yamlFile, &support)
+	if err != nil {
+		log.Fatalf("Unmarshal: %v", err)
+	}
+	c.Support = support.Versions
 
 	return c
 }
