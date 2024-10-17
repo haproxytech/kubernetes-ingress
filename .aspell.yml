@@ -31,3 +31,4 @@ allowed:
   - passthrough
   - ssl
   - unix
+  - parallelize

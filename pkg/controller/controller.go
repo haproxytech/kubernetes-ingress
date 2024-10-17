@@ -23,6 +23,7 @@ import (
 
 	"github.com/haproxytech/client-native/v5/models"
 	"github.com/haproxytech/kubernetes-ingress/pkg/annotations"
+	"github.com/haproxytech/kubernetes-ingress/pkg/fs"
 	gateway "github.com/haproxytech/kubernetes-ingress/pkg/gateways"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/instance"
@@ -196,7 +197,10 @@ func (c *HAProxyController) updateHAProxy() {
 		c.setToReady()
 	}
 
+	fs.Writer.WaitUntilWritesDone()
+
 	if instance.NeedReload() {
+		fs.RunDelayedFuncs()
 		if err = c.haproxy.Service("reload"); err != nil {
 			logger.Error(err)
 		} else {

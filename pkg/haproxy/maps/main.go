@@ -23,6 +23,7 @@ import (
 	"strings"
 
 	"github.com/google/renameio"
+	"github.com/haproxytech/kubernetes-ingress/pkg/fs"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/api"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/instance"
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
@@ -117,36 +118,52 @@ func (m mapFiles) RefreshMaps(client api.HAProxyClient) {
 		if mapFile.hash == hash {
 			continue
 		}
-		var f *os.File
-		var err error
-		filename := GetPath(name)
-		if len(content) == 0 && !mapFile.persistent {
-			logger.Error(os.Remove(string(filename)))
-			delete(m, name)
-			continue
-		} else if f, err = os.Create(string(filename)); err != nil {
-			logger.Error(err)
-			continue
-		}
-		f.Close()
-		var buff strings.Builder
-		buff.Grow(api.BufferSize * len(content))
-		for _, d := range content {
-			buff.WriteString(d)
-		}
-		err = renameio.WriteFile(string(filename), []byte(buff.String()), 0o666)
-		if err != nil {
-			logger.Error(err)
-			continue
-		}
-		mapFile.hash = hash
-		if err = client.SetMapContent(string(name), content); err != nil {
-			if errors.Is(err, api.ErrMapNotFound) {
-				instance.Reload("Map file %s created", string(name))
+		// parallelize writing of files
+		fs.Writer.Write(func() {
+			var err error
+			filename := GetPath(name)
+			if len(content) == 0 && !mapFile.persistent {
+				fs.AddDelayedFunc(string(filename), func() {
+					logger.Error(os.Remove(string(filename)))
+				})
+				delete(m, name)
+				return
 			} else {
-				instance.Reload("Runtime update of map file '%s' failed : %s", string(name), err.Error())
+				if _, err = os.Stat(string(filename)); err != nil {
+					if os.IsNotExist(err) {
+						err = renameio.WriteFile(string(filename), []byte{}, 0o666)
+						if err != nil {
+							logger.Error(err)
+							return
+						}
+					} else {
+						logger.Error(err)
+						return
+					}
+				}
 			}
-		}
+			var buff strings.Builder
+			buff.Grow(api.BufferSize * len(content))
+			for _, d := range content {
+				buff.WriteString(d)
+			}
+			fs.AddDelayedFunc(string(filename), func() {
+				err = renameio.WriteFile(string(filename), []byte(buff.String()), 0o666)
+				if err != nil {
+					logger.Error(err)
+					return
+				}
+			})
+
+			mapFile.hash = hash
+			if err = client.SetMapContent(string(name), content); err != nil {
+				if errors.Is(err, api.ErrMapNotFound) {
+					instance.Reload("Map file %s created", string(name))
+				} else {
+					instance.Reload("Runtime update of map file '%s' failed : %s", string(name), err.Error())
+				}
+			}
+		})
 	}
 }
 
