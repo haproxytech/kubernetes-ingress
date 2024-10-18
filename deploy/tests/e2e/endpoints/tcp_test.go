@@ -24,7 +24,7 @@ func (suite *EndpointsSuite) Test_TCP_Reach() {
 		func() {
 			res, cls, err := suite.client.Do()
 			if err != nil {
-				suite.NoError(err)
+				suite.Require().NoError(err)
 				return
 			}
 			defer cls()

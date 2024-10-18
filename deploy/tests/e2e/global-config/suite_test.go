@@ -33,7 +33,7 @@ type GlobalConfigSuite struct {
 func (suite *GlobalConfigSuite) SetupSuite() {
 	var err error
 	suite.test, err = e2e.NewTest()
-	suite.NoError(err)
+	suite.Require().NoError(err)
 }
 
 func (suite *GlobalConfigSuite) TearDownSuite() {

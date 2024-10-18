@@ -48,20 +48,20 @@ type tmplData struct {
 func (suite *CRDTCPSuite) SetupSuite() {
 	var err error
 	suite.test, err = e2e.NewTest()
-	suite.NoError(err)
+	suite.Require().NoError(err)
 	suite.tmplData = tmplData{
 		Host:  suite.test.GetNS() + ".test",
 		Host2: suite.test.GetNS() + ".test2",
 	}
 	suite.tmplData.BackendCrNamespace = suite.test.GetNS()
 	suite.client, err = e2e.NewHTTPClient(suite.tmplData.Host)
-	suite.NoError(err)
-	suite.NoError(suite.test.Apply("config/tcp-secret.yaml", suite.test.GetNS(), nil))
-	suite.NoError(suite.test.Apply("config/backend-cr.yaml", suite.test.GetNS(), nil))
+	suite.Require().NoError(err)
+	suite.Require().NoError(suite.test.Apply("config/tcp-secret.yaml", suite.test.GetNS(), nil))
+	suite.Require().NoError(suite.test.Apply("config/backend-cr.yaml", suite.test.GetNS(), nil))
 	nbEchoApps := 3
 	for i := 0; i < nbEchoApps; i++ {
 		suite.tmplData.EchoAppIndex = i
-		suite.NoError(suite.test.Apply("config/deploy-index.yaml.tmpl", suite.test.GetNS(), suite.tmplData))
+		suite.Require().NoError(suite.test.Apply("config/deploy-index.yaml.tmpl", suite.test.GetNS(), suite.tmplData))
 	}
 }
 
@@ -75,25 +75,25 @@ func (suite *CRDTCPSuite) BeforeTest(suiteName, testName string) {
 	case "Test_CRD_TCP_CR_Backend":
 		suite.tmplData.BackendCrName = "mybackend"
 	}
-	suite.NoError(suite.test.Apply("config/deploy.yaml.tmpl", suite.test.GetNS(), suite.tmplData))
+	suite.Require().NoError(suite.test.Apply("config/deploy.yaml.tmpl", suite.test.GetNS(), suite.tmplData))
 }
 
 func (suite *CRDTCPSuite) checkFrontend(p parser.Parser, frontendName, param string, value common.ParserData) {
 	v, err := p.Get(parser.Frontends, frontendName, param)
-	suite.NoError(err, "Could not get Haproxy config parser Frontend %s param %s", frontendName, param)
+	suite.Require().NoError(err, "Could not get Haproxy config parser Frontend %s param %s", frontendName, param)
 	suite.Equal(value, v, fmt.Sprintf("Frontend param %s should be equal to %v but is %v", param, value, v))
 }
 
 func (suite *CRDTCPSuite) checkBackend(p parser.Parser, backendName, param string, value common.ParserData) {
 	v, err := p.Get(parser.Backends, backendName, param)
-	suite.NoError(err, "Could not get Haproxy config parser Frontend %s param %s", backendName, param)
+	suite.Require().NoError(err, "Could not get Haproxy config parser Frontend %s param %s", backendName, param)
 	suite.Equal(value, v, fmt.Sprintf("Backend param %s should be equal to %v but is %v", param, value, v))
 }
 
 func (suite *CRDTCPSuite) checkClientRequest(host, backend string) {
 	var err error
 	suite.client, err = e2e.NewHTTPSClient(host, 32766)
-	suite.NoError(err)
+	suite.Require().NoError(err)
 	suite.Eventually(func() bool {
 		res, cls, err := suite.client.Do()
 		if res == nil {

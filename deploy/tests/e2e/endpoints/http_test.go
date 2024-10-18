@@ -30,14 +30,14 @@ func (suite *EndpointsSuite) Test_HTTP_Reach() {
 	for _, replicas := range []int{4, 8, 2, 0, 3} {
 		suite.Run(fmt.Sprintf("%d-replicas", replicas), func() {
 			suite.tmplData.Replicas = replicas
-			suite.NoError(suite.test.Apply("config/endpoints.yaml.tmpl", suite.test.GetNS(), suite.tmplData))
+			suite.Require().NoError(suite.test.Apply("config/endpoints.yaml.tmpl", suite.test.GetNS(), suite.tmplData))
 			suite.Eventually(func() bool {
 				counter := map[string]int{}
 				for i := 0; i < replicas*2; i++ {
 					func() {
 						res, cls, err := suite.client.Do()
 						if err != nil {
-							suite.NoError(err)
+							suite.Require().NoError(err)
 							return
 						}
 						defer cls()

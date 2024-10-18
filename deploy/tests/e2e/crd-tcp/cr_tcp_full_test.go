@@ -69,10 +69,10 @@ func (suite *TCPSuiteFull) Test_CRD_TCP_Full() {
 
 		// Get updated config and check it
 		cfg, err := suite.test.GetIngressControllerFile("/etc/haproxy/haproxy.cfg")
-		suite.NoError(err, "Could not get Haproxy config")
+		suite.Require().NoError(err, "Could not get Haproxy config")
 		reader := strings.NewReader(cfg)
 		p, err := parser.New(options.Reader(reader))
-		suite.NoError(err, "Could not get Haproxy config parser")
+		suite.Require().NoError(err, "Could not get Haproxy config parser")
 
 		// Check client Http Echo calls to both backend0 and backend1
 		feName := "tcpcr_e2e-tests-crd-tcp_fe-http-echo"

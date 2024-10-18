@@ -42,7 +42,7 @@ func (suite *TCPSuite) Test_CRD_TCP_OK() {
 		var err error
 		suite.Require().NoError(suite.test.Apply("config/tcp-cr.yaml", suite.test.GetNS(), nil))
 		suite.client, err = e2e.NewHTTPClient(suite.tmplData.Host, 32766)
-		suite.NoError(err)
+		suite.Require().NoError(err)
 		suite.Eventually(func() bool {
 			res, cls, err := suite.client.Do()
 			if res == nil {
@@ -55,10 +55,10 @@ func (suite *TCPSuite) Test_CRD_TCP_OK() {
 
 		// Get updated config and check it
 		cfg, err := suite.test.GetIngressControllerFile("/etc/haproxy/haproxy.cfg")
-		suite.NoError(err, "Could not get Haproxy config")
+		suite.Require().NoError(err, "Could not get Haproxy config")
 		reader := strings.NewReader(cfg)
 		p, err := parser.New(options.Reader(reader))
-		suite.NoError(err, "Could not get Haproxy config parser")
+		suite.Require().NoError(err, "Could not get Haproxy config parser")
 
 		suite.checkFrontends(p)
 
@@ -87,7 +87,7 @@ func (suite *TCPSuite) Test_CRD_TCP_CR_Backend() {
 		var err error
 		suite.Require().NoError(suite.test.Apply("config/tcp-cr.yaml", suite.test.GetNS(), nil))
 		suite.client, err = e2e.NewHTTPClient(suite.tmplData.Host, 32766)
-		suite.NoError(err)
+		suite.Require().NoError(err)
 		suite.Eventually(func() bool {
 			res, cls, err := suite.client.Do()
 			if res == nil {
@@ -100,10 +100,10 @@ func (suite *TCPSuite) Test_CRD_TCP_CR_Backend() {
 
 		// Get updated config and check it
 		cfg, err := suite.test.GetIngressControllerFile("/etc/haproxy/haproxy.cfg")
-		suite.NoError(err, "Could not get Haproxy config")
+		suite.Require().NoError(err, "Could not get Haproxy config")
 		reader := strings.NewReader(cfg)
 		p, err := parser.New(options.Reader(reader))
-		suite.NoError(err, "Could not get Haproxy config parser")
+		suite.Require().NoError(err, "Could not get Haproxy config parser")
 
 		suite.checkFrontends(p)
 		// Checks for backend e2e-tests-crd-tcp_http-echo_http
@@ -145,7 +145,7 @@ func (suite *TCPSuite) Test_CRD_TCP_SSL() {
 		var err error
 		suite.Require().NoError(suite.test.Apply("config/tcp-cr-ssl.yaml", suite.test.GetNS(), nil))
 		suite.client, err = e2e.NewHTTPSClient("crdtcp-test.haproxy", 32766)
-		suite.NoError(err)
+		suite.Require().NoError(err)
 		suite.Eventually(func() bool {
 			res, cls, err := suite.client.Do()
 			if res == nil {
@@ -160,10 +160,10 @@ func (suite *TCPSuite) Test_CRD_TCP_SSL() {
 
 	// Get updated config and check it
 	cfg, err := suite.test.GetIngressControllerFile("/etc/haproxy/haproxy.cfg")
-	suite.NoError(err, "Could not get Haproxy config")
+	suite.Require().NoError(err, "Could not get Haproxy config")
 	reader := strings.NewReader(cfg)
 	p, err := parser.New(options.Reader(reader))
-	suite.NoError(err, "Could not get Haproxy config parser")
+	suite.Require().NoError(err, "Could not get Haproxy config parser")
 	// Check for tcp tcp-http-echo-443
 	binds443 := []types.Bind{
 		{

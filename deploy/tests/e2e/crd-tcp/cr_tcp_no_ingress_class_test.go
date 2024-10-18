@@ -53,10 +53,10 @@ func (suite *TCPSuiteNoIngressClass) Test_CRD_TCP_No_Ingress_Class() {
 
 		// Get updated config and check it
 		cfg, err := suite.test.GetIngressControllerFile("/etc/haproxy/haproxy.cfg")
-		suite.NoError(err, "Could not get Haproxy config")
+		suite.Require().NoError(err, "Could not get Haproxy config")
 		reader := strings.NewReader(cfg)
 		p, err := parser.New(options.Reader(reader))
-		suite.NoError(err, "Could not get Haproxy config parser")
+		suite.Require().NoError(err, "Could not get Haproxy config parser")
 
 		_, err = p.Get(parser.Frontends, "tcpcr_e2e-tests-crd-tcp_fe-http-echo-80", "bind")
 		suite.Require().Equal(err.Error(), "section missing")

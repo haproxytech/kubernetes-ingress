@@ -50,12 +50,12 @@ type tmplData struct {
 func (suite *CRDSuite) SetupSuite() {
 	var err error
 	suite.test, err = e2e.NewTest()
-	suite.NoError(err)
+	suite.Require().NoError(err)
 	suite.tmplData = tmplData{Host: suite.test.GetNS() + ".test"}
 	suite.client, err = e2e.NewHTTPClient(suite.tmplData.Host)
-	suite.NoError(err)
-	suite.NoError(suite.test.Apply("config/deploy.yaml", suite.test.GetNS(), nil))
-	suite.NoError(suite.test.Apply("config/ingress.yaml.tmpl", suite.test.GetNS(), suite.tmplData))
+	suite.Require().NoError(err)
+	suite.Require().NoError(suite.test.Apply("config/deploy.yaml", suite.test.GetNS(), nil))
+	suite.Require().NoError(suite.test.Apply("config/ingress.yaml.tmpl", suite.test.GetNS(), suite.tmplData))
 	suite.Require().Eventually(func() bool {
 		r, cls, err := suite.client.Do()
 		if err != nil {
@@ -72,10 +72,10 @@ func (suite *CRDSuite) TearDownSuite() {
 
 func (suite *CRDSuite) getVersion() int64 {
 	cfg, err := suite.test.GetIngressControllerFile("/etc/haproxy/haproxy.cfg")
-	suite.NoError(err, "Could not get Haproxy config")
+	suite.Require().NoError(err, "Could not get Haproxy config")
 	reader := strings.NewReader(cfg)
 	p, err := parser.New(options.Reader(reader))
-	suite.NoError(err, "Could not get Haproxy config parser")
+	suite.Require().NoError(err, "Could not get Haproxy config parser")
 
 	data, _ := p.Get(parser.Comments, parser.CommentsSectionName, "# _version", false)
 
