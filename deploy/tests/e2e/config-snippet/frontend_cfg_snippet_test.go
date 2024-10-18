@@ -24,7 +24,7 @@ import (
 )
 
 func (suite *ConfigSnippetSuite) TestFrontendCfgSnippet() {
-	suite.NoError(suite.test.Apply("config/configmap.yaml", "", nil))
+	suite.Require().NoError(suite.test.Apply("config/configmap.yaml", "", nil))
 	suite.Eventually(func() bool {
 		res, cls, err := suite.client.Do()
 		if err != nil {

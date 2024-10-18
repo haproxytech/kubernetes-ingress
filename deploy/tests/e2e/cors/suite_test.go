@@ -40,18 +40,18 @@ type tmplData struct {
 func (suite *CorsSuite) SetupSuite() {
 	var err error
 	suite.test, err = e2e.NewTest()
-	suite.NoError(err)
+	suite.Require().NoError(err)
 	suite.tmplData = tmplData{Host: suite.test.GetNS() + ".test"}
 	suite.client, err = e2e.NewHTTPClient(suite.tmplData.Host)
-	suite.NoError(err)
+	suite.Require().NoError(err)
 
-	suite.NoError(suite.test.Apply("../../config/2.configmap.yaml", "", nil))
-	suite.NoError(suite.test.Apply("config/deploy.yaml.tmpl", suite.test.GetNS(), tmplData{Host: suite.test.GetNS() + ".test"}))
+	suite.Require().NoError(suite.test.Apply("../../config/2.configmap.yaml", "", nil))
+	suite.Require().NoError(suite.test.Apply("config/deploy.yaml.tmpl", suite.test.GetNS(), tmplData{Host: suite.test.GetNS() + ".test"}))
 }
 
 func (suite *CorsSuite) TearDownSuite() {
 	// suite.test.Apply("../../config/2.configmap.yaml", "", nil)
-	suite.NoError(suite.test.Apply("config/deploy.yaml.tmpl", suite.test.GetNS(), tmplData{Host: suite.test.GetNS() + ".test"}))
+	suite.Require().NoError(suite.test.Apply("config/deploy.yaml.tmpl", suite.test.GetNS(), tmplData{Host: suite.test.GetNS() + ".test"}))
 	suite.test.TearDown()
 }
 

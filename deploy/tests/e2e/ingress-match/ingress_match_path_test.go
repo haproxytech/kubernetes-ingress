@@ -61,7 +61,7 @@ var tests = []test{
 func (suite *IngressMatchSuite) BeforeTest(suiteName, testName string) {
 	suite.tmplData.PathTypeSupported = true
 	major, minor, err := suite.test.GetK8sVersion()
-	suite.NoError(err)
+	suite.Require().NoError(err)
 	if major == 1 && minor < 18 {
 		suite.tmplData.PathTypeSupported = false
 		tests[0] = test{ingressRules[0].Service, "app.haproxy", []string{"/", "/test", "/prefixxx"}}

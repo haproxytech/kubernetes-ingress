@@ -24,7 +24,7 @@ import (
 
 func (suite *GlobalConfigSuite) Test_Proxy_Protocol() {
 	suite.Run("Source_IP_OK", func() {
-		suite.NoError(suite.test.Apply("config/configmap-pp-1.yaml", "", nil))
+		suite.Require().NoError(suite.test.Apply("config/configmap-pp-1.yaml", "", nil))
 		suite.Eventually(func() bool {
 			res, err := e2e.ProxyProtoConn()
 			if err != nil {
@@ -36,7 +36,7 @@ func (suite *GlobalConfigSuite) Test_Proxy_Protocol() {
 	})
 
 	suite.Run("Source_IP_KO", func() {
-		suite.NoError(suite.test.Apply("config/configmap-pp-2.yaml", "", nil))
+		suite.Require().NoError(suite.test.Apply("config/configmap-pp-2.yaml", "", nil))
 		suite.Eventually(func() bool {
 			res, err := e2e.ProxyProtoConn()
 			if err != nil {
@@ -49,5 +49,5 @@ func (suite *GlobalConfigSuite) Test_Proxy_Protocol() {
 	})
 
 	// revert to initial configmap
-	suite.NoError(suite.test.Apply("../../config/2.configmap.yaml", "", nil))
+	suite.Require().NoError(suite.test.Apply("../../config/2.configmap.yaml", "", nil))
 }

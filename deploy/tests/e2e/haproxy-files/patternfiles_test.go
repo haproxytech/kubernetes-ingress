@@ -43,7 +43,7 @@ func (suite *HAProxyFilesSuite) Test_PatternFiles() {
 		}
 	})
 	suite.Run("Updated", func() {
-		suite.NoError(suite.test.Apply("config/patternfiles-2.yaml", "", nil))
+		suite.Require().NoError(suite.test.Apply("config/patternfiles-2.yaml", "", nil))
 		for i, path := range tests2 {
 			suite.Require().Eventually(func() bool {
 				return suite.testHeader(path, strconv.Itoa(i))

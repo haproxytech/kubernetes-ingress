@@ -22,9 +22,9 @@ import (
 
 func (suite *HTTPSSuite) Test_HTTPS_Offload() {
 	var err error
-	suite.NoError(suite.test.Apply("config/ingress.yaml.tmpl", suite.test.GetNS(), suite.tmplData))
+	suite.Require().NoError(suite.test.Apply("config/ingress.yaml.tmpl", suite.test.GetNS(), suite.tmplData))
 	suite.client, err = e2e.NewHTTPSClient("offload-test.haproxy", 0)
-	suite.NoError(err)
+	suite.Require().NoError(err)
 	suite.Eventually(func() bool {
 		res, cls, err := suite.client.Do()
 		if res == nil {

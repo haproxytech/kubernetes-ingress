@@ -23,7 +23,7 @@ import (
 func (suite *EndpointsSuite) Test_Non_Ready_Endpoints() {
 	suite.tmplData.NotReady = true
 	suite.tmplData.Replicas = 3
-	suite.NoError(suite.test.Apply("config/endpoints.yaml.tmpl", suite.test.GetNS(), suite.tmplData))
+	suite.Require().NoError(suite.test.Apply("config/endpoints.yaml.tmpl", suite.test.GetNS(), suite.tmplData))
 	suite.Require().Eventually(func() bool {
 		res, cls, err := suite.client.Do()
 		if res == nil {

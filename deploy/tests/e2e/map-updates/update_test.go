@@ -31,13 +31,13 @@ func (suite *MapUpdateSuite) Test_Update() {
 		}
 		oldInfo, err := e2e.GetGlobalHAProxyInfo()
 		oldCount, err := e2e.GetHAProxyMapCount("path-prefix")
-		suite.NoError(err)
-		suite.NoError(suite.test.Apply("config/ingress.yaml.tmpl", suite.test.GetNS(), suite.tmplData))
+		suite.Require().NoError(err)
+		suite.Require().NoError(suite.test.Apply("config/ingress.yaml.tmpl", suite.test.GetNS(), suite.tmplData))
 		suite.Require().Eventually(func() bool {
 			newInfo, err := e2e.GetGlobalHAProxyInfo()
-			suite.NoError(err)
+			suite.Require().NoError(err)
 			count, err := e2e.GetHAProxyMapCount("path-prefix")
-			suite.NoError(err)
+			suite.Require().NoError(err)
 			numOfAddedEntries := count - oldCount + 1 // We add one because there's already an entry at the begining which will be removed
 			suite.T().Logf("oldInfo.Pid(%s) == newInfo.Pid(%s) && additional path-prefix.count(%d) == %d", oldInfo.Pid, newInfo.Pid, numOfAddedEntries, n)
 			return oldInfo.Pid == newInfo.Pid && numOfAddedEntries == n

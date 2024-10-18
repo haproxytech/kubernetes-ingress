@@ -36,13 +36,13 @@ type TLSAuthSuite struct {
 func (suite *TLSAuthSuite) SetupSuite() {
 	var err error
 	suite.test, err = e2e.NewTest()
-	suite.NoError(err)
+	suite.Require().NoError(err)
 	suite.client, err = e2e.NewHTTPSClient(suite.test.GetNS() + ".test")
-	suite.NoError(err)
+	suite.Require().NoError(err)
 	suite.validClientCert, err = tls.LoadX509KeyPair("client-certs/valid.crt", "client-certs/valid.key")
-	suite.NoError(err)
+	suite.Require().NoError(err)
 	suite.wrongClientCert, err = tls.LoadX509KeyPair("client-certs/wrong.crt", "client-certs/wrong.key")
-	suite.NoError(err)
+	suite.Require().NoError(err)
 	suite.Require().NoError(suite.test.Apply("config/secrets/default-cert.yaml", suite.test.GetNS(), nil))
 	suite.Require().NoError(suite.test.Apply("config/client-auth.yaml", "", nil))
 	suite.Eventually(func() bool {

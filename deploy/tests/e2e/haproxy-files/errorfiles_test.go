@@ -22,7 +22,7 @@ import (
 
 func (suite *HAProxyFilesSuite) Test_ErrorFiles() {
 	suite.Run("Enabled", func() {
-		suite.NoError(suite.test.Apply("config/errorfiles.yaml", "", nil))
+		suite.Require().NoError(suite.test.Apply("config/errorfiles.yaml", "", nil))
 		suite.Require().Eventually(func() bool {
 			res, cls, err := suite.client.Do()
 			if res == nil {
@@ -35,7 +35,7 @@ func (suite *HAProxyFilesSuite) Test_ErrorFiles() {
 	})
 
 	suite.Run("Disabled", func() {
-		suite.NoError(suite.test.Delete("config/errorfiles.yaml"))
+		suite.Require().NoError(suite.test.Delete("config/errorfiles.yaml"))
 		suite.Require().Eventually(func() bool {
 			res, cls, err := suite.client.Do()
 			if res == nil {

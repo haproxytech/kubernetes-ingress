@@ -96,7 +96,7 @@ func (suite *TCPSuiteBackendSwitchingRule) Test_CRD_TCP_BackendSwitchingRule() {
 
 		// Any other SNI should go to default http-echo
 		suite.client, err = e2e.NewHTTPSClient("foo.bar", 32766)
-		suite.NoError(err)
+		suite.Require().NoError(err)
 		suite.Eventually(func() bool {
 			res, cls, err := suite.client.Do()
 			if res == nil {
@@ -114,10 +114,10 @@ func (suite *TCPSuiteBackendSwitchingRule) Test_CRD_TCP_BackendSwitchingRule() {
 
 		// Get updated config and check it
 		cfg, err := suite.test.GetIngressControllerFile("/etc/haproxy/haproxy.cfg")
-		suite.NoError(err, "Could not get Haproxy config")
+		suite.Require().NoError(err, "Could not get Haproxy config")
 		reader := strings.NewReader(cfg)
 		p, err := parser.New(options.Reader(reader))
-		suite.NoError(err, "Could not get Haproxy config parser")
+		suite.Require().NoError(err, "Could not get Haproxy config parser")
 
 		feName := "tcpcr_e2e-tests-crd-tcp_fe-http-echo"
 		suite.checkBasicHttpEchoFrontend(p, feName)
@@ -140,7 +140,7 @@ func (suite *TCPSuiteBackendSwitchingRule) Test_CRD_TCP_BackendSwitchingRule_Wit
 		// Any other SNI should go to default http-echo
 		// suite.checkClientRequest("foo.bar", "http-echo-0")
 		suite.client, err = e2e.NewHTTPSClient("foo.bar", 32766)
-		suite.NoError(err)
+		suite.Require().NoError(err)
 		suite.Eventually(func() bool {
 			res, cls, err := suite.client.Do()
 			if res == nil {
@@ -158,10 +158,10 @@ func (suite *TCPSuiteBackendSwitchingRule) Test_CRD_TCP_BackendSwitchingRule_Wit
 
 		// Get updated config and check it
 		cfg, err := suite.test.GetIngressControllerFile("/etc/haproxy/haproxy.cfg")
-		suite.NoError(err, "Could not get Haproxy config")
+		suite.Require().NoError(err, "Could not get Haproxy config")
 		reader := strings.NewReader(cfg)
 		p, err := parser.New(options.Reader(reader))
-		suite.NoError(err, "Could not get Haproxy config parser")
+		suite.Require().NoError(err, "Could not get Haproxy config parser")
 
 		feName := "tcpcr_e2e-tests-crd-tcp_fe-http-echo"
 		suite.checkBasicHttpEchoFrontend(p, feName)

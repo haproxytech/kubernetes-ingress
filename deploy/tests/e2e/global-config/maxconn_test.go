@@ -21,11 +21,11 @@ import (
 )
 
 func (suite *GlobalConfigSuite) TestMaxconn() {
-	suite.NoError(suite.test.Apply("config/configmap-maxconn.yaml", "", nil))
+	suite.Require().NoError(suite.test.Apply("config/configmap-maxconn.yaml", "", nil))
 	suite.maxconn = "1111"
 	suite.Eventually(suite.checkMaxconn, e2e.WaitDuration, e2e.TickDuration)
 
-	suite.NoError(suite.test.Apply("../../config/2.configmap.yaml", "", nil))
+	suite.Require().NoError(suite.test.Apply("../../config/2.configmap.yaml", "", nil))
 	suite.maxconn = "1000"
 	suite.Eventually(suite.checkMaxconn, e2e.WaitDuration, e2e.TickDuration)
 }

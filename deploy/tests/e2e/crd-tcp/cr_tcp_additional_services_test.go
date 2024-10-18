@@ -91,10 +91,10 @@ func (suite *TCPSuiteAddtionalServices) Test_CRD_TCP_Additional_Services() {
 
 		// Get updated config and check it
 		cfg, err := suite.test.GetIngressControllerFile("/etc/haproxy/haproxy.cfg")
-		suite.NoError(err, "Could not get Haproxy config")
+		suite.Require().NoError(err, "Could not get Haproxy config")
 		reader := strings.NewReader(cfg)
 		p, err := parser.New(options.Reader(reader))
-		suite.NoError(err, "Could not get Haproxy config parser")
+		suite.Require().NoError(err, "Could not get Haproxy config parser")
 
 		suite.checkFrontends(p)
 

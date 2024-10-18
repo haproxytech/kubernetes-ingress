@@ -59,7 +59,7 @@ func (suite *HTTPSSuite) Test_HTTPS_Passthrough() {
 			{"ssl-passthrough", "'true'"},
 			{"whitelist", "6.6.6.6"},
 		}
-		suite.NoError(suite.test.Apply("config/ingress.yaml.tmpl", suite.test.GetNS(), suite.tmplData))
+		suite.Require().NoError(suite.test.Apply("config/ingress.yaml.tmpl", suite.test.GetNS(), suite.tmplData))
 		suite.Eventually(func() bool {
 			res, cls, err := suite.client.Do()
 			if err == nil {

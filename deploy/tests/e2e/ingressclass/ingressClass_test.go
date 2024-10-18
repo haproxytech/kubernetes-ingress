@@ -25,7 +25,7 @@ import (
 func (suite *IngressClassSuite) Test_IngressClassName_Field() {
 	test := suite.test
 	suite.Run("Disabled", func() {
-		suite.NoError(test.Apply("config/ingress.yaml.tmpl", test.GetNS(), suite.tmplData))
+		suite.Require().NoError(test.Apply("config/ingress.yaml.tmpl", test.GetNS(), suite.tmplData))
 		suite.Eventually(func() bool {
 			res, cls, err := suite.client.Do()
 			if err != nil {
@@ -39,7 +39,7 @@ func (suite *IngressClassSuite) Test_IngressClassName_Field() {
 
 	suite.Run("Enabled", func() {
 		suite.tmplData.IngressClassName = "haproxy"
-		suite.NoError(test.Apply("config/ingress.yaml.tmpl", test.GetNS(), suite.tmplData))
+		suite.Require().NoError(test.Apply("config/ingress.yaml.tmpl", test.GetNS(), suite.tmplData))
 		suite.Eventually(func() bool {
 			res, cls, err := suite.client.Do()
 			if err != nil {
@@ -55,9 +55,9 @@ func (suite *IngressClassSuite) Test_IngressClassName_Field() {
 func (suite *IngressClassSuite) Test_IngressClassName_Resource() {
 	test := suite.test
 	suite.Run("Disabled", func() {
-		suite.NoError(test.Apply("config/ingress.yaml.tmpl", test.GetNS(), suite.tmplData))
-		suite.NoError(suite.test.Apply("config/ingressclass.yaml", "", nil))
-		suite.NoError(test.Delete("config/ingressclass.yaml"))
+		suite.Require().NoError(test.Apply("config/ingress.yaml.tmpl", test.GetNS(), suite.tmplData))
+		suite.Require().NoError(suite.test.Apply("config/ingressclass.yaml", "", nil))
+		suite.Require().NoError(test.Delete("config/ingressclass.yaml"))
 		suite.Eventually(func() bool {
 			res, cls, err := suite.client.Do()
 			if err != nil {
@@ -71,8 +71,8 @@ func (suite *IngressClassSuite) Test_IngressClassName_Resource() {
 
 	suite.Run("Enabled", func() {
 		suite.tmplData.IngressClassName = "haproxy"
-		suite.NoError(test.Apply("config/ingress.yaml.tmpl", test.GetNS(), suite.tmplData))
-		suite.NoError(suite.test.Apply("config/ingressclass.yaml", "", nil))
+		suite.Require().NoError(test.Apply("config/ingress.yaml.tmpl", test.GetNS(), suite.tmplData))
+		suite.Require().NoError(suite.test.Apply("config/ingressclass.yaml", "", nil))
 		suite.Eventually(func() bool {
 			res, cls, err := suite.client.Do()
 			if err != nil {

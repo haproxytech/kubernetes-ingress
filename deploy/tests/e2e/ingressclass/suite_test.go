@@ -39,17 +39,17 @@ type tmplData struct {
 func (suite *IngressClassSuite) SetupSuite() {
 	var err error
 	suite.test, err = e2e.NewTest()
-	suite.NoError(err)
+	suite.Require().NoError(err)
 	major, minor, err := suite.test.GetK8sVersion()
-	suite.NoError(err)
+	suite.Require().NoError(err)
 	if major == 1 && minor < 18 {
 		suite.T().SkipNow()
 	}
 	suite.tmplData = tmplData{Host: suite.test.GetNS() + ".test"}
 	suite.client, err = e2e.NewHTTPClient(suite.tmplData.Host)
-	suite.NoError(err)
-	suite.NoError(suite.test.Apply("config/deploy.yaml", suite.test.GetNS(), nil))
-	suite.NoError(suite.test.Apply("config/ingressclass.yaml", "", nil))
+	suite.Require().NoError(err)
+	suite.Require().NoError(suite.test.Apply("config/deploy.yaml", suite.test.GetNS(), nil))
+	suite.Require().NoError(suite.test.Apply("config/ingressclass.yaml", "", nil))
 	suite.test.AddTearDown(func() error {
 		return suite.test.Delete("config/ingressclass.yaml")
 	})
