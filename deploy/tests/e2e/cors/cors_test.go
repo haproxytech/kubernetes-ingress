@@ -46,7 +46,7 @@ func (suite *CorsSuite) Test_Configmap_Alone() {
 	suite.Run("CorsMethodsCredentialAlone", suite.CorsMethodsCredentialAlone(false))
 	suite.Run("CorsDisable", suite.CorsDisable(false))
 	suite.Run("CorsMethodsCredentialDisable", suite.CorsMethodsCredentialDisable(false))
-	suite.NoError(suite.test.Apply("../../config/2.configmap.yaml", "", nil))
+	suite.Require().NoError(suite.test.Apply("../../config/2.configmap.yaml", "", nil))
 }
 
 func (suite *CorsSuite) Test_Ingress_Alone() {
@@ -116,7 +116,7 @@ func (suite *CorsSuite) Default(ingressCors bool) func() {
 			yamlFile = "config/configmap.yaml.tmpl"
 			ns = ""
 		}
-		suite.NoError(suite.test.Apply(yamlFile, ns, suite.tmplData))
+		suite.Require().NoError(suite.test.Apply(yamlFile, ns, suite.tmplData))
 
 		suite.eventuallyReturns(expectedHeaders, unexpectedHeaders)
 	}
@@ -148,7 +148,7 @@ func (suite *CorsSuite) CorsOriginAlone(ingressCors bool) func() {
 			yamlFile = "config/configmap.yaml.tmpl"
 			ns = ""
 		}
-		suite.NoError(suite.test.Apply(yamlFile, ns, suite.tmplData))
+		suite.Require().NoError(suite.test.Apply(yamlFile, ns, suite.tmplData))
 
 		suite.eventuallyReturns(expectedHeaders, unexpectedHeaders)
 	}
@@ -180,7 +180,7 @@ func (suite *CorsSuite) CorsMethodsAlone(ingressCors bool) func() {
 			yamlFile = "config/configmap.yaml.tmpl"
 			ns = ""
 		}
-		suite.NoError(suite.test.Apply(yamlFile, ns, suite.tmplData))
+		suite.Require().NoError(suite.test.Apply(yamlFile, ns, suite.tmplData))
 
 		suite.eventuallyReturns(expectedHeaders, unexpectedHeaders)
 	}
@@ -212,7 +212,7 @@ func (suite *CorsSuite) CorsMethodsHeadersAlone(ingressCors bool) func() {
 			yamlFile = "config/configmap.yaml.tmpl"
 			ns = ""
 		}
-		suite.NoError(suite.test.Apply(yamlFile, ns, suite.tmplData))
+		suite.Require().NoError(suite.test.Apply(yamlFile, ns, suite.tmplData))
 
 		suite.eventuallyReturns(expectedHeaders, unexpectedHeaders)
 	}
@@ -244,7 +244,7 @@ func (suite *CorsSuite) CorsMethodsAgeAlone(ingressCors bool) func() {
 			yamlFile = "config/configmap.yaml.tmpl"
 			ns = ""
 		}
-		suite.NoError(suite.test.Apply(yamlFile, ns, suite.tmplData))
+		suite.Require().NoError(suite.test.Apply(yamlFile, ns, suite.tmplData))
 
 		suite.eventuallyReturns(expectedHeaders, unexpectedHeaders)
 	}
@@ -276,7 +276,7 @@ func (suite *CorsSuite) CorsMethodsCredentialDisable(ingressCors bool) func() {
 			yamlFile = "config/configmap.yaml.tmpl"
 			ns = ""
 		}
-		suite.NoError(suite.test.Apply(yamlFile, ns, suite.tmplData))
+		suite.Require().NoError(suite.test.Apply(yamlFile, ns, suite.tmplData))
 
 		suite.eventuallyReturns(expectedHeaders, unexpectedHeaders)
 	}
@@ -305,7 +305,7 @@ func (suite *CorsSuite) CorsMethodsCredentialAlone(ingressCors bool) func() {
 			yamlFile = "config/configmap.yaml.tmpl"
 			ns = ""
 		}
-		suite.NoError(suite.test.Apply(yamlFile, ns, suite.tmplData))
+		suite.Require().NoError(suite.test.Apply(yamlFile, ns, suite.tmplData))
 
 		suite.eventuallyReturns(expectedHeaders, http.Header{})
 	}
@@ -339,7 +339,7 @@ func (suite *CorsSuite) CorsDisable(ingressCors bool) func() {
 			yamlFile = "config/configmap.yaml.tmpl"
 			ns = ""
 		}
-		suite.NoError(suite.test.Apply(yamlFile, ns, suite.tmplData))
+		suite.Require().NoError(suite.test.Apply(yamlFile, ns, suite.tmplData))
 		suite.eventuallyReturns(http.Header{}, unexpectedHeaders)
 	}
 }

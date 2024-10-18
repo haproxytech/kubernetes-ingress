@@ -39,12 +39,12 @@ type tmplData struct {
 func (suite *AccessControlSuite) SetupSuite() {
 	var err error
 	suite.test, err = e2e.NewTest()
-	suite.NoError(err)
+	suite.Require().NoError(err)
 	suite.tmplData = tmplData{Host: suite.test.GetNS() + ".test"}
 	suite.client, err = e2e.NewHTTPClient(suite.tmplData.Host)
-	suite.NoError(err)
+	suite.Require().NoError(err)
 
-	suite.NoError(suite.test.Apply("config/patternfile-empty.yml", "", nil))
+	suite.Require().NoError(suite.test.Apply("config/patternfile-empty.yml", "", nil))
 }
 
 func (suite *AccessControlSuite) TearDownSuite() {

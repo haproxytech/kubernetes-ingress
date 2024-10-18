@@ -44,7 +44,7 @@ func (suite *AccessControlSuite) Test_Whitelist() {
 			{"allow-list", " 192.168.2.0/24"},
 		}
 
-		suite.NoError(suite.test.Apply("config/deploy.yaml.tmpl", suite.test.GetNS(), suite.tmplData))
+		suite.Require().NoError(suite.test.Apply("config/deploy.yaml.tmpl", suite.test.GetNS(), suite.tmplData))
 
 		suite.eventuallyReturns("192.168.2.3", http.StatusOK)
 		suite.eventuallyReturns("192.168.5.3", http.StatusForbidden)
@@ -57,7 +57,7 @@ func (suite *AccessControlSuite) Test_Whitelist() {
 			{"whitelist", "192.168.4.0/24"},
 		}
 
-		suite.NoError(suite.test.Apply("config/deploy.yaml.tmpl", suite.test.GetNS(), suite.tmplData))
+		suite.Require().NoError(suite.test.Apply("config/deploy.yaml.tmpl", suite.test.GetNS(), suite.tmplData))
 
 		suite.eventuallyReturns("192.168.4.3", http.StatusOK)
 		suite.eventuallyReturns("192.168.5.3", http.StatusForbidden)
@@ -71,7 +71,7 @@ func (suite *AccessControlSuite) Test_Whitelist() {
 			{"allow-list", "192.168.5.0/24"},
 		}
 
-		suite.NoError(suite.test.Apply("config/deploy.yaml.tmpl", suite.test.GetNS(), suite.tmplData))
+		suite.Require().NoError(suite.test.Apply("config/deploy.yaml.tmpl", suite.test.GetNS(), suite.tmplData))
 
 		suite.eventuallyReturns("192.168.5.3", http.StatusOK)
 		suite.eventuallyReturns("192.168.4.3", http.StatusForbidden)
@@ -84,8 +84,8 @@ func (suite *AccessControlSuite) Test_Whitelist() {
 			{"allow-list", " patterns/ips"},
 		}
 
-		suite.NoError(suite.test.Apply("config/deploy.yaml.tmpl", suite.test.GetNS(), suite.tmplData))
-		suite.NoError(suite.test.Apply("config/patternfile-a.yml", "", nil))
+		suite.Require().NoError(suite.test.Apply("config/deploy.yaml.tmpl", suite.test.GetNS(), suite.tmplData))
+		suite.Require().NoError(suite.test.Apply("config/patternfile-a.yml", "", nil))
 
 		suite.eventuallyReturns("192.168.0.3", http.StatusOK)
 		suite.eventuallyReturns("192.168.2.3", http.StatusForbidden)
@@ -98,8 +98,8 @@ func (suite *AccessControlSuite) Test_Whitelist() {
 			{"whitelist", " patterns/ips2"},
 		}
 
-		suite.NoError(suite.test.Apply("config/deploy.yaml.tmpl", suite.test.GetNS(), suite.tmplData))
-		suite.NoError(suite.test.Apply("config/patternfile-a.yml", "", nil))
+		suite.Require().NoError(suite.test.Apply("config/deploy.yaml.tmpl", suite.test.GetNS(), suite.tmplData))
+		suite.Require().NoError(suite.test.Apply("config/patternfile-a.yml", "", nil))
 
 		suite.eventuallyReturns("192.169.0.3", http.StatusOK)
 		suite.eventuallyReturns("192.168.2.3", http.StatusForbidden)
@@ -113,8 +113,8 @@ func (suite *AccessControlSuite) Test_Whitelist() {
 			{"allow-list", " patterns/ips"},
 		}
 
-		suite.NoError(suite.test.Apply("config/deploy.yaml.tmpl", suite.test.GetNS(), suite.tmplData))
-		suite.NoError(suite.test.Apply("config/patternfile-a.yml", "", nil))
+		suite.Require().NoError(suite.test.Apply("config/deploy.yaml.tmpl", suite.test.GetNS(), suite.tmplData))
+		suite.Require().NoError(suite.test.Apply("config/patternfile-a.yml", "", nil))
 
 		suite.eventuallyReturns("192.168.0.3", http.StatusOK)
 		suite.eventuallyReturns("192.168.2.3", http.StatusForbidden)
@@ -129,7 +129,7 @@ func (suite *AccessControlSuite) Test_Blacklist() {
 			{"deny-list", " 192.168.2.0/24"},
 		}
 
-		suite.NoError(suite.test.Apply("config/deploy.yaml.tmpl", suite.test.GetNS(), suite.tmplData))
+		suite.Require().NoError(suite.test.Apply("config/deploy.yaml.tmpl", suite.test.GetNS(), suite.tmplData))
 
 		suite.eventuallyReturns("192.168.2.3", http.StatusForbidden)
 		suite.eventuallyReturns("192.168.5.3", http.StatusOK)
@@ -142,7 +142,7 @@ func (suite *AccessControlSuite) Test_Blacklist() {
 			{"blacklist", "192.168.4.0/24"},
 		}
 
-		suite.NoError(suite.test.Apply("config/deploy.yaml.tmpl", suite.test.GetNS(), suite.tmplData))
+		suite.Require().NoError(suite.test.Apply("config/deploy.yaml.tmpl", suite.test.GetNS(), suite.tmplData))
 
 		suite.eventuallyReturns("192.168.4.3", http.StatusForbidden)
 		suite.eventuallyReturns("192.168.5.3", http.StatusOK)
@@ -156,7 +156,7 @@ func (suite *AccessControlSuite) Test_Blacklist() {
 			{"deny-list", "192.168.5.0/24"},
 		}
 
-		suite.NoError(suite.test.Apply("config/deploy.yaml.tmpl", suite.test.GetNS(), suite.tmplData))
+		suite.Require().NoError(suite.test.Apply("config/deploy.yaml.tmpl", suite.test.GetNS(), suite.tmplData))
 
 		suite.eventuallyReturns("192.168.5.3", http.StatusForbidden)
 		suite.eventuallyReturns("192.168.4.3", http.StatusOK)
@@ -169,8 +169,8 @@ func (suite *AccessControlSuite) Test_Blacklist() {
 			{"deny-list", "patterns/ips"},
 		}
 
-		suite.NoError(suite.test.Apply("config/deploy.yaml.tmpl", suite.test.GetNS(), suite.tmplData))
-		suite.NoError(suite.test.Apply("config/patternfile-a.yml", "", nil))
+		suite.Require().NoError(suite.test.Apply("config/deploy.yaml.tmpl", suite.test.GetNS(), suite.tmplData))
+		suite.Require().NoError(suite.test.Apply("config/patternfile-a.yml", "", nil))
 
 		suite.eventuallyReturns("192.168.0.3", http.StatusForbidden)
 		suite.eventuallyReturns("192.168.2.3", http.StatusOK)
@@ -183,8 +183,8 @@ func (suite *AccessControlSuite) Test_Blacklist() {
 			{"blacklist", " patterns/ips2"},
 		}
 
-		suite.NoError(suite.test.Apply("config/deploy.yaml.tmpl", suite.test.GetNS(), suite.tmplData))
-		suite.NoError(suite.test.Apply("config/patternfile-a.yml", "", nil))
+		suite.Require().NoError(suite.test.Apply("config/deploy.yaml.tmpl", suite.test.GetNS(), suite.tmplData))
+		suite.Require().NoError(suite.test.Apply("config/patternfile-a.yml", "", nil))
 
 		suite.eventuallyReturns("192.169.0.3", http.StatusForbidden)
 		suite.eventuallyReturns("192.168.2.3", http.StatusOK)
@@ -197,8 +197,8 @@ func (suite *AccessControlSuite) Test_Blacklist() {
 			{"deny-list", "patterns/ips"},
 		}
 
-		suite.NoError(suite.test.Apply("config/deploy.yaml.tmpl", suite.test.GetNS(), suite.tmplData))
-		suite.NoError(suite.test.Apply("config/patternfile-a.yml", "", nil))
+		suite.Require().NoError(suite.test.Apply("config/deploy.yaml.tmpl", suite.test.GetNS(), suite.tmplData))
+		suite.Require().NoError(suite.test.Apply("config/patternfile-a.yml", "", nil))
 
 		suite.eventuallyReturns("192.168.0.3", http.StatusForbidden)
 		suite.eventuallyReturns("192.169.2.3", http.StatusOK)

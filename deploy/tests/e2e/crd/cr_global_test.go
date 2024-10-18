@@ -53,10 +53,10 @@ func (suite *GlobalSuite) Test_CR_Global() {
 
 		// Get updated config and do all neede param checks
 		cfg, err := suite.test.GetIngressControllerFile("/etc/haproxy/haproxy.cfg")
-		suite.NoError(err, "Could not get Haproxy config")
+		suite.Require().NoError(err, "Could not get Haproxy config")
 		reader := strings.NewReader(cfg)
 		p, err := parser.New(options.Reader(reader))
-		suite.NoError(err, "Could not get Haproxy config parser")
+		suite.Require().NoError(err, "Could not get Haproxy config parser")
 		suite.checkGlobalParam(p, "default-path", &types.DefaultPath{
 			Type: "config",
 		})
@@ -213,12 +213,12 @@ func (suite *GlobalSuite) Test_CR_Global() {
 
 func (suite *GlobalSuite) checkGlobalParam(p parser.Parser, param string, value common.ParserData) {
 	v, err := p.Get(parser.Global, parser.GlobalSectionName, param)
-	suite.NoError(err, "Could not get Haproxy config parser Global param %s", param)
+	suite.Require().NoError(err, "Could not get Haproxy config parser Global param %s", param)
 	suite.Equal(value, v, fmt.Sprintf("Global param %s should be equal to %v but is %v", param, value, v))
 }
 
 func (suite *GlobalSuite) checkLogTargetParam(p parser.Parser, param string, value common.ParserData) {
 	v, err := p.GetOne(parser.Global, parser.GlobalSectionName, param, 0)
-	suite.NoError(err, "Could not get Haproxy config parser Global param %s", param)
+	suite.Require().NoError(err, "Could not get Haproxy config parser Global param %s", param)
 	suite.Equal(value, v, fmt.Sprintf("Global param %s should be equal to %v but is %v", param, value, v))
 }

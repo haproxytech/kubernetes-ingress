@@ -51,15 +51,15 @@ func (suite *HTTPSSuite) BeforeTest(suiteName, testName string) {
 		suite.client, err = e2e.NewHTTPSClient(suite.tmplData.Host)
 		suite.tmplData.TLSEnabled = true
 	}
-	suite.NoError(err)
+	suite.Require().NoError(err)
 }
 
 func (suite *HTTPSSuite) SetupSuite() {
 	var err error
 	suite.test, err = e2e.NewTest()
-	suite.NoError(err)
+	suite.Require().NoError(err)
 	suite.tmplData = tmplData{Host: suite.test.GetNS() + ".test"}
-	suite.NoError(suite.test.Apply("config/deploy.yaml", suite.test.GetNS(), nil))
+	suite.Require().NoError(suite.test.Apply("config/deploy.yaml", suite.test.GetNS(), nil))
 }
 
 func (suite *HTTPSSuite) TearDownSuite() {

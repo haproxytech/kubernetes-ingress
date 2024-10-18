@@ -42,7 +42,7 @@ type tmplData struct {
 func (suite *ServiceDiscoverySuite) SetupSuite() {
 	var err error
 	suite.test, err = e2e.NewTest()
-	suite.NoError(err)
+	suite.Require().NoError(err)
 	suite.tmplData = tmplData{
 		Host:        suite.test.GetNS() + ".test",
 		ServiceName: "http-echo-1",
@@ -50,9 +50,9 @@ func (suite *ServiceDiscoverySuite) SetupSuite() {
 		PortType:    "number",
 	}
 	suite.client, err = e2e.NewHTTPClient(suite.tmplData.Host)
-	suite.NoError(err)
-	suite.NoError(suite.test.Apply("config/deploy.yaml", suite.test.GetNS(), nil))
-	suite.NoError(suite.test.Apply("config/ingress.yaml.tmpl", suite.test.GetNS(), suite.tmplData))
+	suite.Require().NoError(err)
+	suite.Require().NoError(suite.test.Apply("config/deploy.yaml", suite.test.GetNS(), nil))
+	suite.Require().NoError(suite.test.Apply("config/ingress.yaml.tmpl", suite.test.GetNS(), suite.tmplData))
 	suite.Require().Eventually(func() bool {
 		res, cls, err := suite.client.Do()
 		if res == nil {

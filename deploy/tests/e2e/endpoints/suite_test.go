@@ -41,7 +41,7 @@ type tmplData struct {
 func (suite *EndpointsSuite) SetupSuite() {
 	var err error
 	suite.test, err = e2e.NewTest()
-	suite.NoError(err)
+	suite.Require().NoError(err)
 	suite.tmplData = tmplData{
 		Host: suite.test.GetNS() + ".test",
 	}
@@ -64,10 +64,10 @@ func (suite *EndpointsSuite) BeforeTest(suiteName, testName string) {
 	switch testName {
 	case "Test_TCP_Reach":
 		suite.client, err = e2e.NewHTTPSClient("tcp-service.test", 32766)
-		suite.NoError(err)
+		suite.Require().NoError(err)
 		suite.tmplData.Replicas = 4
-		suite.NoError(test.Apply("config/endpoints.yaml.tmpl", test.GetNS(), suite.tmplData))
-		suite.NoError(test.Apply("config/tcp.yaml", "", nil))
+		suite.Require().NoError(test.Apply("config/endpoints.yaml.tmpl", test.GetNS(), suite.tmplData))
+		suite.Require().NoError(test.Apply("config/tcp.yaml", "", nil))
 		test.AddTearDown(func() error {
 			return suite.test.Delete("config/tcp.yaml")
 		})
@@ -82,9 +82,9 @@ func (suite *EndpointsSuite) BeforeTest(suiteName, testName string) {
 		}, e2e.WaitDuration, e2e.TickDuration)
 	default:
 		suite.client, err = e2e.NewHTTPClient(suite.tmplData.Host)
-		suite.NoError(err)
+		suite.Require().NoError(err)
 		suite.tmplData.Replicas = 1
-		suite.NoError(test.Apply("config/endpoints.yaml.tmpl", test.GetNS(), suite.tmplData))
+		suite.Require().NoError(test.Apply("config/endpoints.yaml.tmpl", test.GetNS(), suite.tmplData))
 		suite.Require().Eventually(func() bool {
 			res, cls, err := suite.client.Do()
 			if res == nil {

@@ -47,9 +47,9 @@ type tmplData struct {
 func (suite *IngressMatchSuite) SetupSuite() {
 	var err error
 	suite.test, err = e2e.NewTest()
-	suite.NoError(err)
+	suite.Require().NoError(err)
 	suite.client, err = e2e.NewHTTPClient(suite.test.GetNS() + ".test")
-	suite.NoError(err)
+	suite.Require().NoError(err)
 }
 
 func (suite *IngressMatchSuite) TearDownSuite() {

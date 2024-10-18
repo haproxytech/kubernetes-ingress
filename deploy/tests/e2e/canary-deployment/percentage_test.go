@@ -28,7 +28,7 @@ func (suite *CanaryDeploymentSuite) Test_Response_Percentage() {
 	for _, percentage := range []int{0, 25, 100} {
 		suite.Run(fmt.Sprintf("%d", percentage), func() {
 			suite.tmplData.StagingRouteACL = fmt.Sprintf("rand(100) lt %d", percentage)
-			suite.NoError(suite.test.Apply("config/deploy.yaml.tmpl", suite.test.GetNS(), suite.tmplData))
+			suite.Require().NoError(suite.test.Apply("config/deploy.yaml.tmpl", suite.test.GetNS(), suite.tmplData))
 			suite.Eventually(func() bool {
 				counter := 0
 				for i := 0; i < 10; i++ {
