@@ -38,7 +38,7 @@ type Ingress struct {
 // New returns an Ingress instance to handle the k8s ingress resource given in params.
 // If the k8s ingress resource is not assigned to the controller (no matching IngressClass)
 // then New will return nil
-func New(k store.K8s, resource *store.Ingress, class string, emptyClass bool, a annotations.Annotations) *Ingress {
+func New(resource *store.Ingress, class string, emptyClass bool, a annotations.Annotations) *Ingress {
 	return &Ingress{resource: resource, controllerClass: class, allowEmptyClass: emptyClass, annotations: a}
 }
 
