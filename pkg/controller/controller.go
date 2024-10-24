@@ -150,7 +150,7 @@ func (c *HAProxyController) updateHAProxy() {
 		}
 		c.store.SecretsProcessed = map[string]struct{}{}
 		for _, ingResource := range namespace.Ingresses {
-			i := ingress.New(c.store, ingResource, c.osArgs.IngressClass, c.osArgs.EmptyIngressClass, c.annotations)
+			i := ingress.New(ingResource, c.osArgs.IngressClass, c.osArgs.EmptyIngressClass, c.annotations)
 			if !i.Supported(c.store, c.annotations) {
 				logger.Debugf("ingress '%s/%s' ignored: no matching", ingResource.Namespace, ingResource.Name)
 			} else {
