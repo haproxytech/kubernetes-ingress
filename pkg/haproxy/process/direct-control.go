@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"strconv"
 	"syscall"
 
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/api"
@@ -61,19 +60,6 @@ func (d *directControl) Service(action string) (err error) {
 			return d.Service("start")
 		}
 		return process.Signal(syscall.SIGUSR2)
-	case "restart":
-		if processErr != nil {
-			logger.Errorf("haproxy is not running, trying to start it")
-			return d.Service("start")
-		}
-		pid := strconv.Itoa(process.Pid)
-		cmd = exec.Command(d.Env.Binary, "-S", masterSocketArg, "-f", d.Env.MainCFGFile, "-sf", pid)
-		if d.useAuxFile {
-			cmd = exec.Command(d.Env.Binary, "-S", masterSocketArg, "-f", d.Env.MainCFGFile, "-f", d.Env.AuxCFGFile, "-sf", pid)
-		}
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-		return cmd.Start()
 	default:
 		return fmt.Errorf("unknown command '%s'", action)
 	}

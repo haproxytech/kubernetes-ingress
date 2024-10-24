@@ -18,9 +18,6 @@ type PrometheusMetricsManager struct {
 	// reload
 	reloadsCounterVec *prometheus.CounterVec
 
-	// restart
-	restartsCounterVec *prometheus.CounterVec
-
 	// runtime socket
 	runtimeSocketCounterVec *prometheus.CounterVec
 }
@@ -41,15 +38,6 @@ func New() PrometheusMetricsManager {
 			[]string{"result"},
 		)
 
-		// restart
-		restartCounter := promauto.NewCounterVec(
-			prometheus.CounterOpts{
-				Name: "haproxy_restarts_total",
-				Help: "The number of haproxy restarts partitioned by result (success/failure)",
-			},
-			[]string{"result"},
-		)
-
 		// runtime socket
 		runtimeSocketCounter := promauto.NewCounterVec(
 			prometheus.CounterOpts{
@@ -61,19 +49,10 @@ func New() PrometheusMetricsManager {
 
 		pmm = PrometheusMetricsManager{
 			reloadsCounterVec:       reloadCounter,
-			restartsCounterVec:      restartCounter,
 			runtimeSocketCounterVec: runtimeSocketCounter,
 		}
 	})
 	return pmm
-}
-
-func (pmm PrometheusMetricsManager) UpdateRestartMetrics(err error) {
-	if err != nil {
-		pmm.restartsCounterVec.WithLabelValues(ResultFailure).Inc()
-	} else {
-		pmm.restartsCounterVec.WithLabelValues(ResultSuccess).Inc()
-	}
 }
 
 func (pmm PrometheusMetricsManager) UpdateReloadMetrics(err error) {
