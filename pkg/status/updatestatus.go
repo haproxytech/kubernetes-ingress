@@ -51,7 +51,7 @@ func (m *UpdateStatusManagerImpl) Update(k store.K8s, h haproxy.HAProxy, a annot
 			}
 
 			for _, ingResource := range namespace.Ingresses {
-				i := ingress.New(k, ingResource, m.ingressClass, m.emptyIngressClass, a)
+				i := ingress.New(ingResource, m.ingressClass, m.emptyIngressClass, a)
 				supported := i.Supported(k, a)
 
 				if (!supported && (len(ingResource.Addresses) == 0 || !utils.EqualSliceStringsWithoutOrder(k.PublishServiceAddresses, ingResource.Addresses))) ||
