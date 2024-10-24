@@ -91,13 +91,13 @@ func (c *HAProxyController) globalCfg() {
 	diff := newGlobal.Diff(*global)
 	if len(diff) != 0 {
 		logger.Error(c.haproxy.GlobalPushConfiguration(*newGlobal))
-		instance.Restart("Global config updated: %s", strings.Join(updated, "\n"))
+		instance.Reload("Global config updated: %s", strings.Join(updated, "\n"))
 	}
 	diff = newLg.Diff(lg)
 	// updated = deep.Equal(newLg, lg)
 	if len(diff) != 0 {
 		logger.Error(c.haproxy.GlobalPushLogTargets(newLg))
-		instance.Restart("Global log targets updated: %s", strings.Join(updated, "\n"))
+		instance.Reload("Global log targets updated: %s", strings.Join(updated, "\n"))
 	}
 	c.globalCfgSnipp()
 }
@@ -112,7 +112,7 @@ func (c *HAProxyController) globalCfgSnipp() {
 	}
 	updatedSnipp, errSnipp := annotations.UpdateGlobalCfgSnippet(c.haproxy)
 	logger.Error(errSnipp)
-	instance.RestartIf(len(updatedSnipp) != 0,
+	instance.ReloadIf(len(updatedSnipp) != 0,
 		"Global config-snippet updated: %s", strings.Join(updatedSnipp, "\n"))
 
 	updatedSnipp, errSnipp = annotations.UpdateFrontendCfgSnippet(c.haproxy, "http", "https", "stats")

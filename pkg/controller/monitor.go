@@ -34,7 +34,7 @@ func (c *HAProxyController) SyncData() {
 		case k8s.COMMAND:
 			c.auxCfgManager()
 			// create a NeedAction function.
-			if hadChanges || instance.NeedAction() {
+			if hadChanges || instance.NeedReload() {
 				c.updateHAProxy()
 				hadChanges = false
 				continue
@@ -91,7 +91,6 @@ func (c *HAProxyController) SyncData() {
 	}
 }
 
-// auxCfgManager returns restart or reload requirement based on state and transition of auxiliary configuration file.
 func (c *HAProxyController) auxCfgManager() {
 	info, errStat := os.Stat(c.haproxy.AuxCFGFile)
 	var (
@@ -109,7 +108,7 @@ func (c *HAProxyController) auxCfgManager() {
 		c.haproxy.SetAuxCfgFile(auxCfgFile)
 		c.haproxy.UseAuxFile(useAuxFile)
 		// The file exists now  (modifTime !=0 otherwise nothing changed case).
-		instance.RestartIf(c.auxCfgModTime == 0, "auxiliary configuration file created")
+		instance.ReloadIf(c.auxCfgModTime == 0, "auxiliary configuration file created")
 		instance.ReloadIf(c.auxCfgModTime != 0, "auxiliary configuration file modified")
 		c.auxCfgModTime = modifTime
 		if c.auxCfgModTime != 0 {
@@ -125,7 +124,7 @@ func (c *HAProxyController) auxCfgManager() {
 			// never existed before
 			return
 		}
-		instance.Restart("Auxiliary HAProxy config '%s' removed", c.haproxy.AuxCFGFile)
+		instance.Reload("Auxiliary HAProxy config '%s' removed", c.haproxy.AuxCFGFile)
 		return
 	}
 	// File exists
