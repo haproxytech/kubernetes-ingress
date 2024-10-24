@@ -196,15 +196,7 @@ func (c *HAProxyController) updateHAProxy() {
 		c.setToReady()
 	}
 
-	switch {
-	case instance.NeedRestart():
-		if err = c.haproxy.Service("restart"); err != nil {
-			logger.Error(err)
-		} else {
-			logger.Info("HAProxy restarted")
-		}
-		c.prometheusMetricsManager.UpdateRestartMetrics(err)
-	case instance.NeedReload():
+	if instance.NeedReload() {
 		if err = c.haproxy.Service("reload"); err != nil {
 			logger.Error(err)
 		} else {

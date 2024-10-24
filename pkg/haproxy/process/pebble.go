@@ -67,11 +67,6 @@ func (d *pebbleControl) Service(action string) error {
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 		return cmd.Run()
-	case "restart":
-		cmd = exec.Command("pebble", "restart", "haproxy")
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-		return cmd.Run()
 	default:
 		return fmt.Errorf("unknown command '%s'", action)
 	}
