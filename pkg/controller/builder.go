@@ -28,6 +28,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/haproxytech/kubernetes-ingress/pkg/annotations"
+	"github.com/haproxytech/kubernetes-ingress/pkg/controller/constants"
 	gateway "github.com/haproxytech/kubernetes-ingress/pkg/gateways"
 	"github.com/haproxytech/kubernetes-ingress/pkg/handler"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy"
@@ -67,10 +68,10 @@ var defaultEnv = env.Env{
 	RuntimeDir:  "/var/run",
 	StateDir:    "/var/state/haproxy/",
 	Proxies: env.Proxies{
-		FrontHTTP:  "http",
-		FrontHTTPS: "https",
-		FrontSSL:   "ssl",
-		BackSSL:    "ssl",
+		FrontHTTP:  constants.HTTP_FRONTEND,
+		FrontHTTPS: constants.HTTPS_FRONTEND,
+		FrontSSL:   constants.SSL_FRONTEND,
+		BackSSL:    constants.SSL_BACKEND,
 	},
 }
 

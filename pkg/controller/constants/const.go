@@ -14,4 +14,11 @@
 
 package constants
 
-const DefaultsSectionName = "haproxytech"
+//nolint:golint, stylecheck
+const (
+	DefaultsSectionName = "haproxytech"
+	SSL_FRONTEND        = "ssl"
+	SSL_BACKEND         = "ssl"
+	HTTP_FRONTEND       = "http"
+	HTTPS_FRONTEND      = "https"
+)

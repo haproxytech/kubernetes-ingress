@@ -28,3 +28,6 @@ allowed:
   - linters
   - tls
   - lifecycle
+  - passthrough
+  - ssl
+  - unix

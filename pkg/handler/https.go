@@ -17,6 +17,7 @@ package handler
 import (
 	"errors"
 	"fmt"
+	"path"
 
 	"github.com/haproxytech/client-native/v5/models"
 
@@ -45,47 +46,51 @@ type HTTPS struct {
 }
 
 //nolint:golint, stylecheck
-const HTTPS_PORT_SSLPASSTHROUGH int64 = 8444
+const (
+	HTTPS_PORT_SSLPASSTHROUGH int64 = 8444
+	BIND_UNIX_SOCKET                = "unixsock"
+	BIND_IP_V4                      = "v4"
+	BIND_IP_V6                      = "v6"
+)
 
-func (handler HTTPS) bindList(passhthrough bool) (binds []models.Bind) {
+func (handler HTTPS) bindList(h haproxy.HAProxy) (binds []models.Bind) {
 	if handler.IPv4 {
 		binds = append(binds, models.Bind{
 			Address: handler.AddrIPv4,
-			Port: func() *int64 {
-				if passhthrough {
-					return utils.PtrInt64(HTTPS_PORT_SSLPASSTHROUGH)
-				}
-				return utils.PtrInt64(handler.Port)
-			}(),
+			Port:    utils.PtrInt64(handler.Port),
 			BindParams: models.BindParams{
-				Name:        "v4",
-				AcceptProxy: passhthrough,
+				Name:        BIND_IP_V4,
+				AcceptProxy: false,
 			},
 		})
 	}
 	if handler.IPv6 {
 		binds = append(binds, models.Bind{
-			Address: func() (addr string) {
-				addr = handler.AddrIPv6
-				if passhthrough {
-					addr = "::"
-				}
-				return
-			}(),
-			Port: func() *int64 {
-				if passhthrough {
-					return utils.PtrInt64(HTTPS_PORT_SSLPASSTHROUGH)
-				}
-				return utils.PtrInt64(handler.Port)
-			}(),
+			Address: handler.AddrIPv6,
+			Port:    utils.PtrInt64(handler.Port),
 			BindParams: models.BindParams{
-				AcceptProxy: passhthrough,
-				Name:        "v6",
+				AcceptProxy: false,
+				Name:        BIND_IP_V6,
 				V4v6:        true,
 			},
 		})
 	}
 	return binds
+}
+
+func (handler HTTPS) bindListPassthrough(h haproxy.HAProxy) (binds []models.Bind) {
+	binds = append(binds, models.Bind{
+		Address: "unix@" + handler.unixSocketPath(h),
+		BindParams: models.BindParams{
+			Name:        BIND_UNIX_SOCKET,
+			AcceptProxy: true,
+		},
+	})
+	return binds
+}
+
+func (handler HTTPS) unixSocketPath(h haproxy.HAProxy) string {
+	return path.Join(h.Env.RuntimeDir, "ssl-frontend.sock")
 }
 
 func (handler HTTPS) handleClientTLSAuth(k store.K8s, h haproxy.HAProxy) (err error) {
@@ -211,7 +216,7 @@ func (handler HTTPS) enableSSLPassthrough(h haproxy.HAProxy) (err error) {
 	if err != nil {
 		return err
 	}
-	for _, b := range handler.bindList(false) {
+	for _, b := range handler.bindList(h) {
 		if err = h.FrontendBindCreate(h.FrontSSL, b); err != nil {
 			return fmt.Errorf("cannot create bind for SSL Passthrough: %w", err)
 		}
@@ -226,8 +231,7 @@ func (handler HTTPS) enableSSLPassthrough(h haproxy.HAProxy) (err error) {
 		}),
 		h.BackendServerCreate(h.BackSSL, models.Server{
 			Name:         h.FrontHTTPS,
-			Address:      "127.0.0.1",
-			Port:         utils.PtrInt64(HTTPS_PORT_SSLPASSTHROUGH),
+			Address:      "unix@" + handler.unixSocketPath(h),
 			ServerParams: models.ServerParams{SendProxyV2: "enabled"},
 		}),
 		h.BackendSwitchingRuleCreate(h.FrontSSL, models.BackendSwitchingRule{
@@ -255,8 +259,13 @@ func (handler HTTPS) disableSSLPassthrough(h haproxy.HAProxy) (err error) {
 }
 
 func (handler HTTPS) toggleSSLPassthrough(passthrough bool, h haproxy.HAProxy) (err error) {
-	for _, bind := range handler.bindList(passthrough) {
-		if err = h.FrontendBindEdit(h.FrontHTTPS, bind); err != nil {
+	handler.deleteHTTPSFrontendBinds(h)
+	bindListFunc := handler.bindList
+	if passthrough {
+		bindListFunc = handler.bindListPassthrough
+	}
+	for _, bind := range bindListFunc(h) {
+		if err = h.FrontendBindCreate(h.FrontHTTPS, bind); err != nil {
 			return err
 		}
 	}
@@ -264,6 +273,15 @@ func (handler HTTPS) toggleSSLPassthrough(passthrough bool, h haproxy.HAProxy) (
 		logger.Panic(h.FrontendEnableSSLOffload(h.FrontHTTPS, handler.CertDir, handler.alpn, handler.strictSNI))
 	}
 	return nil
+}
+
+func (handler HTTPS) deleteHTTPSFrontendBinds(h haproxy.HAProxy) {
+	bindsToDelete := []string{BIND_IP_V4, BIND_IP_V6, BIND_UNIX_SOCKET}
+	for _, bind := range bindsToDelete {
+		if err := h.FrontendBindDelete(h.FrontHTTPS, bind); err != nil {
+			logger.Tracef("cannot delete bind %s: %s", bind, err)
+		}
+	}
 }
 
 func (handler HTTPS) sslPassthroughRules(k store.K8s, h haproxy.HAProxy, a annotations.Annotations) error {
