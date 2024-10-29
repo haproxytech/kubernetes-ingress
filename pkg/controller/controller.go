@@ -175,6 +175,8 @@ func (c *HAProxyController) updateHAProxy() {
 		logger.Error(handler.Update(c.store, c.haproxy, c.annotations))
 	}
 
+	fs.Writer.WaitUntilWritesDone()
+
 	err = c.haproxy.APICommitTransaction()
 	if err != nil {
 		logger.Error("unable to Sync HAProxy configuration !!")
@@ -196,8 +198,6 @@ func (c *HAProxyController) updateHAProxy() {
 	if !c.ready {
 		c.setToReady()
 	}
-
-	fs.Writer.WaitUntilWritesDone()
 
 	if instance.NeedReload() {
 		fs.RunDelayedFuncs()
