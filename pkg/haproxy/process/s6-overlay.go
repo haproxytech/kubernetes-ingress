@@ -58,11 +58,11 @@ func (d *s6Control) Service(action string) error {
 	case "reload":
 		if d.masterSocketValid {
 			msg, err := d.masterSocket.Reload()
-			if err != nil {
-				d.logger.Error(err)
+			if err == nil {
+				d.logger.Debug(msg)
+				return nil
 			}
-			d.logger.Debug(msg)
-			return err
+			d.logger.Error(err)
 		}
 
 		cmd = exec.Command("s6-svc", "-2", "/run/service/haproxy")
