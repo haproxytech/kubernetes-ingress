@@ -82,6 +82,7 @@ type k8s struct {
 	podNamespace           string
 	whiteListedNS          []string
 	syncPeriod             time.Duration
+	initialSyncPeriod      time.Duration
 	cacheResyncPeriod      time.Duration
 	disableSvcExternalName bool // CVE-2021-25740
 	gatewayAPIInstalled    bool
@@ -125,6 +126,7 @@ func New(osArgs utils.OSArgs, whitelist map[string]struct{}, publishSvc *utils.N
 		podNamespace:           os.Getenv("POD_NAMESPACE"),
 		podPrefix:              prefix,
 		syncPeriod:             osArgs.SyncPeriod,
+		initialSyncPeriod:      osArgs.InitialSyncPeriod,
 		cacheResyncPeriod:      osArgs.CacheResyncPeriod,
 		disableSvcExternalName: osArgs.DisableServiceExternalName,
 		gatewayClient:          gatewayClient,
@@ -170,7 +172,11 @@ func (k k8s) MonitorChanges(eventChan chan k8ssync.SyncDataEvent, stop chan stru
 	}
 
 	syncPeriod := k.syncPeriod
-	logger.Debugf("Executing syncPeriod every %s", syncPeriod.String())
+	initialSyncPeriod := k.initialSyncPeriod
+	logger.Debugf("Executing first transaction after %s", initialSyncPeriod.String())
+	logger.Debugf("Executing new transaction every %s", syncPeriod.String())
+	time.Sleep(k.initialSyncPeriod)
+	eventChan <- k8ssync.SyncDataEvent{SyncType: k8ssync.COMMAND}
 	for {
 		time.Sleep(syncPeriod)
 		eventChan <- k8ssync.SyncDataEvent{SyncType: k8ssync.COMMAND}

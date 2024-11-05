@@ -98,6 +98,7 @@ type OSArgs struct {
 	HTTPBindPort                      int64          `long:"http-bind-port" default:"8080" description:"port to listen on for HTTP traffic"`
 	HTTPSBindPort                     int64          `long:"https-bind-port" default:"8443" description:"port to listen on for HTTPS traffic"`
 	SyncPeriod                        time.Duration  `long:"sync-period" default:"5s" description:"Sets the period at which the controller syncs HAProxy configuration file"`
+	InitialSyncPeriod                 time.Duration  `long:"initial-sync-period" description:"Sets the first period at which the controller syncs HAProxy configuration file"`
 	CacheResyncPeriod                 time.Duration  `long:"cache-resync-period" default:"10m" description:"Sets the underlying Shared Informer resync period: resyncing controller with informers cache"`
 	HealthzBindPort                   int64          `long:"healthz-bind-port" default:"1042" description:"port to listen on for probes"`
 	QuicAnnouncePort                  int64          `long:"quic-announce-port" description:"sets the port in the alt-svc header"`

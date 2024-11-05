@@ -96,6 +96,9 @@ func main() {
 		// exit, this is just a job
 		os.Exit(0)
 	}
+	if osArgs.InitialSyncPeriod == 0 {
+		osArgs.InitialSyncPeriod = osArgs.SyncPeriod
+	}
 
 	logger.ShowFilename(false)
 	exit := logInfo(logger, osArgs)
@@ -232,6 +235,7 @@ func logInfo(logger utils.Logger, osArgs utils.OSArgs) bool {
 		logger.Printf("Disabling the delayed writing of files to disk only in case of haproxy reload (write to disk even if no reload)")
 	}
 	logger.Debugf("Kubernetes Informers resync period: %s", osArgs.CacheResyncPeriod.String())
+	logger.Printf("Controller initial sync period: %s", osArgs.InitialSyncPeriod.String())
 	logger.Printf("Controller sync period: %s\n", osArgs.SyncPeriod.String())
 
 	hostname, err := os.Hostname()
