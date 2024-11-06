@@ -102,6 +102,11 @@ type HAProxyClient interface { //nolint:interfacebloat
 	UserListDeleteAll() error
 	UserListExistsByGroup(group string) (bool, error)
 	UserListCreateByGroup(group string, userPasswordMap map[string][]byte) error
+	CertEntryCreate(filename string) error
+	CertEntrySet(filename string, payload []byte) error
+	CertEntryCommit(filename string) error
+	CertEntryAbort(filename string) error
+	CrtListEntryAdd(crtList string, entry runtime.CrtListEntry) error
 }
 
 type clientNative struct {

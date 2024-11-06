@@ -1,0 +1,16 @@
+apiVersion: ingress.v1.haproxy.org/v1
+kind: Backend
+metadata:
+  name: be-test
+spec:
+  config:
+    name: test-be-simple
+    abortonclose: "enabled"
+    accept_invalid_http_response: "enabled"
+    default_server:
+      check: "enabled"
+  acls:
+  - acl_name: switch_be_0
+    criterion: req_ssl_sni
+    index: 0
+    value: -i backend100.example.com

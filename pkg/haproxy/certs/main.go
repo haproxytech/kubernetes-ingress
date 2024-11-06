@@ -5,8 +5,14 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"path/filepath"
 	"strings"
+	"sync"
 
+	"github.com/google/renameio"
+	"github.com/haproxytech/client-native/v5/runtime"
+	"github.com/haproxytech/kubernetes-ingress/pkg/fs"
+	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/api"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/instance"
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
@@ -17,6 +23,8 @@ type certs struct {
 	backend  map[string]*cert
 	ca       map[string]*cert
 	TCPCR    map[string]*cert
+	client   api.HAProxyClient
+	mu       *sync.Mutex
 }
 
 type Certificates interface {
@@ -30,6 +38,7 @@ type Certificates interface {
 	RefreshCerts()
 	// Clean cleans certificates state
 	CleanCerts()
+	SetAPI(api api.HAProxyClient)
 }
 
 type cert struct {
@@ -89,6 +98,7 @@ func New(envParam Env) (Certificates, error) { //nolint:ireturn
 		backend:  make(map[string]*cert),
 		ca:       make(map[string]*cert),
 		TCPCR:    make(map[string]*cert),
+		mu:       &sync.Mutex{},
 	}, nil
 }
 
@@ -136,17 +146,73 @@ func (c *certs) AddSecret(secret *store.Secret, secretType SecretType) (certPath
 		}
 	}
 	crt = &cert{
-		path:    certPath,
-		name:    fmt.Sprintf("%s/%s", secret.Namespace, secret.Name),
-		inUse:   true,
-		updated: true,
+		path:  certPath,
+		name:  fmt.Sprintf("%s/%s", secret.Namespace, secret.Name),
+		inUse: true,
 	}
-	err = writeSecret(secret, crt, privateKeyNull)
+	err = c.writeSecret(secret, crt, privateKeyNull)
 	if err != nil {
 		return "", err
 	}
 	certs[certName] = crt
 	return crt.path, nil
+}
+
+func (c *certs) updateRuntime(filename string, payload []byte) (bool, error) {
+	// Only 1 transaction in parallel is possible for now in haproxy
+	// Keep this mutex for now to ensure that we perform 1 transaction at a time
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	var err error
+	var updated, alreadyExists bool
+
+	err = c.client.CertEntryCreate(filename)
+	// If already exists
+	if err != nil {
+		if strings.Contains(err.Error(), "already exists") {
+			alreadyExists = true
+		} else {
+			return updated, err
+		}
+	} else {
+		utils.GetLogger().Debugf("`new ssl cert` ok[%s]", filename)
+	}
+
+	err = c.client.CertEntrySet(filename, payload)
+	if err != nil {
+		return updated, err
+	}
+	utils.GetLogger().Debugf("`set ssl cert` ok[%s]", filename)
+
+	err = c.client.CertEntryCommit(filename)
+	if err != nil {
+		// Abort transaction
+		errAbort := c.client.CertEntryAbort(filename)
+		// If error, just log it
+		// a Reload will follow, transaction will be gone no matter what
+		if errAbort != nil {
+			utils.GetLogger().Error(errAbort)
+		}
+
+		return updated, err
+	}
+	updated = true
+	utils.GetLogger().Debugf("commit ssl cert` ok [%s]", filename)
+
+	if !alreadyExists {
+		crtListPath := filepath.Dir(filename)
+		err = c.client.CrtListEntryAdd(crtListPath,
+			runtime.CrtListEntry{
+				File: filename,
+			})
+		if err != nil {
+			return false, err
+		}
+		utils.GetLogger().Debugf("`crt-list add` ok [%s] [%s] ", crtListPath, filename)
+	}
+
+	return updated, nil
 }
 
 func (c *certs) CleanCerts() {
@@ -211,14 +277,16 @@ func refreshCerts(certs map[string]*cert, certDir string) {
 		certName := strings.Split(filename, ".pem")[0]
 		crt, crtOk := certs[certName]
 		if !crtOk || !crt.inUse {
-			logger.Error(os.Remove(path.Join(certDir, filename)))
+			fs.AddDelayedFunc(filename, func() {
+				logger.Error(os.Remove(path.Join(certDir, filename)))
+			})
 			delete(certs, certName)
 			instance.Reload("secret %s removed", certName)
 		}
 	}
 }
 
-func writeSecret(secret *store.Secret, c *cert, privateKeyNull bool) (err error) {
+func (c *certs) writeSecret(secret *store.Secret, cert *cert, privateKeyNull bool) (err error) {
 	var crtValue, keyValue []byte
 	var crtOk, keyOk, pemOk bool
 	var certPath string
@@ -227,20 +295,22 @@ func writeSecret(secret *store.Secret, c *cert, privateKeyNull bool) (err error)
 		if !crtOk {
 			return fmt.Errorf("certificate missing in %s/%s", secret.Namespace, secret.Name)
 		}
-		c.path += ".pem"
-		return writeCert(c.path, []byte(""), crtValue)
+		cert.path += ".pem"
+		content := certContent([]byte(""), crtValue)
+		return c.writeCert(cert, cert.path, content)
 	}
 	for _, k := range []string{"tls", "rsa", "ecdsa", "dsa"} {
 		keyValue, keyOk = secret.Data[k+".key"]
 		crtValue, crtOk = secret.Data[k+".crt"]
 		if keyOk && crtOk {
 			pemOk = true
-			certPath = c.path + ".pem"
+			certPath = cert.path + ".pem"
 			if k != "tls" {
 				// HAProxy "cert bundle"
 				certPath = fmt.Sprintf("%s.%s", certPath, k)
 			}
-			err = writeCert(certPath, keyValue, crtValue)
+			content := certContent(keyValue, crtValue)
+			err = c.writeCert(cert, certPath, content)
 			if err != nil {
 				return err
 			}
@@ -249,41 +319,65 @@ func writeSecret(secret *store.Secret, c *cert, privateKeyNull bool) (err error)
 	if !pemOk {
 		return fmt.Errorf("certificate or private key missing in %s/%s", secret.Namespace, secret.Name)
 	}
-	c.path = certPath
+	cert.path = certPath
 	return nil
 }
 
-func writeCert(filename string, key, crt []byte) error {
-	var f *os.File
-	var err error
-	if f, err = os.Create(filename); err != nil {
-		logger.Error(err)
-		return err
-	}
-	defer f.Close()
-	if _, err = f.Write(key); err != nil {
-		logger.Error(err)
-		return err
-	}
-	// Force writing a newline so that parsing does not barf
-	if len(key) > 0 && key[len(key)-1] != byte('\n') {
-		logger.Warningf("secret key in %s does not end with \\n, appending it to avoid mangling key and certificate", filename)
-		if _, err = f.WriteString("\n"); err != nil {
-			logger.Error(err)
-			return err
+func (c *certs) writeCert(cert *cert, filename string, content []byte) error {
+	fs.Writer.Write(func() {
+		if _, err := os.Stat(filename); err != nil {
+			// If file does not exist, contrary to the map files, it's not working to create an empty file.
+			// There need to be a valid certificate file.
+			// So, let's create the right content.
+			// Then, on update, it will be written with the delayed function.
+			if os.IsNotExist(err) {
+				err := renameio.WriteFile(filename, content, 0o666)
+				if err != nil {
+					logger.Error(err)
+					return
+				}
+				utils.GetLogger().Debugf("cert written on disk[%s]", filename)
+			} else {
+				logger.Error(err)
+				return
+			}
 		}
-	}
-	if _, err = f.Write(crt); err != nil {
-		logger.Error(err)
-		return err
-	}
-	if err = f.Sync(); err != nil {
-		logger.Error(err)
-		return err
-	}
-	if err = f.Close(); err != nil {
-		logger.Error(err)
-		return err
-	}
+
+		updated, err := c.updateRuntime(filename, content)
+		if err != nil {
+			instance.Reload("Runtime update of cert file '%s' failed : %s", filename, err.Error())
+		} else if updated {
+			utils.GetLogger().Debugf("Runtime update of cert ok [%s]", filename)
+			cert.updated = true
+		}
+
+		// If the certificate has been updated through the runtime, it needs to be written with the delayed function
+		// to be written on disk before a reload.
+		if cert.updated {
+			fs.AddDelayedFunc(filename, func() {
+				err := renameio.WriteFile(filename, content, 0o666)
+				if err != nil {
+					logger.Error(err)
+					return
+				}
+				utils.GetLogger().Debugf("Delayed writing cert on disk ok [%s] ", filename)
+			})
+		}
+	})
+
 	return nil
+}
+
+func certContent(key, crt []byte) []byte {
+	buff := make([]byte, 0, len(key)+len(crt)+1)
+	buff = append(buff, key...)
+	if len(key) > 0 && key[len(key)-1] != byte('\n') {
+		buff = append(buff, byte('\n'))
+	}
+	buff = append(buff, crt...)
+	return buff
+}
+
+func (c *certs) SetAPI(api api.HAProxyClient) {
+	c.client = api
 }

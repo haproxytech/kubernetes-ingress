@@ -239,3 +239,34 @@ func GetGlobalHAProxyInfo() (info GlobalHAProxyInfo, err error) {
 	}
 	return
 }
+
+type CertInfo struct {
+	Used    bool
+	Subject string
+	Issuer  string
+}
+
+func GetCertSubject(filename string) (certInfo CertInfo, err error) {
+	var result []byte
+	result, err = runtimeCommand("show ssl cert " + filename)
+	if err != nil {
+		return
+	}
+	scanner := bufio.NewScanner(bytes.NewReader(result))
+	for scanner.Scan() {
+		line := scanner.Text()
+		switch {
+		case strings.HasPrefix(line, "Used:"):
+			used, convErr := strconv.ParseBool(strings.Split(line, ": ")[1])
+			if convErr != nil {
+				return
+			}
+			certInfo.Used = used
+		case strings.HasPrefix(line, "Subject:"):
+			certInfo.Subject = strings.Split(line, ": ")[1]
+		case strings.HasPrefix(line, "Issuer:"):
+			certInfo.Issuer = strings.Split(line, ": ")[1]
+		}
+	}
+	return
+}

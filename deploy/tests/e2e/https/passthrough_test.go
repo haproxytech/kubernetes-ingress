@@ -19,11 +19,22 @@ package https
 import (
 	"encoding/json"
 	"io"
+	"testing"
 
 	"github.com/haproxytech/kubernetes-ingress/deploy/tests/e2e"
+	"github.com/stretchr/testify/suite"
 )
 
-func (suite *HTTPSSuite) Test_HTTPS_Passthrough() {
+// Adding PassthroughSuite, just to be able to debug directly here and not from CRDSuite
+type PassthroughSuite struct {
+	HTTPSSuite
+}
+
+func TestPassthroughSuite(t *testing.T) {
+	suite.Run(t, new(PassthroughSuite))
+}
+
+func (suite *PassthroughSuite) Test_HTTPS_Passthrough() {
 	suite.tmplData.Port = "https"
 	suite.tmplData.IngAnnotations = []struct{ Key, Value string }{
 		{"ssl-passthrough", "'true'"},

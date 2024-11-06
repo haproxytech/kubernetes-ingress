@@ -233,3 +233,43 @@ func (c *clientNative) SyncBackendSrvs(backend *store.RuntimeBackend, portUpdate
 	}
 	return nil
 }
+
+func (c *clientNative) CertEntryCreate(filename string) error {
+	runtime, err := c.nativeAPI.Runtime()
+	if err != nil {
+		return err
+	}
+	return runtime.NewCertEntry(filename)
+}
+
+func (c *clientNative) CertEntrySet(filename string, payload []byte) error {
+	runtime, err := c.nativeAPI.Runtime()
+	if err != nil {
+		return err
+	}
+	return runtime.SetCertEntry(filename, string(payload))
+}
+
+func (c *clientNative) CertEntryCommit(filename string) error {
+	runtime, err := c.nativeAPI.Runtime()
+	if err != nil {
+		return err
+	}
+	return runtime.CommitCertEntry(filename)
+}
+
+func (c *clientNative) CertEntryAbort(filename string) error {
+	runtime, err := c.nativeAPI.Runtime()
+	if err != nil {
+		return err
+	}
+	return runtime.AbortCertEntry(filename)
+}
+
+func (c *clientNative) CrtListEntryAdd(crtList string, entry runtime.CrtListEntry) error {
+	runtime, err := c.nativeAPI.Runtime()
+	if err != nil {
+		return err
+	}
+	return runtime.AddCrtListEntry(crtList, entry)
+}

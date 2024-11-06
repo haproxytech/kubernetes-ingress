@@ -3,8 +3,8 @@ package api
 import (
 	"errors"
 
+	"github.com/haproxytech/client-native/v5/config-parser/types"
 	"github.com/haproxytech/client-native/v5/models"
-	"github.com/haproxytech/config-parser/v5/types"
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
 )
 

@@ -4,10 +4,10 @@ import (
 	"errors"
 	"fmt"
 
+	parser "github.com/haproxytech/client-native/v5/config-parser"
+	"github.com/haproxytech/client-native/v5/config-parser/types"
 	cnConfiguration "github.com/haproxytech/client-native/v5/configuration"
 	"github.com/haproxytech/client-native/v5/models"
-	parser "github.com/haproxytech/config-parser/v5"
-	"github.com/haproxytech/config-parser/v5/types"
 
 	"github.com/haproxytech/kubernetes-ingress/pkg/controller/constants"
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"

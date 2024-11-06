@@ -17,10 +17,22 @@
 package https
 
 import (
+	"testing"
+
 	"github.com/haproxytech/kubernetes-ingress/deploy/tests/e2e"
+	"github.com/stretchr/testify/suite"
 )
 
-func (suite *HTTPSSuite) Test_HTTPS_Offload() {
+// Adding OffloadSuite, just to be able to debug directly here and not from CRDSuite
+type OffloadSuite struct {
+	HTTPSSuite
+}
+
+func TestOffloadSuite(t *testing.T) {
+	suite.Run(t, new(OffloadSuite))
+}
+
+func (suite *OffloadSuite) Test_HTTPS_Offload() {
 	var err error
 	suite.Require().NoError(suite.test.Apply("config/ingress.yaml.tmpl", suite.test.GetNS(), suite.tmplData))
 	suite.client, err = e2e.NewHTTPSClient("offload-test.haproxy", 0)

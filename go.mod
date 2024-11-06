@@ -10,8 +10,7 @@ require (
 	github.com/google/go-cmp v0.6.0
 	github.com/google/renameio v1.0.1
 	github.com/haproxytech/client-native/v3 v3.1.2-0.20230607075433-231591da68ed
-	github.com/haproxytech/client-native/v5 v5.1.11
-	github.com/haproxytech/config-parser/v5 v5.1.5
+	github.com/haproxytech/client-native/v5 v5.1.15-0.20241106115115-75c12953fe1f
 	github.com/jessevdk/go-flags v1.4.0
 	github.com/pires/go-proxyproto v0.7.0
 	github.com/prometheus/client_golang v1.20.5
@@ -76,7 +75,7 @@ require (
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
-	go.mongodb.org/mongo-driver v1.16.1 // indirect
+	go.mongodb.org/mongo-driver v1.17.1 // indirect
 	go.uber.org/zap v1.27.0 // indirect
 	golang.org/x/exp v0.0.0-20241009180824-f66d83c29e7c // indirect
 	golang.org/x/net v0.30.0 // indirect

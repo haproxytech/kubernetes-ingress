@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"time"
 
 	"github.com/haproxytech/client-native/v5/runtime"
 	"github.com/haproxytech/client-native/v5/runtime/options"
@@ -30,7 +31,7 @@ func newS6Control(api api.HAProxyClient, env env.Env, osArgs utils.OSArgs) *s6Co
 		logger: utils.GetLogger(),
 	}
 
-	masterSocket, err := runtime.New(context.Background(), options.MasterSocket(MASTER_SOCKET_PATH, 1))
+	masterSocket, err := runtime.New(context.Background(), options.MasterSocket(MASTER_SOCKET_PATH, 1), options.AllowDelayedStart(time.Minute, time.Second))
 	if err != nil {
 		sc.logger.Error(err)
 		return &sc

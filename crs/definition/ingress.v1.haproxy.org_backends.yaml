@@ -4,7 +4,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.14.0
-    haproxy.org/client-native: v5.1.11
+    haproxy.org/client-native: v5.1.15-0.20241106115115-75c12953fe1f
   name: backends.ingress.v1.haproxy.org
 spec:
   group: ingress.v1.haproxy.org
@@ -2241,8 +2241,8 @@ spec:
                     capture_sample:
                       description: |-
                         capture sample
-                        Pattern: ^[^\s]+$
-                      pattern: ^[^\s]+$
+                        Pattern: ^(?:[A-Za-z]+\("([A-Za-z\s]+)"\)|[A-Za-z]+)
+                      pattern: ^(?:[A-Za-z]+\("([A-Za-z\s]+)"\)|[A-Za-z]+)
                       type: string
                     cond:
                       description: |-
@@ -2487,6 +2487,10 @@ spec:
                       format: int64
                       maximum: 599
                       minimum: 200
+                      type: integer
+                    rst_ttl:
+                      description: rst ttl
+                      format: int64
                       type: integer
                     sc_expr:
                       description: sc expr

@@ -74,6 +74,7 @@ func New(osArgs utils.OSArgs, env env.Env, cfgFile []byte, p process.Process, cl
 		err = fmt.Errorf("failed to initialize haproxy certificates: %w", err)
 		return
 	}
+	h.Certificates.SetAPI(h.HAProxyClient)
 	h.Rules = rules
 	if !osArgs.Test {
 		logVersion(h.Binary)

@@ -21,11 +21,11 @@ import (
 	"strings"
 	"testing"
 
-	parser "github.com/haproxytech/config-parser/v5"
-	"github.com/haproxytech/config-parser/v5/options"
-	tcp_actions "github.com/haproxytech/config-parser/v5/parsers/tcp/actions"
-	tcptypes "github.com/haproxytech/config-parser/v5/parsers/tcp/types"
-	"github.com/haproxytech/config-parser/v5/types"
+	parser "github.com/haproxytech/client-native/v5/config-parser"
+	"github.com/haproxytech/client-native/v5/config-parser/options"
+	tcp_actions "github.com/haproxytech/client-native/v5/config-parser/parsers/tcp/actions"
+	tcptypes "github.com/haproxytech/client-native/v5/config-parser/parsers/tcp/types"
+	"github.com/haproxytech/client-native/v5/config-parser/types"
 	"github.com/haproxytech/kubernetes-ingress/deploy/tests/e2e"
 	"github.com/stretchr/testify/suite"
 )
