@@ -871,6 +871,26 @@ annotations:
       - service
     version_min: "1.4"
     example: ['cookie-persistence: "mycookie"']
+  - title: cookie-persistence-no-dynamic
+    type: string
+    description:
+      - Enables persistent connections (sticky sessions) between a client and a pod by inserting a cookie
+        into the client's browser that is used to remember which backend pod they connected
+        to before.
+      - Dynamic cookies are not used contrary to cookie-persistence annotation. The cookie will have the server name.
+    tip:
+      - |-
+        This will insert the following cookie configuration in the corresponding backend
+        `cookie <cokkie-name> indirect nocache insert` with `<cookie-name>` the value of this annotation.
+        The server line will have `server <server-name> <server-address> enabled cookie <server-name>`
+    values:
+      - A name for the cookie
+    applies_to:
+      - configmap
+      - ingress
+      - service
+    version_min: "3.1"
+    example: ['cookie-persistence-no-dynamic: "mycookie"']
   - title: dontlognull
     type: bool
     group: logging

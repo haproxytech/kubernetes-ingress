@@ -48,7 +48,7 @@ func (s *Service) HandleHAProxySrvs(k8s store.K8s, client api.HAProxyClient) {
 	}
 	// update servers
 	for _, srvSlot := range backend.HAProxySrvs {
-		if srvSlot.Modified || s.newBackend {
+		if srvSlot.Modified || s.newBackend || s.serversToEdit {
 			s.updateHAProxySrv(client, *srvSlot, backend.Endpoints.Port)
 		}
 	}
@@ -65,6 +65,9 @@ func (s *Service) updateHAProxySrv(client api.HAProxyClient, srvSlot store.HAPro
 		Port:         &port,
 		Address:      "127.0.0.1",
 		ServerParams: models.ServerParams{Maintenance: "enabled"},
+	}
+	if s.backend.Cookie != nil && !s.backend.Cookie.Dynamic {
+		srv.ServerParams.Cookie = srvSlot.Name
 	}
 	// Enable Server
 	if srvSlot.Address != "" {

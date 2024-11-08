@@ -44,11 +44,12 @@ type Service struct {
 	backend  *models.Backend
 	// ingressName      string
 	// ingressNamespace string
-	ingress     *store.Ingress
-	annotations []map[string]string
-	modeTCP     bool
-	newBackend  bool
-	standalone  bool
+	ingress       *store.Ingress
+	annotations   []map[string]string
+	modeTCP       bool
+	newBackend    bool
+	standalone    bool
+	serversToEdit bool
 }
 
 // New returns a Service instance to handle the k8s IngressPath resource given in params.
@@ -76,8 +77,6 @@ func New(k store.K8s, path *store.IngressPath, certs certs.Certificates, tcpServ
 		modeTCP:     tcpService,
 		standalone:  standalone,
 		ingress:     ingress,
-		// ingressName:      ingressName,
-		// ingressNamespace: ingressNamespace,
 	}, nil
 }
 
@@ -156,6 +155,10 @@ func (s *Service) HandleBackend(storeK8s store.K8s, client api.HAProxyClient, a 
 		// Update Backend
 		diff := newBackend.Config.Diff(*backend)
 		if len(diff) != 0 {
+			// Detect if we have a diff on the server line
+			if isServersToEdit(newBackend.Config, backend) {
+				s.serversToEdit = true
+			}
 			if err = client.BackendEdit(*newBackend.Config); err != nil {
 				return
 			}
@@ -182,6 +185,21 @@ func (s *Service) HandleBackend(storeK8s store.K8s, client api.HAProxyClient, a 
 	backendCfgSnippetHandler.SetService(s.resource)
 	logger.Error(backendCfgSnippetHandler.Process(storeK8s, s.annotations...))
 	return
+}
+
+func isServersToEdit(oldBackend *models.Backend, newBackend *models.Backend) bool {
+	// Detect if we have a diff on the server line
+	newCookie := newBackend.Cookie
+	oldCookie := oldBackend.Cookie
+	var cookieAreDifferent bool
+	// Both are nil
+	if newCookie == nil || oldCookie == nil {
+		cookieAreDifferent = !(newCookie == oldCookie)
+		return cookieAreDifferent
+	}
+
+	cookieAreDifferent = len(newCookie.Diff(*oldCookie)) > 0
+	return cookieAreDifferent
 }
 
 // getBackendModel checks for a corresponding custom resource before falling back to annotations
