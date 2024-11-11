@@ -29,7 +29,7 @@ RUN mkdir -p /var/run/vars && \
         -ldflags "-X github.com/haproxytech/kubernetes-ingress/pkg/version.GitTag=$(cat /var/run/vars/GIT_LAST_TAG)" \
         -o fs/haproxy-ingress-controller .
 
-FROM haproxytech/haproxy-alpine:3.0
+FROM haproxytech/haproxy-alpine:3.1
 
 ARG TARGETPLATFORM
 
