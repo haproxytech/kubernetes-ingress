@@ -397,6 +397,13 @@ image_arguments:
     example: |-
       args:
         - --quic-bind-port=4443
+  - argument: --disable-writing-only-if-reload
+    description: Disable the delayed writing of files to disk ONLY in case of haproxy reload (= write files to disk even if no reload)
+    values:
+      - Boolean value, just need to declare the flag to disable
+    default: false
+    version_min: "3.1"
+    example: --disable-writing-only-if-reload
 groups:
   config-snippet:
     header: |-

@@ -207,6 +207,9 @@ func (c *HAProxyController) updateHAProxy() {
 			logger.Info("HAProxy reloaded")
 		}
 		c.prometheusMetricsManager.UpdateReloadMetrics(err)
+	} else if c.osArgs.DisableDelayedWritingOnlyIfReload {
+		// If the osArgs flag is set, then write the files to disk even if there is no reload of haproxy
+		fs.RunDelayedFuncs()
 	}
 
 	c.clean(false)

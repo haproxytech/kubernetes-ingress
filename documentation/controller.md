@@ -46,6 +46,7 @@ Image can be run with arguments:
 | [`--disable-quic`](#--disable-quic) | `false` |
 | [`--quic-announce-port`](#--quic-announce-port) |  |
 | [`--quic-bind-port`](#--quic-bind-port) |  |
+| [`--disable-writing-only-if-reload`](#--disable-writing-only-if-reload) :construction:(dev) | `false` |
 
 
 ### `--configmap`
@@ -811,6 +812,27 @@ Example:
 ```yaml
 args:
   - --quic-bind-port=4443
+```
+
+<p align='right'><a href='#haproxy-kubernetes-ingress-controller'>:arrow_up_small: back to top</a></p>
+
+***
+
+### `--disable-writing-only-if-reload`
+
+
+  > :construction: this is only available from next version, currently available in dev build
+
+  Disable the delayed writing of files to disk ONLY in case of haproxy reload (= write files to disk even if no reload)
+
+Possible values:
+
+- Boolean value, just need to declare the flag to disable
+
+Example:
+
+```yaml
+--disable-writing-only-if-reload
 ```
 
 <p align='right'><a href='#haproxy-kubernetes-ingress-controller'>:arrow_up_small: back to top</a></p>
