@@ -174,6 +174,10 @@ func (c *HAProxyController) updateHAProxy() {
 		logger.Error(handler.Update(c.store, c.haproxy, c.annotations))
 	}
 
+	if !c.ready {
+		c.setToReady()
+	}
+
 	err = c.haproxy.APICommitTransaction()
 	if err != nil {
 		logger.Error("unable to Sync HAProxy configuration !!")
@@ -190,10 +194,6 @@ func (c *HAProxyController) updateHAProxy() {
 			return
 		}
 		return
-	}
-
-	if !c.ready {
-		c.setToReady()
 	}
 
 	if instance.NeedReload() {
@@ -213,38 +213,32 @@ func (c *HAProxyController) updateHAProxy() {
 // setToRready exposes readiness endpoint
 func (c *HAProxyController) setToReady() {
 	healthzPort := c.osArgs.HealthzBindPort
-	logger.Panic(c.clientAPIClosure(func() error {
-		return c.haproxy.FrontendBindCreate("healthz",
+	logger.Panic(c.haproxy.FrontendBindCreate("healthz",
+		models.Bind{
+			BindParams: models.BindParams{
+				Name: "v4",
+			},
+			Address: fmt.Sprintf("0.0.0.0:%d", healthzPort),
+		}))
+	if !c.osArgs.DisableIPV6 {
+		logger.Panic(c.haproxy.FrontendBindCreate("healthz",
 			models.Bind{
 				BindParams: models.BindParams{
-					Name: "v4",
+					Name: "v6",
+					V4v6: true,
 				},
-				Address: fmt.Sprintf("0.0.0.0:%d", healthzPort),
-			})
-	}))
-	if !c.osArgs.DisableIPV6 {
-		logger.Panic(c.clientAPIClosure(func() error {
-			return c.haproxy.FrontendBindCreate("healthz",
-				models.Bind{
-					BindParams: models.BindParams{
-						Name: "v6",
-						V4v6: true,
-					},
-					Address: fmt.Sprintf(":::%d", healthzPort),
-				})
-		}))
+				Address: fmt.Sprintf(":::%d", healthzPort),
+			}))
 	}
 
-	logger.Panic(c.clientAPIClosure(func() error {
-		return c.haproxy.FrontendBindCreate("stats",
-			models.Bind{
-				BindParams: models.BindParams{
-					Name: "stats",
-				},
-				Address: fmt.Sprintf("*:%d", c.osArgs.StatsBindPort),
+	logger.Panic(c.haproxy.FrontendBindCreate("stats",
+		models.Bind{
+			BindParams: models.BindParams{
+				Name: "stats",
 			},
-		)
-	}))
+			Address: fmt.Sprintf("*:%d", c.osArgs.StatsBindPort),
+		},
+	))
 
 	logger.Debugf("healthz frontend exposed for readiness probe")
 	cm := c.store.ConfigMaps.Main
