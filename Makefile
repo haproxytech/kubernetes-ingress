@@ -73,7 +73,7 @@ build-pebble:
 ### Can be used for example to use `go replace` and build with a local library,
 .PHONY: build-dev
 build-dev:
-	GOOS=$(GOSS) GOARCH=$(GOARCH) go build .
+	GOOS=$(GOSS) GOARCH=$(GOARCH) CGO_ENABLED='0' go build .
 	docker build -t haproxytech/kubernetes-ingress --build-arg TARGETPLATFORM=$(TARGETPLATFORM) -f build/Dockerfile.dev .
 
 .PHONY: publish
