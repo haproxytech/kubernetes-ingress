@@ -108,9 +108,17 @@ func AddCustomRoute(route Route, routeACLAnn string, api api.HAProxyClient) (err
 	}
 	if route.Path.Path != "" {
 		if route.Path.PathTypeMatch == store.PATH_TYPE_EXACT {
-			routeCond = fmt.Sprintf("%s { path %s } ", routeCond, route.Path.Path)
+			if routeCond == "" {
+				routeCond = fmt.Sprintf("{ path %s }", route.Path.Path)
+			} else {
+				routeCond = fmt.Sprintf("%s { path %s }", routeCond, route.Path.Path)
+			}
 		} else {
-			routeCond = fmt.Sprintf("%s { path -m beg %s } ", routeCond, route.Path.Path)
+			if routeCond == "" {
+				routeCond = fmt.Sprintf("{ path -m beg %s }", route.Path.Path)
+			} else {
+				routeCond = fmt.Sprintf("%s { path -m beg %s }", routeCond, route.Path.Path)
+			}
 		}
 	}
 	routeCond = fmt.Sprintf("%s { %s } ", routeCond, routeACLAnn)
