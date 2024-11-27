@@ -169,6 +169,15 @@ func (c *clientNative) BackendServerEdit(backendName string, data models.Server)
 	return configuration.EditServer(data.Name, "backend", backendName, &data, c.activeTransaction, 0)
 }
 
+func (c *clientNative) BackendServerCreateOrEdit(backendName string, data models.Server) error {
+	configuration, err := c.nativeAPI.Configuration()
+	if err != nil {
+		return err
+	}
+	c.activeTransactionHasChanges = true
+	return configuration.CreateOrEditServer("backend", backendName, &data, c.activeTransaction, 0)
+}
+
 func (c *clientNative) BackendServerDelete(backendName string, serverName string) error {
 	configuration, err := c.nativeAPI.Configuration()
 	if err != nil {

@@ -4,7 +4,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.14.0
-    haproxy.org/client-native: v5.1.15-0.20241106115115-75c12953fe1f
+    haproxy.org/client-native: v5.1.16-0.20241206145631-acb903fd9ec2
   name: defaults.ingress.v1.haproxy.org
 spec:
   group: ingress.v1.haproxy.org

@@ -10,7 +10,7 @@ require (
 	github.com/google/go-cmp v0.6.0
 	github.com/google/renameio v1.0.1
 	github.com/haproxytech/client-native/v3 v3.1.2-0.20230607075433-231591da68ed
-	github.com/haproxytech/client-native/v5 v5.1.15-0.20241106115115-75c12953fe1f
+	github.com/haproxytech/client-native/v5 v5.1.16-0.20241206145631-acb903fd9ec2
 	github.com/jessevdk/go-flags v1.4.0
 	github.com/pires/go-proxyproto v0.7.0
 	github.com/prometheus/client_golang v1.20.5
@@ -81,6 +81,7 @@ require (
 	golang.org/x/exp v0.0.0-20241204233417-43b7b7cde48d // indirect
 	golang.org/x/net v0.32.0 // indirect
 	golang.org/x/oauth2 v0.24.0 // indirect
+	golang.org/x/sync v0.10.0 // indirect
 	golang.org/x/sys v0.28.0 // indirect
 	golang.org/x/term v0.27.0 // indirect
 	golang.org/x/text v0.21.0 // indirect

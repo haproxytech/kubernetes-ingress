@@ -18,7 +18,6 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
-	"strings"
 
 	"github.com/haproxytech/client-native/v5/models"
 
@@ -58,7 +57,6 @@ func (s *Service) HandleHAProxySrvs(k8s store.K8s, client api.HAProxyClient) {
 	}
 }
 
-// updateHAProxySrv updates corresponding HAProxy backend server or creates one if it does not exist
 func (s *Service) updateHAProxySrv(client api.HAProxyClient, srvSlot store.HAProxySrv, port int64) {
 	srv := models.Server{
 		Name:         srvSlot.Name,
@@ -75,21 +73,10 @@ func (s *Service) updateHAProxySrv(client api.HAProxyClient, srvSlot store.HAPro
 		srv.Maintenance = "disabled"
 	}
 	logger.Tracef("[CONFIG] [BACKEND] [SERVER] backend %s: about to update server in configuration file :  models.Server { Name: %s, Port: %d, Address: %s, Maintenance: %s }", s.backend.Name, srv.Name, *srv.Port, srv.Address, srv.Maintenance)
-	// Update server
-	errAPI := client.BackendServerEdit(s.backend.Name, srv)
+
+	errAPI := client.BackendServerCreateOrEdit(s.backend.Name, srv)
 	if errAPI == nil {
-		logger.Tracef("[CONFIG] [BACKEND] [SERVER] Updating server '%s/%s'", s.backend.Name, srv.Name)
-		return
-	}
-	// Create server
-	if strings.Contains(errAPI.Error(), "does not exist") {
-		logger.Tracef("[CONFIG] [BACKEND] [SERVER] Creating server '%s/%s'", s.backend.Name, srv.Name)
-		errAPI = client.BackendServerCreate(s.backend.Name, srv)
-		if errAPI != nil {
-			logger.Errorf("[CONFIG] [BACKEND] [SERVER] %v", errAPI)
-		}
-	} else {
-		logger.Errorf("[CONFIG] [BACKEND] [SERVER] %v", errAPI)
+		logger.Tracef("[CONFIG] [BACKEND] [SERVER] Creating/Updating server '%s/%s'", s.backend.Name, srv.Name)
 	}
 }
 

@@ -42,6 +42,7 @@ type HAProxyClient interface { //nolint:interfacebloat
 	BackendServerDeleteAll(backendName string) (deleteServers bool)
 	BackendServerCreate(backendName string, data models.Server) error
 	BackendServerEdit(backendName string, data models.Server) error
+	BackendServerCreateOrEdit(backendName string, data models.Server) error
 	BackendServerDelete(backendName string, serverName string) error
 	BackendServersGet(backendName string) (models.Servers, error)
 	BackendSwitchingRulesGet(frontendName string) (models.BackendSwitchingRules, error)
