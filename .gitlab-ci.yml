@@ -4,11 +4,11 @@ stages:
   - unit-tests
   - build
   - e2e-tests
-  - e2e_k8s_28
-  - e2e_k8s_29
   - e2e_k8s_30
+  - e2e_k8s_31
+  - e2e_k8s_32
 variables:
-  KIND: v0.24.0
+  KIND: v0.26.0
   DOCKER_HOST: tcp://docker:2375
   DOCKER_DRIVER: overlay2
   GO_VERSION: "1.23"
@@ -205,27 +205,27 @@ docker-build:
   rules:
    - if: $CI_PIPELINE_SOURCE == "schedule"
   allow_failure: true
-e2e_k8s_29:
-  stage: e2e_k8s_29
-  needs: ["docker-build"]
-  variables:
-    K8S_VERSION: v1.29.8
-    KUBEADM_VER: v1beta3
-    KUBECTL: v1.29.8
-  extends: .kind_deployment_schedules
 e2e_k8s_30:
   stage: e2e_k8s_30
   needs: ["docker-build"]
   variables:
-    K8S_VERSION: v1.30.4
+    K8S_VERSION: v1.30.8
     KUBEADM_VER: v1beta3
     KUBECTL: v1.30.4
   extends: .kind_deployment_schedules
 e2e_k8s_31:
-  stage: e2e_k8s_30
+  stage: e2e_k8s_31
   needs: ["docker-build"]
   variables:
-    K8S_VERSION: v1.31.0
+    K8S_VERSION: v1.31.4
+    KUBEADM_VER: v1beta3
+    KUBECTL: v1.31.0
+  extends: .kind_deployment_schedules
+e2e_k8s_32:
+  stage: e2e_k8s_32
+  needs: ["docker-build"]
+  variables:
+    K8S_VERSION: v1.32.0
     KUBEADM_VER: v1beta3
     KUBECTL: v1.31.0
   extends: .kind_deployment
