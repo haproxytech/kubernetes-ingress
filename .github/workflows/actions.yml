@@ -128,7 +128,7 @@ jobs:
   e2e:
     strategy:
       matrix:
-        k8s-version: ["v1.31.0"]
+        k8s-version: ["v1.32.0"]
     needs: ["build"]
     runs-on: ubuntu-latest
     steps:
