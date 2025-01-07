@@ -1152,7 +1152,7 @@ annotations:
       - ingress
       - configmap
     version_min: "1.4"
-    example: ["pod-maxconn: 30"]
+    example: ['pod-maxconn: "30"']
   - title: proxy-protocol
     type: IPs or CIDRs
     group: proxy-protocol
