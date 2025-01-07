@@ -32,3 +32,4 @@ allowed:
   - ssl
   - unix
   - parallelize
+  - maxconn
