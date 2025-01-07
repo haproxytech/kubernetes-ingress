@@ -1084,7 +1084,7 @@ Possible values:
 Example:
 
 ```yaml
-pod-maxconn: 30
+pod-maxconn: "30"
 ```
 
 <p align='right'><a href='#available-annotations'>:arrow_up_small: back to top</a></p>
