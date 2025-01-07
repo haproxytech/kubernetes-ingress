@@ -94,7 +94,7 @@ func (n ingressNetworkingV1Strategy) ConvertIngress() *Ingress {
 				for _, k8sRule := range ingressRules {
 					paths := make(map[string]*IngressPath)
 					if k8sRule.HTTP == nil {
-						logger.Warningf("Ingress HTTP rules for [%s] does not exists", k8sRule.Host)
+						logger.Warningf("Ingress HTTP rules for [%s] do not exist", k8sRule.Host)
 						continue
 					}
 					for _, k8sPath := range k8sRule.HTTP.Paths {
