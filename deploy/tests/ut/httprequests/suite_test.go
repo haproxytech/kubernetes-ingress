@@ -67,6 +67,10 @@ func (suite *HTTPRequestsSuite) BeforeTest(suiteName, testName string) {
 	suite.T().Logf("temporary configuration dir %s", suite.test.TempDir)
 }
 
+func (suite *HTTPRequestsSuite) TearDownSuite() {
+	os.Unsetenv("POD_NAME")
+}
+
 func (suite *HTTPRequestsSuite) UseHTTPRequestsFixture() (eventChan chan k8ssync.SyncDataEvent) {
 	var osArgs utils.OSArgs
 	os.Args = []string{os.Args[0], "-e", "-t", "--config-dir=" + suite.test.TempDir}
