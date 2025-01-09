@@ -21,6 +21,9 @@ import (
 	"io"
 	"strings"
 
+	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
+
 	"github.com/stretchr/testify/suite"
 
 	parser "github.com/haproxytech/client-native/v5/config-parser"
@@ -81,7 +84,19 @@ func (suite *CRDTCPSuite) BeforeTest(suiteName, testName string) {
 func (suite *CRDTCPSuite) checkFrontend(p parser.Parser, frontendName, param string, value common.ParserData) {
 	v, err := p.Get(parser.Frontends, frontendName, param)
 	suite.Require().NoError(err, "Could not get Haproxy config parser Frontend %s param %s", frontendName, param)
-	suite.Equal(value, v, fmt.Sprintf("Frontend param %s should be equal to %v but is %v", param, value, v))
+
+	// Sort functions for map[string]XXX
+	sortBinds := cmpopts.SortSlices(func(a, b types.Bind) bool {
+		return a.Path < b.Path
+	})
+	areEqual := cmp.Equal(v, value, sortBinds)
+
+	if !areEqual {
+		diff := cmp.Diff(v, value, sortBinds)
+		suite.T().Log(diff)
+	}
+
+	suite.Equal(areEqual, true, fmt.Sprintf("Frontend param %s should be equal to %v but is %v", param, value, v))
 }
 
 func (suite *CRDTCPSuite) checkBackend(p parser.Parser, backendName, param string, value common.ParserData) {
