@@ -15,6 +15,7 @@
 package configsnippet_test
 
 import (
+	"os"
 	"testing"
 
 	"github.com/haproxytech/kubernetes-ingress/deploy/tests/integration"
@@ -44,6 +45,8 @@ func (suite *DisableConfigSnippetSuite) BeforeTest(suiteName, testName string) {
 	suite.BaseSuite.BeforeTest(suiteName, testName)
 	// Add any needed update to the controller setting
 	// by updating suite.TestControllers[suite.T().Name()].XXXXX
+	os.Unsetenv("POD_NAME")
+	os.Unsetenv("POD_NAMESPACE")
 	testController := suite.TestControllers[suite.T().Name()]
 	testController.OSArgs.ConfigMap.Name = configMapName
 	testController.OSArgs.ConfigMap.Namespace = configMapNamespace
