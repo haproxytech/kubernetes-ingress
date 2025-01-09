@@ -67,6 +67,10 @@ func (suite *ACLSuite) BeforeTest(suiteName, testName string) {
 	suite.T().Logf("temporary configuration dir %s", suite.test.TempDir)
 }
 
+func (suite *ACLSuite) TearDownSuite() {
+	os.Unsetenv("POD_NAME")
+}
+
 func (suite *ACLSuite) UseACLFixture() (eventChan chan k8ssync.SyncDataEvent) {
 	var osArgs utils.OSArgs
 	os.Args = []string{os.Args[0], "-e", "-t", "--config-dir=" + suite.test.TempDir}
