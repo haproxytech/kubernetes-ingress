@@ -1,6 +1,7 @@
 mode: commit
 min_length: 3
 allowed:
+  - acl
   - aspell
   - repo
   - yaml
