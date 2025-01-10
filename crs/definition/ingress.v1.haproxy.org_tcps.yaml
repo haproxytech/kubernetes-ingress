@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.14.0
+    controller-gen.kubebuilder.io/version: v0.17.0
     haproxy.org/client-native: v5.1.16-0.20241206145631-acb903fd9ec2
   name: tcps.ingress.v1.haproxy.org
 spec:
@@ -55,20 +55,16 @@ spec:
                       description: |-
                         Acls ACL Lines Array
 
-
                         HAProxy ACL lines array (corresponds to acl directives)
-
 
                         swagger:model acls
                       items:
                         description: |-
                           ACL ACL Lines
 
-
                           The use of Access Control Lists (ACL) provides a flexible solution to perform
                           content switching and generally to take decisions based on content extracted
                           from the request, the response or any environmental status.
-
 
                           swagger:model acl
                         properties:
@@ -104,19 +100,15 @@ spec:
                       description: |-
                         BackendSwitchingRules Backend Switching Rules Array
 
-
                         HAProxy backend switching rules array (corresponds to use_backend directives)
-
 
                         swagger:model backend_switching_rules
                       items:
                         description: |-
                           BackendSwitchingRule Backend Switching Rule
 
-
                           HAProxy backend switching rule configuration (corresponds to use_backend directive)
                           Example: {"cond":"if","cond_test":"{ req_ssl_sni -i www.example.com }","index":0,"name":"test_backend"}
-
 
                           swagger:model backend_switching_rule
                         properties:
@@ -163,9 +155,7 @@ spec:
                         description: |-
                           Bind Bind
 
-
                           # HAProxy frontend bind configuration
-
 
                           swagger:model bind
                         properties:
@@ -486,12 +476,10 @@ spec:
                       description: |-
                         Captures Declare capture array
 
-
                         swagger:model captures
                       items:
                         description: |-
                           Capture Declare Capture
-
 
                           swagger:model capture
                         properties:
@@ -699,7 +687,6 @@ spec:
                         description: |-
                           Errorfile errorfile
 
-
                           swagger:model errorfile
                         properties:
                           code:
@@ -739,7 +726,6 @@ spec:
                       items:
                         description: |-
                           Errorfiles errorfiles
-
 
                           swagger:model errorfiles
                         properties:
@@ -832,19 +818,15 @@ spec:
                       description: |-
                         Filters Filters Array
 
-
                         HAProxy filters array (corresponds to filter directive)
-
 
                         swagger:model filters
                       items:
                         description: |-
                           Filter Filter
 
-
                           HAProxy filters
                           Example: {"index":0,"trace_name":"name","trace_rnd_parsing":true,"type":"trace"}
-
 
                           swagger:model filter
                         properties:
@@ -1120,18 +1102,14 @@ spec:
                       description: |-
                         LogTargets Log Target Array
 
-
                         HAProxy log target array (corresponds to log directives)
-
 
                         swagger:model log_targets
                       items:
                         description: |-
                           LogTarget Log Target
 
-
                           Per-instance logging of events and traffic.
-
 
                           swagger:model log_target
                         properties:
@@ -1378,7 +1356,6 @@ spec:
                             description: |-
                               StatsAuth stats auth
 
-
                               swagger:model stats_auth
                             properties:
                               passwd:
@@ -1407,7 +1384,6 @@ spec:
                           items:
                             description: |-
                               StatsHTTPRequest stats http request
-
 
                               swagger:model stats_http_request
                             properties:
@@ -1539,19 +1515,15 @@ spec:
                       description: |-
                         TCPRequestRules TCP Request Rules Array
 
-
                         HAProxy TCP request rules array (corresponds to tcp-request directive)
-
 
                         swagger:model tcp_request_rules
                       items:
                         description: |-
                           TCPRequestRule TCP Request Rule
 
-
                           HAProxy TCP Request Rule configuration (corresponds to tcp-request)
                           Example: {"cond":"if","cond_test":"{ src 192.168.0.0/16 }","index":0,"type":"connection"}
-
 
                           swagger:model tcp_request_rule
                         properties:

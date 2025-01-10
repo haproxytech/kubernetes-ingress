@@ -33,3 +33,4 @@ allowed:
   - unix
   - parallelize
   - maxconn
+  - kubebuilder
