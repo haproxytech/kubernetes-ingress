@@ -3,10 +3,9 @@ package rules
 import (
 	"errors"
 
-	"github.com/haproxytech/client-native/v5/models"
+	"github.com/haproxytech/client-native/v6/models"
 
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/api"
-	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
 )
 
 type RequestRedirectQuic struct{}
@@ -21,12 +20,11 @@ func (r RequestRedirectQuic) Create(client api.HAProxyClient, frontend *models.F
 	}
 
 	httpRule := models.HTTPRequestRule{
-		Index:      utils.PtrInt64(0),
 		Type:       "redirect",
 		Cond:       "unless",
 		CondTest:   "{ ssl_fc }",
 		RedirType:  "scheme",
 		RedirValue: "https",
 	}
-	return client.FrontendHTTPRequestRuleCreate(frontend.Name, httpRule, ingressACL)
+	return client.FrontendHTTPRequestRuleCreate(0, frontend.Name, httpRule, ingressACL)
 }

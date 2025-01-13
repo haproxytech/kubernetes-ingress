@@ -5,11 +5,10 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/haproxytech/client-native/v5/models"
+	"github.com/haproxytech/client-native/v6/models"
 
 	"github.com/haproxytech/kubernetes-ingress/pkg/annotations/common"
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
-	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
 )
 
 type SyslogServers struct {
@@ -36,7 +35,7 @@ func (a *SyslogServers) GetName() string {
 func (a *SyslogServers) Process(k store.K8s, annotations ...map[string]string) error {
 	input := common.GetValue(a.GetName(), annotations...)
 	a.stdout = false
-	for i, syslogLine := range strings.Split(input, "\n") {
+	for _, syslogLine := range strings.Split(input, "\n") {
 		if syslogLine == "" {
 			continue
 		}
@@ -57,7 +56,7 @@ func (a *SyslogServers) Process(k store.K8s, annotations ...map[string]string) e
 			}
 		}
 		// populate annotation data
-		logTarget := models.LogTarget{Index: utils.PtrInt64(int64(i))}
+		logTarget := models.LogTarget{}
 		address, ok := logParams["address"]
 		if !ok {
 			return fmt.Errorf("incorrect syslog Line: no address param in '%s'", syslogLine)

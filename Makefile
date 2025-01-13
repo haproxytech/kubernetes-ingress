@@ -15,6 +15,13 @@ e2e:
 	go test ./... --tags=e2e_parallel,e2e_https
 	go test ./... -p 1 --tags=e2e_sequential
 
+.PHONY: e2e_crd_v1
+e2e_crd_v1:
+	go clean -testcache
+	CRD_VERSION=v1 go test ./... --tags=e2e_parallel,e2e_https
+	CRD_VERSION=v1 go test ./... -p 1 --tags=e2e_sequential
+
+
 .PHONY: tidy
 tidy:
 	go mod tidy
@@ -79,7 +86,7 @@ build-pebble:
 ### Can be used for example to use `go replace` and build with a local library,
 .PHONY: build-dev
 build-dev:
-	GOOS=$(GOSS) GOARCH=$(GOARCH) CGO_ENABLED='0' go build .
+	GOOS=$(GOOS) GOARCH=$(GOARCH) CGO_ENABLED='0' go build .
 	docker build -t haproxytech/kubernetes-ingress --build-arg TARGETPLATFORM=$(TARGETPLATFORM) -f build/Dockerfile.dev .
 
 .PHONY: publish

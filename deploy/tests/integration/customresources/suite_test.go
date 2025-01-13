@@ -17,8 +17,8 @@ package customresources
 import (
 	"testing"
 
-	"github.com/haproxytech/client-native/v5/models"
-	v1 "github.com/haproxytech/kubernetes-ingress/crs/api/ingress/v1"
+	"github.com/haproxytech/client-native/v6/models"
+	v3 "github.com/haproxytech/kubernetes-ingress/crs/api/ingress/v3"
 	"github.com/haproxytech/kubernetes-ingress/deploy/tests/integration"
 	k8ssync "github.com/haproxytech/kubernetes-ingress/pkg/k8s/sync"
 	"github.com/stretchr/testify/suite"
@@ -37,13 +37,15 @@ func TestCustomResource(t *testing.T) {
 func (suite *CustomResourceSuite) GlobalCRFixture() {
 	suite.globalCREvt = k8ssync.SyncDataEvent{
 		SyncType: k8ssync.CR_GLOBAL,
-		Data: &v1.Global{
+		Data: &v3.Global{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "fake",
 			},
-			Spec: v1.GlobalSpec{
-				Config:     &models.Global{},
-				LogTargets: models.LogTargets{},
+			Spec: v3.GlobalSpec{
+				Global: models.Global{
+					GlobalBase:    models.GlobalBase{},
+					LogTargetList: models.LogTargets{},
+				},
 			},
 		},
 		Name: "globalcrjob",

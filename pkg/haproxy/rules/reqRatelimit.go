@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/haproxytech/client-native/v5/models"
+	"github.com/haproxytech/client-native/v6/models"
 
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/api"
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
@@ -25,11 +25,10 @@ func (r ReqRateLimit) Create(client api.HAProxyClient, frontend *models.Frontend
 		return errors.New("request Track cannot be configured in TCP mode")
 	}
 	httpRule := models.HTTPRequestRule{
-		Index:      utils.PtrInt64(0),
 		Type:       "deny",
 		DenyStatus: utils.PtrInt64(r.DenyStatusCode),
 		Cond:       "if",
 		CondTest:   fmt.Sprintf("{ sc0_http_req_rate(%s) gt %d }", r.TableName, r.ReqsLimit),
 	}
-	return client.FrontendHTTPRequestRuleCreate(frontend.Name, httpRule, ingressACL)
+	return client.FrontendHTTPRequestRuleCreate(0, frontend.Name, httpRule, ingressACL)
 }

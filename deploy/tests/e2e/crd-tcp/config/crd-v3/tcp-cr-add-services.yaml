@@ -1,0 +1,29 @@
+apiVersion: ingress.v3.haproxy.org/v3
+kind: TCP
+metadata:
+  name: tcp-1
+  annotations:
+    ingress.class: haproxy
+spec:
+  - name: tcp-http-echo-80
+    frontend:
+      name: fe-http-echo-80
+      tcplog: true
+      log_format: "%{+Q}o %t %s"
+      binds:
+        v4:
+          port: 32766
+          name: v4
+        v4v6:
+          address: "::"
+          name: v4v6
+          port: 32766
+          v4v6: true
+    service:
+      name: "http-echo"
+      port: 80
+    services:
+      - name: "http-echo-2"
+        port: 443
+      - name: "http-echo-2"
+        port: 80

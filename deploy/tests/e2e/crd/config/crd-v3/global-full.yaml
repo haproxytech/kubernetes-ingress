@@ -1,0 +1,130 @@
+apiVersion: ingress.v3.haproxy.org/v3
+kind: Global
+metadata:
+  creationTimestamp: null
+  name: global-full
+  namespace: haproxy-controller
+spec:
+  close_spread_time: 0
+  cpu_maps:
+  - cpu_set: 1/1
+    process: "1"
+  daemon: true
+  debug_options:
+    anonkey: 0
+  description: a test globals
+  device_atlas_options: {}
+  environment_options:
+    presetenv:
+    - name: test1
+      value: test1
+    setenv:
+    - name: test3
+      value: test3
+  fifty_one_degrees_options: {}
+  grace: 0
+  group: root
+  h1_case_adjust:
+  - from: content-length
+    to: Content-length
+  hard_stop_after: 0
+  http_client_options:
+    resolvers_disabled: enabled
+    resolvers_prefer: ipv6
+    ssl_verify: none
+    timeout_connect: 0
+  log_send_hostname:
+    enabled: enabled
+    param: aword
+  log_target_list:
+  - address: 1.2.3.4
+    facility: mail
+    format: rfc3164
+    level: emerg
+    minlevel: debug
+  lua_options:
+    prepend_path:
+    - path: aword
+      type: cpath
+  mworker_max_reloads: 0
+  numa_cpu_mapping: enabled
+  ocsp_update_options:
+    maxdelay: 10
+    mindelay: 5
+  performance_options:
+    max_spread_checks: 0
+    maxconn: 1007
+    profiling_tasks: auto
+    server_state_base: ssb_word
+  runtime_apis:
+  - address: 0.0.0.0:31025
+    alpn: aword
+    level: admin
+    maxconn: 10005
+    name: aword
+    quic-cc-algo: newreno
+    quic-force-retry: true
+    severity_output: none
+    ssl_max_ver: SSLv3
+    ssl_min_ver: TLSv1.1
+    tcp_user_timeout: 0
+    thread: all
+    verify: optional
+  set_var:
+  - expr: int(100)
+    name: proc.test2
+  set_var_fmt:
+  - format: primary
+    name: proc.current_state
+  setcap: cap_net_bind_service
+  ssl_options:
+    mode_async: enabled
+    server_verify: none
+  stats_maxconn: 10008
+  stats_timeout: 6000
+  tune_buffer_options:
+    buffers_limit: 0
+    buffers_reserve: 3
+    rcvbuf_client: 0
+    rcvbuf_server: 0
+    sndbuf_client: 0
+    sndbuf_server: 0
+  tune_lua_options:
+    burst_timeout: 0
+    log_loggers: disabled
+    log_stderr: disabled
+    service_timeout: 0
+    session_timeout: 0
+    task_timeout: 0
+  tune_options:
+    h2_initial_window_size: 0
+    http_maxhdr: 100
+    idle_pool_shared: disabled
+    idletimer: 0
+    listener_default_shards: by-process
+    listener_multi_queue: disabled
+    memory_hot_size: 7
+    pattern_cache_size: 0
+    sched_low_latency: disabled
+    stick_counters: 0
+  tune_quic_options:
+    frontend_conn_tx_buffers_limit: 7
+    frontend_max_idle_timeout: 0
+    frontend_max_streams_bidi: 8
+    max_frame_loss: 10
+    retry_threshold: 10
+    socket_owner: connection
+  tune_ssl_options:
+    cachesize: 0
+    capture_buffer_size: 0
+    keylog: disabled
+    lifetime: 0
+    maxrecord: 0
+  tune_vars_options:
+    global_max_size: 0
+    proc_max_size: 0
+    reqres_max_size: 0
+    sess_max_size: 0
+    txn_max_size: 0
+  user: root
+  wurfl_options: {}

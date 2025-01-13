@@ -17,7 +17,7 @@ package controller
 import (
 	"os"
 
-	v1 "github.com/haproxytech/kubernetes-ingress/crs/api/ingress/v1"
+	v3 "github.com/haproxytech/kubernetes-ingress/crs/api/ingress/v3"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/instance"
 	k8ssync "github.com/haproxytech/kubernetes-ingress/pkg/k8s/sync"
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
@@ -40,21 +40,21 @@ func (c *HAProxyController) SyncData() {
 				continue
 			}
 		case k8ssync.CR_GLOBAL:
-			var data *v1.Global
+			var data *v3.Global
 			if job.Data != nil {
-				data = job.Data.(*v1.Global) //nolint:forcetypeassert
+				data = job.Data.(*v3.Global) //nolint:forcetypeassert
 			}
 			change = c.store.EventGlobalCR(job.Namespace, job.Name, data)
 		case k8ssync.CR_DEFAULTS:
-			var data *v1.Defaults
+			var data *v3.Defaults
 			if job.Data != nil {
-				data = job.Data.(*v1.Defaults) //nolint:forcetypeassert
+				data = job.Data.(*v3.Defaults) //nolint:forcetypeassert
 			}
 			change = c.store.EventDefaultsCR(job.Namespace, job.Name, data)
 		case k8ssync.CR_BACKEND:
-			var data *v1.Backend
+			var data *v3.Backend
 			if job.Data != nil {
-				data = job.Data.(*v1.Backend) //nolint:forcetypeassert
+				data = job.Data.(*v3.Backend) //nolint:forcetypeassert
 			}
 			change = c.store.EventBackendCR(job.Namespace, job.Name, data)
 		case k8ssync.NAMESPACE:

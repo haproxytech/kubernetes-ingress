@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:build e2e_parallel
+//go:build e2e_sequential
 
 package crd
 
@@ -53,7 +53,7 @@ func (suite *DeployCRDSuite) Test_CRD_Deploy_NOK() {
 		suite.Require().NoError(suite.test.Apply("config/defaults.yaml.tmpl", suite.test.GetNS(), suite.tmplData))
 		// NOK enum
 		err := suite.test.Apply("config/backend.yaml.tmpl", suite.test.GetNS(), suite.tmplData)
-		suite.Require().ErrorContains(err, `The Backend "backends-test" is invalid: spec.config.hash_type.function: Unsupported value:`)
+		suite.Require().ErrorContains(err, `The Backend "backends-test" is invalid: spec.hash_type.function: Unsupported value:`)
 	})
 
 	suite.Run("CRs Minimum NOK", func() {
@@ -63,7 +63,7 @@ func (suite *DeployCRDSuite) Test_CRD_Deploy_NOK() {
 		suite.tmplData.DefaultCookieDomain = "example.com" // pattern ok
 		// Min NOK
 		err := suite.test.Apply("config/global.yaml.tmpl", suite.test.GetNS(), suite.tmplData)
-		suite.Require().ErrorContains(err, `The Global "globals-test" is invalid: spec.config.tune_options.buffers_reserve: Invalid value:`)
+		suite.Require().ErrorContains(err, `The Global "globals-test" is invalid: spec.tune_buffer_options.buffers_reserve: Invalid value:`)
 		suite.Require().NoError(suite.test.Apply("config/defaults.yaml.tmpl", suite.test.GetNS(), suite.tmplData))
 		suite.Require().NoError(suite.test.Apply("config/backend.yaml.tmpl", suite.test.GetNS(), suite.tmplData))
 	})
@@ -75,7 +75,7 @@ func (suite *DeployCRDSuite) Test_CRD_Deploy_NOK() {
 		suite.tmplData.DefaultCookieDomain = "example.com" // pattern ok
 		// Min NOK
 		err := suite.test.Apply("config/global.yaml.tmpl", suite.test.GetNS(), suite.tmplData)
-		suite.Require().ErrorContains(err, `The Global "globals-test" is invalid: spec.config.tune_options.events_max_events_at_once: Invalid value:`)
+		suite.Require().ErrorContains(err, `The Global "globals-test" is invalid: spec.tune_options.events_max_events_at_once: Invalid value:`)
 		suite.Require().NoError(suite.test.Apply("config/defaults.yaml.tmpl", suite.test.GetNS(), suite.tmplData))
 		suite.Require().NoError(suite.test.Apply("config/backend.yaml.tmpl", suite.test.GetNS(), suite.tmplData))
 	})
@@ -88,7 +88,7 @@ func (suite *DeployCRDSuite) Test_CRD_Deploy_NOK() {
 		suite.Require().NoError(suite.test.Apply("config/global.yaml.tmpl", suite.test.GetNS(), suite.tmplData))
 		// Pattern NOK
 		err := suite.test.Apply("config/defaults.yaml.tmpl", suite.test.GetNS(), suite.tmplData)
-		suite.Require().ErrorContains(err, `The Defaults "defaults-test" is invalid: spec.config.cookie.domain[0].value: Invalid value:`)
+		suite.Require().ErrorContains(err, `The Defaults "defaults-test" is invalid: spec.cookie.domain[0].value: Invalid value:`)
 		suite.Require().NoError(suite.test.Apply("config/backend.yaml.tmpl", suite.test.GetNS(), suite.tmplData))
 	})
 }

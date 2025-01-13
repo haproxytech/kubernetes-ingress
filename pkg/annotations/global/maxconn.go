@@ -3,7 +3,7 @@ package global
 import (
 	"strconv"
 
-	"github.com/haproxytech/client-native/v5/models"
+	"github.com/haproxytech/client-native/v6/models"
 
 	"github.com/haproxytech/kubernetes-ingress/pkg/annotations/common"
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
@@ -24,14 +24,16 @@ func (a *Maxconn) GetName() string {
 
 func (a *Maxconn) Process(k store.K8s, annotations ...map[string]string) error {
 	input := common.GetValue(a.GetName(), annotations...)
+	perfOptions := models.PerformanceOptions{}
 	if input == "" {
-		a.global.Maxconn = 0
+		perfOptions.Maxconn = 0
 		return nil
 	}
 	v, err := strconv.Atoi(input)
 	if err != nil {
 		return err
 	}
-	a.global.Maxconn = int64(v)
+	perfOptions.Maxconn = int64(v)
+	a.global.PerformanceOptions = &perfOptions
 	return nil
 }

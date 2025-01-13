@@ -18,7 +18,7 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/haproxytech/client-native/v5/models"
+	"github.com/haproxytech/client-native/v6/models"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/api"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/instance"
 	"github.com/haproxytech/kubernetes-ingress/pkg/k8s"
@@ -205,9 +205,11 @@ func (gm GatewayManagerImpl) manageTCPRoutes() {
 			// If not called on the route, the afferent backend will be automatically deleted.
 			gm.haproxyClient.BackendCreateIfNotExist(
 				models.Backend{
-					Name:          getBackendName(*tcproute),
-					Mode:          "tcp",
-					DefaultServer: &models.DefaultServer{ServerParams: models.ServerParams{Check: "enabled"}},
+					BackendBase: models.BackendBase{
+						Name:          getBackendName(*tcproute),
+						Mode:          "tcp",
+						DefaultServer: &models.DefaultServer{ServerParams: models.ServerParams{Check: "enabled"}},
+					},
 				})
 
 			_, backendExists := gm.backends[tcpRouteBackendName]
@@ -256,7 +258,7 @@ MAIN_LOOP:
 		}
 
 		frontendName := getFrontendName(listener)
-		errFrontendCreate := gm.haproxyClient.FrontendCreate(models.Frontend{
+		errFrontendCreate := gm.haproxyClient.FrontendCreate(models.FrontendBase{
 			Name:   frontendName,
 			Mode:   "tcp",
 			Tcplog: true,
@@ -501,7 +503,7 @@ func (gm GatewayManagerImpl) addRouteToListener(frontendName string, route store
 		return err
 	}
 	frontend.DefaultBackend = getBackendName(route)
-	errEdit := gm.haproxyClient.FrontendEdit(frontend)
+	errEdit := gm.haproxyClient.FrontendEdit(frontend.FrontendBase)
 	if errEdit == nil {
 		// the counter of attached routes for listener status is incremented.
 		gm.statusManager.IncrementRouteForListener(listener)

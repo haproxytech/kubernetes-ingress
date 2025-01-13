@@ -15,17 +15,15 @@
 package store
 
 import (
-	v1 "github.com/haproxytech/kubernetes-ingress/crs/api/ingress/v1"
+	v3 "github.com/haproxytech/kubernetes-ingress/crs/api/ingress/v3"
 )
 
-func (k *K8s) EventGlobalCR(namespace, name string, data *v1.Global) bool {
+func (k *K8s) EventGlobalCR(namespace, name string, data *v3.Global) bool {
 	ns := k.GetNamespace(namespace)
 	if data == nil {
 		delete(ns.CRs.Global, name)
-		delete(ns.CRs.LogTargets, name)
 		return true
 	}
-	ns.CRs.Global[name] = data.Spec.Config
-	ns.CRs.LogTargets[name] = data.Spec.LogTargets
+	ns.CRs.Global[name] = &data.Spec.Global
 	return true
 }

@@ -3,10 +3,9 @@ package rules
 import (
 	"errors"
 
-	"github.com/haproxytech/client-native/v5/models"
+	"github.com/haproxytech/client-native/v6/models"
 
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/api"
-	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
 )
 
 type ReqInspectDelay struct {
@@ -23,8 +22,7 @@ func (r ReqInspectDelay) Create(client api.HAProxyClient, frontend *models.Front
 	}
 	tcpRule := models.TCPRequestRule{
 		Type:    "inspect-delay",
-		Index:   utils.PtrInt64(0),
 		Timeout: r.Timeout,
 	}
-	return client.FrontendTCPRequestRuleCreate(frontend.Name, tcpRule, ingressACL)
+	return client.FrontendTCPRequestRuleCreate(0, frontend.Name, tcpRule, ingressACL)
 }

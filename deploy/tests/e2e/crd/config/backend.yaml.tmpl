@@ -1,332 +1,87 @@
-apiVersion: ingress.v1.haproxy.org/v1
+apiVersion: ingress.v3.haproxy.org/v3
 kind: Backend
 metadata:
+  creationTimestamp: null
   name: backends-test
 spec:
-  config:
-    #abortonclose: ""
-    accept_invalid_http_response: "enabled"
-    adv_check: "ssl-hello-chk"
-    allbackups: "enabled"
-    # balance:
-    #   algorithm: ""
-    #   hash_expression: ""
-    #   hdr_name: ""
-    #   hdr_use_domain_only: false
-    #   random_draws: 0
-    #   rdp_cookie_name: ""
-    #   uri_depth: 0
-    #   uri_len: 0
-    #   uri_path_only: false
-    #   uri_whole: false
-    #   url_param: ""
-    #   url_param_check_post: 0
-    #   url_param_max_wait: 0
-    bind_process: "aword"
-    check_timeout: 0
-    checkcache: "enabled"
-    compression:
-      algorithms:
-      - ""
-      offload: false
-      types:
-      - ""
-    connect_timeout: 0
-    cookie:
-      attr:
-      - value: "aword"
-      domain:
-      - value: "aword"
-      dynamic: false
-      httponly: false
-      indirect: false
-      maxidle: 0
-      maxlife: 0
-      name: "anicename"
-      nocache: false
-      postonly: false
-      preserve: false
-      secure: false
-      type: "rewrite"
-    # default_server:
-    #   agent-addr: ""
-    #   agent-check: ""
-    #   agent-inter: 0
-    #   agent-port: 0
-    #   agent-send: ""
-    #   allow_0rtt: false
-    #   alpn: ""
-    #   backup: ""
-    #   check: ""
-    #   check-send-proxy: ""
-    #   check-sni: ""
-    #   check-ssl: ""
-    #   check_alpn: ""
-    #   check_proto: ""
-    #   check_via_socks4: ""
-    #   ciphers: ""
-    #   ciphersuites: ""
-    #   client_sigalgs: ""
-    #   cookie: ""
-    #   crl_file: ""
-    #   curves: ""
-    #   downinter: 0
-    #   error_limit: 0
-    #   fall: 0
-    #   fastinter: 0
-    #   force_sslv3: ""
-    #   force_tlsv10: ""
-    #   force_tlsv11: ""
-    #   force_tlsv12: ""
-    #   force_tlsv13: ""
-    #   health_check_address: ""
-    #   health_check_port: 0
-    #   init-addr: ""
-    #   inter: 0
-    #   log-bufsize: 0
-    #   log_proto: ""
-    #   maintenance: ""
-    #   max_reuse: 0
-    #   maxconn: 0
-    #   maxqueue: 0
-    #   minconn: 0
-    #   namespace: ""
-    #   no_sslv3: ""
-    #   no_tlsv10: ""
-    #   no_tlsv11: ""
-    #   no_tlsv12: ""
-    #   no_tlsv13: ""
-    #   no_verifyhost: ""
-    #   npn: ""
-    #   observe: ""
-    #   on-error: ""
-    #   on-marked-down: ""
-    #   on-marked-up: ""
-    #   pool_low_conn: 0
-    #   pool_max_conn: 0
-    #   pool_purge_delay: 0
-    #   proto: ""
-    #   proxy-v2-options:
-    #   - ""
-    #   redir: ""
-    #   resolve-net: ""
-    #   resolve-prefer: ""
-    #   resolve_opts: ""
-    #   resolvers: ""
-    #   rise: 0
-    #   send-proxy: ""
-    #   send-proxy-v2: ""
-    #   send_proxy_v2_ssl: ""
-    #   send_proxy_v2_ssl_cn: ""
-    #   shard: 0
-    #   sigalgs: ""
-    #   slowstart: 0
-    #   sni: ""
-    #   socks4: ""
-    #   source: ""
-    #   ssl: ""
-    #   ssl_cafile: ""
-    #   ssl_certificate: ""
-    #   ssl_max_ver: ""
-    #   ssl_min_ver: ""
-    #   ssl_reuse: ""
-    #   stick: ""
-    #   tcp_ut: 0
-    #   tfo: ""
-    #   tls_tickets: ""
-    #   track: ""
-    #   verify: ""
-    #   verifyhost: ""
-    #   weight: 0
-    #   ws: ""
-    description: ""
-    disabled: false
-    #dynamic_cookie_key: ""
-    # email_alert:
-    #   from: ""
-    #   level: ""
-    #   mailers: ""
-    #   myhostname: ""
-    #   to: ""
-    enabled: false
-    error_files:
-    - code: 200
-      file: ""
-    errorfiles_from_http_errors:
-    - codes:
-      - 0
-      name: ""
-    errorloc302:
-      code: 200
-      url: ""
-    errorloc303:
-      code: 400
-      url: ""
-    #external_check: ""
-    #external_check_command: ""
-    #external_check_path: ""
-    force_persist:
-      cond: "if"
-      cond_test: ""
-    # forwardfor:
-    #   enabled: ""
-    #   except: ""
-    #   header: ""
-    #   ifnone: false
-    #from: ""
-    fullconn: 0
-    h1_case_adjust_bogus_server: "enabled"
-    hash_type:
-      function: {{ .BackendHashTypeFunction }}
-      method: "consistent"
-      modifier: "avalanche"
-    #http-buffer-request: ""
-    # http-check:
-    #   addr: ""
-    #   alpn: ""
-    #   body: ""
-    #   body_log_format: ""
-    #   check_comment: ""
-    #   default: false
-    #   error_status: ""
-    #   exclamation_mark: false
-    #   headers:
-    #   - fmt: ""
-    #     name: ""
-    #   index: 0
-    #   linger: false
-    #   match: ""
-    #   method: ""
-    #   min_recv: 0
-    #   ok_status: ""
-    #   on_error: ""
-    #   on_success: ""
-    #   pattern: ""
-    #   port: 0
-    #   port_string: ""
-    #   proto: ""
-    #   send_proxy: false
-    #   sni: ""
-    #   ssl: false
-    #   status-code: ""
-    #   tout_status: ""
-    #   type: ""
-    #   uri: ""
-    #   uri_log_format: ""
-    #   var_expr: ""
-    #   var_format: ""
-    #   var_name: ""
-    #   var_scope: ""
-    #   version: ""
-    #   via_socks4: false
-    #http-keep-alive: ""
-    #http-no-delay: ""
-    http-server-close: "enabled"
-    #http-use-htx: ""
-    http_connection_mode: "httpclose"
-    http_keep_alive_timeout: 0
-    #http_pretend_keepalive: ""
-    http_proxy: "enabled"
-    http_request_timeout: 0
-    #http_restrict_req_hdr_names: ""
-    http_reuse: "aggressive"
-    http_send_name_header: ""
-    httpchk_params:
-      method: "GET"
-      uri: ""
-      version: ""
-    #httpclose: ""
-    id: 0
-    ignore_persist:
-      cond: "if"
-      cond_test: ""
-    #independent_streams: ""
-    load_server_state_from_file: "local"
-    log_health_checks: "enabled"
-    log_tag: "aword"
-    max_keep_alive_queue: 0
-    mode: "http"
-    # mysql_check_params:
-    #   client_version: ""
-    #   username: ""
-    name: "anicename"
-    nolinger: "disabled"
-    # originalto:
-    #   enabled: ""
-    #   except: ""
-    #   header: ""
-    #persist: ""
-    persist_rule:
-      rdp_cookie_name: "aword"
-      type: "rdp-cookie"
-    pgsql_check_params:
-      username: ""
-    prefer_last_server: "enabled"
-    queue_timeout: 0
-    redispatch:
-      enabled: "enabled"
-      interval: 0
-    retries: 0
-    retry_on: ""
-    server_fin_timeout: 0
-    server_state_file_name: ""
-    server_timeout: 0
-    smtpchk_params:
-      domain: ""
-      hello: ""
-    source:
-      address: ""
-      address_second: ""
-      hdr: ""
-      interface: ""
-      occ: ""
-      port: 1
-      port_second: 2
-      usesrc: "client"
-    #splice_auto: ""
-    #splice_request: ""
-    #splice_response: ""
-    #spop_check: ""
-    srvtcpka: "enabled"
-    srvtcpka_cnt: 0
-    srvtcpka_idle: 0
-    srvtcpka_intvl: 0
-    # stats_options:
-    #   stats_admin: false
-    #   stats_admin_cond: ""
-    #   stats_admin_cond_test: ""
-    #   stats_auths:
-    #   - passwd: ""
-    #     user: ""
-    #   stats_enable: false
-    #   stats_hide_version: false
-    #   stats_http_requests:
-    #   - cond: ""
-    #     cond_test: ""
-    #     realm: ""
-    #     type: ""
-    #   stats_maxconn: 0
-    #   stats_realm: false
-    #   stats_realm_realm: ""
-    #   stats_refresh_delay: 0
-    #   stats_show_desc: ""
-    #   stats_show_legends: false
-    #   stats_show_modules: false
-    #   stats_show_node_name: ""
-    #   stats_uri_prefix: ""
-    # stick_table:
-    #   expire: 0
-    #   keylen: 0
-    #   nopurge: false
-    #   peers: ""
-    #   size: 0
-    #   srvkey: ""
-    #   store: ""
-    #   type: "ipv6"
-    #   write_to: ""
-    tarpit_timeout: 0
-    tcp_smart_connect: "enabled"
-    #tcpka: ""
-    #transparent: ""
-    tunnel_timeout: 0
-    use_fcgi_app: ""
+  accept_invalid_http_response: enabled
+  adv_check: ssl-hello-chk
+  allbackups: enabled
+  check_timeout: 0
+  checkcache: enabled
+  compression:
+    algorithms:
+    - ""
+    types:
+    - ""
+  connect_timeout: 0
+  cookie:
+    attr:
+    - value: aword
+    domain:
+    - value: aword
+    name: anicename
+    type: rewrite
+  error_files:
+  - code: 200
+  errorfiles_from_http_errors:
+  - codes:
+    - 0
+  errorloc302:
+    code: 200
+    url: ""
+  errorloc303:
+    code: 400
+    url: ""
+  force_persist:
+    cond: if
+    cond_test: ""
+  fullconn: 0
+  h1_case_adjust_bogus_server: enabled
+  hash_type:
+    function: {{ .BackendHashTypeFunction }}
+    method: consistent
+    modifier: avalanche
+  http_connection_mode: httpclose
+  http_keep_alive_timeout: 0
+  http_proxy: enabled
+  http_request_timeout: 0
+  http_reuse: aggressive
+  http_send_name_header: ""
+  httpchk_params:
+    method: GET
+  id: 0
+  ignore_persist:
+    cond: if
+    cond_test: ""
+  load_server_state_from_file: local
+  log_health_checks: enabled
+  log_tag: aword
+  max_keep_alive_queue: 0
+  mode: http
+  name: anicename
+  nolinger: disabled
+  persist_rule:
+    rdp_cookie_name: aword
+    type: rdp-cookie
+  pgsql_check_params: {}
+  prefer_last_server: enabled
+  queue_timeout: 0
+  redispatch:
+    enabled: enabled
+  retries: 0
+  server_fin_timeout: 0
+  server_timeout: 0
+  smtpchk_params: {}
+  source:
+    address: ""
+    port: 1
+    port_second: 2
+    usesrc: client
+  srvtcpka: enabled
+  srvtcpka_cnt: 0
+  srvtcpka_idle: 0
+  srvtcpka_intvl: 0
+  tarpit_timeout: 0
+  tcp_smart_connect: enabled
+  tunnel_timeout: 0

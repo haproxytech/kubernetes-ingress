@@ -3,10 +3,9 @@ package rules
 import (
 	"fmt"
 
-	"github.com/haproxytech/client-native/v5/models"
+	"github.com/haproxytech/client-native/v6/models"
 
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/api"
-	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
 )
 
 type ReqSetSrc struct {
@@ -23,17 +22,15 @@ func (r ReqSetSrc) Create(client api.HAProxyClient, frontend *models.Frontend, i
 	}
 	if frontend.Mode == "tcp" {
 		tcpRule := models.TCPRequestRule{
-			Index: utils.PtrInt64(0),
-			Type:  "set-src",
-			Expr:  fmt.Sprintf("hdr(%s)", r.HeaderName),
+			Type: "set-src",
+			Expr: fmt.Sprintf("hdr(%s)", r.HeaderName),
 		}
-		return client.FrontendTCPRequestRuleCreate(frontend.Name, tcpRule, ingressACL)
+		return client.FrontendTCPRequestRuleCreate(0, frontend.Name, tcpRule, ingressACL)
 	}
 	httpRule := models.HTTPRequestRule{
-		Index: utils.PtrInt64(0),
-		Type:  "set-src",
-		Expr:  fmt.Sprintf("hdr(%s)", r.HeaderName),
+		Type: "set-src",
+		Expr: fmt.Sprintf("hdr(%s)", r.HeaderName),
 	}
 	ingressACL += " || !{ var(txn.path_match) -m found }"
-	return client.FrontendHTTPRequestRuleCreate(frontend.Name, httpRule, ingressACL)
+	return client.FrontendHTTPRequestRuleCreate(0, frontend.Name, httpRule, ingressACL)
 }

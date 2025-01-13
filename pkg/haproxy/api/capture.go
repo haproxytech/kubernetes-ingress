@@ -1,13 +1,13 @@
 package api
 
-import "github.com/haproxytech/client-native/v5/models"
+import "github.com/haproxytech/client-native/v6/models"
 
-func (c *clientNative) CaptureCreate(frontend string, rule models.Capture) error {
+func (c *clientNative) CaptureCreate(id int64, frontend string, rule models.Capture) error {
 	configuration, err := c.nativeAPI.Configuration()
 	if err != nil {
 		return err
 	}
-	return configuration.CreateDeclareCapture(frontend, &rule, c.activeTransaction, 0)
+	return configuration.CreateDeclareCapture(id, frontend, &rule, c.activeTransaction, 0)
 }
 
 func (c *clientNative) CaptureDeleteAll(frontend string) (err error) {
@@ -38,4 +38,17 @@ func (c *clientNative) CapturesGet(frontend string) (models.Captures, error) {
 		return nil, err
 	}
 	return rules, nil
+}
+
+func (c *clientNative) CapturesReplace(frontend string, rules models.Captures) error {
+	configuration, err := c.nativeAPI.Configuration()
+	if err != nil {
+		return err
+	}
+
+	err = configuration.ReplaceDeclareCaptures(frontend, rules, c.activeTransaction, 0)
+	if err != nil {
+		return err
+	}
+	return nil
 }

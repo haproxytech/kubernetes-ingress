@@ -47,6 +47,8 @@ Image can be run with arguments:
 | [`--quic-announce-port`](#--quic-announce-port) |  |
 | [`--quic-bind-port`](#--quic-bind-port) |  |
 | [`--disable-writing-only-if-reload`](#--disable-writing-only-if-reload) :construction:(dev) | `false` |
+| [`--input-file`](#--input-file) :construction:(dev) |  |
+| [`--output-file`](#--output-file) :construction:(dev) |  |
 
 
 ### `--configmap`
@@ -833,6 +835,50 @@ Example:
 
 ```yaml
 --disable-writing-only-if-reload
+```
+
+<p align='right'><a href='#haproxy-kubernetes-ingress-controller'>:arrow_up_small: back to top</a></p>
+
+***
+
+### `--input-file`
+
+
+  > :construction: this is only available from next version, currently available in dev build
+
+  This is the path to a manifest (yaml) of a v1 version to the CRDs to convert to v3.
+Goes with --output-file for the result
+
+Possible values:
+
+- Path a to a CRD manifest you want to convert to the latest version
+
+Example:
+
+```yaml
+--input-file=/home/xxx/convert/v1/global-full.yaml
+```
+
+<p align='right'><a href='#haproxy-kubernetes-ingress-controller'>:arrow_up_small: back to top</a></p>
+
+***
+
+### `--output-file`
+
+
+  > :construction: this is only available from next version, currently available in dev build
+
+  This is the path to a manifest (yaml) where to write to the converted v3 CRD from a v1 manifest (see --input-file).
+Goes with --input-file
+
+Possible values:
+
+- Path a to a CRD manifest where the converted v3 CRDs will be written
+
+Example:
+
+```yaml
+--output-file=/home/xxx/convert/v3/global-full.yaml
 ```
 
 <p align='right'><a href='#haproxy-kubernetes-ingress-controller'>:arrow_up_small: back to top</a></p>

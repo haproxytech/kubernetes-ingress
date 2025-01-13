@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"flag"
 	"fmt"
+	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -57,7 +58,43 @@ func NewTest() (test Test, err error) {
 	if err != nil {
 		return test, fmt.Errorf("error creating template dir: %w ", err)
 	}
+
+	if os.Getenv("CRD_VERSION") == "v1" {
+		log.Print("WARNING - env variable CRD_VERSION=v1 - creating CRDs")
+
+		projectRoot, err := getProjectRoot()
+		if err != nil {
+			return test, fmt.Errorf("error getting project root: %w ", err)
+		}
+		_ = test.Apply(filepath.Join(projectRoot, "crs/definition/ingress.v1.haproxy.org_backends.yaml"), test.GetNS(), nil)
+		_ = test.Apply(filepath.Join(projectRoot, "crs/definition/ingress.v1.haproxy.org_defaults.yaml"), test.GetNS(), nil)
+		_ = test.Apply(filepath.Join(projectRoot, "crs/definition/ingress.v1.haproxy.org_globals.yaml"), test.GetNS(), nil)
+		_ = test.Apply(filepath.Join(projectRoot, "crs/definition/ingress.v1.haproxy.org_tcps.yaml"), test.GetNS(), nil)
+	}
+
 	return test, nil
+}
+
+func getProjectRoot() (string, error) {
+	// Start from the current directory
+	wd, err := os.Getwd()
+	if err != nil {
+		return "", err
+	}
+
+	// Traverse upward to find the root directory (assumes a known marker file, e.g., "go.mod")
+	for {
+		if _, err := os.Stat(filepath.Join(wd, "go.mod")); err == nil {
+			return wd, nil
+		}
+
+		parent := filepath.Dir(wd)
+		if parent == wd {
+			break // Reached the filesystem root
+		}
+		wd = parent
+	}
+	return "", os.ErrNotExist
 }
 
 func (t *Test) GetNS() string {
@@ -119,6 +156,7 @@ func (t *Test) TearDown() error {
 			return err
 		}
 	}
+
 	return nil
 }
 
@@ -175,4 +213,12 @@ func setupNamespace() (string, error) {
 		return r
 	}, strings.ToLower(dir))
 	return "e2e-tests-" + dir, nil
+}
+
+func GetCRDFixturePath() string {
+	path := "config/crd-v3"
+	if os.Getenv("CRD_VERSION") == "v1" {
+		path = "config/crd-v1"
+	}
+	return path
 }

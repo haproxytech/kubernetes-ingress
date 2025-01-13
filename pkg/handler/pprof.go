@@ -17,7 +17,7 @@ package handler
 import (
 	"fmt"
 
-	"github.com/haproxytech/client-native/v5/models"
+	"github.com/haproxytech/client-native/v6/models"
 
 	"github.com/haproxytech/kubernetes-ingress/pkg/annotations"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy"
@@ -34,10 +34,11 @@ func (handler Pprof) Update(k store.K8s, h haproxy.HAProxy, a annotations.Annota
 
 	if !h.BackendExists(pprofBackend) {
 		h.BackendCreatePermanently(models.Backend{
-			Name: pprofBackend,
-			Mode: "http",
+			BackendBase: models.BackendBase{
+				Name: pprofBackend,
+				Mode: "http",
+			},
 		})
-
 		err = h.BackendServerCreateOrUpdate(pprofBackend, models.Server{
 			Name:    pprofBackend,
 			Address: fmt.Sprintf("127.0.0.1:%d", h.Env.ControllerPort),

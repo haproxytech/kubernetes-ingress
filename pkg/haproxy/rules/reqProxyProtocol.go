@@ -3,11 +3,10 @@ package rules
 import (
 	"fmt"
 
-	"github.com/haproxytech/client-native/v5/models"
+	"github.com/haproxytech/client-native/v6/models"
 
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/api"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/maps"
-	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
 )
 
 type ReqProxyProtocol struct {
@@ -20,11 +19,10 @@ func (r ReqProxyProtocol) GetType() Type {
 
 func (r ReqProxyProtocol) Create(client api.HAProxyClient, frontend *models.Frontend, ingressACL string) error {
 	tcpRule := models.TCPRequestRule{
-		Index:    utils.PtrInt64(0),
 		Type:     "connection",
 		Action:   models.TCPRequestRuleActionExpectDashProxy,
 		Cond:     "if",
 		CondTest: fmt.Sprintf("{ src -f %s }", r.SrcIPsMap),
 	}
-	return client.FrontendTCPRequestRuleCreate(frontend.Name, tcpRule, ingressACL)
+	return client.FrontendTCPRequestRuleCreate(0, frontend.Name, tcpRule, ingressACL)
 }

@@ -1,0 +1,40 @@
+apiVersion: ingress.v3.haproxy.org/v3
+kind: TCP
+metadata:
+  annotations:
+    ingress.class: haproxy
+  creationTimestamp: null
+  name: tcp-1
+spec:
+- frontend:
+    backend_switching_rule_list:
+    - cond: if
+      cond_test: '{ req_ssl_sni -i backend0.example.com }'
+      name: e2e-tests-crd-tcp_http-echo-0_https
+    - cond: if
+      cond_test: '{ req_ssl_sni -i backend1.example.com }'
+      name: e2e-tests-crd-tcp_http-echo-1_https
+    binds:
+      v4:
+        address: 0.0.0.0
+        name: v4
+        port: 32766
+    log_format: '%{+Q}o %t %s'
+    name: fe-http-echo
+    tcp_request_rule_list:
+    - timeout: 5000
+      type: inspect-delay
+    - action: accept
+      cond: if
+      cond_test: '{ req_ssl_hello_type 1 }'
+      type: content
+    tcplog: true
+  name: tcp-test
+  service:
+    name: http-echo
+    port: 443
+  services:
+  - name: http-echo-0
+    port: 443
+  - name: http-echo-1
+    port: 443

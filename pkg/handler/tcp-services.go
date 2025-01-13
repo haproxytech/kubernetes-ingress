@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/haproxytech/client-native/v5/models"
+	"github.com/haproxytech/client-native/v6/models"
 	"github.com/haproxytech/kubernetes-ingress/pkg/annotations"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/instance"
@@ -49,8 +49,10 @@ func (handler TCPServices) Update(k store.K8s, h haproxy.HAProxy, a annotations.
 		frontend, errGet := h.FrontendGet(frontendName)
 		if errGet != nil {
 			frontend = models.Frontend{
-				Name: frontendName,
-				Mode: "tcp",
+				FrontendBase: models.FrontendBase{
+					Name: frontendName,
+					Mode: "tcp",
+				},
 			}
 		}
 
@@ -139,7 +141,7 @@ func (handler TCPServices) clearFrontends(k store.K8s, h haproxy.HAProxy) {
 
 func (handler TCPServices) createTCPFrontend(h haproxy.HAProxy, frontend models.Frontend, bindPort string, sslOffload bool) (err error) {
 	var errors utils.Errors
-	errors.Add(h.FrontendCreate(frontend))
+	errors.Add(h.FrontendCreate(frontend.FrontendBase))
 	if handler.IPv4 {
 		errors.Add(h.FrontendBindCreate(frontend.Name, models.Bind{
 			Address: handler.AddrIPv4 + ":" + bindPort,
@@ -176,7 +178,7 @@ func (handler TCPServices) updateTCPFrontend(k store.K8s, h haproxy.HAProxy, fro
 	}
 
 	if prevFrontend.LogFormat != frontend.LogFormat {
-		err = h.FrontendEdit(frontend)
+		err = h.FrontendEdit(frontend.FrontendBase)
 		if err != nil {
 			return
 		}
@@ -206,7 +208,7 @@ func (handler TCPServices) updateTCPFrontend(k store.K8s, h haproxy.HAProxy, fro
 	}
 	if p.service.Status == store.DELETED {
 		frontend.DefaultBackend = ""
-		err = h.FrontendEdit(frontend)
+		err = h.FrontendEdit(frontend.FrontendBase)
 		instance.Reload("TCP frontend '%s': service '%s/%s' deleted", frontend.Name, p.service.Namespace, p.service.Name)
 		return
 	}

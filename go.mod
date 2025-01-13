@@ -4,13 +4,14 @@ go 1.23.0
 
 require (
 	github.com/Masterminds/semver/v3 v3.3.1
+	github.com/brianvoe/gofakeit/v7 v7.1.2
 	github.com/fasthttp/router v1.5.4
 	github.com/go-openapi/swag v0.23.0
 	github.com/go-test/deep v1.1.1
 	github.com/google/go-cmp v0.6.0
 	github.com/google/renameio v1.0.1
-	github.com/haproxytech/client-native/v3 v3.1.2-0.20230607075433-231591da68ed
 	github.com/haproxytech/client-native/v5 v5.1.16-0.20241206145631-acb903fd9ec2
+	github.com/haproxytech/client-native/v6 v6.0.7-0.20250113083507-df8f78bea9bb
 	github.com/jessevdk/go-flags v1.4.0
 	github.com/pires/go-proxyproto v0.8.0
 	github.com/prometheus/client_golang v1.20.5

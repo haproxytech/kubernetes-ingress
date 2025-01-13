@@ -3,10 +3,9 @@ package rules
 import (
 	"errors"
 
-	"github.com/haproxytech/client-native/v5/models"
+	"github.com/haproxytech/client-native/v6/models"
 
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/api"
-	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
 )
 
 type SetHdr struct {
@@ -36,31 +35,28 @@ func (r SetHdr) Create(client api.HAProxyClient, frontend *models.Frontend, ingr
 	// REQ_FORWARDED_PROTO
 	if r.ForwardedProto {
 		httpRule := models.HTTPRequestRule{
-			Index:     utils.PtrInt64(0),
 			Type:      "set-header",
 			HdrName:   "X-Forwarded-Proto",
 			HdrFormat: "https",
 		}
-		return client.FrontendHTTPRequestRuleCreate(frontend.Name, httpRule, ingressACL)
+		return client.FrontendHTTPRequestRuleCreate(0, frontend.Name, httpRule, ingressACL)
 	}
 	// RES_SET_HEADER
 	if r.Response {
 		httpRule := models.HTTPResponseRule{
-			Index:     utils.PtrInt64(0),
 			Type:      "set-header",
 			HdrName:   r.HdrName,
 			HdrFormat: r.HdrFormat,
 			CondTest:  r.CondTest,
 			Cond:      r.Cond,
 		}
-		return client.FrontendHTTPResponseRuleCreate(frontend.Name, httpRule, ingressACL)
+		return client.FrontendHTTPResponseRuleCreate(0, frontend.Name, httpRule, ingressACL)
 	}
 	// REQ_SET_HEADER
 	httpRule := models.HTTPRequestRule{
-		Index:     utils.PtrInt64(0),
 		Type:      "set-header",
 		HdrName:   r.HdrName,
 		HdrFormat: r.HdrFormat,
 	}
-	return client.FrontendHTTPRequestRuleCreate(frontend.Name, httpRule, ingressACL)
+	return client.FrontendHTTPRequestRuleCreate(0, frontend.Name, httpRule, ingressACL)
 }

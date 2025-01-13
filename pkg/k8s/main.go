@@ -28,8 +28,11 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/clientcmd"
 
-	crclientset "github.com/haproxytech/kubernetes-ingress/crs/generated/clientset/versioned"
-	crinformers "github.com/haproxytech/kubernetes-ingress/crs/generated/informers/externalversions"
+	crclientsetv1 "github.com/haproxytech/kubernetes-ingress/crs/generated/api/ingress/v1/clientset/versioned"
+	crinformersv1 "github.com/haproxytech/kubernetes-ingress/crs/generated/api/ingress/v1/informers/externalversions"
+	crclientsetv3 "github.com/haproxytech/kubernetes-ingress/crs/generated/api/ingress/v3/clientset/versioned"
+	crinformersv3 "github.com/haproxytech/kubernetes-ingress/crs/generated/api/ingress/v3/informers/externalversions"
+
 	k8ssync "github.com/haproxytech/kubernetes-ingress/pkg/k8s/sync"
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
 	crdclientset "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
@@ -45,10 +48,9 @@ var logger = utils.GetK8sLogger()
 
 // TRACE_API outputs all k8s events received from k8s API
 const (
-	CRSGroupVersionV1alpha1 = "core.haproxy.org/v1alpha1"
-	CRSGroupVersionV1alpha2 = "core.haproxy.org/v1alpha2"
-	CRSGroupVersionV1       = "ingress.v1.haproxy.org/v1"
-	GATEWAY_API_VERSION     = "v0.5.1" //nolint:golint,stylecheck
+	CRSGroupVersionV1   = "ingress.v1.haproxy.org/v1"
+	CRSGroupVersionV3   = "ingress.v3.haproxy.org/v3"
+	GATEWAY_API_VERSION = "v0.5.1" //nolint:golint,stylecheck
 )
 
 var ErrIgnored = errors.New("ignored resource")
@@ -63,17 +65,27 @@ type K8s interface {
 // A Custom Resource interface
 // Any CR should be able to provide its kind, its kubernetes Informer
 // and a method to process the update of a CR
-type CR interface {
+type CRKind interface {
 	GetKind() string
-	GetInformer(chan k8ssync.SyncDataEvent, crinformers.SharedInformerFactory, utils.OSArgs) cache.SharedIndexInformer //nolint:inamedparam
+}
+type CRV1 interface {
+	CRKind
+	GetInformerV1(chan k8ssync.SyncDataEvent, crinformersv1.SharedInformerFactory) cache.SharedIndexInformer //nolint:inamedparam
+}
+
+type CRV3 interface {
+	CRKind
+	GetInformerV3(chan k8ssync.SyncDataEvent, crinformersv3.SharedInformerFactory, utils.OSArgs) cache.SharedIndexInformer //nolint:inamedparam
 }
 
 // k8s is structure with all data required to synchronize with k8s
 type k8s struct {
 	gatewayRestClient      client.Client
-	crs                    map[string]CR
+	crsV1                  map[string]CRV1
+	crsV3                  map[string]CRV3
 	builtInClient          *k8sclientset.Clientset
-	crClient               *crclientset.Clientset
+	crClientV1             *crclientsetv1.Clientset
+	crClientV3             *crclientsetv3.Clientset
 	apiExtensionsClient    *crdclientset.Clientset
 	publishSvc             *utils.NamespaceValue
 	gatewayClient          *gatewayclientset.Clientset
@@ -118,9 +130,11 @@ func New(osArgs utils.OSArgs, whitelist map[string]struct{}, publishSvc *utils.N
 	prefix, _ := utils.GetPodPrefix(os.Getenv("POD_NAME"))
 	k := k8s{
 		builtInClient:          builtInClient,
-		crClient:               crclientset.NewForConfigOrDie(restconfig),
+		crClientV1:             crclientsetv1.NewForConfigOrDie(restconfig),
+		crClientV3:             crclientsetv3.NewForConfigOrDie(restconfig),
 		apiExtensionsClient:    crdclientset.NewForConfigOrDie(restconfig),
-		crs:                    map[string]CR{},
+		crsV1:                  map[string]CRV1{},
+		crsV3:                  map[string]CRV3{},
 		whiteListedNS:          getWhitelistedNS(whitelist, osArgs.ConfigMap.Namespace),
 		publishSvc:             publishSvc,
 		podNamespace:           os.Getenv("POD_NAMESPACE"),
@@ -134,15 +148,16 @@ func New(osArgs utils.OSArgs, whitelist map[string]struct{}, publishSvc *utils.N
 		crdClient:              crdClient,
 	}
 
-	// alpha2 is deprecated
-	k.registerCoreCR(NewGlobalCRV1Alpha2(), CRSGroupVersionV1alpha2)
-	k.registerCoreCR(NewDefaultsCRV1Alpha2(), CRSGroupVersionV1alpha2)
-	k.registerCoreCR(NewBackendCRV1Alpha2(), CRSGroupVersionV1alpha2)
+	// ingress/v1 is deprecated
+	k.registerCoreCRV1(NewGlobalCRV1())
+	k.registerCoreCRV1(NewDefaultsCRV1())
+	k.registerCoreCRV1(NewBackendCRV1())
+	k.registerCoreCRV1(NewTCPCRV1())
 
-	k.registerCoreCR(NewGlobalCR(), CRSGroupVersionV1)
-	k.registerCoreCR(NewDefaultsCR(), CRSGroupVersionV1)
-	k.registerCoreCR(NewBackendCR(), CRSGroupVersionV1)
-	k.registerCoreCR(NewTCPCR(), CRSGroupVersionV1)
+	k.registerCoreCRV3(NewGlobalCRV3())
+	k.registerCoreCRV3(NewDefaultsCRV3())
+	k.registerCoreCRV3(NewBackendCRV3())
+	k.registerCoreCRV3(NewTCPCRV3())
 	return k
 }
 
@@ -159,7 +174,7 @@ func (k k8s) MonitorChanges(eventChan chan k8ssync.SyncDataEvent, stop chan stru
 	k.runPodInformer(eventChan, stop, informersSynced)
 	for _, namespace := range k.whiteListedNS {
 		k.runInformers(eventChan, stop, namespace, informersSynced, osArgs)
-		k.runCRInformers(eventChan, stop, namespace, informersSynced, k.crs, osArgs)
+		k.runCRInformers(eventChan, stop, namespace, informersSynced, k.crsV1, k.crsV3, osArgs)
 		if gatewayAPIInstalled {
 			k.runInformersGwAPI(eventChan, stop, namespace, informersSynced)
 		}
@@ -183,8 +198,9 @@ func (k k8s) MonitorChanges(eventChan chan k8ssync.SyncDataEvent, stop chan stru
 	}
 }
 
-func (k k8s) registerCoreCR(cr CR, groupVersion string) {
-	resources, err := k.crClient.DiscoveryClient.ServerResourcesForGroupVersion(groupVersion)
+func (k k8s) registerCoreCRV3(cr CRV3) {
+	groupVersion := CRSGroupVersionV3
+	resources, err := k.crClientV3.DiscoveryClient.ServerResourcesForGroupVersion(groupVersion)
 	if err != nil {
 		return
 	}
@@ -192,17 +208,44 @@ func (k k8s) registerCoreCR(cr CR, groupVersion string) {
 	kindName := cr.GetKind()
 	for _, resource := range resources.APIResources {
 		if resource.Kind == kindName {
-			k.crs[resources.GroupVersion+" - "+kindName] = cr
+			k.crsV3[resources.GroupVersion+" - "+kindName] = cr
 			logger.Infof("%s CR defined in API %s", kindName, resources.GroupVersion)
 			break
 		}
 	}
 }
 
-func (k k8s) runCRInformers(eventChan chan k8ssync.SyncDataEvent, stop chan struct{}, namespace string, informersSynced *[]cache.InformerSynced, crs map[string]CR, osArgs utils.OSArgs) {
-	informerFactory := crinformers.NewSharedInformerFactoryWithOptions(k.crClient, k.cacheResyncPeriod, crinformers.WithNamespace(namespace))
-	for _, cr := range crs {
-		informer := cr.GetInformer(eventChan, informerFactory, osArgs)
+func (k k8s) registerCoreCRV1(cr CRV1) {
+	groupVersion := CRSGroupVersionV1
+	resources, err := k.crClientV1.DiscoveryClient.ServerResourcesForGroupVersion(groupVersion)
+	if err != nil {
+		return
+	}
+	logger.Debugf("Custom API %s available", groupVersion)
+	kindName := cr.GetKind()
+	for _, resource := range resources.APIResources {
+		if resource.Kind == kindName {
+			k.crsV1[resources.GroupVersion+" - "+kindName] = cr
+			logger.Infof("%s CR defined in API %s", kindName, resources.GroupVersion)
+			break
+		}
+	}
+}
+
+func (k k8s) runCRInformers(eventChan chan k8ssync.SyncDataEvent, stop chan struct{}, namespace string,
+	informersSynced *[]cache.InformerSynced, crsV1 map[string]CRV1, crsV3 map[string]CRV3,
+	osArgs utils.OSArgs,
+) {
+	informerFactoryV3 := crinformersv3.NewSharedInformerFactoryWithOptions(k.crClientV3, k.cacheResyncPeriod, crinformersv3.WithNamespace(namespace))
+	informerFactoryV1 := crinformersv1.NewSharedInformerFactoryWithOptions(k.crClientV1, k.cacheResyncPeriod, crinformersv1.WithNamespace(namespace))
+
+	for _, cr := range crsV1 {
+		informer := cr.GetInformerV1(eventChan, informerFactoryV1)
+		go informer.Run(stop)
+		*informersSynced = append(*informersSynced, informer.HasSynced)
+	}
+	for _, cr := range crsV3 {
+		informer := cr.GetInformerV3(eventChan, informerFactoryV3, osArgs)
 		go informer.Run(stop)
 		*informersSynced = append(*informersSynced, informer.HasSynced)
 	}

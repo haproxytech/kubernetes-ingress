@@ -17,8 +17,8 @@ package k8s
 import (
 	"k8s.io/client-go/tools/cache"
 
-	v1 "github.com/haproxytech/kubernetes-ingress/crs/api/ingress/v1"
-	informers "github.com/haproxytech/kubernetes-ingress/crs/generated/informers/externalversions"
+	v3 "github.com/haproxytech/kubernetes-ingress/crs/api/ingress/v3"
+	informers "github.com/haproxytech/kubernetes-ingress/crs/generated/api/ingress/v3/informers/externalversions"
 	k8ssync "github.com/haproxytech/kubernetes-ingress/pkg/k8s/sync"
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
@@ -26,7 +26,7 @@ import (
 
 type BackendCR struct{}
 
-func NewBackendCR() BackendCR {
+func NewBackendCRV3() BackendCR {
 	return BackendCR{}
 }
 
@@ -34,13 +34,13 @@ func (c BackendCR) GetKind() string {
 	return "Backend"
 }
 
-func (c BackendCR) GetInformer(eventChan chan k8ssync.SyncDataEvent, factory informers.SharedInformerFactory, osArgs utils.OSArgs) cache.SharedIndexInformer { //nolint:ireturn
-	informer := factory.Ingress().V1().Backends().Informer()
+func (c BackendCR) GetInformerV3(eventChan chan k8ssync.SyncDataEvent, factory informers.SharedInformerFactory, osArgs utils.OSArgs) cache.SharedIndexInformer { //nolint:ireturn
+	informer := factory.Ingress().V3().Backends().Informer()
 
 	sendToChannel := func(eventChan chan k8ssync.SyncDataEvent, object interface{}, status store.Status) {
-		data, ok := object.(*v1.Backend)
+		data, ok := object.(*v3.Backend)
 		if !ok {
-			logger.Warning(CRSGroupVersionV1 + ": type mismatch with Backend kind")
+			logger.Warning(CRSGroupVersionV3 + ": type mismatch with Backend kind")
 			return
 		}
 		logger.Debugf("%s %s: %s", data.GetNamespace(), status, data.GetName())

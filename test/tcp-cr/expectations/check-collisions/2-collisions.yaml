@@ -2,65 +2,72 @@
 - tcpmodel:
     name: service1CollFeName
     frontend:
-      name: fe1
+      frontendbase:
+        name: fe1
       binds:
-      - accept_proxy: true
-        name: acceptproxy
-        port: 100
-      - port: 101
+        acceptproxy:
+          accept_proxy: true
+          port: 100
+        other:
+          port: 101
     service:
       name: service1
       port: 443
   parent_name: tcp-1
   namespace: ns
   collision_status: ERROR
-  reason: "- Collision FE.Name with ns/tcp-1/service1"
-  creation_timestamp: '2024-07-16T11:45:26.371Z'
+  reason: "-- Collision FE.Name with ns/tcp-1/service1"
+  creation_timestamp: 2024-07-16T11:45:26.371Z
 - tcpmodel:
     name: service2CollAddrPort
     frontend:
-      name: fe2
+      frontendbase:
+        name: fe2
       binds:
-      - accept_proxy: true
-        name: acceptproxy
-        port: 2
-      - port: 234567
+        acceptproxy:
+          accept_proxy: true
+          port: 2
+        other:
+          port: 234567
     service:
       name: service2
       port: 443
   parent_name: tcp-1
   namespace: ns
   collision_status: ERROR
-  reason: "- Collision AddPort :2 with ns/tcp-1/service2 - Collision FE.Name with
-    ns/tcp-1/service2"
-  creation_timestamp: '2024-06-16T11:45:26.371Z'
+  reason: "-- Collision AddPort :2 with ns/tcp-1/service2 -- Collision FE.Name with ns/tcp-1/service2"
+  creation_timestamp: 2024-06-16T11:45:26.371Z
 - tcpmodel:
     name: service1
     frontend:
-      name: fe1
+      frontendbase:
+        name: fe1
       binds:
-      - accept_proxy: true
-        name: acceptproxy
-        port: 1
-      - port: 11
+        acceptproxy:
+          accept_proxy: true
+          port: 1
+        other:
+          port: 11
     service:
       name: service1
       port: 443
   parent_name: tcp-1
   namespace: ns
-  creation_timestamp: '2024-05-16T11:45:26.371Z'
+  creation_timestamp: 2024-05-16T11:45:26.371Z
 - tcpmodel:
     name: service2
     frontend:
-      name: fe2
+      frontendbase:
+        name: fe2
       binds:
-      - accept_proxy: true
-        name: acceptproxy
-        port: 2
-      - port: 22
+        acceptproxy:
+          accept_proxy: true
+          port: 2
+        other:
+          port: 22
     service:
       name: service2
       port: 443
   parent_name: tcp-1
   namespace: ns
-  creation_timestamp: '2024-05-16T11:45:26.371Z'
+  creation_timestamp: 2024-05-16T11:45:26.371Z

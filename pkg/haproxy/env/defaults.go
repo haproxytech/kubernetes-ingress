@@ -1,7 +1,7 @@
 package env
 
 import (
-	"github.com/haproxytech/client-native/v5/models"
+	"github.com/haproxytech/client-native/v6/models"
 
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
 )
@@ -27,36 +27,43 @@ func SetGlobal(global *models.Global, logTargets *models.LogTargets, env Env) {
 		global.RuntimeAPIs = append(runtimeAPIs, global.RuntimeAPIs...)
 	}
 	// Default values
-	if global.Daemon == "" {
-		global.Daemon = "enabled"
-	}
 	if global.StatsTimeout == nil {
 		global.StatsTimeout = utils.PtrInt64(36000)
 	}
-	if global.TuneSslDefaultDhParam == 0 {
-		global.TuneSslDefaultDhParam = 2048
+
+	// TuneSSL options
+	if global.TuneSslOptions == nil {
+		global.TuneSslOptions = &models.TuneSslOptions{}
 	}
-	if global.SslDefaultBindCiphers == "" {
-		global.SslDefaultBindCiphers = "ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES128-GCM-SHA256:DHE-DSS-AES128-GCM-SHA256:kEDH+AESGCM:ECDHE-RSA-AES128-SHA256:ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA:ECDHE-ECDSA-AES128-SHA:ECDHE-RSA-AES256-SHA384:ECDHE-ECDSA-AES256-SHA384:ECDHE-RSA-AES256-SHA:ECDHE-ECDSA-AES256-SHA:DHE-RSA-AES128-SHA256:DHE-RSA-AES128-SHA:DHE-DSS-AES128-SHA256:DHE-RSA-AES256-SHA256:DHE-DSS-AES256-SHA:DHE-RSA-AES256-SHA:AES256-GCM-SHA384:AES128-SHA256:AES256-SHA256:AES128-SHA:AES256-SHA:AES:CAMELLIA:!aNULL:!eNULL:!EXPORT:!DES:!RC4:!MD5:!PSK:!aECDH:!EDH-DSS-DES-CBC3-SHA:!EDH-RSA-DES-CBC3-SHA:!KRB5-DES-CBC3-SHA:!3DES"
+	if global.TuneSslOptions.DefaultDhParam == 0 {
+		global.TuneSslOptions.DefaultDhParam = 2048
 	}
-	if global.SslDefaultBindOptions == "" {
-		global.SslDefaultBindOptions = "no-sslv3 no-tls-tickets no-tlsv10"
+
+	// SSL options
+	if global.SslOptions == nil {
+		global.SslOptions = &models.SslOptions{}
 	}
+	if global.SslOptions.DefaultBindOptions == "" {
+		global.SslOptions.DefaultBindOptions = "no-sslv3 no-tls-tickets no-tlsv10"
+	}
+	if global.SslOptions.DefaultBindCiphers == "" {
+		global.SslOptions.DefaultBindCiphers = "ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES128-GCM-SHA256:DHE-DSS-AES128-GCM-SHA256:kEDH+AESGCM:ECDHE-RSA-AES128-SHA256:ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA:ECDHE-ECDSA-AES128-SHA:ECDHE-RSA-AES256-SHA384:ECDHE-ECDSA-AES256-SHA384:ECDHE-RSA-AES256-SHA:ECDHE-ECDSA-AES256-SHA:DHE-RSA-AES128-SHA256:DHE-RSA-AES128-SHA:DHE-DSS-AES128-SHA256:DHE-RSA-AES256-SHA256:DHE-DSS-AES256-SHA:DHE-RSA-AES256-SHA:AES256-GCM-SHA384:AES128-SHA256:AES256-SHA256:AES128-SHA:AES256-SHA:AES:CAMELLIA:!aNULL:!eNULL:!EXPORT:!DES:!RC4:!MD5:!PSK:!aECDH:!EDH-DSS-DES-CBC3-SHA:!EDH-RSA-DES-CBC3-SHA:!KRB5-DES-CBC3-SHA:!3DES"
+	}
+
+	// Tune options
 	if global.TuneOptions == nil {
-		global.TuneOptions = &models.GlobalTuneOptions{}
+		global.TuneOptions = &models.TuneOptions{}
 	}
 	if len(*logTargets) == 0 {
 		*logTargets = []*models.LogTarget{{
-			Index:    utils.PtrInt64(0),
 			Address:  "127.0.0.1",
 			Facility: "local0",
 			Level:    "notice",
 		}}
 	} else {
-		for i, v := range *logTargets {
-			v.Index = utils.PtrInt64(int64(i))
+		for _, v := range *logTargets {
 			if v.Address == "stdout" {
-				global.Daemon = ""
+				global.Daemon = false
 				break
 			}
 		}

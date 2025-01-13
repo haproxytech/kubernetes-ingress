@@ -69,9 +69,9 @@ func CRDRefresh(log utils.Logger, osArgs utils.OSArgs) error {
 			log.Infof("CRD %s empty ?", crdName)
 			continue
 		}
-		// check if we have v1 and newest version
+		// check if we have v1 and newest CN version
 		crd.ObjectMeta.ResourceVersion = existingVersion.ObjectMeta.ResourceVersion
-		if versions[0].Name == "v1" {
+		if versions[0].Name == "v3" {
 			cnInK8s, ok := existingVersion.ObjectMeta.Annotations["haproxy.org/client-native"]
 
 			needUpgrade := false

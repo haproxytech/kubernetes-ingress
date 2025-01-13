@@ -26,7 +26,6 @@ func (suite *CustomResourceSuite) TestGlobalCR() {
 	suite.GlobalCRFixture()
 
 	globals := testController.Store.GetNamespace(suite.globalCREvt.Namespace).CRs.Global
-	logtrargets := testController.Store.GetNamespace(suite.globalCREvt.Namespace).CRs.LogTargets
 	t := suite.T()
 
 	suite.Run("Adding a global CR creates global and logTargets objects", func() {
@@ -35,7 +34,6 @@ func (suite *CustomResourceSuite) TestGlobalCR() {
 		testController.EventChan <- suite.globalCREvt
 		<-eventProcessedChan
 		assert.Len(t, globals, 1, "Should find one and only one Global CR")
-		assert.Len(t, logtrargets, 1, "Should find one and only one LogTargets CR")
 		assert.Containsf(t, globals, suite.globalCREvt.Name, "Global CR of name '%s' not found", suite.globalCREvt.Name)
 	})
 
@@ -46,7 +44,6 @@ func (suite *CustomResourceSuite) TestGlobalCR() {
 		testController.EventChan <- suite.globalCREvt
 		<-eventProcessedChan
 		assert.Empty(t, globals, "No Global CR should be present")
-		assert.Empty(t, logtrargets, "No LogTargets should be present")
 	})
 
 	suite.StopController()

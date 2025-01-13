@@ -19,8 +19,8 @@ import (
 	"os"
 	"testing"
 
-	"github.com/haproxytech/client-native/v5/models"
-	v1 "github.com/haproxytech/kubernetes-ingress/crs/api/ingress/v1"
+	"github.com/haproxytech/client-native/v6/models"
+	v3 "github.com/haproxytech/kubernetes-ingress/crs/api/ingress/v3"
 	"github.com/haproxytech/kubernetes-ingress/pkg/annotations"
 	c "github.com/haproxytech/kubernetes-ingress/pkg/controller"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy"
@@ -109,27 +109,27 @@ func (suite *ACLSuite) UseACLFixture() (eventChan chan k8ssync.SyncDataEvent) {
 
 	go controller.Start()
 
-	backend := v1.Backend{
+	backend := v3.Backend{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "backend1cr",
 			Namespace: "ns1",
 		},
-		Spec: v1.BackendSpec{
-			Config: &models.Backend{
-				Name: "backend1",
-			},
-			Acls: models.Acls{
-				{
-					ACLName:   "cookie_found",
-					Criterion: "cook(JSESSIONID)",
-					Index:     utils.Ptr[int64](0),
-					Value:     "-m found",
+		Spec: v3.BackendSpec{
+			Backend: models.Backend{
+				BackendBase: models.BackendBase{
+					Name: "backend1",
 				},
-				{
-					ACLName:   "is_ticket",
-					Criterion: "path_beg",
-					Index:     utils.Ptr[int64](1),
-					Value:     "-i /ticket",
+				ACLList: []*models.ACL{
+					{
+						ACLName:   "cookie_found",
+						Criterion: "cook(JSESSIONID)",
+						Value:     "-m found",
+					},
+					{
+						ACLName:   "is_ticket",
+						Criterion: "path_beg",
+						Value:     "-i /ticket",
+					},
 				},
 			},
 		},

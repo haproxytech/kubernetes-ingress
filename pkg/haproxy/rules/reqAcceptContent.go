@@ -3,10 +3,9 @@ package rules
 import (
 	"errors"
 
-	"github.com/haproxytech/client-native/v5/models"
+	"github.com/haproxytech/client-native/v6/models"
 
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/api"
-	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
 )
 
 type ReqAcceptContent struct{}
@@ -20,11 +19,10 @@ func (r ReqAcceptContent) Create(client api.HAProxyClient, frontend *models.Fron
 		return errors.New("tcp accept-content rule is only available in TCP frontends")
 	}
 	tcpRule := models.TCPRequestRule{
-		Index:    utils.PtrInt64(0),
 		Action:   "reject",
 		Type:     "content",
 		Cond:     "if",
 		CondTest: "!{ req_ssl_hello_type 1 }",
 	}
-	return client.FrontendTCPRequestRuleCreate(frontend.Name, tcpRule, ingressACL)
+	return client.FrontendTCPRequestRuleCreate(0, frontend.Name, tcpRule, ingressACL)
 }

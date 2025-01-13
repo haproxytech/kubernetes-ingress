@@ -3,22 +3,22 @@ package annotations
 import (
 	"fmt"
 
-	"github.com/haproxytech/client-native/v5/models"
+	"github.com/haproxytech/client-native/v6/models"
 
-	v1 "github.com/haproxytech/kubernetes-ingress/crs/api/ingress/v1"
+	v3 "github.com/haproxytech/kubernetes-ingress/crs/api/ingress/v3"
 	"github.com/haproxytech/kubernetes-ingress/pkg/annotations/common"
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
 )
 
 // ModelBackend takes an annotation holding the path of a backend cr and returns corresponding Backend model
-func ModelBackend(name, defaultNS string, k store.K8s, annotations ...map[string]string) (backend *v1.BackendSpec, err error) {
+func ModelBackend(name, defaultNS string, k store.K8s, annotations ...map[string]string) (backend *v3.BackendSpec, err error) {
 	b, modelErr := model(name, defaultNS, 3, k, annotations...)
 	if modelErr != nil {
 		err = modelErr
 		return
 	}
 	if b != nil {
-		backend = b.(*v1.BackendSpec) //nolint:forcetypeassert
+		backend = b.(*v3.BackendSpec) //nolint:forcetypeassert
 	}
 	return
 }
@@ -87,11 +87,11 @@ func model(name, defaultNS string, crType int, k store.K8s, annotations ...map[s
 		}
 		return global, nil
 	case 1:
-		lg, lgOk := ns.CRs.LogTargets[crName]
-		if !lgOk {
+		global, globalOk := ns.CRs.Global[crName]
+		if !globalOk {
 			return nil, fmt.Errorf("annotation %s: custom resource '%s/%s' doest not exist", name, crNS, crName)
 		}
-		return lg, nil
+		return global.LogTargetList, nil
 	case 2:
 		defaults, defaultsOk := ns.CRs.Defaults[crName]
 		if !defaultsOk {

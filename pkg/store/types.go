@@ -18,8 +18,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/haproxytech/client-native/v5/models"
-	v1 "github.com/haproxytech/kubernetes-ingress/crs/api/ingress/v1"
+	"github.com/haproxytech/client-native/v6/models"
+	v3 "github.com/haproxytech/kubernetes-ingress/crs/api/ingress/v3"
 )
 
 // ServicePort describes port of a service
@@ -103,12 +103,11 @@ type Namespace struct {
 }
 
 type CustomResources struct {
-	Global     map[string]*models.Global
-	Defaults   map[string]*models.Defaults
-	LogTargets map[string]models.LogTargets
-	Backends   map[string]*v1.BackendSpec
-	TCPsPerCR  map[string]*TCPs // key is the TCP CR name
-	AllTCPs    TCPResourceList
+	Global    map[string]*models.Global
+	Defaults  map[string]*models.Defaults
+	Backends  map[string]*v3.BackendSpec
+	TCPsPerCR map[string]*TCPs // key is the TCP CR name
+	AllTCPs   TCPResourceList
 }
 
 type IngressClass struct {

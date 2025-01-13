@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:build e2e_parallel || e2e_sequential
+//go:build e2e_sequential
 
 package crdtcp
 
@@ -26,10 +26,10 @@ import (
 
 	"github.com/stretchr/testify/suite"
 
-	parser "github.com/haproxytech/client-native/v5/config-parser"
-	"github.com/haproxytech/client-native/v5/config-parser/common"
-	"github.com/haproxytech/client-native/v5/config-parser/params"
-	"github.com/haproxytech/client-native/v5/config-parser/types"
+	parser "github.com/haproxytech/client-native/v6/config-parser"
+	"github.com/haproxytech/client-native/v6/config-parser/common"
+	"github.com/haproxytech/client-native/v6/config-parser/params"
+	"github.com/haproxytech/client-native/v6/config-parser/types"
 	"github.com/haproxytech/kubernetes-ingress/deploy/tests/e2e"
 )
 
@@ -60,7 +60,8 @@ func (suite *CRDTCPSuite) SetupSuite() {
 	suite.client, err = e2e.NewHTTPClient(suite.tmplData.Host)
 	suite.Require().NoError(err)
 	suite.Require().NoError(suite.test.Apply("config/tcp-secret.yaml", suite.test.GetNS(), nil))
-	suite.Require().NoError(suite.test.Apply("config/backend-cr.yaml", suite.test.GetNS(), nil))
+	crdPath := e2e.GetCRDFixturePath() + "/backend-cr.yaml"
+	suite.Require().NoError(suite.test.Apply(crdPath, suite.test.GetNS(), nil))
 	nbEchoApps := 3
 	for i := 0; i < nbEchoApps; i++ {
 		suite.tmplData.EchoAppIndex = i

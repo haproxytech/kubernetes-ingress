@@ -19,13 +19,12 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/haproxytech/client-native/v5/models"
+	"github.com/haproxytech/client-native/v6/models"
 
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/api"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/maps"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/rules"
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
-	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
 )
 
 //nolint:golint,stylecheck
@@ -124,11 +123,10 @@ func AddCustomRoute(route Route, routeACLAnn string, api api.HAProxyClient) (err
 	routeCond = fmt.Sprintf("%s { %s } ", routeCond, routeACLAnn)
 
 	for _, frontend := range []string{FrontendHTTP, FrontendHTTPS} {
-		err = api.BackendSwitchingRuleCreate(frontend, models.BackendSwitchingRule{
+		err = api.BackendSwitchingRuleCreate(0, frontend, models.BackendSwitchingRule{
 			Cond:     "if",
 			CondTest: routeCond,
 			Name:     route.BackendName,
-			Index:    utils.PtrInt64(0),
 		})
 		if err != nil {
 			return
@@ -145,9 +143,8 @@ func CustomRoutesReset(api api.HAProxyClient) (err error) {
 		if err != nil {
 			break
 		}
-		err = api.BackendSwitchingRuleCreate(frontend, models.BackendSwitchingRule{
-			Name:  "%[var(txn.path_match),field(1,.)]",
-			Index: utils.PtrInt64(0),
+		err = api.BackendSwitchingRuleCreate(0, frontend, models.BackendSwitchingRule{
+			Name: "%[var(txn.path_match),field(1,.)]",
 		})
 		if err != nil {
 			return fmt.Errorf("unable to create main backendSwitching rule !!: %w", err)

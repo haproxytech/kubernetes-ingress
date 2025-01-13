@@ -15,14 +15,14 @@
 package logtargets
 
 import (
-	"github.com/haproxytech/client-native/v5/models"
+	"github.com/haproxytech/client-native/v6/models"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/api"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/instance"
 	"github.com/haproxytech/kubernetes-ingress/pkg/rules"
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
 )
 
-func Reconcile(client api.HAProxyClient, parentType rules.ParentType, parentName string, rules models.LogTargets) error {
+func Reconcile(client api.LogTarget, parentType rules.ParentType, parentName string, rules models.LogTargets) error {
 	var errors utils.Errors
 	currentRules, err := client.LogTargetsGet(string(parentType), parentName)
 	if err != nil {
@@ -32,15 +32,10 @@ func Reconcile(client api.HAProxyClient, parentType rules.ParentType, parentName
 	// Diff includes diff in order
 	diffRules := rules.Diff(currentRules)
 	if len(diffRules) != 0 {
-		// ... we remove all the rules
-		_ = client.LogTargetDeleteAll(string(parentType), parentName)
-		// ... and create all the new ones if any
-		for _, rule := range rules {
-			errCreate := client.LogTargetCreate(string(parentType), parentName, *rule)
-			if errCreate != nil {
-				utils.GetLogger().Err(errCreate)
-				break
-			}
+		err = client.LogTargetsReplace(string(parentType), parentName, rules)
+		if err != nil {
+			utils.GetLogger().Err(err)
+			return err
 		}
 		// ... we reload because we created some http requests.
 		instance.Reload("parent '%s/%s', log_target rules updated: %+v", string(parentType), parentName, utils.JSONDiff(diffRules))

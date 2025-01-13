@@ -18,12 +18,13 @@ import (
 	_ "embed"
 	"encoding/json"
 	"os"
+	"sort"
 	"strings"
 	"testing"
 
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
 	"github.com/stretchr/testify/require"
-	"sigs.k8s.io/yaml"
+	"gopkg.in/yaml.v3"
 )
 
 func getResourceList(t *testing.T, paths []string) *store.TCPs {
@@ -41,7 +42,7 @@ func getTCPResourceFromFile(t *testing.T, path string) *store.TCPResource {
 	tcpJ, err := os.ReadFile(path)
 	require.NoError(t, err)
 	var tcp store.TCPResource
-	_ = yaml.Unmarshal(tcpJ, &tcp)
+	_ = yaml.Unmarshal(tcpJ, &tcp) //nolint:musttag
 	return &tcp
 }
 
@@ -59,7 +60,7 @@ func getCollisionMapFromFile(t *testing.T, path string) map[string][]*store.TCPR
 	mapJ, err := os.ReadFile(path)
 	require.NoError(t, err)
 	var mapRes map[string][]*store.TCPResource
-	_ = yaml.Unmarshal(mapJ, &mapRes)
+	_ = yaml.Unmarshal(mapJ, &mapRes) //nolint:musttag
 	return mapRes
 }
 
@@ -191,6 +192,12 @@ func TestTCPs_HasCollisionAddressPort(t *testing.T) {
 			for _, v := range got {
 				gotList = v
 				gotList.OrderByCreationTime()
+				// Order reasons to avoid randon failures
+				for _, r := range gotList {
+					parts := strings.Split(r.Reason, "--")
+					sort.Strings(parts)
+					r.Reason = strings.Join(parts, "--")
+				}
 			}
 
 			if tt.hasCollision == true {
@@ -247,6 +254,12 @@ func TestTCPs_HasCollisionFrontendName(t *testing.T) {
 			for _, v := range got {
 				gotList = v
 				gotList.OrderByCreationTime()
+				// Order reasons to avoid randon failures
+				for _, r := range gotList {
+					parts := strings.Split(r.Reason, "--")
+					sort.Strings(parts)
+					r.Reason = strings.Join(parts, "--")
+				}
 			}
 
 			if hasColl != tt.hasCollision {
@@ -320,6 +333,12 @@ func TestTCPs_CheckCollision(t *testing.T) {
 
 			resourceList.Items.CheckCollision()
 			resourceList.Items.OrderByCreationTime()
+			// Order reasons to avoid randon failures
+			for _, r := range resourceList.Items {
+				parts := strings.Split(r.Reason, "--")
+				sort.Strings(parts)
+				r.Reason = strings.Join(parts, "--")
+			}
 			got, _ := json.Marshal(resourceList.Items)
 
 			expected := getTCPResourceListFromFile(t, tt.expectedPath)

@@ -21,11 +21,11 @@ import (
 	"strings"
 	"testing"
 
-	parser "github.com/haproxytech/client-native/v5/config-parser"
-	"github.com/haproxytech/client-native/v5/config-parser/options"
-	tcp_actions "github.com/haproxytech/client-native/v5/config-parser/parsers/tcp/actions"
-	tcptypes "github.com/haproxytech/client-native/v5/config-parser/parsers/tcp/types"
-	"github.com/haproxytech/client-native/v5/config-parser/types"
+	parser "github.com/haproxytech/client-native/v6/config-parser"
+	"github.com/haproxytech/client-native/v6/config-parser/options"
+	tcp_actions "github.com/haproxytech/client-native/v6/config-parser/parsers/tcp/actions"
+	tcptypes "github.com/haproxytech/client-native/v6/config-parser/parsers/tcp/types"
+	"github.com/haproxytech/client-native/v6/config-parser/types"
 	"github.com/haproxytech/kubernetes-ingress/deploy/tests/e2e"
 	"github.com/stretchr/testify/suite"
 )
@@ -86,7 +86,8 @@ func TestTCPSuiteBackendSwitchingRule(t *testing.T) {
 func (suite *TCPSuiteBackendSwitchingRule) Test_CRD_TCP_BackendSwitchingRule() {
 	suite.Run("TCP CR Backend Switching Rule", func() {
 		var err error
-		suite.Require().NoError(suite.test.Apply("config/tcp-cr-backend-switching-rule.yaml", suite.test.GetNS(), nil))
+		crdPath := e2e.GetCRDFixturePath() + "/tcp-cr-backend-switching-rule.yaml"
+		suite.Require().NoError(suite.test.Apply(crdPath, suite.test.GetNS(), nil))
 
 		// SNI backend0.example.com should go to http-echo-0
 		suite.checkClientRequest("backend0.example.com", "http-echo-0")
@@ -129,7 +130,8 @@ func (suite *TCPSuiteBackendSwitchingRule) Test_CRD_TCP_BackendSwitchingRule() {
 func (suite *TCPSuiteBackendSwitchingRule) Test_CRD_TCP_BackendSwitchingRule_WithAcls() {
 	suite.Run("TCP CR Backend Switching Rule (with Acls)", func() {
 		var err error
-		suite.Require().NoError(suite.test.Apply("config/tcp-cr-backend-switching-rule-acls.yaml", suite.test.GetNS(), nil))
+		crdPath := e2e.GetCRDFixturePath() + "/tcp-cr-backend-switching-rule-acls.yaml"
+		suite.Require().NoError(suite.test.Apply(crdPath, suite.test.GetNS(), nil))
 
 		// SNI backend0.example.com should go to http-echo-0
 		suite.checkClientRequest("backend0.example.com", "http-echo-0")

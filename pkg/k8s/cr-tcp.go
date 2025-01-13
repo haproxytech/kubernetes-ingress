@@ -15,8 +15,8 @@
 package k8s
 
 import (
-	v1 "github.com/haproxytech/kubernetes-ingress/crs/api/ingress/v1"
-	informers "github.com/haproxytech/kubernetes-ingress/crs/generated/informers/externalversions"
+	v3 "github.com/haproxytech/kubernetes-ingress/crs/api/ingress/v3"
+	informersv3 "github.com/haproxytech/kubernetes-ingress/crs/generated/api/ingress/v3/informers/externalversions"
 	k8ssync "github.com/haproxytech/kubernetes-ingress/pkg/k8s/sync"
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
@@ -25,12 +25,12 @@ import (
 
 type TCPCR struct{}
 
-func NewTCPCR() TCPCR {
+func NewTCPCRV3() TCPCR {
 	return TCPCR{}
 }
 
-func (c TCPCR) GetInformer(eventChan chan k8ssync.SyncDataEvent, factory informers.SharedInformerFactory, osArgs utils.OSArgs) cache.SharedIndexInformer { //nolint:ireturn
-	informer := factory.Ingress().V1().TCPs().Informer()
+func (c TCPCR) GetInformerV3(eventChan chan k8ssync.SyncDataEvent, factory informersv3.SharedInformerFactory, osArgs utils.OSArgs) cache.SharedIndexInformer { //nolint:ireturn
+	informer := factory.Ingress().V3().TCPs().Informer()
 
 	sendToChannel := func(eventChan chan k8ssync.SyncDataEvent, newObject interface{}, status store.Status) {
 		storeTCP := convertToStoreTCP(newObject, status)
@@ -73,9 +73,9 @@ func (c TCPCR) GetKind() string {
 }
 
 func convertToStoreTCP(k8sData interface{}, status store.Status) *store.TCPs {
-	data, ok := k8sData.(*v1.TCP)
+	data, ok := k8sData.(*v3.TCP)
 	if !ok {
-		logger.Warning(CRSGroupVersionV1 + ": type mismatch with TCP CR kind")
+		logger.Warning(CRSGroupVersionV3 + ": type mismatch with TCP CR kind")
 		return nil
 	}
 	storeTCP := store.TCPs{

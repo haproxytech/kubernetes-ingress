@@ -1,8 +1,8 @@
 package api
 
 import (
-	parser "github.com/haproxytech/client-native/v5/config-parser"
-	"github.com/haproxytech/client-native/v5/config-parser/types"
+	parser "github.com/haproxytech/client-native/v6/config-parser"
+	"github.com/haproxytech/client-native/v6/config-parser/types"
 )
 
 func (c *clientNative) UserListExistsByGroup(group string) (exist bool, err error) {

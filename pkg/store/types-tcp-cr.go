@@ -20,8 +20,8 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/haproxytech/client-native/v5/models"
-	v1 "github.com/haproxytech/kubernetes-ingress/crs/api/ingress/v1"
+	"github.com/haproxytech/client-native/v6/models"
+	v3 "github.com/haproxytech/kubernetes-ingress/crs/api/ingress/v3"
 	rc "github.com/haproxytech/kubernetes-ingress/pkg/reference-counter"
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
 )
@@ -31,15 +31,15 @@ const (
 )
 
 type TCPResource struct {
-	CreationTimestamp time.Time `json:"creation_timestamp"` //nolint: tagliatelle
+	CreationTimestamp time.Time `json:"creation_timestamp" yaml:"creation_timestamp"` //nolint: tagliatelle
 	// ParentName is the name of TCP CR containing this TCP resource
-	ParentName      string `json:"parent_name,omitempty"` //nolint: tagliatelle
-	Namespace       string `json:"namespace,omitempty"`
-	CollisionStatus Status `json:"collision_status,omitempty"` //nolint: tagliatelle
+	ParentName      string `json:"parent_name,omitempty" yaml:"parent_name,omitempty"`           //nolint: tagliatelle
+	Namespace       string `json:"namespace,omitempty" yaml:"namespace,omitempty"`               //nolint: tagliatelle
+	CollisionStatus Status `json:"collision_status,omitempty" yaml:"collision_status,omitempty"` //nolint: tagliatelle
 	// If Status is ERROR, Reason will contain the reason
 	// Leave it as a fully flexible string
-	Reason      string `json:"reason,omitempty"`
-	v1.TCPModel `json:"tcpmodel"`
+	Reason      string            `json:"reason,omitempty" yaml:"reason,omitempty"` //nolint: tagliatelle
+	v3.TCPModel `json:"tcpmodel"` //nolint: tagliatellet
 }
 
 type TCPResourceList []*TCPResource
@@ -83,24 +83,12 @@ func (a TCPResource) WithParentName() string {
 	return a.ParentName + "/" + a.Name
 }
 
-func AddressPort(b *models.Bind) string {
-	if b == nil {
-		return ""
-	}
+func AddressPort(b models.Bind) string {
 	port := int64(0)
 	if b.Port != nil {
 		port = *b.Port
 	}
 	return b.Address + ":" + strconv.FormatInt(port, 10)
-}
-
-func (a *TCPResource) OrderBinds() {
-	if a.Frontend.Binds == nil {
-		return
-	}
-	sort.SliceStable(a.TCPModel.Frontend.Binds, func(i, j int) bool {
-		return AddressPort(a.TCPModel.Frontend.Binds[i]) < AddressPort(a.TCPModel.Frontend.Binds[j])
-	})
 }
 
 func (a TCPResource) Owner() rc.Owner {
@@ -119,9 +107,6 @@ func (a TCPResourceList) Order() {
 		// Then CreationTime
 		return a[i].CreationTimestamp.After(a[j].CreationTimestamp)
 	})
-	for _, v := range a {
-		v.OrderBinds()
-	}
 }
 
 func (a TCPResourceList) OrderByCreationTime() {
@@ -170,7 +155,7 @@ func (a TCPResourceList) CheckCollision() {
 }
 
 type bindWithResource struct {
-	bind     *models.Bind
+	bind     models.Bind
 	resource *TCPResource
 }
 
@@ -195,9 +180,9 @@ func (a *TCPResourceList) HasCollisionAddressPort() (bool, map[string]TCPResourc
 					collisions[resKey][btcp.Name] = btcp
 					// res[res_key] = append(res[res_key], atcp, btcp)
 					atcp.CollisionStatus = ERROR
-					atcp.Reason += fmt.Sprintf("- Collision AddPort %s with %s/%s ", AddressPort(bBindWithResource.bind), btcp.Namespace, btcp.WithParentName())
+					atcp.Reason += fmt.Sprintf("-- Collision AddPort %s with %s/%s ", AddressPort(bBindWithResource.bind), btcp.Namespace, btcp.WithParentName())
 					btcp.CollisionStatus = ERROR
-					btcp.Reason += fmt.Sprintf("- Collision AddPort %s with %s/%s ", AddressPort(aBind), atcp.Namespace, atcp.WithParentName())
+					btcp.Reason += fmt.Sprintf("-- Collision AddPort %s with %s/%s ", AddressPort(aBind), atcp.Namespace, atcp.WithParentName())
 				}
 				continue
 			}
@@ -243,9 +228,9 @@ func (a *TCPResourceList) HasCollisionFrontendName() (bool, map[string]TCPResour
 				}
 				res[resKey] = append(res[resKey], atcp, btcp)
 				atcp.CollisionStatus = ERROR
-				atcp.Reason += "- Collision FE.Name with " + btcp.Namespace + "/" + btcp.WithParentName()
+				atcp.Reason += "-- Collision FE.Name with " + btcp.Namespace + "/" + btcp.WithParentName()
 				btcp.CollisionStatus = ERROR
-				btcp.Reason += "- Collision FE.Name with " + atcp.Namespace + "/" + atcp.WithParentName()
+				btcp.Reason += "-- Collision FE.Name with " + atcp.Namespace + "/" + atcp.WithParentName()
 			}
 			continue
 		}

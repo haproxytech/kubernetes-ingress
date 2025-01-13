@@ -18,7 +18,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/haproxytech/client-native/v5/models"
+	"github.com/haproxytech/client-native/v6/models"
 
 	"github.com/haproxytech/kubernetes-ingress/pkg/annotations"
 	"github.com/haproxytech/kubernetes-ingress/pkg/annotations/common"
@@ -68,9 +68,11 @@ func (c *HAProxyController) globalCfg() {
 	}
 	if newGlobal == nil {
 		newGlobal = &models.Global{
-			// TuneSslDefaultDhParam: 2048,
-			TuneOptions: &models.GlobalTuneOptions{
-				SslDefaultDhParam: 2048,
+			GlobalBase: models.GlobalBase{
+				// TuneSslDefaultDhParam: 2048,
+				TuneSslOptions: &models.TuneSslOptions{
+					DefaultDhParam: 2048,
+				},
 			},
 		}
 		for _, a := range c.annotations.Global(newGlobal, &newLg) {
@@ -80,12 +82,12 @@ func (c *HAProxyController) globalCfg() {
 			}
 		}
 	}
-	if newGlobal.TuneOptions == nil {
-		newGlobal.TuneOptions = &models.GlobalTuneOptions{}
+	if newGlobal.TuneSslOptions == nil {
+		newGlobal.TuneSslOptions = &models.TuneSslOptions{}
 	}
 
-	if newGlobal.TuneSslDefaultDhParam == 0 {
-		newGlobal.TuneOptions.SslDefaultDhParam = 2048
+	if newGlobal.TuneSslOptions.DefaultDhParam == 0 {
+		newGlobal.TuneSslOptions.DefaultDhParam = 2048
 	}
 	env.SetGlobal(newGlobal, &newLg, c.haproxy.Env)
 	diff := newGlobal.Diff(*global)

@@ -15,10 +15,10 @@
 package store
 
 import (
-	v1 "github.com/haproxytech/kubernetes-ingress/crs/api/ingress/v1"
+	v3 "github.com/haproxytech/kubernetes-ingress/crs/api/ingress/v3"
 )
 
-func (k *K8s) EventBackendCR(namespace, name string, data *v1.Backend) bool {
+func (k *K8s) EventBackendCR(namespace, name string, data *v3.Backend) bool {
 	ns := k.GetNamespace(namespace)
 	if data == nil {
 		delete(ns.CRs.Backends, name)

@@ -15,14 +15,14 @@
 package filters
 
 import (
-	"github.com/haproxytech/client-native/v5/models"
+	"github.com/haproxytech/client-native/v6/models"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/api"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/instance"
 	"github.com/haproxytech/kubernetes-ingress/pkg/rules"
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
 )
 
-func Reconcile(client api.HAProxyClient, parentType rules.ParentType, parentName string, rules models.Filters) error {
+func Reconcile(client api.Filter, parentType rules.ParentType, parentName string, rules models.Filters) error {
 	var errors utils.Errors
 	currentRules, err := client.FiltersGet(string(parentType), parentName)
 	if err != nil {
@@ -32,15 +32,10 @@ func Reconcile(client api.HAProxyClient, parentType rules.ParentType, parentName
 	// Diff includes diff in order
 	diffRules := rules.Diff(currentRules)
 	if len(diffRules) != 0 {
-		// ... we remove all the rules
-		_ = client.FilterDeleteAll(string(parentType), parentName)
-		// ... and create all the new ones if any
-		for _, rule := range rules {
-			errCreate := client.FilterCreate(string(parentType), parentName, *rule)
-			if errCreate != nil {
-				utils.GetLogger().Err(errCreate)
-				break
-			}
+		err = client.FiltersReplace(string(parentType), parentName, rules)
+		if err != nil {
+			utils.GetLogger().Err(err)
+			return err
 		}
 		// ... we reload because we created some http requests.
 		instance.Reload("parent '%s/%s', filter rules updated: %+v", string(parentType), parentName, utils.JSONDiff(diffRules))

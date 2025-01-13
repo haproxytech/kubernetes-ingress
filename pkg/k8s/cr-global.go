@@ -17,8 +17,8 @@ package k8s
 import (
 	"k8s.io/client-go/tools/cache"
 
-	v1 "github.com/haproxytech/kubernetes-ingress/crs/api/ingress/v1"
-	informers "github.com/haproxytech/kubernetes-ingress/crs/generated/informers/externalversions"
+	v3 "github.com/haproxytech/kubernetes-ingress/crs/api/ingress/v3"
+	informersv3 "github.com/haproxytech/kubernetes-ingress/crs/generated/api/ingress/v3/informers/externalversions"
 	k8ssync "github.com/haproxytech/kubernetes-ingress/pkg/k8s/sync"
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
@@ -26,7 +26,7 @@ import (
 
 type GlobalCR struct{}
 
-func NewGlobalCR() GlobalCR {
+func NewGlobalCRV3() GlobalCR {
 	return GlobalCR{}
 }
 
@@ -34,13 +34,13 @@ func (c GlobalCR) GetKind() string {
 	return "Global"
 }
 
-func (c GlobalCR) GetInformer(eventChan chan k8ssync.SyncDataEvent, factory informers.SharedInformerFactory, osArgs utils.OSArgs) cache.SharedIndexInformer { //nolint:ireturn
-	informer := factory.Ingress().V1().Globals().Informer()
+func (c GlobalCR) GetInformerV3(eventChan chan k8ssync.SyncDataEvent, factory informersv3.SharedInformerFactory, osArgs utils.OSArgs) cache.SharedIndexInformer { //nolint:ireturn
+	informer := factory.Ingress().V3().Globals().Informer()
 
 	sendToChannel := func(eventChan chan k8ssync.SyncDataEvent, object interface{}, status store.Status) {
-		data, ok := object.(*v1.Global)
+		data, ok := object.(*v3.Global)
 		if !ok {
-			logger.Warning(CRSGroupVersionV1 + ": type mismatch with Global kind")
+			logger.Warning(CRSGroupVersionV3 + ": type mismatch with Global kind")
 			return
 		}
 		logger.Debugf("%s %s: %s", data.GetNamespace(), status, data.GetName())

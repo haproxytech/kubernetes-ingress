@@ -18,10 +18,10 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/haproxytech/client-native/v5/misc"
-	"github.com/haproxytech/client-native/v5/models"
+	"github.com/haproxytech/client-native/v6/misc"
+	"github.com/haproxytech/client-native/v6/models"
 
-	v1 "github.com/haproxytech/kubernetes-ingress/crs/api/ingress/v1"
+	v3 "github.com/haproxytech/kubernetes-ingress/crs/api/ingress/v3"
 	"github.com/haproxytech/kubernetes-ingress/pkg/annotations"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/api"
@@ -141,31 +141,33 @@ func (s *Service) GetBackendName() (name string, err error) {
 
 // HandleBackend processes a Service and creates/updates corresponding backend configuration in HAProxy
 func (s *Service) HandleBackend(storeK8s store.K8s, client api.HAProxyClient, a annotations.Annotations) (err error) {
-	var newBackend *v1.BackendSpec
+	var newBackend *v3.BackendSpec
 	newBackend, err = s.getBackendModel(storeK8s, a)
 	if err != nil {
 		s.backend = nil
 		return
 	}
-	s.backend = newBackend.Config
-	backend, _ := client.BackendGet(newBackend.Config.Name)
+	s.backend = &newBackend.Backend
+	backend, _ := client.BackendGet(newBackend.BackendBase.Name)
 	// Get/Create Backend
-	diff, created := client.BackendCreateOrUpdate(*newBackend.Config)
-	instance.ReloadIf(len(diff) > 0 || created, "Service '%s/%s': backend '%s' upserted: %v", s.resource.Namespace, s.resource.Name, newBackend.Config.Name, diff)
+	diff, created := client.BackendCreateOrUpdate(newBackend.Backend)
+	instance.ReloadIf(len(diff) > 0 || created, "Service '%s/%s': backend '%s' upserted: %v", s.resource.Namespace, s.resource.Name, newBackend.BackendBase.Name, diff)
 	s.newBackend = created
 	// if updated but not created
 	if len(diff) > 0 && !created {
-		s.serversToEdit = isServersToEdit(newBackend.Config, backend)
+		s.serversToEdit = isServersToEdit(newBackend.Backend, *backend)
 	}
+
 	// acls
-	acls.PopulateBackend(client, newBackend.Config.Name, newBackend.Acls)
+	acls.PopulateBackend(client, newBackend.BackendBase.Name, newBackend.ACLList)
 	// HTTP requests
-	httprequests.PopulateBackend(client, newBackend.Config.Name, newBackend.HTTPRequests)
+	httprequests.PopulateBackend(client, newBackend.BackendBase.Name, newBackend.HTTPRequestRuleList)
+
 	// config-snippet: backend
 	backendCfgSnippetHandler := annotations.NewCfgSnippet(
 		annotations.ConfigSnippetOptions{
 			Name:    "backend-config-snippet",
-			Backend: utils.PtrString(newBackend.Config.Name),
+			Backend: utils.PtrString(newBackend.BackendBase.Name),
 			Ingress: s.ingress,
 		})
 	backendCfgSnippetHandler.SetService(s.resource)
@@ -173,7 +175,7 @@ func (s *Service) HandleBackend(storeK8s store.K8s, client api.HAProxyClient, a 
 	return
 }
 
-func isServersToEdit(oldBackend *models.Backend, newBackend *models.Backend) bool {
+func isServersToEdit(oldBackend models.Backend, newBackend models.Backend) bool {
 	// Detect if we have a diff on the server line
 	newCookie := newBackend.Cookie
 	oldCookie := oldBackend.Cookie
@@ -189,7 +191,7 @@ func isServersToEdit(oldBackend *models.Backend, newBackend *models.Backend) boo
 }
 
 // getBackendModel checks for a corresponding custom resource before falling back to annotations
-func (s *Service) getBackendModel(store store.K8s, a annotations.Annotations) (backend *v1.BackendSpec, err error) {
+func (s *Service) getBackendModel(store store.K8s, a annotations.Annotations) (backend *v3.BackendSpec, err error) {
 	// Backend mode
 	mode := "http"
 	if s.modeTCP {
@@ -199,10 +201,14 @@ func (s *Service) getBackendModel(store store.K8s, a annotations.Annotations) (b
 	backend, err = annotations.ModelBackend("cr-backend", s.resource.Namespace, store, s.annotations...)
 	logger.Warning(err)
 	if backend == nil {
-		backend = &v1.BackendSpec{
-			Config: &models.Backend{Mode: mode},
+		backend = &v3.BackendSpec{
+			Backend: models.Backend{
+				BackendBase: models.BackendBase{
+					Mode: mode,
+				},
+			},
 		}
-		for _, a := range a.Backend(backend.Config, store, s.certs) {
+		for _, a := range a.Backend(&backend.Backend, store, s.certs) {
 			err = a.Process(store, s.annotations...)
 			if err != nil {
 				logger.Errorf("service '%s/%s': annotation '%s': %s", s.resource.Namespace, s.resource.Name, a.GetName(), err)
@@ -211,20 +217,20 @@ func (s *Service) getBackendModel(store store.K8s, a annotations.Annotations) (b
 	}
 
 	// Manadatory backend params
-	backend.Config.Mode = mode
-	backend.Config.Name, err = s.GetBackendName()
+	backend.BackendBase.Mode = mode
+	backend.BackendBase.Name, err = s.GetBackendName()
 	if err != nil {
 		return nil, err
 	}
 	if s.resource.DNS != "" {
-		if backend.Config.DefaultServer == nil {
-			backend.Config.DefaultServer = &models.DefaultServer{ServerParams: models.ServerParams{InitAddr: misc.Ptr("last,libc,none")}}
-		} else if backend.Config.DefaultServer.InitAddr == nil {
-			backend.Config.DefaultServer.InitAddr = misc.Ptr("last,libc,none")
+		if backend.BackendBase.DefaultServer == nil {
+			backend.BackendBase.DefaultServer = &models.DefaultServer{ServerParams: models.ServerParams{InitAddr: misc.Ptr("last,libc,none")}}
+		} else if backend.BackendBase.DefaultServer.InitAddr == nil {
+			backend.BackendBase.DefaultServer.InitAddr = misc.Ptr("last,libc,none")
 		}
 	}
-	if backend.Config.Cookie != nil && backend.Config.Cookie.Dynamic && backend.Config.DynamicCookieKey == "" {
-		backend.Config.DynamicCookieKey = cookieKey
+	if backend.BackendBase.Cookie != nil && backend.BackendBase.Cookie.Dynamic && backend.BackendBase.DynamicCookieKey == "" {
+		backend.BackendBase.DynamicCookieKey = cookieKey
 	}
 	return backend, nil
 }
@@ -257,7 +263,7 @@ func (s *Service) SetDefaultBackend(k store.K8s, h haproxy.HAProxy, frontends []
 			frontend, _ := h.FrontendGet(frontendName)
 			oldDefaultBackend := frontend.DefaultBackend
 			frontend.DefaultBackend = backendName
-			err = h.FrontendEdit(frontend)
+			err = h.FrontendEdit(frontend.FrontendBase)
 			if err != nil {
 				return
 			}

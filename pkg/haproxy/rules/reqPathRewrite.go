@@ -3,10 +3,9 @@ package rules
 import (
 	"errors"
 
-	"github.com/haproxytech/client-native/v5/models"
+	"github.com/haproxytech/client-native/v6/models"
 
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/api"
-	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
 )
 
 type ReqPathRewrite struct {
@@ -23,10 +22,9 @@ func (r ReqPathRewrite) Create(client api.HAProxyClient, frontend *models.Fronte
 		return errors.New("SSL redirect cannot be configured in TCP mode")
 	}
 	httpRule := models.HTTPRequestRule{
-		Index:     utils.PtrInt64(0),
 		Type:      "replace-path",
 		PathMatch: r.PathMatch,
 		PathFmt:   r.PathFmt,
 	}
-	return client.FrontendHTTPRequestRuleCreate(frontend.Name, httpRule, ingressACL)
+	return client.FrontendHTTPRequestRuleCreate(0, frontend.Name, httpRule, ingressACL)
 }

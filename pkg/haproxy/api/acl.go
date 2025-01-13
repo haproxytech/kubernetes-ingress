@@ -3,7 +3,7 @@ package api
 import (
 	"fmt"
 
-	"github.com/haproxytech/client-native/v5/models"
+	"github.com/haproxytech/client-native/v6/models"
 )
 
 func (c *clientNative) ACLsGet(parentType, parentName string, aclName ...string) (models.Acls, error) {
@@ -25,26 +25,6 @@ func (c *clientNative) ACLsGet(parentType, parentName string, aclName ...string)
 		return nil, err
 	}
 	return acls, nil
-}
-
-func (c *clientNative) ACLGet(id int64, parentType, parentName string) (*models.ACL, error) {
-	configuration, err := c.nativeAPI.Configuration()
-	if err != nil {
-		return nil, err
-	}
-	_, acl, err := configuration.GetACL(id, parentType, parentName, c.activeTransaction)
-	if err != nil {
-		return nil, err
-	}
-	return acl, nil
-}
-
-func (c *clientNative) ACLDelete(id int64, parentType string, parentName string) error {
-	configuration, err := c.nativeAPI.Configuration()
-	if err != nil {
-		return err
-	}
-	return configuration.DeleteACL(id, parentType, parentName, c.activeTransaction, 0)
 }
 
 func (c *clientNative) ACLDeleteAll(parentType string, parentName string) error {
@@ -77,7 +57,7 @@ func (c *clientNative) ACLDeleteAll(parentType string, parentName string) error 
 	return nil
 }
 
-func (c *clientNative) ACLCreate(parentType string, parentName string, data *models.ACL) error {
+func (c *clientNative) ACLCreate(id int64, parentType string, parentName string, data *models.ACL) error {
 	configuration, err := c.nativeAPI.Configuration()
 	if err != nil {
 		return err
@@ -91,13 +71,23 @@ func (c *clientNative) ACLCreate(parentType string, parentName string, data *mod
 		c.backends[parentName] = backend
 		return nil
 	}
-	return configuration.CreateACL(parentType, parentName, data, c.activeTransaction, 0)
+	return configuration.CreateACL(id, parentType, parentName, data, c.activeTransaction, 0)
 }
 
-func (c *clientNative) ACLEdit(id int64, parentType string, parentName string, data *models.ACL) error {
+func (c *clientNative) ACLsReplace(parentType, parentName string, rules models.Acls) error {
 	configuration, err := c.nativeAPI.Configuration()
 	if err != nil {
 		return err
 	}
-	return configuration.EditACL(id, parentType, parentName, data, c.activeTransaction, 0)
+	if parentType == "backend" {
+		backend, exists := c.backends[parentName]
+		if !exists {
+			return fmt.Errorf("can't replace acl for unexisting backend %s : %w", parentName, ErrNotFound)
+		}
+		backend.ACLList = rules
+		c.backends[parentName] = backend
+		return nil
+	}
+
+	return configuration.ReplaceAcls(parentType, parentName, rules, c.activeTransaction, 0)
 }

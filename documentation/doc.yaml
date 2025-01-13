@@ -404,6 +404,22 @@ image_arguments:
     default: false
     version_min: "3.1"
     example: --disable-writing-only-if-reload
+  - argument: --input-file
+    description: |-
+      This is the path to a manifest (yaml) of a v1 version to the CRDs to convert to v3.
+      Goes with --output-file for the result
+    values:
+      - Path a to a CRD manifest you want to convert to the latest version
+    example: --input-file=/home/xxx/convert/v1/global-full.yaml
+    version_min: "3.2"
+  - argument: --output-file
+    description: |-
+        This is the path to a manifest (yaml) where to write to the converted v3 CRD from a v1 manifest (see --input-file).
+        Goes with --input-file
+    values:
+        - Path a to a CRD manifest where the converted v3 CRDs will be written
+    example: --output-file=/home/xxx/convert/v3/global-full.yaml
+    version_min: "3.2"
 groups:
   config-snippet:
     header: |-

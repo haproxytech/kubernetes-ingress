@@ -37,14 +37,14 @@ crs
 
 ### GoLang Type
 
-In this guide the API group is `ingress.v1.haproxy.org` (this group is used for any resource dealing with haproxy configuration) and the API version is `v1`.
+In this guide the API group is `ingress.v3.haproxy.org` (this group is used for any resource dealing with haproxy configuration) and the API version is `v3`.
 So to follow the */crs/api/<group>/<version>/* convention, the GoLang Type describing the `Global` CR should be in *crs/api/ingress/v1/global.go* with the following content:
 
 ```go
-package v1
+package v3
 
 import (
-  "github.com/haproxytech/client-native/v5/models"
+  "github.com/haproxytech/client-native/v6/models"
   metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -101,14 +101,14 @@ The tool we are using is [k8s.io/code-generator](https://github.com/kubernetes/c
 - lister-gen: generates lister methods which provide a read-only caching layer for GET and LIST requests.
 
 Before generating code, some global tags need to be set in the package of the versioned API group which should be in *crs/api/<group>/<version>/* directory.
-Usually this goes into the package's doc.go, so in this case it would be in *crs/api/ingress/v1/doc.go* with the following content:
+Usually this goes into the package's doc.go, so in this case it would be in *crs/api/ingress/v3/doc.go* with the following content:
 
 ```yml
-// Package v1 contains the core v1 API group
+// Package v3 contains the core v3 API group
 //
 // +k8s:deepcopy-gen=package
-// +groupName=ingress.v1.haproxy.org
-package v1
+// +groupName=ingress.v3.haproxy.org
+package v3
 ```
 
 In addition to including a number of global code generation tags, "doc.go" is used to describe the API group's purpose.

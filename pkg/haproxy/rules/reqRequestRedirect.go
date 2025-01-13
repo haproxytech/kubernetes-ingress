@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/haproxytech/client-native/v5/models"
+	"github.com/haproxytech/client-native/v6/models"
 
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/api"
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
@@ -37,11 +37,10 @@ func (r RequestRedirect) Create(client api.HAProxyClient, frontend *models.Front
 		rule = fmt.Sprintf(scheme+"://%s%%[capture.req.uri]", r.Host)
 	}
 	httpRule := models.HTTPRequestRule{
-		Index:      utils.PtrInt64(0),
 		Type:       "redirect",
 		RedirCode:  utils.PtrInt64(r.RedirectCode),
 		RedirValue: rule,
 		RedirType:  "location",
 	}
-	return client.FrontendHTTPRequestRuleCreate(frontend.Name, httpRule, ingressACL)
+	return client.FrontendHTTPRequestRuleCreate(0, frontend.Name, httpRule, ingressACL)
 }

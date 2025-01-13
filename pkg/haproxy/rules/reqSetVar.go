@@ -1,10 +1,9 @@
 package rules
 
 import (
-	"github.com/haproxytech/client-native/v5/models"
+	"github.com/haproxytech/client-native/v6/models"
 
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/api"
-	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
 )
 
 type ReqSetVar struct {
@@ -21,17 +20,15 @@ func (r ReqSetVar) GetType() Type {
 func (r ReqSetVar) Create(client api.HAProxyClient, frontend *models.Frontend, ingressACL string) error {
 	if frontend.Mode == "tcp" {
 		tcpRule := models.TCPRequestRule{
-			Index:    utils.PtrInt64(0),
 			Type:     "content",
 			Action:   "set-var",
 			VarName:  r.Name,
 			VarScope: r.Scope,
 			Expr:     r.Expression,
 		}
-		return client.FrontendTCPRequestRuleCreate(frontend.Name, tcpRule, ingressACL)
+		return client.FrontendTCPRequestRuleCreate(0, frontend.Name, tcpRule, ingressACL)
 	}
 	httpRule := models.HTTPRequestRule{
-		Index:    utils.PtrInt64(0),
 		Type:     "set-var",
 		VarName:  r.Name,
 		VarScope: r.Scope,
@@ -41,5 +38,5 @@ func (r ReqSetVar) Create(client api.HAProxyClient, frontend *models.Frontend, i
 		httpRule.Cond = "if"
 		httpRule.CondTest = r.CondTest
 	}
-	return client.FrontendHTTPRequestRuleCreate(frontend.Name, httpRule, ingressACL)
+	return client.FrontendHTTPRequestRuleCreate(0, frontend.Name, httpRule, ingressACL)
 }

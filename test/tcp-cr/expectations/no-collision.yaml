@@ -2,30 +2,34 @@
 - tcpmodel:
     name: service1
     frontend:
-      name: fe1
+      frontendbase:
+        name: fe1
       binds:
-      - accept_proxy: true
-        name: acceptproxy
-        port: 1
-      - port: 11
+        acceptproxy:
+          accept_proxy: true
+          port: 1
+        other:
+          port: 11
     service:
       name: service1
       port: 443
   parent_name: tcp-1
   namespace: ns
-  creation_timestamp: '2024-05-16T11:45:26.371Z'
+  creation_timestamp: 2024-05-16T11:45:26.371Z
 - tcpmodel:
     name: service2
     frontend:
-      name: fe2
+      frontendbase:
+        name: fe2
       binds:
-      - accept_proxy: true
-        name: acceptproxy
-        port: 2
-      - port: 22
+        acceptproxy:
+          accept_proxy: true
+          port: 2
+        other:
+          port: 22
     service:
       name: service2
       port: 443
   parent_name: tcp-1
   namespace: ns
-  creation_timestamp: '2024-05-16T11:45:26.371Z'
+  creation_timestamp: 2024-05-16T11:45:26.371Z

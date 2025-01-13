@@ -4,13 +4,12 @@ import (
 	"errors"
 	"fmt"
 
-	parser "github.com/haproxytech/client-native/v5/config-parser"
-	"github.com/haproxytech/client-native/v5/config-parser/types"
-	cnConfiguration "github.com/haproxytech/client-native/v5/configuration"
-	"github.com/haproxytech/client-native/v5/models"
+	parser "github.com/haproxytech/client-native/v6/config-parser"
+	"github.com/haproxytech/client-native/v6/config-parser/types"
+	cnConfiguration "github.com/haproxytech/client-native/v6/configuration"
+	"github.com/haproxytech/client-native/v6/models"
 
 	"github.com/haproxytech/kubernetes-ingress/pkg/controller/constants"
-	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
 )
 
 func (c *clientNative) DefaultsGetConfiguration() (defaults *models.Defaults, err error) {
@@ -45,7 +44,7 @@ func (c *clientNative) DefaultsPushConfiguration(defaults models.Defaults) (err 
 	}
 	// Force defaults log directive to "log global"
 	_ = configuration.DeleteLogTarget(0, string(parser.Defaults), parser.DefaultSectionName, c.activeTransaction, 0)
-	err = configuration.CreateLogTarget(string(parser.Defaults), parser.DefaultSectionName, &models.LogTarget{Index: utils.PtrInt64(0), Global: true}, c.activeTransaction, 0)
+	err = configuration.CreateLogTarget(0, string(parser.Defaults), parser.DefaultSectionName, &models.LogTarget{Global: true}, c.activeTransaction, 0)
 	if err != nil {
 		return fmt.Errorf("unable to set 'log global' directive in defaults section: %w", err)
 	}
@@ -97,7 +96,7 @@ func (c *clientNative) GlobalPushLogTargets(logTargets models.LogTargets) error 
 		}
 	}
 	for _, log := range logTargets {
-		err = configuration.CreateLogTarget(string(parser.Global), parser.GlobalSectionName, log, c.activeTransaction, 0)
+		err = configuration.CreateLogTarget(0, string(parser.Global), parser.GlobalSectionName, log, c.activeTransaction, 0)
 		if err != nil {
 			return fmt.Errorf("unable to update HAProxy's global log targets: %w", err)
 		}

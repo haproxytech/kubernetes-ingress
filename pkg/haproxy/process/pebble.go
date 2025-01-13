@@ -7,8 +7,8 @@ import (
 	"os/exec"
 	"time"
 
-	"github.com/haproxytech/client-native/v5/runtime"
-	"github.com/haproxytech/client-native/v5/runtime/options"
+	"github.com/haproxytech/client-native/v6/runtime"
+	"github.com/haproxytech/client-native/v6/runtime/options"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/api"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/env"
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
@@ -29,7 +29,7 @@ func newPebbleControl(env env.Env, osArgs utils.OSArgs) *pebbleControl {
 		logger: utils.GetLogger(),
 	}
 
-	masterSocket, err := runtime.New(context.Background(), options.MasterSocket(MASTER_SOCKET_PATH, 1), options.AllowDelayedStart(time.Minute, time.Second))
+	masterSocket, err := runtime.New(context.Background(), options.MasterSocket(MASTER_SOCKET_PATH), options.AllowDelayedStart(time.Minute, time.Second))
 	if err != nil {
 		pb.logger.Error(err)
 		return &pb

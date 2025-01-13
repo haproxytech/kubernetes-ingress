@@ -1,7 +1,7 @@
 package acls
 
 import (
-	"github.com/haproxytech/client-native/v5/models"
+	"github.com/haproxytech/client-native/v6/models"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/api"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/instance"
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
@@ -24,23 +24,18 @@ func PopulateFrontend(client api.HAProxyClient, name string, acls models.Acls) {
 	Populate(client, name, acls, ACL_FRONTEND)
 }
 
-func Populate(client api.HAProxyClient, name string, acls models.Acls, resource ACL_DESTINATION) {
+func Populate(client api.ACL, name string, rules models.Acls, resource ACL_DESTINATION) {
 	currentAcls, errAcls := client.ACLsGet(string(resource), name)
 
 	// There is a resource ...
 	if errAcls == nil {
-		diffAcls := acls.Diff(currentAcls)
+		diffAcls := rules.Diff(currentAcls)
 		// ... with different acls from the resource.
 		if len(diffAcls) != 0 {
-			// ... we remove all the acls
-			_ = client.ACLDeleteAll(string(resource), name)
-			// ... and create all the new ones if any
-			for _, acl := range acls {
-				errCreate := client.ACLCreate(string(resource), name, acl)
-				if errCreate != nil {
-					utils.GetLogger().Err(errCreate)
-					break
-				}
+			err := client.ACLsReplace(string(resource), name, rules)
+			if err != nil {
+				utils.GetLogger().Err(err)
+				return
 			}
 			// ... we reload because we created some acls.
 			instance.Reload("%s '%s', acls updated: %+v", resource, name, utils.JSONDiff(diffAcls))

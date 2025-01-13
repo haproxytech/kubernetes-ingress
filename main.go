@@ -32,6 +32,7 @@ import (
 	"github.com/go-test/deep"
 	"github.com/jessevdk/go-flags"
 
+	convert "github.com/haproxytech/kubernetes-ingress/crs/converters/v1v3"
 	"github.com/haproxytech/kubernetes-ingress/pkg/annotations"
 	"github.com/haproxytech/kubernetes-ingress/pkg/controller"
 	"github.com/haproxytech/kubernetes-ingress/pkg/job"
@@ -96,6 +97,22 @@ func main() {
 		// exit, this is just a job
 		os.Exit(0)
 	}
+
+	if osArgs.CRDInputFile != "" && osArgs.CRDOutputFile != "" {
+		logger.Print(version.IngressControllerInfo)
+		logger.Infof("HAProxy Ingress Controller CRD Converter %s %s", version.GitTag, version.GitCommit)
+		logger.Infof("Build from: %s", version.GitRepo)
+		logger.Infof("Build date: %s\n", version.GitCommitDate)
+
+		err := convert.ConvertV1V3(osArgs)
+		if err != nil {
+			logger.Error(err)
+			os.Exit(1)
+		}
+		// exit, this is just a job
+		os.Exit(0)
+	}
+
 	if osArgs.InitialSyncPeriod == 0 {
 		osArgs.InitialSyncPeriod = osArgs.SyncPeriod
 	}

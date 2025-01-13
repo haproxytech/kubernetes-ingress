@@ -62,7 +62,7 @@ rules:
   - patch
   - update
 - apiGroups:
-  - core.haproxy.org
+  - ingress.v1.haproxy.org
   resources:
   - '*'
   verbs:
@@ -71,7 +71,7 @@ rules:
   - watch
   - update
 - apiGroups:
-  - ingress.v1.haproxy.org
+  - ingress.v3.haproxy.org
   resources:
   - '*'
   verbs:

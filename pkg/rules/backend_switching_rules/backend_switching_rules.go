@@ -15,13 +15,13 @@
 package backendswitchingrules
 
 import (
-	"github.com/haproxytech/client-native/v5/models"
+	"github.com/haproxytech/client-native/v6/models"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/api"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/instance"
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
 )
 
-func Reconcile(client api.HAProxyClient, frontendName string, rules models.BackendSwitchingRules) error {
+func Reconcile(client api.BackendSwitchingRule, frontendName string, rules models.BackendSwitchingRules) error {
 	var errors utils.Errors
 	currentRules, err := client.BackendSwitchingRulesGet(frontendName)
 	if err != nil {
@@ -32,15 +32,10 @@ func Reconcile(client api.HAProxyClient, frontendName string, rules models.Backe
 	diffRules := rules.Diff(currentRules)
 
 	if len(diffRules) != 0 {
-		// ... we remove all the rules
-		_ = client.BackendSwitchingRuleDeleteAll(frontendName)
-		// ... and create all the new ones if any
-		for _, bsRule := range rules {
-			errCreate := client.BackendSwitchingRuleCreate(frontendName, *bsRule)
-			if errCreate != nil {
-				utils.GetLogger().Err(errCreate)
-				break
-			}
+		err = client.BackendSwitchingRulesReplace(frontendName, rules)
+		if err != nil {
+			utils.GetLogger().Err(err)
+			return err
 		}
 		// ... we reload because we created some http requests.
 		instance.Reload("frontend '%s', backend_switching_rule rules updated: %+v", frontendName, utils.JSONDiff(diffRules))

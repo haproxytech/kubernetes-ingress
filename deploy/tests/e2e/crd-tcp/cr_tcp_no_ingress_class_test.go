@@ -20,8 +20,8 @@ import (
 	"strings"
 	"testing"
 
-	parser "github.com/haproxytech/client-native/v5/config-parser"
-	"github.com/haproxytech/client-native/v5/config-parser/options"
+	parser "github.com/haproxytech/client-native/v6/config-parser"
+	"github.com/haproxytech/client-native/v6/config-parser/options"
 	"github.com/haproxytech/kubernetes-ingress/deploy/tests/e2e"
 	"github.com/stretchr/testify/suite"
 )
@@ -44,7 +44,8 @@ func TestTCPSuiteNoIngressClasss(t *testing.T) {
 func (suite *TCPSuiteNoIngressClass) Test_CRD_TCP_No_Ingress_Class() {
 	suite.Run("TCP CR Additional Services", func() {
 		var err error
-		suite.Require().NoError(suite.test.Apply("config/tcp-cr-no-ingress-class.yaml", suite.test.GetNS(), nil))
+		crdPath := e2e.GetCRDFixturePath() + "/tcp-cr-no-ingress-class.yaml"
+		suite.Require().NoError(suite.test.Apply(crdPath, suite.test.GetNS(), nil))
 		client2, err := e2e.NewHTTPClient(suite.tmplData.Host2, 32766)
 		suite.Require().Eventually(func() bool {
 			_, _, err := client2.Do()

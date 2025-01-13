@@ -15,15 +15,15 @@
 package store
 
 import (
-	v1 "github.com/haproxytech/kubernetes-ingress/crs/api/ingress/v1"
+	v3 "github.com/haproxytech/kubernetes-ingress/crs/api/ingress/v3"
 )
 
-func (k *K8s) EventDefaultsCR(namespace, name string, data *v1.Defaults) bool {
+func (k *K8s) EventDefaultsCR(namespace, name string, data *v3.Defaults) bool {
 	ns := k.GetNamespace(namespace)
 	if data == nil {
 		delete(ns.CRs.Defaults, name)
 		return true
 	}
-	ns.CRs.Defaults[name] = data.Spec.Config
+	ns.CRs.Defaults[name] = &data.Spec.Defaults
 	return true
 }

@@ -14,7 +14,7 @@
 
 package utils
 
-import "github.com/haproxytech/client-native/v5/models"
+import "github.com/haproxytech/client-native/v6/models"
 
 type Equalizer[T any] interface {
 	Equal(t T, opt ...models.Options) bool

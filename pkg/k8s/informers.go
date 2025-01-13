@@ -13,9 +13,9 @@ import (
 	discoveryv1 "k8s.io/api/discovery/v1"
 	discoveryv1beta1 "k8s.io/api/discovery/v1beta1"
 
-	"github.com/haproxytech/client-native/v5/models"
+	"github.com/haproxytech/client-native/v6/models"
 
-	v1 "github.com/haproxytech/kubernetes-ingress/crs/api/ingress/v1"
+	v3 "github.com/haproxytech/kubernetes-ingress/crs/api/ingress/v3"
 	k8smeta "github.com/haproxytech/kubernetes-ingress/pkg/k8s/meta"
 	k8ssync "github.com/haproxytech/kubernetes-ingress/pkg/k8s/sync"
 	k8stransform "github.com/haproxytech/kubernetes-ingress/pkg/k8s/transform"
@@ -54,10 +54,9 @@ func (k k8s) getNamespaceInfomer(eventChan chan k8ssync.SyncDataEvent, factory i
 					Secret:         make(map[string]*store.Secret),
 					HAProxyRuntime: make(map[string]map[string]*store.RuntimeBackend),
 					CRs: &store.CustomResources{
-						Global:     make(map[string]*models.Global),
-						Defaults:   make(map[string]*models.Defaults),
-						LogTargets: make(map[string]models.LogTargets),
-						Backends:   make(map[string]*v1.BackendSpec),
+						Global:   make(map[string]*models.Global),
+						Defaults: make(map[string]*models.Defaults),
+						Backends: make(map[string]*v3.BackendSpec),
 					},
 					Gateways:        make(map[string]*store.Gateway),
 					TCPRoutes:       make(map[string]*store.TCPRoute),
@@ -83,10 +82,9 @@ func (k k8s) getNamespaceInfomer(eventChan chan k8ssync.SyncDataEvent, factory i
 					Secret:         make(map[string]*store.Secret),
 					HAProxyRuntime: make(map[string]map[string]*store.RuntimeBackend),
 					CRs: &store.CustomResources{
-						Global:     make(map[string]*models.Global),
-						Defaults:   make(map[string]*models.Defaults),
-						LogTargets: make(map[string]models.LogTargets),
-						Backends:   make(map[string]*v1.BackendSpec),
+						Global:   make(map[string]*models.Global),
+						Defaults: make(map[string]*models.Defaults),
+						Backends: make(map[string]*v3.BackendSpec),
 					},
 					Gateways:        make(map[string]*store.Gateway),
 					TCPRoutes:       make(map[string]*store.TCPRoute),

@@ -19,7 +19,7 @@ import (
 	"fmt"
 	"path"
 
-	"github.com/haproxytech/client-native/v5/models"
+	"github.com/haproxytech/client-native/v6/models"
 
 	"github.com/haproxytech/kubernetes-ingress/pkg/annotations"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy"
@@ -205,7 +205,7 @@ func (handler HTTPS) Update(k store.K8s, h haproxy.HAProxy, a annotations.Annota
 
 func (handler HTTPS) enableSSLPassthrough(h haproxy.HAProxy) (err error) {
 	// Create TCP frontend for ssl-passthrough
-	frontend := models.Frontend{
+	frontend := models.FrontendBase{
 		Name:           h.FrontSSL,
 		Mode:           "tcp",
 		LogFormat:      "'%ci:%cp [%t] %ft %b/%s %Tw/%Tc/%Tt %B %ts %ac/%fc/%bc/%sc/%rc %sq/%bq %hr %hs SNI: %[var(sess.sni)]'",
@@ -223,19 +223,21 @@ func (handler HTTPS) enableSSLPassthrough(h haproxy.HAProxy) (err error) {
 	// Create backend for proxy chaining (chaining
 	// ssl-passthrough frontend to ssl-offload backend)
 	h.BackendCreatePermanently(models.Backend{
-		Name: h.BackSSL,
-		Mode: "tcp",
+		BackendBase: models.BackendBase{
+			Name: h.BackSSL,
+			Mode: "tcp",
+		},
 	})
 	var errors utils.Errors
+
 	errors.Add(
 		h.BackendServerCreateOrUpdate(h.BackSSL, models.Server{
 			Name:         h.FrontHTTPS,
 			Address:      "unix@" + handler.unixSocketPath(h),
 			ServerParams: models.ServerParams{SendProxyV2: "enabled"},
 		}),
-		h.BackendSwitchingRuleCreate(h.FrontSSL, models.BackendSwitchingRule{
-			Index: utils.PtrInt64(0),
-			Name:  "%[var(txn.sni_match),field(1,.)]",
+		h.BackendSwitchingRuleCreate(0, h.FrontSSL, models.BackendSwitchingRule{
+			Name: "%[var(txn.sni_match),field(1,.)]",
 		}),
 		handler.toggleSSLPassthrough(true, h))
 	return errors.Result()

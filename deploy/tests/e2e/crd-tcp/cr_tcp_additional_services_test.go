@@ -20,10 +20,10 @@ import (
 	"strings"
 	"testing"
 
-	parser "github.com/haproxytech/client-native/v5/config-parser"
-	"github.com/haproxytech/client-native/v5/config-parser/options"
-	"github.com/haproxytech/client-native/v5/config-parser/params"
-	"github.com/haproxytech/client-native/v5/config-parser/types"
+	parser "github.com/haproxytech/client-native/v6/config-parser"
+	"github.com/haproxytech/client-native/v6/config-parser/options"
+	"github.com/haproxytech/client-native/v6/config-parser/params"
+	"github.com/haproxytech/client-native/v6/config-parser/types"
 	"github.com/haproxytech/kubernetes-ingress/deploy/tests/e2e"
 	"github.com/stretchr/testify/suite"
 )
@@ -78,7 +78,8 @@ func TestTCPSuiteAddtionalServices(t *testing.T) {
 func (suite *TCPSuiteAddtionalServices) Test_CRD_TCP_Additional_Services() {
 	suite.Run("TCP CR Additional Services", func() {
 		var err error
-		suite.Require().NoError(suite.test.Apply("config/tcp-cr-add-services.yaml", suite.test.GetNS(), nil))
+		crdPath := e2e.GetCRDFixturePath() + "/tcp-cr-add-services.yaml"
+		suite.Require().NoError(suite.test.Apply(crdPath, suite.test.GetNS(), nil))
 		client2, err := e2e.NewHTTPClient(suite.tmplData.Host2, 32766)
 		suite.Require().Eventually(func() bool {
 			r, cls, err := client2.Do()

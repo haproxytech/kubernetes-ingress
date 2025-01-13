@@ -119,7 +119,8 @@ func (suite *OffloadRuntimeSuite) Test_HTTS_OffloadRuntime() {
 	suite.Require().Containsf(certInfo.Subject, "offload-test-4.haproxy", "wrong Cert CN. got [%s], expected [%s]", certInfo.Subject, "offload-test-4.haproxy")
 
 	// Now trigger a reload
-	suite.Require().NoError(suite.test.Apply("config/backend-crd.yaml", suite.test.GetNS(), nil))
+	crdPath := e2e.GetCRDFixturePath() + "/backend-crd.yaml"
+	suite.Require().NoError(suite.test.Apply(crdPath, suite.test.GetNS(), nil))
 	suite.Require().NoError(suite.test.Apply("config/echo-app-offload-backend-crd.yaml", suite.test.GetNS(), nil))
 
 	suite.Eventually(func() bool {

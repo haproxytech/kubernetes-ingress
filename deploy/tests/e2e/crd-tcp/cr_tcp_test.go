@@ -20,10 +20,10 @@ import (
 	"strings"
 	"testing"
 
-	parser "github.com/haproxytech/client-native/v5/config-parser"
-	"github.com/haproxytech/client-native/v5/config-parser/options"
-	"github.com/haproxytech/client-native/v5/config-parser/params"
-	"github.com/haproxytech/client-native/v5/config-parser/types"
+	parser "github.com/haproxytech/client-native/v6/config-parser"
+	"github.com/haproxytech/client-native/v6/config-parser/options"
+	"github.com/haproxytech/client-native/v6/config-parser/params"
+	"github.com/haproxytech/client-native/v6/config-parser/types"
 	"github.com/haproxytech/kubernetes-ingress/deploy/tests/e2e"
 	"github.com/stretchr/testify/suite"
 )
@@ -40,7 +40,8 @@ func TestTCPSuite(t *testing.T) {
 func (suite *TCPSuite) Test_CRD_TCP_OK() {
 	suite.Run("TCP CR OK", func() {
 		var err error
-		suite.Require().NoError(suite.test.Apply("config/tcp-cr.yaml", suite.test.GetNS(), nil))
+		crdPath := e2e.GetCRDFixturePath() + "/tcp-cr.yaml"
+		suite.Require().NoError(suite.test.Apply(crdPath, suite.test.GetNS(), nil))
 		suite.client, err = e2e.NewHTTPClient(suite.tmplData.Host, 32766)
 		suite.Require().NoError(err)
 		suite.Eventually(func() bool {
@@ -85,7 +86,8 @@ func (suite *TCPSuite) Test_CRD_TCP_OK() {
 func (suite *TCPSuite) Test_CRD_TCP_CR_Backend() {
 	suite.Run("TCP CR with Backend CR", func() {
 		var err error
-		suite.Require().NoError(suite.test.Apply("config/tcp-cr.yaml", suite.test.GetNS(), nil))
+		crdPath := e2e.GetCRDFixturePath() + "/tcp-cr.yaml"
+		suite.Require().NoError(suite.test.Apply(crdPath, suite.test.GetNS(), nil))
 		suite.client, err = e2e.NewHTTPClient(suite.tmplData.Host, 32766)
 		suite.Require().NoError(err)
 		suite.Eventually(func() bool {
@@ -143,7 +145,8 @@ func (suite *TCPSuite) Test_CRD_TCP_CR_Backend() {
 func (suite *TCPSuite) Test_CRD_TCP_SSL() {
 	suite.Run("TCP CR SSL", func() {
 		var err error
-		suite.Require().NoError(suite.test.Apply("config/tcp-cr-ssl.yaml", suite.test.GetNS(), nil))
+		crdPath := e2e.GetCRDFixturePath() + "/tcp-cr-ssl.yaml"
+		suite.Require().NoError(suite.test.Apply(crdPath, suite.test.GetNS(), nil))
 		suite.client, err = e2e.NewHTTPSClient("crdtcp-test.haproxy", 32766)
 		suite.Require().NoError(err)
 		suite.Eventually(func() bool {

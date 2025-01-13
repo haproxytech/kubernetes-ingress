@@ -1,13 +1,13 @@
 package api
 
-import "github.com/haproxytech/client-native/v5/models"
+import "github.com/haproxytech/client-native/v6/models"
 
-func (c *clientNative) LogTargetCreate(parentType, parentName string, rule models.LogTarget) error {
+func (c *clientNative) LogTargetCreate(id int64, parentType, parentName string, rule models.LogTarget) error {
 	configuration, err := c.nativeAPI.Configuration()
 	if err != nil {
 		return err
 	}
-	return configuration.CreateLogTarget(parentType, parentName, &rule, c.activeTransaction, 0)
+	return configuration.CreateLogTarget(id, parentType, parentName, &rule, c.activeTransaction, 0)
 }
 
 func (c *clientNative) LogTargetDeleteAll(parentType, parentName string) (err error) {
@@ -38,4 +38,17 @@ func (c *clientNative) LogTargetsGet(parentType, parentName string) (models.LogT
 		return nil, err
 	}
 	return rules, nil
+}
+
+func (c *clientNative) LogTargetsReplace(parentType, parentName string, rules models.LogTargets) error {
+	configuration, err := c.nativeAPI.Configuration()
+	if err != nil {
+		return err
+	}
+
+	err = configuration.ReplaceLogTargets(parentType, parentName, rules, c.activeTransaction, 0)
+	if err != nil {
+		return err
+	}
+	return nil
 }

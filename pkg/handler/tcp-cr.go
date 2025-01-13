@@ -18,8 +18,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/haproxytech/client-native/v5/models"
-	v1 "github.com/haproxytech/kubernetes-ingress/crs/api/ingress/v1"
+	"github.com/haproxytech/client-native/v6/models"
+	v3 "github.com/haproxytech/kubernetes-ingress/crs/api/ingress/v3"
 	"github.com/haproxytech/kubernetes-ingress/pkg/annotations"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/certs"
@@ -140,7 +140,7 @@ func (handler TCPCustomResource) Update(k store.K8s, h haproxy.HAProxy, a annota
 	return errs.Result()
 }
 
-func (handler TCPCustomResource) checkService(ctx tcpcontext, tcp v1.TCPModel) (err error) {
+func (handler TCPCustomResource) checkService(ctx tcpcontext, tcp v3.TCPModel) (err error) {
 	var ok bool
 	if _, ok = ctx.k.Namespaces[ctx.namespace]; !ok {
 		err = fmt.Errorf("tcp-cr: namespace of service '%s/%s' not found", ctx.namespace, tcp.Service.Name)
@@ -154,10 +154,10 @@ func (handler TCPCustomResource) checkService(ctx tcpcontext, tcp v1.TCPModel) (
 	return nil
 }
 
-func (handler TCPCustomResource) reconcileFrontend(ctx tcpcontext, owner rc.Owner, tcp v1.TCPModel, a annotations.Annotations) error {
-	cfgFrontendName := cfgFrontendName(ctx.namespace, tcp.Frontend.Frontend)
+func (handler TCPCustomResource) reconcileFrontend(ctx tcpcontext, owner rc.Owner, tcp v3.TCPModel, a annotations.Annotations) error {
+	cfgFrontendName := cfgFrontendName(ctx.namespace, tcp.Frontend)
 	// First get Frontend from Custom Resource
-	frontend := tcp.Frontend.Frontend
+	frontend := tcp.Frontend
 
 	// Then apply overrides
 	applyFrontendOverride(ctx.namespace, &frontend)
@@ -173,29 +173,29 @@ func (handler TCPCustomResource) reconcileFrontend(ctx tcpcontext, owner rc.Owne
 	}
 
 	// Reconcile ACLs
-	aclrules.PopulateFrontend(ctx.h, frontend.Name, tcp.Frontend.Acls)
+	aclrules.PopulateFrontend(ctx.h, frontend.Name, tcp.Frontend.ACLList)
 
 	// Reconcile BackendSwitchingRules
-	if errBsr := backendswitchingrules.Reconcile(ctx.h, frontend.Name, tcp.Frontend.BackendSwitchingRules); errBsr != nil {
+	if errBsr := backendswitchingrules.Reconcile(ctx.h, frontend.Name, tcp.Frontend.BackendSwitchingRuleList); errBsr != nil {
 		return errBsr
 	}
 	// Reconcile Captures
-	if errCap := captures.Reconcile(ctx.h, frontend.Name, tcp.Frontend.Captures); errCap != nil {
+	if errCap := captures.Reconcile(ctx.h, frontend.Name, tcp.Frontend.CaptureList); errCap != nil {
 		return errCap
 	}
 
 	// Reconcile Filters
-	if errFilter := filters.Reconcile(ctx.h, rules.ParentTypeFrontend, frontend.Name, tcp.Frontend.Filters); errFilter != nil {
+	if errFilter := filters.Reconcile(ctx.h, rules.ParentTypeFrontend, frontend.Name, tcp.Frontend.FilterList); errFilter != nil {
 		return errFilter
 	}
 
 	// Reconcile LogTargets
-	if errLogTargets := logtargets.Reconcile(ctx.h, rules.ParentTypeFrontend, frontend.Name, tcp.Frontend.LogTargets); errLogTargets != nil {
+	if errLogTargets := logtargets.Reconcile(ctx.h, rules.ParentTypeFrontend, frontend.Name, tcp.Frontend.LogTargetList); errLogTargets != nil {
 		return errLogTargets
 	}
 
 	// Reconcile TCP Requests
-	if errTCPRequests := tcprequestrules.Reconcile(ctx.h, rules.ParentTypeFrontend, frontend.Name, tcp.Frontend.TCPRequestRules); errTCPRequests != nil {
+	if errTCPRequests := tcprequestrules.Reconcile(ctx.h, rules.ParentTypeFrontend, frontend.Name, tcp.Frontend.TCPRequestRuleList); errTCPRequests != nil {
 		return errTCPRequests
 	}
 
@@ -260,7 +260,7 @@ func (handler TCPCustomResource) createOrEditFrontend(h haproxy.HAProxy, fronten
 	oldfe, err := h.FrontendGet(frontend.Name)
 	// Create
 	if err != nil {
-		err = h.FrontendCreate(frontend)
+		err = h.FrontendCreate(frontend.FrontendBase)
 		if err == nil {
 			instance.Reload("TCP frontend '%s' created", frontend.Name)
 		}
@@ -273,7 +273,7 @@ func (handler TCPCustomResource) createOrEditFrontend(h haproxy.HAProxy, fronten
 	// A diff in DefaultBackend is normal at this stage
 	delete(diffs, "DefaultBackend")
 	if len(diffs) != 0 {
-		err = h.FrontendEdit(frontend)
+		err = h.FrontendEdit(frontend.FrontendBase)
 		if err == nil {
 			instance.Reload("TCP frontend '%s' updated %v", frontend.Name, diffs)
 		}
@@ -283,11 +283,13 @@ func (handler TCPCustomResource) createOrEditFrontend(h haproxy.HAProxy, fronten
 	return nil
 }
 
-func (handler TCPCustomResource) reconcileBinds(ctx tcpcontext, frontend models.Frontend, binds []*models.Bind, owner rc.Owner) error {
+func (handler TCPCustomResource) reconcileBinds(ctx tcpcontext, frontend models.Frontend, binds map[string]models.Bind, owner rc.Owner) error {
 	newBinds := models.Binds{}
 	for _, bind := range binds {
 		// Copy= do not change bind in store with overrides
-		abind := *bind
+		abind := models.Bind{}
+		b, _ := bind.MarshalBinary()
+		_ = abind.UnmarshalBinary(b)
 		handler.applyBindOverride(ctx, &abind, owner)
 		newBinds = append(newBinds, &abind)
 	}
@@ -326,7 +328,7 @@ func isTCPFrontendRequired(k store.K8s, configFrontendName string) bool {
 	return k.FrontendRC.HasOwners(rc.HaproxyCfgResourceName(configFrontendName))
 }
 
-func (handler TCPCustomResource) reconcileAdditionalBackends(ctx tcpcontext, services v1.TCPServices, a annotations.Annotations) error {
+func (handler TCPCustomResource) reconcileAdditionalBackends(ctx tcpcontext, services v3.TCPServices, a annotations.Annotations) error {
 	var errors utils.Errors
 	for _, additionalService := range services {
 		path := &store.IngressPath{

@@ -6,8 +6,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/haproxytech/client-native/v5/models"
-	"github.com/haproxytech/client-native/v5/runtime"
+	"github.com/haproxytech/client-native/v6/models"
+	"github.com/haproxytech/client-native/v6/runtime"
 
 	"github.com/haproxytech/kubernetes-ingress/pkg/metrics"
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
@@ -24,10 +24,10 @@ type RuntimeServerData struct {
 	Port        int
 }
 
-func (c *clientNative) ExecuteRaw(command string) (result []string, err error) {
+func (c *clientNative) ExecuteRaw(command string) (result string, err error) {
 	runtime, err := c.nativeAPI.Runtime()
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 	result, err = runtime.ExecuteRaw(command)
 	return result, err
@@ -102,16 +102,14 @@ func (c *clientNative) runRaw(runtime runtime.Runtime, sb strings.Builder, backe
 		pmm.UpdateRuntimeMetrics(metrics.ObjectServer, err)
 		return err
 	}
-	for i := range result {
-		if len(result[i]) > 5 {
-			switch result[i][1:5] {
-			case "[3]:", "[2]:", "[1]:", "[0]:":
-				logger.Errorf("[RUNTIME] [BACKEND] [SOCKET] backend %s', server slots adjustment ?", backendName)
-				logger.Tracef("[RUNTIME] [BACKEND] [SOCKET] backend %s: Error: '%s', server slots adjustment ?", backendName, result[i])
-				err := errors.New("runtime update failed for " + backendName)
-				pmm.UpdateRuntimeMetrics(metrics.ObjectServer, err)
-				return err
-			}
+	if len(result) > 5 {
+		switch result[1:5] {
+		case "[3]:", "[2]:", "[1]:", "[0]:":
+			logger.Errorf("[RUNTIME] [BACKEND] [SOCKET] backend %s', server slots adjustment ?", backendName)
+			logger.Tracef("[RUNTIME] [BACKEND] [SOCKET] backend %s: Error: '%s', server slots adjustment ?", backendName, result)
+			err := errors.New("runtime update failed for " + backendName)
+			pmm.UpdateRuntimeMetrics(metrics.ObjectServer, err)
+			return err
 		}
 	}
 	pmm.UpdateRuntimeMetrics(metrics.ObjectServer, nil)
