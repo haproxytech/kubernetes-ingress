@@ -37,9 +37,9 @@ func (d *directControl) Service(action string) (err error) {
 			logger.Error("haproxy is already running")
 			return nil
 		}
-		cmd = exec.Command(d.Env.Binary, "-S", masterSocketArg, "-f", d.Env.MainCFGFile)
+		cmd = exec.Command(d.Env.Binary, "-W", "-S", masterSocketArg, "-f", d.Env.MainCFGFile)
 		if d.useAuxFile {
-			cmd = exec.Command(d.Env.Binary, "-S", masterSocketArg, "-f", d.Env.MainCFGFile, "-f", d.Env.AuxCFGFile)
+			cmd = exec.Command(d.Env.Binary, "-W", "-S", masterSocketArg, "-f", d.Env.MainCFGFile, "-f", d.Env.AuxCFGFile)
 		}
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
