@@ -32,7 +32,7 @@ func (handler Refresh) Update(k store.K8s, h haproxy.HAProxy, a annotations.Anno
 	}
 	// Certs
 	if cleanCrts {
-		h.RefreshCerts()
+		h.RefreshCerts(h.HAProxyClient)
 	}
 	// Rules
 	h.RefreshRules(h.HAProxyClient)

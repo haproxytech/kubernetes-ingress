@@ -273,3 +273,19 @@ func (c *clientNative) CrtListEntryAdd(crtList string, entry runtime.CrtListEntr
 	}
 	return runtime.AddCrtListEntry(crtList, entry)
 }
+
+func (c *clientNative) CrtListEntryDelete(crtList, filename string, linenumber *int64) error {
+	runtime, err := c.nativeAPI.Runtime()
+	if err != nil {
+		return err
+	}
+	return runtime.DeleteCrtListEntry(crtList, filename, nil)
+}
+
+func (c *clientNative) CertEntryDelete(filename string) error {
+	runtime, err := c.nativeAPI.Runtime()
+	if err != nil {
+		return err
+	}
+	return runtime.DeleteCertEntry(filename)
+}
