@@ -23,7 +23,7 @@ import (
 
 	parser "github.com/haproxytech/client-native/v6/config-parser"
 	"github.com/haproxytech/client-native/v6/config-parser/options"
-	tcp_actions "github.com/haproxytech/client-native/v6/config-parser/parsers/tcp/actions"
+	actions "github.com/haproxytech/client-native/v6/config-parser/parsers/actions"
 	tcptypes "github.com/haproxytech/client-native/v6/config-parser/parsers/tcp/types"
 	"github.com/haproxytech/client-native/v6/config-parser/types"
 	"github.com/haproxytech/kubernetes-ingress/deploy/tests/e2e"
@@ -189,7 +189,7 @@ func (suite *TCPSuiteBackendSwitchingRule) Test_CRD_TCP_BackendSwitchingRule_Wit
 				Timeout: "5000",
 			},
 			&tcptypes.Content{
-				Action: &tcp_actions.Accept{
+				Action: &actions.Accept{
 					Cond:     "if",
 					CondTest: "{ req_ssl_hello_type 1 }",
 				},

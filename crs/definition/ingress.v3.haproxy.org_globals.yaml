@@ -4,7 +4,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.17.0
-    haproxy.org/client-native: v6.0.7-0.20250113083507-df8f78bea9bb
+    haproxy.org/client-native: v6.1.0
   name: globals.ingress.v3.haproxy.org
 spec:
   group: ingress.v3.haproxy.org
@@ -199,6 +199,9 @@ spec:
                     description: unsetenv
                     type: string
                 type: object
+              expose_deprecated_directives:
+                description: expose deprecated directives
+                type: boolean
               expose_experimental_directives:
                 description: expose experimental directives
                 type: boolean
@@ -222,6 +225,13 @@ spec:
                     description: property separator
                     type: string
                 type: object
+              force_cfg_parser_pause:
+                description: |-
+                  force cfg parser pause
+                  Minimum: 0
+                format: int64
+                minimum: 0
+                type: integer
               gid:
                 description: gid
                 format: int64
@@ -523,6 +533,9 @@ spec:
                     nolog:
                       description: nolog
                       type: boolean
+                    profile:
+                      description: profile
+                      type: string
                     sample_range:
                       description: sample range
                       type: string
@@ -850,19 +863,24 @@ spec:
                       description: expose fd listeners
                       type: boolean
                     force_sslv3:
-                      description: force sslv3
+                      description: This field is deprecated in favor of sslv3, and
+                        will be removed in a future release
                       type: boolean
                     force_tlsv10:
-                      description: force tlsv10
+                      description: This field is deprecated in favor of tlsv10, and
+                        will be removed in a future release
                       type: boolean
                     force_tlsv11:
-                      description: force tlsv11
+                      description: This field is deprecated in favor of tlsv11, and
+                        will be removed in a future release
                       type: boolean
                     force_tlsv12:
-                      description: force tlsv12
+                      description: This field is deprecated in favor of tlsv12, and
+                        will be removed in a future release
                       type: boolean
                     force_tlsv13:
-                      description: force tlsv13
+                      description: This field is deprecated in favor of tlsv13, and
+                        will be removed in a future release
                       type: boolean
                     generate_certificates:
                       description: generate certificates
@@ -936,22 +954,27 @@ spec:
                       description: no ca names
                       type: boolean
                     no_sslv3:
-                      description: no sslv3
+                      description: This field is deprecated in favor of sslv3, and
+                        will be removed in a future release
                       type: boolean
                     no_tls_tickets:
                       description: no tls tickets
                       type: boolean
                     no_tlsv10:
-                      description: no tlsv10
+                      description: This field is deprecated in favor of tlsv10, and
+                        will be removed in a future release
                       type: boolean
                     no_tlsv11:
-                      description: no tlsv11
+                      description: This field is deprecated in favor of tlsv11, and
+                        will be removed in a future release
                       type: boolean
                     no_tlsv12:
-                      description: no tlsv12
+                      description: This field is deprecated in favor of tlsv12, and
+                        will be removed in a future release
                       type: boolean
                     no_tlsv13:
-                      description: no tlsv13
+                      description: This field is deprecated in favor of tlsv13, and
+                        will be removed in a future release
                       type: boolean
                     npn:
                       description: npn
@@ -965,10 +988,12 @@ spec:
                     quic-cc-algo:
                       description: |-
                         quic cc algo
-                        Enum: ["cubic","newreno"]
+                        Enum: ["cubic","newreno","bbr","nocc"]
                       enum:
                       - cubic
                       - newreno
+                      - bbr
+                      - nocc
                       type: string
                     quic-force-retry:
                       description: quic force retry
@@ -981,6 +1006,24 @@ spec:
                       - connection
                       - listener
                       type: string
+                    quic_cc_algo_burst_size:
+                      description: |-
+                        quic cc algo burst size
+                        Maximum: 1024
+                        Minimum: 0
+                      format: int64
+                      maximum: 1024
+                      minimum: 0
+                      type: integer
+                    quic_cc_algo_max_window:
+                      description: |-
+                        quic cc algo max window
+                        Maximum: 4.194304e+06
+                        Minimum: 10
+                      format: int64
+                      maximum: 4194304
+                      minimum: 10
+                      type: integer
                     severity_output:
                       description: |-
                         severity output
@@ -1031,6 +1074,14 @@ spec:
                       - TLSv1.2
                       - TLSv1.3
                       type: string
+                    sslv3:
+                      description: |-
+                        sslv3
+                        Enum: ["enabled","disabled"]
+                      enum:
+                      - enabled
+                      - disabled
+                      type: string
                     strict_sni:
                       description: strict sni
                       type: boolean
@@ -1046,6 +1097,38 @@ spec:
                       type: string
                     tls_ticket_keys:
                       description: tls ticket keys
+                      type: string
+                    tlsv10:
+                      description: |-
+                        tlsv10
+                        Enum: ["enabled","disabled"]
+                      enum:
+                      - enabled
+                      - disabled
+                      type: string
+                    tlsv11:
+                      description: |-
+                        tlsv11
+                        Enum: ["enabled","disabled"]
+                      enum:
+                      - enabled
+                      - disabled
+                      type: string
+                    tlsv12:
+                      description: |-
+                        tlsv12
+                        Enum: ["enabled","disabled"]
+                      enum:
+                      - enabled
+                      - disabled
+                      type: string
+                    tlsv13:
+                      description: |-
+                        tlsv13
+                        Enum: ["enabled","disabled"]
+                      enum:
+                      - enabled
+                      - disabled
                       type: string
                     transparent:
                       description: transparent
@@ -1313,6 +1396,13 @@ spec:
                     description: bufsize
                     format: int64
                     type: integer
+                  bufsize_small:
+                    description: |-
+                      bufsize small
+                      Minimum: 1
+                    format: int64
+                    minimum: 1
+                    type: integer
                   pipesize:
                     description: pipesize
                     format: int64
@@ -1426,6 +1516,9 @@ spec:
                     description: comp maxlevel
                     format: int64
                     type: integer
+                  disable_fast_forward:
+                    description: disable fast forward
+                    type: boolean
                   disable_zero_copy_forwarding:
                     description: disable zero copy forwarding
                     type: boolean
@@ -1477,6 +1570,10 @@ spec:
                     description: h2 be max concurrent streams
                     format: int64
                     type: integer
+                  h2_be_rxbuf:
+                    description: h2 be rxbuf
+                    format: int64
+                    type: integer
                   h2_fe_glitches_threshold:
                     description: h2 fe glitches threshold
                     format: int64
@@ -1491,6 +1588,10 @@ spec:
                     type: integer
                   h2_fe_max_total_streams:
                     description: h2 fe max total streams
+                    format: int64
+                    type: integer
+                  h2_fe_rxbuf:
+                    description: h2 fe rxbuf
                     format: int64
                     type: integer
                   h2_header_table_size:
@@ -1615,6 +1716,24 @@ spec:
                     - enabled
                     - disabled
                     type: string
+                  renice_runtime:
+                    description: |-
+                      renice runtime
+                      Maximum: 19
+                      Minimum: -20
+                    format: int64
+                    maximum: 19
+                    minimum: -20
+                    type: integer
+                  renice_startup:
+                    description: |-
+                      renice startup
+                      Maximum: 19
+                      Minimum: -20
+                    format: int64
+                    maximum: 19
+                    minimum: -20
+                    type: integer
                   ring_queues:
                     description: ring queues
                     format: int64
@@ -1798,6 +1917,13 @@ spec:
                   Pattern: ^[^\s]+$
                 pattern: ^[^\s]+$
                 type: string
+              warn_blocked_traffic_after:
+                description: |-
+                  warn blocked traffic after
+                  Minimum: 1
+                format: int64
+                minimum: 1
+                type: integer
               wurfl_options:
                 description: wurfl options
                 properties:

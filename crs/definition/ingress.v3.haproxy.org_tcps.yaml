@@ -4,7 +4,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.17.0
-    haproxy.org/client-native: v6.0.7-0.20250113083507-df8f78bea9bb
+    haproxy.org/client-native: v6.1.0
   name: tcps.ingress.v3.haproxy.org
 spec:
   group: ingress.v3.haproxy.org
@@ -50,6 +50,14 @@ spec:
                     accept_invalid_http_request:
                       description: |-
                         accept invalid http request
+                        Enum: ["enabled","disabled"]
+                      enum:
+                      - enabled
+                      - disabled
+                      type: string
+                    accept_unsafe_violations_in_http_request:
+                      description: |-
+                        accept unsafe violations in http request
                         Enum: ["enabled","disabled"]
                       enum:
                       - enabled
@@ -209,19 +217,24 @@ spec:
                             description: expose fd listeners
                             type: boolean
                           force_sslv3:
-                            description: force sslv3
+                            description: This field is deprecated in favor of sslv3,
+                              and will be removed in a future release
                             type: boolean
                           force_tlsv10:
-                            description: force tlsv10
+                            description: This field is deprecated in favor of tlsv10,
+                              and will be removed in a future release
                             type: boolean
                           force_tlsv11:
-                            description: force tlsv11
+                            description: This field is deprecated in favor of tlsv11,
+                              and will be removed in a future release
                             type: boolean
                           force_tlsv12:
-                            description: force tlsv12
+                            description: This field is deprecated in favor of tlsv12,
+                              and will be removed in a future release
                             type: boolean
                           force_tlsv13:
-                            description: force tlsv13
+                            description: This field is deprecated in favor of tlsv13,
+                              and will be removed in a future release
                             type: boolean
                           generate_certificates:
                             description: generate certificates
@@ -295,22 +308,27 @@ spec:
                             description: no ca names
                             type: boolean
                           no_sslv3:
-                            description: no sslv3
+                            description: This field is deprecated in favor of sslv3,
+                              and will be removed in a future release
                             type: boolean
                           no_tls_tickets:
                             description: no tls tickets
                             type: boolean
                           no_tlsv10:
-                            description: no tlsv10
+                            description: This field is deprecated in favor of tlsv10,
+                              and will be removed in a future release
                             type: boolean
                           no_tlsv11:
-                            description: no tlsv11
+                            description: This field is deprecated in favor of tlsv11,
+                              and will be removed in a future release
                             type: boolean
                           no_tlsv12:
-                            description: no tlsv12
+                            description: This field is deprecated in favor of tlsv12,
+                              and will be removed in a future release
                             type: boolean
                           no_tlsv13:
-                            description: no tlsv13
+                            description: This field is deprecated in favor of tlsv13,
+                              and will be removed in a future release
                             type: boolean
                           npn:
                             description: npn
@@ -344,10 +362,12 @@ spec:
                           quic-cc-algo:
                             description: |-
                               quic cc algo
-                              Enum: ["cubic","newreno"]
+                              Enum: ["cubic","newreno","bbr","nocc"]
                             enum:
                             - cubic
                             - newreno
+                            - bbr
+                            - nocc
                             type: string
                           quic-force-retry:
                             description: quic force retry
@@ -360,6 +380,24 @@ spec:
                             - connection
                             - listener
                             type: string
+                          quic_cc_algo_burst_size:
+                            description: |-
+                              quic cc algo burst size
+                              Maximum: 1024
+                              Minimum: 0
+                            format: int64
+                            maximum: 1024
+                            minimum: 0
+                            type: integer
+                          quic_cc_algo_max_window:
+                            description: |-
+                              quic cc algo max window
+                              Maximum: 4.194304e+06
+                              Minimum: 10
+                            format: int64
+                            maximum: 4194304
+                            minimum: 10
+                            type: integer
                           severity_output:
                             description: |-
                               severity output
@@ -410,6 +448,14 @@ spec:
                             - TLSv1.2
                             - TLSv1.3
                             type: string
+                          sslv3:
+                            description: |-
+                              sslv3
+                              Enum: ["enabled","disabled"]
+                            enum:
+                            - enabled
+                            - disabled
+                            type: string
                           strict_sni:
                             description: strict sni
                             type: boolean
@@ -425,6 +471,38 @@ spec:
                             type: string
                           tls_ticket_keys:
                             description: tls ticket keys
+                            type: string
+                          tlsv10:
+                            description: |-
+                              tlsv10
+                              Enum: ["enabled","disabled"]
+                            enum:
+                            - enabled
+                            - disabled
+                            type: string
+                          tlsv11:
+                            description: |-
+                              tlsv11
+                              Enum: ["enabled","disabled"]
+                            enum:
+                            - enabled
+                            - disabled
+                            type: string
+                          tlsv12:
+                            description: |-
+                              tlsv12
+                              Enum: ["enabled","disabled"]
+                            enum:
+                            - enabled
+                            - disabled
+                            type: string
+                          tlsv13:
+                            description: |-
+                              tlsv13
+                              Enum: ["enabled","disabled"]
+                            enum:
+                            - enabled
+                            - disabled
                             type: string
                           transparent:
                             description: transparent
@@ -1103,7 +1181,7 @@ spec:
                             description: |-
                               type
                               Required: true
-                              Enum: ["add-header","allow","capture","del-acl","del-header","del-map","replace-header","replace-value","sc-add-gpc","sc-inc-gpc","sc-inc-gpc0","sc-inc-gpc1","sc-set-gpt","sc-set-gpt0","set-header","set-log-level","set-map","set-status","set-var","set-var-fmt","strict-mode","unset-var"]
+                              Enum: ["add-header","allow","capture","del-acl","del-header","del-map","replace-header","replace-value","sc-add-gpc","sc-inc-gpc","sc-inc-gpc0","sc-inc-gpc1","sc-set-gpt","sc-set-gpt0","set-header","set-log-level","set-map","set-status","set-var","set-var-fmt","strict-mode","unset-var","do-log"]
                             enum:
                             - add-header
                             - allow
@@ -1127,6 +1205,7 @@ spec:
                             - set-var-fmt
                             - strict-mode
                             - unset-var
+                            - do-log
                             type: string
                           var_expr:
                             description: var expr
@@ -1648,7 +1727,7 @@ spec:
                             description: |-
                               type
                               Required: true
-                              Enum: ["add-acl","add-header","allow","auth","cache-use","capture","del-acl","del-header","del-map","deny","disable-l7-retry","do-resolve","early-hint","lua","normalize-uri","redirect","reject","replace-header","replace-path","replace-pathq","replace-uri","replace-value","return","sc-add-gpc","sc-inc-gpc","sc-inc-gpc0","sc-inc-gpc1","sc-set-gpt","sc-set-gpt0","send-spoe-group","set-bc-mark","set-bc-tos","set-dst","set-dst-port","set-fc-mark","set-fc-tos","set-header","set-log-level","set-map","set-mark","set-method","set-nice","set-path","set-pathq","set-priority-class","set-priority-offset","set-query","set-src","set-src-port","set-timeout","set-tos","set-uri","set-var","silent-drop","strict-mode","tarpit","track-sc","unset-var","use-service","wait-for-body","wait-for-handshake","set-bandwidth-limit"]
+                              Enum: ["add-acl","add-header","allow","auth","cache-use","capture","del-acl","del-header","del-map","deny","disable-l7-retry","do-resolve","early-hint","lua","normalize-uri","redirect","reject","replace-header","replace-path","replace-pathq","replace-uri","replace-value","return","sc-add-gpc","sc-inc-gpc","sc-inc-gpc0","sc-inc-gpc1","sc-set-gpt","sc-set-gpt0","send-spoe-group","set-bc-mark","set-bc-tos","set-dst","set-dst-port","set-fc-mark","set-fc-tos","set-header","set-log-level","set-map","set-mark","set-method","set-nice","set-path","set-pathq","set-priority-class","set-priority-offset","set-query","set-src","set-src-port","set-timeout","set-tos","set-uri","set-var","silent-drop","strict-mode","tarpit","track-sc","unset-var","use-service","wait-for-body","wait-for-handshake","set-bandwidth-limit","set-retries","do-log"]
                             enum:
                             - add-acl
                             - add-header
@@ -1712,6 +1791,8 @@ spec:
                             - wait-for-body
                             - wait-for-handshake
                             - set-bandwidth-limit
+                            - set-retries
+                            - do-log
                             type: string
                           uri-fmt:
                             description: uri fmt
@@ -2069,7 +2150,7 @@ spec:
                             description: |-
                               type
                               Required: true
-                              Enum: ["add-acl","add-header","allow","cache-store","capture","del-acl","del-header","del-map","deny","lua","redirect","replace-header","replace-value","return","sc-add-gpc","sc-inc-gpc","sc-inc-gpc0","sc-inc-gpc1","sc-set-gpt","sc-set-gpt0","send-spoe-group","set-fc-mark","set-fc-tos","set-header","set-log-level","set-map","set-mark","set-nice","set-status","set-timeout","set-tos","set-var","set-var-fmt","silent-drop","strict-mode","track-sc","unset-var","wait-for-body","set-bandwidth-limit"]
+                              Enum: ["add-acl","add-header","allow","cache-store","capture","del-acl","del-header","del-map","deny","lua","redirect","replace-header","replace-value","return","sc-add-gpc","sc-inc-gpc","sc-inc-gpc0","sc-inc-gpc1","sc-set-gpt","sc-set-gpt0","send-spoe-group","set-fc-mark","set-fc-tos","set-header","set-log-level","set-map","set-mark","set-nice","set-status","set-timeout","set-tos","set-var","set-var-fmt","silent-drop","strict-mode","track-sc","unset-var","wait-for-body","set-bandwidth-limit","do-log"]
                             enum:
                             - add-acl
                             - add-header
@@ -2110,6 +2191,7 @@ spec:
                             - unset-var
                             - wait-for-body
                             - set-bandwidth-limit
+                            - do-log
                             type: string
                           var_expr:
                             description: var expr
@@ -2206,6 +2288,11 @@ spec:
                       - enabled
                       - disabled
                       type: string
+                    log_steps:
+                      description: log steps
+                      items:
+                        type: string
+                      type: array
                     log_tag:
                       description: |-
                         log tag
@@ -2310,6 +2397,9 @@ spec:
                           nolog:
                             description: nolog
                             type: boolean
+                          profile:
+                            description: profile
+                            type: string
                           sample_range:
                             description: sample range
                             type: string
@@ -2404,6 +2494,43 @@ spec:
                       required:
                       - enabled
                       type: object
+                    quic_initial_rule_list:
+                      description: q UI c initial rule list
+                      items:
+                        description: |-
+                          QUICInitialRule QUIC Initial
+
+                          QUIC Initial configuration
+                          Example: {"type":"reject"}
+
+                          swagger:model QUICInitialRule
+                        properties:
+                          cond:
+                            description: |-
+                              cond
+                              Enum: ["if","unless"]
+                            enum:
+                            - if
+                            - unless
+                            type: string
+                          cond_test:
+                            description: cond test
+                            type: string
+                          type:
+                            description: |-
+                              type
+                              Required: true
+                              Enum: ["reject","accept","send-retry","dgram-drop"]
+                            enum:
+                            - reject
+                            - accept
+                            - send-retry
+                            - dgram-drop
+                            type: string
+                        required:
+                        - type
+                        type: object
+                      type: array
                     socket_stats:
                       description: |-
                         socket stats
@@ -2640,7 +2767,7 @@ spec:
                           action:
                             description: |-
                               action
-                              Enum: ["accept","attach-srv","capture","do-resolve","expect-netscaler-cip","expect-proxy","lua","reject","sc-add-gpc","sc-inc-gpc","sc-inc-gpc0","sc-inc-gpc1","sc-set-gpt","sc-set-gpt0","send-spoe-group","set-bandwidth-limit","set-bc-mark","set-bc-tos","set-dst-port","set-dst","set-fc-mark","set-fc-tos","set-log-level","set-mark","set-nice","set-priority-class","set-priority-offset","set-src","set-src-port","set-tos","set-var","set-var-fmt","silent-drop","switch-mode","track-sc","unset-var","use-service"]
+                              Enum: ["accept","attach-srv","capture","do-resolve","expect-netscaler-cip","expect-proxy","lua","reject","sc-add-gpc","sc-inc-gpc","sc-inc-gpc0","sc-inc-gpc1","sc-set-gpt","sc-set-gpt0","send-spoe-group","set-bandwidth-limit","set-bc-mark","set-bc-tos","set-dst-port","set-dst","set-fc-mark","set-fc-tos","set-log-level","set-mark","set-nice","set-priority-class","set-priority-offset","set-src","set-src-port","set-tos","set-var","set-var-fmt","silent-drop","switch-mode","track-sc","unset-var","use-service","set-retries","do-log"]
                             enum:
                             - accept
                             - attach-srv
@@ -2679,6 +2806,8 @@ spec:
                             - track-sc
                             - unset-var
                             - use-service
+                            - set-retries
+                            - do-log
                             type: string
                           bandwidth_limit_limit:
                             description: bandwidth limit limit

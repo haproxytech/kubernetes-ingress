@@ -35,7 +35,7 @@ type Certificates interface {
 	// Updated returns true if there is any updadted/created certificate
 	CertsUpdated() bool
 	// Refresh removes unused certs from HAProxyCertDir
-	RefreshCerts()
+	RefreshCerts(api api.HAProxyClient)
 	// Clean cleans certificates state
 	CleanCerts()
 	SetAPI(api api.HAProxyClient)
@@ -215,6 +215,28 @@ func (c *certs) updateRuntime(filename string, payload []byte) (bool, error) {
 	return updated, nil
 }
 
+func (c *certs) deleteRuntime(crtList, filename string) error {
+	// Only 1 transaction in parallel is possible for now in haproxy
+	// Keep this mutex for now to ensure that we perform 1 transaction at a time
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	var err error
+	certFile := path.Join(crtList, filename)
+	err = c.client.CrtListEntryDelete(crtList, certFile, nil)
+	if err != nil {
+		return err
+	}
+	utils.GetLogger().Debugf("del ssl crt-list` ok [%s %s]", crtList, certFile)
+
+	err = c.client.CertEntryDelete(certFile)
+	if err != nil {
+		return err
+	}
+	utils.GetLogger().Debugf("del ssl cert` ok [%s]", certFile)
+	return nil
+}
+
 func (c *certs) CleanCerts() {
 	for i := range c.frontend {
 		c.frontend[i].inUse = false
@@ -243,11 +265,12 @@ func (c *certs) FrontCertsInUse() bool {
 	return false
 }
 
-func (c *certs) RefreshCerts() {
-	refreshCerts(c.frontend, env.FrontendDir)
-	refreshCerts(c.backend, env.BackendDir)
-	refreshCerts(c.ca, env.CaDir)
-	refreshCerts(c.TCPCR, env.TCPCRDir)
+func (c *certs) RefreshCerts(api api.HAProxyClient) {
+	c.SetAPI(api)
+	c.refreshCerts(c.frontend, env.FrontendDir)
+	c.refreshCerts(c.backend, env.BackendDir)
+	c.refreshCerts(c.ca, env.CaDir)
+	c.refreshCerts(c.TCPCR, env.TCPCRDir)
 }
 
 func (c *certs) CertsUpdated() (reload bool) {
@@ -262,7 +285,7 @@ func (c *certs) CertsUpdated() (reload bool) {
 	return reload
 }
 
-func refreshCerts(certs map[string]*cert, certDir string) {
+func (c *certs) refreshCerts(certs map[string]*cert, certDir string) {
 	files, err := os.ReadDir(certDir)
 	if err != nil {
 		logger.Error(err)
@@ -277,11 +300,16 @@ func refreshCerts(certs map[string]*cert, certDir string) {
 		certName := strings.Split(filename, ".pem")[0]
 		crt, crtOk := certs[certName]
 		if !crtOk || !crt.inUse {
+			err := c.deleteRuntime(certDir, filename)
+			if err != nil {
+				instance.Reload("Runtime delete of cert file '%s' failed : %s", filename, err.Error())
+			} else {
+				utils.GetLogger().Debugf("Runtime delete of cert ok [%s]", filename)
+			}
 			fs.AddDelayedFunc(filename, func() {
 				logger.Error(os.Remove(path.Join(certDir, filename)))
 			})
 			delete(certs, certName)
-			instance.Reload("secret %s removed", certName)
 		}
 	}
 }

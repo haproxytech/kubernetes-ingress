@@ -89,14 +89,19 @@ type HAProxyClient interface { //nolint:interfacebloat
 	UserListDeleteAll() error
 	UserListExistsByGroup(group string) (bool, error)
 	UserListCreateByGroup(group string, userPasswordMap map[string][]byte) error
+	Cert
+	PushPreviousBackends() error
+	PopPreviousBackends() error
+}
+
+type Cert interface {
 	CertEntryCreate(filename string) error
 	CertEntrySet(filename string, payload []byte) error
 	CertEntryCommit(filename string) error
 	CertEntryAbort(filename string) error
 	CrtListEntryAdd(crtList string, entry runtime.CrtListEntry) error
-
-	PushPreviousBackends() error
-	PopPreviousBackends() error
+	CrtListEntryDelete(crtList, filename string, linenumber *int64) error
+	CertEntryDelete(filename string) error
 }
 
 type Backend struct { // use same names as in client native v6

@@ -4,7 +4,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.17.0
-    haproxy.org/client-native: v6.0.7-0.20250113083507-df8f78bea9bb
+    haproxy.org/client-native: v6.1.0
   name: defaults.ingress.v3.haproxy.org
 spec:
   group: ingress.v3.haproxy.org
@@ -59,6 +59,22 @@ spec:
               accept_invalid_http_response:
                 description: |-
                   accept invalid http response
+                  Enum: ["enabled","disabled"]
+                enum:
+                - enabled
+                - disabled
+                type: string
+              accept_unsafe_violations_in_http_request:
+                description: |-
+                  accept unsafe violations in http request
+                  Enum: ["enabled","disabled"]
+                enum:
+                - enabled
+                - disabled
+                type: string
+              accept_unsafe_violations_in_http_response:
+                description: |-
+                  accept unsafe violations in http response
                   Enum: ["enabled","disabled"]
                 enum:
                 - enabled
@@ -512,7 +528,7 @@ spec:
                     type: integer
                   force_sslv3:
                     description: |-
-                      force sslv3
+                      This field is deprecated in favor of sslv3, and will be removed in a future release
                       Enum: ["enabled","disabled"]
                     enum:
                     - enabled
@@ -520,7 +536,7 @@ spec:
                     type: string
                   force_tlsv10:
                     description: |-
-                      force tlsv10
+                      This field is deprecated in favor of tlsv10, and will be removed in a future release
                       Enum: ["enabled","disabled"]
                     enum:
                     - enabled
@@ -528,7 +544,7 @@ spec:
                     type: string
                   force_tlsv11:
                     description: |-
-                      force tlsv11
+                      This field is deprecated in favor of tlsv11, and will be removed in a future release
                       Enum: ["enabled","disabled"]
                     enum:
                     - enabled
@@ -536,7 +552,7 @@ spec:
                     type: string
                   force_tlsv12:
                     description: |-
-                      force tlsv12
+                      This field is deprecated in favor of tlsv12, and will be removed in a future release
                       Enum: ["enabled","disabled"]
                     enum:
                     - enabled
@@ -544,7 +560,7 @@ spec:
                     type: string
                   force_tlsv13:
                     description: |-
-                      force tlsv13
+                      This field is deprecated in favor of tlsv13, and will be removed in a future release
                       Enum: ["enabled","disabled"]
                     enum:
                     - enabled
@@ -582,6 +598,16 @@ spec:
                       init addr
                       Pattern: ^[^\s]+$
                     pattern: ^[^\s]+$
+                    type: string
+                  init-state:
+                    description: |-
+                      init state
+                      Enum: ["fully-up","up","down","fully-down"]
+                    enum:
+                    - fully-up
+                    - up
+                    - down
+                    - fully-down
                     type: string
                   inter:
                     description: |-
@@ -631,7 +657,7 @@ spec:
                     type: string
                   no_sslv3:
                     description: |-
-                      no sslv3
+                      This field is deprecated in favor of sslv3, and will be removed in a future release
                       Enum: ["enabled","disabled"]
                     enum:
                     - enabled
@@ -639,7 +665,7 @@ spec:
                     type: string
                   no_tlsv10:
                     description: |-
-                      no tlsv10
+                      This field is deprecated in favor of tlsv10, and will be removed in a future release
                       Enum: ["enabled","disabled"]
                     enum:
                     - enabled
@@ -647,7 +673,7 @@ spec:
                     type: string
                   no_tlsv11:
                     description: |-
-                      no tlsv11
+                      This field is deprecated in favor of tlsv11, and will be removed in a future release
                       Enum: ["enabled","disabled"]
                     enum:
                     - enabled
@@ -655,7 +681,7 @@ spec:
                     type: string
                   no_tlsv12:
                     description: |-
-                      no tlsv12
+                      This field is deprecated in favor of tlsv12, and will be removed in a future release
                       Enum: ["enabled","disabled"]
                     enum:
                     - enabled
@@ -663,7 +689,7 @@ spec:
                     type: string
                   no_tlsv13:
                     description: |-
-                      no tlsv13
+                      This field is deprecated in favor of force_tlsv13, and will be removed in a future release
                       Enum: ["enabled","disabled"]
                     enum:
                     - enabled
@@ -905,6 +931,14 @@ spec:
                     - enabled
                     - disabled
                     type: string
+                  sslv3:
+                    description: |-
+                      sslv3
+                      Enum: ["enabled","disabled"]
+                    enum:
+                    - enabled
+                    - disabled
+                    type: string
                   stick:
                     description: |-
                       stick
@@ -931,6 +965,38 @@ spec:
                   tls_tickets:
                     description: |-
                       tls tickets
+                      Enum: ["enabled","disabled"]
+                    enum:
+                    - enabled
+                    - disabled
+                    type: string
+                  tlsv10:
+                    description: |-
+                      tlsv10
+                      Enum: ["enabled","disabled"]
+                    enum:
+                    - enabled
+                    - disabled
+                    type: string
+                  tlsv11:
+                    description: |-
+                      tlsv11
+                      Enum: ["enabled","disabled"]
+                    enum:
+                    - enabled
+                    - disabled
+                    type: string
+                  tlsv12:
+                    description: |-
+                      tlsv12
+                      Enum: ["enabled","disabled"]
+                    enum:
+                    - enabled
+                    - disabled
+                    type: string
+                  tlsv13:
+                    description: |-
+                      tlsv13
                       Enum: ["enabled","disabled"]
                     enum:
                     - enabled
@@ -1683,6 +1749,9 @@ spec:
               httpchk_params:
                 description: httpchk params
                 properties:
+                  host:
+                    description: host
+                    type: string
                   method:
                     description: |-
                       method
@@ -1766,6 +1835,11 @@ spec:
                 - enabled
                 - disabled
                 type: string
+              log_steps:
+                description: log steps
+                items:
+                  type: string
+                type: array
               log_tag:
                 description: |-
                   log tag
@@ -1870,6 +1944,9 @@ spec:
                     nolog:
                       description: nolog
                       type: boolean
+                    profile:
+                      description: profile
+                      type: string
                     sample_range:
                       description: sample range
                       type: string
@@ -2012,6 +2089,43 @@ spec:
                 format: int64
                 minimum: 0
                 type: integer
+              quic_initial_rule_list:
+                description: q UI c initial rule list
+                items:
+                  description: |-
+                    QUICInitialRule QUIC Initial
+
+                    QUIC Initial configuration
+                    Example: {"type":"reject"}
+
+                    swagger:model QUICInitialRule
+                  properties:
+                    cond:
+                      description: |-
+                        cond
+                        Enum: ["if","unless"]
+                      enum:
+                      - if
+                      - unless
+                      type: string
+                    cond_test:
+                      description: cond test
+                      type: string
+                    type:
+                      description: |-
+                        type
+                        Required: true
+                        Enum: ["reject","accept","send-retry","dgram-drop"]
+                      enum:
+                      - reject
+                      - accept
+                      - send-retry
+                      - dgram-drop
+                      type: string
+                  required:
+                  - type
+                  type: object
+                type: array
               redispatch:
                 description: redispatch
                 properties:
