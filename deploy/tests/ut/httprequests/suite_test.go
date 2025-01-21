@@ -89,7 +89,7 @@ func (suite *HTTPRequestsSuite) UseHTTPRequestsFixture() (eventChan chan k8ssync
 			FrontHTTP:  "http",
 			FrontHTTPS: "https",
 			FrontSSL:   "ssl",
-			BackSSL:    "ssl",
+			BackSSL:    "ssl-backend",
 		},
 	}
 	haproxyConfig, err := os.ReadFile("../../../../fs/usr/local/etc/haproxy/haproxy.cfg")

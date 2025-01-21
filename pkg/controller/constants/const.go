@@ -18,7 +18,7 @@ package constants
 const (
 	DefaultsSectionName = "haproxytech"
 	SSL_FRONTEND        = "ssl"
-	SSL_BACKEND         = "ssl"
+	SSL_BACKEND         = "ssl-backend"
 	HTTP_FRONTEND       = "http"
 	HTTPS_FRONTEND      = "https"
 )

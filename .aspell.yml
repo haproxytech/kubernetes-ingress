@@ -34,3 +34,4 @@ allowed:
   - parallelize
   - maxconn
   - kubebuilder
+  - cfg

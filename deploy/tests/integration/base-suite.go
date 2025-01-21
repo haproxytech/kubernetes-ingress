@@ -137,7 +137,7 @@ func (suite *BaseSuite) StartController() {
 			FrontHTTP:  "http",
 			FrontHTTPS: "https",
 			FrontSSL:   "ssl",
-			BackSSL:    "ssl",
+			BackSSL:    "ssl-backend",
 		},
 	}
 

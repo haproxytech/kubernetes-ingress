@@ -113,7 +113,7 @@ func (suite *UseBackendSuite) UseBackendFixture() (eventChan chan k8ssync.SyncDa
 			FrontHTTP:  "http",
 			FrontHTTPS: "https",
 			FrontSSL:   "ssl",
-			BackSSL:    "ssl",
+			BackSSL:    "ssl-backend",
 		},
 	}
 
