@@ -84,6 +84,12 @@ func (s *Service) updateHAProxySrv(client api.HAProxyClient, srvSlot store.HAPro
 		errAPI = client.BackendServerCreate(s.backend.Name, srv)
 		if errAPI != nil {
 			logger.Errorf("[CONFIG] [BACKEND] [SERVER] %v", errAPI)
+		} else {
+			// Server has been created, a reload is required
+			// It covers the case where there was a failure, scaleHAProxySrvs has already been called in a previous loop
+			// but the sync failed (wrong config)
+			// When the config is fixed, servers will be created
+			instance.Reload("server '%s' created in backend '%s'", srv.Name, s.backend.Name)
 		}
 	} else {
 		logger.Errorf("[CONFIG] [BACKEND] [SERVER] %v", errAPI)
