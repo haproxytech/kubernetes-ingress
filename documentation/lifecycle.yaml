@@ -1,4 +1,11 @@
 versions:
+  - version: "3.1"
+    ga: 2025-01
+    min_eol: 2026-02
+    k8s:
+      - "1.32"
+      - "1.31"
+      - "1.30"
   - version: "3.0"
     ga: 2024-06
     min_eol: 2025-06
