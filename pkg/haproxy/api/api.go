@@ -279,6 +279,12 @@ func (c *clientNative) processServers(backendName string, configuration configur
 		errCreateServer := configuration.CreateServer("backend", backendName, server, c.activeTransaction, 0)
 		if errCreateServer != nil {
 			errs.Add(configuration.EditServer(server.Name, "backend", backendName, server, c.activeTransaction, 0))
+		} else {
+			// Server has been created, a reload is required
+			// It covers the case where there was a failure, scaleHAProxySrvs has already been called in a previous loop
+			// but the sync failed (wrong config)
+			// When the config is fixed, servers will be created
+			instance.Reload("server '%s' created in backend '%s'", server.Name, backendName)
 		}
 	}
 	return errs
