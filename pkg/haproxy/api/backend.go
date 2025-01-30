@@ -41,7 +41,7 @@ func (c *clientNative) BackendCreateIfNotExist(backend models.Backend) {
 	existingBackend := c.backends[backend.Name]
 	existingBackend.Used = true
 	c.backends[backend.Name] = existingBackend
-	if c.BackendExists(backend.Name) {
+	if c.BackendUsed(backend.Name) {
 		return
 	}
 	c.BackendCreateOrUpdate(backend)
@@ -240,6 +240,8 @@ func (c *clientNative) BackendServersGet(backendName string) (models.Servers, er
 	return servers, nil
 }
 
+// This function tests if a backend is existing
+// Check if you're not rather looking for BackendUsed function.
 func (c *clientNative) BackendExists(backendName string) (exists bool) {
 	_, exists = c.backends[backendName]
 	return
@@ -265,4 +267,13 @@ func (c *clientNative) BackendDeleteAllUnnecessary() ([]string, error) {
 		backendDeleted = append(backendDeleted, backendName)
 	}
 	return backendDeleted, errs.Result()
+}
+
+// This function tests if a backend is existing AND IT'S USED.
+func (c *clientNative) BackendUsed(backendName string) bool {
+	backend, exists := c.backends[backendName]
+	if !exists {
+		return false
+	}
+	return backend.Used
 }

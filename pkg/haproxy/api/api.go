@@ -37,7 +37,11 @@ type HAProxyClient interface { //nolint:interfacebloat
 	ACLEdit(id int64, parentType string, parentName string, data *models.ACL) error
 	BackendsGet() models.Backends
 	BackendGet(backendName string) (*models.Backend, error)
+	// This function tests if a backend is existing :
+	// Check if you're not rather looking for BackendUsed function.
 	BackendExists(backendName string) bool
+	// This function tests if a backend is existing AND IT'S USED.
+	BackendUsed(backendName string) bool
 	BackendCreatePermanently(backend models.Backend)
 	BackendCreateIfNotExist(backend models.Backend)
 	BackendCreateOrUpdate(backend models.Backend) (map[string][]interface{}, bool)
