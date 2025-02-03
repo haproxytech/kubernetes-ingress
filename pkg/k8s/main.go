@@ -179,7 +179,12 @@ func (k k8s) MonitorChanges(eventChan chan k8ssync.SyncDataEvent, stop chan stru
 	eventChan <- k8ssync.SyncDataEvent{SyncType: k8ssync.COMMAND}
 	for {
 		time.Sleep(syncPeriod)
-		eventChan <- k8ssync.SyncDataEvent{SyncType: k8ssync.COMMAND}
+		ep := make(chan struct{})
+		eventChan <- k8ssync.SyncDataEvent{
+			SyncType:       k8ssync.COMMAND,
+			EventProcessed: ep,
+		}
+		<-ep
 	}
 }
 
