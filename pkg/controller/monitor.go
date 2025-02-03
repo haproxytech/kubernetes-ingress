@@ -37,6 +37,9 @@ func (c *HAProxyController) SyncData() {
 			if hadChanges || instance.NeedReload() {
 				c.updateHAProxy()
 				hadChanges = false
+				if job.EventProcessed != nil {
+					close(job.EventProcessed)
+				}
 				continue
 			}
 		case k8ssync.CR_GLOBAL:
