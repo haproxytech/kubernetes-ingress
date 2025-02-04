@@ -36,6 +36,8 @@ import (
 	k8ssync "github.com/haproxytech/kubernetes-ingress/pkg/k8s/sync"
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
 	crdclientset "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
+	"k8s.io/apimachinery/pkg/fields"
+
 	errGw "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -256,6 +258,20 @@ func (k k8s) runCRInformers(eventChan chan k8ssync.SyncDataEvent, stop chan stru
 	}
 }
 
+func (k k8s) runConfigMapInformers(eventChan chan k8ssync.SyncDataEvent, stop chan struct{}, informersSynced *[]cache.InformerSynced, configMap utils.NamespaceValue) {
+	if configMap.Name != "" {
+		fieldSelector := fields.OneTermEqualSelector("metadata.name", configMap.Name).String()
+		factory := k8sinformers.NewSharedInformerFactoryWithOptions(k.builtInClient, k.cacheResyncPeriod, k8sinformers.WithNamespace(configMap.Namespace),
+			k8sinformers.WithTweakListOptions(func(opts *metav1.ListOptions) {
+				opts.FieldSelector = fieldSelector
+			}))
+
+		cmi := k.getConfigMapInformer(eventChan, factory)
+		go cmi.Run(stop)
+		*informersSynced = append(*informersSynced, cmi.HasSynced)
+	}
+}
+
 func (k k8s) runInformers(eventChan chan k8ssync.SyncDataEvent, stop chan struct{}, namespace string, informersSynced *[]cache.InformerSynced, osArgs utils.OSArgs) {
 	factory := k8sinformers.NewSharedInformerFactoryWithOptions(k.builtInClient, k.cacheResyncPeriod, k8sinformers.WithNamespace(namespace))
 	// Core.V1 Resources
@@ -265,10 +281,12 @@ func (k k8s) runInformers(eventChan chan k8ssync.SyncDataEvent, stop chan struct
 	go svci.Run(stop)
 	seci := k.getSecretInformer(eventChan, factory)
 	go seci.Run(stop)
-	cmi := k.getConfigMapInformer(eventChan, factory)
-	go cmi.Run(stop)
+	*informersSynced = append(*informersSynced, svci.HasSynced, nsi.HasSynced, seci.HasSynced)
 
-	*informersSynced = append(*informersSynced, svci.HasSynced, nsi.HasSynced, seci.HasSynced, cmi.HasSynced)
+	k.runConfigMapInformers(eventChan, stop, informersSynced, osArgs.ConfigMap)
+	k.runConfigMapInformers(eventChan, stop, informersSynced, osArgs.ConfigMapTCPServices)
+	k.runConfigMapInformers(eventChan, stop, informersSynced, osArgs.ConfigMapErrorFiles)
+	k.runConfigMapInformers(eventChan, stop, informersSynced, osArgs.ConfigMapPatternFiles)
 
 	// Ingress and IngressClass Resources
 	ii, ici := k.getIngressInformers(eventChan, factory, osArgs)
