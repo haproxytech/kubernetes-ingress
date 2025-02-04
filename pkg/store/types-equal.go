@@ -77,6 +77,17 @@ func (a *ConfigMap) Equal(b *ConfigMap) bool {
 	return true
 }
 
+// Empty checks if configmap is empty
+func (a *ConfigMap) Empty() bool {
+	if a == nil {
+		return true
+	}
+	if len(a.Annotations) == 0 {
+		return true
+	}
+	return false
+}
+
 // Equal compares two secrets, ignores statuses and old values
 func (a *Secret) Equal(b *Secret) bool {
 	if a == nil || b == nil {
