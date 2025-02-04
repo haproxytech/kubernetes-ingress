@@ -35,3 +35,4 @@ allowed:
   - maxconn
   - kubebuilder
   - cfg
+  - optim

@@ -3,7 +3,6 @@ package service
 import (
 	"errors"
 	"fmt"
-	"regexp"
 	"strconv"
 	"strings"
 
@@ -48,16 +47,22 @@ func (a *LoadBalance) Process(k store.K8s, annotations ...map[string]string) err
 
 func GetParamsFromInput(value string) (*models.Balance, error) {
 	balance := &models.Balance{}
-	tokens := strings.Split(value, " ")
+	tokens := strings.Fields(value)
 	if len(tokens) == 0 {
 		return nil, errors.New("missing algorithm name")
 	}
 
-	reg := regexp.MustCompile(`(\(|\))`)
-	algorithmTokens := reg.Split(tokens[0], -1)
+	firstToken := strings.ReplaceAll(tokens[0], "(", " ")
+	firstToken = strings.ReplaceAll(firstToken, ")", " ")
+	algorithmTokens := strings.Fields(firstToken)
+
+	if len(algorithmTokens) == 0 {
+		return nil, errors.New("invalid algorithm format")
+	}
+
 	algorithm := algorithmTokens[0]
 	balance.Algorithm = &algorithm
-	if len(algorithmTokens) == 3 {
+	if len(algorithmTokens) == 2 {
 		switch algorithm {
 		case "hdr":
 			balance.HdrName = algorithmTokens[1]
