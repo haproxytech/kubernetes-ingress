@@ -16,6 +16,7 @@ package ingress
 
 import (
 	"path/filepath"
+	"sync"
 
 	"github.com/haproxytech/kubernetes-ingress/pkg/annotations"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy"
@@ -25,8 +26,11 @@ import (
 	"github.com/haproxytech/kubernetes-ingress/pkg/secret"
 	"github.com/haproxytech/kubernetes-ingress/pkg/service"
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
+	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
 	"k8s.io/apimachinery/pkg/types"
 )
+
+var ingressClassAnnotationDeprecationOnce sync.Once
 
 type Ingress struct {
 	annotations     annotations.Annotations
@@ -35,6 +39,12 @@ type Ingress struct {
 	ruleIDs         []rules.RuleID
 	allowEmptyClass bool
 	sslPassthrough  bool
+}
+
+func logIngressClassAnnotationDeprecationWarning() {
+	ingressClassAnnotationDeprecationOnce.Do(func() {
+		utils.GetLogger().Warningf("`ingress.class` annotation is deprecated, please use `spec.ingressClassName` instead. Support for `ingress.class` annotation will be removed.")
+	})
 }
 
 // New returns an Ingress instance to handle the k8s ingress resource given in params.
@@ -57,6 +67,9 @@ func (i Ingress) Supported(k8s store.K8s, a annotations.Annotations) (supported 
 
 	var igClassAnn, igClassSpec string
 	igClassAnn = a.String("ingress.class", i.resource.Annotations)
+	if igClassAnn != "" {
+		logIngressClassAnnotationDeprecationWarning()
+	}
 	if igClassResource := k8s.IngressClasses[i.resource.Class]; igClassResource != nil {
 		igClassSpec = igClassResource.Controller
 	}

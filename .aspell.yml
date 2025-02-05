@@ -24,6 +24,14 @@ allowed:
   - frontends
   - tcp
   - crd
+  - hapee
+  - http
+  - ingressclass
+  - json
+  - jemalloc
+  - klog
+  - kubebuilder
+  - lifecycle
   - linter
   - linters
   - tls
