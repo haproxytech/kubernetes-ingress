@@ -64,8 +64,8 @@ metadata:
   annotations:
     auth-secret: basic-auth
     auth-type: basic-auth
-    ingress.class: haproxy
 spec:
+  ingressClassName: haproxy
   rules:
     - host: {{ .Host }}
       http:

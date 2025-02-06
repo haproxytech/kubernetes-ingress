@@ -56,9 +56,9 @@ func newAppIngress() *store.Ingress {
 			Name:       ingressName,
 			Namespace:  appNs,
 			Annotations: map[string]string{
-				"haproxy.org/ingress.class": "haproxy",
-				"backend-config-snippet":    "http-send-name-header x-dst-server",
+				"backend-config-snippet": "http-send-name-header x-dst-server",
 			},
+			Class: "haproxy",
 			Rules: map[string]*store.IngressRule{
 				"": {
 					Paths: map[string]*store.IngressPath{

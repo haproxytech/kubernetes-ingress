@@ -19,6 +19,7 @@ import (
 	informers "github.com/haproxytech/kubernetes-ingress/crs/generated/informers/externalversions"
 	k8ssync "github.com/haproxytech/kubernetes-ingress/pkg/k8s/sync"
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
+	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
 	"k8s.io/client-go/tools/cache"
 )
 
@@ -28,7 +29,7 @@ func NewTCPCR() TCPCR {
 	return TCPCR{}
 }
 
-func (c TCPCR) GetInformer(eventChan chan k8ssync.SyncDataEvent, factory informers.SharedInformerFactory) cache.SharedIndexInformer { //nolint:ireturn
+func (c TCPCR) GetInformer(eventChan chan k8ssync.SyncDataEvent, factory informers.SharedInformerFactory, osArgs utils.OSArgs) cache.SharedIndexInformer { //nolint:ireturn
 	informer := factory.Ingress().V1().TCPs().Informer()
 
 	sendToChannel := func(eventChan chan k8ssync.SyncDataEvent, newObject interface{}, status store.Status) {
@@ -38,7 +39,14 @@ func (c TCPCR) GetInformer(eventChan chan k8ssync.SyncDataEvent, factory informe
 		}
 
 		logger.Debugf("%s %s: %s", storeTCP.Namespace, status, storeTCP.Name)
-		eventChan <- k8ssync.SyncDataEvent{SyncType: k8ssync.SyncType(c.GetKind()), Namespace: storeTCP.Namespace, Name: storeTCP.Name, Data: storeTCP}
+		if storeTCP.IngressClass != "" && storeTCP.IngressClass != osArgs.IngressClass {
+			// Due to ingressclass.kubernetes.io/is-default-class annotation in ingressclass
+			// we need to keep also empty ingressclasses in ingress
+			return
+		}
+		eventChan <- k8ssync.SyncDataEvent{
+			SyncType: k8ssync.SyncType(c.GetKind()), Namespace: storeTCP.Namespace, Name: storeTCP.Name, Data: storeTCP,
+		}
 	}
 
 	errW := informer.SetWatchErrorHandler(func(r *cache.Reflector, err error) {

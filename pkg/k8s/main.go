@@ -65,7 +65,7 @@ type K8s interface {
 // and a method to process the update of a CR
 type CR interface {
 	GetKind() string
-	GetInformer(chan k8ssync.SyncDataEvent, crinformers.SharedInformerFactory) cache.SharedIndexInformer //nolint:inamedparam
+	GetInformer(chan k8ssync.SyncDataEvent, crinformers.SharedInformerFactory, utils.OSArgs) cache.SharedIndexInformer //nolint:inamedparam
 }
 
 // k8s is structure with all data required to synchronize with k8s
@@ -158,14 +158,14 @@ func (k k8s) MonitorChanges(eventChan chan k8ssync.SyncDataEvent, stop chan stru
 	informersSynced := &[]cache.InformerSynced{}
 	k.runPodInformer(eventChan, stop, informersSynced)
 	for _, namespace := range k.whiteListedNS {
-		k.runInformers(eventChan, stop, namespace, informersSynced)
-		k.runCRInformers(eventChan, stop, namespace, informersSynced, k.crs)
+		k.runInformers(eventChan, stop, namespace, informersSynced, osArgs)
+		k.runCRInformers(eventChan, stop, namespace, informersSynced, k.crs, osArgs)
 		if gatewayAPIInstalled {
 			k.runInformersGwAPI(eventChan, stop, namespace, informersSynced)
 		}
 	}
 	// check if we need to also watch CRS creation (in case not all alpha2 definitions are already installed)
-	k.RunCRSCreationMonitoring(eventChan, stop)
+	k.RunCRSCreationMonitoring(eventChan, stop, osArgs)
 
 	if !cache.WaitForCacheSync(stop, *informersSynced...) {
 		logger.Panic("Caches are not populated due to an underlying error, cannot run the Ingress Controller")
@@ -199,16 +199,16 @@ func (k k8s) registerCoreCR(cr CR, groupVersion string) {
 	}
 }
 
-func (k k8s) runCRInformers(eventChan chan k8ssync.SyncDataEvent, stop chan struct{}, namespace string, informersSynced *[]cache.InformerSynced, crs map[string]CR) {
+func (k k8s) runCRInformers(eventChan chan k8ssync.SyncDataEvent, stop chan struct{}, namespace string, informersSynced *[]cache.InformerSynced, crs map[string]CR, osArgs utils.OSArgs) {
 	informerFactory := crinformers.NewSharedInformerFactoryWithOptions(k.crClient, k.cacheResyncPeriod, crinformers.WithNamespace(namespace))
 	for _, cr := range crs {
-		informer := cr.GetInformer(eventChan, informerFactory)
+		informer := cr.GetInformer(eventChan, informerFactory, osArgs)
 		go informer.Run(stop)
 		*informersSynced = append(*informersSynced, informer.HasSynced)
 	}
 }
 
-func (k k8s) runInformers(eventChan chan k8ssync.SyncDataEvent, stop chan struct{}, namespace string, informersSynced *[]cache.InformerSynced) {
+func (k k8s) runInformers(eventChan chan k8ssync.SyncDataEvent, stop chan struct{}, namespace string, informersSynced *[]cache.InformerSynced, osArgs utils.OSArgs) {
 	factory := k8sinformers.NewSharedInformerFactoryWithOptions(k.builtInClient, k.cacheResyncPeriod, k8sinformers.WithNamespace(namespace))
 	// Core.V1 Resources
 	nsi := k.getNamespaceInfomer(eventChan, factory)
@@ -223,7 +223,7 @@ func (k k8s) runInformers(eventChan chan k8ssync.SyncDataEvent, stop chan struct
 	*informersSynced = append(*informersSynced, svci.HasSynced, nsi.HasSynced, seci.HasSynced, cmi.HasSynced)
 
 	// Ingress and IngressClass Resources
-	ii, ici := k.getIngressInformers(eventChan, factory)
+	ii, ici := k.getIngressInformers(eventChan, factory, osArgs)
 	if ii == nil {
 		logger.Panic("Ingress Resource not supported in this cluster")
 	} else {

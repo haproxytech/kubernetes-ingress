@@ -46,14 +46,13 @@ apiVersion: networking.k8s.io/v1
 metadata:
   name: http-echo
   annotations:
-    ingress.class: haproxy
 {{ if .CookiePersistenceDynamic }}
     cookie-persistence: "mycookie"
 {{ else if .CookiePersistenceNoDynamic }}
     cookie-persistence-no-dynamic: "mycookie"
 {{ end }}
-
 spec:
+  ingressClassName: haproxy
   rules:
     - host: {{ .Host }}
       http:

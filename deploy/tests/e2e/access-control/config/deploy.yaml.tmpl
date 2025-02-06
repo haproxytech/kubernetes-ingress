@@ -50,11 +50,11 @@ apiVersion: networking.k8s.io/v1
 metadata:
   name: http-echo
   annotations:
-    ingress.class: haproxy
 {{range .IngAnnotations}}
     {{ .Key }}: {{ .Value }}
 {{end}}
 spec:
+  ingressClassName: haproxy
   rules:
     - host: {{ .Host }}
       http:

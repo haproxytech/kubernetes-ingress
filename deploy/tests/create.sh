@@ -91,6 +91,8 @@ if [ "$EXPERIMENTAL_GWAPI" = "1" ]; then
   printf %80s |tr " " "="; echo ""
 fi
 kubectl apply -f $DIR/config/2.configmap.yaml
+kubectl apply -f $DIR/config/2.2.ingressclass.yaml
+
 if [ "$EXPERIMENTAL_GWAPI" = "1" ]; then
   echo "Adding gateway-controller-name to IC config"
   cat deploy/tests/config/3.ingress-controller.yaml | sed 's#ingress.class=haproxy#&\n            - --gateway-controller-name=haproxy.org/gateway-controller#g' | kubectl apply -f -

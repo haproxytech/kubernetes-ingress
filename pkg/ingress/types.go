@@ -6,8 +6,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-const CONTROLLER = "haproxy.org/ingress-controller"
-
 var logger = utils.GetLogger()
 
 type Sync struct {

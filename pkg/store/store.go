@@ -16,6 +16,7 @@ package store
 
 import (
 	"fmt"
+	"path/filepath"
 
 	"github.com/haproxytech/client-native/v5/models"
 	v1 "github.com/haproxytech/kubernetes-ingress/crs/api/ingress/v1"
@@ -23,7 +24,10 @@ import (
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
 )
 
-const DefaultLocalBackend = "default-local-service"
+const (
+	DefaultLocalBackend = "default-local-service"
+	CONTROLLER          = "haproxy.org/ingress-controller"
+)
 
 type K8s struct {
 	ConfigMaps                   ConfigMaps
@@ -246,4 +250,29 @@ func (k K8s) isRelevantNamespace(namespace string) bool {
 	}
 	_, ok := k.NamespacesAccess.Blacklist[namespace]
 	return !ok
+}
+
+func (k K8s) IsIngressClassSupported(ingressClass, controllerClass string, allowEmptyClass bool) bool {
+	var supported bool
+	var igClassControllerFromSpec string
+	if igClassResource := k.IngressClasses[ingressClass]; igClassResource != nil {
+		igClassControllerFromSpec = igClassResource.Controller
+	}
+	if ingressClass == "" {
+		for _, ingressClass := range k.IngressClasses {
+			if ingressClass.Annotations["ingressclass.kubernetes.io/is-default-class"] == "true" {
+				igClassControllerFromSpec = ingressClass.Controller
+				break
+			}
+		}
+	}
+
+	switch controllerClass {
+	case "":
+		supported = (ingressClass == "" && igClassControllerFromSpec == "") || igClassControllerFromSpec == CONTROLLER
+	default:
+		supported = ingressClass == "" && allowEmptyClass || igClassControllerFromSpec == filepath.Join(CONTROLLER, controllerClass)
+	}
+
+	return supported
 }

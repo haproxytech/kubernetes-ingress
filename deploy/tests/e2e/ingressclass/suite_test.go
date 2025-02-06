@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:build e2e_parallel
+//go:build e2e_sequential
 
 package ingressclass
 
@@ -49,10 +49,6 @@ func (suite *IngressClassSuite) SetupSuite() {
 	suite.client, err = e2e.NewHTTPClient(suite.tmplData.Host)
 	suite.Require().NoError(err)
 	suite.Require().NoError(suite.test.Apply("config/deploy.yaml", suite.test.GetNS(), nil))
-	suite.Require().NoError(suite.test.Apply("config/ingressclass.yaml", "", nil))
-	suite.test.AddTearDown(func() error {
-		return suite.test.Delete("config/ingressclass.yaml")
-	})
 }
 
 func (suite *IngressClassSuite) TearDownSuite() {

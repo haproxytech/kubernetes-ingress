@@ -23,6 +23,7 @@ import (
 	informers "github.com/haproxytech/kubernetes-ingress/crs/generated/informers/externalversions"
 	k8ssync "github.com/haproxytech/kubernetes-ingress/pkg/k8s/sync"
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
+	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
 )
 
 type GlobalCRV1Alpha2 struct{}
@@ -47,7 +48,7 @@ func (c GlobalCRV1Alpha2) GetKind() string {
 	return "Global"
 }
 
-func (c GlobalCRV1Alpha2) GetInformer(eventChan chan k8ssync.SyncDataEvent, factory informers.SharedInformerFactory) cache.SharedIndexInformer { //nolint:ireturn
+func (c GlobalCRV1Alpha2) GetInformer(eventChan chan k8ssync.SyncDataEvent, factory informers.SharedInformerFactory, osArgs utils.OSArgs) cache.SharedIndexInformer { //nolint:ireturn
 	informer := factory.Core().V1alpha2().Globals().Informer()
 
 	sendToChannel := func(eventChan chan k8ssync.SyncDataEvent, object interface{}, status store.Status) {
@@ -95,7 +96,7 @@ func (c DefaultsCRV1Alpha2) GetKind() string {
 	return "Defaults"
 }
 
-func (c DefaultsCRV1Alpha2) GetInformer(eventChan chan k8ssync.SyncDataEvent, factory informers.SharedInformerFactory) cache.SharedIndexInformer { //nolint:ireturn
+func (c DefaultsCRV1Alpha2) GetInformer(eventChan chan k8ssync.SyncDataEvent, factory informers.SharedInformerFactory, osArgs utils.OSArgs) cache.SharedIndexInformer { //nolint:ireturn
 	informer := factory.Core().V1alpha2().Defaults().Informer()
 
 	sendToChannel := func(eventChan chan k8ssync.SyncDataEvent, object interface{}, status store.Status) {
@@ -142,7 +143,7 @@ func (c BackendCRV1Alpha2) GetKind() string {
 	return "Backend"
 }
 
-func (c BackendCRV1Alpha2) GetInformer(eventChan chan k8ssync.SyncDataEvent, factory informers.SharedInformerFactory) cache.SharedIndexInformer { //nolint:ireturn
+func (c BackendCRV1Alpha2) GetInformer(eventChan chan k8ssync.SyncDataEvent, factory informers.SharedInformerFactory, osArgs utils.OSArgs) cache.SharedIndexInformer { //nolint:ireturn
 	informer := factory.Core().V1alpha2().Backends().Informer()
 
 	sendToChannel := func(eventChan chan k8ssync.SyncDataEvent, object interface{}, status store.Status) {

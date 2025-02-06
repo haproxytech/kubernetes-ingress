@@ -18,6 +18,7 @@ import (
 	"time"
 
 	k8ssync "github.com/haproxytech/kubernetes-ingress/pkg/k8s/sync"
+	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
 	"k8s.io/client-go/tools/cache"
 
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -72,7 +73,7 @@ func (k k8s) runCRDefinitionsInformer(eventChan chan GroupKind, stop chan struct
 	logger.Error(err)
 }
 
-func (k k8s) RunCRSCreationMonitoring(eventChan chan k8ssync.SyncDataEvent, stop chan struct{}) {
+func (k k8s) RunCRSCreationMonitoring(eventChan chan k8ssync.SyncDataEvent, stop chan struct{}, osArgs utils.OSArgs) {
 	eventCRS := make(chan GroupKind)
 	k.runCRDefinitionsInformer(eventCRS, stop)
 	go func(chan GroupKind) {
@@ -105,7 +106,7 @@ func (k k8s) RunCRSCreationMonitoring(eventChan chan k8ssync.SyncDataEvent, stop
 						crs[groupKind.Kind] = NewTCPCR()
 					}
 					logger.Info("Custom resource definition created, adding CR watcher for " + crs[groupKind.Kind].GetKind())
-					k.runCRInformers(eventChan, stop, namespace, informersSyncedEvent, crs)
+					k.runCRInformers(eventChan, stop, namespace, informersSyncedEvent, crs, osArgs)
 				}
 
 				if !cache.WaitForCacheSync(stop, *informersSyncedEvent...) {

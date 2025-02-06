@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:build e2e_parallel
+//go:build e2e_sequential
 
 package ingressclass
 
@@ -67,6 +67,7 @@ func (suite *IngressClassSuite) Test_IngressClassName_Resource() {
 
 			return res.StatusCode == http.StatusServiceUnavailable || res.StatusCode == http.StatusNotFound
 		}, e2e.WaitDuration, e2e.TickDuration)
+		suite.Require().NoError(suite.test.Apply("config/ingressclass.yaml", "", nil))
 	})
 
 	suite.Run("Enabled", func() {

@@ -87,7 +87,7 @@ func (handler TCPCustomResource) Update(k store.K8s, h haproxy.HAProxy, a annota
 
 			// >= v3.1 for ingress.class
 			// Not in 3.0
-			supported := handler.isSupportedIngressClass(tcpCR)
+			supported := handler.isSupportedIngressClass(k, tcpCR)
 			if !supported {
 				for _, atcp := range tcpCR.Items {
 					owner := atcp.Owner()
@@ -346,24 +346,7 @@ func (handler TCPCustomResource) reconcileAdditionalBackends(ctx tcpcontext, ser
 	return errors.Result()
 }
 
-func (handler TCPCustomResource) isSupportedIngressClass(tcps *store.TCPs) bool {
-	var supported bool
-	tcpIgClassAnn := tcps.IngressClass
-
-	switch handler.controllerIngressClass {
-	case "", tcpIgClassAnn:
-		supported = true
-	default: // mismatch osArgs.Ingress and TCP IngressClass annotation
-		if tcpIgClassAnn == "" {
-			supported = handler.allowEmptyIngressClass
-			if !supported {
-				utils.GetLogger().Warningf("[SKIP] TCP %s/%s ingress.class annotation='%s' does not match with controller ingress.class flag '%s' and controller flag 'empty-ingress-class' is false",
-					tcps.Namespace, tcps.Name, tcpIgClassAnn, handler.controllerIngressClass)
-			}
-		} else {
-			utils.GetLogger().Warningf("[SKIP] TCP %s/%s ingress.class annotation='%s' does not match with controller ingress.class flag '%s'",
-				tcps.Namespace, tcps.Name, tcpIgClassAnn, handler.controllerIngressClass)
-		}
-	}
+func (handler TCPCustomResource) isSupportedIngressClass(k store.K8s, tcps *store.TCPs) bool {
+	supported := k.IsIngressClassSupported(tcps.IngressClass, handler.controllerIngressClass, handler.allowEmptyIngressClass)
 	return supported
 }

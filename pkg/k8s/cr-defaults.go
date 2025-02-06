@@ -21,6 +21,7 @@ import (
 	informers "github.com/haproxytech/kubernetes-ingress/crs/generated/informers/externalversions"
 	k8ssync "github.com/haproxytech/kubernetes-ingress/pkg/k8s/sync"
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
+	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
 )
 
 type DefaultsCR struct{}
@@ -33,7 +34,7 @@ func (c DefaultsCR) GetKind() string {
 	return "Defaults"
 }
 
-func (c DefaultsCR) GetInformer(eventChan chan k8ssync.SyncDataEvent, factory informers.SharedInformerFactory) cache.SharedIndexInformer { //nolint:ireturn
+func (c DefaultsCR) GetInformer(eventChan chan k8ssync.SyncDataEvent, factory informers.SharedInformerFactory, osArgs utils.OSArgs) cache.SharedIndexInformer { //nolint:ireturn
 	informer := factory.Ingress().V1().Defaults().Informer()
 
 	sendToChannel := func(eventChan chan k8ssync.SyncDataEvent, object interface{}, status store.Status) {

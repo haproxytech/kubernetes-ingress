@@ -57,6 +57,12 @@ func (suite *DisableConfigSnippetSuite) setupTest() {
 
 	ns := store.Namespace{Name: appNs, Status: store.ADDED}
 	testController.EventChan <- k8ssync.SyncDataEvent{SyncType: k8ssync.NAMESPACE, Namespace: ns.Name, Data: &ns}
+	ingressClass := &store.IngressClass{
+		Name:       "haproxy",
+		Controller: "haproxy.org/ingress-controller",
+		Status:     store.ADDED,
+	}
+	testController.EventChan <- k8ssync.SyncDataEvent{SyncType: k8ssync.INGRESS_CLASS, Data: ingressClass}
 	testController.EventChan <- k8ssync.SyncDataEvent{SyncType: k8ssync.COMMAND}
 	controllerHasWorked := make(chan struct{})
 	testController.EventChan <- k8ssync.SyncDataEvent{SyncType: k8ssync.COMMAND, EventProcessed: controllerHasWorked}

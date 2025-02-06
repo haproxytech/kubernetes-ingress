@@ -15,8 +15,6 @@
 package ingress
 
 import (
-	"path/filepath"
-
 	"github.com/haproxytech/kubernetes-ingress/pkg/annotations"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/certs"
@@ -55,36 +53,7 @@ func (i Ingress) Supported(k8s store.K8s, a annotations.Annotations) (supported 
 		return true
 	}
 
-	var igClassAnn, igClassSpec string
-	igClassAnn = a.String("ingress.class", i.resource.Annotations)
-	if igClassResource := k8s.IngressClasses[i.resource.Class]; igClassResource != nil {
-		igClassSpec = igClassResource.Controller
-	}
-	if igClassAnn == "" && i.resource.Class == "" {
-		for _, ingressClass := range k8s.IngressClasses {
-			if ingressClass.Annotations["ingressclass.kubernetes.io/is-default-class"] == "true" {
-				igClassSpec = ingressClass.Controller
-				break
-			}
-		}
-	}
-
-	switch i.controllerClass {
-	case "":
-		if igClassAnn == "" {
-			supported = (i.resource.Class == "" && igClassSpec == "") || igClassSpec == CONTROLLER
-		} else if igClassSpec == CONTROLLER {
-			logger.Warningf("Ingress '%s/%s': conflicting ingress class mechanisms", i.resource.Namespace, i.resource.Name)
-		}
-	case igClassAnn:
-		supported = true
-	default:
-		if igClassAnn == "" {
-			supported = i.resource.Class == "" && i.allowEmptyClass || igClassSpec == filepath.Join(CONTROLLER, i.controllerClass)
-		} else if igClassSpec == filepath.Join(CONTROLLER, i.controllerClass) {
-			logger.Warningf("Ingress '%s/%s': conflicting ingress class mechanisms", i.resource.Namespace, i.resource.Name)
-		}
-	}
+	supported = k8s.IsIngressClassSupported(i.resource.Class, i.controllerClass, i.allowEmptyClass)
 	if !supported {
 		i.resource.Ignored = true
 	}

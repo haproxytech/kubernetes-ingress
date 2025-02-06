@@ -163,13 +163,20 @@ func (suite *UseBackendSuite) UseBackendFixture() (eventChan chan k8ssync.SyncDa
 	}
 	eventChan <- k8ssync.SyncDataEvent{SyncType: k8ssync.SERVICE, Namespace: service.Namespace, Data: service}
 
+	ingressClass := &store.IngressClass{
+		Name:       "haproxy",
+		Controller: "haproxy.org/ingress-controller",
+		Status:     store.ADDED,
+	}
+	eventChan <- k8ssync.SyncDataEvent{SyncType: k8ssync.INGRESS_CLASS, Data: ingressClass}
+
 	prefixPathType := networkingv1.PathTypePrefix
 	ingress := &store.Ingress{
 		IngressCore: store.IngressCore{
-			APIVersion:  store.NETWORKINGV1,
-			Name:        "myapping",
-			Namespace:   ns.Name,
-			Annotations: map[string]string{"haproxy.org/ingress.class": "haproxy"},
+			APIVersion: store.NETWORKINGV1,
+			Name:       "myapping",
+			Namespace:  ns.Name,
+			Class:      "haproxy",
 			Rules: map[string]*store.IngressRule{
 				"": {
 					Paths: map[string]*store.IngressPath{
