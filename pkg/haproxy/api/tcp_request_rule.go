@@ -7,7 +7,6 @@ func (c *clientNative) TCPRequestRuleCreate(parentType, parentName string, rule 
 	if err != nil {
 		return err
 	}
-	c.activeTransactionHasChanges = true
 	return configuration.CreateTCPRequestRule(parentType, parentName, &rule, c.activeTransaction, 0)
 }
 
@@ -16,7 +15,6 @@ func (c *clientNative) TCPRequestRuleDeleteAll(parentType, parentName string) (e
 	if err != nil {
 		return
 	}
-	c.activeTransactionHasChanges = true
 	_, rules, err := configuration.GetTCPRequestRules(parentType, parentName, c.activeTransaction)
 	if err != nil {
 		return

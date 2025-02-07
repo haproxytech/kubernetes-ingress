@@ -7,7 +7,6 @@ func (c *clientNative) LogTargetCreate(parentType, parentName string, rule model
 	if err != nil {
 		return err
 	}
-	c.activeTransactionHasChanges = true
 	return configuration.CreateLogTarget(parentType, parentName, &rule, c.activeTransaction, 0)
 }
 
@@ -16,7 +15,6 @@ func (c *clientNative) LogTargetDeleteAll(parentType, parentName string) (err er
 	if err != nil {
 		return
 	}
-	c.activeTransactionHasChanges = true
 	_, rules, err := configuration.GetLogTargets(parentType, parentName, c.activeTransaction)
 	if err != nil {
 		return

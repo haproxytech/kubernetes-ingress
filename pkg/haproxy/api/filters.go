@@ -7,7 +7,6 @@ func (c *clientNative) FilterCreate(parentType, parentName string, rule models.F
 	if err != nil {
 		return err
 	}
-	c.activeTransactionHasChanges = true
 	return configuration.CreateFilter(parentType, parentName, &rule, c.activeTransaction, 0)
 }
 
@@ -16,7 +15,6 @@ func (c *clientNative) FilterDeleteAll(parentType, parentName string) (err error
 	if err != nil {
 		return
 	}
-	c.activeTransactionHasChanges = true
 	_, rules, err := configuration.GetFilters(parentType, parentName, c.activeTransaction)
 	if err != nil {
 		return

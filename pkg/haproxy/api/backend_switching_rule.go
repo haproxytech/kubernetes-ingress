@@ -7,7 +7,6 @@ func (c *clientNative) BackendSwitchingRuleCreate(frontend string, rule models.B
 	if err != nil {
 		return err
 	}
-	c.activeTransactionHasChanges = true
 	return configuration.CreateBackendSwitchingRule(frontend, &rule, c.activeTransaction, 0)
 }
 
@@ -16,7 +15,6 @@ func (c *clientNative) BackendSwitchingRuleDeleteAll(frontend string) (err error
 	if err != nil {
 		return
 	}
-	c.activeTransactionHasChanges = true
 	_, switchingRules, err := configuration.GetBackendSwitchingRules(frontend, c.activeTransaction)
 	if err != nil {
 		return

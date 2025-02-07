@@ -22,9 +22,6 @@ func (c *clientNative) FrontendCfgSnippetSet(frontendName string, value []string
 	} else {
 		err = config.Set("frontend", frontendName, "config-snippet", types.StringSliceC{Value: value})
 	}
-	if err != nil {
-		c.activeTransactionHasChanges = true
-	}
 	return err
 }
 
@@ -33,7 +30,6 @@ func (c *clientNative) FrontendCreate(frontend models.Frontend) error {
 	if err != nil {
 		return err
 	}
-	c.activeTransactionHasChanges = true
 	return configuration.CreateFrontend(&frontend, c.activeTransaction, 0)
 }
 
@@ -42,7 +38,6 @@ func (c *clientNative) FrontendDelete(frontendName string) error {
 	if err != nil {
 		return err
 	}
-	c.activeTransactionHasChanges = true
 	return configuration.DeleteFrontend(frontendName, c.activeTransaction, 0)
 }
 
@@ -72,7 +67,6 @@ func (c *clientNative) FrontendEdit(frontend models.Frontend) error {
 	if err != nil {
 		return err
 	}
-	c.activeTransactionHasChanges = true
 	return configuration.EditFrontend(frontend.Name, &frontend, c.activeTransaction, 0)
 }
 
@@ -143,7 +137,6 @@ func (c *clientNative) FrontendBindCreate(frontend string, bind models.Bind) err
 	if err != nil {
 		return err
 	}
-	c.activeTransactionHasChanges = true
 	return configuration.CreateBind("frontend", frontend, &bind, c.activeTransaction, 0)
 }
 
@@ -152,7 +145,6 @@ func (c *clientNative) FrontendBindEdit(frontend string, bind models.Bind) error
 	if err != nil {
 		return err
 	}
-	c.activeTransactionHasChanges = true
 	return configuration.EditBind(bind.Name, "frontend", frontend, &bind, c.activeTransaction, 0)
 }
 
@@ -161,7 +153,6 @@ func (c *clientNative) FrontendBindDelete(frontend string, bind string) error {
 	if err != nil {
 		return err
 	}
-	c.activeTransactionHasChanges = true
 	return configuration.DeleteBind(bind, "frontend", frontend, c.activeTransaction, 0)
 }
 
@@ -170,7 +161,6 @@ func (c *clientNative) FrontendHTTPRequestRuleCreate(frontend string, rule model
 	if err != nil {
 		return err
 	}
-	c.activeTransactionHasChanges = true
 	if ingressACL != "" {
 		rule.Cond = "if"
 		rule.CondTest = fmt.Sprintf("%s %s", ingressACL, rule.CondTest)
@@ -183,7 +173,6 @@ func (c *clientNative) FrontendHTTPResponseRuleCreate(frontend string, rule mode
 	if err != nil {
 		return err
 	}
-	c.activeTransactionHasChanges = true
 	if ingressACL != "" {
 		rule.Cond = "if"
 		rule.CondTest = fmt.Sprintf("%s %s", ingressACL, rule.CondTest)
@@ -196,7 +185,6 @@ func (c *clientNative) FrontendTCPRequestRuleCreate(frontend string, rule models
 	if err != nil {
 		return err
 	}
-	c.activeTransactionHasChanges = true
 	if ingressACL != "" {
 		rule.Cond = "if"
 		rule.CondTest = fmt.Sprintf("%s %s", ingressACL, rule.CondTest)
@@ -211,7 +199,6 @@ func (c *clientNative) FrontendRuleDeleteAll(frontend string) {
 		logger.Error(err)
 		return
 	}
-	c.activeTransactionHasChanges = true
 
 	for {
 		err := configuration.DeleteHTTPRequestRule(0, "frontend", frontend, c.activeTransaction, 0)
@@ -239,7 +226,6 @@ func (c *clientNative) PeerEntryEdit(peerSection string, peerEntry models.PeerEn
 	if err != nil {
 		return err
 	}
-	c.activeTransactionHasChanges = true
 	return configuration.EditPeerEntry(peerEntry.Name, peerSection, &peerEntry, c.activeTransaction, 0)
 }
 
@@ -248,7 +234,6 @@ func (c *clientNative) PeerEntryCreateOrEdit(peerSection string, peerEntry model
 	if err != nil {
 		return err
 	}
-	c.activeTransactionHasChanges = true
 	err = configuration.EditPeerEntry(peerEntry.Name, peerSection, &peerEntry, c.activeTransaction, 0)
 	if err != nil {
 		err = configuration.CreatePeerEntry(peerSection, &peerEntry, c.activeTransaction, 0)

@@ -2,6 +2,9 @@ package api
 
 import (
 	"context"
+	//nolint:gosec
+	"crypto/md5" // G501: Blocklisted import crypto/md5: weak cryptographic primitive
+	"encoding/hex"
 	"encoding/json"
 
 	clientnative "github.com/haproxytech/client-native/v5"
@@ -133,11 +136,11 @@ type Backend struct { // use same names as in client native v6
 }
 
 type clientNative struct {
-	nativeAPI                   clientnative.HAProxyClient
-	activeTransaction           string
-	activeTransactionHasChanges bool
-	backends                    map[string]Backend
-	previousBackends            []byte
+	nativeAPI                           clientnative.HAProxyClient
+	activeTransaction                   string
+	backends                            map[string]Backend
+	previousBackends                    []byte
+	configurationHashAtTransactionStart string
 }
 
 func New(transactionDir, configFile, programPath, runtimeSocket string) (client HAProxyClient, err error) { //nolint:ireturn
@@ -155,6 +158,7 @@ func New(transactionDir, configFile, programPath, runtimeSocket string) (client 
 		cfgoptions.ConfigurationFile(configFile),
 		cfgoptions.HAProxyBin(programPath),
 		cfgoptions.UseModelsValidation,
+		cfgoptions.UseMd5Hash,
 		cfgoptions.TransactionsDir(transactionDir),
 	)
 	if err != nil {
@@ -193,8 +197,26 @@ func (c *clientNative) APIStartTransaction() error {
 	}
 	logger.WithField(utils.LogFieldTransactionID, transaction.ID)
 	c.activeTransaction = transaction.ID
-	c.activeTransactionHasChanges = false
+
+	hash, err := c.computeConfigurationHash(configuration)
+	if err != nil {
+		return err
+	}
+	c.configurationHashAtTransactionStart = hash
+
 	return nil
+}
+
+func (c *clientNative) computeConfigurationHash(configuration configuration.Configuration) (string, error) {
+	p, err := configuration.GetParser(c.activeTransaction)
+	if err != nil {
+		return "", err
+	}
+	// Note that p.String() does not include the hash!!!
+	content := p.String()
+	//nolint: gosec
+	hash := md5.Sum([]byte(content))
+	return hex.EncodeToString(hash[:]), err
 }
 
 func (c *clientNative) APICommitTransaction() error {
@@ -202,7 +224,13 @@ func (c *clientNative) APICommitTransaction() error {
 	if err != nil {
 		return err
 	}
-	if !c.activeTransactionHasChanges {
+
+	hash, err := c.computeConfigurationHash(configuration)
+	if err != nil {
+		return err
+	}
+
+	if c.configurationHashAtTransactionStart == hash {
 		if errDel := configuration.DeleteTransaction(c.activeTransaction); errDel != nil {
 			return errDel
 		}
@@ -235,7 +263,12 @@ func (c *clientNative) APIFinalCommitTransaction() error {
 		c.backends[backendName] = backend
 	}
 
-	if !c.activeTransactionHasChanges {
+	hash, err := c.computeConfigurationHash(configuration)
+	if err != nil {
+		return err
+	}
+
+	if c.configurationHashAtTransactionStart == hash {
 		if errDel := configuration.DeleteTransaction(c.activeTransaction); errDel != nil {
 			errs.Add(errDel)
 		}
@@ -249,7 +282,6 @@ func (c *clientNative) APIFinalCommitTransaction() error {
 func (c *clientNative) APIDisposeTransaction() {
 	logger.ResetFields()
 	c.activeTransaction = ""
-	c.activeTransactionHasChanges = false
 }
 
 func (c *clientNative) SetAuxCfgFile(auxCfgFile string) {

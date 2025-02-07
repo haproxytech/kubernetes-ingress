@@ -59,8 +59,6 @@ func (c *clientNative) BackendCreateOrUpdate(backend models.Backend) (diff map[s
 
 	diff = oldBackend.BackendBase.Diff(backend)
 
-	c.activeTransactionHasChanges = len(diff) > 0
-
 	oldBackend.BackendBase = backend
 	oldBackend.Used = true
 	c.backends[backend.Name] = oldBackend
@@ -83,7 +81,6 @@ func (c *clientNative) BackendCfgSnippetSet(backendName string, value []string) 
 		return fmt.Errorf("backend %s : %w", backendName, ErrNotFound)
 	}
 
-	c.activeTransactionHasChanges = slices.Compare(backend.ConfigSnippets, value) != 0
 	backend.ConfigSnippets = value
 	c.backends[backendName] = backend
 	return nil
@@ -117,7 +114,6 @@ func (c *clientNative) BackendRuleDeleteAll(backend string) {
 		logger.Error(err)
 		return
 	}
-	c.activeTransactionHasChanges = true
 
 	// Currently we are only using HTTPRequest rules on backend
 	err = configuration.DeleteHTTPRequestRule(0, "backend", backend, c.activeTransaction, 0)
@@ -253,7 +249,6 @@ func (c *clientNative) BackendDeleteAllUnnecessary() ([]string, error) {
 		return nil, err
 	}
 
-	c.activeTransactionHasChanges = true
 	var errs utils.Errors
 	var backendDeleted []string //nolint:prealloc
 	for _, backend := range c.backends {

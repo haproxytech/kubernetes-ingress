@@ -7,7 +7,6 @@ func (c *clientNative) CaptureCreate(frontend string, rule models.Capture) error
 	if err != nil {
 		return err
 	}
-	c.activeTransactionHasChanges = true
 	return configuration.CreateDeclareCapture(frontend, &rule, c.activeTransaction, 0)
 }
 
@@ -16,7 +15,6 @@ func (c *clientNative) CaptureDeleteAll(frontend string) (err error) {
 	if err != nil {
 		return
 	}
-	c.activeTransactionHasChanges = true
 	_, rules, err := configuration.GetDeclareCaptures(frontend, c.activeTransaction)
 	if err != nil {
 		return

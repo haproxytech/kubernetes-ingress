@@ -78,7 +78,6 @@ func (c *clientNative) GlobalGetLogTargets() (lg models.LogTargets, err error) {
 	if err != nil {
 		return nil, err
 	}
-	c.activeTransactionHasChanges = true
 	_, lg, err = configuration.GetLogTargets("global", parser.GlobalSectionName, c.activeTransaction)
 	if err != nil {
 		return lg, fmt.Errorf("unable to get HAProxy's global log targets: %w", err)
@@ -91,7 +90,6 @@ func (c *clientNative) GlobalPushLogTargets(logTargets models.LogTargets) error 
 	if err != nil {
 		return err
 	}
-	c.activeTransactionHasChanges = true
 	for {
 		err = configuration.DeleteLogTarget(0, "global", parser.GlobalSectionName, c.activeTransaction, 0)
 		if err != nil {
