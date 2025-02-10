@@ -34,7 +34,7 @@ func (a *LoadBalance) Process(k store.K8s, annotations ...map[string]string) err
 	}
 	var params *models.Balance
 	var err error
-	params, err = getParamsFromInput(input)
+	params, err = GetParamsFromInput(input)
 	if err != nil {
 		return fmt.Errorf("load-balance: %w", err)
 	}
@@ -46,7 +46,7 @@ func (a *LoadBalance) Process(k store.K8s, annotations ...map[string]string) err
 	return nil
 }
 
-func getParamsFromInput(value string) (*models.Balance, error) {
+func GetParamsFromInput(value string) (*models.Balance, error) {
 	balance := &models.Balance{}
 	tokens := strings.Split(value, " ")
 	if len(tokens) == 0 {
