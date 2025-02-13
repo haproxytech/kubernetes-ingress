@@ -15,6 +15,8 @@ const (
 )
 
 type PrometheusMetricsManager struct {
+	unableToSyncGauge prometheus.Gauge
+
 	// reload
 	reloadsCounterVec *prometheus.CounterVec
 
@@ -47,9 +49,15 @@ func New() PrometheusMetricsManager {
 			[]string{"object", "result"},
 		)
 
+		unableToSyncGauge := promauto.NewGauge(prometheus.GaugeOpts{
+			Name: "haproxy_unable_to_sync_configuration",
+			Help: "1 = there's a pending haproxy configuration that is not valid so not applicable, 0 = haproxy configuration applied",
+		})
+
 		pmm = PrometheusMetricsManager{
 			reloadsCounterVec:       reloadCounter,
 			runtimeSocketCounterVec: runtimeSocketCounter,
+			unableToSyncGauge:       unableToSyncGauge,
 		}
 	})
 	return pmm
@@ -69,4 +77,12 @@ func (pmm PrometheusMetricsManager) UpdateRuntimeMetrics(object string, err erro
 	} else {
 		pmm.runtimeSocketCounterVec.WithLabelValues(object, ResultSuccess).Inc()
 	}
+}
+
+func (pmm PrometheusMetricsManager) SetUnableSyncGauge() {
+	pmm.unableToSyncGauge.Set(float64(1))
+}
+
+func (pmm PrometheusMetricsManager) UnsetUnableSyncGauge() {
+	pmm.unableToSyncGauge.Set(float64(0))
 }

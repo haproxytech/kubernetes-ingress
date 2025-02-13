@@ -36,3 +36,4 @@ allowed:
   - kubebuilder
   - cfg
   - optim
+  - prometheus

@@ -111,6 +111,7 @@ func (c *HAProxyController) Stop() {
 func (c *HAProxyController) updateHAProxy() {
 	var err error
 	logger.Trace("HAProxy config sync started")
+	c.prometheusMetricsManager.UnsetUnableSyncGauge()
 
 	err = c.haproxy.APIStartTransaction()
 	if err != nil {
@@ -183,6 +184,7 @@ func (c *HAProxyController) updateHAProxy() {
 
 	err = c.haproxy.APIFinalCommitTransaction()
 	if err != nil {
+		c.prometheusMetricsManager.SetUnableSyncGauge()
 		logger.Error("unable to Sync HAProxy configuration !!")
 		logger.Error(err)
 		rerun, errCfgSnippet := annotations.CheckBackendConfigSnippetError(err, c.haproxy.Env.CfgDir)
