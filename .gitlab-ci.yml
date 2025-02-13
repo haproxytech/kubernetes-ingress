@@ -224,16 +224,6 @@ e2e_k8s_31:
   extends: .kind_deployment_schedules
   rules:
     - if: $CI_PIPELINE_SOURCE == "schedule" && $SCHEDULE_TYPE == 'weekly' &&  $SCHEDULE_DAY == 'tuesday'
-e2e_k8s_32:
-  stage: e2e_k8s_32
-  needs: ["docker-build"]
-  variables:
-    K8S_VERSION: v1.32.0
-    KUBEADM_VER: v1beta3
-    KUBECTL: v1.31.0
-  extends: .kind_deployment
-  rules:
-    - if: $CI_PIPELINE_SOURCE == "schedule" && $SCHEDULE_TYPE == 'weekly' &&  $SCHEDULE_DAY == 'wednesday'
 e2e_crd_v1:
   stage: e2e_crd_versions
   needs: ["docker-build"]
@@ -244,4 +234,12 @@ e2e_crd_v1:
     CRD_VERSION: v1
   extends: .kind_deployment_schedules
   rules:
-    - if: $CI_PIPELINE_SOURCE == "schedule" && $SCHEDULE_TYPE == 'weekly' &&  $SCHEDULE_DAY == 'thursday'
+    - if: $CI_PIPELINE_SOURCE == "schedule" && $SCHEDULE_TYPE == 'weekly' &&  $SCHEDULE_DAY == 'wednesday'
+e2e_k8s_32:
+  stage: e2e_k8s_32
+  needs: ["docker-build"]
+  variables:
+    K8S_VERSION: v1.32.0
+    KUBEADM_VER: v1beta3
+    KUBECTL: v1.31.0
+  extends: .kind_deployment
