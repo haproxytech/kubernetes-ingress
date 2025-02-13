@@ -26,6 +26,7 @@ On top of the prometheus provided metrics, we added these three ones:
 haproxy_reloads_total: The number of haproxy reloads partitioned by result (success/failure)
 haproxy_restarts_total: The number of haproxy restarts partitioned by result (success/failure)
 haproxy_runtime_socket_connections_total: The number of haproxy runtime socket connections partitioned by object (server/map) and result (success/failure)
+haproxy_unable_to_sync_configuration 1 = there's a pending haproxy configuration that is not valid so not applicable, 0 = haproxy configuration applied
 ```
 
 
@@ -46,4 +47,7 @@ haproxy_restarts_total{result="success"} 1
 # TYPE haproxy_runtime_socket_connections_total counter
 haproxy_runtime_socket_connections_total{object="map",result="success"} 4
 haproxy_runtime_socket_connections_total{object="server",result="success"} 50
+# HELP haproxy_unable_to_sync_configuration 1 = there's a pending haproxy configuration that is not valid so not applicable, 0 = haproxy configuration applied
+# TYPE haproxy_unable_to_sync_configuration gauge
+haproxy_unable_to_sync_configuration 1
 ```

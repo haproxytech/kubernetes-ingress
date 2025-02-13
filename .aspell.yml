@@ -42,3 +42,6 @@ allowed:
   - parallelize
   - maxconn
   - kubebuilder
+  - cfg
+  - optim
+  - prometheus
