@@ -21,9 +21,9 @@ import (
 
 	"github.com/stretchr/testify/suite"
 
-	parser "github.com/haproxytech/client-native/v5/config-parser"
-	"github.com/haproxytech/client-native/v5/config-parser/options"
-	"github.com/haproxytech/client-native/v5/config-parser/types"
+	parser "github.com/haproxytech/client-native/v6/config-parser"
+	"github.com/haproxytech/client-native/v6/config-parser/options"
+	"github.com/haproxytech/client-native/v6/config-parser/types"
 	"github.com/haproxytech/kubernetes-ingress/deploy/tests/e2e"
 )
 

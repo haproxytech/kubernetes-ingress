@@ -21,8 +21,8 @@ import (
 	"strings"
 	"testing"
 
-	parser "github.com/haproxytech/client-native/v5/config-parser"
-	"github.com/haproxytech/client-native/v5/config-parser/options"
+	parser "github.com/haproxytech/client-native/v6/config-parser"
+	"github.com/haproxytech/client-native/v6/config-parser/options"
 
 	"github.com/haproxytech/kubernetes-ingress/deploy/tests/e2e"
 	"github.com/stretchr/testify/suite"
