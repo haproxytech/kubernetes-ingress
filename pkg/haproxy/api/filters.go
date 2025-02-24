@@ -21,7 +21,7 @@ func (c *clientNative) FilterDeleteAll(parentType, parentName string) (err error
 	if err != nil {
 		return
 	}
-	for range len(rules) {
+	for range rules {
 		if err = configuration.DeleteFilter(0, parentType, parentName, c.activeTransaction, 0); err != nil {
 			break
 		}

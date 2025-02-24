@@ -21,7 +21,7 @@ func (c *clientNative) LogTargetDeleteAll(parentType, parentName string) (err er
 	if err != nil {
 		return
 	}
-	for range len(rules) {
+	for range rules {
 		if err = configuration.DeleteLogTarget(0, parentType, parentName, c.activeTransaction, 0); err != nil {
 			break
 		}
