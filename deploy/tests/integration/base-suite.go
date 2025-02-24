@@ -15,7 +15,6 @@
 package integration
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -171,5 +170,5 @@ func (suite *BaseSuite) ExpectHaproxyConfigContains(s string, count int) {
 		suite.T().Error(err.Error())
 	}
 	c := strings.Count(string(content), s)
-	suite.Exactly(count, c, fmt.Sprintf("%s is repeated %d times but expected %d", s, c, count))
+	suite.Exactly(count, c, "%s is repeated %d times but expected %d", s, c, count)
 }

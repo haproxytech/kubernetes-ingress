@@ -21,7 +21,7 @@ func (c *clientNative) CaptureDeleteAll(frontend string) (err error) {
 	if err != nil {
 		return
 	}
-	for range len(rules) {
+	for range rules {
 		if err = configuration.DeleteDeclareCapture(0, frontend, c.activeTransaction, 0); err != nil {
 			break
 		}

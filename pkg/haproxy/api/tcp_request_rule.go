@@ -21,7 +21,7 @@ func (c *clientNative) TCPRequestRuleDeleteAll(parentType, parentName string) (e
 	if err != nil {
 		return
 	}
-	for range len(rules) {
+	for range rules {
 		if err = configuration.DeleteTCPRequestRule(0, parentType, parentName, c.activeTransaction, 0); err != nil {
 			break
 		}
