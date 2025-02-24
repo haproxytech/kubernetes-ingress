@@ -19,7 +19,7 @@ func (c *clientNative) BackendSwitchingRuleDeleteAll(frontend string) (err error
 	if err != nil {
 		return
 	}
-	for range len(switchingRules) {
+	for range switchingRules {
 		if err = configuration.DeleteBackendSwitchingRule(0, frontend, c.activeTransaction, 0); err != nil {
 			break
 		}

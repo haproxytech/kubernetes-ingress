@@ -259,7 +259,7 @@ func GetCertSubject(filename string) (certInfo CertInfo, err error) {
 		case strings.HasPrefix(line, "Used:"):
 			used, convErr := strconv.ParseBool(strings.Split(line, ": ")[1])
 			if convErr != nil {
-				return
+				return //nolint:nilnesserr
 			}
 			certInfo.Used = used
 		case strings.HasPrefix(line, "Subject:"):
