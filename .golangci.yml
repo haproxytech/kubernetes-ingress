@@ -25,7 +25,6 @@ linters:
     - goconst
     - gocyclo
     - godot
-    - gomnd
     - lll
     - nestif
     - nlreturn
@@ -41,13 +40,13 @@ linters:
     - depguard
     - mnd
     - inamedparam
-    - err113 # maybe tmp disable
     - asasalint
-    - exportloopref # deprecated
-    - execinquery # deprecated
+    - err113 # maybe tmp disable
     - tagliatelle
     - testifylint
     - typecheck
+    - recvcheck # maybe tmp disable
+    - tenv # deprecated
 issues:
   exclude:
     - "tag is not aligned, should be:" # this is harder to read
