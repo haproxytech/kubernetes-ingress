@@ -490,7 +490,7 @@ func (k k8s) getEndpointsInformer(eventChan chan k8ssync.SyncDataEvent, factory 
 func (k *k8s) getPodInformer(namespace, podPrefix string, resyncPeriod time.Duration, eventChan chan k8ssync.SyncDataEvent) cache.Controller { //nolint:ireturn
 	var prefix string
 	watchlist := cache.NewListWatchFromClient(k.builtInClient.CoreV1().RESTClient(), "pods", namespace, fields.Nothing())
-	_, eController := cache.NewInformer(
+	_, eController := cache.NewInformer( //nolint
 		watchlist,
 		&corev1.Pod{},
 		resyncPeriod,
