@@ -100,3 +100,5 @@ go install sigs.k8s.io/controller-tools/cmd/controller-gen@${CONTROLLER_GEN_VERS
 # # Controller-gen version
 echo "Controller-gen: " ${CONTROLLER_GEN_VERSION}
 controller-gen crd paths=./crs/api/ingress/v3/...  output:crd:dir=./crs/definition
+# remove code-gen annotation (dependabot fails)
+find ${CR_DIR}/definition -type f -name '*.yaml' -exec sed -i '/controller-gen.kubebuilder.io\/version/d' {} +
