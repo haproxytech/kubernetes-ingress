@@ -3,7 +3,6 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.14.0
     haproxy.org/client-native: v5.1.4
   name: globals.ingress.v1.haproxy.org
 spec:
@@ -44,9 +43,7 @@ spec:
                 description: |-
                   Global Global
 
-
                   # HAProxy global configuration
-
 
                   swagger:model global
                 properties:
@@ -83,7 +80,6 @@ spec:
                     items:
                       description: |-
                         CPUMap CPU map
-
 
                         swagger:model CPUMap
                       properties:
@@ -197,7 +193,6 @@ spec:
                     items:
                       description: |-
                         H1CaseAdjust h1 case adjust
-
 
                         swagger:model H1CaseAdjust
                       properties:
@@ -322,7 +317,6 @@ spec:
                       description: |-
                         LuaLoad lua load
 
-
                         swagger:model LuaLoad
                       properties:
                         file:
@@ -341,7 +335,6 @@ spec:
                     items:
                       description: |-
                         LuaPrependPath lua prepend path
-
 
                         swagger:model LuaPrependPath
                       properties:
@@ -472,7 +465,6 @@ spec:
                       description: |-
                         PresetEnv preset env
 
-
                         swagger:model PresetEnv
                       properties:
                         name:
@@ -510,7 +502,6 @@ spec:
                     items:
                       description: |-
                         RuntimeAPI runtime API
-
 
                         swagger:model RuntimeAPI
                       properties:
@@ -830,7 +821,6 @@ spec:
                       description: |-
                         SetVar set var
 
-
                         swagger:model SetVar
                       properties:
                         expr:
@@ -853,7 +843,6 @@ spec:
                     items:
                       description: |-
                         SetVarFmt set var fmt
-
 
                         swagger:model SetVarFmt
                       properties:
@@ -883,7 +872,6 @@ spec:
                     items:
                       description: |-
                         SetEnv set env
-
 
                         swagger:model SetEnv
                       properties:
@@ -951,7 +939,6 @@ spec:
                       description: |-
                         SslEngine ssl engine
 
-
                         swagger:model SslEngine
                       properties:
                         algorithms:
@@ -1013,7 +1000,6 @@ spec:
                     items:
                       description: |-
                         ThreadGroup thread group
-
 
                         swagger:model ThreadGroup
                       properties:
@@ -1490,18 +1476,14 @@ spec:
                 description: |-
                   LogTargets Log Target Array
 
-
                   HAProxy log target array (corresponds to log directives)
-
 
                   swagger:model log_targets
                 items:
                   description: |-
                     LogTarget Log Target
 
-
                     Per-instance logging of events and traffic.
-
 
                     swagger:model log_target
                   properties:
