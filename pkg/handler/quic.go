@@ -29,82 +29,101 @@ type Quic struct {
 	IPv6             bool
 }
 
-func (q *Quic) Update(k store.K8s, h haproxy.HAProxy, a annotations.Annotations) (err error) {
-	var errs utils.Errors
-	defer func() {
-		err = errs.Result()
-	}()
-	var bindv4Present, bindv6Present bool
-	binds, errBindsGet := h.FrontendBindsGet(h.FrontHTTPS)
-	if errBindsGet != nil {
-		errs.Add(errBindsGet)
+func (q *Quic) enableQuic(h haproxy.HAProxy) (err error) {
+	var binds []models.Bind
+	var bindIPv4Exists, bindIPv6Exists bool
+
+	err = q.altSvcRule(h)
+	if err != nil {
 		return
 	}
 
+	existingBinds, err := h.FrontendBindsGet(h.FrontHTTPS)
+	if err != nil {
+		return
+	}
+
+	if q.IPv4 || q.IPv6 {
+		for _, existingBind := range existingBinds {
+			if existingBind.Name == QUIC4BIND {
+				bindIPv4Exists = true
+			}
+			if existingBind.Name == QUIC6BIND {
+				bindIPv6Exists = true
+			}
+		}
+	}
+
+	addBind := func(addr string, bindName string, v4v6 bool) {
+		binds = append(binds, models.Bind{
+			Address: addr,
+			Port:    utils.PtrInt64(q.QuicBindPort),
+			BindParams: models.BindParams{
+				Name:           bindName,
+				Ssl:            true,
+				SslCertificate: q.CertDir,
+				Alpn:           "h3",
+				V4v6:           v4v6,
+			},
+		})
+	}
+
+	if q.IPv4 && !bindIPv4Exists {
+		addBind("quic4@"+q.AddrIPv4, QUIC4BIND, false)
+	}
+	if q.IPv6 && !bindIPv6Exists {
+		addBind("quic6@"+q.AddrIPv6, QUIC6BIND, true)
+	}
+
 	for _, bind := range binds {
-		bindv4Present = bindv4Present || bind.Name == QUIC4BIND
-		bindv6Present = bindv6Present || bind.Name == QUIC6BIND
+		err = h.FrontendBindCreate(h.FrontHTTPS, bind)
+		if err != nil {
+			return err
+		}
 	}
 
-	ipv4Func := func() {
-		if bindv4Present {
-			return
-		}
-
-		errFrontendBindCreate := h.FrontendBindCreate(h.FrontHTTPS, models.Bind{
-			Address: func() (addr string) {
-				addr = "quic4@" + q.AddrIPv4
-				return
-			}(),
-			Port: utils.PtrInt64(q.QuicBindPort),
-			BindParams: models.BindParams{
-				Name:           QUIC4BIND,
-				Ssl:            true,
-				SslCertificate: q.CertDir,
-				Alpn:           "h3",
-			},
-		})
-		errs.Add(errFrontendBindCreate)
-		instance.ReloadIf(errFrontendBindCreate == nil, "quic binding v4 created")
+	if len(binds) > 0 {
+		instance.Reload("QUIC enabled")
 	}
+	return
+}
 
-	ipv6Func := func() {
-		if bindv6Present {
-			return
-		}
-		errFrontendBindCreate := h.FrontendBindCreate(h.FrontHTTPS, models.Bind{
-			Address: func() (addr string) {
-				addr = "quic6@" + q.AddrIPv6
-				return
-			}(),
-			Port: utils.PtrInt64(q.QuicBindPort),
-			BindParams: models.BindParams{
-				Name:           QUIC6BIND,
-				Ssl:            true,
-				SslCertificate: q.CertDir,
-				Alpn:           "h3",
-			},
-		})
-		errs.Add(errFrontendBindCreate)
-		instance.ReloadIf(errFrontendBindCreate == nil, "quic binding v6 created")
+func (q *Quic) disableQuic(h haproxy.HAProxy) (err error) {
+	errors := utils.Errors{}
+	if q.IPv6 {
+		errors.Add(h.FrontendBindDelete(h.FrontHTTPS, QUIC6BIND))
 	}
-
-	ipv4DeleteFunc := func() {
-		if !bindv4Present {
-			return
-		}
-		errFrontendBindDelete := h.FrontendBindDelete(h.FrontHTTPS, QUIC4BIND)
-		errs.Add(errFrontendBindDelete)
-		instance.ReloadIf(errFrontendBindDelete == nil, "quic binding v4 removed")
+	if q.IPv4 {
+		errors.Add(h.FrontendBindDelete(h.FrontHTTPS, QUIC4BIND))
 	}
+	err = errors.Result()
+	if err == nil {
+		instance.Reload("QUIC disabled")
+	}
+	return
+}
 
-	ipv6DeleteFunc := func() {
-		if !bindv6Present {
-			return
+func (q *Quic) altSvcRule(h haproxy.HAProxy) (err error) {
+	errors := utils.Errors{}
+	logger.Debug("quic redirect rule to be created")
+	errors.Add(h.AddRule(h.FrontHTTPS, rules.RequestRedirectQuic{}, false))
+	logger.Debug("quic set header rule to be created")
+	errors.Add(h.AddRule(h.FrontHTTPS, rules.SetHdr{
+		HdrName:   "alt-svc",
+		Response:  true,
+		HdrFormat: fmt.Sprintf("\"h3=\\\":%d\\\"; ma="+q.MaxAge+"\"", q.QuicAnnouncePort),
+	}, false))
+	return errors.Result()
+}
+
+func (q *Quic) Update(k store.K8s, h haproxy.HAProxy, a annotations.Annotations) (err error) {
+	sslOffloadEnabled := h.FrontendSSLOffloadEnabled(h.FrontHTTPS)
+	if !sslOffloadEnabled {
+		logger.Warning("quic requires SSL offload to be enabled")
+		if err := q.disableQuic(h); err != nil {
+			return err
 		}
-		errFrontendBindDelete := h.FrontendBindDelete(h.FrontHTTPS, QUIC6BIND)
-		errs.Add(errFrontendBindDelete)
-		instance.ReloadIf(errFrontendBindDelete == nil, "quic binding v6 removed")
+		return nil
 	}
 
 	maxAge := common.GetValue("quic-alt-svc-max-age", k.ConfigMaps.Main.Annotations)
@@ -116,38 +135,25 @@ func (q *Quic) Update(k store.K8s, h haproxy.HAProxy, a annotations.Annotations)
 
 	nsSslCertificateAnn, nameSslCertificateAnn, err := common.GetK8sPath("ssl-certificate", k.ConfigMaps.Main.Annotations)
 	if err != nil || (nameSslCertificateAnn == "") {
-		errs.Add(err)
-		ipv4Func = ipv4DeleteFunc
-		ipv6Func = ipv6DeleteFunc
-	} else {
-		namespaceSslCertificate := k.Namespaces[nsSslCertificateAnn]
-		var sslSecret *store.Secret
-		if namespaceSslCertificate != nil {
-			sslSecret = namespaceSslCertificate.Secret[nameSslCertificateAnn]
+		if err := q.disableQuic(h); err != nil {
+			return err
 		}
+		return nil
+	}
 
-		if sslSecret == nil || sslSecret.Status == store.DELETED {
-			ipv4Func = ipv4DeleteFunc
-			ipv6Func = ipv6DeleteFunc
-		} else {
-			logger.Debug("quic redirect rule to be created")
-			errs.Add(h.AddRule(h.FrontHTTPS, rules.RequestRedirectQuic{}, false))
-			logger.Debug("quic set header rule to be created")
-			errs.Add(h.AddRule(h.FrontHTTPS, rules.SetHdr{
-				HdrName:   "alt-svc",
-				Response:  true,
-				HdrFormat: fmt.Sprintf("\"h3=\\\":%d\\\";ma="+maxAge+";\"", q.QuicAnnouncePort),
-			}, false))
+	namespaceSslCertificate := k.Namespaces[nsSslCertificateAnn]
+	var sslSecret *store.Secret
+	if namespaceSslCertificate != nil {
+		sslSecret = namespaceSslCertificate.Secret[nameSslCertificateAnn]
+	}
+
+	if sslSecret == nil || sslSecret.Status == store.DELETED {
+		logger.Warning("quic requires valid and existing ssl-certificate")
+		if err := q.disableQuic(h); err != nil {
+			return err
 		}
+		return nil
 	}
 
-	if q.IPv4 {
-		ipv4Func()
-	}
-
-	if q.IPv6 {
-		ipv6Func()
-	}
-
-	return
+	return q.enableQuic(h)
 }
