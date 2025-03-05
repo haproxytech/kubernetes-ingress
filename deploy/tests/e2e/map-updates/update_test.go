@@ -30,17 +30,27 @@ func (suite *MapUpdateSuite) Test_Update() {
 			suite.tmplData.Paths = append(suite.tmplData.Paths, strconv.Itoa(i))
 		}
 		oldInfo, err := e2e.GetGlobalHAProxyInfo()
-		oldCount, err := e2e.GetHAProxyMapCount("path-prefix")
+		oldCountExact, err := e2e.GetHAProxyMapCount("path-exact")
+		suite.Require().NoError(err)
+		oldCountPrefixExact, err := e2e.GetHAProxyMapCount("path-prefix-exact")
+		suite.Require().NoError(err)
+		oldCountPrefix, err := e2e.GetHAProxyMapCount("path-prefix")
 		suite.Require().NoError(err)
 		suite.Require().NoError(suite.test.Apply("config/ingress.yaml.tmpl", suite.test.GetNS(), suite.tmplData))
 		suite.Require().Eventually(func() bool {
 			newInfo, err := e2e.GetGlobalHAProxyInfo()
 			suite.Require().NoError(err)
-			count, err := e2e.GetHAProxyMapCount("path-prefix")
+			countExact, err := e2e.GetHAProxyMapCount("path-exact")
 			suite.Require().NoError(err)
-			numOfAddedEntries := count - oldCount + 1 // We add one because there's already an entry at the begining which will be removed
-			suite.T().Logf("oldInfo.Pid(%s) == newInfo.Pid(%s) && additional path-prefix.count(%d) == %d", oldInfo.Pid, newInfo.Pid, numOfAddedEntries, n)
-			return oldInfo.Pid == newInfo.Pid && numOfAddedEntries == n
+			countPrefixExact, err := e2e.GetHAProxyMapCount("path-prefix-exact")
+			suite.Require().NoError(err)
+			countPrefix, err := e2e.GetHAProxyMapCount("path-prefix")
+			suite.Require().NoError(err)
+			numOfAddedEntriesExact := countExact - oldCountExact
+			numOfAddedEntriesPrefixExact := countPrefixExact - oldCountPrefixExact
+			numOfAddedEntriesPrefix := countPrefix - oldCountPrefix + 1 // We add one because there's already an entry at the beginning which will be removed
+			suite.T().Logf("oldInfo.Pid(%s) == newInfo.Pid(%s) && additional path-exact.count(%d) == %d && additional path-prefix-exact.count(%d) == %d && additional path-prefix.count(%d) == %d", oldInfo.Pid, newInfo.Pid, numOfAddedEntriesExact, 0, numOfAddedEntriesPrefixExact, n, numOfAddedEntriesPrefix, n)
+			return oldInfo.Pid == newInfo.Pid && numOfAddedEntriesExact == 0 && numOfAddedEntriesPrefixExact == n && numOfAddedEntriesPrefix == n
 		}, e2e.WaitDuration, e2e.TickDuration)
 	})
 }

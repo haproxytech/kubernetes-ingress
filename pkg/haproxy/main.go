@@ -53,6 +53,7 @@ func New(osArgs utils.OSArgs, env env.Env, cfgFile []byte, p process.Process, cl
 		route.SNI,
 		route.HOST,
 		route.PATH_EXACT,
+		route.PATH_PREFIX_EXACT,
 		route.PATH_PREFIX,
 	}
 	if h.Maps, err = maps.New(env.MapsDir, persistentMaps); err != nil {
