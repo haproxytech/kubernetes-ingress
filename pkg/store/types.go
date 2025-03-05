@@ -186,6 +186,7 @@ type IngressCore struct {
 	Namespace      string
 	Name           string
 	Class          string
+	CreationTime   time.Time
 }
 
 type GatewayClass struct {

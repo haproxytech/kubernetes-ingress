@@ -64,6 +64,11 @@ func (k *K8s) EventIngress(ns *Namespace, data *Ingress, uid types.UID, resource
 
 	if data.Status == DELETED {
 		delete(ns.Ingresses, data.Name)
+		for _, rule := range data.Rules {
+			for _, path := range rule.Paths {
+				k.IngressesByService[path.SvcNamespace+"/"+path.SvcName].Remove(data)
+			}
+		}
 		meta.GetMetaStore().ProcessedResourceVersion.Delete(data, uid)
 	} else {
 		if oldIngress, ok := ns.Ingresses[data.Name]; ok {
@@ -81,9 +86,36 @@ func (k *K8s) EventIngress(ns *Namespace, data *Ingress, uid types.UID, resource
 			if data.Annotations["ingress.class"] != oldIngress.Annotations["ingress.class"] {
 				data.ClassUpdated = true
 			}
+
+			for _, rule := range oldIngress.Rules {
+				for _, path := range rule.Paths {
+					k.IngressesByService[path.SvcNamespace+"/"+path.SvcName].Remove(data)
+				}
+			}
 		}
 		ns.Ingresses[data.Name] = data
 		meta.GetMetaStore().ProcessedResourceVersion.Set(data, uid, resourceVersion)
+
+		for _, rule := range data.Rules {
+			for _, path := range rule.Paths {
+				key := path.SvcNamespace + "/" + path.SvcName
+				ingresses := k.IngressesByService[key]
+
+				if ingresses == nil {
+					ingresses = utils.NewOrderedSet[string, *Ingress](func(i *Ingress) string { return i.Name },
+						func(a, b *Ingress) bool {
+							// We need to consider the case where two ingresses are created in the same second.
+							// Otherwise there could be any order in two instances;
+							if a.CreationTime.Equal(b.CreationTime) {
+								return a.Namespace+a.Name < b.Namespace+b.Name
+							}
+							return a.CreationTime.After(b.CreationTime)
+						})
+					k.IngressesByService[key] = ingresses
+				}
+				ingresses.Add(data)
+			}
+		}
 	}
 	return
 }

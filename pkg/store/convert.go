@@ -158,6 +158,7 @@ func (n ingressNetworkingV1Strategy) ConvertIngress() *Ingress {
 				}
 				return tls
 			}(n.ig.Spec.TLS),
+			CreationTime: n.ig.CreationTimestamp.Time,
 		},
 	}
 	addresses := []string{}

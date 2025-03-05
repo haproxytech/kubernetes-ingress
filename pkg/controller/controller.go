@@ -21,6 +21,8 @@ import (
 
 	"github.com/go-test/deep"
 
+	maps0 "maps"
+
 	"github.com/haproxytech/client-native/v6/models"
 	"github.com/haproxytech/kubernetes-ingress/pkg/annotations"
 	"github.com/haproxytech/kubernetes-ingress/pkg/fs"
@@ -150,26 +152,7 @@ func (c *HAProxyController) updateHAProxy() {
 		logger.Error(err)
 	}
 
-	for _, namespace := range c.store.Namespaces {
-		c.store.SecretsProcessed = map[string]struct{}{}
-		for _, ingResource := range namespace.Ingresses {
-			if !namespace.Relevant && !ingResource.Faked {
-				// As we watch only for white-listed namespaces, we should not worry about iterating over
-				// many ingresses in irrelevant namespaces.
-				// There should only be fake ingresses in irrelevant namespaces so loop should be whithin small amount of ingresses (Prometheus)
-				continue
-			}
-			i := ingress.New(ingResource, c.osArgs.IngressClass, c.osArgs.EmptyIngressClass, c.annotations)
-			if !i.Supported(c.store, c.annotations) {
-				logger.Debugf("ingress '%s/%s' ignored: no matching", ingResource.Namespace, ingResource.Name)
-			} else {
-				i.Update(c.store, c.haproxy, c.annotations)
-			}
-			if ingResource.Status == store.ADDED || ingResource.ClassUpdated {
-				c.updateStatusManager.AddIngress(i)
-			}
-		}
-	}
+	c.processIngressesWithMerge()
 
 	updated := deep.Equal(route.CurentCustomRoutes, route.CustomRoutes, deep.FLAG_IGNORE_SLICE_ORDER)
 	if len(updated) != 0 {
@@ -338,4 +321,105 @@ func (c *HAProxyController) clean(failedSync bool) {
 
 func (c *HAProxyController) SetGatewayAPIInstalled(gatewayAPIInstalled bool) {
 	c.gatewayManager.SetGatewayAPIInstalled(gatewayAPIInstalled)
+}
+
+func (c *HAProxyController) manageIngress(ing *store.Ingress) {
+	i := ingress.New(ing, c.osArgs.IngressClass, c.osArgs.EmptyIngressClass, c.annotations)
+	if !i.Supported(c.store, c.annotations) {
+		logger.Debugf("ingress '%s/%s' ignored: no matching", ing.Namespace, ing.Name)
+	} else {
+		i.Update(c.store, c.haproxy, c.annotations)
+	}
+	if ing.Status == store.ADDED || ing.ClassUpdated {
+		c.updateStatusManager.AddIngress(i)
+	}
+}
+
+func (c *HAProxyController) processIngressesWithMerge() {
+	for _, namespace := range c.store.Namespaces {
+		c.store.SecretsProcessed = map[string]struct{}{}
+		// Iterate over services
+		for _, service := range namespace.Services {
+			ingressesOrderedList := c.store.IngressesByService[service.Namespace+"/"+service.Name]
+			if ingressesOrderedList == nil {
+				continue
+			}
+			ingresses := ingressesOrderedList.Items()
+			if len(ingresses) == 0 {
+				continue
+			}
+			// Put standalone ingresses aside.
+			var standaloneIngresses []*store.Ingress
+			// Get the name of ingresses referring to the service
+			var ingressesToMerge []*store.Ingress
+			for _, ing := range ingresses {
+				i := ingress.New(ing, c.osArgs.IngressClass, c.osArgs.EmptyIngressClass, c.annotations)
+				if !i.Supported(c.store, c.annotations) {
+					continue
+				}
+				// if the ingress has standalone-backend annotation, put it aside and continue.
+				if ing.Annotations["standalone-backend"] == "true" {
+					standaloneIngresses = append(standaloneIngresses, ing)
+					continue
+				}
+				ingressesToMerge = append(ingressesToMerge, ing)
+			}
+
+			// Get copy of annotationsFromAllIngresses from all ingresses
+			annotationsFromAllIngresses := map[string]string{}
+
+			for _, ingressToMerge := range ingressesToMerge {
+				// Gather all annotations from all ingresses referring to the service in a consistent order based on ingress name.
+				for ann, value := range ingressToMerge.Annotations {
+					if _, specific := annotations.SpecificAnnotations[ann]; specific {
+						continue
+					}
+					annotationsFromAllIngresses[ann] = value
+				}
+			}
+
+			// Now we've gathered the annotations set we can process all ingresses.
+			for _, ingressToMerge := range ingressesToMerge {
+				// We copy the ingress
+				consolidatedIngress := *ingressToMerge
+				// We assign the general set of annotations
+				consolidatedIngressAnns := map[string]string{}
+				maps0.Copy(consolidatedIngressAnns, annotationsFromAllIngresses)
+
+				consolidatedIngress.Annotations = consolidatedIngressAnns
+				for ann, value := range ingressToMerge.Annotations {
+					if _, specific := annotations.SpecificAnnotations[ann]; !specific {
+						continue
+					}
+					consolidatedIngress.Annotations[ann] = value
+				}
+				// We will reprocess the rules because we need to skip the ones referring to an other service.
+				rules := map[string]*store.IngressRule{}
+				consolidatedIngress.Rules = rules
+				for _, rule := range ingressToMerge.Rules {
+					newRule := store.IngressRule{
+						Host:  rule.Host,
+						Paths: map[string]*store.IngressPath{},
+					}
+					for _, path := range rule.Paths {
+						// if the rule refers to the service then keep it ...
+						if path.SvcNamespace == service.Namespace && path.SvcName == service.Name {
+							newRule.Paths[path.Path] = path
+						}
+					}
+					// .. if it's not empty
+					if len(newRule.Paths) > 0 {
+						rules[newRule.Host] = &newRule
+					}
+				}
+				// Back to the usual processing of the ingress
+
+				c.manageIngress(&consolidatedIngress)
+			}
+			// Now process the standalone ingresses as usual.
+			for _, standaloneIngress := range standaloneIngresses {
+				c.manageIngress(standaloneIngress)
+			}
+		}
+	}
 }

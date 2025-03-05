@@ -43,6 +43,7 @@ type K8s struct {
 	GatewayControllerName        string
 	PublishServiceAddresses      []string
 	UpdateAllIngresses           bool
+	IngressesByService           map[string]*utils.OrderedSet[string, *Ingress] // service fqn -> ingress name -> ingress
 }
 
 type NamespacesWatch struct {
@@ -86,6 +87,7 @@ func NewK8sStore(args utils.OSArgs) K8s {
 		BackendsWithNoConfigSnippets: map[string]struct{}{},
 		HaProxyPods:                  map[string]struct{}{},
 		FrontendRC:                   rc.NewResourceCounter(),
+		IngressesByService:           map[string]*utils.OrderedSet[string, *Ingress]{},
 	}
 	for _, namespace := range args.NamespaceWhitelist {
 		store.NamespacesAccess.Whitelist[namespace] = struct{}{}
