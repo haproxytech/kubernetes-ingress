@@ -301,6 +301,12 @@ func (c *HAProxyController) setupHAProxyRules() error {
 			c.haproxy.AddRule(frontend, rules.ReqSetVar{
 				Name:       "path_match",
 				Scope:      "txn",
+				Expression: fmt.Sprintf("var(txn.host_match),concat(,txn.path,),map(%s)", maps.GetPath(route.PATH_PREFIX_EXACT)),
+				CondTest:   "!{ var(txn.path_match) -m found }",
+			}, false),
+			c.haproxy.AddRule(frontend, rules.ReqSetVar{
+				Name:       "path_match",
+				Scope:      "txn",
 				Expression: fmt.Sprintf("var(txn.host_match),concat(,txn.path,),map_beg(%s)", maps.GetPath(route.PATH_PREFIX)),
 				CondTest:   "!{ var(txn.path_match) -m found }",
 			}, false),
