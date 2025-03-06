@@ -142,7 +142,7 @@ func (s *Service) GetBackendName() (name string, err error) {
 // HandleBackend processes a Service and creates/updates corresponding backend configuration in HAProxy
 func (s *Service) HandleBackend(storeK8s store.K8s, client api.HAProxyClient, a annotations.Annotations) (err error) {
 	var newBackend *v3.BackendSpec
-	newBackend, err = s.getBackendModel(storeK8s, a)
+	newBackend, err = s.getBackendModel(storeK8s, a, client)
 	if err != nil {
 		s.backend = nil
 		return
@@ -191,7 +191,7 @@ func isServersToEdit(oldBackend models.Backend, newBackend models.Backend) bool 
 }
 
 // getBackendModel checks for a corresponding custom resource before falling back to annotations
-func (s *Service) getBackendModel(store store.K8s, a annotations.Annotations) (backend *v3.BackendSpec, err error) {
+func (s *Service) getBackendModel(store store.K8s, a annotations.Annotations, client api.HAProxyClient) (backend *v3.BackendSpec, err error) {
 	// Backend mode
 	mode := "http"
 	if s.modeTCP {
@@ -222,6 +222,20 @@ func (s *Service) getBackendModel(store store.K8s, a annotations.Annotations) (b
 	if err != nil {
 		return nil, err
 	}
+
+	servers, err := client.BackendServersGet(backend.BackendBase.Name)
+	if err == nil {
+		for _, server := range servers {
+			if backend.Servers == nil {
+				backend.Servers = map[string]models.Server{}
+			}
+			// server should never be nil but for safety
+			if server != nil {
+				backend.Servers[server.Name] = *server
+			}
+		}
+	}
+
 	if s.resource.DNS != "" {
 		if backend.BackendBase.DefaultServer == nil {
 			backend.BackendBase.DefaultServer = &models.DefaultServer{ServerParams: models.ServerParams{InitAddr: misc.Ptr("last,libc,none")}}
