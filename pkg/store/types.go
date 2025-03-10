@@ -85,20 +85,21 @@ type RuntimeBackend struct {
 
 // Namespace is useful data from k8s structures about namespace
 type Namespace struct {
-	_               [0]int
-	Secret          map[string]*Secret
-	Ingresses       map[string]*Ingress
-	Endpoints       map[string]map[string]*Endpoints // service -> sliceName -> Endpoints
-	Services        map[string]*Service
-	HAProxyRuntime  map[string]map[string]*RuntimeBackend // service -> portName -> Backend
-	CRs             *CustomResources
-	Gateways        map[string]*Gateway
-	TCPRoutes       map[string]*TCPRoute
-	ReferenceGrants map[string]*ReferenceGrant
-	Labels          map[string]string
-	Name            string
-	Status          Status
-	Relevant        bool
+	_                        [0]int
+	Secret                   map[string]*Secret
+	Ingresses                map[string]*Ingress
+	Endpoints                map[string]map[string]*Endpoints // service -> sliceName -> Endpoints
+	Services                 map[string]*Service
+	HAProxyRuntime           map[string]map[string]*RuntimeBackend            // service -> portName -> Backend
+	HAProxyRuntimeStandalone map[string]map[string]map[string]*RuntimeBackend // service -> portName -> backendName -> Backend
+	CRs                      *CustomResources
+	Gateways                 map[string]*Gateway
+	TCPRoutes                map[string]*TCPRoute
+	ReferenceGrants          map[string]*ReferenceGrant
+	Labels                   map[string]string
+	Name                     string
+	Status                   Status
+	Relevant                 bool
 }
 
 type CustomResources struct {
