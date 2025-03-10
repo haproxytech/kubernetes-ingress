@@ -47,12 +47,13 @@ func (k k8s) getNamespaceInfomer(eventChan chan k8ssync.SyncDataEvent, factory i
 				}
 
 				item := &store.Namespace{
-					Name:           data.GetName(),
-					Endpoints:      make(map[string]map[string]*store.Endpoints),
-					Services:       make(map[string]*store.Service),
-					Ingresses:      make(map[string]*store.Ingress),
-					Secret:         make(map[string]*store.Secret),
-					HAProxyRuntime: make(map[string]map[string]*store.RuntimeBackend),
+					Name:                     data.GetName(),
+					Endpoints:                make(map[string]map[string]*store.Endpoints),
+					Services:                 make(map[string]*store.Service),
+					Ingresses:                make(map[string]*store.Ingress),
+					Secret:                   make(map[string]*store.Secret),
+					HAProxyRuntime:           make(map[string]map[string]*store.RuntimeBackend),
+					HAProxyRuntimeStandalone: make(map[string]map[string]map[string]*store.RuntimeBackend),
 					CRs: &store.CustomResources{
 						Global:     make(map[string]*models.Global),
 						Defaults:   make(map[string]*models.Defaults),
@@ -76,12 +77,13 @@ func (k k8s) getNamespaceInfomer(eventChan chan k8ssync.SyncDataEvent, factory i
 				}
 				status := store.DELETED
 				item := &store.Namespace{
-					Name:           data.GetName(),
-					Endpoints:      make(map[string]map[string]*store.Endpoints),
-					Services:       make(map[string]*store.Service),
-					Ingresses:      make(map[string]*store.Ingress),
-					Secret:         make(map[string]*store.Secret),
-					HAProxyRuntime: make(map[string]map[string]*store.RuntimeBackend),
+					Name:                     data.GetName(),
+					Endpoints:                make(map[string]map[string]*store.Endpoints),
+					Services:                 make(map[string]*store.Service),
+					Ingresses:                make(map[string]*store.Ingress),
+					Secret:                   make(map[string]*store.Secret),
+					HAProxyRuntime:           make(map[string]map[string]*store.RuntimeBackend),
+					HAProxyRuntimeStandalone: make(map[string]map[string]map[string]*store.RuntimeBackend),
 					CRs: &store.CustomResources{
 						Global:     make(map[string]*models.Global),
 						Defaults:   make(map[string]*models.Defaults),

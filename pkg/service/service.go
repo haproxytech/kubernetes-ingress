@@ -124,7 +124,7 @@ func (s *Service) GetBackendName() (name string, err error) {
 	resourceNamespace := s.resource.Namespace
 	resourceName := s.resource.Name
 	prefix := ""
-	if s.standalone && s.ingress != nil && s.ingress.Name != "" {
+	if s.IsStandalone() && s.ingress != nil && s.ingress.Name != "" {
 		resourceName = s.ingress.Name
 		resourceNamespace = s.ingress.Namespace
 		prefix = "ing_"
@@ -280,4 +280,8 @@ func (s *Service) SetDefaultBackend(k store.K8s, h haproxy.HAProxy, frontends []
 	}
 	s.HandleHAProxySrvs(k, h)
 	return
+}
+
+func (s Service) IsStandalone() bool {
+	return s.standalone
 }
