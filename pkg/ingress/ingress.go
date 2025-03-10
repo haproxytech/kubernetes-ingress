@@ -75,6 +75,24 @@ func (i *Ingress) handlePath(k store.K8s, h haproxy.HAProxy, host string, path *
 		return
 	}
 	backendName, _ := svc.GetBackendName()
+	// If we've got a standalone ingress, put an adhoc RuntimeBackend in HAProxyRuntimeStandalone
+	// This RuntimeBackend will be used for runtime update of server lists(enpoints) in EventEndpoints
+	if svc.IsStandalone() {
+		ns := k.GetNamespace(i.resource.Namespace)
+		svcHAProxyRuntimeStandalone := ns.HAProxyRuntimeStandalone[svc.GetResource().Name]
+		if svcHAProxyRuntimeStandalone == nil {
+			svcHAProxyRuntimeStandalone = map[string]map[string]*store.RuntimeBackend{}
+			ns.HAProxyRuntimeStandalone[svc.GetResource().Name] = svcHAProxyRuntimeStandalone
+		}
+		runtimeBackends := svcHAProxyRuntimeStandalone[path.SvcPortResolved.Name]
+		if runtimeBackends == nil {
+			runtimeBackends = map[string]*store.RuntimeBackend{}
+			svcHAProxyRuntimeStandalone[path.SvcPortResolved.Name] = runtimeBackends
+		}
+		if runtimeBackends[backendName] == nil {
+			runtimeBackends[backendName] = &store.RuntimeBackend{Name: backendName}
+		}
+	}
 	// Route
 	ingRoute := route.Route{
 		Host:           host,

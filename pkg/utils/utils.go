@@ -229,3 +229,19 @@ func JSONDiff(diffs map[string][]interface{}) string {
 	}
 	return string(diffRule)
 }
+
+func CopySliceFunc[T any](slice []T, f func(T) T) (clone []T) {
+	clone = make([]T, 0, len(slice))
+	for _, t := range slice {
+		clone = append(clone, f(t))
+	}
+	return
+}
+
+func CopyPointer[T any](a *T) *T {
+	if a == nil {
+		return nil
+	}
+	clone := *a
+	return &clone
+}
