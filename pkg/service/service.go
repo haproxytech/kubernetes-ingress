@@ -125,7 +125,7 @@ func (s *Service) GetBackendName() (name string, err error) {
 	resourceName := s.resource.Name
 	prefix := ""
 	if s.standalone && s.ingress != nil && s.ingress.Name != "" {
-		resourceName = s.ingress.Name
+		resourceName = s.ingress.Name + "-" + s.resource.Name
 		resourceNamespace = s.ingress.Namespace
 		prefix = "ing_"
 	}
