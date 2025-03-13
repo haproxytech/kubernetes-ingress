@@ -149,11 +149,14 @@ func (c *HAProxyController) updateHAProxy() {
 	}
 
 	for _, namespace := range c.store.Namespaces {
-		if !namespace.Relevant {
-			continue
-		}
 		c.store.SecretsProcessed = map[string]struct{}{}
 		for _, ingResource := range namespace.Ingresses {
+			if !namespace.Relevant && !ingResource.Faked {
+				// As we watch only for white-listed namespaces, we should not worry about iterating over
+				// many ingresses in irrelevant namespaces.
+				// There should only be fake ingresses in irrelevant namespaces so loop should be whithin small amount of ingresses (Prometheus)
+				continue
+			}
 			i := ingress.New(ingResource, c.osArgs.IngressClass, c.osArgs.EmptyIngressClass, c.annotations)
 			if !i.Supported(c.store, c.annotations) {
 				logger.Debugf("ingress '%s/%s' ignored: no matching", ingResource.Namespace, ingResource.Name)
