@@ -80,6 +80,7 @@ type HAProxyClient interface { //nolint:interfacebloat
 	HTTPRequestRule
 	LogTarget
 	TCPRequestRule
+	PeerEntryDelete(peerSection string, name string) error
 	PeerEntryEdit(peerSection string, peer models.PeerEntry) error
 	PeerEntryCreateOrEdit(peerSection string, peer models.PeerEntry) error
 	SetMapContent(mapFile string, payload []string) error
