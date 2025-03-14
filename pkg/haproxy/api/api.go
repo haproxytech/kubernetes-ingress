@@ -91,6 +91,7 @@ type HAProxyClient interface { //nolint:interfacebloat
 	TCPRequestRuleCreate(parentType, parentName string, rule models.TCPRequestRule) error
 	TCPRequestRulesGet(parentType, parentName string) (models.TCPRequestRules, error)
 	TCPRequestRuleDeleteAll(parentType, parentName string) (err error)
+	PeerEntryDelete(peerSection string, name string) error
 	PeerEntryEdit(peerSection string, peer models.PeerEntry) error
 	PeerEntryCreateOrEdit(peerSection string, peer models.PeerEntry) error
 	RefreshBackends() (deleted []string, err error)

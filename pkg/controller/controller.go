@@ -84,6 +84,10 @@ func (c *HAProxyController) clientAPIClosure(fn func() error) (err error) {
 // Start initializes and runs HAProxyController
 func (c *HAProxyController) Start() {
 	logger.Panic(c.clientAPIClosure(func() error {
+		err := c.haproxy.PeerEntryDelete("localinstance", "local")
+		if err != nil {
+			return err
+		}
 		return c.haproxy.PeerEntryCreateOrEdit("localinstance",
 			models.PeerEntry{
 				Name:    c.Hostname,
