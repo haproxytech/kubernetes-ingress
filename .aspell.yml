@@ -38,3 +38,4 @@ allowed:
   - optim
   - prometheus
   - configmaps
+  - quic
