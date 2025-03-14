@@ -255,3 +255,11 @@ func (c *clientNative) PeerEntryCreateOrEdit(peerSection string, peerEntry model
 	}
 	return err
 }
+
+func (c *clientNative) PeerEntryDelete(peerSection, entry string) error {
+	cfg, err := c.nativeAPI.Configuration()
+	if err != nil {
+		return err
+	}
+	return cfg.DeletePeerEntry(entry, peerSection, c.activeTransaction, 0)
+}
