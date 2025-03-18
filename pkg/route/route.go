@@ -33,10 +33,11 @@ const (
 	FrontendHTTP  = "http"
 	FrontendHTTPS = "https"
 	// Routing Maps
-	SNI         maps.Name = "sni"
-	HOST        maps.Name = "host"
-	PATH_EXACT  maps.Name = "path-exact"
-	PATH_PREFIX maps.Name = "path-prefix"
+	SNI               maps.Name = "sni"
+	HOST              maps.Name = "host"
+	PATH_EXACT        maps.Name = "path-exact"
+	PATH_PREFIX_EXACT maps.Name = "path-prefix-exact"
+	PATH_PREFIX       maps.Name = "path-prefix"
 )
 
 var (
@@ -87,11 +88,11 @@ func AddHostPathRoute(route Route, mapFiles maps.Maps) error {
 		mapFiles.MapAppend(PATH_PREFIX, route.Host+"/"+"\t\t\t"+value)
 	case route.Path.PathTypeMatch == store.PATH_TYPE_PREFIX:
 		path = strings.TrimSuffix(path, "/")
-		mapFiles.MapAppend(PATH_EXACT, route.Host+path+"\t\t\t"+value)
+		mapFiles.MapAppend(PATH_PREFIX_EXACT, route.Host+path+"\t\t\t"+value)
 		mapFiles.MapAppend(PATH_PREFIX, route.Host+path+"/"+"\t\t\t"+value)
 	case route.Path.PathTypeMatch == store.PATH_TYPE_IMPLEMENTATION_SPECIFIC:
 		path = strings.TrimSuffix(path, "/")
-		mapFiles.MapAppend(PATH_EXACT, route.Host+path+"\t\t\t"+value)
+		mapFiles.MapAppend(PATH_PREFIX_EXACT, route.Host+path+"\t\t\t"+value)
 		mapFiles.MapAppend(PATH_PREFIX, route.Host+path+"\t\t\t"+value)
 	default:
 		return fmt.Errorf("unknown path type '%s' with backend '%s'", route.Path.PathTypeMatch, route.BackendName)
