@@ -46,6 +46,7 @@ type cert struct {
 	path    string
 	inUse   bool
 	updated bool
+	ca      bool
 }
 
 type SecretType int
@@ -110,7 +111,7 @@ func (c *certs) AddSecret(secret *store.Secret, secretType SecretType) (certPath
 
 	var certs map[string]*cert
 	var crt *cert
-	var crtOk, privateKeyNull bool
+	var crtOk, isCa bool
 	var certName string
 	switch secretType {
 	case FT_DEFAULT_CERT:
@@ -130,7 +131,7 @@ func (c *certs) AddSecret(secret *store.Secret, secretType SecretType) (certPath
 		certName = fmt.Sprintf("%s_%s", secret.Namespace, secret.Name)
 		certPath = path.Join(env.CaDir, certName)
 		certs = c.ca
-		privateKeyNull = true
+		isCa = true
 	case TCP_CERT:
 		certName = fmt.Sprintf("%s_%s", secret.Namespace, secret.Name)
 		certPath = path.Join(env.TCPCRDir, certName)
@@ -149,8 +150,9 @@ func (c *certs) AddSecret(secret *store.Secret, secretType SecretType) (certPath
 		path:  certPath,
 		name:  fmt.Sprintf("%s/%s", secret.Namespace, secret.Name),
 		inUse: true,
+		ca:    isCa,
 	}
-	err = c.writeSecret(secret, crt, privateKeyNull)
+	err = c.writeSecret(secret, crt, isCa)
 	if err != nil {
 		return "", err
 	}
@@ -158,19 +160,29 @@ func (c *certs) AddSecret(secret *store.Secret, secretType SecretType) (certPath
 	return crt.path, nil
 }
 
-func (c *certs) updateRuntime(filename string, payload []byte) (bool, error) {
+func (c *certs) updateRuntime(filename string, payload []byte, isCa bool) (bool, error) {
 	if instance.NeedReload() {
 		return false, nil
 	}
 	// Only 1 transaction in parallel is possible for now in haproxy
 	// Keep this mutex for now to ensure that we perform 1 transaction at a time
+	certType := "cert"
+	entryCreate := c.client.CertEntryCreate
+	entrySet := c.client.CertEntrySet
+	entryCommit := c.client.CertEntryCommit
+	if isCa {
+		entryCreate = c.client.CertAuthEntryCreate
+		entrySet = c.client.CertAuthEntrySet
+		entryCommit = c.client.CertAuthEntryCommit
+		certType = "ca"
+	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
 	var err error
 	var updated, alreadyExists bool
 
-	err = c.client.CertEntryCreate(filename)
+	err = entryCreate(filename)
 	// If already exists
 	if err != nil {
 		if strings.Contains(err.Error(), "already exists") {
@@ -179,16 +191,16 @@ func (c *certs) updateRuntime(filename string, payload []byte) (bool, error) {
 			return updated, err
 		}
 	} else {
-		utils.GetLogger().Debugf("`new ssl cert` ok[%s]", filename)
+		utils.GetLogger().Debugf("`new ssl %s` ok[%s]", certType, filename)
 	}
 
-	err = c.client.CertEntrySet(filename, payload)
+	err = entrySet(filename, payload)
 	if err != nil {
 		return updated, err
 	}
-	utils.GetLogger().Debugf("`set ssl cert` ok[%s]", filename)
+	utils.GetLogger().Debugf("`set ssl %s` ok[%s]", certType, filename)
 
-	err = c.client.CertEntryCommit(filename)
+	err = entryCommit(filename)
 	if err != nil {
 		// Abort transaction
 		errAbort := c.client.CertEntryAbort(filename)
@@ -200,19 +212,20 @@ func (c *certs) updateRuntime(filename string, payload []byte) (bool, error) {
 
 		return updated, err
 	}
-	updated = true
-	utils.GetLogger().Debugf("commit ssl cert` ok [%s]", filename)
 
-	if !alreadyExists {
-		crtListPath := filepath.Dir(filename)
-		err = c.client.CrtListEntryAdd(crtListPath,
+	updated = true
+	utils.GetLogger().Debugf("`commit ssl %s` ok [%s]", certType, filename)
+
+	if !alreadyExists && !isCa {
+		dirPath := filepath.Dir(filename)
+		err := c.client.CrtListEntryAdd(dirPath,
 			runtime.CrtListEntry{
 				File: filename,
 			})
 		if err != nil {
 			return false, err
 		}
-		utils.GetLogger().Debugf("`crt-list add` ok [%s] [%s] ", crtListPath, filename)
+		utils.GetLogger().Debugf("`%s-list add` ok [%s] [%s] ", certType, dirPath, filename)
 	}
 
 	return updated, nil
@@ -320,18 +333,18 @@ func (c *certs) refreshCerts(certs map[string]*cert, certDir string) {
 	}
 }
 
-func (c *certs) writeSecret(secret *store.Secret, cert *cert, privateKeyNull bool) (err error) {
+func (c *certs) writeSecret(secret *store.Secret, cert *cert, isCa bool) (err error) {
 	var crtValue, keyValue []byte
 	var crtOk, keyOk, pemOk bool
 	var certPath string
-	if privateKeyNull {
+	if isCa {
 		crtValue, crtOk = secret.Data["tls.crt"]
 		if !crtOk {
 			return fmt.Errorf("certificate missing in %s/%s", secret.Namespace, secret.Name)
 		}
 		cert.path += ".pem"
 		content := certContent([]byte(""), crtValue)
-		return c.writeCert(cert, cert.path, content)
+		return c.writeCert(cert, cert.path, content, isCa)
 	}
 	for _, k := range []string{"tls", "rsa", "ecdsa", "dsa"} {
 		keyValue, keyOk = secret.Data[k+".key"]
@@ -344,7 +357,7 @@ func (c *certs) writeSecret(secret *store.Secret, cert *cert, privateKeyNull boo
 				certPath = fmt.Sprintf("%s.%s", certPath, k)
 			}
 			content := certContent(keyValue, crtValue)
-			err = c.writeCert(cert, certPath, content)
+			err = c.writeCert(cert, certPath, content, isCa)
 			if err != nil {
 				return err
 			}
@@ -357,7 +370,7 @@ func (c *certs) writeSecret(secret *store.Secret, cert *cert, privateKeyNull boo
 	return nil
 }
 
-func (c *certs) writeCert(cert *cert, filename string, content []byte) error {
+func (c *certs) writeCert(cert *cert, filename string, content []byte, isCa bool) error {
 	fs.Writer.Write(func() {
 		if _, err := os.Stat(filename); err != nil {
 			// If file does not exist, contrary to the map files, it's not working to create an empty file.
@@ -376,8 +389,7 @@ func (c *certs) writeCert(cert *cert, filename string, content []byte) error {
 				return
 			}
 		}
-
-		updated, err := c.updateRuntime(filename, content)
+		updated, err := c.updateRuntime(filename, content, isCa)
 		if err != nil {
 			instance.Reload("Runtime update of cert file '%s' failed : %s", filename, err.Error())
 		} else if updated {

@@ -10,7 +10,7 @@ require (
 	github.com/google/go-cmp v0.7.0
 	github.com/google/renameio v1.0.1
 	github.com/haproxytech/client-native/v3 v3.1.2-0.20230607075433-231591da68ed
-	github.com/haproxytech/client-native/v5 v5.1.16-0.20250120132445-428abe2a833d
+	github.com/haproxytech/client-native/v5 v5.1.18-0.20250618120639-fbea0cb7be62
 	github.com/jessevdk/go-flags v1.4.0
 	github.com/pires/go-proxyproto v0.8.1
 	github.com/prometheus/client_golang v1.22.0

@@ -289,3 +289,35 @@ func (c *clientNative) CertEntryDelete(filename string) error {
 	}
 	return runtime.DeleteCertEntry(filename)
 }
+
+func (c *clientNative) CertAuthEntryCreate(filename string) error {
+	runtime, err := c.nativeAPI.Runtime()
+	if err != nil {
+		return err
+	}
+	return runtime.NewCAFile(filename)
+}
+
+func (c *clientNative) CertAuthEntrySet(filename string, payload []byte) error {
+	runtime, err := c.nativeAPI.Runtime()
+	if err != nil {
+		return err
+	}
+	return runtime.SetCAFile(filename, string(payload))
+}
+
+func (c *clientNative) CertAuthEntryCommit(filename string) error {
+	runtime, err := c.nativeAPI.Runtime()
+	if err != nil {
+		return err
+	}
+	return runtime.CommitCAFile(filename)
+}
+
+func (c *clientNative) CertAuthEntryAbort(filename string) error {
+	runtime, err := c.nativeAPI.Runtime()
+	if err != nil {
+		return err
+	}
+	return runtime.AbortCAFile(filename)
+}
