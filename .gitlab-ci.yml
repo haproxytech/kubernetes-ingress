@@ -9,11 +9,11 @@ stages:
   - e2e_k8s_32
   - e2e_crd_versions
 variables:
-  KIND: v0.26.0
+  KIND: v0.27.0
   DOCKER_HOST: tcp://docker:2375
   DOCKER_DRIVER: overlay2
   GO_VERSION: "1.24"
-  DOCKER_VERSION: "26.0"
+  DOCKER_VERSION: "27.0"
 diff:
   stage: diff
   rules:
@@ -208,7 +208,7 @@ e2e_k8s_30:
   stage: e2e_k8s_30
   needs: ["docker-build"]
   variables:
-    K8S_VERSION: v1.30.8
+    K8S_VERSION: v1.30.10
     KUBEADM_VER: v1beta3
     KUBECTL: v1.30.4
   extends: .kind_deployment_schedules
@@ -218,7 +218,7 @@ e2e_k8s_31:
   stage: e2e_k8s_31
   needs: ["docker-build"]
   variables:
-    K8S_VERSION: v1.31.4
+    K8S_VERSION: v1.31.6
     KUBEADM_VER: v1beta3
     KUBECTL: v1.31.0
   extends: .kind_deployment_schedules
@@ -228,7 +228,7 @@ e2e_crd_v1:
   stage: e2e_crd_versions
   needs: ["docker-build"]
   variables:
-    K8S_VERSION: v1.32.0
+    K8S_VERSION: v1.32.2
     KUBEADM_VER: v1beta3
     KUBECTL: v1.31.0
     CRD_VERSION: v1
@@ -239,7 +239,7 @@ e2e_k8s_32:
   stage: e2e_k8s_32
   needs: ["docker-build"]
   variables:
-    K8S_VERSION: v1.32.0
+    K8S_VERSION: v1.32.2
     KUBEADM_VER: v1beta3
     KUBECTL: v1.31.0
   extends: .kind_deployment
