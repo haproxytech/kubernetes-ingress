@@ -21,6 +21,7 @@ import (
 	"path"
 	"sort"
 	"strings"
+	"sync"
 
 	"github.com/google/renameio"
 	"github.com/haproxytech/kubernetes-ingress/pkg/fs"
@@ -113,20 +114,28 @@ func (m mapFiles) CleanMaps() {
 }
 
 func (m mapFiles) RefreshMaps(client api.HAProxyClient) {
+	mapFilesToDelete := make([]Name, 0, len(m))
+	var wgWriter sync.WaitGroup
+	var mapMutex sync.Mutex
+
 	for name, mapFile := range m {
 		content, hash := mapFile.getContent()
 		if mapFile.hash == hash {
 			continue
 		}
+		wgWriter.Add(1)
 		// parallelize writing of files
 		fs.Writer.Write(func() {
+			defer wgWriter.Done()
 			var err error
 			filename := GetPath(name)
 			if len(content) == 0 && !mapFile.persistent {
 				fs.AddDelayedFunc(string(filename), func() {
 					logger.Error(os.Remove(string(filename)))
 				})
-				delete(m, name)
+				mapMutex.Lock()
+				mapFilesToDelete = append(mapFilesToDelete, name)
+				mapMutex.Unlock()
 				return
 			} else {
 				if _, err = os.Stat(string(filename)); err != nil {
@@ -164,6 +173,11 @@ func (m mapFiles) RefreshMaps(client api.HAProxyClient) {
 				}
 			}
 		})
+	}
+
+	wgWriter.Wait()
+	for _, mapFileToDelete := range mapFilesToDelete {
+		delete(m, mapFileToDelete)
 	}
 }
 
