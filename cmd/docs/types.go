@@ -1,3 +1,17 @@
+// Copyright 2019 HAProxy Technologies LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//    http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package main
 
 import (
@@ -54,16 +68,16 @@ type Conf struct {
 }
 
 func (c *Conf) getConf() *Conf {
-	yamlFile, err := os.ReadFile("../doc.yaml")
+	yamlFile, err := os.ReadFile("../../documentation/doc.yaml")
 	if err != nil {
 		log.Printf("yamlFile.Get err   #%v ", err)
 	}
-	err = yaml.Unmarshal(yamlFile, c)
+	err = yaml.Unmarshal(yamlFile, c) //nolint:musttag
 	if err != nil {
 		log.Fatalf("Unmarshal: %v", err)
 	}
 
-	yamlFile, err = os.ReadFile("../lifecycle.yaml")
+	yamlFile, err = os.ReadFile("../../documentation/lifecycle.yaml")
 	if err != nil {
 		log.Printf("yamlFile.Get err   #%v ", err)
 	}

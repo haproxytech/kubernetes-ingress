@@ -28,7 +28,7 @@ tidy:
 
 .PHONY: doc
 doc:
-	cd documentation/gen/; go run .
+	cd cmd/docs; go run .
 
 .PHONY: lint
 lint:

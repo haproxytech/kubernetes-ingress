@@ -1,3 +1,17 @@
+// Copyright 2019 HAProxy Technologies LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//	http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package main
 
 import (
@@ -7,6 +21,8 @@ import (
 	"strings"
 
 	"github.com/google/renameio"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
 
 var header = `
@@ -133,11 +149,13 @@ func (c *Conf) generateReadmeAnnotations() {
 		sortedGroups = append(sortedGroups, group)
 	}
 	sort.Strings(sortedGroups)
+	caser := cases.Title(language.Und)
 	for _, group := range sortedGroups {
-		buff.WriteString(fmt.Sprintf("#### %s\n\n", strings.ReplaceAll(strings.Title(group), "-", " ")))
+		buff.WriteString(fmt.Sprintf("#### %s\n\n", strings.ReplaceAll(caser.String(group), "-", " ")))
 		groupData, haveGroupData := c.Groups[group]
 		if haveGroupData && groupData.Header != "" {
-			buff.WriteString(fmt.Sprintf("%s\n\n", groupData.Header))
+			buff.WriteString(groupData.Header)
+			buff.WriteString("\n\n")
 		}
 		for _, ann := range c.Items {
 			if ann.Group != group {
@@ -166,14 +184,15 @@ func (c *Conf) generateReadmeAnnotations() {
 			selectExamples(ann, &buff)
 		}
 		if haveGroupData && groupData.Footer != "" {
-			buff.WriteString(fmt.Sprintf("%s\n\n", groupData.Footer))
+			buff.WriteString(groupData.Footer)
+			buff.WriteString("\n\n")
 		}
 		buff.WriteString("<p align='right'><a href='#available-annotations'>:arrow_up_small: back to top</a></p>\n\n***\n\n")
 	}
 
 	buff.WriteString(docFooter)
 
-	err := renameio.WriteFile("../annotations.md", []byte(buff.String()), 0o644)
+	err := renameio.WriteFile("../../documentation/annotations.md", []byte(buff.String()), 0o644)
 	if err != nil {
 		log.Println(err)
 	}
