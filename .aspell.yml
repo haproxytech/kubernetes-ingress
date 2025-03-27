@@ -44,3 +44,5 @@ allowed:
   - CORS
   - dataplaneapi
   - usr
+  - backport
+  - cmd

@@ -1,4 +1,5 @@
 stages:
+  - bots
   - diff
   - lint
   - unit-tests
@@ -46,6 +47,18 @@ diff-crd:
     - git diff
     - test -z "$(git diff 2> /dev/null)" || exit "CRD generation was not generated, issue \`make cr_generate\` and commit the result"
     - test -z "$(git ls-files --others --exclude-standard 2> /dev/null)" || exit "CRD generation created untracked files, cannot proceed"
+mr-backport-question:
+  stage: bots
+  needs: []
+  image:
+    name: $CI_REGISTRY_GO/docker:$DOCKER_VERSION-go$GO_VERSION
+    entrypoint: [ "" ]
+  rules:
+    - if: $CI_PIPELINE_SOURCE == 'merge_request_event' && $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == $CI_DEFAULT_BRANCH
+  tags:
+    - go
+  script:
+    - go run cmd/gitlab-mr-checker/main.go
 tidy:
   stage: lint
   needs: []
