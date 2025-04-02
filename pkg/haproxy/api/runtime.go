@@ -103,7 +103,7 @@ func (c *clientNative) runRaw(runtime runtime.Runtime, sb strings.Builder, backe
 		return err
 	}
 	if len(result) > 5 {
-		switch result[1:5] {
+		switch result[0:4] {
 		case "[3]:", "[2]:", "[1]:", "[0]:":
 			logger.Errorf("[RUNTIME] [BACKEND] [SOCKET] backend %s', server slots adjustment ?", backendName)
 			logger.Tracef("[RUNTIME] [BACKEND] [SOCKET] backend %s: Error: '%s', server slots adjustment ?", backendName, result)
