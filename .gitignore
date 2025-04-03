@@ -6,3 +6,4 @@ dist/
 .code-generator/
 bin/golangci-lint
 .local/*
+__debug_bin*
