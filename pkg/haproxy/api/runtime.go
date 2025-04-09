@@ -212,7 +212,7 @@ func (c *clientNative) SyncBackendSrvs(backend *store.RuntimeBackend, portUpdate
 				BackendName: backend.Name,
 				ServerName:  srv.Name,
 				IP:          "127.0.0.1",
-				Port:        0,
+				Port:        1,
 				State:       "maint",
 			})
 		} else {

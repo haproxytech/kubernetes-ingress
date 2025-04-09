@@ -95,7 +95,7 @@ lint-commit-msg:
   rules:
     - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
   image:
-    name: $CI_REGISTRY_GO/commit-check:3.0.0
+    name: $CI_REGISTRY_GO/commit-check:5.1.1
     entrypoint: [""]
   tags:
     - go
