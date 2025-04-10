@@ -173,7 +173,7 @@ spec:
         livenessProbe:
           httpGet:
             path: /healthz
-            port: 1042
+            port: 1024
         ports:
         - name: http
           containerPort: 8080
