@@ -26,6 +26,7 @@ import (
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/api"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/instance"
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
+	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
 )
 
 // HandleHAProxySrvs handles the haproxy backend servers of the corresponding IngressPath (service + port)
@@ -62,13 +63,14 @@ func (s *Service) HandleHAProxySrvs(k8s store.K8s, client api.HAProxyClient) {
 func (s *Service) updateHAProxySrv(client api.HAProxyClient, srvSlot store.HAProxySrv, port int64) {
 	srv := models.Server{
 		Name:         srvSlot.Name,
-		Port:         &port,
+		Port:         utils.PtrInt64(1),
 		Address:      "127.0.0.1",
 		ServerParams: models.ServerParams{Maintenance: "enabled"},
 	}
 	// Enable Server
 	if srvSlot.Address != "" {
 		srv.Address = srvSlot.Address
+		srv.Port = &port
 		srv.Maintenance = "disabled"
 	}
 	logger.Tracef("[CONFIG] [BACKEND] [SERVER] backend %s: about to update server in configuration file :  models.Server { Name: %s, Port: %d, Address: %s, Maintenance: %s }", s.backend.Name, srv.Name, *srv.Port, srv.Address, srv.Maintenance)
