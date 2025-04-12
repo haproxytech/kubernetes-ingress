@@ -193,7 +193,7 @@ func runtimeCommand(command string) (result []byte, err error) {
 	if err != nil {
 		return
 	}
-	result = make([]byte, 1024)
+	result = make([]byte, 2048)
 	_, err = conn.Read(result)
 	conn.Close()
 	return
@@ -208,7 +208,7 @@ func GetHAProxyMapCount(mapName string) (count int, err error) {
 	scanner := bufio.NewScanner(bytes.NewReader(result))
 	for scanner.Scan() {
 		line := scanner.Text()
-		if strings.Contains(line, mapName) {
+		if strings.Contains(line, mapName+".map") {
 			r := regexp.MustCompile("entry_cnt=[0-9]*")
 			match := r.FindString(line)
 			nbr := strings.Split(match, "=")[1]
