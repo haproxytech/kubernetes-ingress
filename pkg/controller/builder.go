@@ -183,7 +183,7 @@ func (builder *Builder) Build() *HAProxyController {
 	if podIP == "" {
 		podIP = "127.0.0.1"
 	}
-	return &HAProxyController{
+	haproxyController := &HAProxyController{
 		osArgs:                   builder.osArgs,
 		haproxy:                  haproxy,
 		podNamespace:             os.Getenv("POD_NAMESPACE"),
@@ -199,6 +199,11 @@ func (builder *Builder) Build() *HAProxyController {
 		PodIP:                    podIP,
 		Hostname:                 hostname,
 	}
+	haproxyController.processIngress = haproxyController.processIngressesDefaultImplementation
+	if builder.osArgs.Experimental.UseIngressMerge {
+		haproxyController.processIngress = haproxyController.processIngressesWithMerge
+	}
+	return haproxyController
 }
 
 func addControllerMetricData(builder *Builder, chShutdown chan struct{}) {

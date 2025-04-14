@@ -62,6 +62,7 @@ type HAProxyController struct {
 	osArgs                   utils.OSArgs
 	auxCfgModTime            int64
 	ready                    bool
+	processIngress           func()
 }
 
 // Wrapping a Native-Client transaction and commit it.
@@ -152,7 +153,7 @@ func (c *HAProxyController) updateHAProxy() {
 		logger.Error(err)
 	}
 
-	c.processIngressesWithMerge()
+	c.processIngress()
 
 	updated := deep.Equal(route.CurentCustomRoutes, route.CustomRoutes, deep.FLAG_IGNORE_SLICE_ORDER)
 	if len(updated) != 0 {
@@ -420,6 +421,21 @@ func (c *HAProxyController) processIngressesWithMerge() {
 			for _, standaloneIngress := range standaloneIngresses {
 				c.manageIngress(standaloneIngress)
 			}
+		}
+	}
+}
+
+func (c *HAProxyController) processIngressesDefaultImplementation() {
+	for _, namespace := range c.store.Namespaces {
+		c.store.SecretsProcessed = map[string]struct{}{}
+		for _, ingResource := range namespace.Ingresses {
+			if !namespace.Relevant && !ingResource.Faked {
+				// As we watch only for white-listed namespaces, we should not worry about iterating over
+				// many ingresses in irrelevant namespaces.
+				// There should only be fake ingresses in irrelevant namespaces so loop should be whithin small amount of ingresses (Prometheus)
+				continue
+			}
+			c.manageIngress(ingResource)
 		}
 	}
 }

@@ -197,6 +197,11 @@ func logInfo(logger utils.Logger, osArgs utils.OSArgs) bool {
 			fmt.Printf("Ingress class: %s\n", osArgs.IngressClass)
 			fmt.Printf("Empty Ingress class: %t\n", osArgs.EmptyIngressClass)
 		}
+		if osArgs.Experimental.UseIngressMerge {
+			fmt.Println("Ingress Management: merge implementation")
+		} else {
+			fmt.Println("Ingress Management: default implementation")
+		}
 		return true
 	}
 
@@ -253,8 +258,12 @@ func logInfo(logger utils.Logger, osArgs utils.OSArgs) bool {
 	}
 	logger.Debugf("Kubernetes Informers resync period: %s", osArgs.CacheResyncPeriod.String())
 	logger.Printf("Controller initial sync period: %s", osArgs.InitialSyncPeriod.String())
+	if osArgs.Experimental.UseIngressMerge {
+		logger.Print("Ingress Management: merge implementation")
+	} else {
+		logger.Print("Ingress Management: default implementation")
+	}
 	logger.Printf("Controller sync period: %s\n", osArgs.SyncPeriod.String())
-
 	hostname, err := os.Hostname()
 	logger.Error(err)
 	logger.Printf("Running on %s", hostname)
