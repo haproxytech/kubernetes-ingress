@@ -221,6 +221,12 @@ func (c *clientNative) FrontendRuleDeleteAll(frontend string) {
 			break
 		}
 	}
+	for {
+		err := configuration.DeleteHTTPAfterResponseRule(0, string(parser.Frontends), frontend, c.activeTransaction, 0)
+		if err != nil {
+			break
+		}
+	}
 	// No usage of TCPResponseRules yet.
 }
 
@@ -250,4 +256,16 @@ func (c *clientNative) PeerEntryDelete(peerSection, entry string) error {
 		return err
 	}
 	return cfg.DeletePeerEntry(entry, peerSection, c.activeTransaction, 0)
+}
+
+func (c *clientNative) FrontendHTTPAfterResponseRuleCreate(id int64, frontend string, rule models.HTTPAfterResponseRule, ingressACL string) error {
+	configuration, err := c.nativeAPI.Configuration()
+	if err != nil {
+		return err
+	}
+	if ingressACL != "" {
+		rule.Cond = "if"
+		rule.CondTest = fmt.Sprintf("%s %s", ingressACL, rule.CondTest)
+	}
+	return configuration.CreateHTTPAfterResponseRule(id, string(parser.Frontends), frontend, &rule, c.activeTransaction, 0)
 }

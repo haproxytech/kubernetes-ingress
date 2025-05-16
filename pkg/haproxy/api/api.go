@@ -169,6 +169,7 @@ type HTTPRequestRule interface {
 	HTTPRequestRulesReplace(parentType, parentName string, rules models.HTTPRequestRules) error
 	FrontendHTTPRequestRuleCreate(id int64, frontend string, rule models.HTTPRequestRule, ingressACL string) error
 	FrontendHTTPResponseRuleCreate(id int64, frontend string, rule models.HTTPResponseRule, ingressACL string) error
+	FrontendHTTPAfterResponseRuleCreate(id int64, frontend string, rule models.HTTPAfterResponseRule, ingressACL string) error
 	BackendHTTPRequestRuleCreate(id int64, backend string, rule models.HTTPRequestRule) error
 }
 
