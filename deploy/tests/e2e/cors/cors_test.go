@@ -23,22 +23,24 @@ import (
 )
 
 const (
-	AccessControlAllowOrigin     = "Access-Control-Allow-Origin"
-	AccessControlAllowMethods    = "Access-Control-Allow-Methods"
-	AccessControlAllowHeaders    = "Access-Control-Allow-Headers"
-	AccessControlMaxAge          = "Access-Control-Max-Age"
-	AccessControlAllowCredential = "Access-Control-Allow-Credentials"
-	AnnotationCorsEnable         = "cors-enable"
-	AnnotationCorsOrigin         = "cors-allow-origin"
-	AnnotationCorsMethods        = "cors-allow-methods"
-	AnnotationCorsHeaders        = "cors-allow-headers"
-	AnnotationCorsAge            = "cors-max-age"
-	AnnotationCorsCredential     = "cors-allow-credentials"
-	Star                         = "*"
+	AccessControlAllowOrigin        = "Access-Control-Allow-Origin"
+	AccessControlAllowMethods       = "Access-Control-Allow-Methods"
+	AccessControlAllowHeaders       = "Access-Control-Allow-Headers"
+	AccessControlMaxAge             = "Access-Control-Max-Age"
+	AccessControlAllowCredential    = "Access-Control-Allow-Credentials"
+	AnnotationCorsEnable            = "cors-enable"
+	AnnotationCorsOrigin            = "cors-allow-origin"
+	AnnotationCorsMethods           = "cors-allow-methods"
+	AnnotationCorsHeaders           = "cors-allow-headers"
+	AnnotationCorsAge               = "cors-max-age"
+	AnnotationCorsCredential        = "cors-allow-credentials"
+	AnnotationsCorsRespondToOptions = "cors-respond-to-options"
+	Star                            = "*"
 )
 
 func (suite *CorsSuite) Test_Configmap_Alone() {
 	suite.Run("Default", suite.Default(false))
+	suite.Run("DefaultWithNoContent", suite.DefaultWithNoContent(false))
 	suite.Run("CorsOriginAlone", suite.CorsOriginAlone(false))
 	suite.Run("CorsMethodsAlone", suite.CorsMethodsAlone(false))
 	suite.Run("CorsMethodsHeadersAlone", suite.CorsMethodsHeadersAlone(false))
@@ -51,6 +53,7 @@ func (suite *CorsSuite) Test_Configmap_Alone() {
 
 func (suite *CorsSuite) Test_Ingress_Alone() {
 	suite.Run("Default", suite.Default(true))
+	suite.Run("DefaultWithNoContent", suite.DefaultWithNoContent(true))
 	suite.Run("CorsOriginAlone", suite.CorsOriginAlone(true))
 	suite.Run("CorsMethodsAlone", suite.CorsMethodsAlone(true))
 	suite.Run("CorsMethodsHeadersAlone", suite.CorsMethodsHeadersAlone(true))
@@ -60,18 +63,32 @@ func (suite *CorsSuite) Test_Ingress_Alone() {
 	suite.Run("CorsMethodsCredentialDisable", suite.CorsMethodsCredentialDisable(true))
 }
 
-func (suite *CorsSuite) eventuallyReturns(expecedHeaders, unexpectedHeaders http.Header) {
+func (suite *CorsSuite) eventuallyReturns(expectedHeaders, unexpectedHeaders http.Header) {
+	suite.eventuallyReturnsWithNoContentOption(expectedHeaders, unexpectedHeaders, false)
+}
+
+func (suite *CorsSuite) eventuallyReturnsWithNoContentOption(expectedHeaders, unexpectedHeaders http.Header, noContent bool) {
 	suite.Eventually(func() bool {
-		res, cls, err := suite.client.Do()
+		do := suite.client.Do
+		if noContent {
+			do = suite.client.DoOptions
+		}
+		res, cls, err := do()
 		if err != nil {
 			suite.T().Logf("Connection ERROR: %s", err.Error())
 			return false
 		}
 		defer cls()
+
 		if res.StatusCode == 503 {
 			return false
 		}
-		for expectedHeader, expectedValues := range expecedHeaders {
+
+		if noContent && res.StatusCode != 204 {
+			return false
+		}
+
+		for expectedHeader, expectedValues := range expectedHeaders {
 			values, ok := res.Header[expectedHeader]
 			if !ok || len(values) != 1 || values[0] != expectedValues[0] {
 				return false
@@ -119,6 +136,37 @@ func (suite *CorsSuite) Default(ingressCors bool) func() {
 		suite.Require().NoError(suite.test.Apply(yamlFile, ns, suite.tmplData))
 
 		suite.eventuallyReturns(expectedHeaders, unexpectedHeaders)
+	}
+}
+
+func (suite *CorsSuite) DefaultWithNoContent(ingressCors bool) func() {
+	return func() {
+		expectedHeaders := http.Header{
+			AccessControlAllowOrigin:  {Star},
+			AccessControlAllowMethods: {Star},
+			AccessControlAllowHeaders: {Star},
+		}
+		unexpectedHeaders := http.Header{
+			AccessControlAllowCredential: {},
+		}
+		annotations := &suite.tmplData.IngAnnotations
+		if !ingressCors {
+			annotations = &suite.tmplData.ConfigMapAnnotations
+		}
+		*annotations = []struct{ Key, Value string }{
+			{AnnotationCorsEnable, q("true")},
+			{AnnotationsCorsRespondToOptions, q("true")},
+		}
+
+		yamlFile := "config/deploy.yaml.tmpl"
+		ns := suite.test.GetNS()
+		if !ingressCors {
+			yamlFile = "config/configmap.yaml.tmpl"
+			ns = ""
+		}
+		suite.Require().NoError(suite.test.Apply(yamlFile, ns, suite.tmplData))
+
+		suite.eventuallyReturnsWithNoContentOption(expectedHeaders, unexpectedHeaders, true)
 	}
 }
 

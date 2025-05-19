@@ -112,7 +112,7 @@ func NewHTTPSClient(host string, port ...int) (*Client, error) {
 	return client, nil
 }
 
-func (c *Client) Do() (res *http.Response, closeFunc func() error, err error) {
+func (c *Client) DoMethod(method string) (res *http.Response, closeFunc func() error, err error) {
 	client := &http.Client{}
 	if c.Transport != nil {
 		client.Transport = c.Transport
@@ -126,12 +126,21 @@ func (c *Client) Do() (res *http.Response, closeFunc func() error, err error) {
 	c.Req.Header["Origin"] = []string{c.Req.URL.Scheme + "://" + c.Host}
 	c.Req.URL.Host = c.Host
 	c.Req.URL.Path = c.Path
+	c.Req.Method = method
 	res, err = client.Do(c.Req)
 	if err != nil {
 		return
 	}
 	closeFunc = res.Body.Close
 	return
+}
+
+func (c *Client) Do() (res *http.Response, closeFunc func() error, err error) {
+	return c.DoMethod("GET")
+}
+
+func (c *Client) DoOptions() (res *http.Response, closeFunc func() error, err error) {
+	return c.DoMethod("OPTIONS")
 }
 
 func ProxyProtoConn() (result []byte, err error) {
