@@ -1,0 +1,5 @@
+mode: commit
+min_length: 3
+allowed:
+  - http
+  - CORS

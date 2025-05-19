@@ -141,6 +141,7 @@ func (a annImpl) Frontend(i *store.Ingress, r *rules.List, m maps.Maps) []Annota
 		resSetCORS.NewAnnotation("cors-allow-headers"),
 		resSetCORS.NewAnnotation("cors-max-age"),
 		resSetCORS.NewAnnotation("cors-allow-credentials"),
+		resSetCORS.NewAnnotation("cors-respond-to-options"),
 	}
 }
 

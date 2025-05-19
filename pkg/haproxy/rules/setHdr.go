@@ -16,6 +16,7 @@ type SetHdr struct {
 	Cond           string
 	Type           Type
 	Response       bool
+	AfterResponse  bool
 	ForwardedProto bool
 }
 
@@ -54,6 +55,17 @@ func (r SetHdr) Create(client api.HAProxyClient, frontend *models.Frontend, ingr
 			Cond:      r.Cond,
 		}
 		return client.FrontendHTTPResponseRuleCreate(frontend.Name, httpRule, ingressACL)
+	}
+	if r.AfterResponse {
+		httpRule := models.HTTPAfterResponseRule{
+			Index:     utils.PtrInt64(0),
+			Type:      "set-header",
+			HdrName:   r.HdrName,
+			HdrFormat: r.HdrFormat,
+			CondTest:  r.CondTest,
+			Cond:      r.Cond,
+		}
+		return client.FrontendHTTPAfterResponseRuleCreate(frontend.Name, httpRule, ingressACL)
 	}
 	// REQ_SET_HEADER
 	httpRule := models.HTTPRequestRule{
