@@ -74,11 +74,11 @@ func (a ResSetCORSAnn) Process(k store.K8s, annotations ...map[string]string) (e
 			origin = "%[var(txn." + corsVarName + ")]"
 		}
 		a.parent.rules.Add(&rules.SetHdr{
-			HdrName:   "Access-Control-Allow-Origin",
-			HdrFormat: origin,
-			Response:  true,
-			CondTest:  a.parent.acl,
-			Cond:      "if",
+			HdrName:       "Access-Control-Allow-Origin",
+			HdrFormat:     origin,
+			AfterResponse: true,
+			CondTest:      a.parent.acl,
+			Cond:          "if",
 		})
 	case "cors-allow-methods":
 		if a.parent.acl == "" {
@@ -96,11 +96,11 @@ func (a ResSetCORSAnn) Process(k store.K8s, annotations ...map[string]string) (e
 			input = "\"" + strings.Join(methods, ", ") + "\""
 		}
 		a.parent.rules.Add(&rules.SetHdr{
-			HdrName:   "Access-Control-Allow-Methods",
-			HdrFormat: input,
-			Response:  true,
-			CondTest:  a.parent.acl,
-			Cond:      "if",
+			HdrName:       "Access-Control-Allow-Methods",
+			HdrFormat:     input,
+			AfterResponse: true,
+			CondTest:      a.parent.acl,
+			Cond:          "if",
 		})
 	case "cors-allow-headers":
 		if a.parent.acl == "" {
@@ -108,11 +108,11 @@ func (a ResSetCORSAnn) Process(k store.K8s, annotations ...map[string]string) (e
 		}
 		input = strings.Join(strings.Fields(input), "") // strip spaces
 		a.parent.rules.Add(rules.SetHdr{
-			HdrName:   "Access-Control-Allow-Headers",
-			HdrFormat: "\"" + input + "\"",
-			Response:  true,
-			CondTest:  a.parent.acl,
-			Cond:      "if",
+			HdrName:       "Access-Control-Allow-Headers",
+			HdrFormat:     "\"" + input + "\"",
+			AfterResponse: true,
+			CondTest:      a.parent.acl,
+			Cond:          "if",
 		})
 	case "cors-max-age":
 		if a.parent.acl == "" {
@@ -128,22 +128,29 @@ func (a ResSetCORSAnn) Process(k store.K8s, annotations ...map[string]string) (e
 			return fmt.Errorf("invalid cors-max-age value %d", maxage)
 		}
 		a.parent.rules.Add(&rules.SetHdr{
-			HdrName:   "Access-Control-Max-Age",
-			HdrFormat: fmt.Sprintf("\"%d\"", maxage),
-			Response:  true,
-			CondTest:  a.parent.acl,
-			Cond:      "if",
+			HdrName:       "Access-Control-Max-Age",
+			HdrFormat:     fmt.Sprintf("\"%d\"", maxage),
+			AfterResponse: true,
+			CondTest:      a.parent.acl,
+			Cond:          "if",
 		})
 	case "cors-allow-credentials":
 		if a.parent.acl == "" || input != "true" {
 			return
 		}
 		a.parent.rules.Add(&rules.SetHdr{
-			HdrName:   "Access-Control-Allow-Credentials",
-			HdrFormat: "\"true\"",
-			Response:  true,
-			CondTest:  a.parent.acl,
-			Cond:      "if",
+			HdrName:       "Access-Control-Allow-Credentials",
+			HdrFormat:     "\"true\"",
+			AfterResponse: true,
+			CondTest:      a.parent.acl,
+			Cond:          "if",
+		})
+	case "cors-respond-to-options":
+		if a.parent.acl == "" || input != "true" {
+			return
+		}
+		a.parent.rules.Add(&rules.ReqReturnStatus{
+			StatusCode: 204,
 		})
 	default:
 		err = fmt.Errorf("unknown cors annotation '%s'", a.name)

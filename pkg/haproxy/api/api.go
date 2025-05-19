@@ -71,6 +71,7 @@ type HAProxyClient interface { //nolint:interfacebloat
 	FrontendBindDelete(frontend string, bind string) error
 	FrontendHTTPRequestRuleCreate(frontend string, rule models.HTTPRequestRule, ingressACL string) error
 	FrontendHTTPResponseRuleCreate(frontend string, rule models.HTTPResponseRule, ingressACL string) error
+	FrontendHTTPAfterResponseRuleCreate(frontend string, rule models.HTTPAfterResponseRule, ingressACL string) error
 	FrontendTCPRequestRuleCreate(frontend string, rule models.TCPRequestRule, ingressACL string) error
 	FrontendRuleDeleteAll(frontend string)
 	GlobalGetLogTargets() (models.LogTargets, error)

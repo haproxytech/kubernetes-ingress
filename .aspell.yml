@@ -48,3 +48,5 @@ allowed:
   - configmaps
   - namespace
   - namespaces
+  - http
+  - CORS
