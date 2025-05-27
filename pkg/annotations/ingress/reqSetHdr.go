@@ -42,7 +42,7 @@ func (a *SetHdr) Process(k store.K8s, annotations ...map[string]string) (err err
 		}
 		a.rules.Add(&rules.SetHdr{
 			HdrName:   param[:indexSpace],
-			HdrFormat: "\"" + param[indexSpace+1:] + "\"",
+			HdrFormat: common.EnsureQuoted(param[indexSpace+1:]),
 			Response:  a.response,
 		})
 	}
