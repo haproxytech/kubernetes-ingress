@@ -93,7 +93,7 @@ func (a ResSetCORSAnn) Process(k store.K8s, annotations ...map[string]string) (e
 					return fmt.Errorf("unsupported HTTP method '%s' in cors-allow-methods configuration", methods[i])
 				}
 			}
-			input = "\"" + strings.Join(methods, ", ") + "\""
+			input = common.EnsureQuoted(strings.Join(methods, ", "))
 		}
 		a.parent.rules.Add(&rules.SetHdr{
 			HdrName:       "Access-Control-Allow-Methods",
@@ -109,7 +109,7 @@ func (a ResSetCORSAnn) Process(k store.K8s, annotations ...map[string]string) (e
 		input = strings.Join(strings.Fields(input), "") // strip spaces
 		a.parent.rules.Add(rules.SetHdr{
 			HdrName:       "Access-Control-Allow-Headers",
-			HdrFormat:     "\"" + input + "\"",
+			HdrFormat:     common.EnsureQuoted(input),
 			AfterResponse: true,
 			CondTest:      a.parent.acl,
 			Cond:          "if",

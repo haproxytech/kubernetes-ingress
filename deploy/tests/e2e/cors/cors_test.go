@@ -20,6 +20,7 @@ import (
 	"net/http"
 
 	"github.com/haproxytech/kubernetes-ingress/deploy/tests/e2e"
+	"github.com/haproxytech/kubernetes-ingress/pkg/annotations/common"
 )
 
 const (
@@ -104,7 +105,7 @@ func (suite *CorsSuite) eventuallyReturnsWithNoContentOption(expectedHeaders, un
 }
 
 func q(value string) string {
-	return "\"" + value + "\""
+	return common.EnsureQuoted(value)
 }
 
 func (suite *CorsSuite) Default(ingressCors bool) func() {

@@ -75,3 +75,21 @@ func GetValuesAndIndices(annotationName string, annotations ...map[string]string
 	}
 	return result
 }
+
+// EnsureQuoted ensures that a string starts and ends with a double quote.
+// It adds a quote to the beginning if one is not already present,
+// and adds a quote to the end if one is not already present.
+func EnsureQuoted(s string) string {
+	newS := s
+	if s == "\"" || s == "" {
+		newS = "\"\""
+		return newS
+	}
+	if !strings.HasPrefix(newS, "\"") {
+		newS = "\"" + newS
+	}
+	if !strings.HasSuffix(newS, "\"") {
+		newS += "\""
+	}
+	return newS
+}
