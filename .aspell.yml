@@ -37,3 +37,6 @@ allowed:
   - cfg
   - optim
   - prometheus
+  - configmaps
+  - namespace
+  - namespaces

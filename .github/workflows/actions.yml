@@ -7,7 +7,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: commit-policy
-        uses: docker://ghcr.io/haproxytech/commit-check:5.0.4
+        uses: docker://ghcr.io/haproxytech/commit-check:5.1.1
         env:
           API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   generate:
@@ -128,7 +128,7 @@ jobs:
   e2e:
     strategy:
       matrix:
-        k8s-version: ["v1.32.0"]
+        k8s-version: ["v1.32.2"]
     needs: ["build"]
     runs-on: ubuntu-latest
     steps:
@@ -152,7 +152,7 @@ jobs:
           name: dev
           config: deploy/tests/kind-config.yaml
           image: kindest/node:${{ matrix.k8s-version }}
-          version: v0.24.0
+          version: v0.27.0
       - name: Setup
         run: CI_ENV=github deploy/tests/create.sh
       - name: Run parallel e2e tests

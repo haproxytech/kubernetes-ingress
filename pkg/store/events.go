@@ -64,6 +64,11 @@ func (k *K8s) EventIngress(ns *Namespace, data *Ingress, uid types.UID, resource
 
 	if data.Status == DELETED {
 		delete(ns.Ingresses, data.Name)
+		for _, rule := range data.Rules {
+			for _, path := range rule.Paths {
+				k.IngressesByService[path.SvcNamespace+"/"+path.SvcName].Remove(data)
+			}
+		}
 		meta.GetMetaStore().ProcessedResourceVersion.Delete(data, uid)
 	} else {
 		if oldIngress, ok := ns.Ingresses[data.Name]; ok {
@@ -81,9 +86,36 @@ func (k *K8s) EventIngress(ns *Namespace, data *Ingress, uid types.UID, resource
 			if data.Annotations["ingress.class"] != oldIngress.Annotations["ingress.class"] {
 				data.ClassUpdated = true
 			}
+
+			for _, rule := range oldIngress.Rules {
+				for _, path := range rule.Paths {
+					k.IngressesByService[path.SvcNamespace+"/"+path.SvcName].Remove(data)
+				}
+			}
 		}
 		ns.Ingresses[data.Name] = data
 		meta.GetMetaStore().ProcessedResourceVersion.Set(data, uid, resourceVersion)
+
+		for _, rule := range data.Rules {
+			for _, path := range rule.Paths {
+				key := path.SvcNamespace + "/" + path.SvcName
+				ingresses := k.IngressesByService[key]
+
+				if ingresses == nil {
+					ingresses = utils.NewOrderedSet[string, *Ingress](func(i *Ingress) string { return i.Name },
+						func(a, b *Ingress) bool {
+							// We need to consider the case where two ingresses are created in the same second.
+							// Otherwise there could be any order in two instances;
+							if a.CreationTime.Equal(b.CreationTime) {
+								return a.Namespace+a.Name < b.Namespace+b.Name
+							}
+							return a.CreationTime.After(b.CreationTime)
+						})
+					k.IngressesByService[key] = ingresses
+				}
+				ingresses.Add(data)
+			}
+		}
 	}
 	return
 }
@@ -131,19 +163,52 @@ func (k *K8s) EventEndpoints(ns *Namespace, data *Endpoints, syncHAproxySrvs fun
 		ns.HAProxyRuntime[data.Service] = make(map[string]*RuntimeBackend)
 	}
 	logger.Tracef("service %s : number of already existing backend(s) in this transaction for this endpoint: %d", data.Service, len(ns.HAProxyRuntime[data.Service]))
+	// Standalone
+	_, ok = ns.HAProxyRuntimeStandalone[data.Service]
+	if !ok {
+		ns.HAProxyRuntimeStandalone[data.Service] = make(map[string]map[string]*RuntimeBackend)
+	}
 	for key, value := range ns.HAProxyRuntime[data.Service] {
 		logger.Tracef("service %s : port name %s, backend %+v", data.Service, key, *value)
 	}
+	// Standalone
+	for portName, backendsNames := range ns.HAProxyRuntimeStandalone[data.Service] {
+		for backendName := range backendsNames {
+			logger.Tracef("service %s : port name %s, backend %+v", data.Service, portName, backendName)
+		}
+	}
 	for portName, portEndpoints := range endpoints {
+		// Make a copy of addresses for potential standalone runtime backend
+		// as these addresses are consumed/removed in the process
+		backendAddresses := utils.CopyMap(portEndpoints.Addresses)
 		newBackend := &RuntimeBackend{Endpoints: portEndpoints}
 		backend, ok := ns.HAProxyRuntime[data.Service][portName]
+		// Make a copy of haproxy server list for potential standalone runtime backend
+		// as this servere list is modified in the process
+		var backendHAProxySrvs []*HAProxySrv
 		if ok {
+			backendHAProxySrvs = utils.CopySliceFunc(backend.HAProxySrvs, utils.CopyPointer)
 			portUpdated := (newBackend.Endpoints.Port != backend.Endpoints.Port)
 			newBackend.HAProxySrvs = backend.HAProxySrvs
 			newBackend.Name = backend.Name
 			logger.Warning(syncHAproxySrvs(newBackend, portUpdated))
 		}
 		ns.HAProxyRuntime[data.Service][portName] = newBackend
+
+		// Reprocuce the same steps ar regular runtime backend for each standalone runtime backend
+		// referring to the same port and service
+		standaloneNewBackend := &RuntimeBackend{Endpoints: portEndpoints}
+		for standaloneBackendName, standaloneRuntimeBackend := range ns.HAProxyRuntimeStandalone[data.Service][portName] {
+			// Make own copy of regular runtime backend portEndpoint addresses
+			standaloneNewBackend.Endpoints.Addresses = utils.CopyMap(backendAddresses)
+			// Make own copy of regular runtime backend portEndpoint servers list
+			standaloneNewBackend.HAProxySrvs = utils.CopySliceFunc(backendHAProxySrvs, utils.CopyPointer)
+			standaloneNewBackend.Name = standaloneRuntimeBackend.Name
+			standalonePortUpdated := (standaloneNewBackend.Endpoints.Port != standaloneRuntimeBackend.Endpoints.Port)
+			logger.Warning(syncHAproxySrvs(standaloneNewBackend, standalonePortUpdated))
+			ns.HAProxyRuntimeStandalone[data.Service][portName][standaloneBackendName] = standaloneNewBackend
+			standaloneNewBackend = &RuntimeBackend{Endpoints: portEndpoints}
+		}
 	}
 	return true
 }
@@ -216,7 +281,9 @@ func (k *K8s) EventConfigMap(ns *Namespace, data *ConfigMap) (updateRequired boo
 		}
 		*cm = *data
 		cm.Loaded = true
-		updateRequired = true
+		if !cm.Empty() {
+			updateRequired = true
+		}
 		logger.Debugf("configmap '%s/%s' processed", cm.Namespace, cm.Name)
 	case MODIFIED:
 		if cm.Equal(data) {
@@ -228,7 +295,9 @@ func (k *K8s) EventConfigMap(ns *Namespace, data *ConfigMap) (updateRequired boo
 	case DELETED:
 		cm.Loaded = false
 		cm.Annotations = map[string]string{}
-		updateRequired = true
+		if !cm.Empty() {
+			updateRequired = true
+		}
 		logger.Debugf("configmap '%s/%s' deleted", cm.Namespace, cm.Name)
 	}
 	return updateRequired

@@ -106,7 +106,7 @@ func (n ingressNetworkingV1Strategy) ConvertIngress() *Ingress {
 							logger.Errorf("backend in ingress '%s/%s' should have service but none found", n.ig.GetNamespace(), n.ig.GetName())
 							continue
 						}
-						pathKey := pathType + "-" + k8sPath.Path + "-" + k8sPath.Backend.Service.Port.Name
+						pathKey := pathType + "-" + k8sPath.Path + "-" + k8sPath.Backend.Service.Name + "-" + k8sPath.Backend.Service.Port.Name
 						paths[pathKey] = &IngressPath{
 							Path:          k8sPath.Path,
 							PathTypeMatch: pathType,
@@ -158,6 +158,7 @@ func (n ingressNetworkingV1Strategy) ConvertIngress() *Ingress {
 				}
 				return tls
 			}(n.ig.Spec.TLS),
+			CreationTime: n.ig.CreationTimestamp.Time,
 		},
 	}
 	addresses := []string{}
@@ -196,8 +197,22 @@ func getIgClass(className *string) string {
 func CopyAnnotations(in map[string]string) map[string]string {
 	out := make(map[string]string, len(in))
 	for name, value := range in {
-		split := strings.SplitN(name, "/", 2)
-		out[split[len(split)-1]] = value
+		out[cleanAnnotation(name)] = value
 	}
 	return out
+}
+
+var annotationsPrefixes = []string{
+	"haproxy.org/",
+	"ingress.kubernetes.io/",
+	"haproxy.com/",
+}
+
+func cleanAnnotation(annotation string) string {
+	for _, prefix := range annotationsPrefixes {
+		if strings.HasPrefix(annotation, prefix) {
+			return strings.TrimPrefix(annotation, prefix)
+		}
+	}
+	return annotation
 }

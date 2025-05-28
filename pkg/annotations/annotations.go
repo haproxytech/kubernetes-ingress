@@ -244,3 +244,38 @@ func Timeout(name string, annotations ...map[string]string) (out *int64, err err
 	}
 	return
 }
+
+// SpecificAnnotations is a set of annotations that uses rules to produce specific configuration with rule ID in configuration file.
+// These annotations in an ingress can't be merged with other ingresses annotations when these ingresses point to the same service because specific paths must be treated specifically.
+var SpecificAnnotations = map[string]struct{}{
+	"backend-config-snippet": {},
+	"deny-list":              {},
+	"blacklist":              {},
+	"allow-list":             {},
+	"whitelist":              {},
+	"src-ip-header":          {},
+	"auth-type":              {},
+	"auth-realm":             {},
+	"auth-secret":            {},
+	"ssl-redirect":           {},
+	"ssl-redirect-port":      {},
+	"ssl-redirect-code":      {},
+	"request-redirect":       {},
+	"request-redirect-code":  {},
+	"request-capture":        {},
+	"request-capture-len":    {},
+	"path-rewrite":           {},
+	"rate-limit-requests":    {},
+	"rate-limit-period":      {},
+	"rate-limit-size":        {},
+	"rate-limit-status-code": {},
+	"request-set-header":     {},
+	"response-set-header":    {},
+	"set-host":               {},
+	"cors-enable":            {},
+	"cors-allow-origin":      {},
+	"cors-allow-methods":     {},
+	"cors-allow-headers":     {},
+	"cors-max-age":           {},
+	"cors-allow-credentials": {},
+}

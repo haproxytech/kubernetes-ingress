@@ -19,6 +19,8 @@ import (
 
 	v3 "github.com/haproxytech/kubernetes-ingress/crs/api/ingress/v3"
 	informers "github.com/haproxytech/kubernetes-ingress/crs/generated/api/ingress/v3/informers/externalversions"
+	k8stransform "github.com/haproxytech/kubernetes-ingress/pkg/k8s/transform"
+
 	k8ssync "github.com/haproxytech/kubernetes-ingress/pkg/k8s/sync"
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
@@ -72,6 +74,9 @@ func (c BackendCR) GetInformerV3(eventChan chan k8ssync.SyncDataEvent, factory i
 			sendToChannel(eventChan, obj, store.DELETED)
 		},
 	})
+	logger.Error(err)
+	// Use TransformFunc to modify/filter objects before passing them to handlers
+	err = informer.SetTransform(k8stransform.TransformBackend)
 	logger.Error(err)
 	return informer
 }

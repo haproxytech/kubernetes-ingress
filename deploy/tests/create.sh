@@ -40,11 +40,15 @@ fi
 printf %80s |tr " " "="; echo ""
 if [ -n "${GITLAB_CI}" ]; then
   echo "haproxytech/http-echo:latest pulled from CI registry"
+  echo "haproxytech/proxy-protocol:latest pulled from CI registry"
 else
   docker build --build-arg TARGETPLATFORM="linux/amd64" -t haproxytech/http-echo -f deploy/tests/images/http-echo/Dockerfile deploy/tests/images/http-echo
+  docker build --build-arg TARGETPLATFORM="linux/amd64" -t haproxytech/proxy-protocol -f deploy/tests/images/proxy-protocol/Dockerfile deploy/tests/images/proxy-protocol
 fi
 echo "loading image http-echo in kind"
-kind load docker-image haproxytech/http-echo:latest  --name=$clustername
+kind load docker-image haproxytech/http-echo:latest --name=$clustername
+echo "loading image proxy-protocol in kind"
+kind load docker-image haproxytech/proxy-protocol:latest --name=$clustername
 
 printf %80s |tr " " "="; echo ""
 echo "Create HAProxy namespace ..."

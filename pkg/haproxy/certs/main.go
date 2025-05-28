@@ -159,6 +159,9 @@ func (c *certs) AddSecret(secret *store.Secret, secretType SecretType) (certPath
 }
 
 func (c *certs) updateRuntime(filename string, payload []byte) (bool, error) {
+	if instance.NeedReload() {
+		return false, nil
+	}
 	// Only 1 transaction in parallel is possible for now in haproxy
 	// Keep this mutex for now to ensure that we perform 1 transaction at a time
 	c.mu.Lock()
@@ -216,6 +219,9 @@ func (c *certs) updateRuntime(filename string, payload []byte) (bool, error) {
 }
 
 func (c *certs) deleteRuntime(crtList, filename string) error {
+	if instance.NeedReload() {
+		return nil
+	}
 	// Only 1 transaction in parallel is possible for now in haproxy
 	// Keep this mutex for now to ensure that we perform 1 transaction at a time
 	c.mu.Lock()

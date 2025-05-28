@@ -117,6 +117,7 @@ type OSArgs struct {
 	DisableIPV6                       bool           `long:"disable-ipv6" description:"toggle to disable the IPv6 protocol from all frontends"`
 	UseWithPebble                     bool           `long:"with-pebble" description:"use pebble to start/stop/reload HAProxy"`
 	JobCheckCRD                       bool           `long:"job-check-crd" description:"does not execute IC, but adds/updates CRDs"`
+	Experimental                      Experimental   `long:"experimental" description:"comma separated list of experimental features to activate"`
 	DisableQuic                       bool           `long:"disable-quic" description:"disable quic protocol in http frontend bindings"`
 	DisableDelayedWritingOnlyIfReload bool           `long:"disable-writing-only-if-reload" description:"disable the delayed writing of files to disk only in case of haproxy reload (=write files to disk even if no reload)"`
 	CRDInputFile                      string         `long:"input-file" description:"The file path of a CRD manifest to convert"`

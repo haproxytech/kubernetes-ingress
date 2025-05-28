@@ -43,6 +43,7 @@ type K8s struct {
 	GatewayControllerName        string
 	PublishServiceAddresses      []string
 	UpdateAllIngresses           bool
+	IngressesByService           map[string]*utils.OrderedSet[string, *Ingress] // service fqn -> ingress name -> ingress
 }
 
 type NamespacesWatch struct {
@@ -86,6 +87,7 @@ func NewK8sStore(args utils.OSArgs) K8s {
 		BackendsWithNoConfigSnippets: map[string]struct{}{},
 		HaProxyPods:                  map[string]struct{}{},
 		FrontendRC:                   rc.NewResourceCounter(),
+		IngressesByService:           map[string]*utils.OrderedSet[string, *Ingress]{},
 	}
 	for _, namespace := range args.NamespaceWhitelist {
 		store.NamespacesAccess.Whitelist[namespace] = struct{}{}
@@ -117,6 +119,7 @@ func (k *K8s) Clean() {
 					if len(namespace.Endpoints[slice.Service]) == 0 {
 						delete(namespace.Endpoints, slice.Service)
 						delete(namespace.HAProxyRuntime, slice.Service)
+						delete(namespace.HAProxyRuntimeStandalone, slice.Service)
 					}
 				default:
 					slice.Status = EMPTY
@@ -167,13 +170,14 @@ func (k K8s) GetNamespace(name string) *Namespace {
 		return namespace
 	}
 	newNamespace := &Namespace{
-		Name:           name,
-		Relevant:       k.isRelevantNamespace(name),
-		Endpoints:      make(map[string]map[string]*Endpoints),
-		Services:       make(map[string]*Service),
-		Ingresses:      make(map[string]*Ingress),
-		Secret:         make(map[string]*Secret),
-		HAProxyRuntime: make(map[string]map[string]*RuntimeBackend),
+		Name:                     name,
+		Relevant:                 k.isRelevantNamespace(name),
+		Endpoints:                make(map[string]map[string]*Endpoints),
+		Services:                 make(map[string]*Service),
+		Ingresses:                make(map[string]*Ingress),
+		Secret:                   make(map[string]*Secret),
+		HAProxyRuntime:           make(map[string]map[string]*RuntimeBackend),
+		HAProxyRuntimeStandalone: make(map[string]map[string]map[string]*RuntimeBackend),
 		CRs: &CustomResources{
 			Global:    make(map[string]*models.Global),
 			Defaults:  make(map[string]*models.Defaults),

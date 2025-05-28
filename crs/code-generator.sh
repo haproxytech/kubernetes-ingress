@@ -102,3 +102,9 @@ echo "Controller-gen: " ${CONTROLLER_GEN_VERSION}
 controller-gen crd paths=./crs/api/ingress/v3/...  output:crd:dir=./crs/definition
 # remove code-gen annotation (dependabot fails)
 find ${CR_DIR}/definition -type f -name '*.yaml' -exec sed -i '/controller-gen.kubebuilder.io\/version/d' {} +
+
+
+# # Removal of some fields from the CRDs
+# # For example, for now we remove servers from the backend CRD v3
+echo "Removing fields from the generated CRDs"
+sh crs/remove-fields-from-crds.sh

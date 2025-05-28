@@ -103,7 +103,7 @@ func (c *clientNative) runRaw(runtime runtime.Runtime, sb strings.Builder, backe
 		return err
 	}
 	if len(result) > 5 {
-		switch result[1:5] {
+		switch result[0:4] {
 		case "[3]:", "[2]:", "[1]:", "[0]:":
 			logger.Errorf("[RUNTIME] [BACKEND] [SOCKET] backend %s', server slots adjustment ?", backendName)
 			logger.Tracef("[RUNTIME] [BACKEND] [SOCKET] backend %s: Error: '%s', server slots adjustment ?", backendName, result)
@@ -210,7 +210,7 @@ func (c *clientNative) SyncBackendSrvs(backend *store.RuntimeBackend, portUpdate
 				BackendName: backend.Name,
 				ServerName:  srv.Name,
 				IP:          "127.0.0.1",
-				Port:        0,
+				Port:        1,
 				State:       "maint",
 			})
 		} else {
