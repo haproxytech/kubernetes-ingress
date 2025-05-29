@@ -128,7 +128,7 @@ jobs:
   e2e:
     strategy:
       matrix:
-        k8s-version: ["v1.32.2"]
+        k8s-version: ["v1.33.1"]
     needs: ["build"]
     runs-on: ubuntu-latest
     steps:
@@ -147,12 +147,12 @@ jobs:
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-
-      - uses: engineerd/setup-kind@v0.5.0
+      - uses: engineerd/setup-kind@v0.6.2
         with:
           name: dev
           config: deploy/tests/kind-config.yaml
           image: kindest/node:${{ matrix.k8s-version }}
-          version: v0.27.0
+          version: v0.29.0
       - name: Setup
         run: CI_ENV=github deploy/tests/create.sh
       - name: Run parallel e2e tests

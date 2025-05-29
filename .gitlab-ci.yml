@@ -9,11 +9,11 @@ stages:
   - e2e_k8s_32
   - e2e_crd_versions
 variables:
-  KIND: v0.27.0
+  KIND: v0.29.0
   DOCKER_HOST: tcp://docker:2375
   DOCKER_DRIVER: overlay2
   GO_VERSION: "1.24"
-  DOCKER_VERSION: "27.0"
+  DOCKER_VERSION: "28.1"
 diff:
   stage: diff
   rules:
@@ -179,7 +179,7 @@ docker-build:
     - docker image tag $CI_REGISTRY_GO/haproxytech/proxy-protocol:latest haproxytech/proxy-protocol:latest
     - wget -nv -O /usr/local/bin/kind https://github.com/kubernetes-sigs/kind/releases/download/${KIND}/kind-linux-amd64
     - chmod +x /usr/local/bin/kind
-    - wget -nv -O /usr/local/bin/kubectl https://storage.googleapis.com/kubernetes-release/release/${KUBECTL}/bin/linux/amd64/kubectl
+    - wget -nv -O /usr/local/bin/kubectl https://dl.k8s.io/release/${KUBECTL}/bin/linux/amd64/kubectl
     - chmod +x /usr/local/bin/kubectl
     - sed -i "s/K8S_VERSION/$K8S_VERSION/g" ".gitlab/kind-config.yaml"
     - sed -i "s/KUBEADM_VER/$KUBEADM_VER/g" ".gitlab/kind-config.yaml"
@@ -210,9 +210,9 @@ e2e_k8s_30:
   stage: e2e_k8s_30
   needs: ["docker-build"]
   variables:
-    K8S_VERSION: v1.30.10
+    K8S_VERSION: v1.31.9
     KUBEADM_VER: v1beta3
-    KUBECTL: v1.30.4
+    KUBECTL: v1.31.0
   extends: .kind_deployment_schedules
   rules:
     - if: $CI_PIPELINE_SOURCE == "schedule" && $SCHEDULE_TYPE == 'weekly' &&  $SCHEDULE_DAY == 'monday'
@@ -220,9 +220,9 @@ e2e_k8s_31:
   stage: e2e_k8s_31
   needs: ["docker-build"]
   variables:
-    K8S_VERSION: v1.31.6
+    K8S_VERSION: v1.32.5
     KUBEADM_VER: v1beta3
-    KUBECTL: v1.31.0
+    KUBECTL: v1.32.0
   extends: .kind_deployment_schedules
   rules:
     - if: $CI_PIPELINE_SOURCE == "schedule" && $SCHEDULE_TYPE == 'weekly' &&  $SCHEDULE_DAY == 'tuesday'
@@ -230,9 +230,9 @@ e2e_crd_v1:
   stage: e2e_crd_versions
   needs: ["docker-build"]
   variables:
-    K8S_VERSION: v1.32.2
+    K8S_VERSION: v1.33.1
     KUBEADM_VER: v1beta3
-    KUBECTL: v1.31.0
+    KUBECTL: v1.33.1
     CRD_VERSION: v1
   extends: .kind_deployment_schedules
   rules:
@@ -241,7 +241,7 @@ e2e_k8s_32:
   stage: e2e_k8s_32
   needs: ["docker-build"]
   variables:
-    K8S_VERSION: v1.32.2
+    K8S_VERSION: v1.33.1
     KUBEADM_VER: v1beta3
-    KUBECTL: v1.31.0
+    KUBECTL: v1.33.1
   extends: .kind_deployment

@@ -6,7 +6,7 @@ networking:
 kind: Cluster
 nodes:
   - role: control-plane
-    image: kindest/node:v1.32.2
+    image: kindest/node:v1.33.1
     extraPortMappings:
       - hostPort: 30080
         containerPort: 30080
