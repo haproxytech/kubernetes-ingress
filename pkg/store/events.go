@@ -145,6 +145,15 @@ func (k *K8s) EventEndpoints(ns *Namespace, data *Endpoints, syncHAproxySrvs fun
 			logger.Tracef("service %s : port name %s, backend %+v", data.Service, portName, backendName)
 		}
 	}
+	if len(endpoints) == 0 {
+		for _, runtimeBackend := range ns.HAProxyRuntime[data.Service] {
+			runtimeBackend.Endpoints = PortEndpoints{}
+			for _, haproxySrv := range runtimeBackend.HAProxySrvs {
+				haproxySrv.Address = ""
+				haproxySrv.Modified = true
+			}
+		}
+	}
 	for portName, portEndpoints := range endpoints {
 		// Make a copy of addresses for potential standalone runtime backend
 		// as these addresses are consumed/removed in the process
