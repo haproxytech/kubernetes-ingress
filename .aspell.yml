@@ -50,3 +50,5 @@ allowed:
   - namespaces
   - http
   - CORS
+  - dataplaneapi
+  - usr
