@@ -43,6 +43,7 @@ COPY /fs /
 
 RUN apk --no-cache add socat openssl util-linux htop tzdata curl libcap && \
     rm -f /usr/local/bin/dataplaneapi /usr/bin/dataplaneapi /etc/haproxy/dataplaneapi.yml && \
+    rm -f /usr/local/bin/dataplaneapi-v2 /usr/bin/dataplaneapi-v2 && \
     chgrp -R haproxy /usr/local/etc/haproxy /run /var && \
     chmod -R ug+rwx /usr/local/etc/haproxy /run /var && \
     setcap 'cap_net_bind_service=+ep' /usr/local/sbin/haproxy && \
