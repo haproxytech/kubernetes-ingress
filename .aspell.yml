@@ -3,3 +3,5 @@ min_length: 3
 allowed:
   - http
   - CORS
+  - dataplaneapi
+  - usr
