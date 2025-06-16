@@ -48,3 +48,4 @@ linters:
 issues:
   exclude:
     - "tag is not aligned, should be:" # this is harder to read
+    - "corev1.Endpoints is deprecated"
