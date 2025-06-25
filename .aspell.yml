@@ -52,3 +52,4 @@ allowed:
   - CORS
   - dataplaneapi
   - usr
+  - Redispatch
