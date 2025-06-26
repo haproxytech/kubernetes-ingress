@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    haproxy.org/client-native: v6.1.1
+    haproxy.org/client-native: v6.2.1
   name: backends.ingress.v3.haproxy.org
 spec:
   group: ingress.v3.haproxy.org
@@ -89,6 +89,8 @@ spec:
                           Pattern: ^[^\s]+$
                         pattern: ^[^\s]+$
                         type: string
+                      metadata:
+                        x-kubernetes-preserve-unknown-fields: true
                       value:
                         description: value
                         type: string
@@ -234,6 +236,14 @@ spec:
                         - response
                         - both
                       type: string
+                    minsize_req:
+                      description: minsize req
+                      format: int64
+                      type: integer
+                    minsize_res:
+                      description: minsize res
+                      format: int64
+                      type: integer
                     offload:
                       description: offload
                       type: boolean
@@ -404,6 +414,20 @@ spec:
                         - enabled
                         - disabled
                       type: string
+                    check-pool-conn-name:
+                      description: |-
+                        check pool conn name
+                        Pattern: ^[^\s]+$
+                      pattern: ^[^\s]+$
+                      type: string
+                    check-reuse-pool:
+                      description: |-
+                        check reuse pool
+                        Enum: ["enabled","disabled"]
+                      enum:
+                        - enabled
+                        - disabled
+                      type: string
                     check-send-proxy:
                       description: |-
                         check send proxy
@@ -555,6 +579,13 @@ spec:
                       format: int64
                       maximum: 65535
                       minimum: 1
+                      type: integer
+                    idle_ping:
+                      description: |-
+                        idle ping
+                        Minimum: 0
+                      format: int64
+                      minimum: 0
                       type: integer
                     init-addr:
                       description: |-
@@ -910,6 +941,9 @@ spec:
                         - enabled
                         - disabled
                       type: string
+                    strict-maxconn:
+                      description: strict maxconn
+                      type: boolean
                     tcp_ut:
                       description: |-
                         tcp ut
@@ -1034,6 +1068,8 @@ spec:
                         mailers
                         Required: true
                       type: string
+                    metadata:
+                      x-kubernetes-preserve-unknown-fields: true
                     myhostname:
                       description: myhostname
                       type: string
@@ -1103,6 +1139,8 @@ spec:
                           format: int64
                           type: integer
                         type: array
+                      metadata:
+                        x-kubernetes-preserve-unknown-fields: true
                       name:
                         description: name
                         type: string
@@ -1136,6 +1174,8 @@ spec:
                         - 504
                       format: int64
                       type: integer
+                    metadata:
+                      x-kubernetes-preserve-unknown-fields: true
                     url:
                       description: |-
                         url
@@ -1173,6 +1213,8 @@ spec:
                         - 504
                       format: int64
                       type: integer
+                    metadata:
+                      x-kubernetes-preserve-unknown-fields: true
                     url:
                       description: |-
                         url
@@ -1258,6 +1300,8 @@ spec:
                           It follows the HAProxy size format and is expressed in bytes.
                         format: int64
                         type: integer
+                      metadata:
+                        x-kubernetes-preserve-unknown-fields: true
                       min_size:
                         description: |-
                           The optional minimum number of bytes forwarded at a time by a stream excluding the last packet that may be smaller.
@@ -1420,6 +1464,15 @@ spec:
                   description: hash balance factor
                   format: int64
                   type: integer
+                hash_preserve_affinity:
+                  description: |-
+                    hash preserve affinity
+                    Enum: ["always","maxconn","maxqueue"]
+                  enum:
+                    - always
+                    - maxconn
+                    - maxqueue
+                  type: string
                 hash_type:
                   description: hash type
                   properties:
@@ -1453,6 +1506,14 @@ spec:
                 http-buffer-request:
                   description: |-
                     http buffer request
+                    Enum: ["enabled","disabled"]
+                  enum:
+                    - enabled
+                    - disabled
+                  type: string
+                http-drop-request-trailers:
+                  description: |-
+                    http drop request trailers
                     Enum: ["enabled","disabled"]
                   enum:
                     - enabled
@@ -1569,6 +1630,8 @@ spec:
                           Pattern: ^[^\s]+$
                         pattern: ^[^\s]+$
                         type: string
+                      metadata:
+                        x-kubernetes-preserve-unknown-fields: true
                       sc_expr:
                         description: sc expr
                         type: string
@@ -1742,6 +1805,8 @@ spec:
                           - rstring
                         pattern: ^[^\s]+$
                         type: string
+                      metadata:
+                        x-kubernetes-preserve-unknown-fields: true
                       method:
                         description: |-
                           method
@@ -1886,6 +1951,8 @@ spec:
 
                       swagger:model http_error_rule
                     properties:
+                      metadata:
+                        x-kubernetes-preserve-unknown-fields: true
                       return_content:
                         description: return content
                         type: string
@@ -2142,6 +2209,8 @@ spec:
                           Pattern: ^(0x[0-9A-Fa-f]+|[0-9]+)$
                         pattern: ^(0x[0-9A-Fa-f]+|[0-9]+)$
                         type: string
+                      metadata:
+                        x-kubernetes-preserve-unknown-fields: true
                       method_fmt:
                         description: |-
                           method fmt
@@ -2364,7 +2433,7 @@ spec:
                         description: |-
                           type
                           Required: true
-                          Enum: ["add-acl","add-header","allow","auth","cache-use","capture","del-acl","del-header","del-map","deny","disable-l7-retry","do-resolve","early-hint","lua","normalize-uri","redirect","reject","replace-header","replace-path","replace-pathq","replace-uri","replace-value","return","sc-add-gpc","sc-inc-gpc","sc-inc-gpc0","sc-inc-gpc1","sc-set-gpt","sc-set-gpt0","send-spoe-group","set-bc-mark","set-bc-tos","set-dst","set-dst-port","set-fc-mark","set-fc-tos","set-header","set-log-level","set-map","set-mark","set-method","set-nice","set-path","set-pathq","set-priority-class","set-priority-offset","set-query","set-src","set-src-port","set-timeout","set-tos","set-uri","set-var","silent-drop","strict-mode","tarpit","track-sc","unset-var","use-service","wait-for-body","wait-for-handshake","set-bandwidth-limit","set-retries","do-log"]
+                          Enum: ["add-acl","add-header","allow","auth","cache-use","capture","del-acl","del-header","del-map","deny","disable-l7-retry","do-resolve","early-hint","lua","normalize-uri","pause","redirect","reject","replace-header","replace-path","replace-pathq","replace-uri","replace-value","return","sc-add-gpc","sc-inc-gpc","sc-inc-gpc0","sc-inc-gpc1","sc-set-gpt","sc-set-gpt0","send-spoe-group","set-bc-mark","set-bc-tos","set-dst","set-dst-port","set-fc-mark","set-fc-tos","set-header","set-log-level","set-map","set-mark","set-method","set-nice","set-path","set-pathq","set-priority-class","set-priority-offset","set-query","set-src","set-src-port","set-timeout","set-tos","set-uri","set-var","set-var-fmt","silent-drop","strict-mode","tarpit","track-sc","unset-var","use-service","wait-for-body","wait-for-handshake","set-bandwidth-limit","set-retries","do-log"]
                         enum:
                           - add-acl
                           - add-header
@@ -2381,6 +2450,7 @@ spec:
                           - early-hint
                           - lua
                           - normalize-uri
+                          - pause
                           - redirect
                           - reject
                           - replace-header
@@ -2419,6 +2489,7 @@ spec:
                           - set-tos
                           - set-uri
                           - set-var
+                          - set-var-fmt
                           - silent-drop
                           - strict-mode
                           - tarpit
@@ -2608,6 +2679,8 @@ spec:
                           Pattern: ^(0x[0-9A-Fa-f]+|[0-9]+)$
                         pattern: ^(0x[0-9A-Fa-f]+|[0-9]+)$
                         type: string
+                      metadata:
+                        x-kubernetes-preserve-unknown-fields: true
                       nice_value:
                         description: |-
                           nice value
@@ -2787,7 +2860,7 @@ spec:
                         description: |-
                           type
                           Required: true
-                          Enum: ["add-acl","add-header","allow","cache-store","capture","del-acl","del-header","del-map","deny","lua","redirect","replace-header","replace-value","return","sc-add-gpc","sc-inc-gpc","sc-inc-gpc0","sc-inc-gpc1","sc-set-gpt","sc-set-gpt0","send-spoe-group","set-fc-mark","set-fc-tos","set-header","set-log-level","set-map","set-mark","set-nice","set-status","set-timeout","set-tos","set-var","set-var-fmt","silent-drop","strict-mode","track-sc","unset-var","wait-for-body","set-bandwidth-limit","do-log"]
+                          Enum: ["add-acl","add-header","allow","cache-store","capture","del-acl","del-header","del-map","deny","lua","pause","redirect","replace-header","replace-value","return","sc-add-gpc","sc-inc-gpc","sc-inc-gpc0","sc-inc-gpc1","sc-set-gpt","sc-set-gpt0","send-spoe-group","set-fc-mark","set-fc-tos","set-header","set-log-level","set-map","set-mark","set-nice","set-status","set-timeout","set-tos","set-var","set-var-fmt","silent-drop","strict-mode","track-sc","unset-var","wait-for-body","set-bandwidth-limit","do-log"]
                         enum:
                           - add-acl
                           - add-header
@@ -2799,6 +2872,7 @@ spec:
                           - del-map
                           - deny
                           - lua
+                          - pause
                           - redirect
                           - replace-header
                           - replace-value
@@ -3080,6 +3154,8 @@ spec:
                           - info
                           - debug
                         type: string
+                      metadata:
+                        x-kubernetes-preserve-unknown-fields: true
                       minlevel:
                         description: |-
                           minlevel
@@ -3113,6 +3189,8 @@ spec:
                   description: max keep alive queue
                   format: int64
                   type: integer
+                metadata:
+                  x-kubernetes-preserve-unknown-fields: true
                 mode:
                   description: |-
                     mode
@@ -3286,6 +3364,8 @@ spec:
                       cond_test:
                         description: cond test
                         type: string
+                      metadata:
+                        x-kubernetes-preserve-unknown-fields: true
                       target_server:
                         description: |-
                           target server
@@ -3360,6 +3440,20 @@ spec:
                       check:
                         description: |-
                           check
+                          Enum: ["enabled","disabled"]
+                        enum:
+                          - enabled
+                          - disabled
+                        type: string
+                      check-pool-conn-name:
+                        description: |-
+                          check pool conn name
+                          Pattern: ^[^\s]+$
+                        pattern: ^[^\s]+$
+                        type: string
+                      check-reuse-pool:
+                        description: |-
+                          check reuse pool
                           Enum: ["enabled","disabled"]
                         enum:
                           - enabled
@@ -3526,6 +3620,13 @@ spec:
                         description: id
                         format: int64
                         type: integer
+                      idle_ping:
+                        description: |-
+                          idle ping
+                          Minimum: 0
+                        format: int64
+                        minimum: 0
+                        type: integer
                       init-addr:
                         description: |-
                           init addr
@@ -3581,6 +3682,8 @@ spec:
                         description: maxqueue
                         format: int64
                         type: integer
+                      metadata:
+                        x-kubernetes-preserve-unknown-fields: true
                       minconn:
                         description: minconn
                         format: int64
@@ -3901,6 +4004,9 @@ spec:
                           - enabled
                           - disabled
                         type: string
+                      strict-maxconn:
+                        description: strict maxconn
+                        type: boolean
                       tcp_ut:
                         description: |-
                           tcp ut
@@ -4253,6 +4359,8 @@ spec:
                       cond_test:
                         description: cond test
                         type: string
+                      metadata:
+                        x-kubernetes-preserve-unknown-fields: true
                       pattern:
                         description: |-
                           pattern
@@ -4296,6 +4404,8 @@ spec:
                       description: keylen
                       format: int64
                       type: integer
+                    metadata:
+                      x-kubernetes-preserve-unknown-fields: true
                     nopurge:
                       description: nopurge
                       type: boolean
@@ -4305,6 +4415,9 @@ spec:
                         Pattern: ^[^\s]+$
                       pattern: ^[^\s]+$
                       type: string
+                    recv_only:
+                      description: recv only
+                      type: boolean
                     size:
                       description: |-
                         size
@@ -4437,6 +4550,8 @@ spec:
                           - binary-lf
                         pattern: ^[^\s]+$
                         type: string
+                      metadata:
+                        x-kubernetes-preserve-unknown-fields: true
                       min_recv:
                         description: min recv
                         format: int64
@@ -4643,6 +4758,8 @@ spec:
                           Pattern: ^(0x[0-9A-Fa-f]+|[0-9]+)$
                         pattern: ^(0x[0-9A-Fa-f]+|[0-9]+)$
                         type: string
+                      metadata:
+                        x-kubernetes-preserve-unknown-fields: true
                       nice_value:
                         description: |-
                           nice value
@@ -4838,6 +4955,8 @@ spec:
                           Pattern: ^(0x[0-9A-Fa-f]+|[0-9]+)$
                         pattern: ^(0x[0-9A-Fa-f]+|[0-9]+)$
                         type: string
+                      metadata:
+                        x-kubernetes-preserve-unknown-fields: true
                       nice_value:
                         description: |-
                           nice value

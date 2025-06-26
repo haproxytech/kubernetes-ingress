@@ -7,8 +7,8 @@ metadata:
 spec:
   close_spread_time: 0
   cpu_maps:
-  - cpu_set: 1/1
-    process: "1"
+    - cpu_set: 1/1
+      process: "1"
   daemon: true
   debug_options:
     anonkey: 0
@@ -16,17 +16,17 @@ spec:
   device_atlas_options: {}
   environment_options:
     presetenv:
-    - name: test1
-      value: test1
+      - name: test1
+        value: test1
     setenv:
-    - name: test3
-      value: test3
+      - name: test3
+        value: test3
   fifty_one_degrees_options: {}
   grace: 0
   group: root
   h1_case_adjust:
-  - from: content-length
-    to: Content-length
+    - from: content-length
+      to: Content-length
   hard_stop_after: 0
   http_client_options:
     resolvers_disabled: enabled
@@ -37,15 +37,15 @@ spec:
     enabled: enabled
     param: aword
   log_target_list:
-  - address: 1.2.3.4
-    facility: mail
-    format: rfc3164
-    level: emerg
-    minlevel: debug
+    - address: 1.2.3.4
+      facility: mail
+      format: rfc3164
+      level: emerg
+      minlevel: debug
   lua_options:
     prepend_path:
-    - path: aword
-      type: cpath
+      - path: aword
+        type: cpath
   mworker_max_reloads: 0
   numa_cpu_mapping: enabled
   ocsp_update_options:
@@ -57,25 +57,25 @@ spec:
     profiling_tasks: auto
     server_state_base: ssb_word
   runtime_apis:
-  - address: 0.0.0.0:31025
-    alpn: aword
-    level: admin
-    maxconn: 10005
-    name: aword
-    quic-cc-algo: newreno
-    quic-force-retry: true
-    severity_output: none
-    ssl_max_ver: SSLv3
-    ssl_min_ver: TLSv1.1
-    tcp_user_timeout: 0
-    thread: all
-    verify: optional
+    - address: 0.0.0.0:31025
+      alpn: aword
+      level: admin
+      maxconn: 10005
+      name: aword
+      quic-cc-algo: newreno
+      quic-force-retry: true
+      severity_output: none
+      ssl_max_ver: SSLv3
+      ssl_min_ver: TLSv1.1
+      tcp_user_timeout: 0
+      thread: all
+      verify: optional
   set_var:
-  - expr: int(100)
-    name: proc.test2
+    - expr: int(100)
+      name: proc.test2
   set_var_fmt:
-  - format: primary
-    name: proc.current_state
+    - format: primary
+      name: proc.current_state
   setcap: cap_net_bind_service
   ssl_options:
     mode_async: enabled
@@ -107,6 +107,7 @@ spec:
     pattern_cache_size: 0
     sched_low_latency: disabled
     stick_counters: 0
+    epoll_mask_events: []
   tune_quic_options:
     frontend_conn_tx_buffers_limit: 7
     frontend_max_idle_timeout: 0

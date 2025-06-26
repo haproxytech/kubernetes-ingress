@@ -22,7 +22,7 @@ import (
 
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-// +kubebuilder:metadata:annotations="haproxy.org/client-native=v6.1.1"
+// +kubebuilder:metadata:annotations="haproxy.org/client-native=v6.2.1"
 
 // Backend is a specification for a Backend resource
 type Backend struct {

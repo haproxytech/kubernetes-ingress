@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    haproxy.org/client-native: v6.1.1
+    haproxy.org/client-native: v6.2.1
   name: globals.ingress.v3.haproxy.org
 spec:
   group: ingress.v3.haproxy.org
@@ -78,6 +78,58 @@ spec:
                   - process
                   type: object
                 type: array
+              cpu_policy:
+                description: |-
+                  cpu policy
+                  Enum: ["none","efficiency","first-usable-node","group-by-2-ccx","group-by-2-clusters","group-by-3-ccx","group-by-3-clusters","group-by-4-ccx","group-by-4-cluster","group-by-ccx","group-by-cluster","performance","resource"]
+                enum:
+                - none
+                - efficiency
+                - first-usable-node
+                - group-by-2-ccx
+                - group-by-2-clusters
+                - group-by-3-ccx
+                - group-by-3-clusters
+                - group-by-4-ccx
+                - group-by-4-cluster
+                - group-by-ccx
+                - group-by-cluster
+                - performance
+                - resource
+                type: string
+              cpu_set:
+                description: CPU sets
+                items:
+                  description: |-
+                    CPUSet CPU set
+
+                    swagger:model CPUSet
+                  properties:
+                    directive:
+                      description: |-
+                        directive
+                        Required: true
+                        Enum: ["reset","drop-cpu","only-cpu","drop-node","only-node","drop-cluster","only-cluster","drop-core","only-core","drop-thread","only-thread"]
+                      enum:
+                      - reset
+                      - drop-cpu
+                      - only-cpu
+                      - drop-node
+                      - only-node
+                      - drop-cluster
+                      - only-cluster
+                      - drop-core
+                      - only-core
+                      - drop-thread
+                      - only-thread
+                      type: string
+                    set:
+                      description: set
+                      type: string
+                  required:
+                  - directive
+                  type: object
+                type: array
               daemon:
                 description: daemon
                 type: boolean
@@ -96,6 +148,15 @@ spec:
                   quiet:
                     description: quiet
                     type: boolean
+                  stress_level:
+                    description: |-
+                      stress level
+                      Maximum: 9
+                      Minimum: 0
+                    format: int64
+                    maximum: 9
+                    minimum: 0
+                    type: integer
                   zero_warning:
                     description: zero warning
                     type: boolean
@@ -142,6 +203,12 @@ spec:
                     description: separator
                     type: string
                 type: object
+              dns_accept_family:
+                description: |-
+                  dns accept family
+                  Pattern: ^[^\s]+$
+                pattern: ^[^\s]+$
+                type: string
               environment_options:
                 description: environment options
                 properties:
@@ -515,6 +582,8 @@ spec:
                       - info
                       - debug
                       type: string
+                    metadata:
+                      x-kubernetes-preserve-unknown-fields: true
                     minlevel:
                       description: |-
                         minlevel
@@ -600,6 +669,8 @@ spec:
               master-worker:
                 description: master worker
                 type: boolean
+              metadata:
+                x-kubernetes-preserve-unknown-fields: true
               mworker_max_reloads:
                 description: |-
                   mworker max reloads
@@ -865,6 +936,14 @@ spec:
                       description: This field is deprecated in favor of sslv3, and
                         will be removed in a future release
                       type: boolean
+                    force_strict_sni:
+                      description: |-
+                        force strict sni
+                        Enum: ["enabled","disabled"]
+                      enum:
+                      - enabled
+                      - disabled
+                      type: string
                     force_tlsv10:
                       description: This field is deprecated in favor of tlsv10, and
                         will be removed in a future release
@@ -900,6 +979,13 @@ spec:
                     id:
                       description: id
                       type: string
+                    idle_ping:
+                      description: |-
+                        idle ping
+                        Minimum: 0
+                      format: int64
+                      minimum: 0
+                      type: integer
                     interface:
                       description: interface
                       type: string
@@ -956,8 +1042,12 @@ spec:
                       description: This field is deprecated in favor of sslv3, and
                         will be removed in a future release
                       type: boolean
+                    no_strict_sni:
+                      description: no strict sni
+                      type: boolean
                     no_tls_tickets:
-                      description: no tls tickets
+                      description: This field is deprecated in favor of tls_tickets,
+                        and will be removed in a future release
                       type: boolean
                     no_tlsv10:
                       description: This field is deprecated in favor of tlsv10, and
@@ -1097,6 +1187,14 @@ spec:
                     tls_ticket_keys:
                       description: tls ticket keys
                       type: string
+                    tls_tickets:
+                      description: |-
+                        tls tickets
+                        Enum: ["enabled","disabled"]
+                      enum:
+                      - enabled
+                      - disabled
+                      type: string
                     tlsv10:
                       description: |-
                         tlsv10
@@ -1216,6 +1314,14 @@ spec:
               ssl_options:
                 description: ssl options
                 properties:
+                  acme_scheduler:
+                    description: |-
+                      acme scheduler
+                      Enum: ["auto","off"]
+                    enum:
+                    - auto
+                    - "off"
+                    type: string
                   ca_base:
                     description: ca base
                     type: string
@@ -1446,6 +1552,14 @@ spec:
               tune_lua_options:
                 description: tune lua options
                 properties:
+                  bool_sample_conversion:
+                    description: |-
+                      bool sample conversion
+                      Enum: ["normal","pre-3.1-bug"]
+                    enum:
+                    - normal
+                    - pre-3.1-bug
+                    type: string
                   burst_timeout:
                     description: |-
                       burst timeout
@@ -1521,6 +1635,11 @@ spec:
                   disable_zero_copy_forwarding:
                     description: disable zero copy forwarding
                     type: boolean
+                  epoll_mask_events:
+                    description: epoll mask events
+                    items:
+                      type: string
+                    type: array
                   events_max_events_at_once:
                     description: |-
                       events max events at once
@@ -1541,6 +1660,15 @@ spec:
                     - enabled
                     - disabled
                     type: string
+                  glitches_kill_cpu_usage:
+                    description: |-
+                      glitches kill cpu usage
+                      Maximum: 100
+                      Minimum: 0
+                    format: int64
+                    maximum: 100
+                    minimum: 0
+                    type: integer
                   h1_zero_copy_fwd_recv:
                     description: |-
                       h1 zero copy fwd recv
@@ -1675,6 +1803,13 @@ spec:
                     description: max checks per thread
                     format: int64
                     type: integer
+                  max_rules_at_once:
+                    description: |-
+                      max rules at once
+                      Minimum: 0
+                    format: int64
+                    minimum: 0
+                    type: integer
                   maxaccept:
                     description: maxaccept
                     format: int64
@@ -1689,6 +1824,14 @@ spec:
                     type: integer
                   memory_hot_size:
                     description: memory hot size
+                    format: int64
+                    type: integer
+                  notsent_lowat_client:
+                    description: notsent lowat client
+                    format: int64
+                    type: integer
+                  notsent_lowat_server:
+                    description: notsent lowat server
                     format: int64
                     type: integer
                   pattern_cache_size:
@@ -1753,6 +1896,15 @@ spec:
                     description: stick counters
                     format: int64
                     type: integer
+                  takeover_other_tg_connections:
+                    description: |-
+                      takeover other tg connections
+                      Enum: ["none","restricted","full"]
+                    enum:
+                    - none
+                    - restricted
+                    - full
+                    type: string
                 type: object
               tune_quic_options:
                 description: tune quic options
@@ -1770,6 +1922,10 @@ spec:
                     type: integer
                   frontend_max_streams_bidi:
                     description: frontend max streams bidi
+                    format: int64
+                    type: integer
+                  frontend_max_tx_memory:
+                    description: frontend max tx memory
                     format: int64
                     type: integer
                   max_frame_loss:

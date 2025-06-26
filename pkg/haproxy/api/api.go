@@ -91,6 +91,7 @@ type HAProxyClient interface { //nolint:interfacebloat
 	UserListExistsByGroup(group string) (bool, error)
 	UserListCreateByGroup(group string, userPasswordMap map[string][]byte) error
 	Cert
+	CertAuth
 	PushPreviousBackends() error
 	PopPreviousBackends() error
 }
@@ -102,6 +103,14 @@ type Cert interface {
 	CertEntryAbort(filename string) error
 	CrtListEntryAdd(crtList string, entry runtime.CrtListEntry) error
 	CrtListEntryDelete(crtList, filename string, linenumber *int64) error
+	CertEntryDelete(filename string) error
+}
+
+type CertAuth interface {
+	CertAuthEntryCreate(filename string) error
+	CertAuthEntrySet(filename string, payload []byte) error
+	CertAuthEntryCommit(filename string) error
+	CertEntryAbort(filename string) error
 	CertEntryDelete(filename string) error
 }
 

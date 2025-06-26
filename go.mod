@@ -11,7 +11,7 @@ require (
 	github.com/google/go-cmp v0.7.0
 	github.com/google/renameio v1.0.1
 	github.com/haproxytech/client-native/v5 v5.1.16-0.20241206145631-acb903fd9ec2
-	github.com/haproxytech/client-native/v6 v6.1.1
+	github.com/haproxytech/client-native/v6 v6.2.1
 	github.com/jessevdk/go-flags v1.4.0
 	github.com/pires/go-proxyproto v0.8.1
 	github.com/prometheus/client_golang v1.22.0
@@ -49,6 +49,7 @@ require (
 	github.com/go-openapi/spec v0.21.0 // indirect
 	github.com/go-openapi/strfmt v0.23.0 // indirect
 	github.com/go-openapi/validate v0.24.0 // indirect
+	github.com/go-viper/mapstructure/v2 v2.2.1 // indirect
 	github.com/gofrs/flock v0.12.1 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/google/gnostic-models v0.6.9 // indirect

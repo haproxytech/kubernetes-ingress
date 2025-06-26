@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    haproxy.org/client-native: v6.1.1
+    haproxy.org/client-native: v6.2.1
   name: tcps.ingress.v3.haproxy.org
 spec:
   group: ingress.v3.haproxy.org
@@ -88,6 +88,8 @@ spec:
                               Pattern: ^[^\s]+$
                             pattern: ^[^\s]+$
                             type: string
+                          metadata:
+                            x-kubernetes-preserve-unknown-fields: true
                           value:
                             description: value
                             type: string
@@ -118,6 +120,8 @@ spec:
                           cond_test:
                             description: cond test
                             type: string
+                          metadata:
+                            x-kubernetes-preserve-unknown-fields: true
                           name:
                             description: |-
                               name
@@ -219,6 +223,14 @@ spec:
                             description: This field is deprecated in favor of sslv3,
                               and will be removed in a future release
                             type: boolean
+                          force_strict_sni:
+                            description: |-
+                              force strict sni
+                              Enum: ["enabled","disabled"]
+                            enum:
+                            - enabled
+                            - disabled
+                            type: string
                           force_tlsv10:
                             description: This field is deprecated in favor of tlsv10,
                               and will be removed in a future release
@@ -254,6 +266,13 @@ spec:
                           id:
                             description: id
                             type: string
+                          idle_ping:
+                            description: |-
+                              idle ping
+                              Minimum: 0
+                            format: int64
+                            minimum: 0
+                            type: integer
                           interface:
                             description: interface
                             type: string
@@ -273,6 +292,8 @@ spec:
                               Example: 1234
                             format: int64
                             type: integer
+                          metadata:
+                            x-kubernetes-preserve-unknown-fields: true
                           mode:
                             description: mode
                             type: string
@@ -310,8 +331,12 @@ spec:
                             description: This field is deprecated in favor of sslv3,
                               and will be removed in a future release
                             type: boolean
+                          no_strict_sni:
+                            description: no strict sni
+                            type: boolean
                           no_tls_tickets:
-                            description: no tls tickets
+                            description: This field is deprecated in favor of tls_tickets,
+                              and will be removed in a future release
                             type: boolean
                           no_tlsv10:
                             description: This field is deprecated in favor of tlsv10,
@@ -471,6 +496,14 @@ spec:
                           tls_ticket_keys:
                             description: tls ticket keys
                             type: string
+                          tls_tickets:
+                            description: |-
+                              tls tickets
+                              Enum: ["enabled","disabled"]
+                            enum:
+                            - enabled
+                            - disabled
+                            type: string
                           tlsv10:
                             description: |-
                               tlsv10
@@ -545,6 +578,8 @@ spec:
                               Required: true
                             format: int64
                             type: integer
+                          metadata:
+                            x-kubernetes-preserve-unknown-fields: true
                           type:
                             description: |-
                               type
@@ -628,6 +663,14 @@ spec:
                           - response
                           - both
                           type: string
+                        minsize_req:
+                          description: minsize req
+                          format: int64
+                          type: integer
+                        minsize_res:
+                          description: minsize res
+                          format: int64
+                          type: integer
                         offload:
                           description: offload
                           type: boolean
@@ -719,6 +762,8 @@ spec:
                             mailers
                             Required: true
                           type: string
+                        metadata:
+                          x-kubernetes-preserve-unknown-fields: true
                         myhostname:
                           description: myhostname
                           type: string
@@ -791,6 +836,8 @@ spec:
                               format: int64
                               type: integer
                             type: array
+                          metadata:
+                            x-kubernetes-preserve-unknown-fields: true
                           name:
                             description: name
                             type: string
@@ -824,6 +871,8 @@ spec:
                           - 504
                           format: int64
                           type: integer
+                        metadata:
+                          x-kubernetes-preserve-unknown-fields: true
                         url:
                           description: |-
                             url
@@ -861,6 +910,8 @@ spec:
                           - 504
                           format: int64
                           type: integer
+                        metadata:
+                          x-kubernetes-preserve-unknown-fields: true
                         url:
                           description: |-
                             url
@@ -926,6 +977,8 @@ spec:
                               It follows the HAProxy size format and is expressed in bytes.
                             format: int64
                             type: integer
+                          metadata:
+                            x-kubernetes-preserve-unknown-fields: true
                           min_size:
                             description: |-
                               The optional minimum number of bytes forwarded at a time by a stream excluding the last packet that may be smaller.
@@ -1040,6 +1093,14 @@ spec:
                       - enabled
                       - disabled
                       type: string
+                    http-drop-response-trailers:
+                      description: |-
+                        http drop response trailers
+                        Enum: ["enabled","disabled"]
+                      enum:
+                      - enabled
+                      - disabled
+                      type: string
                     http-use-htx:
                       description: |-
                         http use htx
@@ -1141,6 +1202,8 @@ spec:
                               Pattern: ^[^\s]+$
                             pattern: ^[^\s]+$
                             type: string
+                          metadata:
+                            x-kubernetes-preserve-unknown-fields: true
                           sc_expr:
                             description: sc expr
                             type: string
@@ -1248,6 +1311,8 @@ spec:
 
                           swagger:model http_error_rule
                         properties:
+                          metadata:
+                            x-kubernetes-preserve-unknown-fields: true
                           return_content:
                             description: return content
                             type: string
@@ -1504,6 +1569,8 @@ spec:
                               Pattern: ^(0x[0-9A-Fa-f]+|[0-9]+)$
                             pattern: ^(0x[0-9A-Fa-f]+|[0-9]+)$
                             type: string
+                          metadata:
+                            x-kubernetes-preserve-unknown-fields: true
                           method_fmt:
                             description: |-
                               method fmt
@@ -1726,7 +1793,7 @@ spec:
                             description: |-
                               type
                               Required: true
-                              Enum: ["add-acl","add-header","allow","auth","cache-use","capture","del-acl","del-header","del-map","deny","disable-l7-retry","do-resolve","early-hint","lua","normalize-uri","redirect","reject","replace-header","replace-path","replace-pathq","replace-uri","replace-value","return","sc-add-gpc","sc-inc-gpc","sc-inc-gpc0","sc-inc-gpc1","sc-set-gpt","sc-set-gpt0","send-spoe-group","set-bc-mark","set-bc-tos","set-dst","set-dst-port","set-fc-mark","set-fc-tos","set-header","set-log-level","set-map","set-mark","set-method","set-nice","set-path","set-pathq","set-priority-class","set-priority-offset","set-query","set-src","set-src-port","set-timeout","set-tos","set-uri","set-var","silent-drop","strict-mode","tarpit","track-sc","unset-var","use-service","wait-for-body","wait-for-handshake","set-bandwidth-limit","set-retries","do-log"]
+                              Enum: ["add-acl","add-header","allow","auth","cache-use","capture","del-acl","del-header","del-map","deny","disable-l7-retry","do-resolve","early-hint","lua","normalize-uri","pause","redirect","reject","replace-header","replace-path","replace-pathq","replace-uri","replace-value","return","sc-add-gpc","sc-inc-gpc","sc-inc-gpc0","sc-inc-gpc1","sc-set-gpt","sc-set-gpt0","send-spoe-group","set-bc-mark","set-bc-tos","set-dst","set-dst-port","set-fc-mark","set-fc-tos","set-header","set-log-level","set-map","set-mark","set-method","set-nice","set-path","set-pathq","set-priority-class","set-priority-offset","set-query","set-src","set-src-port","set-timeout","set-tos","set-uri","set-var","set-var-fmt","silent-drop","strict-mode","tarpit","track-sc","unset-var","use-service","wait-for-body","wait-for-handshake","set-bandwidth-limit","set-retries","do-log"]
                             enum:
                             - add-acl
                             - add-header
@@ -1743,6 +1810,7 @@ spec:
                             - early-hint
                             - lua
                             - normalize-uri
+                            - pause
                             - redirect
                             - reject
                             - replace-header
@@ -1781,6 +1849,7 @@ spec:
                             - set-tos
                             - set-uri
                             - set-var
+                            - set-var-fmt
                             - silent-drop
                             - strict-mode
                             - tarpit
@@ -1970,6 +2039,8 @@ spec:
                               Pattern: ^(0x[0-9A-Fa-f]+|[0-9]+)$
                             pattern: ^(0x[0-9A-Fa-f]+|[0-9]+)$
                             type: string
+                          metadata:
+                            x-kubernetes-preserve-unknown-fields: true
                           nice_value:
                             description: |-
                               nice value
@@ -2149,7 +2220,7 @@ spec:
                             description: |-
                               type
                               Required: true
-                              Enum: ["add-acl","add-header","allow","cache-store","capture","del-acl","del-header","del-map","deny","lua","redirect","replace-header","replace-value","return","sc-add-gpc","sc-inc-gpc","sc-inc-gpc0","sc-inc-gpc1","sc-set-gpt","sc-set-gpt0","send-spoe-group","set-fc-mark","set-fc-tos","set-header","set-log-level","set-map","set-mark","set-nice","set-status","set-timeout","set-tos","set-var","set-var-fmt","silent-drop","strict-mode","track-sc","unset-var","wait-for-body","set-bandwidth-limit","do-log"]
+                              Enum: ["add-acl","add-header","allow","cache-store","capture","del-acl","del-header","del-map","deny","lua","pause","redirect","replace-header","replace-value","return","sc-add-gpc","sc-inc-gpc","sc-inc-gpc0","sc-inc-gpc1","sc-set-gpt","sc-set-gpt0","send-spoe-group","set-fc-mark","set-fc-tos","set-header","set-log-level","set-map","set-mark","set-nice","set-status","set-timeout","set-tos","set-var","set-var-fmt","silent-drop","strict-mode","track-sc","unset-var","wait-for-body","set-bandwidth-limit","do-log"]
                             enum:
                             - add-acl
                             - add-header
@@ -2161,6 +2232,7 @@ spec:
                             - del-map
                             - deny
                             - lua
+                            - pause
                             - redirect
                             - replace-header
                             - replace-value
@@ -2379,6 +2451,8 @@ spec:
                             - info
                             - debug
                             type: string
+                          metadata:
+                            x-kubernetes-preserve-unknown-fields: true
                           minlevel:
                             description: |-
                               minlevel
@@ -2420,6 +2494,8 @@ spec:
                       description: maxconn
                       format: int64
                       type: integer
+                    metadata:
+                      x-kubernetes-preserve-unknown-fields: true
                     mode:
                       description: |-
                         mode
@@ -2515,6 +2591,8 @@ spec:
                           cond_test:
                             description: cond test
                             type: string
+                          metadata:
+                            x-kubernetes-preserve-unknown-fields: true
                           type:
                             description: |-
                               type
@@ -2562,6 +2640,119 @@ spec:
                       - enabled
                       - disabled
                       type: string
+                    ssl_front_use_list:
+                      description: s s l front uses
+                      items:
+                        description: |-
+                          SSLFrontUse SSL Frontend Use certificate
+
+                          # Assign a certificate to the current frontend
+
+                          swagger:model SSLFrontUse
+                        properties:
+                          allow_0rtt:
+                            description: allow 0rtt
+                            type: boolean
+                          alpn:
+                            description: alpn
+                            type: string
+                          ca_file:
+                            description: ca file
+                            type: string
+                          certificate:
+                            description: |-
+                              Certificate filename
+                              Required: true
+                              Pattern: ^[^\s]+$
+                            pattern: ^[^\s]+$
+                            type: string
+                          ciphers:
+                            description: ciphers
+                            type: string
+                          ciphersuites:
+                            description: ciphersuites
+                            type: string
+                          client_sigalgs:
+                            description: client sigalgs
+                            type: string
+                          crl_file:
+                            description: crl file
+                            type: string
+                          curves:
+                            description: curves
+                            type: string
+                          ecdhe:
+                            description: ecdhe
+                            type: string
+                          issuer:
+                            description: OCSP issuer filename
+                            type: string
+                          key:
+                            description: Private key filename
+                            type: string
+                          metadata:
+                            x-kubernetes-preserve-unknown-fields: true
+                          no_alpn:
+                            description: no alpn
+                            type: boolean
+                          no_ca_names:
+                            description: no ca names
+                            type: boolean
+                          npn:
+                            description: npn
+                            type: string
+                          ocsp:
+                            description: OCSP response filename
+                            type: string
+                          ocsp_update:
+                            description: |-
+                              Automatic OCSP response update
+                              Enum: ["enabled","disabled"]
+                            enum:
+                            - enabled
+                            - disabled
+                            type: string
+                          sctl:
+                            description: Signed Certificate Timestamp List filename
+                            type: string
+                          sigalgs:
+                            description: sigalgs
+                            type: string
+                          ssl_max_ver:
+                            description: |-
+                              ssl max ver
+                              Enum: ["SSLv3","TLSv1.0","TLSv1.1","TLSv1.2","TLSv1.3"]
+                            enum:
+                            - SSLv3
+                            - TLSv1.0
+                            - TLSv1.1
+                            - TLSv1.2
+                            - TLSv1.3
+                            type: string
+                          ssl_min_ver:
+                            description: |-
+                              ssl min ver
+                              Enum: ["SSLv3","TLSv1.0","TLSv1.1","TLSv1.2","TLSv1.3"]
+                            enum:
+                            - SSLv3
+                            - TLSv1.0
+                            - TLSv1.1
+                            - TLSv1.2
+                            - TLSv1.3
+                            type: string
+                          verify:
+                            description: |-
+                              verify
+                              Enum: ["none","optional","required"]
+                            enum:
+                            - none
+                            - optional
+                            - required
+                            type: string
+                        required:
+                        - certificate
+                        type: object
+                      type: array
                     stats_options:
                       description: stats options
                       properties:
@@ -2697,6 +2888,8 @@ spec:
                           description: keylen
                           format: int64
                           type: integer
+                        metadata:
+                          x-kubernetes-preserve-unknown-fields: true
                         nopurge:
                           description: nopurge
                           type: boolean
@@ -2706,6 +2899,9 @@ spec:
                             Pattern: ^[^\s]+$
                           pattern: ^[^\s]+$
                           type: string
+                        recv_only:
+                          description: recv only
+                          type: boolean
                         size:
                           description: |-
                             size
@@ -2874,6 +3070,8 @@ spec:
                               Pattern: ^(0x[0-9A-Fa-f]+|[0-9]+)$
                             pattern: ^(0x[0-9A-Fa-f]+|[0-9]+)$
                             type: string
+                          metadata:
+                            x-kubernetes-preserve-unknown-fields: true
                           nice_value:
                             description: |-
                               nice value

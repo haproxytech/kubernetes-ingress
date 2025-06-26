@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    haproxy.org/client-native: v6.1.1
+    haproxy.org/client-native: v6.2.1
   name: defaults.ingress.v3.haproxy.org
 spec:
   group: ingress.v3.haproxy.org
@@ -79,6 +79,42 @@ spec:
                 - enabled
                 - disabled
                 type: string
+              acl_list:
+                description: Acl list
+                items:
+                  description: |-
+                    ACL ACL Lines
+
+                    The use of Access Control Lists (ACL) provides a flexible solution to perform
+                    content switching and generally to take decisions based on content extracted
+                    from the request, the response or any environmental status.
+
+                    swagger:model acl
+                  properties:
+                    acl_name:
+                      description: |-
+                        acl name
+                        Required: true
+                        Pattern: ^[^\s]+$
+                      pattern: ^[^\s]+$
+                      type: string
+                    criterion:
+                      description: |-
+                        criterion
+                        Required: true
+                        Pattern: ^[^\s]+$
+                      pattern: ^[^\s]+$
+                      type: string
+                    metadata:
+                      x-kubernetes-preserve-unknown-fields: true
+                    value:
+                      description: value
+                      type: string
+                  required:
+                  - acl_name
+                  - criterion
+                  type: object
+                type: array
               adv_check:
                 description: |-
                   adv check
@@ -257,6 +293,14 @@ spec:
                     - response
                     - both
                     type: string
+                  minsize_req:
+                    description: minsize req
+                    format: int64
+                    type: integer
+                  minsize_res:
+                    description: minsize res
+                    format: int64
+                    type: integer
                   offload:
                     description: offload
                     type: boolean
@@ -440,6 +484,20 @@ spec:
                     - enabled
                     - disabled
                     type: string
+                  check-pool-conn-name:
+                    description: |-
+                      check pool conn name
+                      Pattern: ^[^\s]+$
+                    pattern: ^[^\s]+$
+                    type: string
+                  check-reuse-pool:
+                    description: |-
+                      check reuse pool
+                      Enum: ["enabled","disabled"]
+                    enum:
+                    - enabled
+                    - disabled
+                    type: string
                   check-send-proxy:
                     description: |-
                       check send proxy
@@ -591,6 +649,13 @@ spec:
                     format: int64
                     maximum: 65535
                     minimum: 1
+                    type: integer
+                  idle_ping:
+                    description: |-
+                      idle ping
+                      Minimum: 0
+                    format: int64
+                    minimum: 0
                     type: integer
                   init-addr:
                     description: |-
@@ -946,6 +1011,9 @@ spec:
                     - enabled
                     - disabled
                     type: string
+                  strict-maxconn:
+                    description: strict maxconn
+                    type: boolean
                   tcp_ut:
                     description: |-
                       tcp ut
@@ -1091,6 +1159,8 @@ spec:
                       mailers
                       Required: true
                     type: string
+                  metadata:
+                    x-kubernetes-preserve-unknown-fields: true
                   myhostname:
                     description: myhostname
                     type: string
@@ -1163,6 +1233,8 @@ spec:
                         format: int64
                         type: integer
                       type: array
+                    metadata:
+                      x-kubernetes-preserve-unknown-fields: true
                     name:
                       description: name
                       type: string
@@ -1196,6 +1268,8 @@ spec:
                     - 504
                     format: int64
                     type: integer
+                  metadata:
+                    x-kubernetes-preserve-unknown-fields: true
                   url:
                     description: |-
                       url
@@ -1233,6 +1307,8 @@ spec:
                     - 504
                     format: int64
                     type: integer
+                  metadata:
+                    x-kubernetes-preserve-unknown-fields: true
                   url:
                     description: |-
                       url
@@ -1321,6 +1397,15 @@ spec:
                 description: hash balance factor
                 format: int64
                 type: integer
+              hash_preserve_affinity:
+                description: |-
+                  hash preserve affinity
+                  Enum: ["always","maxconn","maxqueue"]
+                enum:
+                - always
+                - maxconn
+                - maxqueue
+                type: string
               hash_type:
                 description: hash type
                 properties:
@@ -1359,6 +1444,22 @@ spec:
                 - enabled
                 - disabled
                 type: string
+              http-drop-request-trailers:
+                description: |-
+                  http drop request trailers
+                  Enum: ["enabled","disabled"]
+                enum:
+                - enabled
+                - disabled
+                type: string
+              http-drop-response-trailers:
+                description: |-
+                  http drop response trailers
+                  Enum: ["enabled","disabled"]
+                enum:
+                - enabled
+                - disabled
+                type: string
               http-use-htx:
                 description: |-
                   http use htx
@@ -1367,6 +1468,188 @@ spec:
                 - enabled
                 - disabled
                 type: string
+              http_after_response_rule_list:
+                description: HTTP after response rule list
+                items:
+                  description: |-
+                    HTTPAfterResponseRule HTTP after Response Rule
+
+                    HAProxy HTTP after response rule configuration (corresponds to http-after-response directives)
+                    Example: {"cond":"unless","cond_test":"{ src 192.168.0.0/16 }","hdr_format":"max-age=31536000","hdr_name":"Strict-Transport-Security","type":"set-header"}
+
+                    swagger:model http_after_response_rule
+                  properties:
+                    acl_file:
+                      description: |-
+                        acl file
+                        Pattern: ^[^\s]+$
+                      pattern: ^[^\s]+$
+                      type: string
+                    acl_keyfmt:
+                      description: |-
+                        acl keyfmt
+                        Pattern: ^[^\s]+$
+                      pattern: ^[^\s]+$
+                      type: string
+                    capture_id:
+                      description: capture id
+                      format: int64
+                      type: integer
+                    capture_len:
+                      description: capture len
+                      format: int64
+                      type: integer
+                    capture_sample:
+                      description: |-
+                        capture sample
+                        Pattern: ^(?:[A-Za-z]+\("([A-Za-z\s]+)"\)|[A-Za-z]+)
+                      pattern: ^(?:[A-Za-z]+\("([A-Za-z\s]+)"\)|[A-Za-z]+)
+                      type: string
+                    cond:
+                      description: |-
+                        cond
+                        Enum: ["if","unless"]
+                      enum:
+                      - if
+                      - unless
+                      type: string
+                    cond_test:
+                      description: cond test
+                      type: string
+                    hdr_format:
+                      description: hdr format
+                      type: string
+                    hdr_match:
+                      description: hdr match
+                      type: string
+                    hdr_method:
+                      description: hdr method
+                      type: string
+                    hdr_name:
+                      description: hdr name
+                      type: string
+                    log_level:
+                      description: |-
+                        log level
+                        Enum: ["emerg","alert","crit","err","warning","notice","info","debug","silent"]
+                      enum:
+                      - emerg
+                      - alert
+                      - crit
+                      - err
+                      - warning
+                      - notice
+                      - info
+                      - debug
+                      - silent
+                      type: string
+                    map_file:
+                      description: |-
+                        map file
+                        Pattern: ^[^\s]+$
+                      pattern: ^[^\s]+$
+                      type: string
+                    map_keyfmt:
+                      description: |-
+                        map keyfmt
+                        Pattern: ^[^\s]+$
+                      pattern: ^[^\s]+$
+                      type: string
+                    map_valuefmt:
+                      description: |-
+                        map valuefmt
+                        Pattern: ^[^\s]+$
+                      pattern: ^[^\s]+$
+                      type: string
+                    metadata:
+                      x-kubernetes-preserve-unknown-fields: true
+                    sc_expr:
+                      description: sc expr
+                      type: string
+                    sc_id:
+                      description: sc id
+                      format: int64
+                      type: integer
+                    sc_idx:
+                      description: sc idx
+                      format: int64
+                      type: integer
+                    sc_int:
+                      description: sc int
+                      format: int64
+                      type: integer
+                    status:
+                      description: |-
+                        status
+                        Maximum: 999
+                        Minimum: 100
+                      format: int64
+                      maximum: 999
+                      minimum: 100
+                      type: integer
+                    status_reason:
+                      description: status reason
+                      type: string
+                    strict_mode:
+                      description: |-
+                        strict mode
+                        Enum: ["on","off"]
+                      enum:
+                      - "on"
+                      - "off"
+                      type: string
+                    type:
+                      description: |-
+                        type
+                        Required: true
+                        Enum: ["add-header","allow","capture","del-acl","del-header","del-map","replace-header","replace-value","sc-add-gpc","sc-inc-gpc","sc-inc-gpc0","sc-inc-gpc1","sc-set-gpt","sc-set-gpt0","set-header","set-log-level","set-map","set-status","set-var","set-var-fmt","strict-mode","unset-var","do-log"]
+                      enum:
+                      - add-header
+                      - allow
+                      - capture
+                      - del-acl
+                      - del-header
+                      - del-map
+                      - replace-header
+                      - replace-value
+                      - sc-add-gpc
+                      - sc-inc-gpc
+                      - sc-inc-gpc0
+                      - sc-inc-gpc1
+                      - sc-set-gpt
+                      - sc-set-gpt0
+                      - set-header
+                      - set-log-level
+                      - set-map
+                      - set-status
+                      - set-var
+                      - set-var-fmt
+                      - strict-mode
+                      - unset-var
+                      - do-log
+                      type: string
+                    var_expr:
+                      description: var expr
+                      type: string
+                    var_format:
+                      description: var format
+                      type: string
+                    var_name:
+                      description: |-
+                        var name
+                        Pattern: ^[^\s]+$
+                      pattern: ^[^\s]+$
+                      type: string
+                    var_scope:
+                      description: |-
+                        var scope
+                        Pattern: ^[^\s]+$
+                      pattern: ^[^\s]+$
+                      type: string
+                  required:
+                  - type
+                  type: object
+                type: array
               http_check_list:
                 description: HTTP check list
                 items:
@@ -1453,6 +1736,8 @@ spec:
                       - rstring
                       pattern: ^[^\s]+$
                       type: string
+                    metadata:
+                      x-kubernetes-preserve-unknown-fields: true
                     method:
                       description: |-
                         method
@@ -1597,6 +1882,8 @@ spec:
 
                     swagger:model http_error_rule
                   properties:
+                    metadata:
+                      x-kubernetes-preserve-unknown-fields: true
                     return_content:
                       description: return content
                       type: string
@@ -1708,6 +1995,491 @@ spec:
                 - enabled
                 - disabled
                 type: string
+              http_request_rule_list:
+                description: HTTP request rule list
+                items:
+                  description: |-
+                    HTTPRequestRule HTTP Request Rule
+
+                    HAProxy HTTP request rule configuration (corresponds to http-request directives)
+                    Example: {"cond":"unless","cond_test":"{ src 192.168.0.0/16 }","hdr_format":"%T","hdr_name":"X-Haproxy-Current-Date","index":0,"type":"add-header"}
+
+                    swagger:model http_request_rule
+                  properties:
+                    acl_file:
+                      description: |-
+                        acl file
+                        Pattern: ^[^\s]+$
+                      pattern: ^[^\s]+$
+                      type: string
+                    acl_keyfmt:
+                      description: |-
+                        acl keyfmt
+                        Pattern: ^[^\s]+$
+                      pattern: ^[^\s]+$
+                      type: string
+                    auth_realm:
+                      description: |-
+                        auth realm
+                        Pattern: ^[^\s]+$
+                      pattern: ^[^\s]+$
+                      type: string
+                    bandwidth_limit_limit:
+                      description: bandwidth limit limit
+                      type: string
+                    bandwidth_limit_name:
+                      description: bandwidth limit name
+                      type: string
+                    bandwidth_limit_period:
+                      description: bandwidth limit period
+                      type: string
+                    cache_name:
+                      description: |-
+                        cache name
+                        Pattern: ^[^\s]+$
+                      pattern: ^[^\s]+$
+                      type: string
+                    capture_id:
+                      description: capture id
+                      format: int64
+                      type: integer
+                    capture_len:
+                      description: capture len
+                      format: int64
+                      type: integer
+                    capture_sample:
+                      description: |-
+                        capture sample
+                        Pattern: ^(?:[A-Za-z]+\("([A-Za-z\s]+)"\)|[A-Za-z]+)
+                      pattern: ^(?:[A-Za-z]+\("([A-Za-z\s]+)"\)|[A-Za-z]+)
+                      type: string
+                    cond:
+                      description: |-
+                        cond
+                        Enum: ["if","unless"]
+                      enum:
+                      - if
+                      - unless
+                      type: string
+                    cond_test:
+                      description: cond test
+                      type: string
+                    deny_status:
+                      description: |-
+                        deny status
+                        Maximum: 599
+                        Minimum: 200
+                      format: int64
+                      maximum: 599
+                      minimum: 200
+                      type: integer
+                    expr:
+                      description: expr
+                      type: string
+                    hdr_format:
+                      description: hdr format
+                      type: string
+                    hdr_match:
+                      description: hdr match
+                      type: string
+                    hdr_method:
+                      description: hdr method
+                      type: string
+                    hdr_name:
+                      description: hdr name
+                      type: string
+                    hint_format:
+                      description: |-
+                        hint format
+                        Pattern: ^[^\s]+$
+                      pattern: ^[^\s]+$
+                      type: string
+                    hint_name:
+                      description: |-
+                        hint name
+                        Pattern: ^[^\s]+$
+                      pattern: ^[^\s]+$
+                      type: string
+                    log_level:
+                      description: |-
+                        log level
+                        Enum: ["emerg","alert","crit","err","warning","notice","info","debug","silent"]
+                      enum:
+                      - emerg
+                      - alert
+                      - crit
+                      - err
+                      - warning
+                      - notice
+                      - info
+                      - debug
+                      - silent
+                      type: string
+                    lua_action:
+                      description: |-
+                        lua action
+                        Pattern: ^[^\s]+$
+                      pattern: ^[^\s]+$
+                      type: string
+                    lua_params:
+                      description: lua params
+                      type: string
+                    map_file:
+                      description: |-
+                        map file
+                        Pattern: ^[^\s]+$
+                      pattern: ^[^\s]+$
+                      type: string
+                    map_keyfmt:
+                      description: |-
+                        map keyfmt
+                        Pattern: ^[^\s]+$
+                      pattern: ^[^\s]+$
+                      type: string
+                    map_valuefmt:
+                      description: |-
+                        map valuefmt
+                        Pattern: ^[^\s]+$
+                      pattern: ^[^\s]+$
+                      type: string
+                    mark_value:
+                      description: |-
+                        mark value
+                        Pattern: ^(0x[0-9A-Fa-f]+|[0-9]+)$
+                      pattern: ^(0x[0-9A-Fa-f]+|[0-9]+)$
+                      type: string
+                    metadata:
+                      x-kubernetes-preserve-unknown-fields: true
+                    method_fmt:
+                      description: |-
+                        method fmt
+                        Pattern: ^[^\s]+$
+                      pattern: ^[^\s]+$
+                      type: string
+                    nice_value:
+                      description: |-
+                        nice value
+                        Maximum: 1024
+                        Minimum: -1024
+                      format: int64
+                      maximum: 1024
+                      minimum: -1024
+                      type: integer
+                    normalizer:
+                      description: |-
+                        normalizer
+                        Enum: ["fragment-encode","fragment-strip","path-merge-slashes","path-strip-dot","path-strip-dotdot","percent-decode-unreserved","percent-to-uppercase","query-sort-by-name"]
+                      enum:
+                      - fragment-encode
+                      - fragment-strip
+                      - path-merge-slashes
+                      - path-strip-dot
+                      - path-strip-dotdot
+                      - percent-decode-unreserved
+                      - percent-to-uppercase
+                      - query-sort-by-name
+                      type: string
+                    normalizer_full:
+                      description: normalizer full
+                      type: boolean
+                    normalizer_strict:
+                      description: normalizer strict
+                      type: boolean
+                    path_fmt:
+                      description: |-
+                        path fmt
+                        Pattern: ^[^\s]+$
+                      pattern: ^[^\s]+$
+                      type: string
+                    path_match:
+                      description: |-
+                        path match
+                        Pattern: ^[^\s]+$
+                      pattern: ^[^\s]+$
+                      type: string
+                    protocol:
+                      description: |-
+                        protocol
+                        Enum: ["ipv4","ipv6"]
+                      enum:
+                      - ipv4
+                      - ipv6
+                      type: string
+                    query-fmt:
+                      description: query fmt
+                      type: string
+                    redir_code:
+                      description: |-
+                        redir code
+                        Enum: [301,302,303,307,308]
+                      enum:
+                      - 301
+                      - 302
+                      - 303
+                      - 307
+                      - 308
+                      format: int64
+                      type: integer
+                    redir_option:
+                      description: redir option
+                      type: string
+                    redir_type:
+                      description: |-
+                        redir type
+                        Enum: ["location","prefix","scheme"]
+                      enum:
+                      - location
+                      - prefix
+                      - scheme
+                      type: string
+                    redir_value:
+                      description: |-
+                        redir value
+                        Pattern: ^[^\s]+$
+                      pattern: ^[^\s]+$
+                      type: string
+                    resolvers:
+                      description: resolvers
+                      type: string
+                    return_content:
+                      description: return content
+                      type: string
+                    return_content_format:
+                      description: |-
+                        return content format
+                        Enum: ["default-errorfiles","errorfile","errorfiles","file","lf-file","string","lf-string"]
+                      enum:
+                      - default-errorfiles
+                      - errorfile
+                      - errorfiles
+                      - file
+                      - lf-file
+                      - string
+                      - lf-string
+                      type: string
+                    return_content_type:
+                      description: return content type
+                      type: string
+                    return_hdrs:
+                      description: return headers
+                      items:
+                        description: |-
+                          ReturnHeader return header
+
+                          swagger:model ReturnHeader
+                        properties:
+                          fmt:
+                            description: |-
+                              fmt
+                              Required: true
+                            type: string
+                          name:
+                            description: |-
+                              name
+                              Required: true
+                            type: string
+                        required:
+                        - fmt
+                        - name
+                        type: object
+                      type: array
+                    return_status_code:
+                      description: |-
+                        return status code
+                        Maximum: 599
+                        Minimum: 200
+                      format: int64
+                      maximum: 599
+                      minimum: 200
+                      type: integer
+                    rst_ttl:
+                      description: rst ttl
+                      format: int64
+                      type: integer
+                    sc_expr:
+                      description: sc expr
+                      type: string
+                    sc_id:
+                      description: sc id
+                      format: int64
+                      type: integer
+                    sc_idx:
+                      description: sc idx
+                      format: int64
+                      type: integer
+                    sc_int:
+                      description: sc int
+                      format: int64
+                      type: integer
+                    service_name:
+                      description: service name
+                      type: string
+                    spoe_engine:
+                      description: |-
+                        spoe engine
+                        Pattern: ^[^\s]+$
+                      pattern: ^[^\s]+$
+                      type: string
+                    spoe_group:
+                      description: |-
+                        spoe group
+                        Pattern: ^[^\s]+$
+                      pattern: ^[^\s]+$
+                      type: string
+                    strict_mode:
+                      description: |-
+                        strict mode
+                        Enum: ["on","off"]
+                      enum:
+                      - "on"
+                      - "off"
+                      type: string
+                    timeout:
+                      description: timeout
+                      type: string
+                    timeout_type:
+                      description: |-
+                        timeout type
+                        Enum: ["server","tunnel","client"]
+                      enum:
+                      - server
+                      - tunnel
+                      - client
+                      type: string
+                    tos_value:
+                      description: |-
+                        tos value
+                        Pattern: ^(0x[0-9A-Fa-f]+|[0-9]+)$
+                      pattern: ^(0x[0-9A-Fa-f]+|[0-9]+)$
+                      type: string
+                    track_sc_key:
+                      description: |-
+                        track sc key
+                        Pattern: ^[^\s]+$
+                      pattern: ^[^\s]+$
+                      type: string
+                    track_sc_stick_counter:
+                      description: track sc stick counter
+                      format: int64
+                      type: integer
+                    track_sc_table:
+                      description: |-
+                        track sc table
+                        Pattern: ^[^\s]+$
+                      pattern: ^[^\s]+$
+                      type: string
+                    type:
+                      description: |-
+                        type
+                        Required: true
+                        Enum: ["add-acl","add-header","allow","auth","cache-use","capture","del-acl","del-header","del-map","deny","disable-l7-retry","do-resolve","early-hint","lua","normalize-uri","pause","redirect","reject","replace-header","replace-path","replace-pathq","replace-uri","replace-value","return","sc-add-gpc","sc-inc-gpc","sc-inc-gpc0","sc-inc-gpc1","sc-set-gpt","sc-set-gpt0","send-spoe-group","set-bc-mark","set-bc-tos","set-dst","set-dst-port","set-fc-mark","set-fc-tos","set-header","set-log-level","set-map","set-mark","set-method","set-nice","set-path","set-pathq","set-priority-class","set-priority-offset","set-query","set-src","set-src-port","set-timeout","set-tos","set-uri","set-var","set-var-fmt","silent-drop","strict-mode","tarpit","track-sc","unset-var","use-service","wait-for-body","wait-for-handshake","set-bandwidth-limit","set-retries","do-log"]
+                      enum:
+                      - add-acl
+                      - add-header
+                      - allow
+                      - auth
+                      - cache-use
+                      - capture
+                      - del-acl
+                      - del-header
+                      - del-map
+                      - deny
+                      - disable-l7-retry
+                      - do-resolve
+                      - early-hint
+                      - lua
+                      - normalize-uri
+                      - pause
+                      - redirect
+                      - reject
+                      - replace-header
+                      - replace-path
+                      - replace-pathq
+                      - replace-uri
+                      - replace-value
+                      - return
+                      - sc-add-gpc
+                      - sc-inc-gpc
+                      - sc-inc-gpc0
+                      - sc-inc-gpc1
+                      - sc-set-gpt
+                      - sc-set-gpt0
+                      - send-spoe-group
+                      - set-bc-mark
+                      - set-bc-tos
+                      - set-dst
+                      - set-dst-port
+                      - set-fc-mark
+                      - set-fc-tos
+                      - set-header
+                      - set-log-level
+                      - set-map
+                      - set-mark
+                      - set-method
+                      - set-nice
+                      - set-path
+                      - set-pathq
+                      - set-priority-class
+                      - set-priority-offset
+                      - set-query
+                      - set-src
+                      - set-src-port
+                      - set-timeout
+                      - set-tos
+                      - set-uri
+                      - set-var
+                      - set-var-fmt
+                      - silent-drop
+                      - strict-mode
+                      - tarpit
+                      - track-sc
+                      - unset-var
+                      - use-service
+                      - wait-for-body
+                      - wait-for-handshake
+                      - set-bandwidth-limit
+                      - set-retries
+                      - do-log
+                      type: string
+                    uri-fmt:
+                      description: uri fmt
+                      type: string
+                    uri-match:
+                      description: uri match
+                      type: string
+                    var_expr:
+                      description: var expr
+                      type: string
+                    var_format:
+                      description: var format
+                      type: string
+                    var_name:
+                      description: |-
+                        var name
+                        Pattern: ^[^\s]+$
+                      pattern: ^[^\s]+$
+                      type: string
+                    var_scope:
+                      description: |-
+                        var scope
+                        Pattern: ^[^\s]+$
+                      pattern: ^[^\s]+$
+                      type: string
+                    wait_at_least:
+                      description: wait at least
+                      format: int64
+                      type: integer
+                    wait_time:
+                      description: |-
+                        wait time
+                        Minimum: 0
+                      format: int64
+                      minimum: 0
+                      type: integer
+                  required:
+                  - type
+                  type: object
+                type: array
               http_request_timeout:
                 description: |-
                   http request timeout
@@ -1715,6 +2487,395 @@ spec:
                 format: int64
                 minimum: 0
                 type: integer
+              http_response_rule_list:
+                description: HTTP response rule list
+                items:
+                  description: |-
+                    HTTPResponseRule HTTP Response Rule
+
+                    HAProxy HTTP response rule configuration (corresponds to http-response directives)
+                    Example: {"cond":"unless","cond_test":"{ src 192.168.0.0/16 }","hdr_format":"%T","hdr_name":"X-Haproxy-Current-Date","index":0,"type":"add-header"}
+
+                    swagger:model http_response_rule
+                  properties:
+                    acl_file:
+                      description: |-
+                        acl file
+                        Pattern: ^[^\s]+$
+                      pattern: ^[^\s]+$
+                      type: string
+                    acl_keyfmt:
+                      description: |-
+                        acl keyfmt
+                        Pattern: ^[^\s]+$
+                      pattern: ^[^\s]+$
+                      type: string
+                    bandwidth_limit_limit:
+                      description: bandwidth limit limit
+                      type: string
+                    bandwidth_limit_name:
+                      description: bandwidth limit name
+                      type: string
+                    bandwidth_limit_period:
+                      description: bandwidth limit period
+                      type: string
+                    cache_name:
+                      description: |-
+                        cache name
+                        Pattern: ^[^\s]+$
+                      pattern: ^[^\s]+$
+                      type: string
+                    capture_id:
+                      description: capture id
+                      format: int64
+                      type: integer
+                    capture_sample:
+                      description: |-
+                        capture sample
+                        Pattern: ^[^\s]+$
+                      pattern: ^[^\s]+$
+                      type: string
+                    cond:
+                      description: |-
+                        cond
+                        Enum: ["if","unless"]
+                      enum:
+                      - if
+                      - unless
+                      type: string
+                    cond_test:
+                      description: cond test
+                      type: string
+                    deny_status:
+                      description: |-
+                        deny status
+                        Maximum: 599
+                        Minimum: 200
+                      format: int64
+                      maximum: 599
+                      minimum: 200
+                      type: integer
+                    expr:
+                      description: expr
+                      type: string
+                    hdr_format:
+                      description: hdr format
+                      type: string
+                    hdr_match:
+                      description: hdr match
+                      type: string
+                    hdr_method:
+                      description: hdr method
+                      type: string
+                    hdr_name:
+                      description: hdr name
+                      type: string
+                    log_level:
+                      description: |-
+                        log level
+                        Enum: ["emerg","alert","crit","err","warning","notice","info","debug","silent"]
+                      enum:
+                      - emerg
+                      - alert
+                      - crit
+                      - err
+                      - warning
+                      - notice
+                      - info
+                      - debug
+                      - silent
+                      type: string
+                    lua_action:
+                      description: |-
+                        lua action
+                        Pattern: ^[^\s]+$
+                      pattern: ^[^\s]+$
+                      type: string
+                    lua_params:
+                      description: lua params
+                      type: string
+                    map_file:
+                      description: |-
+                        map file
+                        Pattern: ^[^\s]+$
+                      pattern: ^[^\s]+$
+                      type: string
+                    map_keyfmt:
+                      description: |-
+                        map keyfmt
+                        Pattern: ^[^\s]+$
+                      pattern: ^[^\s]+$
+                      type: string
+                    map_valuefmt:
+                      description: |-
+                        map valuefmt
+                        Pattern: ^[^\s]+$
+                      pattern: ^[^\s]+$
+                      type: string
+                    mark_value:
+                      description: |-
+                        mark value
+                        Pattern: ^(0x[0-9A-Fa-f]+|[0-9]+)$
+                      pattern: ^(0x[0-9A-Fa-f]+|[0-9]+)$
+                      type: string
+                    metadata:
+                      x-kubernetes-preserve-unknown-fields: true
+                    nice_value:
+                      description: |-
+                        nice value
+                        Maximum: 1024
+                        Minimum: -1024
+                      format: int64
+                      maximum: 1024
+                      minimum: -1024
+                      type: integer
+                    redir_code:
+                      description: |-
+                        redir code
+                        Enum: [301,302,303,307,308]
+                      enum:
+                      - 301
+                      - 302
+                      - 303
+                      - 307
+                      - 308
+                      format: int64
+                      type: integer
+                    redir_option:
+                      description: redir option
+                      type: string
+                    redir_type:
+                      description: |-
+                        redir type
+                        Enum: ["location","prefix","scheme"]
+                      enum:
+                      - location
+                      - prefix
+                      - scheme
+                      type: string
+                    redir_value:
+                      description: |-
+                        redir value
+                        Pattern: ^[^\s]+$
+                      pattern: ^[^\s]+$
+                      type: string
+                    return_content:
+                      description: return content
+                      type: string
+                    return_content_format:
+                      description: |-
+                        return content format
+                        Enum: ["default-errorfiles","errorfile","errorfiles","file","lf-file","string","lf-string"]
+                      enum:
+                      - default-errorfiles
+                      - errorfile
+                      - errorfiles
+                      - file
+                      - lf-file
+                      - string
+                      - lf-string
+                      type: string
+                    return_content_type:
+                      description: return content type
+                      type: string
+                    return_hdrs:
+                      description: return headers
+                      items:
+                        description: |-
+                          ReturnHeader return header
+
+                          swagger:model ReturnHeader
+                        properties:
+                          fmt:
+                            description: |-
+                              fmt
+                              Required: true
+                            type: string
+                          name:
+                            description: |-
+                              name
+                              Required: true
+                            type: string
+                        required:
+                        - fmt
+                        - name
+                        type: object
+                      type: array
+                    return_status_code:
+                      description: |-
+                        return status code
+                        Maximum: 599
+                        Minimum: 200
+                      format: int64
+                      maximum: 599
+                      minimum: 200
+                      type: integer
+                    rst_ttl:
+                      description: rst ttl
+                      format: int64
+                      type: integer
+                    sc_expr:
+                      description: sc expr
+                      type: string
+                    sc_id:
+                      description: sc id
+                      format: int64
+                      type: integer
+                    sc_idx:
+                      description: sc idx
+                      format: int64
+                      type: integer
+                    sc_int:
+                      description: sc int
+                      format: int64
+                      type: integer
+                    spoe_engine:
+                      description: |-
+                        spoe engine
+                        Pattern: ^[^\s]+$
+                      pattern: ^[^\s]+$
+                      type: string
+                    spoe_group:
+                      description: |-
+                        spoe group
+                        Pattern: ^[^\s]+$
+                      pattern: ^[^\s]+$
+                      type: string
+                    status:
+                      description: |-
+                        status
+                        Maximum: 999
+                        Minimum: 100
+                      format: int64
+                      maximum: 999
+                      minimum: 100
+                      type: integer
+                    status_reason:
+                      description: status reason
+                      type: string
+                    strict_mode:
+                      description: |-
+                        strict mode
+                        Enum: ["on","off"]
+                      enum:
+                      - "on"
+                      - "off"
+                      type: string
+                    timeout:
+                      description: timeout
+                      type: string
+                    timeout_type:
+                      description: |-
+                        timeout type
+                        Enum: ["server","tunnel","client"]
+                      enum:
+                      - server
+                      - tunnel
+                      - client
+                      type: string
+                    tos_value:
+                      description: |-
+                        tos value
+                        Pattern: ^(0x[0-9A-Fa-f]+|[0-9]+)$
+                      pattern: ^(0x[0-9A-Fa-f]+|[0-9]+)$
+                      type: string
+                    track_sc_key:
+                      description: |-
+                        track sc key
+                        Pattern: ^[^\s]+$
+                      pattern: ^[^\s]+$
+                      type: string
+                    track_sc_stick_counter:
+                      description: track sc stick counter
+                      format: int64
+                      type: integer
+                    track_sc_table:
+                      description: |-
+                        track sc table
+                        Pattern: ^[^\s]+$
+                      pattern: ^[^\s]+$
+                      type: string
+                    type:
+                      description: |-
+                        type
+                        Required: true
+                        Enum: ["add-acl","add-header","allow","cache-store","capture","del-acl","del-header","del-map","deny","lua","pause","redirect","replace-header","replace-value","return","sc-add-gpc","sc-inc-gpc","sc-inc-gpc0","sc-inc-gpc1","sc-set-gpt","sc-set-gpt0","send-spoe-group","set-fc-mark","set-fc-tos","set-header","set-log-level","set-map","set-mark","set-nice","set-status","set-timeout","set-tos","set-var","set-var-fmt","silent-drop","strict-mode","track-sc","unset-var","wait-for-body","set-bandwidth-limit","do-log"]
+                      enum:
+                      - add-acl
+                      - add-header
+                      - allow
+                      - cache-store
+                      - capture
+                      - del-acl
+                      - del-header
+                      - del-map
+                      - deny
+                      - lua
+                      - pause
+                      - redirect
+                      - replace-header
+                      - replace-value
+                      - return
+                      - sc-add-gpc
+                      - sc-inc-gpc
+                      - sc-inc-gpc0
+                      - sc-inc-gpc1
+                      - sc-set-gpt
+                      - sc-set-gpt0
+                      - send-spoe-group
+                      - set-fc-mark
+                      - set-fc-tos
+                      - set-header
+                      - set-log-level
+                      - set-map
+                      - set-mark
+                      - set-nice
+                      - set-status
+                      - set-timeout
+                      - set-tos
+                      - set-var
+                      - set-var-fmt
+                      - silent-drop
+                      - strict-mode
+                      - track-sc
+                      - unset-var
+                      - wait-for-body
+                      - set-bandwidth-limit
+                      - do-log
+                      type: string
+                    var_expr:
+                      description: var expr
+                      type: string
+                    var_format:
+                      description: var format
+                      type: string
+                    var_name:
+                      description: |-
+                        var name
+                        Pattern: ^[^\s]+$
+                      pattern: ^[^\s]+$
+                      type: string
+                    var_scope:
+                      description: |-
+                        var scope
+                        Pattern: ^[^\s]+$
+                      pattern: ^[^\s]+$
+                      type: string
+                    wait_at_least:
+                      description: wait at least
+                      format: int64
+                      type: integer
+                    wait_time:
+                      description: |-
+                        wait time
+                        Minimum: 0
+                      format: int64
+                      minimum: 0
+                      type: integer
+                  required:
+                  - type
+                  type: object
+                type: array
               http_restrict_req_hdr_names:
                 description: |-
                   http restrict req hdr names
@@ -1926,6 +3087,8 @@ spec:
                       - info
                       - debug
                       type: string
+                    metadata:
+                      x-kubernetes-preserve-unknown-fields: true
                     minlevel:
                       description: |-
                         minlevel
@@ -1971,6 +3134,8 @@ spec:
                 description: maxconn
                 format: int64
                 type: integer
+              metadata:
+                x-kubernetes-preserve-unknown-fields: true
               mode:
                 description: |-
                   mode
@@ -2110,6 +3275,8 @@ spec:
                     cond_test:
                       description: cond test
                       type: string
+                    metadata:
+                      x-kubernetes-preserve-unknown-fields: true
                     type:
                       description: |-
                         type
@@ -2492,6 +3659,8 @@ spec:
                       - binary-lf
                       pattern: ^[^\s]+$
                       type: string
+                    metadata:
+                      x-kubernetes-preserve-unknown-fields: true
                     min_recv:
                       description: min recv
                       format: int64
@@ -2574,6 +3743,405 @@ spec:
                       type: boolean
                   required:
                   - action
+                  type: object
+                type: array
+              tcp_request_rule_list:
+                description: TCP request rule list
+                items:
+                  description: |-
+                    TCPRequestRule TCP Request Rule
+
+                    HAProxy TCP Request Rule configuration (corresponds to tcp-request)
+                    Example: {"cond":"if","cond_test":"{ src 192.168.0.0/16 }","index":0,"type":"connection"}
+
+                    swagger:model tcp_request_rule
+                  properties:
+                    action:
+                      description: |-
+                        action
+                        Enum: ["accept","attach-srv","capture","do-resolve","expect-netscaler-cip","expect-proxy","lua","reject","sc-add-gpc","sc-inc-gpc","sc-inc-gpc0","sc-inc-gpc1","sc-set-gpt","sc-set-gpt0","send-spoe-group","set-bandwidth-limit","set-bc-mark","set-bc-tos","set-dst-port","set-dst","set-fc-mark","set-fc-tos","set-log-level","set-mark","set-nice","set-priority-class","set-priority-offset","set-src","set-src-port","set-tos","set-var","set-var-fmt","silent-drop","switch-mode","track-sc","unset-var","use-service","set-retries","do-log"]
+                      enum:
+                      - accept
+                      - attach-srv
+                      - capture
+                      - do-resolve
+                      - expect-netscaler-cip
+                      - expect-proxy
+                      - lua
+                      - reject
+                      - sc-add-gpc
+                      - sc-inc-gpc
+                      - sc-inc-gpc0
+                      - sc-inc-gpc1
+                      - sc-set-gpt
+                      - sc-set-gpt0
+                      - send-spoe-group
+                      - set-bandwidth-limit
+                      - set-bc-mark
+                      - set-bc-tos
+                      - set-dst-port
+                      - set-dst
+                      - set-fc-mark
+                      - set-fc-tos
+                      - set-log-level
+                      - set-mark
+                      - set-nice
+                      - set-priority-class
+                      - set-priority-offset
+                      - set-src
+                      - set-src-port
+                      - set-tos
+                      - set-var
+                      - set-var-fmt
+                      - silent-drop
+                      - switch-mode
+                      - track-sc
+                      - unset-var
+                      - use-service
+                      - set-retries
+                      - do-log
+                      type: string
+                    bandwidth_limit_limit:
+                      description: bandwidth limit limit
+                      type: string
+                    bandwidth_limit_name:
+                      description: bandwidth limit name
+                      type: string
+                    bandwidth_limit_period:
+                      description: bandwidth limit period
+                      type: string
+                    capture_len:
+                      description: capture len
+                      format: int64
+                      type: integer
+                    capture_sample:
+                      description: |-
+                        capture sample
+                        Pattern: ^(?:[A-Za-z]+\("([A-Za-z\s]+)"\)|[A-Za-z]+)
+                      pattern: ^(?:[A-Za-z]+\("([A-Za-z\s]+)"\)|[A-Za-z]+)
+                      type: string
+                    cond:
+                      description: |-
+                        cond
+                        Enum: ["if","unless"]
+                      enum:
+                      - if
+                      - unless
+                      type: string
+                    cond_test:
+                      description: cond test
+                      type: string
+                    expr:
+                      description: expr
+                      type: string
+                    gpt_value:
+                      description: gpt value
+                      type: string
+                    log_level:
+                      description: |-
+                        log level
+                        Enum: ["emerg","alert","crit","err","warning","notice","info","debug","silent"]
+                      enum:
+                      - emerg
+                      - alert
+                      - crit
+                      - err
+                      - warning
+                      - notice
+                      - info
+                      - debug
+                      - silent
+                      type: string
+                    lua_action:
+                      description: |-
+                        lua action
+                        Pattern: ^[^\s]+$
+                      pattern: ^[^\s]+$
+                      type: string
+                    lua_params:
+                      description: lua params
+                      type: string
+                    mark_value:
+                      description: |-
+                        mark value
+                        Pattern: ^(0x[0-9A-Fa-f]+|[0-9]+)$
+                      pattern: ^(0x[0-9A-Fa-f]+|[0-9]+)$
+                      type: string
+                    metadata:
+                      x-kubernetes-preserve-unknown-fields: true
+                    nice_value:
+                      description: |-
+                        nice value
+                        Maximum: 1024
+                        Minimum: -1024
+                      format: int64
+                      maximum: 1024
+                      minimum: -1024
+                      type: integer
+                    resolve_protocol:
+                      description: |-
+                        resolve protocol
+                        Enum: ["ipv4","ipv6"]
+                      enum:
+                      - ipv4
+                      - ipv6
+                      type: string
+                    resolve_resolvers:
+                      description: resolve resolvers
+                      type: string
+                    resolve_var:
+                      description: resolve var
+                      type: string
+                    rst_ttl:
+                      description: rst ttl
+                      format: int64
+                      type: integer
+                    sc_idx:
+                      description: sc idx
+                      type: string
+                    sc_inc_id:
+                      description: sc inc id
+                      type: string
+                    sc_int:
+                      description: sc int
+                      format: int64
+                      type: integer
+                    server_name:
+                      description: server name
+                      type: string
+                    service_name:
+                      description: service name
+                      type: string
+                    spoe_engine_name:
+                      description: spoe engine name
+                      type: string
+                    spoe_group_name:
+                      description: spoe group name
+                      type: string
+                    switch_mode_proto:
+                      description: switch mode proto
+                      type: string
+                    timeout:
+                      description: timeout
+                      format: int64
+                      type: integer
+                    tos_value:
+                      description: |-
+                        tos value
+                        Pattern: ^(0x[0-9A-Fa-f]+|[0-9]+)$
+                      pattern: ^(0x[0-9A-Fa-f]+|[0-9]+)$
+                      type: string
+                    track_key:
+                      description: track key
+                      type: string
+                    track_stick_counter:
+                      description: track stick counter
+                      format: int64
+                      type: integer
+                    track_table:
+                      description: track table
+                      type: string
+                    type:
+                      description: |-
+                        type
+                        Required: true
+                        Enum: ["connection","content","inspect-delay","session"]
+                      enum:
+                      - connection
+                      - content
+                      - inspect-delay
+                      - session
+                      type: string
+                    var_format:
+                      description: var format
+                      type: string
+                    var_name:
+                      description: |-
+                        var name
+                        Pattern: ^[^\s]+$
+                      pattern: ^[^\s]+$
+                      type: string
+                    var_scope:
+                      description: |-
+                        var scope
+                        Pattern: ^[^\s]+$
+                      pattern: ^[^\s]+$
+                      type: string
+                  required:
+                  - type
+                  type: object
+                type: array
+              tcp_response_rule_list:
+                description: TCP response rule list
+                items:
+                  description: |-
+                    TCPResponseRule TCP Response Rule
+
+                    HAProxy TCP Response Rule configuration (corresponds to tcp-response)
+                    Example: {"cond":"if","cond_test":"{ src 192.168.0.0/16 }","index":0,"type":"content"}
+
+                    swagger:model tcp_response_rule
+                  properties:
+                    action:
+                      description: |-
+                        action
+                        Enum: ["accept","close","lua","reject","sc-add-gpc","sc-inc-gpc","sc-inc-gpc0","sc-inc-gpc1","sc-set-gpt","sc-set-gpt0","send-spoe-group","set-bandwidth-limit","set-fc-mark","set-fc-tos","set-log-level","set-mark","set-nice","set-tos","set-var","set-var-fmt","silent-drop","unset-var","do-log"]
+                      enum:
+                      - accept
+                      - close
+                      - lua
+                      - reject
+                      - sc-add-gpc
+                      - sc-inc-gpc
+                      - sc-inc-gpc0
+                      - sc-inc-gpc1
+                      - sc-set-gpt
+                      - sc-set-gpt0
+                      - send-spoe-group
+                      - set-bandwidth-limit
+                      - set-fc-mark
+                      - set-fc-tos
+                      - set-log-level
+                      - set-mark
+                      - set-nice
+                      - set-tos
+                      - set-var
+                      - set-var-fmt
+                      - silent-drop
+                      - unset-var
+                      - do-log
+                      type: string
+                    bandwidth_limit_limit:
+                      description: bandwidth limit limit
+                      type: string
+                    bandwidth_limit_name:
+                      description: bandwidth limit name
+                      type: string
+                    bandwidth_limit_period:
+                      description: bandwidth limit period
+                      type: string
+                    cond:
+                      description: |-
+                        cond
+                        Enum: ["if","unless"]
+                      enum:
+                      - if
+                      - unless
+                      type: string
+                    cond_test:
+                      description: cond test
+                      type: string
+                    expr:
+                      description: expr
+                      type: string
+                    log_level:
+                      description: |-
+                        log level
+                        Enum: ["emerg","alert","crit","err","warning","notice","info","debug","silent"]
+                      enum:
+                      - emerg
+                      - alert
+                      - crit
+                      - err
+                      - warning
+                      - notice
+                      - info
+                      - debug
+                      - silent
+                      type: string
+                    lua_action:
+                      description: |-
+                        lua action
+                        Pattern: ^[^\s]+$
+                      pattern: ^[^\s]+$
+                      type: string
+                    lua_params:
+                      description: lua params
+                      type: string
+                    mark_value:
+                      description: |-
+                        mark value
+                        Pattern: ^(0x[0-9A-Fa-f]+|[0-9]+)$
+                      pattern: ^(0x[0-9A-Fa-f]+|[0-9]+)$
+                      type: string
+                    metadata:
+                      x-kubernetes-preserve-unknown-fields: true
+                    nice_value:
+                      description: |-
+                        nice value
+                        Maximum: 1024
+                        Minimum: -1024
+                      format: int64
+                      maximum: 1024
+                      minimum: -1024
+                      type: integer
+                    rst_ttl:
+                      description: rst ttl
+                      format: int64
+                      type: integer
+                    sc_expr:
+                      description: sc expr
+                      type: string
+                    sc_id:
+                      description: sc id
+                      format: int64
+                      type: integer
+                    sc_idx:
+                      description: sc idx
+                      format: int64
+                      type: integer
+                    sc_int:
+                      description: sc int
+                      format: int64
+                      type: integer
+                    spoe_engine:
+                      description: |-
+                        spoe engine
+                        Pattern: ^[^\s]+$
+                      pattern: ^[^\s]+$
+                      type: string
+                    spoe_group:
+                      description: |-
+                        spoe group
+                        Pattern: ^[^\s]+$
+                      pattern: ^[^\s]+$
+                      type: string
+                    timeout:
+                      description: timeout
+                      format: int64
+                      type: integer
+                    tos_value:
+                      description: |-
+                        tos value
+                        Pattern: ^(0x[0-9A-Fa-f]+|[0-9]+)$
+                      pattern: ^(0x[0-9A-Fa-f]+|[0-9]+)$
+                      type: string
+                    type:
+                      description: |-
+                        type
+                        Required: true
+                        Enum: ["content","inspect-delay"]
+                      enum:
+                      - content
+                      - inspect-delay
+                      type: string
+                    var_format:
+                      description: var format
+                      type: string
+                    var_name:
+                      description: |-
+                        var name
+                        Pattern: ^[^\s]+$
+                      pattern: ^[^\s]+$
+                      type: string
+                    var_scope:
+                      description: |-
+                        var scope
+                        Pattern: ^[^\s]+$
+                      pattern: ^[^\s]+$
+                      type: string
+                  required:
+                  - type
                   type: object
                 type: array
               tcp_smart_accept:
