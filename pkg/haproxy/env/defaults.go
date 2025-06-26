@@ -83,10 +83,6 @@ func SetDefaults(defaults *models.Defaults) {
 	// Logging is enforced in DefaultsPushConfiguration method
 
 	// Default values
-	enabled := "enabled"
-	if defaults.Redispatch == nil {
-		defaults.Redispatch = &models.Redispatch{Enabled: &enabled}
-	}
 	if defaults.Dontlognull == "" {
 		defaults.Dontlognull = "enabled"
 	}

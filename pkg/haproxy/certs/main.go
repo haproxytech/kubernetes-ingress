@@ -161,9 +161,9 @@ func (c *certs) AddSecret(secret *store.Secret, secretType SecretType) (certPath
 }
 
 func (c *certs) updateRuntime(filename string, payload []byte, isCa bool) (bool, error) {
-	if instance.NeedReload() {
-		return false, nil
-	}
+	// if instance.NeedReload() {
+	// 	return false, nil
+	// }
 	// Only 1 transaction in parallel is possible for now in haproxy
 	// Keep this mutex for now to ensure that we perform 1 transaction at a time
 	certType := "cert"
