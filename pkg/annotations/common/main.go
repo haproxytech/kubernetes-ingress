@@ -16,6 +16,19 @@ func GetValue(annotationName string, annotations ...map[string]string) string {
 	return DefaultValues[annotationName]
 }
 
+// GetMatch returns all matches of the annotation prefix name in the provided annotations.
+func GetMatch(annotationPrefix string, annotations ...map[string]string) map[string]string {
+	result := map[string]string{}
+	for _, a := range annotations {
+		for name, value := range a {
+			if strings.HasPrefix(name, annotationPrefix) {
+				result[name] = value
+			}
+		}
+	}
+	return result
+}
+
 func GetK8sPath(annotationName string, annotations ...map[string]string) (ns, name string, err error) {
 	a := GetValue(annotationName, annotations...)
 	if a == "" {
@@ -65,15 +78,32 @@ var DefaultValues = map[string]string{
 	"quic-alt-svc-max-age":   "60",
 }
 
-// Returns the first annotation value in the set of maps of annotations along with the indice of which map in argument provided the value.
-func GetValuesAndIndices(annotationName string, annotations ...map[string]string) map[int]string {
+// GetValuesAndIndices retrieves values of a specific annotation from multiple annotations maps.
+func GetValuesAndIndices(annotationName string, customAnnotationPrefix string, annotations ...map[string]string) (map[int]string, map[string]string) {
 	result := map[int]string{}
+	customResult := map[string]string{}
 	for i, a := range annotations {
 		if val, ok := a[annotationName]; ok {
 			result[i] = val
 		}
 	}
-	return result
+	for _, a := range annotations {
+		for k, v := range a {
+			if strings.HasPrefix(k, customAnnotationPrefix) {
+				// Remove the prefix from the key
+				annotationName := strings.TrimPrefix(k, customAnnotationPrefix)
+				if _, ok := customResult[annotationName]; ok {
+					// If the key already exists, prepend the value (so service is most important one)
+					customResult[annotationName] = v + "\n" + customResult[annotationName]
+				} else {
+					// Otherwise, set the value
+					customResult[annotationName] = v
+				}
+			}
+		}
+	}
+
+	return result, customResult
 }
 
 // EnsureQuoted ensures that a string starts and ends with a double quote.

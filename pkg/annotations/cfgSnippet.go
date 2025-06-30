@@ -4,12 +4,14 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 
 	"github.com/go-test/deep"
 
 	"github.com/haproxytech/kubernetes-ingress/pkg/annotations/common"
+	"github.com/haproxytech/kubernetes-ingress/pkg/annotations/validators"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/api"
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
 )
@@ -166,18 +168,86 @@ func (a *CfgSnippet) Process(k store.K8s, annotations ...map[string]string) erro
 		}
 
 	case a.backend != "":
-		if IsConfigSnippetDisabled(ConfigSnippetBackend) {
-			// backend snippet is disabled, do not handle
-			return nil
+		validator, err := validators.Get()
+		if err != nil {
+			return fmt.Errorf("failed to get validator: %w", err)
 		}
-		anns := common.GetValuesAndIndices(a.GetName(), annotations...)
-		// We don't want configmap value unless it's configmap being processed.
-		// We detect that by name of the backend and indice of maps providing the value
+		anns, customAnnotations := common.GetValuesAndIndices(a.GetName(), "backend."+validator.Prefix(), annotations...)
 		_, ok := cfgSnippet.backends[a.backend]
 		if !ok {
 			cfgSnippet.backends[a.backend] = map[string]*cfgData{}
 		}
+		if len(customAnnotations) > 0 {
+			// We have custom annotations, so we process them. in alphabetical order
+			// to avoid issues with the order of processing.
+			keys := []string{}
+			for k := range customAnnotations {
+				keys = append(keys, k)
+			}
+			sort.Strings(keys)
 
+			env := map[string]any{
+				"BACKEND":  a.backend,
+				"FRONTEND": a.frontend,
+			}
+			if a.ingress != nil {
+				env["NAMESPACE"] = a.ingress.Namespace
+				env["INGRESS"] = a.ingress.Name
+			}
+			if a.service != nil {
+				env["SERVICE"] = a.service.Name
+			}
+
+			for _, k := range keys {
+				customAnnotationValue := customAnnotations[k]
+				// If the custom annotation value is empty, we skip it.
+				if customAnnotationValue == "" {
+					continue
+				}
+				origin := validator.Prefix() + k
+				prefix := ""
+				// Validate the custom annotation
+				var validationErr string
+				if err := validator.ValidateInput(k, customAnnotationValue, "backend"); err != nil {
+					logger.Errorf("failed to validate custom annotation '%s' for backend '%s': %s", k, a.backend, err.Error())
+					// continue
+					validationErr = "# ERROR: " + strings.ReplaceAll(err.Error(), "\n", "\n  # ")
+					customAnnotationValue = ""
+					prefix = "# value:"
+				}
+
+				// check if this is fine for snippet removal
+				// comment := "### " + a.backend + ":" + origin + COMMENT_ENDING
+				comment := "### " + origin + COMMENT_ENDING
+				rdata := []string{comment}
+				if validationErr != "" {
+					rdata = append(rdata, validationErr)
+				}
+				if customAnnotationValue != "" {
+					result := ""
+					if prefix == "" {
+						result, err = validator.GetResult(k, customAnnotationValue, env)
+						if err != nil {
+							logger.Errorf("failed to get result for custom annotation '%s' for backend '%s': %s", k, a.backend, err.Error())
+							rdata = append(rdata, "# ERROR: "+strings.ReplaceAll(err.Error(), "\n", "\n  # "))
+						}
+					}
+					if strings.HasPrefix(result, "#") {
+						rdata = append(rdata, result)
+					} else {
+						rdata = append(rdata, prefix+result)
+					}
+				}
+				processConfigSnippet(a.backend, origin, rdata)
+			}
+		}
+		if IsConfigSnippetDisabled(ConfigSnippetBackend) {
+			// backend snippet is disabled, do not handle
+			return nil
+		}
+
+		// We don't want configmap value unless it's configmap being processed.
+		// We detect that by name of the backend and indice of maps providing the value
 		if a.backend == "configmap" {
 			if anns[0] != "" {
 				// Create comment section for configmap configsnippet

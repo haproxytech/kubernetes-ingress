@@ -43,6 +43,10 @@ func (c *FakeIngressV3) TCPs(namespace string) v3.TCPInterface {
 	return &FakeTCPs{c, namespace}
 }
 
+func (c *FakeIngressV3) ValidationRules(namespace string) v3.ValidationRulesInterface {
+	return &FakeValidationRules{c, namespace}
+}
+
 // RESTClient returns a RESTClient that is used to communicate
 // with API server by this client implementation.
 func (c *FakeIngressV3) RESTClient() rest.Interface {

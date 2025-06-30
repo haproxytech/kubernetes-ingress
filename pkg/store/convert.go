@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/haproxytech/kubernetes-ingress/pkg/annotations/validators"
 	networkingv1 "k8s.io/api/networking/v1"
 	ammeta "k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/types"
@@ -202,14 +203,10 @@ func CopyAnnotations(in map[string]string) map[string]string {
 	return out
 }
 
-var annotationsPrefixes = []string{
-	"haproxy.org/",
-	"ingress.kubernetes.io/",
-	"haproxy.com/",
-}
-
 func cleanAnnotation(annotation string) string {
-	for _, prefix := range annotationsPrefixes {
+	val, _ := validators.Get()
+
+	for _, prefix := range val.Prefixes() {
 		if strings.HasPrefix(annotation, prefix) {
 			return strings.TrimPrefix(annotation, prefix)
 		}

@@ -31,6 +31,8 @@ type Interface interface {
 	Globals() GlobalInformer
 	// TCPs returns a TCPInformer.
 	TCPs() TCPInformer
+	// ValidationRules returns a ValidationRulesInformer.
+	ValidationRules() ValidationRulesInformer
 }
 
 type version struct {
@@ -62,4 +64,9 @@ func (v *version) Globals() GlobalInformer {
 // TCPs returns a TCPInformer.
 func (v *version) TCPs() TCPInformer {
 	return &tCPInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
+}
+
+// ValidationRules returns a ValidationRulesInformer.
+func (v *version) ValidationRules() ValidationRulesInformer {
+	return &validationRulesInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }

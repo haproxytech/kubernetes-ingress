@@ -1,0 +1,45 @@
+validation_rules:
+  # Rule for 'timeout-server' accepting duration values
+  timeout-server:
+    sections: 
+      - backend # Specifies the section where this rule applies
+      - global # Also applies to global section
+    template: "timeout server {{.value}}" 
+    type: duration # Specifies the expected data type for conversion
+    rule: "value > duration('0s') && value <= duration('50m')" # CEL expression
+
+  # Rule for 'timeout-client' accepting duration values
+  timeout-client:
+    sections: 
+      - backend # Specifies the section where this rule applies
+    template: "timeout client {{.value}}" 
+    type: duration
+    rule: "value > duration('0s') && value <= duration('1m')"
+
+  # Rule for 'max-connections' accepting integer values
+  max-connections:
+    sections: 
+      - backend # Specifies the section where this rule applies
+    type: int
+    rule: "value >= 10 && value <= 1000000"
+
+  # Rule for 'feature-flag' accepting boolean values
+  feature-flag:
+    sections: 
+      - backend # Specifies the section where this rule applies
+    type: bool
+    rule: "value == true"
+
+  # Rule for 'custom-header' accepting string values
+  custom-something:
+    sections: 
+      - backend # Specifies the section where this rule applies
+    type: string
+    rule: "value != '' && value.size() <= 100" # Ensures the header is not empty and has a reasonable length
+
+  http-request:
+    # http-request set-header e2e-test %[str(test)]
+    sections: 
+      - backend # Specifies the section where this rule applies
+    type: string
+    rule: "value.matches('^[a-zA-Z0-9-_/]+$')" 

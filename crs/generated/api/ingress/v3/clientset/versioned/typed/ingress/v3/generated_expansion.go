@@ -24,3 +24,5 @@ type DefaultsExpansion interface{}
 type GlobalExpansion interface{}
 
 type TCPExpansion interface{}
+
+type ValidationRulesExpansion interface{}

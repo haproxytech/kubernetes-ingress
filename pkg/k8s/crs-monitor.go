@@ -48,7 +48,8 @@ func (k k8s) runCRDefinitionsInformer(eventChan chan GroupKind, stop chan struct
 			if !(crd.Spec.Names.Kind == "Global" ||
 				crd.Spec.Names.Kind == "Defaults" ||
 				crd.Spec.Names.Kind == "Backend" ||
-				crd.Spec.Names.Kind == "TCP") {
+				crd.Spec.Names.Kind == "TCP" ||
+				crd.Spec.Names.Kind == "ValidationRules") {
 				return
 			}
 			for _, version := range crd.Spec.Versions {
@@ -120,6 +121,8 @@ func (k k8s) RunCRSCreationMonitoring(eventChan chan k8ssync.SyncDataEvent, stop
 							crsV3[groupKind.Kind] = NewGlobalCRV3()
 						case "TCP":
 							crsV3[groupKind.Kind] = NewTCPCRV3()
+						case "ValidationRules":
+							crsV3[groupKind.Kind] = NewValidationCRV3()
 						}
 						logger.Info("Custom resource definition created, adding CR watcher for " + crsV3[groupKind.Kind].GetKind())
 					}
