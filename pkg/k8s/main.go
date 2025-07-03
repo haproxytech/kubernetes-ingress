@@ -206,24 +206,6 @@ func (k k8s) MonitorChanges(eventChan chan k8ssync.SyncDataEvent, stop chan stru
 	}
 }
 
-func (k k8s) registerCoreCRV3(cr CRV3) {
-	groupVersion := CRSGroupVersionV3
-	resources, err := k.crClientV3.DiscoveryClient.ServerResourcesForGroupVersion(groupVersion)
-	if err != nil {
-		return
-	}
-	logger.Debugf("Custom API %s available", groupVersion)
-	kindName := cr.GetKind()
-	groupVersion = strings.Split(resources.GroupVersion, "/")[0]
-	for _, resource := range resources.APIResources {
-		if resource.Kind == kindName {
-			k.crsV3[groupVersion+" - "+kindName] = cr
-			logger.Infof("%s CR defined in API %s", kindName, resources.GroupVersion)
-			break
-		}
-	}
-}
-
 func (k k8s) registerCoreCRV1(cr CRV1) {
 	groupVersion := CRSGroupVersionV1
 	resources, err := k.crClientV1.DiscoveryClient.ServerResourcesForGroupVersion(groupVersion)
@@ -236,6 +218,24 @@ func (k k8s) registerCoreCRV1(cr CRV1) {
 	for _, resource := range resources.APIResources {
 		if resource.Kind == kindName {
 			k.crsV1[groupVersion+" - "+kindName] = cr
+			logger.Infof("%s CR defined in API %s", kindName, resources.GroupVersion)
+			break
+		}
+	}
+}
+
+func (k k8s) registerCoreCRV3(cr CRV3) {
+	groupVersion := CRSGroupVersionV3
+	resources, err := k.crClientV3.DiscoveryClient.ServerResourcesForGroupVersion(groupVersion)
+	if err != nil {
+		return
+	}
+	logger.Debugf("Custom API %s available", groupVersion)
+	kindName := cr.GetKind()
+	groupVersion = strings.Split(resources.GroupVersion, "/")[0]
+	for _, resource := range resources.APIResources {
+		if resource.Kind == kindName {
+			k.crsV3[groupVersion+" - "+kindName] = cr
 			logger.Infof("%s CR defined in API %s", kindName, resources.GroupVersion)
 			break
 		}
