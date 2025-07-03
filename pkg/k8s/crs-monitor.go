@@ -82,7 +82,7 @@ func (k k8s) RunCRSCreationMonitoring(eventChan chan k8ssync.SyncDataEvent, stop
 			select {
 			case groupKind := <-eventCRS:
 				if groupKind.Group == "ingress.v1.haproxy.org" {
-					if _, ok := k.crsV1["ingress.v1.haproxy.org/v1 - "+groupKind.Kind]; ok {
+					if _, ok := k.crsV1["ingress.v1.haproxy.org - "+groupKind.Kind]; ok {
 						// we have already created watchers for this CRD
 						continue
 					}

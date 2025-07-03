@@ -20,6 +20,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 
 	k8sinformers "k8s.io/client-go/informers"
@@ -213,9 +214,10 @@ func (k k8s) registerCoreCRV3(cr CRV3) {
 	}
 	logger.Debugf("Custom API %s available", groupVersion)
 	kindName := cr.GetKind()
+	groupVersion = strings.Split(resources.GroupVersion, "/")[0]
 	for _, resource := range resources.APIResources {
 		if resource.Kind == kindName {
-			k.crsV3[resources.GroupVersion+" - "+kindName] = cr
+			k.crsV3[groupVersion+" - "+kindName] = cr
 			logger.Infof("%s CR defined in API %s", kindName, resources.GroupVersion)
 			break
 		}
@@ -230,9 +232,10 @@ func (k k8s) registerCoreCRV1(cr CRV1) {
 	}
 	logger.Debugf("Custom API %s available", groupVersion)
 	kindName := cr.GetKind()
+	groupVersion = strings.Split(resources.GroupVersion, "/")[0]
 	for _, resource := range resources.APIResources {
 		if resource.Kind == kindName {
-			k.crsV1[resources.GroupVersion+" - "+kindName] = cr
+			k.crsV1[groupVersion+" - "+kindName] = cr
 			logger.Infof("%s CR defined in API %s", kindName, resources.GroupVersion)
 			break
 		}
