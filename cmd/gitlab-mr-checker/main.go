@@ -144,6 +144,8 @@ func main() {
 		question += "\n" + "| " + version.Version + " | ~ " + version.EOLHuman + " | " + "backport-" + version.Version + " |"
 		backportLabels["backport-"+version.Version] = struct{}{}
 	}
+	// ee
+	question += "\n" + "| EE | ∞ | " + "backport-ee |"
 	question += "\n\n" + "please add labels for backporting."
 
 	notes, err := getMergeRequestComments(baseURL, token, CI_PROJECT_ID, CI_MERGE_REQUEST_IID)
