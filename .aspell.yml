@@ -48,3 +48,5 @@ allowed:
   - backport
   - cmd
   - backports
+  - alpn
+  - SNI

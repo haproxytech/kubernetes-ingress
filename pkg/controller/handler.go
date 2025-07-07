@@ -31,7 +31,7 @@ func (c *HAProxyController) initHandlers() {
 
 	// handlers executed at reconciliation loop
 	c.updateHandlers = []UpdateHandler{
-		handler.HTTPS{
+		&handler.HTTPS{
 			Enabled:  !c.osArgs.DisableHTTPS,
 			CertDir:  c.haproxy.Certs.FrontendDir,
 			IPv4:     !c.osArgs.DisableIPV4,
