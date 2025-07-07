@@ -100,7 +100,6 @@ type k8s struct {
 	initialSyncPeriod      time.Duration
 	cacheResyncPeriod      time.Duration
 	disableSvcExternalName bool // CVE-2021-25740
-	gatewayAPIInstalled    bool
 }
 
 func New(osArgs utils.OSArgs, whitelist map[string]struct{}, publishSvc *utils.NamespaceValue) K8s { //nolint:ireturn
@@ -408,9 +407,6 @@ func getWhitelistedNS(whitelist map[string]struct{}, cfgMapNS string) []string {
 
 func (k k8s) IsGatewayAPIInstalled(gatewayControllerName string) (installed bool) {
 	installed = true
-	defer func() {
-		k.gatewayAPIInstalled = installed
-	}()
 	gatewayCrd, err := k.crdClient.ApiextensionsV1().CustomResourceDefinitions().Get(context.Background(), "gateways.gateway.networking.k8s.io", metav1.GetOptions{})
 	if err != nil {
 		var errStatus *errGw.StatusError
