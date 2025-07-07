@@ -53,3 +53,8 @@ allowed:
   - dataplaneapi
   - usr
   - Redispatch
+  - backport
+  - cmd
+  - backports
+  - alpn
+  - SNI
