@@ -25,9 +25,9 @@ jobs:
           go-version-file: "go.mod"
           check-latest: true
       - name: generating documentation
-        run: cd documentation/gen && go run .
+        run: make doc
       - name: changes
-        run: test -z "$(git diff 2> /dev/null)" || exit "Documentation is not generated, issue \`cd documentation/gen && go run .\` and commit the result"
+        run: test -z "$(git diff 2> /dev/null)" || exit "Documentation is not generated, issue \`make doc\` and commit the result"
       - name: untracked files
         run: test -z "$(git ls-files --others --exclude-standard 2> /dev/null)" || exit "Documentation created untracked files, cannot proceed"
   tidy:

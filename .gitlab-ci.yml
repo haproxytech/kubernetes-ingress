@@ -26,9 +26,9 @@ diff:
   tags:
     - go
   before_script:
-    - cd documentation/gen && go run .
+    - make doc
   script:
-    - test -z "$(git diff 2> /dev/null)" || exit "Documentation is not generated, issue \`cd documentation/gen && go run .\` and commit the result"
+    - test -z "$(git diff 2> /dev/null)" || exit "Documentation is not generated, issue \`make doc\` and commit the result"
     - test -z "$(git ls-files --others --exclude-standard 2> /dev/null)" || exit "Documentation created untracked files, cannot proceed"
 diff-crd:
   stage: diff
