@@ -166,8 +166,10 @@ func main() {
 	signalC := make(chan os.Signal, 1)
 	signal.Notify(signalC, os.Interrupt, syscall.SIGTERM, syscall.SIGUSR1)
 	<-signalC
+	logger.Print("Graceful shutdown requested ....")
 	c.Stop()
 	close(stop)
+	logger.Print("Graceful shutdown done, exiting")
 }
 
 func logInfo(logger utils.Logger, osArgs utils.OSArgs) bool {
