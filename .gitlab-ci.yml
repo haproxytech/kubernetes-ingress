@@ -1,4 +1,5 @@
 stages:
+  - bots
   - diff
   - lint
   - unit-tests
@@ -13,6 +14,18 @@ variables:
   DOCKER_DRIVER: overlay2
   GO_VERSION: "1.24"
   DOCKER_VERSION: "27.0"
+pipelines-check:
+  stage: bots
+  needs: []
+  image:
+    name: $CI_REGISTRY_GO/docker:$DOCKER_VERSION-go$GO_VERSION
+    entrypoint: [ "" ]
+  rules:
+    - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
+  tags:
+    - go
+  script:
+    - go run cmd/gitlab-mr-pipelines/main.go
 diff:
   stage: diff
   rules:
