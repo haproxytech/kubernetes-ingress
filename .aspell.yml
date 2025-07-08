@@ -51,3 +51,4 @@ allowed:
   - alpn
   - SNI
   - gwapi
+  - init
