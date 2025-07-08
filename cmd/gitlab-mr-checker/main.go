@@ -69,13 +69,15 @@ type Thread struct {
 	IID  int    `json:"iid"`
 }
 
-// GitlabLabel defines the structure for a GitLab label.
-// It includes common fields; you are primarily using Name.
 type GitlabLabel struct {
 	ID          int    `json:"id"`
 	Name        string `json:"name"`
 	Color       string `json:"color"`
 	Description string `json:"description,omitempty"` // omitempty handles cases where description might be null or absent
+}
+
+type MergeRequest struct {
+	Description string `json:"description"`
 }
 
 var baseURL string
@@ -148,6 +150,17 @@ func main() {
 	question += "\n" + "| EE | ∞ | " + "backport-ee |"
 	question += "\n\n" + "please add labels for backporting."
 
+	mr, err := getMergeRequest(baseURL, token, CI_PROJECT_ID, CI_MERGE_REQUEST_IID)
+	if err != nil {
+		slog.Error(err.Error())
+		os.Exit(1)
+	}
+
+	if strings.Contains(mr.Description, "<!-- BOT DEPENDABOT -->") {
+		slog.Info("Dependabot MR detected, skipping backport check.")
+		os.Exit(0)
+	}
+
 	notes, err := getMergeRequestComments(baseURL, token, CI_PROJECT_ID, CI_MERGE_REQUEST_IID)
 	if err != nil {
 		slog.Error(err.Error())
@@ -194,21 +207,41 @@ func startThreadOnMergeRequest(baseURL, token, projectID string, mergeRequestIID
 		os.Exit(1)
 	}
 	defer resp.Body.Close()
+}
 
-	// body, err := io.ReadAll(resp.Body)
-	// if err != nil {
-	// 	slog.Error(err.Error())
-	// 	os.Exit(1)
-	// }
+func getMergeRequest(baseURL, token, projectID string, mergeRequestIID int) (*MergeRequest, error) {
+	client := &http.Client{}
 
-	// var thread Thread
-	// err = json.Unmarshal(body, &thread)
-	// if err != nil {
-	// 	slog.Error(err.Error())
-	// 	os.Exit(1)
-	// }
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet,
+		fmt.Sprintf("%s/projects/%s/merge_requests/%d", baseURL, url.PathEscape(projectID), mergeRequestIID), nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Add("PRIVATE-TOKEN", token) //nolint:canonicalheader
 
-	// slog.Info("Thread started with ID " + strconv.Itoa(thread.ID))
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("failed to get merge request: status %s, body: %s", resp.Status, string(body))
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	var mr MergeRequest
+	err = json.Unmarshal(body, &mr)
+	if err != nil {
+		return nil, err
+	}
+
+	return &mr, nil
 }
 
 func getMergeRequestComments(baseURL, token, projectID string, mergeRequestIID int) ([]Note, error) {
