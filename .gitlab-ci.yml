@@ -258,3 +258,6 @@ e2e_k8s_32:
     KUBEADM_VER: v1beta3
     KUBECTL: v1.33.1
   extends: .kind_deployment
+  rules:
+    - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
+    - if: '$CI_PIPELINE_SOURCE == "push" && $CI_PROJECT_NAMESPACE != "haproxy-controller"'
