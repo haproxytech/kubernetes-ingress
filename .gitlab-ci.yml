@@ -15,6 +15,30 @@ variables:
   DOCKER_DRIVER: overlay2
   GO_VERSION: "1.24"
   DOCKER_VERSION: "28.1"
+pipelines-check:
+  stage: bots
+  needs: []
+  image:
+    name: $CI_REGISTRY_GO/docker:$DOCKER_VERSION-go$GO_VERSION
+    entrypoint: [ "" ]
+  rules:
+    - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
+  tags:
+    - go
+  script:
+    - go run cmd/gitlab-mr-pipelines/main.go
+mr-backport-question:
+  stage: bots
+  needs: []
+  image:
+    name: $CI_REGISTRY_GO/docker:$DOCKER_VERSION-go$GO_VERSION
+    entrypoint: [ "" ]
+  rules:
+    - if: $CI_PIPELINE_SOURCE == 'merge_request_event' && $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == $CI_DEFAULT_BRANCH
+  tags:
+    - go
+  script:
+    - go run cmd/gitlab-mr-checker/main.go
 diff:
   stage: diff
   rules:
@@ -47,18 +71,6 @@ diff-crd:
     - git diff
     - test -z "$(git diff 2> /dev/null)" || exit "CRD generation was not generated, issue \`make cr_generate\` and commit the result"
     - test -z "$(git ls-files --others --exclude-standard 2> /dev/null)" || exit "CRD generation created untracked files, cannot proceed"
-mr-backport-question:
-  stage: bots
-  needs: []
-  image:
-    name: $CI_REGISTRY_GO/docker:$DOCKER_VERSION-go$GO_VERSION
-    entrypoint: [ "" ]
-  rules:
-    - if: $CI_PIPELINE_SOURCE == 'merge_request_event' && $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == $CI_DEFAULT_BRANCH
-  tags:
-    - go
-  script:
-    - go run cmd/gitlab-mr-checker/main.go
 tidy:
   stage: lint
   needs: []
