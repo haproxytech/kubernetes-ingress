@@ -1,0 +1,31 @@
+docker-build:
+  stage: build
+  needs: []
+  rules:
+    - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
+    - if: $CI_PIPELINE_SOURCE == 'push'
+    - if: $CI_PIPELINE_SOURCE == 'schedule'
+  image: $CI_REGISTRY_GO/docker:$DOCKER_VERSION-go$GO_VERSION
+  services:
+    - name: $CI_REGISTRY_GO/docker:$DOCKER_VERSION-dind
+      alias: docker
+  tags:
+    - go
+  before_script:
+    - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN $CI_REGISTRY_GO
+    - go version
+    - docker pull -q $CI_REGISTRY_GO/alpine:3
+    - docker image tag $CI_REGISTRY_GO/alpine:3 alpine:3
+    - docker pull -q $CI_REGISTRY_GO/golang:$GO_VERSION-alpine
+    - docker image tag $CI_REGISTRY_GO/golang:$GO_VERSION-alpine golang:$GO_VERSION-alpine
+    - sed -i "s~FROM golang~FROM $CI_REGISTRY_GO/golang~g" "build/Dockerfile"
+    - sed -i "s~FROM haproxytech/haproxy-alpine~FROM $CI_REGISTRY_GO/haproxy-alpine~g" "build/Dockerfile"
+  script:
+    - mkdir -p tar
+    - make build
+    - docker save -o tar/k8sIC.tar haproxytech/kubernetes-ingress:latest
+  artifacts:
+    when: on_success
+    paths:
+      - tar
+    expire_in: 60 minutes

@@ -1,0 +1,22 @@
+include:
+  - local: .gitlab/.templates.yml
+e2e_k8s_sch_1:
+  stage: e2e_k8s_sch_1
+  needs: ["docker-build"]
+  variables:
+    K8S_VERSION: v1.31.9
+    KUBEADM_VER: v1beta3
+    KUBECTL: v1.31.0
+  extends: .kind_deployment_schedules
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule" && $SCHEDULE_TYPE == 'weekly' &&  $SCHEDULE_DAY == 'monday'
+e2e_k8s_sch_2:
+  stage: e2e_k8s_sch_2
+  needs: ["docker-build"]
+  variables:
+    K8S_VERSION: v1.32.5
+    KUBEADM_VER: v1beta3
+    KUBECTL: v1.32.0
+  extends: .kind_deployment_schedules
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule" && $SCHEDULE_TYPE == 'weekly' &&  $SCHEDULE_DAY == 'tuesday'

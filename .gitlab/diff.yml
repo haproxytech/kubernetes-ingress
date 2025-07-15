@@ -1,0 +1,32 @@
+diff:
+  stage: diff
+  rules:
+    - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
+    - if: $CI_PIPELINE_SOURCE == 'push'
+  image:
+    name: $CI_REGISTRY_GO/golang:$GO_VERSION
+    entrypoint: [ "" ]
+  tags:
+    - go
+  before_script:
+    - make doc
+  script:
+    - test -z "$(git diff 2> /dev/null)" || exit "Documentation is not generated, issue \`make doc\` and commit the result"
+    - test -z "$(git ls-files --others --exclude-standard 2> /dev/null)" || exit "Documentation created untracked files, cannot proceed"
+diff-crd:
+  stage: diff
+  rules:
+    - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
+    - if: $CI_PIPELINE_SOURCE == 'push'
+  image:
+    name: $CI_REGISTRY_GO/golang:$GO_VERSION
+    entrypoint: [ "" ]
+  tags:
+    - go
+  before_script:
+    - go version
+    - make cr_generate
+  script:
+    - git diff
+    - test -z "$(git diff 2> /dev/null)" || exit "CRD generation was not generated, issue \`make cr_generate\` and commit the result"
+    - test -z "$(git ls-files --others --exclude-standard 2> /dev/null)" || exit "CRD generation created untracked files, cannot proceed"
