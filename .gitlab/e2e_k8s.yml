@@ -1,0 +1,13 @@
+include:
+  - local: .gitlab/.templates.yml
+e2e_k8s:
+  stage: e2e_k8s
+  needs: ["docker-build"]
+  variables:
+    K8S_VERSION: v1.32.2
+    KUBEADM_VER: v1beta3
+    KUBECTL: v1.31.0
+  extends: .kind_deployment
+  rules:
+    - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
+    - if: '$CI_PIPELINE_SOURCE == "push" && $CI_PROJECT_NAMESPACE != "haproxy-controller"'
