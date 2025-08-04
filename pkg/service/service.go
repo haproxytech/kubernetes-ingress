@@ -122,19 +122,18 @@ func (s *Service) GetBackendName() (name string, err error) {
 		return
 	}
 	resourceNamespace := s.resource.Namespace
-	resourceName := s.resource.Name
-	prefix := ""
+	prefixSvc := "svc_"
+	resourceName := prefixSvc + s.resource.Name
 	if s.IsStandalone() && s.ingress != nil && s.ingress.Name != "" {
-		resourceName = s.ingress.Name + "-" + s.resource.Name
+		resourceName = s.ingress.Name + "_" + prefixSvc + s.resource.Name
 		resourceNamespace = s.ingress.Namespace
-		prefix = "ing_"
 	}
 
 	s.path.SvcPortResolved = &svcPort
 	if svcPort.Name != "" {
-		name = fmt.Sprintf("%s%s_%s_%s", prefix, resourceNamespace, resourceName, svcPort.Name)
+		name = fmt.Sprintf("%s_%s_%s", resourceNamespace, resourceName, svcPort.Name)
 	} else {
-		name = fmt.Sprintf("%s%s_%s_%s", prefix, resourceNamespace, resourceName, strconv.Itoa(int(svcPort.Port)))
+		name = fmt.Sprintf("%s_%s_%s", resourceNamespace, resourceName, strconv.Itoa(int(svcPort.Port)))
 	}
 	return
 }

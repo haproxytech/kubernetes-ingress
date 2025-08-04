@@ -16,13 +16,13 @@ spec:
           port: 32766
       backend_switching_rule_list:
         - cond: if
-          cond_test: '{ req_ssl_sni -i backend0.example.com }'
+          cond_test: "{ req_ssl_sni -i backend0.example.com }"
           index: 0
-          name: e2e-tests-crd-tcp_http-echo-0_https
+          name: e2e-tests-crd-tcp_svc_http-echo-0_https
         - cond: if
-          cond_test: '{ req_ssl_sni -i backend1.example.com }'
+          cond_test: "{ req_ssl_sni -i backend1.example.com }"
           index: 1
-          name: e2e-tests-crd-tcp_http-echo-1_https
+          name: e2e-tests-crd-tcp_svc_http-echo-1_https
       tcp_request_rule_list:
         - type: inspect-delay
           timeout: 5000

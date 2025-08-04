@@ -143,5 +143,5 @@ func (suite *CRDTCPSuite) checkBasicHttpEchoFrontend(p parser.Parser, feName str
 	suite.checkFrontend(p, feName, "mode", &types.StringC{Value: "tcp"})
 	suite.checkFrontend(p, feName, "log-format", &types.StringC{Value: "'%{+Q}o %t %s'"})
 	suite.checkFrontend(p, feName, "option tcplog", &types.SimpleOption{NoOption: false, Comment: ""})
-	suite.checkFrontend(p, feName, "default_backend", &types.StringC{Value: "e2e-tests-crd-tcp_http-echo_https"})
+	suite.checkFrontend(p, feName, "default_backend", &types.StringC{Value: "e2e-tests-crd-tcp_svc_http-echo_https"})
 }

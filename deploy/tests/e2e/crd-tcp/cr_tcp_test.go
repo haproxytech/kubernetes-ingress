@@ -65,7 +65,7 @@ func (suite *TCPSuite) Test_CRD_TCP_OK() {
 
 		// Checks for backend
 		// Checks that we have correctly applied the backend CR
-		beNames := []string{"e2e-tests-crd-tcp_http-echo_http", "e2e-tests-crd-tcp_http-echo_http2"}
+		beNames := []string{"e2e-tests-crd-tcp_svc_http-echo_http", "e2e-tests-crd-tcp_svc_http-echo_http2"}
 		for _, beName := range beNames {
 			suite.checkBackend(p, beName, "mode", &types.StringC{Value: "tcp"})
 			suite.checkBackend(p, beName, "balance", &types.Balance{
@@ -108,8 +108,8 @@ func (suite *TCPSuite) Test_CRD_TCP_CR_Backend() {
 		suite.Require().NoError(err, "Could not get Haproxy config parser")
 
 		suite.checkFrontends(p)
-		// Checks for backend e2e-tests-crd-tcp_http-echo_http
-		beNames := []string{"e2e-tests-crd-tcp_http-echo_http", "e2e-tests-crd-tcp_http-echo_http2"}
+		// Checks for backend e2e-tests-crd-tcp_svc_http-echo_http
+		beNames := []string{"e2e-tests-crd-tcp_svc_http-echo_http", "e2e-tests-crd-tcp_svc_http-echo_http2"}
 		for _, beName := range beNames {
 			suite.checkBackend(p, beName, "mode", &types.StringC{Value: "tcp"})
 			suite.checkBackend(p, beName, "balance", &types.Balance{
@@ -199,7 +199,7 @@ func (suite *TCPSuite) Test_CRD_TCP_SSL() {
 	suite.checkFrontend(p, feName443, "mode", &types.StringC{Value: "tcp"})
 	suite.checkFrontend(p, feName443, "log-format", &types.StringC{Value: "'%{+Q}o %t %s'"})
 	suite.checkFrontend(p, feName443, "option tcplog", &types.SimpleOption{NoOption: false, Comment: ""})
-	suite.checkFrontend(p, feName443, "default_backend", &types.StringC{Value: "e2e-tests-crd-tcp_http-echo_https"})
+	suite.checkFrontend(p, feName443, "default_backend", &types.StringC{Value: "e2e-tests-crd-tcp_svc_http-echo_https"})
 }
 
 func (suite *TCPSuite) checkFrontends(p parser.Parser) {
@@ -232,7 +232,7 @@ func (suite *TCPSuite) checkFrontends(p parser.Parser) {
 	suite.checkFrontend(p, feName80, "mode", &types.StringC{Value: "tcp"})
 	suite.checkFrontend(p, feName80, "log-format", &types.StringC{Value: "'%{+Q}o %t %s'"})
 	suite.checkFrontend(p, feName80, "option tcplog", &types.SimpleOption{NoOption: false, Comment: ""})
-	suite.checkFrontend(p, feName80, "default_backend", &types.StringC{Value: "e2e-tests-crd-tcp_http-echo_http"})
+	suite.checkFrontend(p, feName80, "default_backend", &types.StringC{Value: "e2e-tests-crd-tcp_svc_http-echo_http"})
 
 	// Check for tcp tcp-http-echo-444
 	binds81 := []types.Bind{
@@ -254,5 +254,5 @@ func (suite *TCPSuite) checkFrontends(p parser.Parser) {
 	suite.checkFrontend(p, feName444, "mode", &types.StringC{Value: "tcp"})
 	suite.checkFrontend(p, feName444, "log-format", &types.StringC{Value: "'%{+Q}o %t %s'"})
 	suite.checkFrontend(p, feName444, "option tcplog", &types.SimpleOption{NoOption: false, Comment: ""})
-	suite.checkFrontend(p, feName444, "default_backend", &types.StringC{Value: "e2e-tests-crd-tcp_http-echo_http2"})
+	suite.checkFrontend(p, feName444, "default_backend", &types.StringC{Value: "e2e-tests-crd-tcp_svc_http-echo_http2"})
 }

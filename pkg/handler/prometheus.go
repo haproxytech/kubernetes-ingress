@@ -18,7 +18,8 @@ type PrometheusEndpoint struct {
 
 //nolint:golint, stylecheck
 const (
-	PROMETHEUS_URL_PATH = "/metrics"
+	PROMETHEUS_URL_PATH     = "/metrics"
+	PROMETHEUS_SERVICE_NAME = "prometheus"
 )
 
 func (handler PrometheusEndpoint) Update(k store.K8s, h haproxy.HAProxy, a annotations.Annotations) (err error) {
@@ -27,7 +28,7 @@ func (handler PrometheusEndpoint) Update(k store.K8s, h haproxy.HAProxy, a annot
 	}
 
 	prometheusSvcName := "prometheus"
-	prometheusBackendName := fmt.Sprintf("%s_%s_http", handler.PodNs, prometheusSvcName)
+	prometheusBackendName := fmt.Sprintf("%s_svc_%s_http", handler.PodNs, PROMETHEUS_SERVICE_NAME)
 
 	status := store.EMPTY
 	var secret *store.Secret

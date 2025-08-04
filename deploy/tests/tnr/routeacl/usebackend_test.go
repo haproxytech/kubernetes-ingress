@@ -28,7 +28,7 @@ func (suite *UseBackendSuite) TestUseBackend() {
 		if err != nil {
 			suite.T().Error(err.Error())
 		}
-		c := strings.Count(string(contents), "use_backend ns_myappservice_https if { path -m beg / } { cookie(staging) -m found }")
+		c := strings.Count(string(contents), "use_backend ns_svc_myappservice_https if { path -m beg / } { cookie(staging) -m found }")
 		suite.Exactly(c, 2, "use_backend for route-acl is repeated %d times but expected 2", c)
 	})
 }

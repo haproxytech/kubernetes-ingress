@@ -38,7 +38,7 @@ func TestCookiePersistenceTestSuite(t *testing.T) {
 }
 
 // Expected backend
-// backend e2e-tests-cookie-persistence_http-echo_http
+// backend e2e-tests-cookie-persistence_svc_http-echo_http
 //   ...
 //   cookie mycookie dynamic indirect nocache insert
 //   dynamic-cookie-key ohph7OoGhong
@@ -84,7 +84,7 @@ func (suite *CookiePersistenceTestSuite) Test_CookiePersistence_Dynamic() {
 	reader := strings.NewReader(cfg)
 	p, err := parser.New(options.Reader(reader))
 	suite.Require().NoError(err, "Could not get Haproxy config parser")
-	beName := suite.test.GetNS() + "_http-echo_http"
+	beName := suite.test.GetNS() + "_svc_http-echo_http"
 	serverName := "SRV_1"
 
 	suite.checkServerNoCookie(p, beName, serverName)
@@ -122,7 +122,7 @@ func (suite *CookiePersistenceTestSuite) Test_CookiePersistence_Dynamic() {
 }
 
 // Expected backend
-// backend e2e-tests-cookie-persistence_http-echo_http
+// backend e2e-tests-cookie-persistence_svc_http-echo_http
 //   ...
 //   cookie mycookie indirect nocache insert
 //   server SRV_1 10.244.0.13:8888 enabled cookie SRV_1
@@ -166,7 +166,7 @@ func (suite *CookiePersistenceTestSuite) Test_CookiePersistence_No_Dynamic() {
 	suite.Require().NoError(err, "Could not get Haproxy config parser")
 
 	// Check that the server line
-	beName := suite.test.GetNS() + "_http-echo_http"
+	beName := suite.test.GetNS() + "_svc_http-echo_http"
 	serverName := "SRV_1"
 
 	suite.checkServerCookie(p, beName, serverName)
@@ -242,7 +242,7 @@ func (suite *CookiePersistenceTestSuite) Test_CookiePersistence_Switch() {
 	reader := strings.NewReader(cfg)
 	p, err := parser.New(options.Reader(reader))
 	suite.Require().NoError(err, "Could not get Haproxy config parser")
-	beName := suite.test.GetNS() + "_http-echo_http"
+	beName := suite.test.GetNS() + "_svc_http-echo_http"
 	serverName := "SRV_1"
 
 	suite.checkServerNoCookie(p, beName, serverName)

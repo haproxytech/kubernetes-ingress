@@ -162,11 +162,11 @@ func (suite *DisableConfigSnippetSuite) expectSnippet(expectedSnippets []excepte
 }
 
 func getSvcSnippetComment(appNs, serviceName string) string {
-	return fmt.Sprintf("### service:%s_%s_%s/%s/%s ###", appNs, serviceName, "https", appNs, serviceName)
+	return fmt.Sprintf("### service:%s_svc_%s_%s/%s/%s ###", appNs, serviceName, "https", appNs, serviceName)
 }
 
 func getIngSnippetComment(appNs, serviceName, ingressName string) string {
-	return fmt.Sprintf("### ingress:%s_%s_%s/%s/%s ###", appNs, serviceName, "https", appNs, ingressName)
+	return fmt.Sprintf("### ingress:%s_svc_%s_%s/%s/%s ###", appNs, serviceName, "https", appNs, ingressName)
 }
 
 func getConfigMapComment() string {
