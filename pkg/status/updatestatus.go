@@ -17,17 +17,19 @@ type UpdateStatusManager interface {
 }
 
 type UpdateStatusManagerImpl struct {
-	client            *kubernetes.Clientset
-	ingressClass      string
-	updateIngresses   []*ingress.Ingress
-	emptyIngressClass bool
+	client                     *kubernetes.Clientset
+	ingressClass               string
+	updateIngresses            []*ingress.Ingress
+	emptyIngressClass          bool
+	disableIngressStatusUpdate bool
 }
 
-func New(client *kubernetes.Clientset, ingressClass string, emptyIngressClass bool) UpdateStatusManager {
+func New(client *kubernetes.Clientset, ingressClass string, emptyIngressClass bool, disableIngressStatusUpdate bool) UpdateStatusManager {
 	return &UpdateStatusManagerImpl{
-		client:            client,
-		ingressClass:      ingressClass,
-		emptyIngressClass: emptyIngressClass,
+		client:                     client,
+		ingressClass:               ingressClass,
+		emptyIngressClass:          emptyIngressClass,
+		disableIngressStatusUpdate: disableIngressStatusUpdate,
 	}
 }
 
@@ -75,7 +77,7 @@ func (m *UpdateStatusManagerImpl) Update(k store.K8s, h haproxy.HAProxy, a annot
 		go func() {
 			for _, ing := range ingresses {
 				if ing != nil {
-					errs.Add(ing.UpdateStatus(m.client))
+					errs.Add(ing.UpdateStatus(m.client, m.disableIngressStatusUpdate))
 				}
 			}
 		}()
