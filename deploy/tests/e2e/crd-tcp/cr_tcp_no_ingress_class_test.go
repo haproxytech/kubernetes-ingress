@@ -36,9 +36,9 @@ func TestTCPSuiteNoIngressClasss(t *testing.T) {
 
 // Expected configuration:
 // frontend tcpcr_e2e-tests-crd-tcp_fe-http-echo-80
-// backend e2e-tests-crd-tcp_http-echo-2_http ## from service/http-echo-2 (port 80)
-// backend e2e-tests-crd-tcp_http-echo-2_https ## from service/http-echo-2 (port 443)
-// backend e2e-tests-crd-tcp_http-echo_http ## from service/http-echo (port 80)
+// backend e2e-tests-crd-tcp_svc_http-echo-2_http ## from service/http-echo-2 (port 80)
+// backend e2e-tests-crd-tcp_svc_http-echo-2_https ## from service/http-echo-2 (port 443)
+// backend e2e-tests-crd-tcp_svc_http-echo_http ## from service/http-echo (port 80)
 // SHOULD NOT be created
 
 func (suite *TCPSuiteNoIngressClass) Test_CRD_TCP_No_Ingress_Class() {
@@ -60,11 +60,11 @@ func (suite *TCPSuiteNoIngressClass) Test_CRD_TCP_No_Ingress_Class() {
 
 		_, err = p.Get(parser.Frontends, "tcpcr_e2e-tests-crd-tcp_fe-http-echo-80", "bind")
 		suite.Require().Equal(err.Error(), "section missing")
-		_, err = p.Get(parser.Backends, "e2e-tests-crd-tcp_http-echo-2_http", "mode")
+		_, err = p.Get(parser.Backends, "e2e-tests-crd-tcp_svc_http-echo-2_http", "mode")
 		suite.Require().Equal(err.Error(), "section missing")
-		_, err = p.Get(parser.Backends, "e2e-tests-crd-tcp_http-echo-2_https", "mode")
+		_, err = p.Get(parser.Backends, "e2e-tests-crd-tcp_svc_http-echo-2_https", "mode")
 		suite.Require().Equal(err.Error(), "section missing")
-		_, err = p.Get(parser.Backends, "e2e-tests-crd-tcp_http-echo_http", "mode")
+		_, err = p.Get(parser.Backends, "e2e-tests-crd-tcp_svc_http-echo_http", "mode")
 		suite.Require().Equal(err.Error(), "section missing")
 	})
 }

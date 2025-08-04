@@ -44,7 +44,7 @@ func TestTCPSuiteAddtionalServices(t *testing.T) {
 //   log-format '%{+Q}o %t %s'
 //   option tcplog
 //   default_backend e2e-tests-crd-tcp_http-echo_http
-// backend e2e-tests-crd-tcp_http-echo-2_http ## from service/http-echo-2 (port 80)
+// backend e2e-tests-crd-tcp_svc_http-echo-2_http ## from service/http-echo-2 (port 80)
 //   mode tcp
 //   balance roundrobin
 //   no option abortonclose
@@ -54,7 +54,7 @@ func TestTCPSuiteAddtionalServices(t *testing.T) {
 //   server SRV_2 [fd00:10:244::8]:8888 enabled
 //   server SRV_3 127.0.0.1:8888 disabled
 //   server SRV_4 127.0.0.1:8888 disabled
-// backend e2e-tests-crd-tcp_http-echo-2_https ## from service/http-echo-2 (port 443)
+// backend e2e-tests-crd-tcp_svc_http-echo-2_https ## from service/http-echo-2 (port 443)
 //   mode tcp
 //   balance roundrobin
 //   no option abortonclose
@@ -64,7 +64,7 @@ func TestTCPSuiteAddtionalServices(t *testing.T) {
 //   server SRV_2 [fd00:10:244::8]:8443 enabled
 //   server SRV_3 127.0.0.1:8443 disabled
 //   server SRV_4 127.0.0.1:8443 disabled
-// backend e2e-tests-crd-tcp_http-echo_http ## from service/http-echo (port 80)
+// backend e2e-tests-crd-tcp_svc_http-echo_http ## from service/http-echo (port 80)
 //   mode tcp
 //   balance roundrobin
 //   no option abortonclose
@@ -99,22 +99,22 @@ func (suite *TCPSuiteAddtionalServices) Test_CRD_TCP_Additional_Services() {
 		suite.checkFrontends(p)
 
 		// Checks for backend
-		// BE: e2e-tests-crd-tcp_http-echo_http
+		// BE: e2e-tests-crd-tcp_svc_http-echo_http
 		//  comes from TCP CR
 		//  service:
 		//   name: "http-echo"
 		//   port: 80
-		// BE e2e-tests-crd-tcp_http-echo-2_http
+		// BE e2e-tests-crd-tcp_svc_http-echo-2_http
 		//  comes from TCP CR
 		//  services:
 		//   - name: "http-echo-2"
 		//     port: 80
-		// BE e2e-tests-crd-tcp_http-echo-2_https"
+		// BE e2e-tests-crd-tcp_svc_http-echo-2_https"
 		//  comes from TCP CR
 		//  services:
 		//   - name: "http-echo-2"
 		//     port: 443
-		beNames := []string{"e2e-tests-crd-tcp_http-echo_http", "e2e-tests-crd-tcp_http-echo-2_http", "e2e-tests-crd-tcp_http-echo-2_https"}
+		beNames := []string{"e2e-tests-crd-tcp_svc_http-echo_http", "e2e-tests-crd-tcp_svc_http-echo-2_http", "e2e-tests-crd-tcp_svc_http-echo-2_https"}
 		for _, beName := range beNames {
 			suite.checkBackend(p, beName, "mode", &types.StringC{Value: "tcp"})
 			suite.checkBackend(p, beName, "balance", &types.Balance{
@@ -162,5 +162,5 @@ func (suite *TCPSuiteAddtionalServices) checkFrontends(p parser.Parser) {
 	suite.checkFrontend(p, feName, "mode", &types.StringC{Value: "tcp"})
 	suite.checkFrontend(p, feName, "log-format", &types.StringC{Value: "'%{+Q}o %t %s'"})
 	suite.checkFrontend(p, feName, "option tcplog", &types.SimpleOption{NoOption: false, Comment: ""})
-	suite.checkFrontend(p, feName, "default_backend", &types.StringC{Value: "e2e-tests-crd-tcp_http-echo_http"})
+	suite.checkFrontend(p, feName, "default_backend", &types.StringC{Value: "e2e-tests-crd-tcp_svc_http-echo_http"})
 }

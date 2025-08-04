@@ -51,9 +51,9 @@ func TestTCPSuiteFull(t *testing.T) {
 //   filter trace name AFTER-HTTP-COMP
 //   tcp-request inspect-delay 5000
 //   tcp-request content accept if { req_ssl_hello_type 1 }
-//   use_backend e2e-tests-crd-tcp_http-echo-0_https if switch_be_0
-//   use_backend e2e-tests-crd-tcp_http-echo-1_https if switch_be_1
-//   default_backend e2e-tests-crd-tcp_http-echo_https
+//   use_backend e2e-tests-crd-tcp_svc_http-echo-0_https if switch_be_0
+//   use_backend e2e-tests-crd-tcp_svc_http-echo-1_https if switch_be_1
+//   default_backend e2e-tests-crd-tcp_svc_http-echo_https
 //   declare capture request len 12345
 //   declare capture response len 54321
 

@@ -50,7 +50,7 @@ func TestTCPSuiteBackendSwitchingRule(t *testing.T) {
 //   use_backend e2e-tests-crd-tcp_http-echo-1_https if { req_ssl_sni -i backend1.example.com }
 //   default_backend e2e-tests-crd-tcp_http-echo_https
 
-//   backend e2e-tests-crd-tcp_http-echo-0_https
+//   backend e2e-tests-crd-tcp_svc_http-echo-0_https
 //   mode tcp
 //   balance roundrobin
 //   no option abortonclose
@@ -61,7 +61,7 @@ func TestTCPSuiteBackendSwitchingRule(t *testing.T) {
 //   server SRV_3 127.0.0.1:8443 disabled
 //   server SRV_4 127.0.0.1:8443 disabled
 
-// backend e2e-tests-crd-tcp_http-echo-1_https
+// backend e2e-tests-crd-tcp_svc_http-echo-1_https
 //   mode tcp
 //   balance roundrobin
 //   no option abortonclose
@@ -72,7 +72,7 @@ func TestTCPSuiteBackendSwitchingRule(t *testing.T) {
 //   server SRV_3 127.0.0.1:8443 disabled
 //   server SRV_4 127.0.0.1:8443 disabled
 
-// backend e2e-tests-crd-tcp_http-echo_https
+// backend e2e-tests-crd-tcp_svc_http-echo_https
 //   mode tcp
 //   balance roundrobin
 //   no option abortonclose
@@ -107,7 +107,7 @@ func (suite *TCPSuiteBackendSwitchingRule) Test_CRD_TCP_BackendSwitchingRule() {
 			var ok bool
 			if res.StatusCode == 200 {
 				body, _ := io.ReadAll(res.Body)
-				ok = !strings.HasPrefix(string(body), "http-echo-0") && !strings.HasPrefix(string(body), "http-echo-1")
+				ok = !strings.HasPrefix(string(body), "svc_http-echo-0") && !strings.HasPrefix(string(body), "svc_http-echo-1")
 			}
 			return ok
 		}, e2e.WaitDuration, e2e.TickDuration)

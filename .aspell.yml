@@ -60,3 +60,4 @@ allowed:
   - SNI
   - gwapi
   - init
+  - svc

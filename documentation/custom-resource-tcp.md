@@ -96,11 +96,11 @@ In the example, the resources have been deployed in a namespace `tests`.
 
 Note that in the TCP CR :
 - `.spec.service` will create:
-  - the backend `backend tests_http-echo_https`
+  - the backend `backend tests_svc_http-echo_https`
   - the frontend `default_backend`
 - `.spec.services` will create 2 additional backends:
-  - `tests_http-echo-0_https`
-  - `tests_http-echo-1_https`
+  - `tests_svc_http-echo-0_https`
+  - `tests_svc_http-echo-1_https`
 - The `acl` and `use_backend` are handled by the TCP CR `.spec.acl_list` and `.spec.backend_switching_rule_list`.
 
 Except the frontend keyword `default_backend`, all other lines are not automatically generated but are in a flexible way handled by the `frontend` section in the TCP CR.
@@ -201,7 +201,7 @@ frontend tcpcr_test_fe-http-echo-8443
   bind [::]:32766 name v4v6 v4v6
   log-format '%{+Q}o %t %s'
   option tcplog
-  default_backend test_http-echo_https
+  default_backend test_svc_http-echo_https
 ```
 
 The frontend name `tcpcr_test_fe-http-echo-443` follow the pattern:
@@ -210,7 +210,7 @@ The frontend name `tcpcr_test_fe-http-echo-443` follow the pattern:
 #### Backend sections
 
 ```
-backend test_http-echo_https
+backend test_svc_http-echo_https
   mode tcp
   balance roundrobin
   no option abortonclose
@@ -257,7 +257,7 @@ spec:
 The following backend section would be generated in the HAProxy configuration instead of what was explained above:
 
 ```
-backend test_http-echo_https
+backend test_svc_http-echo_https
   mode tcp
   balance leastconn
   no option abortonclose
@@ -431,14 +431,14 @@ frontend tcpcr_test_fe-http-echo-443
   bind [::]:32766 name v4v6 v4v6
   log-format '%{+Q}o %t %s'
   option tcplog
-  default_backend test_http-echo_https
+  default_backend test_svc_http-echo_https
 
 ```
 
 #### Backend sections
 
 ```
-backend test_http-echo_https
+backend test_svc_http-echo_https
   mode tcp
   balance roundrobin
   no option abortonclose
