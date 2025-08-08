@@ -230,7 +230,7 @@ func addControllerMetricData(builder *Builder, chShutdown chan struct{}) {
 			if err := server.Shutdown(); err != nil {
 				logger.Errorf("Could not gracefully shutdown controller data server: %v\n", err)
 			} else {
-				logger.Errorf("Gracefully shuting down controller data server")
+				logger.Info("Gracefully shuting down controller data server")
 			}
 		}()
 		logger.Infof("running controller data server on :%d, running%s", builder.osArgs.ControllerPort, runningServices)
@@ -254,7 +254,7 @@ func addLocalDefaultService(builder *Builder, chShutdown chan struct{}) {
 			if err := server.Shutdown(); err != nil {
 				logger.Errorf("Could not gracefully shutdown controller data server: %v\n", err)
 			} else {
-				logger.Errorf("Gracefully shuting down controller data server")
+				logger.Info("Gracefully shuting down controller data server")
 			}
 		}()
 		logger.Infof("running default backend server on :%d", builder.osArgs.DefaultBackendPort)
