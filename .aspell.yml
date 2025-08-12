@@ -61,3 +61,5 @@ allowed:
   - gwapi
   - init
   - svc
+  - frontent
+  - pprof

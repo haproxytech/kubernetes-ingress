@@ -65,10 +65,6 @@ func (c *HAProxyController) initHandlers() {
 			},
 		}
 	}
-	// Need to be before Refresh. If after, maps are refreshed without pprof content
-	if c.osArgs.PprofEnabled {
-		c.beforeUpdateHandlers = append(c.beforeUpdateHandlers, handler.Pprof{})
-	}
 
 	if !c.osArgs.DisableQuic {
 		c.updateHandlers = append(c.updateHandlers, &handler.Quic{
