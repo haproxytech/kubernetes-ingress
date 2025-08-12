@@ -3,10 +3,10 @@ package handler
 import (
 	"fmt"
 	"strings"
+	"sync"
 
 	"github.com/haproxytech/kubernetes-ingress/pkg/annotations"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy"
-	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/instance"
 	k8ssync "github.com/haproxytech/kubernetes-ingress/pkg/k8s/sync"
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
 )
@@ -16,28 +16,68 @@ type PrometheusEndpoint struct {
 	PodNs     string
 }
 
+var (
+	prometheusUsers       map[string]prometheusAuthUser
+	prometheusUsersActive bool
+	prometheusMu          sync.RWMutex
+)
+
 //nolint:golint, stylecheck
 const (
 	PROMETHEUS_URL_PATH     = "/metrics"
 	PROMETHEUS_SERVICE_NAME = "prometheus"
 )
 
+type prometheusAuthUser struct {
+	Password string
+	Salt     string
+}
+
+func PrometheusAuthUsers() map[string]prometheusAuthUser {
+	prometheusMu.RLock()
+	defer prometheusMu.RUnlock()
+	users := make(map[string]prometheusAuthUser, len(prometheusUsers))
+	for user, passwordData := range prometheusUsers {
+		users[user] = prometheusAuthUser{
+			Password: passwordData.Password,
+			Salt:     passwordData.Salt,
+		}
+	}
+	return users
+}
+
+func PrometheusAuthActive() bool {
+	prometheusMu.RLock()
+	defer prometheusMu.RUnlock()
+	return prometheusUsersActive
+}
+
 func (handler PrometheusEndpoint) Update(k store.K8s, h haproxy.HAProxy, a annotations.Annotations) (err error) {
 	if handler.PodNs == "" {
-		return
+		return nil
 	}
 
-	prometheusSvcName := "prometheus"
-	prometheusBackendName := fmt.Sprintf("%s_svc_%s_http", handler.PodNs, PROMETHEUS_SERVICE_NAME)
-
-	status := store.EMPTY
-	var secret *store.Secret
-	backendExists := h.BackendExists(prometheusBackendName)
-
 	annSecret := annotations.String("prometheus-endpoint-auth-secret", k.ConfigMaps.Main.Annotations)
-	var secretExists, secretChanged, userListChanged bool
-	userListExists, _ := h.UserListExistsByGroup("haproxy-controller-prometheus")
+	prometheusMu.RLock()
+	prometheusUsersActiveLocal := prometheusUsersActive
+	prometheusMu.RUnlock()
 
+	if annSecret != "" && !prometheusUsersActiveLocal {
+		prometheusMu.Lock()
+		prometheusUsersActive = true
+		prometheusMu.Unlock()
+	} else if annSecret == "" && prometheusUsersActiveLocal {
+		prometheusMu.Lock()
+		prometheusUsersActive = false
+		prometheusUsers = nil
+		prometheusMu.Unlock()
+	}
+	if annSecret == "" {
+		return nil
+	}
+
+	var secret *store.Secret
+	var secretExists bool
 	// Does the secret exist in store ? ...
 	if annSecret != "" {
 		secretFQN := strings.Split(annSecret, "/")
@@ -46,87 +86,34 @@ func (handler PrometheusEndpoint) Update(k store.K8s, h haproxy.HAProxy, a annot
 			if ns != nil {
 				secret = ns.Secret[secretFQN[1]]
 				secretExists = secret != nil && secret.Status != store.DELETED
-				secretChanged = secret.Status == store.MODIFIED
 			}
 		}
-		userListChanged = secretChanged || !userListExists
-	} else {
-		userListChanged = userListExists
-	}
-
-	if !backendExists {
-		status = store.ADDED
-	}
-
-	if !userListChanged && status == store.EMPTY && (!secretExists || (secretExists && secret.Status == store.EMPTY)) {
-		return
-	}
-
-	svc := &store.Service{
-		Namespace:   handler.PodNs,
-		Name:        prometheusSvcName,
-		Status:      status,
-		Annotations: k.ConfigMaps.Main.Annotations,
-		Ports: []store.ServicePort{
-			{
-				Name:     "http",
-				Protocol: "http",
-				Port:     8765,
-				Status:   status,
-			},
-		},
-		Faked: true,
-	}
-	endpoints := &store.Endpoints{
-		Namespace: handler.PodNs,
-		Service:   prometheusSvcName,
-		SliceName: prometheusSvcName,
-		Status:    status,
-		Ports: map[string]*store.PortEndpoints{
-			"http": {
-				Port:      int64(h.Env.ControllerPort),
-				Addresses: map[string]struct{}{"127.0.0.1": {}},
-			},
-		},
-	}
-
-	if status != store.EMPTY {
-		k.EventService(k.GetNamespace(svc.Namespace), svc)
-		k.EventEndpoints(k.GetNamespace(endpoints.Namespace), endpoints, func(*store.RuntimeBackend, bool) error { return nil })
-	}
-
-	ing := &store.Ingress{
-		Status: status,
-		Faked:  true,
-		IngressCore: store.IngressCore{
-			Namespace: handler.PodNs,
-			Name:      "prometheus",
-			Rules: map[string]*store.IngressRule{"": {
-				Paths: map[string]*store.IngressPath{
-					PROMETHEUS_URL_PATH: {
-						SvcNamespace:  svc.Namespace,
-						SvcName:       svc.Name,
-						Path:          PROMETHEUS_URL_PATH,
-						SvcPortString: "http",
-						PathTypeMatch: store.PATH_TYPE_IMPLEMENTATION_SPECIFIC,
-					},
-				},
-			}},
-		},
 	}
 
 	if secretExists {
-		ing.Annotations = map[string]string{
-			"auth-type":   "basic-auth",
-			"auth-secret": annSecret,
+		// first see if we need to do something
+		prometheusMu.RLock()
+		// prometheusUsers != nil, not len, there is a diff in logic
+		if secret.Status == store.EMPTY && prometheusUsers != nil {
+			prometheusMu.RUnlock()
+			return nil
 		}
+		prometheusMu.RUnlock()
+
+		// then fill users if needed
+		prometheusMu.Lock()
+		prometheusUsers = make(map[string]prometheusAuthUser)
+		for user, password := range secret.Data {
+			partsPass := strings.Split(string(password), "$")
+			salt := fmt.Sprintf("$%s$%s$", partsPass[1], partsPass[2])
+			prometheusUsers[user] = prometheusAuthUser{
+				Password: string(password),
+				Salt:     salt,
+			}
+			logger.Debugf("Adding prometheus user '%s' from secret '%s'", user, annSecret)
+		}
+		prometheusUsersActive = true
+		prometheusMu.Unlock()
 	}
-
-	if userListChanged || status != store.EMPTY || secretExists && secret.Status != store.EMPTY {
-		k.EventIngress(k.GetNamespace(ing.Namespace), ing, "fakeUID", "fakeResourceVersion")
-	}
-
-	instance.ReloadIf(status != store.EMPTY, "creation/modification of prometheus endpoint")
-
 	return nil
 }
