@@ -15,10 +15,15 @@
 package controller
 
 import (
+	"bytes"
+	"encoding/base64"
 	"errors"
+	"log"
 	"os"
 	"strconv"
 
+	"github.com/GehirnInc/crypt"
+	_ "github.com/GehirnInc/crypt/sha256_crypt"
 	"github.com/fasthttp/router"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/valyala/fasthttp"
@@ -209,7 +214,7 @@ func addControllerMetricData(builder *Builder, chShutdown chan struct{}) {
 		runningServices += " pprof"
 	}
 	if builder.osArgs.PrometheusEnabled {
-		rtr.GET(handler.PROMETHEUS_URL_PATH, fasthttpadaptor.NewFastHTTPHandler(promhttp.Handler()))
+		rtr.GET(handler.PROMETHEUS_URL_PATH, prometheusHandler())
 		runningServices += ", prometheus"
 	}
 	rtr.GET("/healtz", requestHandler)
@@ -266,5 +271,64 @@ func requestHandler(ctx *fasthttp.RequestCtx) {
 		ctx.Response.Header.Set("X-HAProxy-Ingress-Controller", "healthz")
 	default:
 		ctx.Response.Header.Set("X-HAProxy-Ingress-Controller", "healtz")
+	}
+}
+
+func prometheusHandler() func(ctx *fasthttp.RequestCtx) {
+	prometheusHandler := fasthttpadaptor.NewFastHTTPHandler(promhttp.Handler())
+	return func(ctx *fasthttp.RequestCtx) {
+		authActive := handler.PrometheusAuthActive()
+		if !authActive {
+			prometheusHandler(ctx)
+			return
+		}
+
+		auth := ctx.Request.Header.Peek("Authorization")
+		if auth == nil {
+			ctx.Response.Header.Set("WWW-Authenticate", `Basic realm="Restricted"`)
+			ctx.SetStatusCode(fasthttp.StatusUnauthorized)
+			return
+		}
+
+		const prefix = "Basic "
+		if !bytes.HasPrefix(auth, []byte(prefix)) {
+			ctx.SetStatusCode(fasthttp.StatusUnauthorized)
+			return
+		}
+
+		encoded := auth[len(prefix):]
+		decoded, err := base64.StdEncoding.DecodeString(string(encoded))
+		if err != nil {
+			ctx.SetStatusCode(fasthttp.StatusUnauthorized)
+			return
+		}
+
+		parts := bytes.SplitN(decoded, []byte{':'}, 2)
+		if len(parts) != 2 {
+			ctx.SetStatusCode(fasthttp.StatusUnauthorized)
+			return
+		}
+
+		crypter := crypt.SHA256.New()
+		users := handler.PrometheusAuthUsers()
+		userOK := false
+		for user, passwordData := range users {
+			if user != string(parts[0]) {
+				continue
+			}
+			computed, err := crypter.Generate(parts[1], []byte(passwordData.Salt))
+			if err != nil {
+				log.Printf("Error during comparison: %v", err)
+			}
+			if computed == passwordData.Password {
+				userOK = true
+				break
+			}
+		}
+		if !userOK {
+			ctx.SetStatusCode(fasthttp.StatusUnauthorized)
+			return
+		}
+		prometheusHandler(ctx)
 	}
 }
