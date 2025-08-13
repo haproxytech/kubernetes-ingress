@@ -22,6 +22,8 @@ nodes:
         containerPort: 32767
       - hostPort: 32765 # gwapi
         containerPort: 32765
+      - hostPort: 32060 # admin port
+        containerPort: 32060
     kubeadmConfigPatches:
     - |
       kind: ClusterConfiguration

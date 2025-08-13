@@ -29,6 +29,8 @@ nodes:
         containerPort: 32766
       - hostPort: 32767
         containerPort: 32767
+      - hostPort: 32060 # admin port
+        containerPort: 32060
     kubeadmConfigPatches:
     - |
       kind: ClusterConfiguration
