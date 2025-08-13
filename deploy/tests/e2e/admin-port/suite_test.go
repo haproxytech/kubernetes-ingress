@@ -40,7 +40,7 @@ func (suite *AdminPortSuite) SetupSuite() {
 	suite.test, err = e2e.NewTest()
 	suite.Require().NoError(err)
 	suite.tmplData = tmplData{Host: suite.test.GetNS() + ".test"}
-	suite.client, err = e2e.NewHTTPClient(suite.tmplData.Host)
+	suite.client, err = e2e.NewHTTPClient(suite.tmplData.Host, 32060)
 	suite.Require().NoError(err)
 }
 
