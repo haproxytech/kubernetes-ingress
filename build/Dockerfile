@@ -12,8 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM golang:1.24-alpine AS builder
+FROM haproxytech/haproxy-alpine:3.2 AS builder-c
+RUN apk add --no-cache build-base gcc musl-dev
+WORKDIR /src
 
+COPY pkg/protection/block_secrets.c .
+RUN gcc -O3 -Wall -flto -fPIC -shared -s -o libblock_secrets.so block_secrets.c -ldl
+
+FROM golang:1.24-alpine AS builder
 RUN apk --no-cache add git openssh
 
 COPY /go.mod /src/go.mod
@@ -46,7 +52,6 @@ RUN apk --no-cache add socat openssl util-linux htop tzdata curl libcap && \
     rm -f /usr/local/bin/dataplaneapi-v2 /usr/bin/dataplaneapi-v2 && \
     chgrp -R haproxy /usr/local/etc/haproxy /run /var && \
     chmod -R ug+rwx /usr/local/etc/haproxy /run /var && \
-    setcap 'cap_net_bind_service=+ep' /usr/local/sbin/haproxy && \
     case "${TARGETPLATFORM}" in \
         "linux/arm64")      S6_ARCH=aarch64      ;; \
         "linux/amd64")      S6_ARCH=x86_64       ;; \
@@ -68,5 +73,7 @@ RUN apk --no-cache add socat openssl util-linux htop tzdata curl libcap && \
     rm -rf /var/lib/pebble
 
 COPY --from=builder /src/fs/haproxy-ingress-controller .
+
+COPY --from=builder-c /src/libblock_secrets.so /usr/local/lib/libblock_secrets.so
 
 ENTRYPOINT ["/start.sh"]
