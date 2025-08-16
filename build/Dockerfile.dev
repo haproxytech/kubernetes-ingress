@@ -11,11 +11,14 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+FROM haproxytech/haproxy-alpine:3.1 AS builder-c
+RUN apk add --no-cache build-base gcc musl-dev
+WORKDIR /src
+COPY pkg/protection/block_secrets.c .
+RUN gcc -O3 -Wall -flto -fPIC -shared -s -o libblock_secrets.so block_secrets.c -ldl
 
 FROM haproxytech/haproxy-alpine:3.1
-
 ARG TARGETPLATFORM
-
 ARG S6_OVERLAY_VERSION=3.1.6.2
 ENV S6_OVERLAY_VERSION=$S6_OVERLAY_VERSION
 ENV S6_READ_ONLY_ROOT=1
@@ -28,7 +31,6 @@ RUN apk --no-cache add socat openssl util-linux htop tzdata curl libcap && \
     rm -f /usr/local/bin/dataplaneapi /usr/bin/dataplaneapi /etc/haproxy/dataplaneapi.yml && \
     chgrp -R haproxy /usr/local/etc/haproxy /run /var && \
     chmod -R ug+rwx /usr/local/etc/haproxy /run /var && \
-    setcap 'cap_net_bind_service=+ep' /usr/local/sbin/haproxy && \
     case "${TARGETPLATFORM}" in \
         "linux/arm64")      S6_ARCH=aarch64      ;; \
         "linux/amd64")      S6_ARCH=x86_64       ;; \
@@ -50,5 +52,7 @@ RUN apk --no-cache add socat openssl util-linux htop tzdata curl libcap && \
     rm -rf /var/lib/pebble
 
 COPY kubernetes-ingress  ./haproxy-ingress-controller
+
+COPY --from=builder-c /src/libblock_secrets.so /usr/local/lib/libblock_secrets.so
 
 ENTRYPOINT ["/start.sh"]
