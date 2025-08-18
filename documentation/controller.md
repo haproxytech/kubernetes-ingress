@@ -884,13 +884,17 @@ Example:
 
 <p align='right'><a href='#haproxy-kubernetes-ingress-controller'>:arrow_up_small: back to top</a></p>
 
+***
+
 ### `--disable-ingress-status-update`
 
-  If set, disables updating the status field of Ingress resources by the controller. By default, the controller will update the status field with the LoadBalancer address. This flag is useful if you want to prevent the controller from modifying Ingress status, for example when using another controller or external process to manage status updates.
+  If set, disables updating the status field of Ingress resources by the controller.
+By default, the controller will update the status field with the LoadBalancer address.
+This flag is useful if you want to prevent the controller from modifying Ingress status, for example when using another controller or external process to manage status updates.
 
 Possible values:
 
-- Boolean value, just need to declare the flag to disable status updates.
+- Boolean flag; just declare the flag to disable status updates.
 
 Example:
 
