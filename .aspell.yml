@@ -64,3 +64,4 @@ allowed:
   - svc
   - frontent
   - pprof
+  - preload
