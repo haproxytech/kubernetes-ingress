@@ -9,3 +9,4 @@ bin/check-commit
 .local/*
 __debug_bin*
 pkg/protection/libblock_secrets.so
+pkg/protection/haproxy_wrapper

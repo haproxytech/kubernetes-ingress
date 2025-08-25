@@ -17,7 +17,9 @@ RUN apk add --no-cache build-base gcc musl-dev
 WORKDIR /src
 
 COPY pkg/protection/block_secrets.c .
+COPY pkg/protection/haproxy_wrapper.c .
 RUN gcc -O3 -Wall -flto -fPIC -shared -s -o libblock_secrets.so block_secrets.c -ldl
+RUN gcc -O3 -Wall -g -s -o haproxy_wrapper haproxy_wrapper.c
 
 FROM golang:1.24-alpine AS builder
 RUN apk --no-cache add git openssh
@@ -46,12 +48,15 @@ ENV S6_USER=haproxy
 ENV S6_GROUP=haproxy
 
 COPY /fs /
+COPY --from=builder-c /src/libblock_secrets.so /usr/local/lib/libblock_secrets.so
+COPY --from=builder-c /src/haproxy_wrapper /usr/local/sbin/haproxy_wrapper
 
 RUN apk --no-cache add socat openssl util-linux htop tzdata curl libcap && \
     rm -f /usr/local/bin/dataplaneapi /usr/bin/dataplaneapi /etc/haproxy/dataplaneapi.yml && \
     rm -f /usr/local/bin/dataplaneapi-v2 /usr/bin/dataplaneapi-v2 && \
-    chgrp -R haproxy /usr/local/etc/haproxy /run /var && \
-    chmod -R ug+rwx /usr/local/etc/haproxy /run /var && \
+    chgrp -R haproxy /usr/local/etc/haproxy /run /var /usr/local/sbin/haproxy_wrapper && \
+    chmod -R ug+rwx /usr/local/etc/haproxy /run /var /usr/local/sbin/haproxy_wrapper && \
+    setcap 'cap_net_bind_service=+ep' /usr/local/sbin/haproxy_wrapper && \
     case "${TARGETPLATFORM}" in \
         "linux/arm64")      S6_ARCH=aarch64      ;; \
         "linux/amd64")      S6_ARCH=x86_64       ;; \
@@ -73,7 +78,5 @@ RUN apk --no-cache add socat openssl util-linux htop tzdata curl libcap && \
     rm -rf /var/lib/pebble
 
 COPY --from=builder /src/fs/haproxy-ingress-controller .
-
-COPY --from=builder-c /src/libblock_secrets.so /usr/local/lib/libblock_secrets.so
 
 ENTRYPOINT ["/start.sh"]
