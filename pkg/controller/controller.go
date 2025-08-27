@@ -15,6 +15,7 @@
 package controller
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -102,7 +103,8 @@ func (c *HAProxyController) Start() {
 	c.initHandlers()
 	logger.Error(c.setupHAProxyRules())
 	logger.Error(os.Chdir(c.haproxy.Env.CfgDir))
-	logger.Panic(c.haproxy.Service("start"))
+	_, errStart := (c.haproxy.Service("start"))
+	logger.Panic(errStart)
 
 	c.SyncData()
 }
@@ -111,7 +113,8 @@ func (c *HAProxyController) Start() {
 func (c *HAProxyController) Stop() {
 	logger.Infof("Stopping Ingress Controller")
 	close(c.chShutdown)
-	logger.Error(c.haproxy.Service("stop"))
+	_, errStop := c.haproxy.Service("stop")
+	logger.Error(errStop)
 }
 
 // updateHAProxy is the control loop syncing HAProxy configuration
@@ -196,8 +199,32 @@ func (c *HAProxyController) updateHAProxy() {
 
 	if instance.NeedReload() {
 		fs.RunDelayedFuncs()
-		if err = c.haproxy.Service("reload"); err != nil {
+		var msg string
+		if msg, err = c.haproxy.Service("reload"); err != nil {
 			logger.Error(err)
+			errLines := strings.Split(msg, "\n")
+			msg := ""
+			// Extract only lines with [ALERT] prefix to reuse functions
+			for _, line := range errLines {
+				if strings.HasPrefix(line, "[ALERT]") {
+					msg += strings.TrimPrefix(line, "[ALERT]") + "\n"
+				}
+			}
+
+			c.prometheusMetricsManager.SetUnableSyncGauge()
+			rerun, errCfgSnippet := annotations.CheckBackendConfigSnippetErrorOnReload(errors.New(msg), c.haproxy.Env.CfgDir)
+			logger.Error(errCfgSnippet)
+			c.clean(true)
+			if rerun {
+				logger.Debug("disabling some config snippets because of errors")
+				// We need to replay all these resources.
+				c.store.SecretsProcessed = map[string]struct{}{}
+				c.store.BackendsProcessed = map[string]struct{}{}
+				c.updateHAProxy()
+				return
+			}
+			// If any error not from config snippet then pop the previous state of backends
+			logger.Error(c.haproxy.PopPreviousBackends())
 		} else {
 			logger.Info("HAProxy reloaded")
 		}

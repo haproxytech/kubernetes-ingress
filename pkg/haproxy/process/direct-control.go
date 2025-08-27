@@ -18,10 +18,10 @@ type directControl struct {
 	useAuxFile bool
 }
 
-func (d *directControl) Service(action string) (err error) {
+func (d *directControl) Service(action string) (msg string, err error) {
 	if d.OSArgs.Test {
 		logger.Infof("HAProxy would be %sed now", action)
-		return nil
+		return "", nil
 	}
 	var cmd *exec.Cmd
 	// if processErr is nil, process variable will automatically
@@ -35,7 +35,7 @@ func (d *directControl) Service(action string) (err error) {
 	case "start":
 		if processErr == nil {
 			logger.Error("haproxy is already running")
-			return nil
+			return "", nil
 		}
 		cmd = exec.Command(d.Env.Binary, "-W", "-S", masterSocketArg, "-f", d.Env.MainCFGFile)
 		if d.useAuxFile {
@@ -43,25 +43,25 @@ func (d *directControl) Service(action string) (err error) {
 		}
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
-		return cmd.Run()
+		return "", cmd.Run()
 	case "stop":
 		if processErr != nil {
 			logger.Error("haproxy already stopped")
-			return processErr
+			return "", processErr
 		}
 		if err = process.Signal(syscall.SIGUSR1); err != nil {
-			return err
+			return "", err
 		}
 		_, err = process.Wait()
-		return err
+		return "", err
 	case "reload":
 		if processErr != nil {
 			logger.Errorf("haproxy is not running, trying to start it")
 			return d.Service("start")
 		}
-		return process.Signal(syscall.SIGUSR2)
+		return "", process.Signal(syscall.SIGUSR2)
 	default:
-		return fmt.Errorf("unknown command '%s'", action)
+		return "", fmt.Errorf("unknown command '%s'", action)
 	}
 }
 

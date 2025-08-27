@@ -281,6 +281,26 @@ func CheckBackendConfigSnippetError(configErr error, cfgDir string) (rerun bool,
 	return rerun, err
 }
 
+func CheckBackendConfigSnippetErrorOnReload(configErr error, cfgDir string) (rerun bool, err error) {
+	// No error ? no configsnippet to disable.
+	if configErr == nil {
+		return rerun, err
+	}
+	file, lineNumbers, err := processConfigurationError(configErr)
+	if err != nil {
+		return rerun, err
+	}
+	// Read contents from failed configuration file
+	file = filepath.Join(cfgDir, filepath.Base(file))
+	contents, err := os.ReadFile(file)
+	if err != nil {
+		return rerun, err
+	}
+
+	rerun = disableFaultyCfgSnippet(string(contents), lineNumbers)
+	return rerun, err
+}
+
 func RemoveBackendCfgSnippet(backend string) {
 	if cfgSnippet.backends == nil {
 		return

@@ -17,7 +17,7 @@ var logger = utils.GetLogger()
 const MASTER_SOCKET_PATH = "/var/run/haproxy-master.sock" //nolint:stylecheck
 
 type Process interface {
-	Service(action string) (err error)
+	Service(action string) (msg string, err error)
 	UseAuxFile(useAuxFile bool)
 	SetAPI(api api.HAProxyClient)
 }
@@ -37,7 +37,7 @@ func New(env env.Env, osArgs utils.OSArgs, auxCfgFile string, api api.HAProxyCli
 		if _, err := os.Stat(auxCfgFile); err == nil {
 			p.UseAuxFile(true)
 		}
-		_ = p.Service("start")
+		_, _ = p.Service("start")
 	}
 	return p
 }

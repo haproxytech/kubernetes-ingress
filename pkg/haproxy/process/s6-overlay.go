@@ -42,36 +42,37 @@ func newS6Control(api api.HAProxyClient, env env.Env, osArgs utils.OSArgs) *s6Co
 	return &sc
 }
 
-func (d *s6Control) Service(action string) error {
+func (d *s6Control) Service(action string) (string, error) {
 	if d.OSArgs.Test {
 		logger.Infof("HAProxy would be %sed now", action)
-		return nil
+		return "", nil
 	}
 	var cmd *exec.Cmd
 
 	switch action {
 	case "start":
 		// no need to start it is up already (s6)
-		return nil
+		return "", nil
 	case "stop":
 		// no need to stop it (s6)
-		return nil
+		return "", nil
 	case "reload":
 		if d.masterSocketValid {
 			msg, err := d.masterSocket.Reload()
 			if err == nil {
 				d.logger.Debug(msg)
-				return nil
+				return "", nil
 			}
 			d.logger.Error(err)
+			return msg, err
 		}
 
 		cmd = exec.Command("s6-svc", "-2", "/run/service/haproxy")
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
-		return cmd.Run()
+		return "", cmd.Run()
 	default:
-		return fmt.Errorf("unknown command '%s'", action)
+		return "", fmt.Errorf("unknown command '%s'", action)
 	}
 }
 
