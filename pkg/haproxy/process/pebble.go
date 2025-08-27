@@ -40,20 +40,20 @@ func newPebbleControl(env env.Env, osArgs utils.OSArgs) *pebbleControl {
 	return &pb
 }
 
-func (d *pebbleControl) Service(action string) error {
+func (d *pebbleControl) Service(action string) (string, error) {
 	if d.OSArgs.Test {
 		logger.Infof("HAProxy would be %sed now", action)
-		return nil
+		return "", nil
 	}
 	var cmd *exec.Cmd
 
 	switch action {
 	case "start":
 		// no need to start it is up already (pebble)
-		return nil
+		return "", nil
 	case "stop":
 		// no need to stop it (pebble)
-		return nil
+		return "", nil
 	case "reload":
 		if d.masterSocketValid {
 			msg, err := d.masterSocket.Reload()
@@ -62,14 +62,14 @@ func (d *pebbleControl) Service(action string) error {
 			}
 			d.logger.Debug("Reload done")
 			d.logger.Debug(msg)
-			return err
+			return msg, err
 		}
 		cmd = exec.Command("pebble", "signal", "SIGUSR2", "haproxy")
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
-		return cmd.Run()
+		return "", cmd.Run()
 	default:
-		return fmt.Errorf("unknown command '%s'", action)
+		return "", fmt.Errorf("unknown command '%s'", action)
 	}
 }
 
