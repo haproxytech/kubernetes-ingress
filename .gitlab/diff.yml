@@ -30,3 +30,20 @@ diff-crd:
     - git diff
     - test -z "$(git diff 2> /dev/null)" || exit "CRD generation was not generated, issue \`make cr_generate\` and commit the result"
     - test -z "$(git ls-files --others --exclude-standard 2> /dev/null)" || exit "CRD generation created untracked files, cannot proceed"
+check-large-files:
+  stage: diff
+  tags:
+    - go
+  script:
+    # List all files in the latest commit that are larger than 1MB
+    - git ls-tree -r HEAD --long | awk '$4 > 1048576 { print $0 }' > large_files.txt
+
+    # Fail the job if any file is larger than 1MB
+    - |
+      if [ -s large_files.txt ]; then
+        echo "❌ The following files exceed 1MB:"
+        cat large_files.txt
+        exit 1
+      else
+        echo "✅ No large files found in the latest commit."
+      fi
