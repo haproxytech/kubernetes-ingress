@@ -23,7 +23,7 @@ const (
 
 func (handler PrometheusEndpoint) Update(k store.K8s, h haproxy.HAProxy, a annotations.Annotations) (err error) {
 	if handler.PodNs == "" {
-		return
+		return err
 	}
 
 	prometheusSvcName := "prometheus"
@@ -59,7 +59,7 @@ func (handler PrometheusEndpoint) Update(k store.K8s, h haproxy.HAProxy, a annot
 	}
 
 	if !userListChanged && status == store.EMPTY && (!secretExists || (secretExists && secret.Status == store.EMPTY)) {
-		return
+		return err
 	}
 
 	svc := &store.Service{

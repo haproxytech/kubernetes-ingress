@@ -108,7 +108,7 @@ func (env *Env) Init(osArgs utils.OSArgs) (err error) {
 			return err
 		}
 	}
-	return
+	return err
 }
 
 // When controller is not running on a containerized

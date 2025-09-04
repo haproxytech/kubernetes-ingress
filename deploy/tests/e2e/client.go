@@ -129,10 +129,10 @@ func (c *Client) DoMethod(method string) (res *http.Response, closeFunc func() e
 	c.Req.Method = method
 	res, err = client.Do(c.Req)
 	if err != nil {
-		return
+		return res, closeFunc, err
 	}
 	closeFunc = res.Body.Close
-	return
+	return res, closeFunc, err
 }
 
 func (c *Client) Do() (res *http.Response, closeFunc func() error, err error) {
@@ -178,12 +178,12 @@ func ProxyProtoConn() (result []byte, err error) {
 
 	_, err = header.WriteTo(conn)
 	if err != nil {
-		return
+		return result, err
 	}
 
 	_, err = conn.Write([]byte("HEAD / HTTP/1.0\r\n\r\n"))
 	if err != nil {
-		return
+		return result, err
 	}
 
 	return io.ReadAll(conn)
@@ -196,23 +196,23 @@ func runtimeCommand(command string) (result []byte, err error) {
 	}
 	conn, err := net.Dial("tcp", fmt.Sprintf("%s:%d", kindURL, STATS_PORT))
 	if err != nil {
-		return
+		return result, err
 	}
 	_, err = conn.Write([]byte(command + "\n"))
 	if err != nil {
-		return
+		return result, err
 	}
 	result = make([]byte, 1024)
 	_, err = conn.Read(result)
 	conn.Close()
-	return
+	return result, err
 }
 
 func GetHAProxyMapCount(mapName string) (count int, err error) {
 	var result []byte
 	result, err = runtimeCommand("show map")
 	if err != nil {
-		return
+		return count, err
 	}
 	scanner := bufio.NewScanner(bytes.NewReader(result))
 	for scanner.Scan() {
@@ -225,14 +225,14 @@ func GetHAProxyMapCount(mapName string) (count int, err error) {
 			break
 		}
 	}
-	return
+	return count, err
 }
 
 func GetGlobalHAProxyInfo() (info GlobalHAProxyInfo, err error) {
 	var result []byte
 	result, err = runtimeCommand("show info")
 	if err != nil {
-		return
+		return info, err
 	}
 	scanner := bufio.NewScanner(bytes.NewReader(result))
 	for scanner.Scan() {
@@ -246,5 +246,5 @@ func GetGlobalHAProxyInfo() (info GlobalHAProxyInfo, err error) {
 			info.Pid = strings.Split(line, ": ")[1]
 		}
 	}
-	return
+	return info, err
 }

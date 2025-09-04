@@ -57,8 +57,8 @@ func (handler ProxyProtocol) Update(k store.K8s, h haproxy.HAProxy, a annotation
 	for _, frontend := range frontends {
 		err = h.AddRule(frontend, rules.ReqProxyProtocol{SrcIPsMap: maps.GetPath(mapName)}, false)
 		if err != nil {
-			return
+			return err
 		}
 	}
-	return
+	return err
 }

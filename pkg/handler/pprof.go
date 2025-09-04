@@ -38,14 +38,14 @@ func (handler Pprof) Update(k store.K8s, h haproxy.HAProxy, a annotations.Annota
 			Mode: "http",
 		})
 		if err != nil {
-			return
+			return err
 		}
 		err = h.BackendServerCreate(pprofBackend, models.Server{
 			Name:    pprofBackend,
 			Address: fmt.Sprintf("127.0.0.1:%d", h.Env.ControllerPort),
 		})
 		if err != nil {
-			return
+			return err
 		}
 		logger.Debug("pprof backend created")
 	}
@@ -57,8 +57,8 @@ func (handler Pprof) Update(k store.K8s, h haproxy.HAProxy, a annotations.Annota
 		},
 	}, h.Maps)
 	if err != nil {
-		return
+		return err
 	}
 	// instance.Reload("pprof backend created")
-	return
+	return err
 }

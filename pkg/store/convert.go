@@ -39,7 +39,7 @@ func ConvertToIngress(resource interface{}) (ingress *Ingress, err error) {
 	default:
 		err = fmt.Errorf("unrecognized type for: %T", t)
 	}
-	return
+	return ingress, err
 }
 
 func ConvertToIngressClass(resource interface{}) (ingress *IngressClass, err error) {
@@ -49,7 +49,7 @@ func ConvertToIngressClass(resource interface{}) (ingress *IngressClass, err err
 	default:
 		err = fmt.Errorf("unrecognized type for: %T", t)
 	}
-	return
+	return ingress, err
 }
 
 // ingressNetworkingV1Strategy is the Strategy implementation for converting an

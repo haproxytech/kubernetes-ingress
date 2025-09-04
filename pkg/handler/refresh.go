@@ -46,5 +46,5 @@ func (handler Refresh) Update(k store.K8s, h haproxy.HAProxy, a annotations.Anno
 		logger.Debugf("Backend '%s' deleted", backend)
 		annotations.RemoveBackendCfgSnippet(backend)
 	}
-	return
+	return err
 }

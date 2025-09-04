@@ -102,7 +102,7 @@ func (s *Service) GetResource() *store.Service {
 func (s *Service) GetBackendName() (name string, err error) {
 	if s.backend != nil && s.backend.Name != "" {
 		name = s.backend.Name
-		return
+		return name, err
 	}
 	var svcPort store.ServicePort
 	found := false
@@ -120,7 +120,7 @@ func (s *Service) GetBackendName() (name string, err error) {
 		} else {
 			err = fmt.Errorf("service %s: no service port matching '%d'", s.resource.Name, s.path.SvcPortInt)
 		}
-		return
+		return name, err
 	}
 	resourceNamespace := s.resource.Namespace
 	resourceName := s.resource.Name
@@ -137,7 +137,7 @@ func (s *Service) GetBackendName() (name string, err error) {
 	} else {
 		name = fmt.Sprintf("%s%s_%s_%s", prefix, resourceNamespace, resourceName, strconv.Itoa(int(svcPort.Port)))
 	}
-	return
+	return name, err
 }
 
 // HandleBackend processes a Service and creates/updates corresponding backend configuration in HAProxy
@@ -147,7 +147,7 @@ func (s *Service) HandleBackend(storeK8s store.K8s, client api.HAProxyClient, a 
 	newBackend, err = s.getBackendModel(storeK8s, a)
 	if err != nil {
 		s.backend = nil
-		return
+		return err
 	}
 	s.backend = newBackend.Config
 	// Get/Create Backend
@@ -157,13 +157,13 @@ func (s *Service) HandleBackend(storeK8s store.K8s, client api.HAProxyClient, a 
 		diff := newBackend.Config.Diff(*backend)
 		if len(diff) != 0 {
 			if err = client.BackendEdit(*newBackend.Config); err != nil {
-				return
+				return err
 			}
 			instance.Reload("Service '%s/%s': backend '%s' updated: %v", s.resource.Namespace, s.resource.Name, newBackend.Config.Name, diff)
 		}
 	} else {
 		if err = client.BackendCreate(*newBackend.Config); err != nil {
-			return
+			return err
 		}
 		s.newBackend = true
 		instance.Reload(fmt.Sprintf("Service '%s/%s': new backend '%s'", s.resource.Namespace, s.resource.Name, newBackend.Config.Name))
@@ -181,7 +181,7 @@ func (s *Service) HandleBackend(storeK8s store.K8s, client api.HAProxyClient, a 
 		})
 	backendCfgSnippetHandler.SetService(s.resource)
 	logger.Error(backendCfgSnippetHandler.Process(storeK8s, s.annotations...))
-	return
+	return err
 }
 
 // getBackendModel checks for a corresponding custom resource before falling back to annotations
@@ -229,12 +229,12 @@ func (s *Service) getBackendModel(store store.K8s, a annotations.Annotations) (b
 func (s *Service) SetDefaultBackend(k store.K8s, h haproxy.HAProxy, frontends []string, a annotations.Annotations) (err error) {
 	if !s.path.IsDefaultBackend {
 		err = fmt.Errorf("service '%s/%s' is not marked as default backend", s.resource.Namespace, s.resource.Name)
-		return
+		return err
 	}
 	var frontend models.Frontend
 	frontend, err = h.FrontendGet(frontends[0])
 	if err != nil {
-		return
+		return err
 	}
 	if frontend.Mode == "tcp" {
 		s.modeTCP = true
@@ -245,7 +245,7 @@ func (s *Service) SetDefaultBackend(k store.K8s, h haproxy.HAProxy, frontends []
 	}
 	err = s.HandleBackend(k, h, a)
 	if err != nil {
-		return
+		return err
 	}
 	backendName, _ := s.GetBackendName()
 	if frontend.DefaultBackend != backendName {
@@ -255,13 +255,13 @@ func (s *Service) SetDefaultBackend(k store.K8s, h haproxy.HAProxy, frontends []
 			frontend.DefaultBackend = backendName
 			err = h.FrontendEdit(frontend)
 			if err != nil {
-				return
+				return err
 			}
 			instance.Reload("default backend changed in frontend '%s': from '%s' to '%s'", frontendName, oldDefaultBackend, backendName)
 		}
 	}
 	s.HandleHAProxySrvs(k, h)
-	return
+	return err
 }
 
 func (s Service) IsStandalone() bool {

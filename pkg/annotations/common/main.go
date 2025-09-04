@@ -19,7 +19,7 @@ func GetValue(annotationName string, annotations ...map[string]string) string {
 func GetK8sPath(annotationName string, annotations ...map[string]string) (ns, name string, err error) {
 	a := GetValue(annotationName, annotations...)
 	if a == "" {
-		return
+		return ns, name, err
 	}
 	parts := strings.Split(a, "/")
 	switch len(parts) {
@@ -35,7 +35,7 @@ func GetK8sPath(annotationName string, annotations ...map[string]string) (ns, na
 	if name == "" {
 		err = errors.New("invalid format")
 	}
-	return
+	return ns, name, err
 }
 
 var DefaultValues = map[string]string{

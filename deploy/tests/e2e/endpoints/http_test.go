@@ -80,8 +80,8 @@ func (suite *EndpointsSuite) getPID() (pid string) {
 	r, err := e2e.GetGlobalHAProxyInfo()
 	if err != nil {
 		suite.T().Log(err)
-		return
+		return pid
 	}
 	pid = r.Pid
-	return
+	return pid
 }

@@ -56,7 +56,7 @@ func (c *clientNative) BackendCreatePermanently(backend models.Backend) error {
 func (c *clientNative) BackendCreateIfNotExist(backend models.Backend) (err error) {
 	configuration, err := c.nativeAPI.Configuration()
 	if err != nil {
-		return
+		return err
 	}
 	c.activeTransactionHasChanges = true
 	defer func() {
@@ -67,7 +67,7 @@ func (c *clientNative) BackendCreateIfNotExist(backend models.Backend) (err erro
 
 	_, _, err = configuration.GetBackend(backend.Name, c.activeTransaction)
 	if err == nil {
-		return
+		return err
 	}
 
 	return configuration.CreateBackend(&backend, c.activeTransaction, 0)
@@ -206,7 +206,7 @@ func (c *clientNative) RefreshBackends() (deleted []string, err error) {
 	backends, errAPI := c.BackendsGet()
 	if errAPI != nil {
 		err = errors.New("unable to get configured backends")
-		return
+		return deleted, err
 	}
 	for _, backend := range backends {
 		if _, ok := c.permanentBackends[backend.Name]; ok {
@@ -214,12 +214,12 @@ func (c *clientNative) RefreshBackends() (deleted []string, err error) {
 		}
 		if _, ok := c.activeBackends[backend.Name]; !ok {
 			if err = c.BackendDelete(backend.Name); err != nil {
-				return
+				return deleted, err
 			}
 			utils.GetLogger().Debugf("backend '%s' deleted", backend.Name)
 			deleted = append(deleted, backend.Name)
 		}
 	}
 	c.activeBackends = map[string]struct{}{}
-	return
+	return deleted, err
 }

@@ -52,7 +52,7 @@ func (a ResSetCORSAnn) Process(k store.K8s, annotations ...map[string]string) (e
 		var enabled bool
 		enabled, err = utils.GetBoolValue(input, "cors-enable")
 		if !enabled {
-			return
+			return err
 		}
 		// SetVar rule to capture Origin header
 		a.parent.rules.Add(&rules.ReqSetVar{
@@ -63,7 +63,7 @@ func (a ResSetCORSAnn) Process(k store.K8s, annotations ...map[string]string) (e
 		a.parent.acl = fmt.Sprintf("{ var(txn.%s) -m found }", corsVarName)
 	case "cors-allow-origin":
 		if a.parent.acl == "" {
-			return
+			return err
 		}
 		// Access-Control-Allow-Origin = *
 		origin := "*"
@@ -82,7 +82,7 @@ func (a ResSetCORSAnn) Process(k store.K8s, annotations ...map[string]string) (e
 		})
 	case "cors-allow-methods":
 		if a.parent.acl == "" {
-			return
+			return err
 		}
 		if input != "*" {
 			input = strings.Join(strings.Fields(input), "") // strip spaces
@@ -104,7 +104,7 @@ func (a ResSetCORSAnn) Process(k store.K8s, annotations ...map[string]string) (e
 		})
 	case "cors-allow-headers":
 		if a.parent.acl == "" {
-			return
+			return err
 		}
 		input = strings.Join(strings.Fields(input), "") // strip spaces
 		a.parent.rules.Add(rules.SetHdr{
@@ -116,12 +116,12 @@ func (a ResSetCORSAnn) Process(k store.K8s, annotations ...map[string]string) (e
 		})
 	case "cors-max-age":
 		if a.parent.acl == "" {
-			return
+			return err
 		}
 		var duration *int64
 		duration, err = utils.ParseTime(input)
 		if err != nil {
-			return
+			return err
 		}
 		maxage := *duration / 1000
 		if maxage < -1 {
@@ -136,7 +136,7 @@ func (a ResSetCORSAnn) Process(k store.K8s, annotations ...map[string]string) (e
 		})
 	case "cors-allow-credentials":
 		if a.parent.acl == "" || input != "true" {
-			return
+			return err
 		}
 		a.parent.rules.Add(&rules.SetHdr{
 			HdrName:       "Access-Control-Allow-Credentials",
@@ -147,7 +147,7 @@ func (a ResSetCORSAnn) Process(k store.K8s, annotations ...map[string]string) (e
 		})
 	case "cors-respond-to-options":
 		if a.parent.acl == "" || input != "true" {
-			return
+			return err
 		}
 		a.parent.rules.Add(&rules.ReqReturnStatus{
 			StatusCode: 204,
@@ -155,5 +155,5 @@ func (a ResSetCORSAnn) Process(k store.K8s, annotations ...map[string]string) (e
 	default:
 		err = fmt.Errorf("unknown cors annotation '%s'", a.name)
 	}
-	return
+	return err
 }

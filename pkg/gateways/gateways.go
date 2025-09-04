@@ -334,7 +334,7 @@ func (gm GatewayManagerImpl) isNamespaceGranted(namespace string, backendRef sto
 		ns, found := gm.k8sStore.Namespaces[*backendRef.Namespace]
 		if !found || !ns.Relevant {
 			gm.statusManager.SetRouteReasonBackendNotFound(fmt.Sprintf("backend '%s/%s' not found", utils.PointerDefaultValueIfNil(backendRef.Namespace), backendRef.Name))
-			return
+			return granted
 		}
 		// .. we iterate over referenceGrants in this namespace.
 		for _, referenceGrant := range ns.ReferenceGrants {
@@ -361,7 +361,7 @@ func (gm GatewayManagerImpl) isNamespaceGranted(namespace string, backendRef sto
 			gm.statusManager.SetRouteReasonRefNotPermitted(fmt.Sprintf("backendref '%s/%s' not allowed by any referencegrant",
 				*backendRef.Namespace, backendRef.Name))
 		}
-		return
+		return granted
 	}
 	return true
 }
@@ -438,14 +438,14 @@ func (gm GatewayManagerImpl) addServersToRoute(route store.TCPRoute) (reload boo
 						ServerParams: models.ServerParams{Maintenance: "disabled"},
 					})
 					if err != nil {
-						return
+						return reload, err
 					}
 					i++
 				}
 			}
 		}
 	}
-	return
+	return reload, err
 }
 
 // getOurListenersFromTCPRoute computes the list of listeners the tcproute can be attached to according matching and authorizations rules.

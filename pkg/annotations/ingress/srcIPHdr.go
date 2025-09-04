@@ -22,10 +22,10 @@ func (a *SrcIPHdr) GetName() string {
 func (a *SrcIPHdr) Process(k store.K8s, annotations ...map[string]string) (err error) {
 	input := common.GetValue(a.GetName(), annotations...)
 	if input == "" {
-		return
+		return err
 	}
 	a.rules.Add(&rules.ReqSetSrc{
 		HeaderName: input,
 	})
-	return
+	return err
 }

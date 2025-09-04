@@ -77,5 +77,5 @@ func (handler HTTPBind) Update(k store.K8s, h haproxy.HAProxy, a annotations.Ann
 	}
 	err = errors.Result()
 	instance.Reload("New HTTP(S) bindings")
-	return
+	return err
 }

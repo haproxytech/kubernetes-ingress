@@ -95,7 +95,7 @@ func New(envParam Env) (Certificates, error) { //nolint:ireturn
 func (c *certs) AddSecret(secret *store.Secret, secretType SecretType) (certPath string, err error) {
 	if secret == nil {
 		err = errors.New("nil secret")
-		return
+		return certPath, err
 	}
 
 	var certs map[string]*cert
