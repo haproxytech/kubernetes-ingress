@@ -38,7 +38,7 @@ func (q *Quic) Update(k store.K8s, h haproxy.HAProxy, a annotations.Annotations)
 	binds, errBindsGet := h.FrontendBindsGet(h.FrontHTTPS)
 	if errBindsGet != nil {
 		errs.Add(errBindsGet)
-		return
+		return err
 	}
 
 	for _, bind := range binds {
@@ -54,7 +54,7 @@ func (q *Quic) Update(k store.K8s, h haproxy.HAProxy, a annotations.Annotations)
 		errFrontendBindCreate := h.FrontendBindCreate(h.FrontHTTPS, models.Bind{
 			Address: func() (addr string) {
 				addr = "quic4@" + q.AddrIPv4
-				return
+				return addr
 			}(),
 			Port: utils.PtrInt64(q.QuicBindPort),
 			BindParams: models.BindParams{
@@ -75,7 +75,7 @@ func (q *Quic) Update(k store.K8s, h haproxy.HAProxy, a annotations.Annotations)
 		errFrontendBindCreate := h.FrontendBindCreate(h.FrontHTTPS, models.Bind{
 			Address: func() (addr string) {
 				addr = "quic6@" + q.AddrIPv6
-				return
+				return addr
 			}(),
 			Port: utils.PtrInt64(q.QuicBindPort),
 			BindParams: models.BindParams{
@@ -149,5 +149,5 @@ func (q *Quic) Update(k store.K8s, h haproxy.HAProxy, a annotations.Annotations)
 		ipv6Func()
 	}
 
-	return
+	return err
 }

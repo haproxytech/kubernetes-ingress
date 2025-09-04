@@ -13,18 +13,18 @@ func (c *clientNative) TCPRequestRuleCreate(id int64, parentType, parentName str
 func (c *clientNative) TCPRequestRuleDeleteAll(parentType, parentName string) (err error) {
 	configuration, err := c.nativeAPI.Configuration()
 	if err != nil {
-		return
+		return err
 	}
 	_, rules, err := configuration.GetTCPRequestRules(parentType, parentName, c.activeTransaction)
 	if err != nil {
-		return
+		return err
 	}
 	for range rules {
 		if err = configuration.DeleteTCPRequestRule(0, parentType, parentName, c.activeTransaction, 0); err != nil {
 			break
 		}
 	}
-	return
+	return err
 }
 
 func (c *clientNative) TCPRequestRulesGet(parentType, parentName string) (models.TCPRequestRules, error) {

@@ -61,18 +61,18 @@ func (i Ingress) Supported(k8s store.K8s, a annotations.Annotations) (supported 
 		i.resource.Status = store.ADDED
 		i.resource.Ignored = false
 	}
-	return
+	return supported
 }
 
 func (i *Ingress) handlePath(k store.K8s, h haproxy.HAProxy, host string, path *store.IngressPath, a annotations.Annotations) (err error) {
 	svc, err := service.New(k, path, h.Certificates, i.sslPassthrough, i.resource, i.resource.Annotations, k.ConfigMaps.Main.Annotations)
 	if err != nil {
-		return
+		return err
 	}
 	// Backend
 	err = svc.HandleBackend(k, h, a)
 	if err != nil {
-		return
+		return err
 	}
 	backendName, _ := svc.GetBackendName()
 	// If we've got a standalone ingress, put an adhoc RuntimeBackend in HAProxyRuntimeStandalone
@@ -109,7 +109,7 @@ func (i *Ingress) handlePath(k store.K8s, h haproxy.HAProxy, host string, path *
 		err = route.AddCustomRoute(ingRoute, routeACLAnn, h)
 	}
 	if err != nil {
-		return
+		return err
 	}
 	// Endpoints
 	if _, ok := k.BackendsProcessed[backendName]; !ok {

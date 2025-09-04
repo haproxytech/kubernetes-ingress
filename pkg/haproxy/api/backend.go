@@ -241,7 +241,7 @@ func (c *clientNative) BackendServersGet(backendName string) (models.Servers, er
 // Check if you're not rather looking for BackendUsed function.
 func (c *clientNative) BackendExists(backendName string) (exists bool) {
 	_, exists = c.backends[backendName]
-	return
+	return exists
 }
 
 func (c *clientNative) BackendDeleteAllUnnecessary() ([]string, error) {

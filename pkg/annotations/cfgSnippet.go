@@ -226,16 +226,16 @@ func (a *CfgSnippet) Process(k store.K8s, annotations ...map[string]string) erro
 func UpdateGlobalCfgSnippet(api api.HAProxyClient) (updated []string, err error) {
 	err = api.GlobalCfgSnippet(cfgSnippet.global.value)
 	if err != nil {
-		return
+		return updated, err
 	}
 
 	if len(cfgSnippet.global.updated) == 0 {
-		return
+		return updated, err
 	}
 
 	updated = cfgSnippet.global.updated
 	cfgSnippet.global.updated = nil
-	return
+	return updated, err
 }
 
 func UpdateFrontendCfgSnippet(api api.HAProxyClient, frontends ...string) (updated []string, err error) {
@@ -247,7 +247,7 @@ func UpdateFrontendCfgSnippet(api api.HAProxyClient, frontends ...string) (updat
 
 		err = api.FrontendCfgSnippetSet(ft, data.value)
 		if err != nil {
-			return
+			return updated, err
 		}
 
 		if len(data.updated) == 0 {
@@ -258,27 +258,27 @@ func UpdateFrontendCfgSnippet(api api.HAProxyClient, frontends ...string) (updat
 		data.updated = nil
 		cfgSnippet.frontends[ft] = data
 	}
-	return
+	return updated, err
 }
 
 func CheckBackendConfigSnippetError(configErr error, cfgDir string) (rerun bool, err error) {
 	// No error ? no configsnippet to disable.
 	if configErr == nil {
-		return
+		return rerun, err
 	}
 	file, lineNumbers, err := processConfigurationError(configErr)
 	if err != nil {
-		return
+		return rerun, err
 	}
 	// Read contents from failed configuration file
 	file = filepath.Join(cfgDir, "failed", filepath.Base(file))
 	contents, err := os.ReadFile(file)
 	if err != nil {
-		return
+		return rerun, err
 	}
 
 	rerun = disableFaultyCfgSnippet(string(contents), lineNumbers)
-	return
+	return rerun, err
 }
 
 func RemoveBackendCfgSnippet(backend string) {
@@ -328,11 +328,11 @@ func getErrorLineNumberAndFileName(msg string) (lineNumber int, file string, err
 	lineNumber = -1
 	openSquareBracket := strings.Index(msg, "[")
 	if openSquareBracket == -1 {
-		return
+		return lineNumber, file, err
 	}
 	closeSquareBracket := strings.Index(msg, "]")
 	if closeSquareBracket == -1 {
-		return
+		return lineNumber, file, err
 	}
 	configsnippetComment := msg[openSquareBracket+1 : closeSquareBracket]
 	fileLineNumber := strings.Split(configsnippetComment, ":")
@@ -341,12 +341,12 @@ func getErrorLineNumberAndFileName(msg string) (lineNumber int, file string, err
 		file = fileLineNumber[0]
 		lineNumber, err = strconv.Atoi(fileLineNumber[1])
 		if err != nil {
-			return
+			return lineNumber, file, err
 		}
 	} else {
 		err = fmt.Errorf("invalid config snippet information : '%s'", configsnippetComment)
 	}
-	return
+	return lineNumber, file, err
 }
 
 func disableFaultyCfgSnippet(contents string, lineNumbers []int) (rerun bool) {
@@ -405,7 +405,7 @@ func disableFaultyCfgSnippet(contents string, lineNumbers []int) (rerun bool) {
 			rerun = true
 		}
 	}
-	return
+	return rerun
 }
 
 func processConfigurationError(configErr error) (file string, lineNumbers []int, err error) {
@@ -423,8 +423,8 @@ func processConfigurationError(configErr error) (file string, lineNumbers []int,
 			}
 			lineNumbers = append(lineNumbers, lineNumber)
 		} else if err != nil {
-			return
+			return file, lineNumbers, err
 		}
 	}
-	return
+	return file, lineNumbers, err
 }

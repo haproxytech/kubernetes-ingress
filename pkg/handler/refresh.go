@@ -38,5 +38,5 @@ func (handler Refresh) Update(k store.K8s, h haproxy.HAProxy, a annotations.Anno
 	// Maps
 	h.RefreshMaps(h.HAProxyClient)
 
-	return
+	return err
 }

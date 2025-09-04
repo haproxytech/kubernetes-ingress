@@ -33,19 +33,19 @@ func (handler GlobalCfg) Update(k store.K8s, h haproxy.HAProxy, a annotations.An
 	env.SetGlobal(global, logTargets, h.Env)
 	err = h.GlobalPushConfiguration(*global)
 	if err != nil {
-		return
+		return err
 	}
 	err = h.GlobalPushLogTargets(*logTargets)
 	if err != nil {
-		return
+		return err
 	}
 	defaults := &models.Defaults{}
 	env.SetDefaults(defaults)
 	defaults.Name = constants.DefaultsSectionName
 	err = h.DefaultsPushConfiguration(*defaults)
 	if err != nil {
-		return
+		return err
 	}
 	instance.Reload("new global configuration applied")
-	return
+	return err
 }

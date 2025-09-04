@@ -435,7 +435,7 @@ func (k k8s) getIngressInformers(eventChan chan k8ssync.SyncDataEvent, factory i
 
 	resources, err := k.builtInClient.ServerResourcesForGroupVersion(apiGroup)
 	if err != nil {
-		return
+		return ii, ici
 	}
 	for _, rs := range resources.APIResources {
 		if rs.Name == "ingresses" {
@@ -451,9 +451,9 @@ func (k k8s) getIngressInformers(eventChan chan k8ssync.SyncDataEvent, factory i
 		if ici != nil {
 			k.addIngressClassHandlers(eventChan, ici)
 		}
-		return
+		return ii, ici
 	}
-	return
+	return ii, ici
 }
 
 func (k k8s) getEndpointSliceInformer(eventChan chan k8ssync.SyncDataEvent, factory informers.SharedInformerFactory) cache.SharedIndexInformer { //nolint:ireturn
@@ -859,12 +859,12 @@ func getServiceAddresses(service *corev1.Service) (addresses []string) {
 		addresses = append(addresses, service.Spec.ExternalIPs...)
 	default:
 		logger.Errorf("Unable to extract IP address/es from service %s/%s", service.Namespace, service.Name)
-		return
+		return addresses
 	}
 	if addresses == nil {
 		addresses = []string{}
 	}
-	return
+	return addresses
 }
 
 type InformerGetter interface {

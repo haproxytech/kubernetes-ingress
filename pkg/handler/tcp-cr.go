@@ -144,7 +144,7 @@ func (handler TCPCustomResource) checkService(ctx tcpcontext, tcp v3.TCPModel) (
 	var ok bool
 	if _, ok = ctx.k.Namespaces[ctx.namespace]; !ok {
 		err = fmt.Errorf("tcp-cr: namespace of service '%s/%s' not found", ctx.namespace, tcp.Service.Name)
-		return
+		return err
 	}
 	_, ok = ctx.k.Namespaces[ctx.namespace].Services[tcp.Service.Name]
 	if !ok {

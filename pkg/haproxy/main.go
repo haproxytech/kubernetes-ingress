@@ -35,7 +35,7 @@ func New(osArgs utils.OSArgs, env env.Env, cfgFile []byte, p process.Process, cl
 	err = (&env).Init(osArgs)
 	if err != nil {
 		err = fmt.Errorf("failed to initialize haproxy environment: %w", err)
-		return
+		return h, err
 	}
 	h.Env = env
 
@@ -47,7 +47,7 @@ func New(osArgs utils.OSArgs, env env.Env, cfgFile []byte, p process.Process, cl
 	err = renameio.WriteFile(h.MainCFGFile, cfgFile, 0o755)
 	if err != nil {
 		err = fmt.Errorf("failed to write haproxy config file: %w", err)
-		return
+		return h, err
 	}
 	persistentMaps := []maps.Name{
 		route.SNI,
@@ -58,7 +58,7 @@ func New(osArgs utils.OSArgs, env env.Env, cfgFile []byte, p process.Process, cl
 	}
 	if h.Maps, err = maps.New(env.MapsDir, persistentMaps); err != nil {
 		err = fmt.Errorf("failed to initialize haproxy maps: %w", err)
-		return
+		return h, err
 	}
 	if p == nil {
 		h.Process = process.New(h.Env, osArgs, h.AuxCFGFile, h.HAProxyClient)
@@ -67,20 +67,20 @@ func New(osArgs utils.OSArgs, env env.Env, cfgFile []byte, p process.Process, cl
 		h.HAProxyClient, err = api.New(h.CfgDir, h.MainCFGFile, h.Binary, h.RuntimeSocket)
 		if err != nil {
 			err = fmt.Errorf("failed to initialize haproxy API client: %w", err)
-			return
+			return h, err
 		}
 	}
 	h.Process.SetAPI(h.HAProxyClient)
 	if h.Certificates, err = certs.New(env.Certs); err != nil {
 		err = fmt.Errorf("failed to initialize haproxy certificates: %w", err)
-		return
+		return h, err
 	}
 	h.Certificates.SetAPI(h.HAProxyClient)
 	h.Rules = rules
 	if !osArgs.Test {
 		logVersion(h.Binary)
 	}
-	return
+	return h, err
 }
 
 func (h HAProxy) Clean() {

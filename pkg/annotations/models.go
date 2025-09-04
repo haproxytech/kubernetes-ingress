@@ -15,12 +15,12 @@ func ModelBackend(name, defaultNS string, k store.K8s, annotations ...map[string
 	b, modelErr := model(name, defaultNS, 3, k, annotations...)
 	if modelErr != nil {
 		err = modelErr
-		return
+		return backend, err
 	}
 	if b != nil {
 		backend = b.(*v3.BackendSpec) //nolint:forcetypeassert
 	}
-	return
+	return backend, err
 }
 
 // ModelDefaults takes an annotation holding the path of a defaults cr and returns corresponding Defaults model
@@ -28,12 +28,12 @@ func ModelDefaults(name, defaultNS string, k store.K8s, annotations ...map[strin
 	d, modelErr := model(name, defaultNS, 2, k, annotations...)
 	if modelErr != nil {
 		err = modelErr
-		return
+		return defaults, err
 	}
 	if d != nil {
 		defaults = d.(*models.Defaults)
 	}
-	return
+	return defaults, err
 }
 
 // ModelGlobal takes an annotation holding the path of a global cr and returns corresponding Global model
@@ -41,12 +41,12 @@ func ModelGlobal(name, defaultNS string, k store.K8s, annotations ...map[string]
 	g, modelErr := model(name, defaultNS, 0, k, annotations...)
 	if modelErr != nil {
 		err = modelErr
-		return
+		return global, err
 	}
 	if g != nil {
 		global = g.(*models.Global)
 	}
-	return
+	return global, err
 }
 
 // ModelLog takes an annotation holding the path of a global cr and returns corresponding LogTargerts model
@@ -54,12 +54,12 @@ func ModelLog(name, defaultNS string, k store.K8s, annotations ...map[string]str
 	l, modelErr := model(name, defaultNS, 1, k, annotations...)
 	if modelErr != nil {
 		err = modelErr
-		return
+		return log, err
 	}
 	if l != nil {
 		log = l.(models.LogTargets) //nolint:forcetypeassert
 	}
-	return
+	return log, err
 }
 
 func model(name, defaultNS string, crType int, k store.K8s, annotations ...map[string]string) (model interface{}, err error) {
@@ -67,10 +67,10 @@ func model(name, defaultNS string, crType int, k store.K8s, annotations ...map[s
 	crNS, crName, err = common.GetK8sPath(name, annotations...)
 	if err != nil {
 		err = fmt.Errorf("annotation '%s': %w", name, err)
-		return
+		return model, err
 	}
 	if crName == "" {
-		return
+		return model, err
 	}
 	if crNS == "" {
 		crNS = defaultNS

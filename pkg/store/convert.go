@@ -41,7 +41,7 @@ func ConvertToIngress(resource interface{}) (ingress *Ingress, err error) {
 	default:
 		err = fmt.Errorf("unrecognized type for: %T", t)
 	}
-	return
+	return ingress, err
 }
 
 func GetIngress(resource interface{}) (ingress *networkingv1.Ingress, err error) {
@@ -51,17 +51,17 @@ func GetIngress(resource interface{}) (ingress *networkingv1.Ingress, err error)
 	default:
 		err = fmt.Errorf("unrecognized type for: %T", t)
 	}
-	return
+	return ingress, err
 }
 
 func GetUIDResourceVersion(resource interface{}) (uid types.UID, resourceVersion string, err error) {
 	v, err := ammeta.Accessor(resource)
 	if err != nil {
-		return
+		return uid, resourceVersion, err
 	}
 	uid = v.GetUID()
 	resourceVersion = v.GetResourceVersion()
-	return
+	return uid, resourceVersion, err
 }
 
 func ConvertToIngressClass(resource interface{}) (ingress *IngressClass, err error) {
@@ -71,7 +71,7 @@ func ConvertToIngressClass(resource interface{}) (ingress *IngressClass, err err
 	default:
 		err = fmt.Errorf("unrecognized type for: %T", t)
 	}
-	return
+	return ingress, err
 }
 
 // ingressNetworkingV1Strategy is the Strategy implementation for converting an

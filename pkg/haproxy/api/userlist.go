@@ -59,11 +59,11 @@ func (c *clientNative) UserListCreateByGroup(group string, userPasswordMap map[s
 
 	var p parser.Parser
 	if p, err = configuration.GetParser(c.activeTransaction); err != nil {
-		return
+		return err
 	}
 
 	if err = p.SectionsCreate(parser.UserList, group); err != nil {
-		return
+		return err
 	}
 
 	names := make([]string, 0, len(userPasswordMap))
@@ -74,7 +74,7 @@ func (c *clientNative) UserListCreateByGroup(group string, userPasswordMap map[s
 			Groups:   []string{"authenticated-users"},
 		}
 		if err = p.Insert(parser.UserList, group, "user", user); err != nil {
-			return
+			return err
 		}
 		names = append(names, user.Name)
 	}
@@ -83,5 +83,5 @@ func (c *clientNative) UserListCreateByGroup(group string, userPasswordMap map[s
 		Users: names,
 	})
 
-	return
+	return err
 }

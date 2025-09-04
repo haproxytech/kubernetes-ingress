@@ -41,7 +41,7 @@ type FakeUpdateSatusManager struct{}
 
 func (m *FakeUpdateSatusManager) AddIngress(ingress *ingress.Ingress) {}
 func (m *FakeUpdateSatusManager) Update(k store.K8s, h haproxy.HAProxy, a annotations.Annotations) (err error) {
-	return
+	return err
 }
 
 type HTTPRequestsSuite struct {
@@ -210,5 +210,5 @@ func (suite *HTTPRequestsSuite) UseHTTPRequestsFixture() (eventChan chan k8ssync
 	eventChan <- k8ssync.SyncDataEvent{SyncType: k8ssync.COMMAND}
 	eventChan <- k8ssync.SyncDataEvent{EventProcessed: controllerHasWorked}
 	<-controllerHasWorked
-	return
+	return eventChan
 }

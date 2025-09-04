@@ -41,7 +41,7 @@ type updateStatusManager struct{}
 
 func (m *updateStatusManager) AddIngress(ingress *ingress.Ingress) {}
 func (m *updateStatusManager) Update(k store.K8s, h haproxy.HAProxy, a annotations.Annotations) (err error) {
-	return
+	return err
 }
 
 func TestUseBackend(t *testing.T) {
@@ -206,5 +206,5 @@ func (suite *UseBackendSuite) UseBackendFixture() (eventChan chan k8ssync.SyncDa
 	controllerHasWorked := make(chan struct{})
 	eventChan <- k8ssync.SyncDataEvent{SyncType: k8ssync.COMMAND, EventProcessed: controllerHasWorked}
 	<-controllerHasWorked
-	return
+	return eventChan
 }

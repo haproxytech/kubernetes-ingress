@@ -56,7 +56,7 @@ func (k *K8s) EventIngressClass(data *IngressClass) (updateRequired bool) {
 		updateRequired = true
 		k.IngressClasses[data.Name] = data
 	}
-	return
+	return updateRequired
 }
 
 func (k *K8s) EventIngress(ns *Namespace, data *Ingress, uid types.UID, resourceVersion string) (updateRequired bool) {
@@ -117,7 +117,7 @@ func (k *K8s) EventIngress(ns *Namespace, data *Ingress, uid types.UID, resource
 			}
 		}
 	}
-	return
+	return updateRequired
 }
 
 func getEndpoints(slices map[string]*Endpoints) (endpoints map[string]PortEndpoints) {
@@ -138,7 +138,7 @@ func getEndpoints(slices map[string]*Endpoints) (endpoints map[string]PortEndpoi
 			}
 		}
 	}
-	return
+	return endpoints
 }
 
 func (k *K8s) EventEndpoints(ns *Namespace, data *Endpoints, syncHAproxySrvs func(backend *RuntimeBackend, portUpdated bool) error) (updateRequired bool) {
@@ -386,7 +386,7 @@ func (k *K8s) EventPublishService(ns *Namespace, data *Service) (updateRequired 
 			return k.EventPublishService(ns, data)
 		}
 		if oldService.EqualWithAddresses(newService) {
-			return
+			return updateRequired
 		}
 		oldService.Addresses = newService.Addresses
 		k.PublishServiceAddresses = newService.Addresses
@@ -398,7 +398,7 @@ func (k *K8s) EventPublishService(ns *Namespace, data *Service) (updateRequired 
 			service.Addresses = data.Addresses
 			k.UpdateAllIngresses = true
 			updateRequired = true
-			return
+			return updateRequired
 		}
 		logger.Errorf("Publish service '%s/%s' not found", data.Namespace, data.Name)
 	case DELETED:
