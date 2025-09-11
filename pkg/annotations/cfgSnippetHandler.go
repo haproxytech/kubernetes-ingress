@@ -47,7 +47,7 @@ func getConfigmapConfigSnippet(backendsWithNoConfigSnippets map[string]struct{},
 			err = errGet
 		}
 	}
-	return
+	return configmapCfgSnippetValue, err
 }
 
 func updateConfigSnippet(api api.HAProxyClient, configmapCfgSnippetValue []string) (err error) {

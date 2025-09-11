@@ -35,7 +35,7 @@ func (a ReqAuthAnn) GetName() string {
 func (a ReqAuthAnn) Process(k store.K8s, annotations ...map[string]string) (err error) {
 	input := common.GetValue(a.GetName(), annotations...)
 	if input == "" {
-		return
+		return err
 	}
 
 	switch a.name {
@@ -54,25 +54,25 @@ func (a ReqAuthAnn) Process(k store.K8s, annotations ...map[string]string) (err 
 		a.parent.rules.Add(a.parent.authRule)
 	case "auth-realm":
 		if a.parent.authRule == nil {
-			return
+			return err
 		}
 		a.parent.authRule.AuthRealm = strings.ReplaceAll(input, " ", "-")
 	case "auth-secret":
 		if a.parent.authRule == nil {
-			return
+			return err
 		}
 		var secret *store.Secret
 		ns, name, errAnn := common.GetK8sPath(a.name, annotations...)
 		if errAnn != nil {
 			err = errAnn
-			return
+			return err
 		}
 		if ns == "" {
 			ns = a.parent.ingress.Namespace
 		}
 		secret, _ = k.GetSecret(ns, name)
 		if secret == nil {
-			return
+			return err
 		}
 		a.parent.authRule.Credentials = make(map[string][]byte)
 		for u, pwd := range secret.Data {
@@ -85,5 +85,5 @@ func (a ReqAuthAnn) Process(k store.K8s, annotations ...map[string]string) (err 
 	default:
 		err = fmt.Errorf("unknown auth-type annotation '%s'", a.name)
 	}
-	return
+	return err
 }

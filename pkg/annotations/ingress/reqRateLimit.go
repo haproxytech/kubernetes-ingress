@@ -53,7 +53,7 @@ func (a ReqRateLimitAnn) Process(k store.K8s, annotations ...map[string]string) 
 		a.parent.rules.Add(a.parent.track)
 	case "rate-limit-period":
 		if a.parent.limit == nil || a.parent.track == nil {
-			return
+			return err
 		}
 		var value *int64
 		value, err = utils.ParseTime(input)
@@ -63,14 +63,14 @@ func (a ReqRateLimitAnn) Process(k store.K8s, annotations ...map[string]string) 
 		a.parent.limit.TableName = tableName
 	case "rate-limit-size":
 		if a.parent.limit == nil || a.parent.track == nil {
-			return
+			return err
 		}
 		var value *int64
 		value, err = utils.ParseSize(input)
 		a.parent.track.TableSize = value
 	case "rate-limit-status-code":
 		if a.parent.limit == nil || a.parent.track == nil {
-			return
+			return err
 		}
 		var value int64
 		value, err = utils.ParseInt(input)
@@ -78,5 +78,5 @@ func (a ReqRateLimitAnn) Process(k store.K8s, annotations ...map[string]string) 
 	default:
 		err = fmt.Errorf("unknown rate-limit annotation '%s'", a.name)
 	}
-	return
+	return err
 }

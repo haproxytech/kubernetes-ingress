@@ -55,7 +55,7 @@ func ParseInt(data string) (v int64, err error) {
 	if err == nil {
 		v = int64(i)
 	}
-	return
+	return v, err
 }
 
 func ParseTime(data string) (*int64, error) {
@@ -127,15 +127,15 @@ func GetPodPrefix(podName string) (prefix string, err error) {
 	i := strings.LastIndex(podName, "-")
 	if i == -1 {
 		err = fmt.Errorf("incorrect podName format: '%s'", podName)
-		return
+		return prefix, err
 	}
 	i = strings.LastIndex(string([]rune(podName)[:i]), "-")
 	if i == -1 {
 		err = fmt.Errorf("incorrect podName format: '%s'", podName)
-		return
+		return prefix, err
 	}
 	prefix = string([]rune(podName)[:i])
-	return
+	return prefix, err
 }
 
 func EqualSliceStringsWithoutOrder(a, b []string) bool {
@@ -235,7 +235,7 @@ func CopySliceFunc[T any](slice []T, f func(T) T) (clone []T) {
 	for _, t := range slice {
 		clone = append(clone, f(t))
 	}
-	return
+	return clone
 }
 
 func CopyPointer[T any](a *T) *T {

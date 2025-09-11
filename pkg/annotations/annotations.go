@@ -178,34 +178,34 @@ func SetDefaultValue(annotation, value string) {
 func Bool(name string, annotations ...map[string]string) (out bool, err error) {
 	boolean, err := ParseBool(name, annotations...)
 	out = boolean == "true"
-	return
+	return out, err
 }
 
 func ParseBool(name string, annotations ...map[string]string) (out string, err error) {
 	input := common.GetValue(name, annotations...)
 	if input == "" {
-		return
+		return out, err
 	}
 	_, err = utils.GetBoolValue(input, name)
 	if err != nil {
 		err = fmt.Errorf("%s annotation: %w", name, err)
-		return
+		return out, err
 	}
 	out = input
-	return
+	return out, err
 }
 
 func Int(name string, annotations ...map[string]string) (out int, err error) {
 	input := common.GetValue(name, annotations...)
 	if input == "" {
-		return
+		return out, err
 	}
 	out, err = strconv.Atoi(input)
 	if err != nil {
 		err = fmt.Errorf("annotation '%s': %w", name, err)
-		return
+		return out, err
 	}
-	return
+	return out, err
 }
 
 func Secret(name, defaultNs string, k store.K8s, annotations ...map[string]string) (secret *store.Secret, err error) {
@@ -213,10 +213,10 @@ func Secret(name, defaultNs string, k store.K8s, annotations ...map[string]strin
 	secNs, secName, err = common.GetK8sPath(name, annotations...)
 	if err != nil {
 		err = fmt.Errorf("annotation '%s': %w", name, err)
-		return
+		return secret, err
 	}
 	if secName == "" {
-		return
+		return secret, err
 	}
 	if secNs == "" {
 		secNs = defaultNs
@@ -224,9 +224,9 @@ func Secret(name, defaultNs string, k store.K8s, annotations ...map[string]strin
 	secret, err = k.GetSecret(secNs, secName)
 	if err != nil {
 		err = fmt.Errorf("annotation '%s': %w", name, err)
-		return
+		return secret, err
 	}
-	return
+	return secret, err
 }
 
 func String(name string, annotations ...map[string]string) string {
@@ -236,12 +236,12 @@ func String(name string, annotations ...map[string]string) string {
 func Timeout(name string, annotations ...map[string]string) (out *int64, err error) {
 	input := common.GetValue(name, annotations...)
 	if input == "" {
-		return
+		return out, err
 	}
 	out, err = utils.ParseTime(input)
 	if err != nil {
 		err = fmt.Errorf("annotation '%s': %w", name, err)
-		return
+		return out, err
 	}
-	return
+	return out, err
 }

@@ -14,19 +14,19 @@ func (c *clientNative) BackendSwitchingRuleCreate(frontend string, rule models.B
 func (c *clientNative) BackendSwitchingRuleDeleteAll(frontend string) (err error) {
 	configuration, err := c.nativeAPI.Configuration()
 	if err != nil {
-		return
+		return err
 	}
 	c.activeTransactionHasChanges = true
 	_, switchingRules, err := configuration.GetBackendSwitchingRules(frontend, c.activeTransaction)
 	if err != nil {
-		return
+		return err
 	}
 	for range switchingRules {
 		if err = configuration.DeleteBackendSwitchingRule(0, frontend, c.activeTransaction, 0); err != nil {
 			break
 		}
 	}
-	return
+	return err
 }
 
 func (c *clientNative) BackendSwitchingRulesGet(frontend string) (models.BackendSwitchingRules, error) {

@@ -129,7 +129,7 @@ func AddCustomRoute(route Route, routeACLAnn string, api api.HAProxyClient) (err
 			Index:    utils.PtrInt64(0),
 		})
 		if err != nil {
-			return
+			return err
 		}
 	}
 
@@ -152,5 +152,5 @@ func CustomRoutesReset(api api.HAProxyClient) (err error) {
 		}
 	}
 	CustomRoutes = make([]string, 0)
-	return
+	return err
 }

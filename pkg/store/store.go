@@ -235,7 +235,7 @@ func (k K8s) GetEndpoints(namespace, name string) (endpoints map[string]*PortEnd
 			endpoints[portName] = portEndpoints
 		}
 	}
-	return
+	return endpoints, err
 }
 
 func (k K8s) isRelevantNamespace(namespace string) bool {

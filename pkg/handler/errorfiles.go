@@ -56,14 +56,14 @@ func (handler *ErrorFiles) writeFile(code, content string) (err error) {
 	if _, ok := handler.files.data[code]; !ok {
 		err = checkCode(code)
 		if err != nil {
-			return
+			return err
 		}
 	}
 	err = handler.files.writeFile(code, content)
 	if err != nil {
 		err = fmt.Errorf("failed writing errorfile for code '%s': %w", code, err)
 	}
-	return
+	return err
 }
 
 func (handler *ErrorFiles) refresh() (result []*models.Errorfile) {
@@ -87,7 +87,7 @@ func (handler *ErrorFiles) refresh() (result []*models.Errorfile) {
 		f.inUse = false
 		f.updated = false
 	}
-	return
+	return result
 }
 
 func checkCode(code string) error {

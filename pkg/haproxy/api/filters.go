@@ -14,19 +14,19 @@ func (c *clientNative) FilterCreate(parentType, parentName string, rule models.F
 func (c *clientNative) FilterDeleteAll(parentType, parentName string) (err error) {
 	configuration, err := c.nativeAPI.Configuration()
 	if err != nil {
-		return
+		return err
 	}
 	c.activeTransactionHasChanges = true
 	_, rules, err := configuration.GetFilters(parentType, parentName, c.activeTransaction)
 	if err != nil {
-		return
+		return err
 	}
 	for range rules {
 		if err = configuration.DeleteFilter(0, parentType, parentName, c.activeTransaction, 0); err != nil {
 			break
 		}
 	}
-	return
+	return err
 }
 
 func (c *clientNative) FiltersGet(parentType, parentName string) (models.Filters, error) {

@@ -42,7 +42,7 @@ func (a *AccessControl) GetName() string {
 func (a *AccessControl) Process(k store.K8s, annotations ...map[string]string) (err error) {
 	input := a.GetAnnotationValue(annotations...)
 	if input == "" {
-		return
+		return err
 	}
 
 	if strings.HasPrefix(input, "patterns/") {
@@ -52,7 +52,7 @@ func (a *AccessControl) Process(k store.K8s, annotations ...map[string]string) (
 			AllowList: a.allowList,
 		})
 
-		return
+		return err
 	}
 
 	var mapName maps.Name
@@ -77,7 +77,7 @@ func (a *AccessControl) Process(k store.K8s, annotations ...map[string]string) (
 		SrcIPsMap: maps.GetPath(mapName),
 		AllowList: a.allowList,
 	})
-	return
+	return err
 }
 
 // GetAnnotationValue returns the annotation value of the AccessControl. If the annotation is not defined, it returns an empty string.

@@ -22,11 +22,11 @@ func (a *ReqSetHost) GetName() string {
 func (a *ReqSetHost) Process(k store.K8s, annotations ...map[string]string) (err error) {
 	input := common.GetValue(a.GetName(), annotations...)
 	if input == "" {
-		return
+		return err
 	}
 	a.rules.Add(&rules.SetHdr{
 		HdrName:   "Host",
 		HdrFormat: input,
 	})
-	return
+	return err
 }

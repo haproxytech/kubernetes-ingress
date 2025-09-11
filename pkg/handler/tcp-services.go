@@ -87,7 +87,7 @@ func (handler TCPServices) parseTCPService(store store.K8s, input string) (p tcp
 	parts := strings.Split(input, ":")
 	if len(parts) < 2 {
 		err = fmt.Errorf("incorrect format '%s', 'ServiceName:ServicePort' is required", input)
-		return
+		return p, err
 	}
 	svcName := strings.Split(parts[0], "/")
 	svcPort := parts[1]
@@ -98,22 +98,22 @@ func (handler TCPServices) parseTCPService(store store.K8s, input string) (p tcp
 	}
 	if len(svcName) != 2 {
 		err = fmt.Errorf("incorrect Service Name '%s'. Should be in 'ServiceNS/ServiceName' format", parts[0])
-		return
+		return p, err
 	}
 	namespace := svcName[0]
 	service := svcName[1]
 	var ok bool
 	if _, ok = store.Namespaces[namespace]; !ok {
 		err = fmt.Errorf("tcp-services: namespace of service '%s/%s' not found", namespace, service)
-		return
+		return p, err
 	}
 	p.service, ok = store.Namespaces[namespace].Services[service]
 	if !ok {
 		err = fmt.Errorf("tcp-services: service '%s/%s' not found", namespace, service)
-		return
+		return p, err
 	}
 	if p.port, err = strconv.ParseInt(svcPort, 10, 64); err != nil {
-		return
+		return p, err
 	}
 	return p, err
 }
@@ -165,20 +165,20 @@ func (handler TCPServices) createTCPFrontend(h haproxy.HAProxy, frontend models.
 		return err
 	}
 	instance.Reload("TCP frontend '%s' created", frontend.Name)
-	return
+	return err
 }
 
 func (handler TCPServices) updateTCPFrontend(k store.K8s, h haproxy.HAProxy, frontend models.Frontend, p tcpSvcParser, a annotations.Annotations) (err error) {
 	prevFrontend, err := h.FrontendGet(frontend.Name)
 	if err != nil {
 		err = fmt.Errorf("failed to get frontend '%s' : %w", frontend.Name, err)
-		return
+		return err
 	}
 
 	if prevFrontend.LogFormat != frontend.LogFormat {
 		err = h.FrontendEdit(frontend)
 		if err != nil {
-			return
+			return err
 		}
 
 		instance.Reload("log format TCP changed from configmap '%s/%s'", k.ConfigMaps.TCPServices.Namespace, k.ConfigMaps.TCPServices.Name)
@@ -186,13 +186,13 @@ func (handler TCPServices) updateTCPFrontend(k store.K8s, h haproxy.HAProxy, fro
 	binds, err := h.FrontendBindsGet(frontend.Name)
 	if err != nil {
 		err = fmt.Errorf("failed to get bind lines: %w", err)
-		return
+		return err
 	}
 	if !binds[0].Ssl && p.sslOffload {
 		err = h.FrontendEnableSSLOffload(frontend.Name, handler.CertDir, "", false)
 		if err != nil {
 			err = fmt.Errorf("failed to enable SSL offload: %w", err)
-			return
+			return err
 		}
 		instance.Reload("TCP frontend '%s': ssl offload enabled", frontend.Name)
 	}
@@ -200,7 +200,7 @@ func (handler TCPServices) updateTCPFrontend(k store.K8s, h haproxy.HAProxy, fro
 		err = h.FrontendDisableSSLOffload(frontend.Name)
 		if err != nil {
 			err = fmt.Errorf("failed to disable SSL offload: %w", err)
-			return
+			return err
 		}
 		instance.Reload("TCP frontend '%s': ssl offload disabled", frontend.Name)
 	}
@@ -208,7 +208,7 @@ func (handler TCPServices) updateTCPFrontend(k store.K8s, h haproxy.HAProxy, fro
 		frontend.DefaultBackend = ""
 		err = h.FrontendEdit(frontend)
 		instance.Reload("TCP frontend '%s': service '%s/%s' deleted", frontend.Name, p.service.Namespace, p.service.Name)
-		return
+		return err
 	}
 
 	var svc *service.Service

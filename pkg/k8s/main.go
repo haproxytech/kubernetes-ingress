@@ -336,7 +336,7 @@ func GetRestConfig(osArgs utils.OSArgs) (restConfig *rest.Config, err error) {
 		restConfig, err = rest.InClusterConfig()
 	}
 	if err != nil {
-		return
+		return restConfig, err
 	}
 	restConfig.WarningHandler = logger
 	return restConfig, err
@@ -394,5 +394,5 @@ func (k k8s) IsGatewayAPIInstalled(gatewayControllerName string) (installed bool
 		log("No tcproute crd is installed, please install experimental yaml version %s", GATEWAY_API_VERSION)
 		installed = false
 	}
-	return
+	return installed
 }

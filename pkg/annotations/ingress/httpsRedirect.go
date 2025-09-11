@@ -44,7 +44,7 @@ func (a HTTPSRedirectAnn) Process(k store.K8s, annotations ...map[string]string)
 			a.parent.redirect = &rules.RequestRedirect{SSLRedirect: true}
 			a.parent.rules.Add(a.parent.redirect)
 		}
-		return
+		return err
 	}
 
 	switch a.name {
@@ -54,36 +54,36 @@ func (a HTTPSRedirectAnn) Process(k store.K8s, annotations ...map[string]string)
 			return errBool
 		}
 		if !enable {
-			return
+			return err
 		}
 		// Enable HTTPS redirect
 		a.parent.redirect = &rules.RequestRedirect{SSLRedirect: true}
 		a.parent.rules.Add(a.parent.redirect)
-		return
+		return err
 	case "ssl-redirect-port":
 		if a.parent.redirect == nil {
-			return
+			return err
 		}
 		var port int
 		port, err = strconv.Atoi(input)
 		if err != nil {
-			return
+			return err
 		}
 		a.parent.redirect.RedirectPort = port
 	case "ssl-redirect-code":
 		if a.parent.redirect == nil {
-			return
+			return err
 		}
 		var code int64
 		code, err = strconv.ParseInt(input, 10, 64)
 		if err != nil {
-			return
+			return err
 		}
 		a.parent.redirect.RedirectCode = code
 	default:
 		err = fmt.Errorf("unknown ssl-redirect annotation '%s'", a.name)
 	}
-	return
+	return err
 }
 
 func tlsEnabled(ingress *store.Ingress) bool {

@@ -83,5 +83,5 @@ func (m *UpdateStatusManagerImpl) Update(k store.K8s, h haproxy.HAProxy, a annot
 
 	k.UpdateAllIngresses = false
 	m.updateIngresses = nil
-	return
+	return err
 }

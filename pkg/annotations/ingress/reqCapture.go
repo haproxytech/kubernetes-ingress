@@ -38,7 +38,7 @@ func (a ReqCaptureAnn) GetName() string {
 func (a ReqCaptureAnn) Process(k store.K8s, annotations ...map[string]string) (err error) {
 	input := common.GetValue(a.GetName(), annotations...)
 	if input == "" {
-		return
+		return err
 	}
 
 	switch a.name {
@@ -56,12 +56,12 @@ func (a ReqCaptureAnn) Process(k store.K8s, annotations ...map[string]string) (e
 		}
 	case "request-capture-len":
 		if len(a.parent.capture) == 0 {
-			return
+			return err
 		}
 		var captureLen int64
 		captureLen, err = strconv.ParseInt(input, 10, 64)
 		if err != nil {
-			return
+			return err
 		}
 		for _, rule := range a.parent.capture {
 			rule.CaptureLen = captureLen
@@ -69,5 +69,5 @@ func (a ReqCaptureAnn) Process(k store.K8s, annotations ...map[string]string) (e
 	default:
 		err = fmt.Errorf("unknown request-capture annotation '%s'", a.name)
 	}
-	return
+	return err
 }

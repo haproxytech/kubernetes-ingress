@@ -23,12 +23,12 @@ func (r ReqBasicAuth) Create(client api.HAProxyClient, frontend *models.Frontend
 	var userList bool
 	userList, err = client.UserListExistsByGroup(r.AuthGroup)
 	if err != nil {
-		return
+		return err
 	}
 	if !userList {
 		err = client.UserListCreateByGroup(r.AuthGroup, r.Credentials)
 		if err != nil {
-			return
+			return err
 		}
 	}
 	httpRule := models.HTTPRequestRule{
@@ -39,8 +39,8 @@ func (r ReqBasicAuth) Create(client api.HAProxyClient, frontend *models.Frontend
 		CondTest:  fmt.Sprintf("!{ http_auth_group(%s) authenticated-users }", r.AuthGroup),
 	}
 	if err = client.FrontendHTTPRequestRuleCreate(frontend.Name, httpRule, ingressACL); err != nil {
-		return
+		return err
 	}
 
-	return
+	return err
 }

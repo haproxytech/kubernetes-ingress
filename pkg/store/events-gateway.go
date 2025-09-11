@@ -16,7 +16,7 @@ package store
 
 func (k *K8s) EventGatewayClass(data *GatewayClass) (updateRequired bool) {
 	if data.ControllerName != k.GatewayControllerName {
-		return
+		return updateRequired
 	}
 	switch data.Status {
 	case ADDED:
@@ -29,7 +29,7 @@ func (k *K8s) EventGatewayClass(data *GatewayClass) (updateRequired bool) {
 	case DELETED:
 		if previous := k.GatewayClasses[data.Name]; previous == nil {
 			logger.Warningf("Trying to delete unexisting gatewayclass %s", data.Name)
-			return
+			return updateRequired
 		}
 		delete(k.GatewayClasses, data.Name)
 		updateRequired = true
@@ -50,7 +50,7 @@ func (k *K8s) EventGatewayClass(data *GatewayClass) (updateRequired bool) {
 		k.GatewayClasses[data.Name] = newGatewayClass
 		updateRequired = true
 	}
-	return
+	return updateRequired
 }
 
 func (k *K8s) EventGateway(ns *Namespace, data *Gateway) (updateRequired bool) {
@@ -64,7 +64,7 @@ func (k *K8s) EventGateway(ns *Namespace, data *Gateway) (updateRequired bool) {
 	case DELETED:
 		if previous := ns.Gateways[data.Name]; previous == nil {
 			logger.Warningf("Trying to delete unexisting gateway %s", data.Name)
-			return
+			return updateRequired
 		}
 		ns.Gateways[data.Name] = data
 		updateRequired = true
@@ -85,7 +85,7 @@ func (k *K8s) EventGateway(ns *Namespace, data *Gateway) (updateRequired bool) {
 		ns.Gateways[data.Name] = newGateway
 		updateRequired = true
 	}
-	return
+	return updateRequired
 }
 
 func (k *K8s) EventTCPRoute(ns *Namespace, data *TCPRoute) (updateRequired bool) {
@@ -99,7 +99,7 @@ func (k *K8s) EventTCPRoute(ns *Namespace, data *TCPRoute) (updateRequired bool)
 	case DELETED:
 		if previous := ns.TCPRoutes[data.Name]; previous == nil {
 			logger.Warningf("Trying to delete unexisting tcproute %s", data.Name)
-			return
+			return updateRequired
 		}
 		// We can't remove directly because we need the listener attached to this route to be updated.
 		ns.TCPRoutes[data.Name] = data
@@ -121,7 +121,7 @@ func (k *K8s) EventTCPRoute(ns *Namespace, data *TCPRoute) (updateRequired bool)
 		ns.TCPRoutes[data.Name] = newTCPRoute
 		updateRequired = true
 	}
-	return
+	return updateRequired
 }
 
 func (k *K8s) EventReferenceGrant(ns *Namespace, data *ReferenceGrant) (updateRequired bool) {
@@ -135,7 +135,7 @@ func (k *K8s) EventReferenceGrant(ns *Namespace, data *ReferenceGrant) (updateRe
 	case DELETED:
 		if previous := ns.ReferenceGrants[data.Name]; previous == nil {
 			logger.Warningf("Trying to delete unexisting refrencegrant %s", data.Name)
-			return
+			return updateRequired
 		}
 		delete(ns.ReferenceGrants, data.Name)
 		updateRequired = true
@@ -156,5 +156,5 @@ func (k *K8s) EventReferenceGrant(ns *Namespace, data *ReferenceGrant) (updateRe
 		ns.ReferenceGrants[data.Name] = newReferenceGrant
 		updateRequired = true
 	}
-	return
+	return updateRequired
 }
