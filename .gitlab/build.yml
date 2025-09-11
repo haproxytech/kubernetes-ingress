@@ -3,7 +3,7 @@ docker-build:
   needs: []
   rules:
     - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
-    - if: $CI_PIPELINE_SOURCE == 'push'
+    - if: "$CI_PROJECT_NAMESPACE != 'haproxy-controller' && $CI_PIPELINE_SOURCE == 'push'"
     - if: $CI_PIPELINE_SOURCE == 'schedule'
   image: $CI_REGISTRY_GO/docker:$DOCKER_VERSION-go$GO_VERSION
   services:
