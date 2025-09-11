@@ -2,7 +2,7 @@ unit-tests:
   needs: ["diff", "tidy"]
   rules:
     - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
-    - if: $CI_PIPELINE_SOURCE == 'push'
+    - if: "$CI_PROJECT_NAMESPACE != 'haproxy-controller' && $CI_PIPELINE_SOURCE == 'push'"
   stage: unit-tests
   image:
     name: $CI_REGISTRY_GO/haproxy-alpine:3.1-go$GO_VERSION

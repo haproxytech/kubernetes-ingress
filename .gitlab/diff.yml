@@ -2,7 +2,7 @@ diff:
   stage: diff
   rules:
     - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
-    - if: $CI_PIPELINE_SOURCE == 'push'
+    - if: "$CI_PROJECT_NAMESPACE != 'haproxy-controller' && $CI_PIPELINE_SOURCE == 'push'"
   image:
     name: $CI_REGISTRY_GO/golang:$GO_VERSION
     entrypoint: [ "" ]
@@ -17,7 +17,7 @@ diff-crd:
   stage: diff
   rules:
     - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
-    - if: $CI_PIPELINE_SOURCE == 'push'
+    - if: "$CI_PROJECT_NAMESPACE != 'haproxy-controller' && $CI_PIPELINE_SOURCE == 'push'"
   image:
     name: $CI_REGISTRY_GO/golang:$GO_VERSION
     entrypoint: [ "" ]
