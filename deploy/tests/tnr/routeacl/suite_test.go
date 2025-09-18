@@ -208,3 +208,215 @@ func (suite *UseBackendSuite) UseBackendFixture() (eventChan chan k8ssync.SyncDa
 	<-controllerHasWorked
 	return eventChan
 }
+
+func (suite *UseBackendSuite) NonWildcardHostFixture() (eventChan chan k8ssync.SyncDataEvent) {
+	var osArgs utils.OSArgs
+	os.Args = []string{os.Args[0], "-e", "-t", "--config-dir=" + suite.test.TempDir}
+	parser := flags.NewParser(&osArgs, flags.IgnoreUnknown)
+	_, errParsing := parser.Parse() //nolint:ifshort
+	if errParsing != nil {
+		suite.T().Fatal(errParsing)
+	}
+
+	s := store.NewK8sStore(osArgs)
+
+	haproxyEnv := env.Env{
+		CfgDir: suite.test.TempDir,
+		Proxies: env.Proxies{
+			FrontHTTP:  "http",
+			FrontHTTPS: "https",
+			FrontSSL:   "ssl",
+			BackSSL:    "ssl-backend",
+		},
+	}
+
+	eventChan = make(chan k8ssync.SyncDataEvent, watch.DefaultChanSize*6)
+	controller := c.NewBuilder().
+		WithHaproxyCfgFile([]byte(haproxyConfig)).
+		WithEventChan(eventChan).
+		WithStore(s).
+		WithHaproxyEnv(haproxyEnv).
+		WithUpdateStatusManager(&updateStatusManager{}).
+		WithArgs(osArgs).Build()
+
+	go controller.Start()
+
+	// Now sending store events for test setup
+	ns := store.Namespace{Name: "ns", Status: store.ADDED}
+	eventChan <- k8ssync.SyncDataEvent{SyncType: k8ssync.NAMESPACE, Namespace: ns.Name, Data: &ns}
+
+	endpoints := &store.Endpoints{
+		SliceName: "api-service",
+		Service:   "api-service",
+		Namespace: ns.Name,
+		Ports: map[string]*store.PortEndpoints{
+			"https": {
+				Port:      int64(3001),
+				Addresses: map[string]struct{}{"10.244.0.11": {}},
+			},
+		},
+		Status: store.ADDED,
+	}
+
+	eventChan <- k8ssync.SyncDataEvent{SyncType: k8ssync.ENDPOINTS, Namespace: endpoints.Namespace, Data: endpoints}
+
+	service := &store.Service{
+		Name:        "api-service",
+		Namespace:   ns.Name,
+		Annotations: map[string]string{"route-acl": "path_reg path-in-bug-repro$"},
+		Ports: []store.ServicePort{
+			{
+				Name:     "https",
+				Protocol: "TCP",
+				Port:     8443,
+				Status:   store.ADDED,
+			},
+		},
+		Status: store.ADDED,
+	}
+	eventChan <- k8ssync.SyncDataEvent{SyncType: k8ssync.SERVICE, Namespace: service.Namespace, Data: service}
+
+	ingressClass := &store.IngressClass{
+		Name:       "haproxy",
+		Controller: "haproxy.org/ingress-controller",
+		Status:     store.ADDED,
+	}
+	eventChan <- k8ssync.SyncDataEvent{SyncType: k8ssync.INGRESS_CLASS, Data: ingressClass}
+
+	prefixPathType := networkingv1.PathTypePrefix
+	ingress := &store.Ingress{
+		IngressCore: store.IngressCore{
+			APIVersion: store.NETWORKINGV1,
+			Name:       "api-ingress",
+			Namespace:  ns.Name,
+			Class:      "haproxy",
+			Rules: map[string]*store.IngressRule{
+				"api.example.local": {
+					Host: "api.example.local", // Explicitly set the Host field
+					Paths: map[string]*store.IngressPath{
+						string(prefixPathType) + "-/": {
+							Path:          "/",
+							PathTypeMatch: string(prefixPathType),
+							SvcNamespace:  service.Namespace,
+							SvcPortString: "https",
+							SvcName:       service.Name,
+						},
+					},
+				},
+			},
+		},
+		Status: store.ADDED,
+	}
+
+	eventChan <- k8ssync.SyncDataEvent{SyncType: k8ssync.INGRESS, Namespace: ingress.Namespace, Data: ingress}
+	controllerHasWorked := make(chan struct{})
+	eventChan <- k8ssync.SyncDataEvent{SyncType: k8ssync.COMMAND, EventProcessed: controllerHasWorked}
+	<-controllerHasWorked
+	return eventChan
+}
+
+func (suite *UseBackendSuite) WildcardHostFixture() (eventChan chan k8ssync.SyncDataEvent) {
+	var osArgs utils.OSArgs
+	os.Args = []string{os.Args[0], "-e", "-t", "--config-dir=" + suite.test.TempDir}
+	parser := flags.NewParser(&osArgs, flags.IgnoreUnknown)
+	_, errParsing := parser.Parse() //nolint:ifshort
+	if errParsing != nil {
+		suite.T().Fatal(errParsing)
+	}
+
+	s := store.NewK8sStore(osArgs)
+
+	haproxyEnv := env.Env{
+		CfgDir: suite.test.TempDir,
+		Proxies: env.Proxies{
+			FrontHTTP:  "http",
+			FrontHTTPS: "https",
+			FrontSSL:   "ssl",
+			BackSSL:    "ssl-backend",
+		},
+	}
+
+	eventChan = make(chan k8ssync.SyncDataEvent, watch.DefaultChanSize*6)
+	controller := c.NewBuilder().
+		WithHaproxyCfgFile([]byte(haproxyConfig)).
+		WithEventChan(eventChan).
+		WithStore(s).
+		WithHaproxyEnv(haproxyEnv).
+		WithUpdateStatusManager(&updateStatusManager{}).
+		WithArgs(osArgs).Build()
+
+	go controller.Start()
+
+	// Now sending store events for test setup
+	ns := store.Namespace{Name: "ns", Status: store.ADDED}
+	eventChan <- k8ssync.SyncDataEvent{SyncType: k8ssync.NAMESPACE, Namespace: ns.Name, Data: &ns}
+
+	endpoints := &store.Endpoints{
+		SliceName: "wildcard-service",
+		Service:   "wildcard-service",
+		Namespace: ns.Name,
+		Ports: map[string]*store.PortEndpoints{
+			"https": {
+				Port:      int64(3001),
+				Addresses: map[string]struct{}{"10.244.0.10": {}},
+			},
+		},
+		Status: store.ADDED,
+	}
+
+	eventChan <- k8ssync.SyncDataEvent{SyncType: k8ssync.ENDPOINTS, Namespace: endpoints.Namespace, Data: endpoints}
+
+	service := &store.Service{
+		Name:        "wildcard-service",
+		Namespace:   ns.Name,
+		Annotations: map[string]string{"route-acl": "path_reg path-in-bug-repro$"},
+		Ports: []store.ServicePort{
+			{
+				Name:     "https",
+				Protocol: "TCP",
+				Port:     8443,
+				Status:   store.ADDED,
+			},
+		},
+		Status: store.ADDED,
+	}
+	eventChan <- k8ssync.SyncDataEvent{SyncType: k8ssync.SERVICE, Namespace: service.Namespace, Data: service}
+
+	ingressClass := &store.IngressClass{
+		Name:       "haproxy",
+		Controller: "haproxy.org/ingress-controller",
+		Status:     store.ADDED,
+	}
+	eventChan <- k8ssync.SyncDataEvent{SyncType: k8ssync.INGRESS_CLASS, Data: ingressClass}
+
+	prefixPathType := networkingv1.PathTypePrefix
+	ingress := &store.Ingress{
+		IngressCore: store.IngressCore{
+			APIVersion: store.NETWORKINGV1,
+			Name:       "wildcard-ingress",
+			Namespace:  ns.Name,
+			Class:      "haproxy",
+			Rules: map[string]*store.IngressRule{
+				"*.example.local": {
+					Host: "*.example.local", // Explicitly set the Host field
+					Paths: map[string]*store.IngressPath{
+						string(prefixPathType) + "-/": {
+							Path:          "/",
+							PathTypeMatch: string(prefixPathType),
+							SvcNamespace:  service.Namespace,
+							SvcPortString: "https",
+							SvcName:       service.Name,
+						},
+					},
+				},
+			},
+		},
+		Status: store.ADDED,
+	}
+
+	eventChan <- k8ssync.SyncDataEvent{SyncType: k8ssync.INGRESS, Namespace: ingress.Namespace, Data: ingress}
+	controllerHasWorked := make(chan struct{})
+	eventChan <- k8ssync.SyncDataEvent{SyncType: k8ssync.COMMAND, EventProcessed: controllerHasWorked}
+	<-controllerHasWorked
+	return eventChan
+}
