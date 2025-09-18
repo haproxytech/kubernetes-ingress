@@ -65,3 +65,5 @@ allowed:
   - frontent
   - pprof
   - preload
+  - hostname
+  - str
