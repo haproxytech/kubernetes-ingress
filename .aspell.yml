@@ -64,4 +64,3 @@ allowed:
   - svc
   - frontent
   - pprof
-  - openapi
