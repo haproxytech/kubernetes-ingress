@@ -11,7 +11,12 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
-func (i *Ingress) UpdateStatus(client *kubernetes.Clientset) (err error) {
+func (i *Ingress) UpdateStatus(client *kubernetes.Clientset, disableStatusUpdate bool) (err error) {
+	if disableStatusUpdate {
+		logger.Tracef("Skipping update of LoadBalancer status in ingress %s/%s due to configuration", i.resource.Namespace, i.resource.Name)
+		return nil
+	}
+
 	var lbi []networkingv1.IngressLoadBalancerIngress
 
 	for _, addr := range i.resource.Addresses {
