@@ -56,3 +56,5 @@ allowed:
   - svc
   - frontent
   - pprof
+  - hostname
+  - str
