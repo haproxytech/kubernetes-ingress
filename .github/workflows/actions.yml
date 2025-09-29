@@ -6,6 +6,8 @@ jobs:
     name: HAProxy check commit message
     runs-on: ubuntu-latest
     steps:
+      - name: Check out code
+        uses: actions/checkout@v4
       - name: commit-policy
         uses: docker://ghcr.io/haproxytech/commit-check:5.2.0
         env:
