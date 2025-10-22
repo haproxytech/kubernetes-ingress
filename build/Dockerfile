@@ -54,8 +54,9 @@ COPY --from=builder-c /src/haproxy_wrapper /usr/local/sbin/haproxy_wrapper
 RUN apk --no-cache add socat openssl util-linux htop tzdata curl libcap && \
     rm -f /usr/local/bin/dataplaneapi /usr/bin/dataplaneapi /etc/haproxy/dataplaneapi.yml && \
     rm -f /usr/local/bin/dataplaneapi-v2 /usr/bin/dataplaneapi-v2 && \
-    chgrp -R haproxy /usr/local/etc/haproxy /run /var /usr/local/sbin/haproxy_wrapper && \
-    chmod -R ug+rwx /usr/local/etc/haproxy /run /var /usr/local/sbin/haproxy_wrapper && \
+    chown -R "${S6_USER}:${S6_GROUP}" /usr/local/etc/haproxy /run /var && \
+    chmod -R ug+rwx /usr/local/etc/haproxy /run /var && \
+    chmod u+rx /usr/local/sbin/haproxy_wrapper && \
     setcap 'cap_net_bind_service=+ep' /usr/local/sbin/haproxy_wrapper && \
     case "${TARGETPLATFORM}" in \
         "linux/arm64")      S6_ARCH=aarch64      ;; \
