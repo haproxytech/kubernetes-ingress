@@ -420,6 +420,16 @@ image_arguments:
         - Path a to a CRD manifest where the converted v3 CRDs will be written
     example: --output-file=/home/xxx/convert/v3/global-full.yaml
     version_min: "3.2"
+  - argument: --disable-ingress-status-update
+    description: |-
+      If set, disables updating the status field of Ingress resources by the controller.
+      By default, the controller will update the status field with the LoadBalancer address.
+      This flag is useful if you want to prevent the controller from modifying Ingress status, for example when using another controller or external process to manage status updates.
+    values:
+      - Boolean flag; just declare the flag to disable status updates.
+    default: false
+    version_min: "3.0"
+    example: --disable-ingress-status-update
 groups:
   config-snippet:
     header: |-
