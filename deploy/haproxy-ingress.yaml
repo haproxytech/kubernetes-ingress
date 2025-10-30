@@ -161,8 +161,6 @@ spec:
           capabilities:
             drop:
               - ALL
-            add:
-              - NET_BIND_SERVICE
           seccompProfile:
             type: RuntimeDefault
         resources:
