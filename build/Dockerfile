@@ -57,7 +57,7 @@ RUN apk --no-cache add socat openssl util-linux htop tzdata curl libcap && \
     chown -R "${S6_USER}:${S6_GROUP}" /usr/local/etc/haproxy /run /var && \
     chmod -R ug+rwx /usr/local/etc/haproxy /run /var && \
     chmod u+rx /usr/local/sbin/haproxy_wrapper && \
-    setcap 'cap_net_bind_service=+ep' /usr/local/sbin/haproxy_wrapper && \
+    setcap 'cap_net_bind_service=-ep' /usr/local/sbin/haproxy && \
     case "${TARGETPLATFORM}" in \
         "linux/arm64")      S6_ARCH=aarch64      ;; \
         "linux/amd64")      S6_ARCH=x86_64       ;; \
