@@ -686,6 +686,27 @@ annotations:
     version_min: "1.8"
     example:
       - "client-strict-sni: true"
+  - title: generate-certificates-signer
+    type: string
+    group: ssl-offloading
+    dependencies: ""
+    default: ""
+    description:
+      - Specifies the Kubernetes kubernetes.io/tls type secret containing the CA certificate file used to sign automatically generated certificates.
+      - When this annotation is set, HAProxy's generate-certificates feature is automatically enabled on the HTTPS frontend bind line.
+      - This allows HAProxy to automatically generate certificates for incoming TLS connections using the provided CA for signing.
+      - The secret should contain the CA certificate and key in PEM format.
+    tip:
+      - The secret format should be namespace/secret-name or just secret-name.
+      - When this annotation is configured, the generate-certificates option is automatically added to the bind line in the HTTPS frontend when SSL offload is enabled.
+      - HAProxy will use this CA to sign certificates generated for incoming TLS connections.
+    values:
+      - Name of Kubernetes secret in format namespace/secret-name
+    applies_to:
+      - configmap
+    version_min: "3.2"
+    example:
+      - 'generate-certificates-signer: "default/ca-signing-cert"'
   - title: cors-enable
     type: bool
     group: CORS
