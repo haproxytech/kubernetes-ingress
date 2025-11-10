@@ -34,15 +34,16 @@ import (
 )
 
 type HTTPS struct {
-	AddrIPv4  string
-	AddrIPv6  string
-	CertDir   string
-	alpn      string
-	Port      int64
-	Enabled   bool
-	IPv4      bool
-	IPv6      bool
-	strictSNI bool
+	AddrIPv4                   string
+	AddrIPv6                   string
+	CertDir                    string
+	alpn                       string
+	Port                       int64
+	Enabled                    bool
+	IPv4                       bool
+	IPv6                       bool
+	strictSNI                  bool
+	generateCertificatesSigner string
 }
 
 //nolint:golint, stylecheck
@@ -170,11 +171,32 @@ func (handler *HTTPS) Update(k store.K8s, h haproxy.HAProxy, a annotations.Annot
 	handler.strictSNI, err = annotations.Bool("client-strict-sni", k.ConfigMaps.Main.Annotations)
 	logger.Error(err)
 
+	// Handle generate-certificates-signer secret
+	handler.generateCertificatesSigner = ""
+	var notFound store.ErrNotFound
+	secret, annErr := annotations.Secret("generate-certificates-signer", "", k, k.ConfigMaps.Main.Annotations)
+	if annErr != nil {
+		if errors.Is(annErr, notFound) {
+			logger.Debugf("generate-certificates-signer not configured: %s", annErr)
+		} else {
+			err = fmt.Errorf("generate-certificates-signer: %w", annErr)
+			return err
+		}
+	}
+	if secret != nil {
+		caFile, certErr := h.Certificates.AddSecret(secret, certs.FT_CERT)
+		if certErr != nil {
+			err = fmt.Errorf("generate-certificates-signer: %w", certErr)
+			return err
+		}
+		handler.generateCertificatesSigner = caFile
+	}
+
 	// ssl-offload
 	sslOffloadEnabled := h.FrontendSSLOffloadEnabled(h.FrontHTTPS)
 	if h.FrontCertsInUse() {
 		if !sslOffloadEnabled {
-			logger.Panic(h.FrontendEnableSSLOffload(h.FrontHTTPS, handler.CertDir, handler.alpn, handler.strictSNI))
+			logger.Panic(h.FrontendEnableSSLOffload(h.FrontHTTPS, handler.CertDir, handler.alpn, handler.strictSNI, handler.generateCertificatesSigner))
 			instance.Reload("SSL offload enabled")
 		}
 		err := handler.handleClientTLSAuth(k, h)
@@ -268,7 +290,7 @@ func (handler *HTTPS) toggleSSLPassthrough(passthrough bool, h haproxy.HAProxy) 
 		}
 	}
 	if h.FrontendSSLOffloadEnabled(h.FrontHTTPS) || h.FrontCertsInUse() {
-		logger.Panic(h.FrontendEnableSSLOffload(h.FrontHTTPS, handler.CertDir, handler.alpn, handler.strictSNI))
+		logger.Panic(h.FrontendEnableSSLOffload(h.FrontHTTPS, handler.CertDir, handler.alpn, handler.strictSNI, handler.generateCertificatesSigner))
 	}
 	return nil
 }

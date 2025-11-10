@@ -66,7 +66,7 @@ type HAProxyClient interface { //nolint:interfacebloat
 	FrontendsGet() (models.Frontends, error)
 	FrontendGet(frontendName string) (models.Frontend, error)
 	FrontendEdit(frontend models.FrontendBase) error
-	FrontendEnableSSLOffload(frontendName string, certDir string, alpn string, strictSNI bool) (err error)
+	FrontendEnableSSLOffload(frontendName string, certDir string, alpn string, strictSNI bool, generateCertificatesSigner string) (err error)
 	FrontendDisableSSLOffload(frontendName string) (err error)
 	FrontendSSLOffloadEnabled(frontendName string) bool
 	Bind

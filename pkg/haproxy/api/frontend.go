@@ -73,7 +73,7 @@ func (c *clientNative) FrontendEdit(frontend models.FrontendBase) error {
 	return configuration.EditFrontend(frontend.Name, f, c.activeTransaction, 0)
 }
 
-func (c *clientNative) FrontendEnableSSLOffload(frontendName string, certDir string, alpn string, strictSNI bool) (err error) {
+func (c *clientNative) FrontendEnableSSLOffload(frontendName string, certDir string, alpn string, strictSNI bool, generateCertificatesSigner string) (err error) {
 	binds, err := c.FrontendBindsGet(frontendName)
 	if err != nil {
 		return err
@@ -81,6 +81,12 @@ func (c *clientNative) FrontendEnableSSLOffload(frontendName string, certDir str
 	for _, bind := range binds {
 		bind.Ssl = true
 		bind.SslCertificate = certDir
+		if generateCertificatesSigner != "" {
+			bind.GenerateCertificates = true
+			bind.CaSignFile = generateCertificatesSigner
+		} else {
+			bind.GenerateCertificates = false
+		}
 		if alpn != "" {
 			bind.Alpn = alpn
 			bind.StrictSni = strictSNI
@@ -103,8 +109,10 @@ func (c *clientNative) FrontendDisableSSLOffload(frontendName string) (err error
 		bind.SslCafile = ""
 		bind.Verify = ""
 		bind.SslCertificate = ""
+		bind.CaSignFile = ""
 		bind.Alpn = ""
 		bind.StrictSni = false
+		bind.GenerateCertificates = false
 		err = c.FrontendBindEdit(frontendName, *bind)
 	}
 	if err != nil {
