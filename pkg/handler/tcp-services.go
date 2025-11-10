@@ -160,7 +160,7 @@ func (handler TCPServices) createTCPFrontend(h haproxy.HAProxy, frontend models.
 		}))
 	}
 	if sslOffload {
-		errors.Add(h.FrontendEnableSSLOffload(frontend.Name, handler.CertDir, "", false))
+		errors.Add(h.FrontendEnableSSLOffload(frontend.Name, handler.CertDir, "", false, ""))
 	}
 	if errors.Result() != nil {
 		err = fmt.Errorf("error configuring tcp frontend: %w", err)
@@ -191,7 +191,7 @@ func (handler TCPServices) updateTCPFrontend(k store.K8s, h haproxy.HAProxy, fro
 		return err
 	}
 	if !binds[0].Ssl && p.sslOffload {
-		err = h.FrontendEnableSSLOffload(frontend.Name, handler.CertDir, "", false)
+		err = h.FrontendEnableSSLOffload(frontend.Name, handler.CertDir, "", false, "")
 		if err != nil {
 			err = fmt.Errorf("failed to enable SSL offload: %w", err)
 			return err
