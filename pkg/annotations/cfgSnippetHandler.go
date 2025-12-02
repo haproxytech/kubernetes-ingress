@@ -1,6 +1,7 @@
 package annotations
 
 import (
+	"slices"
 	"strings"
 
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy"
@@ -67,7 +68,25 @@ func updateConfigSnippet(api api.HAProxyClient, configmapCfgSnippetValue []strin
 		cfgSnippetvalue := append([]string{}, configmapCfgSnippetValue...)
 		cfgSnippetvalue = append(cfgSnippetvalue, serviceCfgSnippetValue...)
 		// Then we can iterate over each config snippet coming from different origin.
+		// but first, we need to sort them by orderPriority
+		type originWithPriority struct {
+			origin        string
+			orderPriority int
+		}
+		var originsWithPriority []originWithPriority
 		for origin, cfgData := range cfgDataByOrigin {
+			originsWithPriority = append(originsWithPriority, originWithPriority{origin: origin, orderPriority: cfgData.orderPriority})
+		}
+		// Sort by orderPriority descending
+		slices.SortFunc(originsWithPriority, func(a, b originWithPriority) int {
+			if a.orderPriority == b.orderPriority {
+				return strings.Compare(a.origin, b.origin)
+			}
+			return b.orderPriority - a.orderPriority
+		})
+		// Now proceed as usual
+		for _, origin := range originsWithPriority {
+			cfgData := cfgDataByOrigin[origin.origin]
 			if cfgData.disabled {
 				instance.ReloadIf(
 					cfgData.status == store.ADDED || cfgData.status == store.MODIFIED,
@@ -79,10 +98,10 @@ func updateConfigSnippet(api api.HAProxyClient, configmapCfgSnippetValue []strin
 
 			// The configsnippet has not been reseen so delete it.
 			if cfgData.status == store.DELETED {
-				delete(cfgSnippet.backends[backend], origin)
+				delete(cfgSnippet.backends[backend], origin.origin)
 				continue
 			}
-			if origin != "configmap" && !strings.HasPrefix(origin, SERVICE_NAME_PREFIX) {
+			if origin.origin != "configmap" && !strings.HasPrefix(origin.origin, SERVICE_NAME_PREFIX) {
 				instance.ReloadIf(len(cfgData.updated) > 0,
 					"config snippet from %s has been updated", origin)
 

@@ -45,6 +45,8 @@ linters:
     - err113 # maybe tmp disable
     - recvcheck # maybe tmp disable
     - tenv # deprecated
+    - tagalign
+    - testifylint
 issues:
   exclude:
     - "tag is not aligned, should be:" # this is harder to read

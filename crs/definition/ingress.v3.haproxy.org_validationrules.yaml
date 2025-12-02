@@ -45,20 +45,36 @@ spec:
                   description: Rule defines the structure for a single validation
                     rule in the YAML.
                   properties:
-                    namespaces:
+                    ingresses:
+                      description: ingresses where this rule can apply (ingress names)
                       items:
                         type: string
                       type: array
-                    resources:
+                    namespaces:
+                      description: namespaces where this rule can apply (namespace
+                        names)
                       items:
                         type: string
+                      type: array
+                    order_priority:
+                      description: Optional priority for sorting rules, bigger value
+                        has higher priority
+                      type: integer
+                    resources:
+                      description: resources where this rule can apply (service, frontend)
+                      items:
+                        type: string
+                      maxItems: 42
                       type: array
                     rule:
                       type: string
-                    sections:
-                      items:
-                        type: string
-                      type: array
+                    section:
+                      default: backend
+                      enum:
+                      - frontend
+                      - backend
+                      - all
+                      type: string
                     template:
                       type: string
                     type:

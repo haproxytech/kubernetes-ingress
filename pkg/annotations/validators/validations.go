@@ -6,6 +6,8 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"slices"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -16,7 +18,6 @@ import (
 	"github.com/google/cel-go/common/types"
 	durationpb "google.golang.org/protobuf/types/known/durationpb"
 	"gopkg.in/yaml.v3"
-	"k8s.io/utils/strings/slices"
 )
 
 // AnnType defines the type of annotation used in the validation rules.
@@ -35,12 +36,21 @@ const (
 // Rule defines the structure for a single validation rule in the YAML.
 type Rule struct {
 	// +kubebuilder:validation:Enum=duration;int;uint;bool;string;float;json;
-	Type       AnnType  `yaml:"type" json:"type"`                                 // Expected data type (e.g., "duration", "int", "bool")
-	Rule       string   `yaml:"rule" json:"rule"`                                 // The CEL expression for validation
-	Template   string   `yaml:"template,omitempty" json:"template,omitempty"`     // Optional pattern
-	Sections   []string `yaml:"sections,omitempty" json:"sections,omitempty"`     // sections where this rule can apply (e.g., "backend", "frontend")
-	Resources  []string `yaml:"resources,omitempty" json:"resources,omitempty"`   // resources where this rule can apply (backend names)
-	Namespaces []string `yaml:"namespaces,omitempty" json:"namespaces,omitempty"` // namespaces where this rule can apply (namespace names)
+	Type AnnType `yaml:"type" json:"type"` // Expected data type (e.g., "duration", "int", "bool")
+	Rule string  `yaml:"rule" json:"rule"`
+	// Optional priority for sorting rules, bigger value has higher priority
+	OrderPriority int    `yaml:"order_priority,omitempty" json:"order_priority,omitempty"`
+	Template      string `yaml:"template,omitempty" json:"template,omitempty"` // Optional pattern
+	// +kubebuilder:validation:Enum=frontend;backend;all
+	// +kubebuilder:default=backend
+	Section string `yaml:"section" json:"section,omitempty"`
+	// resources where this rule can apply (service, frontend)
+	// +kubebuilder:validation:MaxItems=42
+	Resources []string `yaml:"resources,omitempty" json:"resources,omitempty"`
+	// namespaces where this rule can apply (namespace names)
+	Namespaces []string `yaml:"namespaces,omitempty" json:"namespaces,omitempty"`
+	// ingresses where this rule can apply (ingress names)
+	Ingresses []string `yaml:"ingresses,omitempty" json:"ingresses,omitempty"`
 }
 
 // Config defines the structure for the entire YAML configuration file.
@@ -159,6 +169,10 @@ func (v *Validator) Set(prefix string, config Config) error {
 
 	// Iterate through each rule defined in the configuration.
 	for name, rule := range v.config.ValidationRules {
+		if rule.Section == "" {
+			rule.Section = "backend"
+			v.config.ValidationRules[name] = rule
+		}
 		// Compile the CEL expression string into an AST (Abstract Syntax Tree).
 		ast, issues := env.Compile(rule.Rule)
 		if issues != nil && issues.Err() != nil {
@@ -197,13 +211,11 @@ func (v *Validator) ValidateInput(ruleName string, rawValue string, section stri
 	}
 
 	// Check if the rule applies to the specified section.
-	if len(rule.Sections) > 0 {
-		sectionFound := slices.Contains(rule.Sections, section)
-		if !sectionFound {
-			// If the rule has sections defined and the current section is not one of them,
-			// we skip validation for this rule.
-			return fmt.Errorf("no validation rule found for '%s' in section '%s'", ruleName, section)
-		}
+	sectionFound := rule.Section == section || rule.Section == "all"
+	if !sectionFound {
+		// If the rule has sections defined and the current section is not one of them,
+		// we skip validation for this rule.
+		return fmt.Errorf("no validation rule found for '%s' in section '%s'", ruleName, section)
 	}
 
 	// Retrieve the pre-compiled CEL program for this rule.
@@ -324,6 +336,9 @@ func (v *Validator) GetResult(ruleName string, value string, envValues map[strin
 	if rule.Template == "" {
 		return ruleName + " " + value, nil
 	}
+	if envValues == nil {
+		envValues = make(map[string]any)
+	}
 	for k, val := range v.templateVariables {
 		envValues[k] = val
 	}
@@ -369,4 +384,71 @@ func (v *Validator) GetResult(ruleName string, value string, envValues map[strin
 	}
 
 	return result.String(), nil
+}
+
+// FilterValues is a struct that holds the filter values for the GetSortedAnnotationKeys method
+type FilterValues struct {
+	Section   string
+	Frontend  string
+	Backend   string
+	Namespace string
+	Ingress   string
+	Service   string
+}
+
+// GetSortedAnnotationKeys generates a result string based on the validation rule's template.
+func (v *Validator) GetSortedAnnotationKeys(annotations map[string]string, filters FilterValues) []string {
+	mu.RLock()
+	defer mu.RUnlock()
+	keys := []string{}
+	for k := range annotations {
+		rule, ok := v.config.ValidationRules[k]
+		if !ok {
+			continue
+		}
+		// Check if the rule applies to the specified section.
+		if !(rule.Section == filters.Section || rule.Section == "all") {
+			continue
+		}
+		// service can be Service, Frontend or Backend name
+		if len(rule.Resources) > 0 {
+			found := slices.Contains(rule.Resources, filters.Service)
+			if !found && filters.Frontend != "" {
+				found = slices.Contains(rule.Resources, filters.Frontend)
+			}
+			if !found && filters.Backend != "" {
+				found = slices.Contains(rule.Resources, filters.Backend)
+			}
+			if !found {
+				continue
+			}
+		}
+
+		if len(rule.Ingresses) > 0 {
+			found := slices.Contains(rule.Ingresses, filters.Ingress)
+			if !found {
+				continue
+			}
+		}
+
+		if len(rule.Namespaces) > 0 {
+			found := slices.Contains(rule.Namespaces, filters.Namespace)
+			if !found {
+				continue
+			}
+		}
+
+		keys = append(keys, k)
+	}
+	// now sort the keys based on SortPriority, if same priority, sort alphabetically
+	sort.SliceStable(keys, func(i, j int) bool {
+		ruleI := v.config.ValidationRules[keys[i]]
+		ruleJ := v.config.ValidationRules[keys[j]]
+		if ruleI.OrderPriority == ruleJ.OrderPriority {
+			return keys[i] < keys[j]
+		}
+		return ruleI.OrderPriority > ruleJ.OrderPriority
+	})
+
+	return keys
 }

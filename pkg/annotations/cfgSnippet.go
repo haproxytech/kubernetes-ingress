@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"sort"
 	"strconv"
 	"strings"
 
@@ -38,10 +37,11 @@ type CfgSnippet struct {
 }
 
 type cfgData struct {
-	status   store.Status
-	value    []string
-	updated  []string
-	disabled bool
+	status        store.Status
+	value         []string
+	updated       []string
+	orderPriority int
+	disabled      bool
 }
 
 // CfgSnippetType represents type of a config snippet
@@ -180,11 +180,11 @@ func (a *CfgSnippet) Process(k store.K8s, annotations ...map[string]string) erro
 		if len(customAnnotations) > 0 {
 			// We have custom annotations, so we process them. in alphabetical order
 			// to avoid issues with the order of processing.
-			keys := []string{}
-			for k := range customAnnotations {
-				keys = append(keys, k)
+			filterValues := validators.FilterValues{
+				Section:  "backend",
+				Frontend: a.frontend,
+				Backend:  a.backend,
 			}
-			sort.Strings(keys)
 
 			env := map[string]any{
 				"BACKEND":  a.backend,
@@ -193,12 +193,17 @@ func (a *CfgSnippet) Process(k store.K8s, annotations ...map[string]string) erro
 			if a.ingress != nil {
 				env["NAMESPACE"] = a.ingress.Namespace
 				env["INGRESS"] = a.ingress.Name
+				filterValues.Namespace = a.ingress.Namespace
+				filterValues.Ingress = a.ingress.Name
 			}
 			if a.service != nil {
 				env["SERVICE"] = a.service.Name
+				filterValues.Service = a.service.Name
 			}
+			keys := validator.GetSortedAnnotationKeys(
+				customAnnotations, filterValues)
 
-			for _, k := range keys {
+			for index, k := range keys {
 				customAnnotationValue := customAnnotations[k]
 				// If the custom annotation value is empty, we skip it.
 				if customAnnotationValue == "" {
@@ -238,7 +243,7 @@ func (a *CfgSnippet) Process(k store.K8s, annotations ...map[string]string) erro
 						rdata = append(rdata, prefix+result)
 					}
 				}
-				processConfigSnippet(a.backend, origin, rdata)
+				processConfigSnippet(a.backend, origin, rdata, len(keys)-index+1)
 			}
 		}
 		if IsConfigSnippetDisabled(ConfigSnippetBackend) {
@@ -255,7 +260,7 @@ func (a *CfgSnippet) Process(k store.K8s, annotations ...map[string]string) erro
 				comment := COMMENT_CONFIGMAP_PREFIX + k.ConfigMaps.Main.Namespace + "/" + k.ConfigMaps.Main.Name + COMMENT_ENDING
 				data := strings.Split(strings.Trim(anns[0], "\n"), "\n")
 				data = append([]string{comment}, data...)
-				processConfigSnippet(a.backend, origin, data)
+				processConfigSnippet(a.backend, origin, data, 0)
 			}
 		} else {
 			if a.service != nil && a.service.Name != "" && !a.service.Faked && anns[0] != "" {
@@ -263,14 +268,14 @@ func (a *CfgSnippet) Process(k store.K8s, annotations ...map[string]string) erro
 				comment := COMMMENT_SERVICE_PREFIX + a.backend + "/" + origin + COMMENT_ENDING
 				data := strings.Split(strings.Trim(anns[0], "\n"), "\n")
 				data = append([]string{comment}, data...)
-				processConfigSnippet(a.backend, SERVICE_NAME_PREFIX+origin, data)
+				processConfigSnippet(a.backend, SERVICE_NAME_PREFIX+origin, data, 0)
 			}
 			if a.ingress != nil && anns[1] != "" {
 				origin := a.ingress.Namespace + "/" + a.ingress.Name
 				comment := COMMMENT_INGRESS_PREFIX + a.backend + "/" + origin + COMMENT_ENDING
 				data := strings.Split(strings.Trim(anns[1], "\n"), "\n")
 				data = append([]string{comment}, data...)
-				processConfigSnippet(a.backend, INGRESS_NAME_PREFIX+origin, data)
+				processConfigSnippet(a.backend, INGRESS_NAME_PREFIX+origin, data, 0)
 			}
 		}
 	default:
@@ -382,7 +387,7 @@ func (a *CfgSnippet) SetService(service *store.Service) {
 	a.service = service
 }
 
-func processConfigSnippet(backend, origin string, data []string) {
+func processConfigSnippet(backend, origin string, data []string, orderPriority int) {
 	var exists bool
 	if _, exists = cfgSnippet.backends[backend][origin]; !exists {
 		// Prevent empty configsnippet to be inserted (with only comment)
@@ -390,7 +395,7 @@ func processConfigSnippet(backend, origin string, data []string) {
 		if len(data) == 1 || data == nil {
 			return
 		}
-		cfgSnippet.backends[backend][origin] = &cfgData{status: store.ADDED}
+		cfgSnippet.backends[backend][origin] = &cfgData{status: store.ADDED, orderPriority: orderPriority}
 	}
 
 	currentCfgData := cfgSnippet.backends[backend][origin]
@@ -406,6 +411,7 @@ func processConfigSnippet(backend, origin string, data []string) {
 		// A change so update.
 		currentCfgData.value = data
 		currentCfgData.updated = updated
+		currentCfgData.orderPriority = orderPriority
 		if exists {
 			// as existing, set status to modified and reset disable status as now should be retested.
 			currentCfgData.status = store.MODIFIED
