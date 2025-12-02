@@ -2,6 +2,7 @@ package k8s
 
 import (
 	"errors"
+	"maps"
 	"time"
 
 	"k8s.io/client-go/informers"
@@ -379,6 +380,9 @@ func (k k8s) getConfigMapInformer(eventChan chan k8ssync.SyncDataEvent, factory 
 					Annotations: store.CopyAnnotations(data.Data),
 					Status:      status,
 				}
+				Annotations := store.CopyAnnotations(data.ObjectMeta.Annotations)
+				maps.Copy(item.Annotations, Annotations)
+
 				logIncomingK8sEvent(logger, item, data.UID, data.ResourceVersion)
 				eventChan <- ToSyncDataEvent(item, item, data.UID, data.ResourceVersion)
 			},
@@ -416,6 +420,8 @@ func (k k8s) getConfigMapInformer(eventChan chan k8ssync.SyncDataEvent, factory 
 					Annotations: store.CopyAnnotations(data2.Data),
 					Status:      status,
 				}
+				Annotations := store.CopyAnnotations(data2.ObjectMeta.Annotations)
+				maps.Copy(item2.Annotations, Annotations)
 
 				logIncomingK8sEvent(logger, item2, data2.UID, data2.ResourceVersion)
 				eventChan <- ToSyncDataEvent(item2, item2, data2.UID, data2.ResourceVersion)

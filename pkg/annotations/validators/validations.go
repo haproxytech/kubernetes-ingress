@@ -431,7 +431,7 @@ func (v *Validator) GetSortedAnnotationKeys(annotations map[string]string, filte
 			}
 		}
 
-		if len(rule.Namespaces) > 0 {
+		if len(rule.Namespaces) > 0 && filters.Namespace != "" {
 			found := slices.Contains(rule.Namespaces, filters.Namespace)
 			if !found {
 				continue

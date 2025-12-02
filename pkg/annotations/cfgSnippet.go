@@ -65,6 +65,7 @@ const (
 var cfgSnippet struct {
 	global           *cfgData
 	frontends        map[string]*cfgData
+	frontendsCustom  map[string]map[string]*cfgData // [frontend][origin] = &cfgData{}
 	backends         map[string]map[string]*cfgData // backends[backend][origin] = &cfgData{}
 	disabledServices map[string]bool
 	// Flags to allow disable some config snippet ("backend", "frontend", "global")
@@ -78,6 +79,7 @@ func init() { //nolint:gochecknoinits
 func InitCfgSnippet() {
 	cfgSnippet.global = &cfgData{}
 	cfgSnippet.frontends = make(map[string]*cfgData)
+	cfgSnippet.frontendsCustom = make(map[string]map[string]*cfgData)
 	cfgSnippet.backends = make(map[string]map[string]*cfgData)
 	cfgSnippet.disabledServices = make(map[string]bool)
 	cfgSnippet.disabledSnippets = make(map[CfgSnippetType]struct{})
@@ -147,6 +149,23 @@ func (a *CfgSnippet) GetName() string {
 func (a *CfgSnippet) Process(k store.K8s, annotations ...map[string]string) error {
 	switch {
 	case a.frontend != "":
+		validator, err := validators.Get()
+		if err != nil {
+			return fmt.Errorf("failed to get validator: %w", err)
+		}
+		customAnnotations := map[string]string{}
+		for _, annotation := range annotations {
+			for k, v := range annotation {
+				if strings.HasPrefix(k, "frontend."+a.frontend+"."+validator.Prefix()) {
+					key := strings.TrimPrefix(k, "frontend."+a.frontend+"."+validator.Prefix())
+					customAnnotations[key] = v
+				}
+			}
+		}
+		err = processCustomAnnotationsFrontend(customAnnotations, a, validator)
+		if err != nil {
+			return err
+		}
 		if IsConfigSnippetDisabled(ConfigSnippetFrontend) {
 			// frontend snippet is disabled, do not handle
 			return nil
@@ -173,79 +192,8 @@ func (a *CfgSnippet) Process(k store.K8s, annotations ...map[string]string) erro
 			return fmt.Errorf("failed to get validator: %w", err)
 		}
 		anns, customAnnotations := common.GetValuesAndIndices(a.GetName(), "backend."+validator.Prefix(), annotations...)
-		_, ok := cfgSnippet.backends[a.backend]
-		if !ok {
-			cfgSnippet.backends[a.backend] = map[string]*cfgData{}
-		}
-		if len(customAnnotations) > 0 {
-			// We have custom annotations, so we process them. in alphabetical order
-			// to avoid issues with the order of processing.
-			filterValues := validators.FilterValues{
-				Section:  "backend",
-				Frontend: a.frontend,
-				Backend:  a.backend,
-			}
+		processCustomAnnotationsBackend(customAnnotations, a, validator)
 
-			env := map[string]any{
-				"BACKEND":  a.backend,
-				"FRONTEND": a.frontend,
-			}
-			if a.ingress != nil {
-				env["NAMESPACE"] = a.ingress.Namespace
-				env["INGRESS"] = a.ingress.Name
-				filterValues.Namespace = a.ingress.Namespace
-				filterValues.Ingress = a.ingress.Name
-			}
-			if a.service != nil {
-				env["SERVICE"] = a.service.Name
-				filterValues.Service = a.service.Name
-			}
-			keys := validator.GetSortedAnnotationKeys(
-				customAnnotations, filterValues)
-
-			for index, k := range keys {
-				customAnnotationValue := customAnnotations[k]
-				// If the custom annotation value is empty, we skip it.
-				if customAnnotationValue == "" {
-					continue
-				}
-				origin := validator.Prefix() + k
-				prefix := ""
-				// Validate the custom annotation
-				var validationErr string
-				if err := validator.ValidateInput(k, customAnnotationValue, "backend"); err != nil {
-					logger.Errorf("failed to validate custom annotation '%s' for backend '%s': %s", k, a.backend, err.Error())
-					// continue
-					validationErr = "# ERROR: " + strings.ReplaceAll(err.Error(), "\n", "\n  # ")
-					customAnnotationValue = ""
-					prefix = "# value:"
-				}
-
-				// check if this is fine for snippet removal
-				// comment := "### " + a.backend + ":" + origin + COMMENT_ENDING
-				comment := "### " + origin + COMMENT_ENDING
-				rdata := []string{comment}
-				if validationErr != "" {
-					rdata = append(rdata, validationErr)
-				}
-				if customAnnotationValue != "" {
-					result := ""
-					if prefix == "" {
-						result, err = validator.GetResult(k, customAnnotationValue, env)
-						if err != nil {
-							logger.Errorf("failed to get result for custom annotation '%s' for backend '%s': %s", k, a.backend, err.Error())
-							rdata = append(rdata, "# ERROR: "+strings.ReplaceAll(err.Error(), "\n", "\n  # "))
-						}
-					}
-					if strings.HasPrefix(result, "#") {
-						rdata = append(rdata, result)
-					} else {
-						rdata = append(rdata, prefix+result)
-					}
-				}
-				processConfigSnippet(a.backend, origin, rdata, len(keys)-index+1)
-			}
-		}
 		if IsConfigSnippetDisabled(ConfigSnippetBackend) {
 			// backend snippet is disabled, do not handle
 			return nil
@@ -316,8 +264,18 @@ func UpdateGlobalCfgSnippet(api api.HAProxyClient) (updated []string, err error)
 func UpdateFrontendCfgSnippet(api api.HAProxyClient, frontends ...string) (updated []string, err error) {
 	for _, ft := range frontends {
 		data, ok := cfgSnippet.frontends[ft]
-		if !ok {
+		customData, okCustom := cfgSnippet.frontendsCustom[ft]
+		if !ok && !okCustom {
 			continue
+		}
+		if okCustom {
+			newData := make([]string, 0)
+			for _, v := range customData {
+				newData = append(newData, v.value...)
+				updated = append(updated, v.updated...)
+			}
+			newData = append(newData, "### custom annotations end ###")
+			data = &cfgData{value: append(newData, data.value...)}
 		}
 
 		err = api.FrontendCfgSnippetSet(ft, data.value)
@@ -325,13 +283,17 @@ func UpdateFrontendCfgSnippet(api api.HAProxyClient, frontends ...string) (updat
 			return updated, err
 		}
 
-		if len(data.updated) == 0 {
+		if len(updated) == 0 {
 			continue
 		}
 
 		updated = append(updated, data.updated...)
 		data.updated = nil
 		cfgSnippet.frontends[ft] = data
+		for k, v := range cfgSnippet.frontendsCustom[ft] {
+			v.updated = nil
+			cfgSnippet.frontendsCustom[ft][k] = v
+		}
 	}
 	return updated, err
 }
@@ -385,6 +347,39 @@ func RemoveBackendCfgSnippet(backend string) {
 
 func (a *CfgSnippet) SetService(service *store.Service) {
 	a.service = service
+}
+
+func processConfigSnippetFrontendCustom(frontend, origin string, data []string, orderPriority int) {
+	var exists bool
+	if _, exists = cfgSnippet.frontendsCustom[frontend][origin]; !exists {
+		// Prevent empty configsnippet to be inserted (with only comment)
+		// and if no data is provided
+		if len(data) == 1 || data == nil {
+			return
+		}
+		cfgSnippet.frontendsCustom[frontend][origin] = &cfgData{status: store.ADDED, orderPriority: orderPriority}
+	}
+
+	currentCfgData := cfgSnippet.frontendsCustom[frontend][origin]
+	// As reseen it's not to be deleted
+	if currentCfgData.status == store.DELETED {
+		currentCfgData.status = store.EMPTY
+	}
+
+	updated := deep.Equal(currentCfgData.value, data)
+	// Something changed from possibly existing configsnippet value ?
+	// If new configsnippet this would generate a difference between empty and something.
+	if len(updated) != 0 {
+		// A change so update.
+		currentCfgData.value = data
+		currentCfgData.updated = updated
+		currentCfgData.orderPriority = orderPriority
+		if exists {
+			// as existing, set status to modified and reset disable status as now should be retested.
+			currentCfgData.status = store.MODIFIED
+			currentCfgData.disabled = false
+		}
+	}
 }
 
 func processConfigSnippet(backend, origin string, data []string, orderPriority int) {
