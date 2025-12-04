@@ -61,3 +61,4 @@ allowed:
   - str
   - async
   - params
+  - configmap

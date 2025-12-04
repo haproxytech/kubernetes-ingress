@@ -92,11 +92,9 @@ func GetValuesAndIndices(annotationName string, customAnnotationPrefix string, a
 			if strings.HasPrefix(k, customAnnotationPrefix) {
 				// Remove the prefix from the key
 				annotationName := strings.TrimPrefix(k, customAnnotationPrefix)
-				if _, ok := customResult[annotationName]; ok {
-					// If the key already exists, prepend the value (so service is most important one)
-					customResult[annotationName] = v + "\n" + customResult[annotationName]
-				} else {
-					// Otherwise, set the value
+				if _, ok := customResult[annotationName]; !ok {
+					// add it only if we do not have it yet,
+					// this is due to priority, Service > Ingress > ConfigMap
 					customResult[annotationName] = v
 				}
 			}

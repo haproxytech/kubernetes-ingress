@@ -35,10 +35,10 @@ const (
 
 // ConvertToIngress detects the interface{} provided by the SharedInformer and select
 // the proper strategy to convert and return the resource as a store.Ingress struct
-func ConvertToIngress(resource interface{}) (ingress *Ingress, err error) {
+func ConvertToIngress(resource interface{}, enableUserAnnotations bool) (ingress *Ingress, err error) {
 	switch t := resource.(type) {
 	case *networkingv1.Ingress:
-		ingress = ingressNetworkingV1Strategy{ig: resource.(*networkingv1.Ingress)}.ConvertIngress()
+		ingress = ingressNetworkingV1Strategy{ig: resource.(*networkingv1.Ingress)}.ConvertIngress(enableUserAnnotations)
 	default:
 		err = fmt.Errorf("unrecognized type for: %T", t)
 	}
@@ -82,14 +82,14 @@ type ingressNetworkingV1Strategy struct {
 	class *networkingv1.IngressClass
 }
 
-func (n ingressNetworkingV1Strategy) ConvertIngress() *Ingress {
+func (n ingressNetworkingV1Strategy) ConvertIngress(enableUserAnnotations bool) *Ingress {
 	ing := &Ingress{
 		IngressCore: IngressCore{
 			APIVersion:  NETWORKINGV1,
 			Namespace:   n.ig.GetNamespace(),
 			Name:        n.ig.GetName(),
 			Class:       getIgClass(n.ig.Spec.IngressClassName),
-			Annotations: CopyAnnotations(n.ig.GetAnnotations()),
+			Annotations: CopyAnnotationsWithFilter(n.ig.GetAnnotations(), enableUserAnnotations),
 			Rules: func(ingressRules []networkingv1.IngressRule) map[string]*IngressRule {
 				rules := make(map[string]*IngressRule)
 				for _, k8sRule := range ingressRules {
@@ -196,8 +196,21 @@ func getIgClass(className *string) string {
 
 // CopyAnnotations returns a copy of annotations map and removes prefixe from annotations name
 func CopyAnnotations(in map[string]string) map[string]string {
+	return CopyAnnotationsWithFilter(in, true)
+}
+
+// CopyAnnotationsWithFilter returns a copy of annotations map and removes prefixe from annotations name
+func CopyAnnotationsWithFilter(in map[string]string, enableUserAnnotations bool) map[string]string {
 	out := make(map[string]string, len(in))
 	for name, value := range in {
+		if !enableUserAnnotations {
+			if strings.HasPrefix(name, "backend.") {
+				continue
+			}
+			if strings.HasPrefix(name, "frontend.") {
+				continue
+			}
+		}
 		out[cleanAnnotation(name)] = value
 	}
 	return out

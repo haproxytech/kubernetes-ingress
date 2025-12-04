@@ -123,4 +123,5 @@ type OSArgs struct {
 	CRDInputFile                      string         `long:"input-file" description:"The file path of a CRD manifest to convert"`
 	CRDOutputFile                     string         `long:"output-file" description:"The file path of the converted (to the most recent version) CRD manifest"`
 	DisableIngressStatusUpdate        bool           `long:"disable-ingress-status-update" description:"If true, disables updating the status field of Ingress resources"`
+	EnableUserAnnotationsIngress      bool           `long:"enable-user-annotations-on-ingress" description:"allow custom user annotations on ingress"`
 }

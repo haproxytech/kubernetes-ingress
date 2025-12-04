@@ -342,3 +342,34 @@ its similar as with other configuration values, except we define it as configmap
 `frontend.<frontend-name>.<org>/<user-annotation-name>`
 
 the only difference is extra information what frontend this settings belong to. With HAProxy Ingress controller, you have 3 different frontends: `http`, `https` and `stats`, each can be customized with user annotations.
+
+
+## Where can user annotations can be defined ?
+
+### Frontend Annotations
+
+Frontend Annotations can be defined in Ingress Controller configmap. not as a key-value, but as a annotation of configmap
+
+```yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: haproxy-kubernetes-ingress
+  namespace: haproxy-controller
+  annotations:
+    frontend.<frontend-name>.<org>/<user-annotation-name>: <value>
+```
+
+### Backend Annotations
+
+you can define them on:
+
+- `configmap` - this will be applied for each backend
+- ⚠ `ingress` - this will be applied on services used in ingress. **use with precaution.**
+  - setting user annotations on ingress level is disabled by default!
+  - use `--enable-user-annotations-on-ingress` to enable it. Setting different annotation values in different ingresses for same service will trigger **inconsistencies**, so this is not encouraged. use `service` annotations.
+- `service` - this will be applied just on service
+
+#### what happens if you try to use same annotation on multiple places
+
+Service annotation have highest priority, only if service one does not exist, ingress one will be applied, same goes for configmap, it will be used only if ingress and service annotation do not exist.
