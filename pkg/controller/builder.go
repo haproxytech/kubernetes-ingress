@@ -181,7 +181,7 @@ func (builder *Builder) Build() *HAProxyController {
 	}
 	updateStatusManager := builder.updateStatusManager
 	if updateStatusManager == nil {
-		updateStatusManager = status.New(builder.clientSet, builder.osArgs.IngressClass, builder.osArgs.EmptyIngressClass)
+		updateStatusManager = status.New(builder.clientSet, builder.osArgs.IngressClass, builder.osArgs.EmptyIngressClass, builder.osArgs.DisableIngressStatusUpdate)
 	}
 	hostname, _ := os.Hostname()
 	podIP := utils.GetIP()
