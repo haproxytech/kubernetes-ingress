@@ -274,10 +274,16 @@ func UpdateFrontendCfgSnippet(api api.HAProxyClient, frontends ...string) (updat
 				newData = append(newData, v.value...)
 				updated = append(updated, v.updated...)
 			}
-			newData = append(newData, "### custom annotations end ###")
-			data = &cfgData{value: append(newData, data.value...)}
+			if len(customData) > 0 {
+				newData = append(newData, "### custom annotations end ###")
+			}
+			if data != nil && len(data.value) > 0 {
+				data = &cfgData{value: append(newData, data.value...)}
+			}
 		}
-
+		if data == nil {
+			continue
+		}
 		err = api.FrontendCfgSnippetSet(ft, data.value)
 		if err != nil {
 			return updated, err
