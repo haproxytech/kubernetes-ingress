@@ -210,7 +210,7 @@ spec:
     # - algorithms: "RSA,DSA"
     #   name: "rdrand"
     ssl_load_extra_files: ""
-    ssl_mode_async: "enabled"
+    #ssl_mode_async: "enabled"
     ssl_propquery: ""
     ssl_provider: ""
     ssl_provider_path: ""

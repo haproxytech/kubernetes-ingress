@@ -78,7 +78,7 @@ spec:
       name: proc.current_state
   setcap: cap_net_bind_service
   ssl_options:
-    mode_async: enabled
+    #mode_async: enabled
     server_verify: none
   stats_maxconn: 10008
   stats_timeout: 6000

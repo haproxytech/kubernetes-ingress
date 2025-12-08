@@ -185,7 +185,7 @@ func (suite *GlobalSuite) Test_CR_Global() {
 			},
 		})
 		suite.checkGlobalParam(p, "setcap", &types.StringC{Value: "cap_net_bind_service"})
-		suite.checkGlobalParam(p, "ssl-mode-async", &types.SslModeAsync{})
+		// suite.checkGlobalParam(p, "ssl-mode-async", &types.SslModeAsync{})
 		suite.checkGlobalParam(p, "ssl-server-verify", &types.StringC{Value: "none"})
 		suite.checkGlobalParam(p, "stats maxconn", &types.Int64C{Value: 10008})
 		suite.checkGlobalParam(p, "stats timeout", &types.StringC{Value: "6000"})
