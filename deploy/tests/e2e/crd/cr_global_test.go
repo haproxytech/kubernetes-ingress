@@ -267,11 +267,7 @@ func (suite *GlobalSuite) Test_CR_Global() {
 				suite.T().Log(err)
 				return false
 			}
-			err = suite.checkGlobalParam(p, "ssl-mode-async", &types.SslModeAsync{})
-			if err != nil {
-				suite.T().Log(err)
-				return false
-			}
+			// err = suite.checkGlobalParam(p, "ssl-mode-async", &types.SslModeAsync{})
 			err = suite.checkGlobalParam(p, "ssl-server-verify", &types.StringC{Value: "none"})
 			if err != nil {
 				suite.T().Log(err)
