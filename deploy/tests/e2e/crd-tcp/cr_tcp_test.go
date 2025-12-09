@@ -75,26 +75,42 @@ func (suite *TCPSuite) Test_CRD_TCP_OK() {
 				return false
 			}
 
+			// Checks for backend
+			// Checks that we have correctly applied the backend CR
+			beNames := []string{"e2e-tests-crd-tcp_svc_http-echo_http", "e2e-tests-crd-tcp_svc_http-echo_http2"}
+			for _, beName := range beNames {
+				err = suite.checkBackend(p, beName, "mode", &types.StringC{Value: "tcp"})
+				if err != nil {
+					suite.T().Log(err)
+					return false
+				}
+				err = suite.checkBackend(p, beName, "balance", &types.Balance{
+					Algorithm: "roundrobin",
+				})
+				if err != nil {
+					suite.T().Log(err)
+					return false
+				}
+				err = suite.checkBackend(p, beName, "option abortonclose", &types.SimpleOption{NoOption: true, Comment: ""})
+				if err != nil {
+					suite.T().Log(err)
+					return false
+				}
+				err = suite.checkBackend(p, beName, "default-server", []types.DefaultServer{
+					{
+						Params: []params.ServerOption{
+							&params.ServerOptionWord{Name: "check"},
+						},
+					},
+				})
+				if err != nil {
+					suite.T().Log(err)
+					return false
+				}
+			}
+
 			return true
 		}, e2e.WaitDuration, e2e.TickDuration)
-
-		// Checks for backend
-		// Checks that we have correctly applied the backend CR
-		beNames := []string{"e2e-tests-crd-tcp_svc_http-echo_http", "e2e-tests-crd-tcp_svc_http-echo_http2"}
-		for _, beName := range beNames {
-			suite.checkBackend(p, beName, "mode", &types.StringC{Value: "tcp"})
-			suite.checkBackend(p, beName, "balance", &types.Balance{
-				Algorithm: "roundrobin",
-			})
-			suite.checkBackend(p, beName, "option abortonclose", &types.SimpleOption{NoOption: true, Comment: ""})
-			suite.checkBackend(p, beName, "default-server", []types.DefaultServer{
-				{
-					Params: []params.ServerOption{
-						&params.ServerOptionWord{Name: "check"},
-					},
-				},
-			})
-		}
 	})
 }
 
@@ -122,16 +138,20 @@ func (suite *TCPSuite) Test_CRD_TCP_CR_Backend() {
 		p, err := parser.New(options.Reader(reader))
 		suite.Require().NoError(err, "Could not get Haproxy config parser")
 
-		suite.checkFrontends(p)
+		err = suite.checkFrontends(p)
+		suite.Require().NoError(err)
 		// Checks for backend e2e-tests-crd-tcp_svc_http-echo_http
 		beNames := []string{"e2e-tests-crd-tcp_svc_http-echo_http", "e2e-tests-crd-tcp_svc_http-echo_http2"}
 		for _, beName := range beNames {
-			suite.checkBackend(p, beName, "mode", &types.StringC{Value: "tcp"})
-			suite.checkBackend(p, beName, "balance", &types.Balance{
+			err = suite.checkBackend(p, beName, "mode", &types.StringC{Value: "tcp"})
+			suite.Require().NoError(err)
+			err = suite.checkBackend(p, beName, "balance", &types.Balance{
 				Algorithm: "leastconn",
 			})
-			suite.checkBackend(p, beName, "option abortonclose", &types.SimpleOption{NoOption: true, Comment: ""})
-			suite.checkBackend(p, beName, "default-server", []types.DefaultServer{
+			suite.Require().NoError(err)
+			err = suite.checkBackend(p, beName, "option abortonclose", &types.SimpleOption{NoOption: true, Comment: ""})
+			suite.Require().NoError(err)
+			err = suite.checkBackend(p, beName, "default-server", []types.DefaultServer{
 				{
 					Params: []params.ServerOption{
 						&params.ServerOptionValue{
@@ -153,6 +173,7 @@ func (suite *TCPSuite) Test_CRD_TCP_CR_Backend() {
 					},
 				},
 			})
+			suite.Require().NoError(err)
 		}
 	})
 }
@@ -210,14 +231,19 @@ func (suite *TCPSuite) Test_CRD_TCP_SSL() {
 		},
 	}
 	feName443 := "tcpcr_e2e-tests-crd-tcp_fe-http-echo-443"
-	suite.checkFrontend(p, feName443, "bind", binds443)
-	suite.checkFrontend(p, feName443, "mode", &types.StringC{Value: "tcp"})
-	suite.checkFrontend(p, feName443, "log-format", &types.StringC{Value: "'%{+Q}o %t %s'"})
-	suite.checkFrontend(p, feName443, "option tcplog", &types.SimpleOption{NoOption: false, Comment: ""})
-	suite.checkFrontend(p, feName443, "default_backend", &types.StringC{Value: "e2e-tests-crd-tcp_svc_http-echo_https"})
+	err = suite.checkFrontend(p, feName443, "bind", binds443)
+	suite.Require().NoError(err)
+	err = suite.checkFrontend(p, feName443, "mode", &types.StringC{Value: "tcp"})
+	suite.Require().NoError(err)
+	err = suite.checkFrontend(p, feName443, "log-format", &types.StringC{Value: "'%{+Q}o %t %s'"})
+	suite.Require().NoError(err)
+	err = suite.checkFrontend(p, feName443, "option tcplog", &types.SimpleOption{NoOption: false, Comment: ""})
+	suite.Require().NoError(err)
+	err = suite.checkFrontend(p, feName443, "default_backend", &types.StringC{Value: "e2e-tests-crd-tcp_svc_http-echo_https"})
+	suite.Require().NoError(err)
 }
 
-func (suite *TCPSuite) checkFrontends(p parser.Parser) {
+func (suite *TCPSuite) checkFrontends(p parser.Parser) error {
 	// Checks for tcp tcp-http-echo-80
 	binds80 := []types.Bind{
 		{
@@ -243,11 +269,26 @@ func (suite *TCPSuite) checkFrontends(p parser.Parser) {
 		},
 	}
 	feName80 := "tcpcr_e2e-tests-crd-tcp_fe-http-echo-80"
-	suite.checkFrontend(p, feName80, "bind", binds80)
-	suite.checkFrontend(p, feName80, "mode", &types.StringC{Value: "tcp"})
-	suite.checkFrontend(p, feName80, "log-format", &types.StringC{Value: "'%{+Q}o %t %s'"})
-	suite.checkFrontend(p, feName80, "option tcplog", &types.SimpleOption{NoOption: false, Comment: ""})
-	suite.checkFrontend(p, feName80, "default_backend", &types.StringC{Value: "e2e-tests-crd-tcp_svc_http-echo_http"})
+	err := suite.checkFrontend(p, feName80, "bind", binds80)
+	if err != nil {
+		return err
+	}
+	err = suite.checkFrontend(p, feName80, "mode", &types.StringC{Value: "tcp"})
+	if err != nil {
+		return err
+	}
+	err = suite.checkFrontend(p, feName80, "log-format", &types.StringC{Value: "'%{+Q}o %t %s'"})
+	if err != nil {
+		return err
+	}
+	err = suite.checkFrontend(p, feName80, "option tcplog", &types.SimpleOption{NoOption: false, Comment: ""})
+	if err != nil {
+		return err
+	}
+	err = suite.checkFrontend(p, feName80, "default_backend", &types.StringC{Value: "e2e-tests-crd-tcp_svc_http-echo_http"})
+	if err != nil {
+		return err
+	}
 
 	// Check for tcp tcp-http-echo-444
 	binds81 := []types.Bind{
@@ -265,9 +306,25 @@ func (suite *TCPSuite) checkFrontends(p parser.Parser) {
 		},
 	}
 	feName444 := "tcpcr_e2e-tests-crd-tcp_fe-http-echo-81"
-	suite.checkFrontend(p, feName444, "bind", binds81)
-	suite.checkFrontend(p, feName444, "mode", &types.StringC{Value: "tcp"})
-	suite.checkFrontend(p, feName444, "log-format", &types.StringC{Value: "'%{+Q}o %t %s'"})
-	suite.checkFrontend(p, feName444, "option tcplog", &types.SimpleOption{NoOption: false, Comment: ""})
-	suite.checkFrontend(p, feName444, "default_backend", &types.StringC{Value: "e2e-tests-crd-tcp_svc_http-echo_http2"})
+	err = suite.checkFrontend(p, feName444, "bind", binds81)
+	if err != nil {
+		return err
+	}
+	err = suite.checkFrontend(p, feName444, "mode", &types.StringC{Value: "tcp"})
+	if err != nil {
+		return err
+	}
+	err = suite.checkFrontend(p, feName444, "log-format", &types.StringC{Value: "'%{+Q}o %t %s'"})
+	if err != nil {
+		return err
+	}
+	err = suite.checkFrontend(p, feName444, "option tcplog", &types.SimpleOption{NoOption: false, Comment: ""})
+	if err != nil {
+		return err
+	}
+	err = suite.checkFrontend(p, feName444, "default_backend", &types.StringC{Value: "e2e-tests-crd-tcp_svc_http-echo_http2"})
+	if err != nil {
+		return err
+	}
+	return nil
 }

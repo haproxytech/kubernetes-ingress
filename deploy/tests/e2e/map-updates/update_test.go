@@ -39,13 +39,25 @@ func (suite *MapUpdateSuite) Test_Update() {
 		suite.Require().NoError(suite.test.Apply("config/ingress.yaml.tmpl", suite.test.GetNS(), suite.tmplData))
 		suite.Require().Eventually(func() bool {
 			newInfo, err := e2e.GetGlobalHAProxyInfo()
-			suite.Require().NoError(err)
+			if err != nil {
+				suite.T().Log(err)
+				return false
+			}
 			countExact, err := e2e.GetHAProxyMapCount("path-exact")
-			suite.Require().NoError(err)
+			if err != nil {
+				suite.T().Log(err)
+				return false
+			}
 			countPrefixExact, err := e2e.GetHAProxyMapCount("path-prefix-exact")
-			suite.Require().NoError(err)
+			if err != nil {
+				suite.T().Log(err)
+				return false
+			}
 			countPrefix, err := e2e.GetHAProxyMapCount("path-prefix")
-			suite.Require().NoError(err)
+			if err != nil {
+				suite.T().Log(err)
+				return false
+			}
 			numOfAddedEntriesExact := countExact - oldCountExact
 			numOfAddedEntriesPrefixExact := countPrefixExact - oldCountPrefixExact
 			numOfAddedEntriesPrefix := countPrefix - oldCountPrefix + 1 // We add one because there's already an entry at the beginning which will be removed

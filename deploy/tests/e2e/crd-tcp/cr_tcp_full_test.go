@@ -78,7 +78,8 @@ func (suite *TCPSuiteFull) Test_CRD_TCP_Full() {
 
 		// Check client Http Echo calls to both backend0 and backend1
 		feName := "tcpcr_e2e-tests-crd-tcp_fe-http-echo"
-		suite.checkBasicHttpEchoFrontend(p, feName)
+		err = suite.checkBasicHttpEchoFrontend(p, feName)
+		suite.Require().NoError(err)
 
 		//-----------------------
 		// Extra configuration checks
@@ -95,7 +96,8 @@ func (suite *TCPSuiteFull) Test_CRD_TCP_Full() {
 				Value:     "-i backend1.example.com",
 			},
 		}
-		suite.checkFrontend(p, feName, "acl", acls)
+		err = suite.checkFrontend(p, feName, "acl", acls)
+		suite.Require().NoError(err)
 
 		// TCP Request
 		tcpRequests := []types.TCPType{
@@ -109,7 +111,8 @@ func (suite *TCPSuiteFull) Test_CRD_TCP_Full() {
 				},
 			},
 		}
-		suite.checkFrontend(p, feName, "tcp-request", tcpRequests)
+		err = suite.checkFrontend(p, feName, "tcp-request", tcpRequests)
+		suite.Require().NoError(err)
 
 		// Captures
 		captures := []types.DeclareCapture{
@@ -122,7 +125,8 @@ func (suite *TCPSuiteFull) Test_CRD_TCP_Full() {
 				Length: 54321,
 			},
 		}
-		suite.checkFrontend(p, feName, "declare capture", captures)
+		err = suite.checkFrontend(p, feName, "declare capture", captures)
+		suite.Require().NoError(err)
 
 		// Filters
 		filters := []types.Filter{
@@ -136,7 +140,8 @@ func (suite *TCPSuiteFull) Test_CRD_TCP_Full() {
 				Name: "AFTER-HTTP-COMP",
 			},
 		}
-		suite.checkFrontend(p, feName, "filter", filters)
+		err = suite.checkFrontend(p, feName, "filter", filters)
+		suite.Require().NoError(err)
 
 		// Log Targets
 		logTargets := []types.Log{
@@ -146,6 +151,7 @@ func (suite *TCPSuiteFull) Test_CRD_TCP_Full() {
 				Format:   "raw",
 			},
 		}
-		suite.checkFrontend(p, feName, "log", logTargets)
+		err = suite.checkFrontend(p, feName, "log", logTargets)
+		suite.Require().NoError(err)
 	})
 }

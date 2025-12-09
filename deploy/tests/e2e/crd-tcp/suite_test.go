@@ -82,9 +82,12 @@ func (suite *CRDTCPSuite) BeforeTest(suiteName, testName string) {
 	suite.Require().NoError(suite.test.Apply("config/deploy.yaml.tmpl", suite.test.GetNS(), suite.tmplData))
 }
 
-func (suite *CRDTCPSuite) checkFrontend(p parser.Parser, frontendName, param string, value common.ParserData) {
+func (suite *CRDTCPSuite) checkFrontend(p parser.Parser, frontendName, param string, value common.ParserData) error {
 	v, err := p.Get(parser.Frontends, frontendName, param)
-	suite.Require().NoError(err, "Could not get Haproxy config parser Frontend %s param %s", frontendName, param)
+	if err != nil {
+		suite.T().Logf("Could not get Haproxy config parser Frontend %s param %s - %v", frontendName, param, value)
+		return err
+	}
 
 	// Sort functions for map[string]XXX
 	sortBinds := cmpopts.SortSlices(func(a, b types.Bind) bool {
@@ -95,15 +98,21 @@ func (suite *CRDTCPSuite) checkFrontend(p parser.Parser, frontendName, param str
 	if !areEqual {
 		diff := cmp.Diff(v, value, sortBinds)
 		suite.T().Log(diff)
+		return fmt.Errorf("Frontend param %s should be equal to %v but is %v", param, value, v)
 	}
 
-	suite.Equal(areEqual, true, fmt.Sprintf("Frontend param %s should be equal to %v but is %v", param, value, v))
+	return nil
 }
 
-func (suite *CRDTCPSuite) checkBackend(p parser.Parser, backendName, param string, value common.ParserData) {
+func (suite *CRDTCPSuite) checkBackend(p parser.Parser, backendName, param string, value common.ParserData) error {
 	v, err := p.Get(parser.Backends, backendName, param)
-	suite.Require().NoError(err, "Could not get Haproxy config parser Frontend %s param %s", backendName, param)
-	suite.Equal(value, v, fmt.Sprintf("Backend param %s should be equal to %v but is %v", param, value, v))
+	if err != nil {
+		return err
+	}
+	if !cmp.Equal(v, value) {
+		return fmt.Errorf("Backend param %s should be equal to %v but is %v", param, value, v)
+	}
+	return nil
 }
 
 func (suite *CRDTCPSuite) checkClientRequest(host, backend string) {
@@ -126,7 +135,7 @@ func (suite *CRDTCPSuite) checkClientRequest(host, backend string) {
 	}, e2e.WaitDuration, e2e.TickDuration)
 }
 
-func (suite *CRDTCPSuite) checkBasicHttpEchoFrontend(p parser.Parser, feName string) {
+func (suite *CRDTCPSuite) checkBasicHttpEchoFrontend(p parser.Parser, feName string) error {
 	// Checks for tcpcr_e2e-tests-crd-tcp_fe-http-echo
 	binds443 := []types.Bind{
 		{
@@ -139,9 +148,31 @@ func (suite *CRDTCPSuite) checkBasicHttpEchoFrontend(p parser.Parser, feName str
 			},
 		},
 	}
-	suite.checkFrontend(p, feName, "bind", binds443)
-	suite.checkFrontend(p, feName, "mode", &types.StringC{Value: "tcp"})
-	suite.checkFrontend(p, feName, "log-format", &types.StringC{Value: "'%{+Q}o %t %s'"})
-	suite.checkFrontend(p, feName, "option tcplog", &types.SimpleOption{NoOption: false, Comment: ""})
-	suite.checkFrontend(p, feName, "default_backend", &types.StringC{Value: "e2e-tests-crd-tcp_svc_http-echo_https"})
+	err := suite.checkFrontend(p, feName, "bind", binds443)
+	if err != nil {
+		suite.T().Logf("checkBasicHttpEchoFrontend %s param %s", feName, "bind")
+		return err
+	}
+	err = suite.checkFrontend(p, feName, "mode", &types.StringC{Value: "tcp"})
+	if err != nil {
+		suite.T().Logf("checkBasicHttpEchoFrontend %s param %s", feName, "mode")
+		return err
+	}
+	err = suite.checkFrontend(p, feName, "log-format", &types.StringC{Value: "'%{+Q}o %t %s'"})
+	if err != nil {
+		suite.T().Logf("checkBasicHttpEchoFrontend %s param %s", feName, "log-format")
+		return err
+	}
+	err = suite.checkFrontend(p, feName, "option tcplog", &types.SimpleOption{NoOption: false, Comment: ""})
+	if err != nil {
+		suite.T().Logf("checkBasicHttpEchoFrontend %s param %s", feName, "option tcplog")
+		return err
+	}
+	err = suite.checkFrontend(p, feName, "default_backend", &types.StringC{Value: "e2e-tests-crd-tcp_svc_http-echo_https"})
+	if err != nil {
+		suite.T().Logf("checkBasicHttpEchoFrontend %s param %s", feName, "default_backend")
+		return err
+	}
+
+	return nil
 }

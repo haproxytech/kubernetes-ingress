@@ -121,12 +121,12 @@ func (suite *TCPSuiteBackendSwitchingRule) Test_CRD_TCP_BackendSwitchingRule() {
 		suite.Require().NoError(err, "Could not get Haproxy config parser")
 
 		feName := "tcpcr_e2e-tests-crd-tcp_fe-http-echo"
-		suite.checkBasicHttpEchoFrontend(p, feName)
+		err = suite.checkBasicHttpEchoFrontend(p, feName)
+		suite.Require().NoError(err)
 	})
 }
 
 // Same test as previous but switching rule
-
 func (suite *TCPSuiteBackendSwitchingRule) Test_CRD_TCP_BackendSwitchingRule_WithAcls() {
 	suite.Run("TCP CR Backend Switching Rule (with Acls)", func() {
 		var err error
@@ -158,30 +158,55 @@ func (suite *TCPSuiteBackendSwitchingRule) Test_CRD_TCP_BackendSwitchingRule_Wit
 			return ok
 		}, e2e.WaitDuration, e2e.TickDuration)
 
-		// Get updated config and check it
-		cfg, err := suite.test.GetIngressControllerFile("/etc/haproxy/haproxy.cfg")
-		suite.Require().NoError(err, "Could not get Haproxy config")
-		reader := strings.NewReader(cfg)
-		p, err := parser.New(options.Reader(reader))
-		suite.Require().NoError(err, "Could not get Haproxy config parser")
-
+		doNotShowConfig := false
+		cfg := ""
 		feName := "tcpcr_e2e-tests-crd-tcp_fe-http-echo"
-		suite.checkBasicHttpEchoFrontend(p, feName)
+		var p parser.Parser
+		suite.Eventually(func() bool {
+			// Get updated config and check it
+			cfg, err = suite.test.GetIngressControllerFile("/etc/haproxy/haproxy.cfg")
+			if err != nil {
+				suite.T().Logf("Could not get Haproxy config: %v", err)
+				return false
+			}
+			reader := strings.NewReader(cfg)
+			p, err = parser.New(options.Reader(reader))
+			if err != nil {
+				suite.T().Logf("Could not get Haproxy config parser: %v", err)
+				return false
+			}
 
-		// Add Acls checks
-		acls := []types.ACL{
-			{
-				Name:      "switch_be_0",
-				Criterion: "req_ssl_sni",
-				Value:     "-i backend0.example.com",
-			},
-			{
-				Name:      "switch_be_1",
-				Criterion: "req_ssl_sni",
-				Value:     "-i backend1.example.com",
-			},
+			err = suite.checkBasicHttpEchoFrontend(p, feName)
+			if err != nil {
+				suite.T().Logf("Could not check Haproxy config in frontend %s: %v", feName, err)
+				return false
+			}
+
+			// Add Acls checks
+			acls := []types.ACL{
+				{
+					Name:      "switch_be_0",
+					Criterion: "req_ssl_sni",
+					Value:     "-i backend0.example.com",
+				},
+				{
+					Name:      "switch_be_1",
+					Criterion: "req_ssl_sni",
+					Value:     "-i backend1.example.com",
+				},
+			}
+			err = suite.checkFrontend(p, feName, "acl", acls)
+			if err != nil {
+				suite.T().Logf("Could not check Acls in Haproxy config in frontend %s: %v", feName, err)
+				return false
+			}
+			doNotShowConfig = true
+			return true
+		}, e2e.WaitDuration, e2e.TickDuration, "Could not find acls in Haproxy config in frontend"+feName)
+
+		if !doNotShowConfig {
+			suite.T().Log(cfg)
 		}
-		suite.checkFrontend(p, feName, "acl", acls)
 
 		// TCP Request
 		tcpRequests := []types.TCPType{
@@ -195,6 +220,7 @@ func (suite *TCPSuiteBackendSwitchingRule) Test_CRD_TCP_BackendSwitchingRule_Wit
 				},
 			},
 		}
-		suite.checkFrontend(p, feName, "tcp-request", tcpRequests)
+		err = suite.checkFrontend(p, feName, "tcp-request", tcpRequests)
+		suite.Require().NoError(err)
 	})
 }

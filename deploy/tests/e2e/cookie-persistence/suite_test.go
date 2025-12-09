@@ -17,6 +17,7 @@
 package cookiepersistence
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/suite"
@@ -92,12 +93,16 @@ func (suite *CookiePersistenceSuite) checkServerCookie(p parser.Parser, backendN
 
 // Check that the server serverName for backend backendName
 // has a NOT a "cookie" params
-func (suite *CookiePersistenceSuite) checkServerNoCookie(p parser.Parser, backendName, serverName string) {
+func (suite *CookiePersistenceSuite) checkServerNoCookie(p parser.Parser, backendName, serverName string) error {
 	v, err := p.Get(parser.Backends, backendName, "server")
-	suite.Require().NoError(err, "Could not get Haproxy config parser servers for backend %s", backendName)
+	if err != nil {
+		return errors.New("Could not get Haproxy config parser servers for backend " + backendName)
+	}
 
 	ondiskServers, ok := v.([]types.Server)
-	suite.Require().Equal(ok, true, "Could not get Haproxy config parser servers for backend %s", backendName)
+	if !ok {
+		return errors.New("Could not get Haproxy config parser servers for backend " + backendName)
+	}
 
 	paramName := "cookie"
 	cookieParamFound := false
@@ -118,5 +123,8 @@ func (suite *CookiePersistenceSuite) checkServerNoCookie(p parser.Parser, backen
 			break
 		}
 	}
-	suite.Require().Equal(cookieParamFound, false)
+	if cookieParamFound {
+		return errors.New("Found cookie param for server " + serverName)
+	}
+	return nil
 }
