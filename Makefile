@@ -7,7 +7,7 @@ CHECK_COMMIT=5.4.0
 
 .PHONY: test
 test:
-	gotestsum --format-icons=hivis --format=testdox --format-hide-empty-pkg -- $(go list ./... | grep -v /deploy)
+	gotestsum --format-icons=hivis --format=testdox --format-hide-empty-pkg -- $(go list ./... | grep -v /deploy/tests/e2e)
 
 .PHONY: e2e
 e2e:

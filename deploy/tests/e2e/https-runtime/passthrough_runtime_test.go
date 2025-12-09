@@ -51,7 +51,7 @@ func (suite *OffloadRuntimeSuite) Test_HTTS_OffloadRuntime() {
 	suite.Require().NoError(err)
 	suite.Eventually(func() bool {
 		res, cls, err := suite.client.Do()
-		if res == nil {
+		if res == nil || err != nil {
 			suite.T().Log(err)
 			return false
 		}
@@ -124,7 +124,10 @@ func (suite *OffloadRuntimeSuite) Test_HTTS_OffloadRuntime() {
 
 	suite.Eventually(func() bool {
 		newInfo3, err := e2e.GetGlobalHAProxyInfo()
-		suite.Require().NoError(err)
+		suite.T().Log(err)
+		if err != nil {
+			return false
+		}
 		return newInfo3.Pid != newInfo2.Pid
 	}, e2e.WaitDuration, e2e.TickDuration)
 

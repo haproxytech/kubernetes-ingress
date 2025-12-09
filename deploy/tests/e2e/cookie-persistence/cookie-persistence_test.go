@@ -87,7 +87,8 @@ func (suite *CookiePersistenceTestSuite) Test_CookiePersistence_Dynamic() {
 	beName := suite.test.GetNS() + "_svc_http-echo_http"
 	serverName := "SRV_1"
 
-	suite.checkServerNoCookie(p, beName, serverName)
+	err = suite.checkServerNoCookie(p, beName, serverName)
+	suite.Require().NoError(err, "check server no cookie")
 
 	// ------------------------
 	// Second step : remove annotation
@@ -118,7 +119,8 @@ func (suite *CookiePersistenceTestSuite) Test_CookiePersistence_Dynamic() {
 	p, err = parser.New(options.Reader(reader))
 	suite.Require().NoError(err, "Could not get Haproxy config parser")
 
-	suite.checkServerNoCookie(p, beName, serverName)
+	err = suite.checkServerNoCookie(p, beName, serverName)
+	suite.Require().NoError(err, "check server no cookie")
 }
 
 // Expected backend
@@ -200,7 +202,8 @@ func (suite *CookiePersistenceTestSuite) Test_CookiePersistence_No_Dynamic() {
 	p, err = parser.New(options.Reader(reader))
 	suite.Require().NoError(err, "Could not get Haproxy config parser")
 
-	suite.checkServerNoCookie(p, beName, serverName)
+	err = suite.checkServerNoCookie(p, beName, serverName)
+	suite.Require().NoError(err, "check server no cookie")
 }
 
 func (suite *CookiePersistenceTestSuite) Test_CookiePersistence_Switch() {
@@ -245,7 +248,8 @@ func (suite *CookiePersistenceTestSuite) Test_CookiePersistence_Switch() {
 	beName := suite.test.GetNS() + "_svc_http-echo_http"
 	serverName := "SRV_1"
 
-	suite.checkServerNoCookie(p, beName, serverName)
+	err = suite.checkServerNoCookie(p, beName, serverName)
+	suite.Require().NoError(err, "check server no cookie")
 
 	//----------------------
 	// Step 2: not dynamic
@@ -316,16 +320,31 @@ func (suite *CookiePersistenceTestSuite) Test_CookiePersistence_Switch() {
 	}, e2e.WaitDuration, e2e.TickDuration)
 
 	// Also check configuration
-	cfg, err = suite.test.GetIngressControllerFile("/etc/haproxy/haproxy.cfg")
-	suite.Require().NoError(err, "Could not get Haproxy config")
+	suite.Eventually(func() bool {
+		cfg, err = suite.test.GetIngressControllerFile("/etc/haproxy/haproxy.cfg")
+		if err != nil {
+			suite.T().Logf("Could not get Haproxy config: %v", err)
+			return false
+		}
+		if !strings.Contains(cfg, "cookie mycookie dynamic indirect nocache insert") {
+			return false
+		}
+		if !strings.Contains(cfg, "dynamic-cookie-key") {
+			return false
+		}
+		// Check that the server line does not contain "cookie" param
+		reader = strings.NewReader(cfg)
+		p, err = parser.New(options.Reader(reader))
+		if err != nil {
+			suite.T().Logf("Could not get Haproxy config parser: %v", err)
+			return false
+		}
+		err = suite.checkServerNoCookie(p, beName, serverName)
+		if err != nil {
+			suite.T().Logf("check server no cookie: %v", err)
+			return false
+		}
 
-	suite.Require().Contains(cfg, "cookie mycookie dynamic indirect nocache insert")
-	suite.Require().Contains(cfg, "dynamic-cookie-key")
-
-	// Check that the server line does not contain "cookie" param
-	reader = strings.NewReader(cfg)
-	p, err = parser.New(options.Reader(reader))
-	suite.Require().NoError(err, "Could not get Haproxy config parser")
-
-	suite.checkServerNoCookie(p, beName, serverName)
+		return true
+	}, e2e.WaitDuration, e2e.TickDuration)
 }
