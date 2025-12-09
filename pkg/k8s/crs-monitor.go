@@ -49,6 +49,7 @@ func (k k8s) runCRDefinitionsInformer(eventChan chan GroupKind, stop chan struct
 				crd.Spec.Names.Kind == "Defaults" ||
 				crd.Spec.Names.Kind == "Backend" ||
 				crd.Spec.Names.Kind == "TCP" ||
+				crd.Spec.Names.Kind == "Frontend" ||
 				crd.Spec.Names.Kind == "ValidationRules") {
 				return
 			}
@@ -128,6 +129,8 @@ func (k k8s) RunCRSCreationMonitoring(eventChan chan k8ssync.SyncDataEvent, stop
 							} else {
 								ok = false
 							}
+						case "Frontend":
+							crsV3[groupKind.Kind] = NewFrontendCRV3()
 						}
 						if ok {
 							logger.Info("Custom resource definition created, adding CR watcher for " + crsV3[groupKind.Kind].GetKind())

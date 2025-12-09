@@ -60,6 +60,12 @@ func (c *HAProxyController) SyncData() {
 				data = job.Data.(*v3.Backend) //nolint:forcetypeassert
 			}
 			change = c.store.EventBackendCR(job.Namespace, job.Name, data)
+		case k8ssync.CR_FRONTEND:
+			var data *v3.Frontend
+			if job.Data != nil {
+				data = job.Data.(*v3.Frontend) //nolint:forcetypeassert
+			}
+			change = c.store.EventFrontendCR(job.Namespace, job.Name, data)
 		case k8ssync.NAMESPACE:
 			change = c.store.EventNamespace(ns, job.Data.(*store.Namespace)) //nolint:forcetypeassert
 		case k8ssync.INGRESS:

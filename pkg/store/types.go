@@ -107,6 +107,7 @@ type CustomResources struct {
 	Global    map[string]*models.Global
 	Defaults  map[string]*models.Defaults
 	Backends  map[string]*v3.BackendSpec
+	Frontends map[string]*v3.FrontendSpec
 	TCPsPerCR map[string]*TCPs // key is the TCP CR name
 	AllTCPs   TCPResourceList
 }

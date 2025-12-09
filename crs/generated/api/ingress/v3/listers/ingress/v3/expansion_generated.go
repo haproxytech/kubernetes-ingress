@@ -33,6 +33,14 @@ type DefaultsListerExpansion interface{}
 // DefaultsNamespaceLister.
 type DefaultsNamespaceListerExpansion interface{}
 
+// FrontendListerExpansion allows custom methods to be added to
+// FrontendLister.
+type FrontendListerExpansion interface{}
+
+// FrontendNamespaceListerExpansion allows custom methods to be added to
+// FrontendNamespaceLister.
+type FrontendNamespaceListerExpansion interface{}
+
 // GlobalListerExpansion allows custom methods to be added to
 // GlobalLister.
 type GlobalListerExpansion interface{}

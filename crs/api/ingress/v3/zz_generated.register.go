@@ -61,6 +61,8 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&BackendList{},
 		&Defaults{},
 		&DefaultsList{},
+		&Frontend{},
+		&FrontendList{},
 		&Global{},
 		&GlobalList{},
 		&TCP{},

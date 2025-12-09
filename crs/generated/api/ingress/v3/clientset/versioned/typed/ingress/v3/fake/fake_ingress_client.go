@@ -35,6 +35,10 @@ func (c *FakeIngressV3) Defaults(namespace string) v3.DefaultsInterface {
 	return &FakeDefaults{c, namespace}
 }
 
+func (c *FakeIngressV3) Frontends(namespace string) v3.FrontendInterface {
+	return &FakeFrontends{c, namespace}
+}
+
 func (c *FakeIngressV3) Globals(namespace string) v3.GlobalInterface {
 	return &FakeGlobals{c, namespace}
 }

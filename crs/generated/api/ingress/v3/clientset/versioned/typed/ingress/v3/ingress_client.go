@@ -29,6 +29,7 @@ type IngressV3Interface interface {
 	RESTClient() rest.Interface
 	BackendsGetter
 	DefaultsGetter
+	FrontendsGetter
 	GlobalsGetter
 	TCPsGetter
 	ValidationRulesGetter
@@ -45,6 +46,10 @@ func (c *IngressV3Client) Backends(namespace string) BackendInterface {
 
 func (c *IngressV3Client) Defaults(namespace string) DefaultsInterface {
 	return newDefaults(c, namespace)
+}
+
+func (c *IngressV3Client) Frontends(namespace string) FrontendInterface {
+	return newFrontends(c, namespace)
 }
 
 func (c *IngressV3Client) Globals(namespace string) GlobalInterface {
