@@ -7,7 +7,7 @@ require (
 	github.com/Masterminds/semver/v3 v3.3.1
 	github.com/brianvoe/gofakeit/v7 v7.2.1
 	github.com/fasthttp/router v1.5.4
-	github.com/go-openapi/swag v0.25.4
+	github.com/go-openapi/swag/jsonutils v0.25.4
 	github.com/go-test/deep v1.1.1
 	github.com/google/cel-go v0.26.1
 	github.com/google/go-cmp v0.7.0
@@ -52,11 +52,11 @@ require (
 	github.com/go-openapi/loads v0.22.0 // indirect
 	github.com/go-openapi/spec v0.21.0 // indirect
 	github.com/go-openapi/strfmt v0.23.0 // indirect
+	github.com/go-openapi/swag v0.25.4 // indirect
 	github.com/go-openapi/swag/cmdutils v0.25.4 // indirect
 	github.com/go-openapi/swag/conv v0.25.4 // indirect
 	github.com/go-openapi/swag/fileutils v0.25.4 // indirect
 	github.com/go-openapi/swag/jsonname v0.25.4 // indirect
-	github.com/go-openapi/swag/jsonutils v0.25.4 // indirect
 	github.com/go-openapi/swag/loading v0.25.4 // indirect
 	github.com/go-openapi/swag/mangling v0.25.4 // indirect
 	github.com/go-openapi/swag/netutils v0.25.4 // indirect

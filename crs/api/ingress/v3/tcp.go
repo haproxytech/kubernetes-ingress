@@ -16,7 +16,7 @@
 package v3
 
 import (
-	"github.com/go-openapi/swag"
+	"github.com/go-openapi/swag/jsonutils"
 	"github.com/haproxytech/client-native/v6/models"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -87,13 +87,13 @@ func (s *TCPService) MarshalBinary() ([]byte, error) {
 	if s == nil {
 		return nil, nil
 	}
-	return swag.WriteJSON(s)
+	return jsonutils.WriteJSON(s)
 }
 
 // UnmarshalBinary interface implementation
 func (s *TCPService) UnmarshalBinary(b []byte) error {
 	var res TCPService
-	if err := swag.ReadJSON(b, &res); err != nil {
+	if err := jsonutils.ReadJSON(b, &res); err != nil {
 		return err
 	}
 	*s = res

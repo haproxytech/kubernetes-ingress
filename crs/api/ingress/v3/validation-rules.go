@@ -16,7 +16,7 @@
 package v3
 
 import (
-	"github.com/go-openapi/swag"
+	"github.com/go-openapi/swag/jsonutils"
 	"github.com/haproxytech/kubernetes-ingress/pkg/annotations/validators"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -51,13 +51,13 @@ func (m *ValidationRulesSpec) MarshalBinary() ([]byte, error) {
 	if m == nil {
 		return nil, nil
 	}
-	return swag.WriteJSON(m)
+	return jsonutils.WriteJSON(m)
 }
 
 // UnmarshalBinary interface implementation
 func (m *ValidationRulesSpec) UnmarshalBinary(b []byte) error {
 	var res ValidationRulesSpec
-	if err := swag.ReadJSON(b, &res); err != nil {
+	if err := jsonutils.ReadJSON(b, &res); err != nil {
 		return err
 	}
 	*m = res
