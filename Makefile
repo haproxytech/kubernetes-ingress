@@ -3,11 +3,11 @@ TARGETPLATFORM?=linux/amd64
 GOOS?=linux
 GOARCH?=amd64
 GOLANGCI_LINT_VERSION=1.64.5
-CHECK_COMMIT=5.2.0
+CHECK_COMMIT=5.4.0
 
 .PHONY: test
 test:
-	go test ./...
+	gotestsum --format-icons=hivis --format=testdox --format-hide-empty-pkg -- $(go list ./... | grep -v /deploy)
 
 .PHONY: e2e
 e2e:

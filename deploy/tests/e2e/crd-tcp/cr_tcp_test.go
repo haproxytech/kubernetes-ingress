@@ -53,14 +53,29 @@ func (suite *TCPSuite) Test_CRD_TCP_OK() {
 			return true
 		}, e2e.WaitDuration, e2e.TickDuration)
 
-		// Get updated config and check it
-		cfg, err := suite.test.GetIngressControllerFile("/etc/haproxy/haproxy.cfg")
-		suite.Require().NoError(err, "Could not get Haproxy config")
-		reader := strings.NewReader(cfg)
-		p, err := parser.New(options.Reader(reader))
-		suite.Require().NoError(err, "Could not get Haproxy config parser")
+		var p parser.Parser
+		suite.Eventually(func() bool {
+			// Get updated config and check it
+			cfg, err := suite.test.GetIngressControllerFile("/etc/haproxy/haproxy.cfg")
+			if err != nil {
+				suite.T().Log(err)
+				return false
+			}
+			reader := strings.NewReader(cfg)
+			p, err = parser.New(options.Reader(reader))
+			if err != nil {
+				suite.T().Log(err)
+				return false
+			}
 
-		suite.checkFrontends(p)
+			err = suite.checkFrontends(p)
+			if err != nil {
+				suite.T().Log(err)
+				return false
+			}
+
+			return true
+		}, e2e.WaitDuration, e2e.TickDuration)
 
 		// Checks for backend
 		// Checks that we have correctly applied the backend CR

@@ -67,3 +67,7 @@ allowed:
   - preload
   - hostname
   - str
+  - async
+  - params
+  - configmap
+  - junit

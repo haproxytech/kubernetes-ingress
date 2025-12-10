@@ -10,5 +10,4 @@ unit-tests:
   tags:
     - go
   script:
-    - go build -v .
-    - go test -v ./...
+    - make test
