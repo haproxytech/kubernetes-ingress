@@ -20,6 +20,14 @@ func (c *clientNative) ACLsGet(parentType, parentName string, aclName ...string)
 		return backend.ACLList, nil
 	}
 
+	if parentType == "frontend" {
+		frontend, exists := c.frontends[parentName]
+		if !exists {
+			return nil, fmt.Errorf("can't get acls for unexisting frontend %s : %w", parentName, ErrNotFound)
+		}
+		return frontend.ACLList, nil
+	}
+
 	_, acls, err := configuration.GetACLs(parentType, parentName, c.activeTransaction, aclName...)
 	if err != nil {
 		return nil, err
@@ -40,6 +48,16 @@ func (c *clientNative) ACLDeleteAll(parentType string, parentName string) error 
 		}
 		backend.ACLList = nil
 		c.backends[parentName] = backend
+		return nil
+	}
+
+	if parentType == "frontend" {
+		frontend, exists := c.frontends[parentName]
+		if !exists {
+			return fmt.Errorf("can't delete acls for unexisting frontend %s : %w", parentName, ErrNotFound)
+		}
+		frontend.ACLList = nil
+		c.frontends[parentName] = frontend
 		return nil
 	}
 
@@ -71,6 +89,17 @@ func (c *clientNative) ACLCreate(id int64, parentType string, parentName string,
 		c.backends[parentName] = backend
 		return nil
 	}
+
+	if parentType == "frontend" {
+		frontend, exists := c.frontends[parentName]
+		if !exists {
+			return fmt.Errorf("can't create acl for unexisting frontend %s : %w", parentName, ErrNotFound)
+		}
+		frontend.ACLList = append(frontend.ACLList, data)
+		c.frontends[parentName] = frontend
+		return nil
+	}
+
 	return configuration.CreateACL(id, parentType, parentName, data, c.activeTransaction, 0)
 }
 
@@ -86,6 +115,16 @@ func (c *clientNative) ACLsReplace(parentType, parentName string, rules models.A
 		}
 		backend.ACLList = rules
 		c.backends[parentName] = backend
+		return nil
+	}
+
+	if parentType == "frontend" {
+		frontend, exists := c.frontends[parentName]
+		if !exists {
+			return fmt.Errorf("can't replace acl for unexisting frontend %s : %w", parentName, ErrNotFound)
+		}
+		frontend.ACLList = rules
+		c.frontends[parentName] = frontend
 		return nil
 	}
 

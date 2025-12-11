@@ -245,3 +245,19 @@ func CopyPointer[T any](a *T) *T {
 	clone := *a
 	return &clone
 }
+
+func ConvertMapIntoValuesSlice[K comparable, V any](m map[K]V) []V {
+	values := make([]V, 0, len(m))
+	for _, v := range m {
+		values = append(values, v)
+	}
+	return values
+}
+
+func ConvertMapIntoPointerValuesSlice[K comparable, V any](m map[K]V) []*V {
+	values := make([]*V, 0, len(m))
+	for _, v := range m {
+		values = append(values, &v)
+	}
+	return values
+}

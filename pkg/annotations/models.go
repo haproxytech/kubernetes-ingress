@@ -62,6 +62,17 @@ func ModelLog(name, defaultNS string, k store.K8s, annotations ...map[string]str
 	return log, err
 }
 
+func ModelFrontend(name, defaultNS string, k store.K8s, annotations ...map[string]string) (frontend *models.Frontend, err error) {
+	modelFound, err := model(name, defaultNS, 4, k, annotations...)
+	if err != nil {
+		return nil, err
+	}
+	if modelFound != nil {
+		frontend = &modelFound.(*v3.FrontendSpec).Frontend //nolint:forcetypeassert
+	}
+	return
+}
+
 func model(name, defaultNS string, crType int, k store.K8s, annotations ...map[string]string) (model interface{}, err error) {
 	var crNS, crName string
 	crNS, crName, err = common.GetK8sPath(name, annotations...)
@@ -77,33 +88,40 @@ func model(name, defaultNS string, crType int, k store.K8s, annotations ...map[s
 	}
 	ns, nsOk := k.Namespaces[crNS]
 	if !nsOk {
-		return nil, fmt.Errorf("annotation %s: custom resource '%s/%s' doest not exist, namespace not found", name, crNS, crName)
+		return nil, fmt.Errorf("annotation %s: custom resource '%s/%s' does not exist, namespace not found", name, crNS, crName)
 	}
 	switch crType {
 	case 0:
 		global, globalOk := ns.CRs.Global[crName]
 		if !globalOk {
-			return nil, fmt.Errorf("annotation %s: custom resource '%s/%s' doest not exist", name, crNS, crName)
+			return nil, fmt.Errorf("annotation %s: custom resource '%s/%s' does not exist", name, crNS, crName)
 		}
 		return global, nil
 	case 1:
 		global, globalOk := ns.CRs.Global[crName]
 		if !globalOk {
-			return nil, fmt.Errorf("annotation %s: custom resource '%s/%s' doest not exist", name, crNS, crName)
+			return nil, fmt.Errorf("annotation %s: custom resource '%s/%s' does not exist", name, crNS, crName)
 		}
 		return global.LogTargetList, nil
 	case 2:
 		defaults, defaultsOk := ns.CRs.Defaults[crName]
 		if !defaultsOk {
-			return nil, fmt.Errorf("annotation %s: custom resource '%s/%s' doest not exist", name, crNS, crName)
+			return nil, fmt.Errorf("annotation %s: custom resource '%s/%s' does not exist", name, crNS, crName)
 		}
 		return defaults, nil
 	case 3:
 		backend, backendOk := ns.CRs.Backends[crName]
 		if !backendOk {
-			return nil, fmt.Errorf("annotation %s: custom resource '%s/%s' doest not exist", name, crNS, crName)
+			return nil, fmt.Errorf("annotation %s: custom resource '%s/%s' does not exist", name, crNS, crName)
 		}
 		return backend, nil
+	case 4:
+		frontend, frontendFound := ns.CRs.Frontends[crName]
+		if !frontendFound {
+			return nil, fmt.Errorf("annotation %s: custom resource '%s/%s' does not exist", name, crNS, crName)
+		}
+		return frontend, nil
 	}
+
 	return nil, nil //nolint:nilnil
 }

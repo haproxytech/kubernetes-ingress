@@ -61,14 +61,18 @@ type HAProxyClient interface { //nolint:interfacebloat
 	ExecuteRaw(command string) (result string, err error)
 	Filter
 	FrontendCfgSnippetSet(frontendName string, value []string) error
+	FrontendCfgSnippetApply() error
 	FrontendCreate(frontend models.FrontendBase) error
 	FrontendDelete(frontendName string) error
+	FrontendDeletePending() error
 	FrontendsGet() (models.Frontends, error)
 	FrontendGet(frontendName string) (models.Frontend, error)
 	FrontendEdit(frontend models.FrontendBase) error
 	FrontendEnableSSLOffload(frontendName string, certDir string, alpn string, strictSNI bool, generateCertificatesSigner string) (err error)
 	FrontendDisableSSLOffload(frontendName string) (err error)
 	FrontendSSLOffloadEnabled(frontendName string) bool
+	UploadFrontends() error
+	FrontendStructured
 	Bind
 	FrontendRuleDeleteAll(frontend string)
 	GlobalGetLogTargets() (models.LogTargets, error)
@@ -182,10 +186,16 @@ type HTTPRequestRule interface {
 	BackendHTTPRequestRuleCreate(id int64, backend string, rule models.HTTPRequestRule) error
 }
 
+type Frontend struct {
+	models.Frontend
+	ConfigSnippets []string
+}
+
 type clientNative struct {
 	nativeAPI                           clientnative.HAProxyClient
 	activeTransaction                   string
 	backends                            map[string]Backend
+	frontends                           map[string]*Frontend
 	previousBackends                    []byte
 	configurationHashAtTransactionStart string
 }
@@ -224,6 +234,7 @@ func New(transactionDir, configFile, programPath, runtimeSocket string) (client 
 	cn := clientNative{
 		nativeAPI: cnHAProxyClient,
 		backends:  make(map[string]Backend),
+		frontends: make(map[string]*Frontend),
 	}
 	return &cn, nil
 }

@@ -1,54 +1,53 @@
 package api
 
-import "github.com/haproxytech/client-native/v6/models"
+import (
+	"errors"
+	"fmt"
 
-func (c *clientNative) BackendSwitchingRuleCreate(id int64, frontend string, rule models.BackendSwitchingRule) error {
-	configuration, err := c.nativeAPI.Configuration()
-	if err != nil {
-		return err
-	}
-	return configuration.CreateBackendSwitchingRule(id, frontend, &rule, c.activeTransaction, 0)
-}
+	"github.com/haproxytech/client-native/v6/models"
+)
 
-func (c *clientNative) BackendSwitchingRuleDeleteAll(frontend string) (err error) {
-	configuration, err := c.nativeAPI.Configuration()
-	if err != nil {
-		return err
+func (c *clientNative) BackendSwitchingRuleCreate(id int64, frontendName string, rule models.BackendSwitchingRule) error {
+	frontend, ok := c.frontends[frontendName]
+	if !ok {
+		return fmt.Errorf("frontend %s not found", frontendName)
 	}
-	_, switchingRules, err := configuration.GetBackendSwitchingRules(frontend, c.activeTransaction)
-	if err != nil {
-		return err
+	if id != 0 && id >= int64(len(frontend.BackendSwitchingRuleList)-1) {
+		return errors.New("can't add rule to the last position in the list")
 	}
-	for range switchingRules {
-		if err = configuration.DeleteBackendSwitchingRule(0, frontend, c.activeTransaction, 0); err != nil {
-			break
-		}
-	}
-	return err
-}
-
-func (c *clientNative) BackendSwitchingRulesGet(frontend string) (models.BackendSwitchingRules, error) {
-	configuration, err := c.nativeAPI.Configuration()
-	if err != nil {
-		return nil, err
+	if frontend.BackendSwitchingRuleList == nil {
+		frontend.BackendSwitchingRuleList = models.BackendSwitchingRules{}
 	}
 
-	_, bsRules, err := configuration.GetBackendSwitchingRules(frontend, c.activeTransaction)
-	if err != nil {
-		return nil, err
-	}
-	return bsRules, nil
-}
-
-func (c *clientNative) BackendSwitchingRulesReplace(frontend string, rules models.BackendSwitchingRules) error {
-	configuration, err := c.nativeAPI.Configuration()
-	if err != nil {
-		return err
-	}
-
-	err = configuration.ReplaceBackendSwitchingRules(frontend, rules, c.activeTransaction, 0)
-	if err != nil {
-		return err
-	}
+	frontend.BackendSwitchingRuleList = append(frontend.BackendSwitchingRuleList, &models.BackendSwitchingRule{})
+	copy(frontend.BackendSwitchingRuleList[id+1:], frontend.BackendSwitchingRuleList[id:])
+	frontend.BackendSwitchingRuleList[id] = &rule
 	return nil
+}
+
+func (c *clientNative) BackendSwitchingRuleDeleteAll(frontendName string) (err error) {
+	frontend, ok := c.frontends[frontendName]
+	if !ok {
+		return fmt.Errorf("frontend %s not found", frontendName)
+	}
+	frontend.BackendSwitchingRuleList = nil
+	return nil
+}
+
+func (c *clientNative) BackendSwitchingRulesGet(frontendName string) (models.BackendSwitchingRules, error) {
+	frontend, ok := c.frontends[frontendName]
+	if !ok {
+		return nil, fmt.Errorf("frontend %s not found", frontendName)
+	}
+	return frontend.BackendSwitchingRuleList, nil
+}
+
+func (c *clientNative) BackendSwitchingRulesReplace(frontendName string, rules models.BackendSwitchingRules) error {
+	frontend, ok := c.frontends[frontendName]
+	if !ok {
+		return fmt.Errorf("frontend %s not found", frontendName)
+	}
+	frontend.BackendSwitchingRuleList = rules
+	return nil
+
 }

@@ -18,6 +18,15 @@ func (c *clientNative) HTTPRequestRulesGet(parentType, parentName string) (model
 		}
 		return backend.HTTPRequestRuleList, nil
 	}
+
+	if parentType == "frontend" {
+		frontend, exists := c.frontends[parentName]
+		if !exists {
+			return nil, fmt.Errorf("can't get http requests rules for unexisting frontend %s : %w", parentName, ErrNotFound)
+		}
+		return frontend.HTTPRequestRuleList, nil
+	}
+
 	_, httpRequests, err := configuration.GetHTTPRequestRules(parentType, parentName, c.activeTransaction)
 	if err != nil {
 		return nil, err
@@ -39,6 +48,17 @@ func (c *clientNative) HTTPRequestRuleDeleteAll(parentType string, parentName st
 		c.backends[parentName] = backend
 		return nil
 	}
+
+	if parentType == "frontend" {
+		frontend, exists := c.frontends[parentName]
+		if !exists {
+			return fmt.Errorf("can't delete http requests rules for unexisting frontend %s : %w", parentName, ErrNotFound)
+		}
+		frontend.HTTPRequestRuleList = nil
+		c.frontends[parentName] = frontend
+		return nil
+	}
+
 	_, httpRequests, errGet := configuration.GetHTTPRequestRules(parentType, parentName, c.activeTransaction)
 	if errGet != nil {
 		return errGet
@@ -67,6 +87,15 @@ func (c *clientNative) HTTPRequestRuleCreate(id int64, parentType string, parent
 		c.backends[parentName] = backend
 		return nil
 	}
+	if parentType == "frontend" {
+		frontend, exists := c.frontends[parentName]
+		if !exists {
+			return fmt.Errorf("can't create http request rule for unexisting frontend %s : %w", parentName, ErrNotFound)
+		}
+		frontend.HTTPRequestRuleList = append(frontend.HTTPRequestRuleList, data)
+		c.frontends[parentName] = frontend
+		return nil
+	}
 	return configuration.CreateHTTPRequestRule(id, parentType, parentName, data, c.activeTransaction, 0)
 }
 
@@ -83,6 +112,16 @@ func (c *clientNative) HTTPRequestRulesReplace(parentType, parentName string, ru
 		}
 		backend.HTTPRequestRuleList = rules
 		c.backends[parentName] = backend
+		return nil
+	}
+
+	if parentType == "frontend" {
+		frontend, exists := c.frontends[parentName]
+		if !exists {
+			return fmt.Errorf("can't replace http request rule for unexisting frontend %s : %w", parentName, ErrNotFound)
+		}
+		frontend.HTTPRequestRuleList = rules
+		c.frontends[parentName] = frontend
 		return nil
 	}
 

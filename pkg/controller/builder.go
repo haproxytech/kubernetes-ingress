@@ -171,6 +171,11 @@ func (builder *Builder) Build() *HAProxyController {
 	haproxy, err := haproxy.New(builder.osArgs, builder.haproxyEnv, builder.haproxyCfgFile, builder.haproxyProcess, builder.haproxyClient, builder.haproxyRules)
 	logger.Panic(err)
 
+	// Populate the buffer of frontends for the first time
+	// required by some init handlers
+
+	logger.Panic(haproxy.UploadFrontends())
+
 	prefix, errPrefix := utils.GetPodPrefix(os.Getenv("POD_NAME"))
 	logger.Error(errPrefix)
 

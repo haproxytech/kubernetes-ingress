@@ -1,0 +1,18 @@
+apiVersion: ingress.v3.haproxy.org/v3
+kind: Frontend
+metadata:
+  name: test-http
+spec:
+  accept_invalid_http_request: enabled
+  binds:
+    test:
+      address: 127.0.0.1
+      port: 9080
+      name: test-http
+  name: test
+  compression:
+    algo-req: identity
+  acl_list:
+    - acl_name: images_url
+      criterion: path
+      value: -i -m beg /images/
