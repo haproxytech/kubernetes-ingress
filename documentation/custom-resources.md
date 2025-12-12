@@ -1,7 +1,7 @@
 # Custom Resources
 
 - In order to use custom resources, you will need to apply/update resource [definitions](../crs/definition/)
-- Custom Resources are used by Ingress Controller to implement HAProxy concepts like (backend, frontend, http rules, etc) which are all available under the `ingress.v1.haproxy.org` API.
+- Custom Resources are used by Ingress Controller to implement HAProxy concepts like (backend, frontend, http rules, etc) which are all available under the `ingress.v1.haproxy.org` or `ingress.v3.haproxy.org` API.
 - Current implementation relies on the [client-native](https://github.com/haproxytech/client-native) library and its [models](https://github.com/haproxytech/client-native/tree/master/models) to [configure HAProxy](https://cbonte.github.io/haproxy-dconv/2.4/configuration.html#4.1).
 - Custom resources are meant to **replace annotations** when possible. So they will have **precedance** when used.
   *Example:* if the backend resource is used no backend annotation will be processed which means a backend cannot be configured by mixing both the backend resource and backend annotations.
@@ -155,3 +155,43 @@ spec:
     name: https
     targetPort: 8443
 ```
+### Frontend
+
+The frontend custom resource can be used to configure the three principal frontends `http`, `https` and `stats`. 
+Caution, the frontends are the very interface of your load balancer. Any misconfiguration can shut down all of your services. Please, test in any preproduction environment before applying anything in your production environment. 
+Be aware that the original configuration can only be amended not replaced.
+The three frontends aforementioned are addressable by creating a Frontend custom resource and then assign it to the target frontend in the configmap with these three annotations:
+
+* cr-frontend-http
+* cr-frontend-https
+* cr-frontend-stats
+
+1. Define a frontend resource
+
+```yaml
+apiVersion: ingress.v3.haproxy.org/v3
+kind: Frontend
+metadata:
+  name: test
+spec:
+  accept_invalid_http_request: enabled
+  binds:
+    test:
+      address: 127.0.0.1
+      port: 1234
+      name: test
+  name: test
+```  
+
+2. Apply it:
+```
+$ kubectl apply -f myfrontend.yaml
+```
+
+3. Associate your target frontend with this frontend custom resource in the controller configmap
+
+```yaml
+data:
+  cr-frontend-http: default/test
+```
+

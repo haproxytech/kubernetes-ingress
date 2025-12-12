@@ -49,5 +49,4 @@ func (c *clientNative) BackendSwitchingRulesReplace(frontendName string, rules m
 	}
 	frontend.BackendSwitchingRuleList = rules
 	return nil
-
 }
