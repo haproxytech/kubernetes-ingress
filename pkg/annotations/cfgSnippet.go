@@ -279,9 +279,11 @@ func UpdateFrontendCfgSnippet(api api.HAProxyClient, frontends ...string) (updat
 			}
 			if data != nil && len(data.value) > 0 {
 				data = &cfgData{value: append(newData, data.value...)}
+			} else {
+				data = &cfgData{value: newData}
 			}
 		}
-		if data == nil {
+		if data == nil || len(data.value) == 0 {
 			continue
 		}
 		err = api.FrontendCfgSnippetSet(ft, data.value)
