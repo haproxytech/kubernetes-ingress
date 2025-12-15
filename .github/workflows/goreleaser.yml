@@ -8,20 +8,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           # we have to fetch all history to be able to generate the release note. c.f. https://goreleaser.com/ci/actions/.
           fetch-depth: 0
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
-          go-version-file: "go.mod"
+          go-version: 'stable' # Latest stable version
           check-latest: true
       - name: Run GoReleaser
-        uses: goreleaser/goreleaser-action@v4
+        uses: goreleaser/goreleaser-action@v6
         with:
           distribution: goreleaser
-          version: 1.17.1
+          version: '~> v2'
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
