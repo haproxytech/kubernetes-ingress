@@ -637,7 +637,7 @@ func (k k8s) addIngressHandlers(eventChan chan k8ssync.SyncDataEvent, informer c
 	_, err := informer.AddEventHandler(
 		cache.ResourceEventHandlerFuncs{
 			AddFunc: func(obj interface{}) {
-				item, err := store.ConvertToIngress(obj, osArgs.EnableUserAnnotationsIngress)
+				item, err := store.ConvertToIngress(obj, osArgs.EnableCustomAnnotationsOnIngress)
 				if err != nil {
 					logger.Errorf("%s: Invalid data from k8s api, %s", k8ssync.INGRESS, obj)
 					return
@@ -654,7 +654,7 @@ func (k k8s) addIngressHandlers(eventChan chan k8ssync.SyncDataEvent, informer c
 				eventChan <- ToSyncDataEvent(item, item, uid, resourceVersion)
 			},
 			DeleteFunc: func(obj interface{}) {
-				item, err := store.ConvertToIngress(obj, osArgs.EnableUserAnnotationsIngress)
+				item, err := store.ConvertToIngress(obj, osArgs.EnableCustomAnnotationsOnIngress)
 				if err != nil {
 					logger.Errorf("%s: Invalid data from k8s api, %s", k8ssync.INGRESS, obj)
 					return
@@ -671,7 +671,7 @@ func (k k8s) addIngressHandlers(eventChan chan k8ssync.SyncDataEvent, informer c
 				eventChan <- ToSyncDataEvent(item, item, uid, resourceVersion)
 			},
 			UpdateFunc: func(oldObj, newObj interface{}) {
-				item, err := store.ConvertToIngress(newObj, osArgs.EnableUserAnnotationsIngress)
+				item, err := store.ConvertToIngress(newObj, osArgs.EnableCustomAnnotationsOnIngress)
 				if err != nil {
 					logger.Errorf("%s: Invalid data from k8s api, %s", k8ssync.INGRESS, oldObj)
 					return

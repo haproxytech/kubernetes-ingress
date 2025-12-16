@@ -430,11 +430,11 @@ image_arguments:
     default: false
     version_min: "3.0"
     example: --disable-ingress-status-update
-  - argument: --enable-user-annotations-on-ingress
+  - argument: --enable-custom-annotations-on-ingress
     description: |-
-        Enable support for user annotations on ingress resources.
+        Enable support for custom annotations on ingress resources.
         Use with caution when using the same annotation on multiple ingresses for same service.
-    example: --enable-user-annotations-on-ingress
+    example: --enable-custom-annotations-on-ingress
     version_min: "3.2"
     values:
       - Boolean value, just need to declare the flag

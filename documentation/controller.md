@@ -50,7 +50,7 @@ Image can be run with arguments:
 | [`--input-file`](#--input-file) :construction:(dev) |  |
 | [`--output-file`](#--output-file) :construction:(dev) |  |
 | [`--disable-ingress-status-update`](#--disable-ingress-status-update) | `false` |
-| [`--enable-user-annotations-on-ingress`](#--enable-user-annotations-on-ingress) :construction:(dev) |  |
+| [`--enable-custom-annotations-on-ingress`](#--enable-custom-annotations-on-ingress) :construction:(dev) |  |
 
 
 ### `--configmap`
@@ -907,12 +907,12 @@ Example:
 
 ***
 
-### `--enable-user-annotations-on-ingress`
+### `--enable-custom-annotations-on-ingress`
 
 
   > :construction: this is only available from next version, currently available in dev build
 
-  Enable support for user annotations on ingress resources.
+  Enable support for custom annotations on ingress resources.
 Use with caution when using the same annotation on multiple ingresses for same service.
 
 Possible values:
@@ -922,7 +922,7 @@ Possible values:
 Example:
 
 ```yaml
---enable-user-annotations-on-ingress
+--enable-custom-annotations-on-ingress
 ```
 
 <p align='right'><a href='#haproxy-kubernetes-ingress-controller'>:arrow_up_small: back to top</a></p>
