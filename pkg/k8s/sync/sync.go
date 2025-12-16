@@ -52,4 +52,5 @@ const (
 	GATEWAY         SyncType = "GATEWAY"
 	TCPROUTE        SyncType = "TCPROUTE"
 	REFERENCEGRANT  SyncType = "REFERENCEGRANT"
+	CUSTOM_RESOURCE SyncType = "CUSTOM_RESOURCE"
 )

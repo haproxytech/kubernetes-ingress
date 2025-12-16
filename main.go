@@ -265,6 +265,10 @@ func logInfo(logger utils.Logger, osArgs utils.OSArgs) bool {
 	} else {
 		logger.Print("Ingress Management: default implementation")
 	}
+	if osArgs.CustomValidationRules.Name != "" {
+		logger.Printf("Custom validation rules provided in '%s'", osArgs.CustomValidationRules)
+	}
+
 	logger.Printf("Controller sync period: %s\n", osArgs.SyncPeriod.String())
 	hostname, err := os.Hostname()
 	logger.Error(err)

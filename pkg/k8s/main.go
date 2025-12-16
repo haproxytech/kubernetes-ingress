@@ -160,7 +160,9 @@ func New(osArgs utils.OSArgs, whitelist map[string]struct{}, publishSvc *utils.N
 	k.registerCoreCRV3(NewDefaultsCRV3())
 	k.registerCoreCRV3(NewBackendCRV3())
 	k.registerCoreCRV3(NewTCPCRV3())
-	k.registerCoreCRV3(NewValidationCRV3())
+	if osArgs.CustomValidationRules.Name != "" {
+		k.registerCoreCRV3(NewValidationCRV3())
+	}
 	return k
 }
 

@@ -112,6 +112,7 @@ func (k k8s) RunCRSCreationMonitoring(eventChan chan k8ssync.SyncDataEvent, stop
 						}
 						logger.Info("Custom resource definition created, adding CR watcher for " + crsV1[groupKind.Kind].GetKind())
 					case "ingress.v3.haproxy.org":
+						ok := true
 						switch groupKind.Kind {
 						case "Backend":
 							crsV3[groupKind.Kind] = NewBackendCRV3()
@@ -122,9 +123,15 @@ func (k k8s) RunCRSCreationMonitoring(eventChan chan k8ssync.SyncDataEvent, stop
 						case "TCP":
 							crsV3[groupKind.Kind] = NewTCPCRV3()
 						case "ValidationRules":
-							crsV3[groupKind.Kind] = NewValidationCRV3()
+							if osArgs.CustomValidationRules.Name != "" {
+								crsV3[groupKind.Kind] = NewValidationCRV3()
+							} else {
+								ok = false
+							}
 						}
-						logger.Info("Custom resource definition created, adding CR watcher for " + crsV3[groupKind.Kind].GetKind())
+						if ok {
+							logger.Info("Custom resource definition created, adding CR watcher for " + crsV3[groupKind.Kind].GetKind())
+						}
 					}
 
 					k.runCRInformers(eventChan, stop, namespace, informersSyncedEvent, crsV1, crsV3, osArgs)

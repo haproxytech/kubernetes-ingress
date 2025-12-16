@@ -48,6 +48,13 @@ func (c ValidationCR) GetInformerV3(eventChan chan k8ssync.SyncDataEvent, factor
 			return
 		}
 
+		if data.ObjectMeta.Namespace != osArgs.CustomValidationRules.Namespace {
+			return
+		}
+		if data.ObjectMeta.Name != osArgs.CustomValidationRules.Name {
+			return
+		}
+
 		validator, err := validators.Get()
 		if err != nil {
 			logger.Error("Failed to get validator: %s", err)
@@ -59,8 +66,11 @@ func (c ValidationCR) GetInformerV3(eventChan chan k8ssync.SyncDataEvent, factor
 			return
 		}
 		logger.Infof("ValidationRules %s/%s accepted and set [%s]", data.Namespace, data.Name, data.Spec.Prefix)
+		// eventChan <- k8ssync.SyncDataEvent{
+		// 	SyncType: k8ssync.SyncType(c.GetKind()), Namespace: data.Namespace, Name: data.Name, Data: data,
+		// }
 		eventChan <- k8ssync.SyncDataEvent{
-			SyncType: k8ssync.SyncType(c.GetKind()), Namespace: data.Namespace, Name: data.Name, Data: data,
+			SyncType: k8ssync.CUSTOM_RESOURCE, Namespace: data.Namespace, Name: data.Name, Data: data,
 		}
 	}
 
