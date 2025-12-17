@@ -4,9 +4,9 @@ e2e_k8s:
   stage: e2e_k8s
   needs: ["docker-build"]
   variables:
-    K8S_VERSION: v1.33.1
+    K8S_VERSION: v1.34.0
     KUBEADM_VER: v1beta3
-    KUBECTL: v1.33.1
+    KUBECTL: v1.34.0
   extends: .kind_deployment
   rules:
     - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
