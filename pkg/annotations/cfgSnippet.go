@@ -85,6 +85,19 @@ func InitCfgSnippet() {
 	cfgSnippet.disabledSnippets = make(map[CfgSnippetType]struct{})
 }
 
+// Clean removes all deleted custom config snippets from the global map cfgSnippet.
+// It iterates over the frontend custom config snippets and checks if any of them
+// have a status of DELETED. If so, it deletes them from the map.
+func Clean() {
+	for _, v := range cfgSnippet.frontendsCustom {
+		for annKey, annVal := range v {
+			if annVal.status == store.DELETED {
+				delete(v, annKey)
+			}
+		}
+	}
+}
+
 type ConfigSnippetOptions struct {
 	Backend  *string
 	Frontend *string
@@ -156,8 +169,8 @@ func (a *CfgSnippet) Process(k store.K8s, annotations ...map[string]string) erro
 		customAnnotations := map[string]string{}
 		for _, annotation := range annotations {
 			for k, v := range annotation {
-				if strings.HasPrefix(k, "frontend."+a.frontend+"."+validator.Prefix()) {
-					key := strings.TrimPrefix(k, "frontend."+a.frontend+"."+validator.Prefix())
+				if strings.HasPrefix(k, "frontend."+validator.Prefix()) {
+					key := strings.TrimPrefix(k, "frontend."+validator.Prefix())
 					customAnnotations[key] = v
 				}
 			}
@@ -268,13 +281,20 @@ func UpdateFrontendCfgSnippet(api api.HAProxyClient, frontends ...string) (updat
 		if !ok && !okCustom {
 			continue
 		}
+		deleted := []string{}
 		if okCustom {
 			newData := make([]string, 0)
-			for _, v := range customData {
+			for k, v := range customData {
+				if v.status == store.DELETED {
+					updated = append(updated, "DELETED: "+k)
+					deleted = append(deleted, k)
+					continue
+				}
 				newData = append(newData, v.value...)
 				updated = append(updated, v.updated...)
 			}
-			if len(customData) > 0 {
+
+			if len(newData) > 0 {
 				newData = append(newData, "### custom annotations end ###")
 			}
 			if data != nil && len(data.value) > 0 {
@@ -283,7 +303,7 @@ func UpdateFrontendCfgSnippet(api api.HAProxyClient, frontends ...string) (updat
 				data = &cfgData{value: newData}
 			}
 		}
-		if data == nil || len(data.value) == 0 {
+		if len(deleted) == 0 && (data == nil || len(data.value) == 0) {
 			continue
 		}
 		err = api.FrontendCfgSnippetSet(ft, data.value)

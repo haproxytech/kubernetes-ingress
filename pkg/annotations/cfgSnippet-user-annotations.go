@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"github.com/haproxytech/kubernetes-ingress/pkg/annotations/validators"
+	"github.com/haproxytech/kubernetes-ingress/pkg/store"
 )
 
 func processCustomAnnotationsFrontend(customAnnotations map[string]string, a *CfgSnippet, validator *validators.Validator) error {
@@ -70,6 +71,14 @@ func processCustomAnnotationsFrontend(customAnnotations map[string]string, a *Cf
 			}
 		}
 		processConfigSnippetFrontendCustom(a.frontend, origin, rdata, len(keys)-index+1)
+	}
+	if len(keys) == 0 && len(cfgSnippet.frontendsCustom[a.frontend]) != 0 {
+		// go through cfgSnippet.frontendsCustom[a.frontend] and mark them as deleted
+		for _, value := range cfgSnippet.frontendsCustom[a.frontend] {
+			value.status = store.DELETED
+			value.value = []string{}
+			value.updated = []string{}
+		}
 	}
 
 	return nil

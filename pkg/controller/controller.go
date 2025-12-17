@@ -350,6 +350,7 @@ func (c *HAProxyController) clean(failedSync bool) {
 	logger.Error(c.setupHAProxyRules())
 	if !failedSync {
 		c.store.Clean()
+		annotations.Clean()
 	}
 }
 

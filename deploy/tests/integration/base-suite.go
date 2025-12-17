@@ -159,6 +159,7 @@ func (suite *BaseSuite) StopController() {
 	testController := suite.TestControllers[suite.T().Name()]
 	testController.Controller.Stop()
 	testController.Store.Clean()
+	annotations.Clean()
 	close(testController.EventChan)
 }
 

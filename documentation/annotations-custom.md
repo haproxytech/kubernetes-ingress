@@ -112,7 +112,7 @@ backend default_svc_http-echo_http
   ...
 ```
 
-we can see that a config snippet was added, but compared to regular snippet, our annotation has full validation that we defined (and also its limiting what we can put)
+we can see that a config snippet was added, but compared to regular snippet, our annotation has full validation that we defined (and also it is limiting what we can put)
 
 what happens if we try to add value that is not accepted ?
 
@@ -147,6 +147,13 @@ if template is not defined, value as is will be copied
 
 usage
 
+```yaml
+backend.example.com/maxconn: "1000"
+```
+
+⚠ `duration`, `int`, `uint`, `bool` and `float` values needs to be defined as strings in annotation value. This is limitation of k8s for annotation values. If using type `json` normal number and boolean values can be used.
+
+**invalid**
 ```yaml
 backend.example.com/maxconn: 1000
 ```
@@ -314,7 +321,7 @@ config
       rule: "value > duration('42s') && value <= duration('42m')" # CEL expression
 ```
 
-## How do i create frontend annotations ?
+## How do I create frontend annotations ?
 
 in same way as backend ones, except there is no `frontend` object in k8s. Therefore we will use configmap
 
@@ -325,24 +332,39 @@ metadata:
   name: haproxy-kubernetes-ingress
   namespace: haproxy-controller
   annotations:
-    frontend.http.example.com/timeout-server: "5s"
-    frontend.http.example.com/timeout-client: "6s"
-    frontend.https.example.com/timeout-server: "7s"
-    frontend.stats.example.com/timeout-server: "8s"
+    frontend.example.com/timeout-server: "5s"
+    frontend.example.com/timeout-client: "6s"
 data:
-  syslog-server: |
-    address: stdout, format: raw, facility:daemon
-  cr-global: haproxy-controller/global-full
+  ...
 ```
 
-its similar as with other configuration values, except we define it as configmap annotations
+it is similar as with other configuration values, except we define it as configmap annotations.
 
 ### Structure
 
-`frontend.<frontend-name>.<org>/<custom-annotation-name>`
+`frontend.<prefix>/<custom-annotation-name>`
 
-the only difference is extra information what frontend this settings belong to. With HAProxy Ingress controller, you have 3 different frontends: `http`, `https` and `stats`, each can be customized with custom annotations.
+With HAProxy Ingress controller, you have 3 different frontends: `http`, `https` and `stats`, each can be customized with custom annotations.
 
+If you want to create a annotation for specific frontend use `resources` as shown in example:
+
+```yaml
+apiVersion: ingress.v3.haproxy.org/v3
+kind: ValidationRules
+metadata:
+  name: custom-validation-rules
+  namespace: haproxy-controller
+spec:
+  prefix: "haproxy.org"
+  validation_rules:
+    maxconn:
+      section: frontend
+      resources:
+        - http
+        - https
+      type: int
+      rule: "value >= 10 && value <= 1000000"
+```
 
 ## Where can custom annotations can be defined ?
 
@@ -357,7 +379,7 @@ metadata:
   name: haproxy-kubernetes-ingress
   namespace: haproxy-controller
   annotations:
-    frontend.<frontend-name>.<org>/<custom-annotation-name>: <value>
+    frontend.<org>/<custom-annotation-name>: <value>
 ```
 
 ### Backend Annotations
