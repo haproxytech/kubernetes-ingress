@@ -166,15 +166,15 @@ func (c *HAProxyController) updateHAProxy() {
 
 	c.gatewayManager.ManageGateway()
 
+	if !c.ready {
+		c.setToReady()
+	}
+
 	for _, handler := range c.updateHandlers {
 		logger.Error(handler.Update(c.store, c.haproxy, c.annotations))
 	}
 
 	fs.Writer.WaitUntilWritesDone()
-
-	if !c.ready {
-		c.setToReady()
-	}
 
 	err = c.haproxy.APIFinalCommitTransaction()
 	if err != nil {
