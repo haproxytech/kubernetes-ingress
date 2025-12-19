@@ -194,26 +194,37 @@ func ProxyProtoConn() (result []byte, err error) {
 	return io.ReadAll(conn)
 }
 
-func runtimeCommand(command string) (result []byte, err error) {
+func runtimeCommand(command string) ([]byte, error) {
 	kindURL := os.Getenv("KIND_URL")
 	if kindURL == "" {
 		kindURL = "127.0.0.1"
 	}
 	conn, err := net.Dial("tcp", net.JoinHostPort(kindURL, strconv.Itoa(STATS_PORT)))
 	if err != nil {
-		return result, err
+		return nil, err
 	}
 	_, err = conn.Write([]byte(command + "\n"))
 	if err != nil {
-		return result, err
+		return nil, err
 	}
-	result = make([]byte, 2048)
-	_, err = conn.Read(result)
-	if err != nil {
-		return []byte{}, err
+
+	// 1024 was not enough! Need to read what needs to be read
+	bufferSize := 1024
+	buf := make([]byte, bufferSize)
+	var data strings.Builder
+	for {
+		n, readErr := conn.Read(buf)
+		if readErr != nil {
+			break
+		}
+		_, _ = data.Write(buf[0:n])
 	}
+
+	result := strings.TrimSuffix(data.String(), "\n> ")
+	result = strings.TrimSuffix(result, "\n")
+	result = strings.TrimSpace(result)
 	err = conn.Close()
-	return result, err
+	return []byte(result), err
 }
 
 func GetHAProxyMapCount(mapName string) (count int, err error) {
@@ -231,6 +242,29 @@ func GetHAProxyMapCount(mapName string) (count int, err error) {
 			nbr := strings.Split(match, "=")[1]
 			count, err = strconv.Atoi(nbr)
 			break
+		}
+	}
+	return count, err
+}
+
+func GetRuntimeUpServersCount(backend string) (count int, err error) {
+	var result []byte
+	command := fmt.Sprintf("show stat %s 4 -1 up", backend)
+	result, err = runtimeCommand(command)
+	if err != nil {
+		return count, err
+	}
+	scanner := bufio.NewScanner(bytes.NewReader(result))
+	for scanner.Scan() {
+		line := scanner.Text()
+		// Split string by the separator
+		parts := strings.Split(line, ",")
+
+		// Get everything before the last separator
+		l := strings.Join(parts[:len(parts)-1], ",")
+		lineFiltered := strings.ToLower(l)
+		if strings.Contains(lineFiltered, backend) {
+			count++
 		}
 	}
 	return count, err

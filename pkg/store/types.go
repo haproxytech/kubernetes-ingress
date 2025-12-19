@@ -36,6 +36,7 @@ type HAProxySrv struct {
 	Address  string
 	Modified bool
 	Port     int64
+	Deleted  bool
 }
 
 func (h *HAProxySrv) String() string {
@@ -99,7 +100,7 @@ type RuntimeEndpoints = map[RuntimeEndpoint]struct{}
 type RuntimeBackend struct {
 	Endpoints       RuntimeEndpoints
 	Name            string
-	HAProxySrvs     []*HAProxySrv
+	HAProxySrvs     map[string]*HAProxySrv
 	DynUpdateFailed bool
 }
 

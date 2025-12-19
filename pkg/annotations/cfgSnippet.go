@@ -547,3 +547,8 @@ func processConfigurationError(configErr error) (file string, lineNumbers []int,
 	}
 	return file, lineNumbers, err
 }
+
+func HasBackendCfgSnippet(backend string) bool {
+	beCfgSnippet, ok := cfgSnippet.backends[backend]
+	return ok && len(beCfgSnippet) > 0
+}

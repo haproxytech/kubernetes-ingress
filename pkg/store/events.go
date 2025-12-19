@@ -200,9 +200,9 @@ func (k *K8s) EventEndpoints(ns *Namespace, data *Endpoints, syncHAproxySrvs fun
 		backend, ok := ns.HAProxyRuntime[data.Service][portName]
 		// Make a copy of haproxy server list for potential standalone runtime backend
 		// as this servere list is modified in the process
-		var backendHAProxySrvs []*HAProxySrv
+		var backendHAProxySrvs map[string]*HAProxySrv
 		if ok {
-			backendHAProxySrvs = utils.CopySliceFunc(backend.HAProxySrvs, utils.CopyPointer)
+			backendHAProxySrvs = utils.CopyMapFunc(backend.HAProxySrvs, utils.CopyPointer)
 			newBackend.HAProxySrvs = backend.HAProxySrvs
 			newBackend.Name = backend.Name
 			logger.Warning(syncHAproxySrvs(newBackend))
@@ -215,7 +215,7 @@ func (k *K8s) EventEndpoints(ns *Namespace, data *Endpoints, syncHAproxySrvs fun
 			// Make own copy of regular runtime backend endpoints
 			standaloneNewBackend := &RuntimeBackend{Endpoints: utils.CopyMap(backendEndpoints)}
 			// Make own copy of regular runtime backend portEndpoint servers list
-			standaloneNewBackend.HAProxySrvs = utils.CopySliceFunc(backendHAProxySrvs, utils.CopyPointer)
+			standaloneNewBackend.HAProxySrvs = utils.CopyMapFunc(backendHAProxySrvs, utils.CopyPointer)
 			standaloneNewBackend.Name = standaloneRuntimeBackend.Name
 			logger.Warning(syncHAproxySrvs(standaloneNewBackend))
 			ns.HAProxyRuntimeStandalone[data.Service][portName][standaloneBackendName] = standaloneNewBackend

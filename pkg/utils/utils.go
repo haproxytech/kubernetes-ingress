@@ -238,6 +238,14 @@ func CopySliceFunc[T any](slice []T, f func(T) T) (clone []T) {
 	return clone
 }
 
+func CopyMapFunc[T any](mymap map[string]T, f func(T) T) (clone map[string]T) {
+	clone = make(map[string]T)
+	for k, v := range mymap {
+		clone[k] = f(v)
+	}
+	return clone
+}
+
 func CopyPointer[T any](a *T) *T {
 	if a == nil {
 		return nil

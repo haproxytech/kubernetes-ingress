@@ -89,3 +89,4 @@ allowed:
   - runnable
   - statx
   - unparsable
+  - haproxytech

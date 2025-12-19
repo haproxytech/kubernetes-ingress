@@ -37,6 +37,7 @@ import (
 	k8ssync "github.com/haproxytech/kubernetes-ingress/pkg/k8s/sync"
 	"github.com/haproxytech/kubernetes-ingress/pkg/metrics"
 	"github.com/haproxytech/kubernetes-ingress/pkg/route"
+	rutracker "github.com/haproxytech/kubernetes-ingress/pkg/runtime-update-tracker"
 	"github.com/haproxytech/kubernetes-ingress/pkg/status"
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
@@ -134,6 +135,7 @@ func (c *HAProxyController) updateHAProxy() {
 	defer func() {
 		c.haproxy.APIDisposeTransaction()
 		instance.Reset()
+		rutracker.GetRuntimeUpdateTracker().Reset()
 	}()
 	// First log here that will contain the "transactionID" field (added in APIStartTransaction)
 	// All subsequent log line will contain the "transactionID" field.

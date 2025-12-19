@@ -2,13 +2,13 @@ package api
 
 import (
 	"errors"
-	"fmt"
 	"strconv"
 	"strings"
 
 	"github.com/haproxytech/client-native/v6/models"
 	"github.com/haproxytech/client-native/v6/runtime"
 
+	"github.com/haproxytech/kubernetes-ingress/pkg/controller/constants"
 	"github.com/haproxytech/kubernetes-ingress/pkg/metrics"
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
@@ -116,49 +116,6 @@ func (c *clientNative) runRaw(runtime runtime.Runtime, sb strings.Builder, backe
 	return nil
 }
 
-func (c *clientNative) SetMapContent(mapFile string, payload []string) error {
-	var mapVer, mapPath string
-	pmm := metrics.New()
-	runtime, err := c.nativeAPI.Runtime()
-	if err != nil {
-		return err
-	}
-	mapVer, err = runtime.PrepareMap(mapFile)
-	if err != nil {
-		if strings.HasPrefix(err.Error(), "maps dir doesn't exists") {
-			err = ErrMapNotFound
-		}
-		err = fmt.Errorf("error preparing map file: %w", err)
-		return err
-	}
-	mapPath, err = runtime.GetMapsPath(mapFile)
-	if err != nil {
-		err = fmt.Errorf("error getting map path: %w", err)
-		return err
-	}
-	for i := range payload {
-		_, err = runtime.ExecuteRaw(fmt.Sprintf("add map @%s %s <<\n%s\n", mapVer, mapPath, payload[i]))
-		pmm.UpdateRuntimeMetrics(metrics.ObjectMap, err)
-		if err != nil {
-			err = fmt.Errorf("error loading map payload: %w", err)
-			return err
-		}
-	}
-	err = runtime.CommitMap(mapVer, mapFile)
-	if err != nil {
-		err = fmt.Errorf("error committing map file: %w", err)
-	}
-	return err
-}
-
-func (c *clientNative) GetMap(mapFile string) (*models.Map, error) {
-	runtime, err := c.nativeAPI.Runtime()
-	if err != nil {
-		return nil, err
-	}
-	return runtime.GetMap(mapFile)
-}
-
 // SyncBackendSrvs syncs states and addresses of a backend servers with corresponding endpoints.
 func (c *clientNative) SyncBackendSrvs(backend *store.RuntimeBackend) error {
 	logger := utils.GetLogger()
@@ -171,8 +128,6 @@ func (c *clientNative) SyncBackendSrvs(backend *store.RuntimeBackend) error {
 	logger.Tracef("[RUNTIME] [BACKEND] [SERVER] backend %s: list of servers %+v", backend.Name, haproxySrvs)
 	logger.Tracef("[RUNTIME] [BACKEND] [SERVER] backend %s: list of endpoints %+v", backend.Name, endpoints)
 	// Disable stale entries from HAProxySrvs
-	// and provide list of Disabled Srvs
-	var disabled []*store.HAProxySrv
 	for i, srv := range haproxySrvs {
 		srvEndpoint := store.RuntimeEndpoint{Address: srv.Address, Port: srv.Port}
 		if _, ok := endpoints[srvEndpoint]; ok {
@@ -181,33 +136,30 @@ func (c *clientNative) SyncBackendSrvs(backend *store.RuntimeBackend) error {
 			haproxySrvs[i].Address = ""
 			haproxySrvs[i].Port = 1
 			haproxySrvs[i].Modified = true
-			disabled = append(disabled, srv)
 		}
-	}
-
-	// Configure new Endpoints in available HAProxySrvs
-	for newEndpoint := range endpoints {
-		if len(disabled) == 0 {
-			break
-		}
-		disabled[0].Address = newEndpoint.Address
-		disabled[0].Port = newEndpoint.Port
-		disabled[0].Modified = true
-		disabled = disabled[1:]
-		delete(endpoints, newEndpoint)
 	}
 
 	logger.Tracef("[RUNTIME] [BACKEND] [SERVER] backend %s: list of servers after treatment  %+v", backend.Name, haproxySrvs)
 	logger.Tracef("[RUNTIME] [BACKEND] [SERVER] backend %s: list of endpoints after treatment  %+v", backend.Name, endpoints)
 
+	// Add new servers if needed
+	// - if a server with the same IP/PORT is found in MAINT, re-use it
+	// - if not add a server through runtime
+	errNew := c.SyncNewServers(backend, endpoints)
+	if errNew != nil {
+		backend.DynUpdateFailed = true
+		return errNew
+	}
+
 	// Dynamically updates HAProxy backend servers  with HAProxySrvs content
+	// Updates the addresses and put them in MAINT or READY
 	runtimeServerData := make([]RuntimeServerData, 0, len(haproxySrvs))
 	for _, srv := range haproxySrvs {
-		if !srv.Modified {
+		if !srv.Modified || srv.Deleted {
 			continue
 		}
 		if srv.Address == "" {
-			logger.Tracef("[RUNTIME] [BACKEND] [SERVER] [SOCKET] backend %s: server '%s' changed status to %v", backend.Name, srv.Name, "maint")
+			logger.Debugf("[RUNTIME] [BACKEND] [SERVER] [SOCKET] backend %s: server '%s' changed status to %v", backend.Name, srv.Name, "maint")
 			runtimeServerData = append(runtimeServerData, RuntimeServerData{
 				BackendName: backend.Name,
 				ServerName:  srv.Name,
@@ -216,7 +168,7 @@ func (c *clientNative) SyncBackendSrvs(backend *store.RuntimeBackend) error {
 				State:       "maint",
 			})
 		} else {
-			logger.Tracef("[RUNTIME] [BACKEND] [SERVER] [SOCKET] backend %s: server '%s': addr '%s' changed status to %v", backend.Name, srv.Name, srv.Address, "ready")
+			logger.Debugf("[RUNTIME] [BACKEND] [SERVER] [SOCKET] backend %s: server '%s': addr '%s' changed status to %v", backend.Name, srv.Name, srv.Address, "ready")
 			runtimeServerData = append(runtimeServerData, RuntimeServerData{
 				BackendName: backend.Name,
 				ServerName:  srv.Name,
@@ -231,6 +183,125 @@ func (c *clientNative) SyncBackendSrvs(backend *store.RuntimeBackend) error {
 		backend.DynUpdateFailed = true
 		return err
 	}
+
+	// Last, try to delete the MAINT servers
+	err = c.DeleteMaintServers(backend)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// DeleteMaintServers will delete the servers in MAINT in backend.HAProxySrvs through the runtime
+// It might fail, it's normal
+//
+//	Delete a removable server attached to the backend <backend>. A removable
+//
+// server is the server which satisfies all of these conditions :
+// - not referenced by other configuration elements
+// - must already be in maintenance (see "disable server")
+// - must not have any active or idle connections
+// If any of these conditions is not met, the command will fail.
+// The runtime commands status are stored in the RuntimeUpdateTracker
+func (c *clientNative) DeleteMaintServers(backend *store.RuntimeBackend) error {
+	for _, server := range backend.HAProxySrvs {
+		if server.Address == "" {
+			err := c.BackendServerRuntimeDelete(backend.Name, server.Name)
+			if err == nil {
+				server.Deleted = true
+			}
+		}
+	}
+	return nil
+}
+
+// reusableMaintServers lists MAINT servers still present in the running process.
+func reusableMaintServers(srvs map[string]*store.HAProxySrv) map[string]*store.HAProxySrv {
+	reusable := make(map[string]*store.HAProxySrv)
+	for name, srv := range srvs {
+		if srv.Address == "" && !srv.Deleted {
+			reusable[name] = srv
+		}
+	}
+	return reusable
+}
+
+// SyncNewServers takes care of new addresses (= new servers) on a backend
+// - if a server with the same IP/PORT is found in MAINT, re-use it
+// - if not add a server through runtime
+// newAddresses contains the addresses that are added
+// backend contains the current state of the runtime backend
+// backend.HAProxySrvs is updated with the new/updated servers
+// - new if no maint one was found
+// - updated from maint to ready if a maint was found
+// The runtime commands status are stored in the RuntimeUpdateTracker and a reload will be issued if the command fails (for add/update, not for delete as deletion failure is normal)
+func (c *clientNative) SyncNewServers(backend *store.RuntimeBackend, endpoints store.RuntimeEndpoints) error {
+	haproxySrvs := backend.HAProxySrvs
+	if haproxySrvs == nil {
+		haproxySrvs = make(map[string]*store.HAProxySrv)
+	}
+
+	disabledSrvNames := reusableMaintServers(backend.HAProxySrvs)
+
+	cnBackend, err := c.BackendGet(backend.Name)
+	if err != nil {
+		// Backend already removed from the config: nothing to add servers to.
+		utils.GetLogger().Debugf("backend %s: %v, skipping runtime server creation", backend.Name, err)
+		return nil
+	}
+	config, err := c.nativeAPI.Configuration()
+	if err != nil {
+		return err
+	}
+	_, sectionDefaults, err := config.GetDefaultsSection(constants.DefaultsSectionName, c.activeTransaction)
+	if err != nil {
+		return err
+	}
+	var defaultServer *models.DefaultServer
+	if sectionDefaults != nil {
+		defaultServer = sectionDefaults.DefaultServer
+	}
+
+	for newRuntimeEndpoint := range endpoints {
+		// First check if a server already exists in MAINT, then re-use it and set it to READY
+		newSrvName := newRuntimeEndpoint.ComputeServerName()
+
+		if disabledSrv, ok := disabledSrvNames[newSrvName]; ok {
+			// We found a MAINT server, re-use it and set it to READY
+			utils.GetLogger().Debugf("backend %s newAddress %s - Re-using server %s and set it to ready", backend.Name, newRuntimeEndpoint.Address, newSrvName)
+			delete(disabledSrvNames, newSrvName)
+			// Set those servers to ready
+			disabledSrv.Modified = true
+			disabledSrv.Address = newRuntimeEndpoint.Address
+			disabledSrv.Port = int64(newRuntimeEndpoint.Port)
+			continue
+		}
+
+		// no server in MAINT found, we create a new one
+		srv := models.Server{
+			Name:         newSrvName,
+			Port:         utils.PtrInt64(newRuntimeEndpoint.Port),
+			Address:      newRuntimeEndpoint.Address,
+			ServerParams: models.ServerParams{Maintenance: "disabled"},
+		}
+
+		utils.GetLogger().Debugf("backend %s newAddress %s - Creating server %s ", backend.Name, newRuntimeEndpoint.Address, newSrvName)
+		// RUNTIME SOCKET call
+		errAPI := c.BackendServerRuntimeCreate(cnBackend, srv, defaultServer)
+		if errAPI == nil {
+			// If and error occurs, the runtime command status Failure is stored in RuntimeUpdateTracker and a reload will be issued
+			haproxySrv := &store.HAProxySrv{
+				Name:     srv.Name,
+				Address:  newRuntimeEndpoint.Address,
+				Modified: true,
+				Port:     newRuntimeEndpoint.Port,
+			}
+			haproxySrvs[srv.Name] = haproxySrv
+		}
+	}
+
+	backend.HAProxySrvs = haproxySrvs
 	return nil
 }
 

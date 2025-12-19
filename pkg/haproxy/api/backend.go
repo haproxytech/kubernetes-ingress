@@ -3,8 +3,6 @@ package api
 import (
 	"errors"
 	"fmt"
-	"slices"
-	"strings"
 
 	parser "github.com/haproxytech/client-native/v6/config-parser"
 	"github.com/haproxytech/client-native/v6/models"
@@ -111,122 +109,6 @@ func (c *clientNative) BackendRuleDeleteAll(backend string) {
 	}
 }
 
-func (c *clientNative) BackendServerCreateOrUpdate(backendName string, data models.Server) error {
-	backend, exists := c.backends[backendName]
-	if !exists {
-		return fmt.Errorf("can't create server for unexisting backend %s", backendName)
-	}
-	if data.Name == "" {
-		return fmt.Errorf("can't create unnamed server in backend %s", backendName)
-	}
-
-	if backend.Servers == nil {
-		backend.Servers = map[string]models.Server{}
-	}
-	backend.Servers[data.Name] = data
-	c.backends[backendName] = backend
-	return nil
-}
-
-func (c *clientNative) BackendServerCreate(backendName string, data models.Server) error {
-	backend, exists := c.backends[backendName]
-	if !exists {
-		return fmt.Errorf("can't create server for unexisting backend %s", backendName)
-	}
-	if data.Name == "" {
-		return fmt.Errorf("can't create unnamed server in backend %s", backendName)
-	}
-
-	_, exists = backend.Servers[data.Name]
-	if exists {
-		return fmt.Errorf("can't create already existing server %s in backend %s", data.Name, backendName)
-	}
-	if backend.Servers == nil {
-		backend.Servers = map[string]models.Server{}
-	}
-	backend.Servers[data.Name] = data
-	c.backends[backendName] = backend
-	return nil
-}
-
-func (c *clientNative) BackendServerEdit(backendName string, data models.Server) error {
-	backend, exists := c.backends[backendName]
-	if !exists {
-		return fmt.Errorf("can't edit server for unexisting backend %s, %w", backendName, ErrNotFound)
-	}
-	if data.Name == "" {
-		return fmt.Errorf("can't edit unnamed server in backend %s", backendName)
-	}
-
-	if backend.Servers == nil {
-		return fmt.Errorf("can't edit unexisting server %s in backend %s, %w", data.Name, backendName, ErrNotFound)
-	}
-	_, exists = backend.Servers[data.Name]
-	if !exists {
-		return fmt.Errorf("can't edit unexisting server %s in backend %s, %w", data.Name, backendName, ErrNotFound)
-	}
-	backend.Servers[data.Name] = data
-	c.backends[backendName] = backend
-	return nil
-}
-
-func (c *clientNative) BackendServerDelete(backendName string, serverName string) error {
-	backend, exists := c.backends[backendName]
-	if !exists {
-		return fmt.Errorf("can't edit server for unexisting backend %s", backendName)
-	}
-	if serverName == "" {
-		return fmt.Errorf("can't edit unnamed server in backend %s", backendName)
-	}
-
-	_, exists = backend.Servers[serverName]
-	if !exists {
-		return fmt.Errorf("can't delete unexisting server %s in backend %s", serverName, backendName)
-	}
-	delete(backend.Servers, serverName)
-	c.backends[backendName] = backend
-	return nil
-}
-
-func (c *clientNative) BackendServerGet(serverName, backendName string) (*models.Server, error) {
-	backend, exists := c.backends[backendName]
-	if !exists {
-		return nil, fmt.Errorf("can't get server %s for unexisting backend %s", serverName, backendName)
-	}
-	if serverName == "" {
-		return nil, fmt.Errorf("can't get unnamed server in backend %s", backendName)
-	}
-
-	server, exists := backend.Servers[serverName]
-	if !exists {
-		return nil, nil //nolint:golint,nilnil
-	}
-	return &server, nil
-}
-
-func (c *clientNative) BackendServersGet(backendName string) (models.Servers, error) {
-	backend, exists := c.backends[backendName]
-	if !exists {
-		return nil, fmt.Errorf("can't get server for unexisting backend %s", backendName)
-	}
-	servers := models.Servers(make([]*models.Server, len(backend.Servers)))
-	i := 0
-	for _, server := range backend.Servers {
-		servers[i] = &server
-		i++
-	}
-	slices.SortFunc(servers, func(a, b *models.Server) int {
-		lenDiff := len(a.Name) - len(b.Name)
-		if lenDiff != 0 {
-			return lenDiff
-		}
-		return strings.Compare(a.Name, b.Name)
-	})
-	return servers, nil
-}
-
-// This function tests if a backend is existing
-// Check if you're not rather looking for BackendUsed function.
 func (c *clientNative) BackendExists(backendName string) (exists bool) {
 	_, exists = c.backends[backendName]
 	return exists

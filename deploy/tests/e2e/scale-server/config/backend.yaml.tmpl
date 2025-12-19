@@ -1,0 +1,17 @@
+apiVersion: ingress.v3.haproxy.org/v3
+kind: Backend
+metadata:
+  name: be-test
+spec:
+  name: test-be
+  abortonclose: "enabled"
+  accept_invalid_http_response: "enabled"
+  balance:
+    algorithm: "roundrobin"
+  default_server:
+    check: "enabled"
+    alpn: r6b0UW
+    inter: 150
+    {{ if .BackendCRWithReload }}
+    log-bufsize: 77   # not accepted on dynamic server, should trigger a reload
+    {{ end }}

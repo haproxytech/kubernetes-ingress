@@ -112,9 +112,6 @@ func ruleListsMatch(b *models.Backend, hdrName, hdrValue, healthURI, logAddr str
 	if !hasFilterType(b.FilterList, "compression") {
 		return false
 	}
-	if !hasUseServer(b.ServerSwitchingRuleList, "SRV_1") {
-		return false
-	}
 	if !hasStickPattern(b.StickRuleList, "src") {
 		return false
 	}
@@ -181,15 +178,6 @@ func hasLogAddress(list models.LogTargets, addr string) bool {
 func hasFilterType(list models.Filters, t string) bool {
 	for _, f := range list {
 		if f != nil && f.Type == t {
-			return true
-		}
-	}
-	return false
-}
-
-func hasUseServer(list models.ServerSwitchingRules, target string) bool {
-	for _, r := range list {
-		if r != nil && r.TargetServer == target {
 			return true
 		}
 	}

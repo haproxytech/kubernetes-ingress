@@ -147,6 +147,24 @@ func (t *Test) Delete(path string) error {
 	return err
 }
 
+func (t *Test) DeleteInNamespace(path string, namespace string, tmplData interface{}) error {
+	var err error
+	var file []byte
+	if tmplData != nil {
+		if path, err = t.processTemplate(path, tmplData); err != nil {
+			return err
+		}
+	}
+	if file, err = os.ReadFile(path); err != nil {
+		return fmt.Errorf("error reading yaml file: %w", err)
+	}
+	// kubectl -n $NS apply -f -
+	if out, errApply := t.execute(string(file), "kubectl", "-n", namespace, "delete", "-f", "-"); errApply != nil {
+		return fmt.Errorf("error applying yaml file: %s", out)
+	}
+	return nil
+}
+
 func (t *Test) TearDown() error {
 	if devMode {
 		return nil

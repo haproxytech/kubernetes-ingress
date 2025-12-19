@@ -81,9 +81,11 @@ func TestGetRuntimeBackend_ExternalName_IgnoresOrphanEndpointSlices(t *testing.T
 
 	require.NoError(t, err)
 	require.Len(t, backend.HAProxySrvs, 1)
-	assert.Equal(t, "api1.example.com", backend.HAProxySrvs[0].Address)
-	assert.Equal(t, "SRV_1", backend.HAProxySrvs[0].Name)
-	assert.Equal(t, int64(80), backend.HAProxySrvs[0].Port)
+	srv, ok := backend.HAProxySrvs[externalNameServer]
+	require.True(t, ok, "external name backend must expose exactly one fixed server")
+	// The port should come from the ExternalName service definition, not the orphan EndpointSlice.
+	assert.Equal(t, "api1.example.com", srv.Address)
+	assert.Equal(t, int64(80), srv.Port)
 }
 
 // TestGetRuntimeBackend_ExternalName_NoRuntime verifies that an ExternalName
@@ -116,8 +118,10 @@ func TestGetRuntimeBackend_ExternalName_NoRuntime(t *testing.T) {
 
 	require.NoError(t, err)
 	require.Len(t, backend.HAProxySrvs, 1)
-	assert.Equal(t, "api.example.com", backend.HAProxySrvs[0].Address)
-	assert.Equal(t, int64(443), backend.HAProxySrvs[0].Port)
+	srv, ok := backend.HAProxySrvs[externalNameServer]
+	require.True(t, ok, "external name backend must expose exactly one fixed server")
+	assert.Equal(t, "api.example.com", srv.Address)
+	assert.Equal(t, int64(443), srv.Port)
 }
 
 // TestGetRuntimeBackend_ClusterIP_MatchingPort verifies that a regular ClusterIP

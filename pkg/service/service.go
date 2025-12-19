@@ -38,7 +38,6 @@ import (
 	"github.com/haproxytech/kubernetes-ingress/pkg/rules/httprequests"
 	"github.com/haproxytech/kubernetes-ingress/pkg/rules/httpresponses"
 	logtargets "github.com/haproxytech/kubernetes-ingress/pkg/rules/log_targets"
-	"github.com/haproxytech/kubernetes-ingress/pkg/rules/serverswitching"
 	"github.com/haproxytech/kubernetes-ingress/pkg/rules/stick"
 	tcprequestrules "github.com/haproxytech/kubernetes-ingress/pkg/rules/tcp_request_rules"
 	"github.com/haproxytech/kubernetes-ingress/pkg/rules/tcpchecks"
@@ -180,7 +179,8 @@ func (s *Service) HandleBackend(storeK8s store.K8s, client api.HAProxyClient, a 
 	// HTTP after responses
 	httpafterresponses.PopulateBackend(client, newBackend.BackendBase.Name, newBackend.HTTPAfterResponseRuleList)
 	// Server switching
-	serverswitching.PopulateBackend(client, newBackend.BackendBase.Name, newBackend.ServerSwitchingRuleList)
+	// We DO NOT populate the server switching rules. The server names are dynamic and we can not have a switching rule with a hard coded name like "SRV_1"
+	// server s31e84e9bff56a6100f8d388594cecb61ad8e4ae8d27be3987c7c5d696234134d 127.0.0.1:6061 enabled
 	// Stick rules
 	stick.PopulateBackend(client, newBackend.BackendBase.Name, newBackend.StickRuleList)
 	// TCP requests

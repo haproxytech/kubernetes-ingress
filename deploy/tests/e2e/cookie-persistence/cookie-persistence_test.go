@@ -23,6 +23,7 @@ import (
 
 	parser "github.com/haproxytech/client-native/v6/config-parser"
 	"github.com/haproxytech/client-native/v6/config-parser/options"
+	"github.com/haproxytech/client-native/v6/config-parser/types"
 
 	"github.com/haproxytech/kubernetes-ingress/deploy/tests/e2e"
 	"github.com/stretchr/testify/suite"
@@ -146,7 +147,7 @@ func (suite *CookiePersistenceTestSuite) Test_CookiePersistence_No_Dynamic() {
 		cookieOK := false
 		if len(cookies) != 0 {
 			for _, cookie := range cookies {
-				if strings.Contains(cookie, "mycookie") && strings.Contains(cookie, "SRV_1") {
+				if strings.Contains(cookie, "mycookie") && strings.Contains(cookie, "s") {
 					cookieOK = true
 					break
 				}
@@ -167,9 +168,14 @@ func (suite *CookiePersistenceTestSuite) Test_CookiePersistence_No_Dynamic() {
 	p, err := parser.New(options.Reader(reader))
 	suite.Require().NoError(err, "Could not get Haproxy config parser")
 
-	// Check that the server line
+	// Check the server line
 	beName := suite.test.GetNS() + "_svc_http-echo_http"
-	serverName := "SRV_1"
+	// Get server names
+	data, err := p.Get("backend", beName, "server", false)
+	servers, ok := data.([]types.Server)
+	suite.Require().True(ok, "Could not get backends servers")
+	suite.Require().Len(servers, 1)
+	serverName := servers[0].Name
 
 	suite.checkServerCookie(p, beName, serverName)
 
@@ -246,7 +252,12 @@ func (suite *CookiePersistenceTestSuite) Test_CookiePersistence_Switch() {
 	p, err := parser.New(options.Reader(reader))
 	suite.Require().NoError(err, "Could not get Haproxy config parser")
 	beName := suite.test.GetNS() + "_svc_http-echo_http"
-	serverName := "SRV_1"
+	// Get server names
+	data, err := p.Get("backend", beName, "server", false)
+	servers, ok := data.([]types.Server)
+	suite.Require().True(ok, "Could not get backends servers")
+	suite.Require().Len(servers, 1)
+	serverName := servers[0].Name
 
 	err = suite.checkServerNoCookie(p, beName, serverName)
 	suite.Require().NoError(err, "check server no cookie")
@@ -268,7 +279,7 @@ func (suite *CookiePersistenceTestSuite) Test_CookiePersistence_Switch() {
 		cookieOK := false
 		if len(cookies) != 0 {
 			for _, cookie := range cookies {
-				if strings.Contains(cookie, "mycookie") && strings.Contains(cookie, "SRV_1") {
+				if strings.Contains(cookie, "mycookie") && strings.Contains(cookie, "s") {
 					cookieOK = true
 					break
 				}

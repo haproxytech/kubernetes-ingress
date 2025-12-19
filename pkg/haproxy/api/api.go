@@ -17,6 +17,7 @@ import (
 	runtimeoptions "github.com/haproxytech/client-native/v6/runtime/options"
 
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/instance"
+	rutracker "github.com/haproxytech/kubernetes-ingress/pkg/runtime-update-tracker"
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
 )
@@ -50,6 +51,7 @@ type HAProxyClient interface { //nolint:interfacebloat
 	BackendServerDeleteAll(backendName string) error
 	BackendServerCreate(backendName string, data models.Server) error
 	BackendServerCreateOrUpdate(backendName string, data models.Server) error
+	BackendServerRuntimeCreate(backend *models.Backend, data models.Server, sectionDefaults *models.DefaultServer) error
 	BackendServerEdit(backendName string, data models.Server) error
 	BackendServerDelete(backendName string, serverName string) error
 	BackendServerGet(serverName, backendNa string) (*models.Server, error)
@@ -405,6 +407,7 @@ func (c *clientNative) APIFinalCommitTransaction() error {
 	for _, deletedBackend := range deletedBackends {
 		instance.Reload("backend '%s' deleted", deletedBackend)
 	}
+
 	// ... then we parse the backends to take decisions.
 	for backendName, backend := range c.backends {
 		errs.Add(c.processBackend(&backend.Backend, configuration))
@@ -427,6 +430,13 @@ func (c *clientNative) APIFinalCommitTransaction() error {
 		c.backends[backendName] = backend
 	}
 
+	// Delete all servers in MAINT
+	err = c.BackendServersDeleteAllInMaint()
+	if err != nil {
+		// Only logs error
+		logger.Error(err)
+	}
+
 	hash, err := c.computeConfigurationHash(configuration)
 	if err != nil {
 		return err
@@ -439,6 +449,7 @@ func (c *clientNative) APIFinalCommitTransaction() error {
 		return errs.Result()
 	}
 	_, err = configuration.CommitTransaction(c.activeTransaction)
+
 	logger.Error(errs.Result())
 	return err
 }
@@ -478,15 +489,35 @@ func (c *clientNative) processServers(backendName string, configuration configur
 	for _, server := range servers {
 		errCreateServer := configuration.CreateServer("backend", backendName, server, c.activeTransaction, 0)
 		if errCreateServer != nil {
-			errs.Add(configuration.EditServer(server.Name, "backend", backendName, server, c.activeTransaction, 0))
+			errEditServer := configuration.EditServer(server.Name, "backend", backendName, server, c.activeTransaction, 0)
+			if errEditServer != nil {
+				errs.Add(errEditServer)
+			}
 		} else {
 			// Server has been created, a reload is required
 			// It covers the case where there was a failure, scaleHAProxySrvs has already been called in a previous loop
 			// but the sync failed (wrong config)
 			// When the config is fixed, servers will be created
-			instance.Reload("server '%s' created in backend '%s'", server.Name, backendName)
+
+			// To know if a Reload is needed, we need to check if some runtime commands were performed
+			// if all were successful, then no reload is necessary
+			tracker := rutracker.GetRuntimeUpdateTracker()
+			status := tracker.GlobalStatusForServer(backendName, server.Name)
+			if status == rutracker.StatusSuccess {
+				continue
+			}
+			instance.Reload("server '%s' created in backend '%s' . runtime status [%s]", server.Name, backendName, status)
 		}
 	}
+	// serversToDelete, _ := c.BackendServersToDeleteGet(backendName)
+	// for srvToDelete := range serversToDelete {
+	// 	errDeleteServer := configuration.DeleteServer(srvToDelete, "backend", backendName, c.activeTransaction, 0)
+	// 	if errDeleteServer != nil {
+	// 		errs.Add(errDeleteServer)
+	// 	}
+	// 	// No reload due to server deletion, servers are in MAINT, no need
+	// 	// next time a reload occurs, they will be deleted
+	// }
 	return errs
 }
 

@@ -34,10 +34,6 @@ spec:
       facility: local0
   filter_list:
     - type: compression
-  server_switching_rule_list:
-    - target_server: SRV_1
-      cond: if
-      cond_test: is_admin
   stick_rule_list:
     - type: "on"
       pattern: src
