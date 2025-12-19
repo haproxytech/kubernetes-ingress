@@ -420,9 +420,6 @@ func (k k8s) IsGatewayAPIInstalled(gatewayControllerName string) (installed bool
 	}
 
 	if gatewayCrd.Name == "" {
-		if gatewayControllerName != "" {
-			logger.Errorf("No gateway api is installed, please install experimental yaml version %s", GATEWAY_API_VERSION)
-		}
 		return false
 	}
 
