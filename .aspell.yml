@@ -63,3 +63,4 @@ allowed:
   - params
   - configmap
   - junit
+  - healthz

@@ -34,10 +34,10 @@ var mapFrontendAnnotations = map[string]string{
 }
 
 var managedFrontends = map[string]struct{}{
-	FRONTEND_HTTP:    {},
-	FRONTEND_HTTPS:   {},
-	FRONTEND_STATS:   {},
-	FRONTEND_HEALTHZ: {},
+	FRONTEND_HTTP:  {},
+	FRONTEND_HTTPS: {},
+	FRONTEND_STATS: {},
+	// FRONTEND_HEALTHZ: {},
 }
 
 // Update handles the creation, modification, or removal of the frontends based on the frontend custom resource
@@ -85,7 +85,7 @@ func (handler *Frontend) manageFrontend(crFrontendAnnotationName string,
 	frontendName := mapFrontendAnnotations[crFrontendAnnotationName]
 	frontend, err := h.FrontendGet(frontendName)
 	if err != nil {
-		return
+		return err
 	}
 	differentCRFromAnnotation := (*currentCR != nil && frontendCRFromAnnotation != nil && !frontendCRFromAnnotation.Equal(**currentCR)) // we have a CR and it is different
 	switchToNone := (*currentCR != nil && frontendCRFromAnnotation == nil)                                                              // or now we switch to one
@@ -110,13 +110,13 @@ func (handler *Frontend) manageFrontend(crFrontendAnnotationName string,
 	var frontendToBeMerged *models.Frontend
 	frontendToBeMerged, err = copyFrontend(*copyFrom)
 	if err != nil {
-		return
+		return err
 	}
 
 	// Merge
 	err = mergo.MergeWithOverwrite(frontendToBeMerged, frontend, mergo.WithAppendSlice)
 	if err != nil {
-		return
+		return err
 	}
 	// Keep track of the current state
 	*currentCR = frontendCRFromAnnotation
@@ -126,7 +126,7 @@ func (handler *Frontend) manageFrontend(crFrontendAnnotationName string,
 	if err != nil {
 		err = h.FrontendEditStructured(frontendToBeMerged.FrontendBase.Name, frontendToBeMerged)
 	}
-	return
+	return err
 }
 
 // copyFrontend returns a deep copy of the given frontend.
