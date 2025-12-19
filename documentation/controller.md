@@ -46,11 +46,11 @@ Image can be run with arguments:
 | [`--disable-quic`](#--disable-quic) | `false` |
 | [`--quic-announce-port`](#--quic-announce-port) |  |
 | [`--quic-bind-port`](#--quic-bind-port) |  |
-| [`--disable-writing-only-if-reload`](#--disable-writing-only-if-reload) :construction:(dev) | `false` |
-| [`--input-file`](#--input-file) :construction:(dev) |  |
-| [`--output-file`](#--output-file) :construction:(dev) |  |
+| [`--disable-writing-only-if-reload`](#--disable-writing-only-if-reload) | `false` |
+| [`--input-file`](#--input-file) |  |
+| [`--output-file`](#--output-file) |  |
 | [`--disable-ingress-status-update`](#--disable-ingress-status-update) | `false` |
-| [`--enable-custom-annotations-on-ingress`](#--enable-custom-annotations-on-ingress) :construction:(dev) |  |
+| [`--enable-custom-annotations-on-ingress`](#--enable-custom-annotations-on-ingress) |  |
 
 
 ### `--configmap`
@@ -824,9 +824,6 @@ args:
 
 ### `--disable-writing-only-if-reload`
 
-
-  > :construction: this is only available from next version, currently available in dev build
-
   Disable the delayed writing of files to disk ONLY in case of haproxy reload (= write files to disk even if no reload)
 
 Possible values:
@@ -844,9 +841,6 @@ Example:
 ***
 
 ### `--input-file`
-
-
-  > :construction: this is only available from next version, currently available in dev build
 
   This is the path to a manifest (yaml) of a v1 version to the CRDs to convert to v3.
 Goes with --output-file for the result
@@ -866,9 +860,6 @@ Example:
 ***
 
 ### `--output-file`
-
-
-  > :construction: this is only available from next version, currently available in dev build
 
   This is the path to a manifest (yaml) where to write to the converted v3 CRD from a v1 manifest (see --input-file).
 Goes with --input-file
@@ -908,9 +899,6 @@ Example:
 ***
 
 ### `--enable-custom-annotations-on-ingress`
-
-
-  > :construction: this is only available from next version, currently available in dev build
 
   Enable support for custom annotations on ingress resources.
 Use with caution when using the same annotation on multiple ingresses for same service.
