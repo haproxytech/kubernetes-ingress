@@ -46,6 +46,23 @@ spec:
                 - NET_BIND_SERVICE
             seccompProfile:
               type: RuntimeDefault
+          startupProbe:
+            httpGet:
+              path: /healthz
+              port: 1024
+            failureThreshold: 30
+            periodSeconds: 1
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 1024
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 1024
+            periodSeconds: 5
           ports:
             - name: http
               containerPort: 80
