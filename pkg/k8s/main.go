@@ -86,6 +86,7 @@ type k8s struct {
 	gatewayRestClient      client.Client
 	crsV1                  map[string]CRV1
 	crsV3                  map[string]CRV3
+	crsRegisteredOnStart   map[string]struct{}
 	builtInClient          *k8sclientset.Clientset
 	crClientV1             *crclientsetv1.Clientset
 	crClientV3             *crclientsetv3.Clientset
@@ -137,6 +138,7 @@ func New(osArgs utils.OSArgs, whitelist map[string]struct{}, publishSvc *utils.N
 		apiExtensionsClient:    crdclientset.NewForConfigOrDie(restconfig),
 		crsV1:                  map[string]CRV1{},
 		crsV3:                  map[string]CRV3{},
+		crsRegisteredOnStart:   map[string]struct{}{},
 		whiteListedNS:          getWhitelistedNS(whitelist, osArgs.ConfigMap.Namespace),
 		publishSvc:             publishSvc,
 		podNamespace:           os.Getenv("POD_NAMESPACE"),
@@ -220,6 +222,7 @@ func (k k8s) registerCoreCRV1(cr CRV1) {
 	for _, resource := range resources.APIResources {
 		if resource.Kind == kindName {
 			k.crsV1[groupVersion+" - "+kindName] = cr
+			k.crsRegisteredOnStart[groupVersion+" - "+kindName] = struct{}{}
 			logger.Infof("%s CR defined in API %s", kindName, resources.GroupVersion)
 			break
 		}
@@ -238,6 +241,7 @@ func (k k8s) registerCoreCRV3(cr CRV3) {
 	for _, resource := range resources.APIResources {
 		if resource.Kind == kindName {
 			k.crsV3[groupVersion+" - "+kindName] = cr
+			k.crsRegisteredOnStart[groupVersion+" - "+kindName] = struct{}{}
 			logger.Infof("%s CR defined in API %s", kindName, resources.GroupVersion)
 			break
 		}

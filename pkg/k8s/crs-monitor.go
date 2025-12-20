@@ -56,7 +56,9 @@ func (k k8s) runCRDefinitionsInformer(eventChan chan GroupKind, stop chan struct
 			for _, version := range crd.Spec.Versions {
 				if (version.Name == "v1" && crd.Spec.Group == "ingress.v1.haproxy.org") ||
 					(version.Name == "v3" && crd.Spec.Group == "ingress.v3.haproxy.org") {
-					time.Sleep(time.Second * 5) // a little delay is needed to let CRD API be created
+					if _, ok := k.crsRegisteredOnStart[crd.Spec.Group+" - "+crd.Spec.Names.Kind]; !ok {
+						time.Sleep(time.Second * 5) // a little delay is needed to let CRD API be created
+					}
 					eventChan <- GroupKind{
 						Group: crd.Spec.Group,
 						Kind:  crd.Spec.Names.Kind,
