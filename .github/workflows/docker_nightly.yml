@@ -8,7 +8,7 @@ on:
 jobs:
   main:
     if: ${{ github.repository_owner == 'haproxytech' }}
-    runs-on: ubuntu-latest
+    runs-on: large_runner
     permissions:
       contents: read
       packages: write
