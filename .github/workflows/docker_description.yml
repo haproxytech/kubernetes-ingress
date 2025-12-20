@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 jobs:
   main:
-    runs-on: ubuntu-latest
+    runs-on: large_runner
     env:
       DOCKER_IMAGE: haproxytech/kubernetes-ingress
     steps:
