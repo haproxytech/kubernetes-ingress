@@ -382,8 +382,10 @@ func (k k8s) getConfigMapInformer(eventChan chan k8ssync.SyncDataEvent, factory 
 					Annotations: store.CopyAnnotations(data.Data),
 					Status:      status,
 				}
-				Annotations := store.CopyAnnotations(data.ObjectMeta.Annotations)
-				maps.Copy(item.Annotations, Annotations)
+				if k.cmMain.Namespace == item.Namespace && k.cmMain.Name == item.Name {
+					annotations := store.CopyAnnotations(data.ObjectMeta.Annotations)
+					maps.Copy(item.Annotations, annotations)
+				}
 
 				logIncomingK8sEvent(logger, item, data.UID, data.ResourceVersion)
 				eventChan <- ToSyncDataEvent(item, item, data.UID, data.ResourceVersion)
@@ -422,9 +424,10 @@ func (k k8s) getConfigMapInformer(eventChan chan k8ssync.SyncDataEvent, factory 
 					Annotations: store.CopyAnnotations(data2.Data),
 					Status:      status,
 				}
-				Annotations := store.CopyAnnotations(data2.ObjectMeta.Annotations)
-				maps.Copy(item2.Annotations, Annotations)
-
+				if k.cmMain.Namespace == item2.Namespace && k.cmMain.Name == item2.Name {
+					annotations := store.CopyAnnotations(data2.ObjectMeta.Annotations)
+					maps.Copy(item2.Annotations, annotations)
+				}
 				logIncomingK8sEvent(logger, item2, data2.UID, data2.ResourceVersion)
 				eventChan <- ToSyncDataEvent(item2, item2, data2.UID, data2.ResourceVersion)
 			},
@@ -433,7 +436,7 @@ func (k k8s) getConfigMapInformer(eventChan chan k8ssync.SyncDataEvent, factory 
 	logger.Error(err)
 
 	// Use TransformFunc to modify/filter objects before passing them to handlers
-	err = informer.SetTransform(k8stransform.TransformSecret)
+	err = informer.SetTransform(k8stransform.TransformConfigmap)
 	logger.Error(err)
 	return informer
 }
