@@ -9,6 +9,7 @@ allowed:
   - Github
   - Gitlab
   - env
+  - errorfile
   - failsafe
   - golang
   - mkdir
