@@ -304,9 +304,7 @@ func (k *K8s) EventConfigMap(ns *Namespace, data *ConfigMap) (updateRequired boo
 	case DELETED:
 		cm.Loaded = false
 		cm.Annotations = map[string]string{}
-		if !cm.Empty() {
-			updateRequired = true
-		}
+		updateRequired = true
 		logger.Debugf("configmap '%s/%s' deleted", cm.Namespace, cm.Name)
 	}
 	return updateRequired
