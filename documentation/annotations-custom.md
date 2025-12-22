@@ -49,6 +49,22 @@ Not really, but we always need to keep in mind that adding/modifying annotation 
 
 ## Examples
 
+### Controller Arguments
+
+Rules are defined in a Custom Resource Definition (CRD).
+
+in order to use them, new controller argument needs to be specified
+
+```txt
+--custom-validation-rules=<namepace>/<object name>
+```
+
+in the examples will use
+
+```txt
+--custom-validation-rules=haproxy-controller/example-validationrules
+```
+
 ### CRD
 
 We need to write a CRD where we will define all custom annotations.
@@ -352,7 +368,7 @@ If you want to create a annotation for specific frontend use `resources` as show
 apiVersion: ingress.v3.haproxy.org/v3
 kind: ValidationRules
 metadata:
-  name: custom-validation-rules
+  name: example-validationrules
   namespace: haproxy-controller
 spec:
   prefix: "haproxy.org"
@@ -366,7 +382,7 @@ spec:
       rule: "value >= 10 && value <= 1000000"
 ```
 
-## Where can custom annotations can be defined ?
+## Where can custom annotations be defined ?
 
 ### Frontend Annotations
 
