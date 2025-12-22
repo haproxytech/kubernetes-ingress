@@ -47,7 +47,7 @@ func (handler *PatternFiles) Update(k store.K8s, h haproxy.HAProxy, a annotation
 		if !f.inUse {
 			err = handler.files.deleteFile(name)
 			if err != nil {
-				logger.Errorf("failed deleting atternfile '%s': %s", name, err)
+				logger.Errorf("failed deleting patternfile '%s': %s", name, err)
 			}
 			continue
 		}

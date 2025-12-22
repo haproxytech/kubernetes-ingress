@@ -38,6 +38,7 @@ import (
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
 	crdclientset "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/apimachinery/pkg/types"
 
 	errGw "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -101,6 +102,7 @@ type k8s struct {
 	initialSyncPeriod      time.Duration
 	cacheResyncPeriod      time.Duration
 	disableSvcExternalName bool // CVE-2021-25740
+	cmMain                 types.NamespacedName
 }
 
 func New(osArgs utils.OSArgs, whitelist map[string]struct{}, publishSvc *utils.NamespaceValue) K8s { //nolint:ireturn
@@ -150,6 +152,10 @@ func New(osArgs utils.OSArgs, whitelist map[string]struct{}, publishSvc *utils.N
 		gatewayClient:          gatewayClient,
 		gatewayRestClient:      gatewayRestClient,
 		crdClient:              crdClient,
+		cmMain: types.NamespacedName{
+			Name:      osArgs.ConfigMap.Name,
+			Namespace: osArgs.ConfigMap.Namespace,
+		},
 	}
 
 	// ingress/v1 is deprecated
