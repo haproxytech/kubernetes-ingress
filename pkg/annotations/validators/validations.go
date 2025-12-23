@@ -86,6 +86,7 @@ func Get() (*Validator, error) {
 		validator = Validator{
 			compiledRules:     make(map[string]cel.Program),
 			templateVariables: make(map[string]any),
+			prefixes:          annotationsPrefixes,
 		}
 		validator.templateVariables["POD_NAME"] = os.Getenv("POD_NAME")
 		validator.templateVariables["POD_NAMESPACE"] = os.Getenv("POD_NAMESPACE")
