@@ -49,19 +49,19 @@ spec:
           startupProbe:
             httpGet:
               path: /healthz
-              port: 1024
+              port: 1042
             failureThreshold: 30
             periodSeconds: 1
           livenessProbe:
             httpGet:
               path: /healthz
-              port: 1024
+              port: 1042
             initialDelaySeconds: 5
             periodSeconds: 5
           readinessProbe:
             httpGet:
               path: /healthz
-              port: 1024
+              port: 1042
             periodSeconds: 5
           ports:
             - name: http
@@ -70,6 +70,8 @@ spec:
               containerPort: 443
             - name: stat
               containerPort: 31024
+            - name: healthz
+              containerPort: 31042
             - name: tcp1
               containerPort: 32766
             - name: tcp2
@@ -116,6 +118,10 @@ spec:
       port: 31024
       targetPort: 31024
       nodePort: 31024
+    - name: healthz
+      port: 31042
+      targetPort: 31042
+      nodePort: 31042
     - name: tcp1
       port: 32766
       targetPort: 32766
