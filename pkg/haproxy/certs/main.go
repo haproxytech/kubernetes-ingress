@@ -161,9 +161,6 @@ func (c *certs) AddSecret(secret *store.Secret, secretType SecretType) (certPath
 }
 
 func (c *certs) updateRuntime(filename string, payload []byte, isCa bool) (bool, error) {
-	// if instance.NeedReload() {
-	// 	return false, nil
-	// }
 	// Only 1 transaction in parallel is possible for now in haproxy
 	// Keep this mutex for now to ensure that we perform 1 transaction at a time
 	certType := "cert"
@@ -232,9 +229,6 @@ func (c *certs) updateRuntime(filename string, payload []byte, isCa bool) (bool,
 }
 
 func (c *certs) deleteRuntime(crtList, filename string) error {
-	if instance.NeedReload() {
-		return nil
-	}
 	// Only 1 transaction in parallel is possible for now in haproxy
 	// Keep this mutex for now to ensure that we perform 1 transaction at a time
 	c.mu.Lock()
@@ -318,6 +312,13 @@ func (c *certs) refreshCerts(certs map[string]*cert, certDir string) {
 		// certificate file name should be already in the format: certName.pem
 		certName := strings.Split(filename, ".pem")[0]
 		crt, crtOk := certs[certName]
+		// SKIP temporary file created by renameio
+		// fileName .e2e-tests-https-runtime_haproxy-offload-test.pem2179154433
+		// revisit this, take time to think about another way
+		if certName+".pem" != filename {
+			// This happens with temp files: created by renameio
+			continue
+		}
 		if !crtOk || !crt.inUse {
 			err := c.deleteRuntime(certDir, filename)
 			if err != nil {
@@ -398,18 +399,15 @@ func (c *certs) writeCert(cert *cert, filename string, content []byte, isCa bool
 			cert.updated = true
 		}
 
-		// If the certificate has been updated through the runtime, it needs to be written with the delayed function
-		// to be written on disk before a reload.
-		if cert.updated {
-			fs.AddDelayedFunc(filename, func() {
-				err := renameio.WriteFile(filename, content, 0o666)
-				if err != nil {
-					logger.Error(err)
-					return
-				}
-				utils.GetLogger().Debugf("Delayed writing cert on disk ok [%s] ", filename)
-			})
-		}
+		// In runtime failed or did succeed, it needs to be written on disk.
+		fs.AddDelayedFunc(filename, func() {
+			err := renameio.WriteFile(filename, content, 0o666)
+			if err != nil {
+				logger.Error(err)
+				return
+			}
+			utils.GetLogger().Debugf("Delayed writing cert on disk ok [%s] ", filename)
+		})
 	})
 
 	return nil
