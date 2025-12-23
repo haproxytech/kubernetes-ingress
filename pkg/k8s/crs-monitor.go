@@ -135,7 +135,7 @@ func (k k8s) RunCRSCreationMonitoring(eventChan chan k8ssync.SyncDataEvent, stop
 							crsV3[groupKind.Kind] = NewFrontendCRV3()
 						}
 						if ok {
-							logger.Info("Custom resource definition created, adding CR watcher for " + crsV3[groupKind.Kind].GetKind())
+							logger.Info("Custom resource definition created, adding CR watcher for " + crsV3[groupKind.Kind].GetKind() + " " + groupKind.Group)
 						}
 					}
 
