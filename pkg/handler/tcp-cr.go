@@ -268,14 +268,15 @@ func (handler TCPCustomResource) createOrEditFrontend(h haproxy.HAProxy, fronten
 	}
 
 	// Update
-	diffs := frontend.Diff(oldfe)
+	diffsBase := frontend.FrontendBase.Diff(oldfe.FrontendBase)
 	// exclude "DefaultBackend" from the diffs, DefaultBackend is set afterwards in the flow in frontend
 	// A diff in DefaultBackend is normal at this stage
-	delete(diffs, "DefaultBackend")
-	if len(diffs) != 0 {
+	// Diffs on FrontendBase
+	delete(diffsBase, "DefaultBackend")
+	if len(diffsBase) != 0 {
 		err = h.FrontendEdit(frontend.FrontendBase)
 		if err == nil {
-			instance.Reload("TCP frontend '%s' updated %v", frontend.Name, diffs)
+			instance.Reload("TCP frontend base '%s' updated %v", frontend.Name, diffsBase)
 		}
 		return err
 	}
