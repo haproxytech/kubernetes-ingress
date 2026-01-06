@@ -115,7 +115,7 @@ func (c *Conf) generateReadmeAnnotations() {
 
 	groups := map[string]struct{}{}
 	for _, ann := range c.Items {
-		if !ann.VersionMax.LowerOrEqual(c.ActiveVersion) {
+		if !ann.VersionMax.Undefined() && ann.VersionMax.LowerOrEqual(c.ActiveVersion) {
 			continue
 		}
 		devVersion := !ann.VersionMin.LowerOrEqual(c.ActiveVersion)

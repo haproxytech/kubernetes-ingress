@@ -66,6 +66,10 @@ func (v *Version) LowerOrEqual(active Version) bool {
 	return true
 }
 
+func (v *Version) Undefined() bool {
+	return v.Major == 0 && v.Minor == 0
+}
+
 func (v Version) MarshalYAML() (interface{}, error) { //nolint:unparam
 	return v.String(), nil
 }
