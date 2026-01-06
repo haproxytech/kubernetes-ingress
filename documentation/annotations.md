@@ -48,7 +48,6 @@ more info about custom annotations can be found in [annotations-custom.md](annot
 | [http-connection-mode](#http-options) | string | "http-keep-alive" |  |:large_blue_circle:|:white_circle:|:white_circle:|
 | [http-keep-alive](#http-options) | [bool](#bool) | "true" |  |:large_blue_circle:|:white_circle:|:white_circle:|
 | [http-server-close](#http-options) | [bool](#bool) | "false" |  |:large_blue_circle:|:white_circle:|:white_circle:|
-| [ingress.class](#ingress-class) | string |  |  |:white_circle:|:large_blue_circle:|:white_circle:|
 | [load-balance](#balance-algorithm) | string | "roundrobin" |  |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:|
 | [log-format](#log-format) | string |  |  |:large_blue_circle:|:white_circle:|:white_circle:|
 | [log-format-tcp](#log-format) | string |  |  |:large_blue_circle:|:white_circle:|:white_circle:|
@@ -919,33 +918,6 @@ Example:
 
 ```yaml
 tls-alpn: http/1.1
-```
-
-<p align='right'><a href='#available-annotations'>:arrow_up_small: back to top</a></p>
-
-***
-
-#### Ingress Class
-
-##### `ingress.class`
-
-  Identifies the ingress controller to be used. If this value is the same as the [--ingress.class](./controller.md#--ingressclass) controller arg, the ingress resource will be processed.
-
-  Available on:  `ingress`
-
-  :information_source: In kubernetes 1.18+, a new `IngressClass` resource can be referenced by Ingress objects to target an Ingress Controller. More details can be found in the [IngressClass doc entry](./ingressclass.md).
-
-  :information_source: In case both `ingress.class` annotation and `ingressClassName` are used, `ingress.class` will have precedence.
-
-Possible values:
-
-- The ingress class name
-
-Example:
-
-```yaml
-ingress.class: "haproxy"
-
 ```
 
 <p align='right'><a href='#available-annotations'>:arrow_up_small: back to top</a></p>

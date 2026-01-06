@@ -1076,6 +1076,7 @@ annotations:
     applies_to:
       - ingress
     version_min: "1.4"
+    version_max: "3.1"
     example: ['ingress.class: "haproxy"']
   - title: load-balance
     type: string
