@@ -398,30 +398,15 @@ func (c *clientNative) processConfigSnippets(backendName string, configSnippets 
 }
 
 func (c *clientNative) processACLs(backendName string, aclsList models.Acls, configuration configuration.Configuration) utils.Errors {
-	// we remove all acls because of permanent backend still in parsers.
-	_, existingACLs, _ := configuration.GetACLs("backend", backendName, c.activeTransaction)
-	for range existingACLs {
-		_ = configuration.DeleteACL(0, "backend", backendName, c.activeTransaction, 0)
-	}
 	var errs utils.Errors
-	// we (re)create all acls
-	for _, acl := range aclsList {
-		errs.Add(configuration.CreateACL(0, "backend", backendName, acl, c.activeTransaction, 0))
-	}
+	errs.Add(configuration.ReplaceAcls("backend", backendName, aclsList, c.activeTransaction, 0))
 	return errs
 }
 
 func (c *clientNative) processHTTPRequestRules(backendName string, httpRequestsRules models.HTTPRequestRules, configuration configuration.Configuration) utils.Errors {
-	// we remove all http request rules because of permanent backend still in parsers.
-	_, existingHTTPRequestRules, _ := configuration.GetHTTPRequestRules("backend", backendName, c.activeTransaction)
-	for range existingHTTPRequestRules {
-		_ = configuration.DeleteHTTPRequestRule(0, "backend", backendName, c.activeTransaction, 0)
-	}
 	var errs utils.Errors
 	// we (re)create all http request rules
-	for _, httpRequestRule := range httpRequestsRules {
-		errs.Add(configuration.CreateHTTPRequestRule(0, "backend", backendName, httpRequestRule, c.activeTransaction, 0))
-	}
+	errs.Add(configuration.ReplaceHTTPRequestRules("backend", backendName, httpRequestsRules, c.activeTransaction, 0))
 	return errs
 }
 
