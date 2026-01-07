@@ -19,6 +19,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"log"
+	"net"
 	"os"
 	"strconv"
 
@@ -243,9 +244,24 @@ func addControllerMetricData(builder *Builder, chShutdown chan struct{}) {
 				logger.Info("Gracefully shuting down controller data server")
 			}
 		}()
-		logger.Infof("running controller data server on :%d, running%s", builder.osArgs.ControllerPort, runningServices)
-		err := server.ListenAndServe(":" + strconv.Itoa(builder.osArgs.ControllerPort))
+		var addr, network string
+		if builder.osArgs.DisableIPV6 {
+			network = "tcp4"
+			addr = ":" + strconv.Itoa(builder.osArgs.ControllerPort)
+		} else {
+			network = "tcp"
+			addr = "[::]:" + strconv.Itoa(builder.osArgs.ControllerPort)
+		}
+
+		logger.Infof("running controller data server on addr %s network %s, running%s", addr, network, runningServices)
+
+		listener, err := net.Listen(network, addr)
 		logger.Error(err)
+
+		if err == nil {
+			err = server.Serve(listener)
+			logger.Error(err)
+		}
 	}()
 }
 

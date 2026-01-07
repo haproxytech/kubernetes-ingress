@@ -66,3 +66,4 @@ allowed:
   - junit
   - healthz
   - liveness
+  - ipv
