@@ -68,3 +68,5 @@ allowed:
   - liveness
   - ipv
   - CIDR
+  - auth
+  - userlist
