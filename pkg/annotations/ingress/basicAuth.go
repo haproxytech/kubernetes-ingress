@@ -76,11 +76,15 @@ func (a ReqAuthAnn) Process(k store.K8s, annotations ...map[string]string) (err 
 		}
 		a.parent.authRule.Credentials = make(map[string][]byte)
 		for u, pwd := range secret.Data {
-			if pwd[len(pwd)-1] == '\n' {
-				// logger.Warningf("Ingress %s/%s: basic-auth: password for user %s ends with '\\n'. Ignoring last character.", ingress.Namespace, ingress.Name, u)
-				pwd = pwd[:len(pwd)-1]
+			// If the pwd length is 0, we do not create the user in the userlist
+			// This is not a valid setting
+			if len(pwd) > 0 {
+				if pwd[len(pwd)-1] == '\n' {
+					// logger.Warningf("Ingress %s/%s: basic-auth: password for user %s ends with '\\n'. Ignoring last character.", ingress.Namespace, ingress.Name, u)
+					pwd = pwd[:len(pwd)-1]
+				}
+				a.parent.authRule.Credentials[u] = pwd
 			}
-			a.parent.authRule.Credentials[u] = pwd
 		}
 	default:
 		err = fmt.Errorf("unknown auth-type annotation '%s'", a.name)
