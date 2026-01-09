@@ -104,7 +104,7 @@ func (a annImpl) Defaults(d *models.Defaults) []Annotation {
 }
 
 func (a annImpl) Frontend(i *store.Ingress, r *rules.List, m maps.Maps) []Annotation {
-	reqRateLimit := ingress.NewReqRateLimit(r)
+	reqRateLimit := ingress.NewReqRateLimit(r, m)
 	httpsRedirect := ingress.NewHTTPSRedirect(r, i)
 	hostRedirect := ingress.NewHostRedirect(r)
 	reqAuth := ingress.NewReqAuth(r, i)
@@ -129,6 +129,7 @@ func (a annImpl) Frontend(i *store.Ingress, r *rules.List, m maps.Maps) []Annota
 		reqRateLimit.NewAnnotation("rate-limit-period"),
 		reqRateLimit.NewAnnotation("rate-limit-size"),
 		reqRateLimit.NewAnnotation("rate-limit-status-code"),
+		reqRateLimit.NewAnnotation("rate-limit-whitelist"),
 		reqAuth.NewAnnotation("auth-type"),
 		reqAuth.NewAnnotation("auth-realm"),
 		reqAuth.NewAnnotation("auth-secret"),
@@ -270,6 +271,7 @@ var SpecificAnnotations = map[string]struct{}{
 	"rate-limit-period":       {},
 	"rate-limit-size":         {},
 	"rate-limit-status-code":  {},
+	"rate-limit-whitelist":    {},
 	"request-set-header":      {},
 	"response-set-header":     {},
 	"set-host":                {},

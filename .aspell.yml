@@ -67,3 +67,4 @@ allowed:
   - healthz
   - liveness
   - ipv
+  - CIDR
