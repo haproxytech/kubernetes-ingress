@@ -31,14 +31,6 @@ func SetGlobal(global *models.Global, logTargets *models.LogTargets, env Env) {
 		global.StatsTimeout = utils.PtrInt64(36000)
 	}
 
-	// TuneSSL options
-	if global.TuneSslOptions == nil {
-		global.TuneSslOptions = &models.TuneSslOptions{}
-	}
-	if global.TuneSslOptions.DefaultDhParam == 0 {
-		global.TuneSslOptions.DefaultDhParam = 2048
-	}
-
 	// SSL options
 	if global.SslOptions == nil {
 		global.SslOptions = &models.SslOptions{}
