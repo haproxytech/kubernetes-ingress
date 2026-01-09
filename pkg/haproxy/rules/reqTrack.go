@@ -6,6 +6,7 @@ import (
 
 	"github.com/haproxytech/client-native/v6/models"
 
+	"github.com/haproxytech/kubernetes-ingress/pkg/controller/constants"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/api"
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
 )
@@ -30,6 +31,7 @@ func (r ReqTrack) Create(client api.HAProxyClient, frontend *models.Frontend, in
 	if !client.BackendUsed(r.TableName) {
 		backend := models.Backend{
 			BackendBase: models.BackendBase{
+				From: constants.DefaultsSectionName,
 				Name: r.TableName,
 				StickTable: &models.ConfigStickTable{
 					Peers: "localinstance",

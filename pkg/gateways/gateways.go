@@ -19,6 +19,7 @@ import (
 	"sort"
 
 	"github.com/haproxytech/client-native/v6/models"
+	"github.com/haproxytech/kubernetes-ingress/pkg/controller/constants"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/api"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/instance"
 	"github.com/haproxytech/kubernetes-ingress/pkg/k8s"
@@ -206,6 +207,7 @@ func (gm GatewayManagerImpl) manageTCPRoutes() {
 			gm.haproxyClient.BackendCreateIfNotExist(
 				models.Backend{
 					BackendBase: models.BackendBase{
+						From:          constants.DefaultsSectionName,
 						Name:          getBackendName(*tcproute),
 						Mode:          "tcp",
 						DefaultServer: &models.DefaultServer{ServerParams: models.ServerParams{Check: "enabled"}},

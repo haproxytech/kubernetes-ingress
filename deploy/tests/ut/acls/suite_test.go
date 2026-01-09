@@ -23,6 +23,7 @@ import (
 	v3 "github.com/haproxytech/kubernetes-ingress/crs/api/ingress/v3"
 	"github.com/haproxytech/kubernetes-ingress/pkg/annotations"
 	c "github.com/haproxytech/kubernetes-ingress/pkg/controller"
+	"github.com/haproxytech/kubernetes-ingress/pkg/controller/constants"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/env"
 	"github.com/haproxytech/kubernetes-ingress/pkg/ingress"
@@ -117,6 +118,7 @@ func (suite *ACLSuite) UseACLFixture() (eventChan chan k8ssync.SyncDataEvent) {
 		Spec: v3.BackendSpec{
 			Backend: models.Backend{
 				BackendBase: models.BackendBase{
+					From: constants.DefaultsSectionName,
 					Name: "backend1",
 				},
 				ACLList: []*models.ACL{
