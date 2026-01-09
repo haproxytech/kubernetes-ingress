@@ -22,6 +22,7 @@ import (
 	"github.com/haproxytech/client-native/v6/models"
 
 	"github.com/haproxytech/kubernetes-ingress/pkg/annotations"
+	"github.com/haproxytech/kubernetes-ingress/pkg/controller/constants"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/certs"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/instance"
@@ -246,6 +247,7 @@ func (handler *HTTPS) enableSSLPassthrough(h haproxy.HAProxy) (err error) {
 	// ssl-passthrough frontend to ssl-offload backend)
 	h.BackendCreatePermanently(models.Backend{
 		BackendBase: models.BackendBase{
+			From: constants.DefaultsSectionName,
 			Name: h.BackSSL,
 			Mode: "tcp",
 		},

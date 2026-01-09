@@ -23,6 +23,7 @@ import (
 
 	v3 "github.com/haproxytech/kubernetes-ingress/crs/api/ingress/v3"
 	"github.com/haproxytech/kubernetes-ingress/pkg/annotations"
+	"github.com/haproxytech/kubernetes-ingress/pkg/controller/constants"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/api"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/certs"
@@ -203,6 +204,7 @@ func (s *Service) getBackendModel(store store.K8s, a annotations.Annotations, cl
 		backend = &v3.BackendSpec{
 			Backend: models.Backend{
 				BackendBase: models.BackendBase{
+					From: constants.DefaultsSectionName,
 					Mode: mode,
 				},
 			},
