@@ -62,6 +62,7 @@ more info about custom annotations can be found in [annotations-custom.md](annot
 | [rate-limit-status-code](#rate-limit) | string | "403" |  |:large_blue_circle:|:large_blue_circle:|:white_circle:|
 | [rate-limit-requests](#rate-limit) | number |  |  |:large_blue_circle:|:large_blue_circle:|:white_circle:|
 | [rate-limit-size](#rate-limit) | string | "100k" | rate-limit |:large_blue_circle:|:large_blue_circle:|:white_circle:|
+| [rate-limit-whitelist](#rate-limit) | IPs/CIDRs or pattern file |  |  |:large_blue_circle:|:large_blue_circle:|:white_circle:|
 | [request-capture](#request-capture) | [sample expression](#sample-expression) |  |  |:large_blue_circle:|:large_blue_circle:|:white_circle:|
 | [request-capture-len](#request-capture) | number | 128 |  |:large_blue_circle:|:large_blue_circle:|:white_circle:|
 | [request-set-header](#request-set-header) | string |  |  |:large_blue_circle:|:large_blue_circle:|:white_circle:|
@@ -1276,6 +1277,29 @@ Example:
 
 ```yaml
 rate-limit-size: 1000000
+```
+
+##### `rate-limit-whitelist`
+
+  Defines a list of IP addresses or CIDR ranges that should be excluded from rate limiting. IPs in the whitelist will never be rate limited.
+
+  Available on:  `configmap`  `ingress`
+
+  :information_source: When both rate limiting and a whitelist are configured, only clients NOT in the whitelist will be subject to rate limiting.
+
+Possible values:
+
+- Comma-separated list of IP addresses and/or CIDR ranges (e.g., `10.0.0.0/8, 192.168.1.100`)
+- Reference to a pattern file using `patterns/` prefix (e.g., `patterns/whitelist`)
+
+Example:
+
+```yaml
+rate-limit-period: "10s"
+rate-limit-requests: 1200
+rate-limit-status-code: "429"
+rate-limit-whitelist: "10.0.0.0/8, 192.168.1.100"
+
 ```
 
 <p align='right'><a href='#available-annotations'>:arrow_up_small: back to top</a></p>

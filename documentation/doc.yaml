@@ -1341,6 +1341,35 @@ annotations:
       - ingress
     version_min: "1.4"
     example: ["rate-limit-size: 1000000"]
+  - title: rate-limit-whitelist
+    type: IPs/CIDRs or pattern file
+    group: rate-limit
+    dependencies: ""
+    default: ""
+    description:
+      - Defines a list of IP addresses or CIDR ranges that should be excluded from
+        rate limiting. IPs in the whitelist will never be rate limited.
+    tip:
+      - When both rate limiting and a whitelist are configured, only clients NOT in
+        the whitelist will be subject to rate limiting.
+    values:
+      - Comma-separated list of IP addresses and/or CIDR ranges (e.g., `10.0.0.0/8,
+        192.168.1.100`)
+      - Reference to a pattern file using `patterns/` prefix (e.g., `patterns/whitelist`)
+    applies_to:
+      - configmap
+      - ingress
+    version_min: "1.4"
+    example:
+      - |
+        rate-limit-period: "10s"
+        rate-limit-requests: 1200
+        rate-limit-status-code: "429"
+        rate-limit-whitelist: "10.0.0.0/8, 192.168.1.100"
+    example_notes:
+      - In this example, most clients can make up to 1200 requests per 10 seconds.
+        Clients from `10.0.0.0/8` or IP `192.168.1.100` are never rate limited. When
+        the limit is exceeded for non-whitelisted IPs, a 429 status code is returned.
   - title: request-capture
     type: "[sample expression](#sample-expression)"
     group: request-capture
