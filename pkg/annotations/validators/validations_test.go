@@ -7,6 +7,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+//revive:disable:function-length
+
 func TestValidator_Get(t *testing.T) {
 	v1, err1 := validators.Get()
 	v2, err2 := validators.Get()

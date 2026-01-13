@@ -14,6 +14,8 @@
 
 package main
 
+//revive:disable:deep-exit
+
 import (
 	"log"
 	"os"

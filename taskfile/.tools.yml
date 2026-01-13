@@ -1,0 +1,49 @@
+version: "3"
+vars:
+  YQ_NAME: yq
+  YQ_VERSION: v4.47.1
+  YQ_URL: github.com/mikefarah/yq/v4
+
+  KIND_NAME: kind
+  KIND_VERSION: v0.30.0
+  KIND_URL: sigs.k8s.io/kind
+
+  CONTROLLER_GEN_NAME: controller-gen
+  CONTROLLER_GEN_VERSION: v0.20.0
+  CONTROLLER_GEN_URL: sigs.k8s.io/controller-tools/cmd/controller-gen
+
+  CHECK_COMMIT_NAME: check-commit
+  CHECK_COMMIT_VERSION: v5.4.0
+  CHECK_COMMIT_URL: github.com/haproxytech/check-commit/v5
+
+  BETTERALIGN_NAME: betteralign
+  BETTERALIGN_VERSION: v0.8.3
+  BETTERALIGN_URL: github.com/dkorunic/betteralign/cmd/betteralign
+
+  STATICCHECK_NAME: staticcheck
+  STATICCHECK_VERSION: v0.6.1
+  STATICCHECK_URL: honnef.co/go/tools/cmd/staticcheck
+
+  GO_LICENSES_NAME: go-licenses
+  GO_LICENSES_VERSION: v1.6.0
+  GO_LICENSES_URL: github.com/google/go-licenses
+
+  GOVULNCHECK_NAME: govulncheck
+  GOVULNCHECK_VERSION: v1.1.4
+  GOVULNCHECK_URL: golang.org/x/vuln/cmd/govulncheck
+
+  GOFUMPT_NAME: gofumpt
+  GOFUMPT_VERSION: v0.9.2
+  GOFUMPT_URL: mvdan.cc/gofumpt
+
+  REVIVE_NAME: revive
+  REVIVE_VERSION: v1.13.0
+  REVIVE_URL: github.com/mgechev/revive
+
+  GOTESTSUM_NAME: gotestsum
+  GOTESTSUM_VERSION: v1.13.0
+  GOTESTSUM_URL: gotest.tools/gotestsum
+
+  YQ_INSTALLED_V:
+    sh: /{{.TMP}}/yq/{{.YQ_VERSION}}/yq --version || echo ""
+  YQ_INSTALLED: "{{ if contains .YQ_VERSION .YQ_INSTALLED_V }}true{{ else }}false{{ end }}"

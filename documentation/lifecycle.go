@@ -9,6 +9,8 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+//revive:disable:deep-exit
+
 type SupportVersion struct {
 	Version    string   `yaml:"version"`
 	GA         string   `yaml:"ga"`
@@ -56,14 +58,15 @@ func diff(a, b time.Time) string {
 	if a.After(b) {
 		a, b = b, a
 	}
-	y1, M1, d1 := a.Date()
-	y2, M2, d2 := b.Date()
+	y1, m1, d1 := a.Date()
+	y2, m2, d2 := b.Date()
 
 	year := y2 - y1
-	month := int(M2 - M1)
+	month := int(m2 - m1)
 	day := d2 - d1
 	if day < 0 {
-		t := time.Date(y1, M1, 32, 0, 0, 0, 0, time.UTC)
+		//revive:disable-next-line:time-date
+		t := time.Date(y1, m1, 32, 0, 0, 0, 0, time.UTC)
 		day += 32 - t.Day()
 		month--
 	}

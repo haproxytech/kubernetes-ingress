@@ -79,10 +79,7 @@ func (c *HAProxyController) clientAPIClosure(fn func() error) (err error) {
 		return err
 	}
 
-	if err = c.haproxy.APICommitTransaction(); err != nil {
-		return err
-	}
-	return nil
+	return c.haproxy.APICommitTransaction()
 }
 
 // Start initializes and runs HAProxyController
@@ -371,6 +368,7 @@ func (c *HAProxyController) manageIngress(ing *store.Ingress) {
 	}
 }
 
+//revive:disable-next-line:cognitive-complexity
 func (c *HAProxyController) processIngressesWithMerge() {
 	for _, namespace := range c.store.Namespaces {
 		c.store.SecretsProcessed = map[string]struct{}{}

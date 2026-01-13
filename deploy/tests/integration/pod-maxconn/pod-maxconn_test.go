@@ -24,7 +24,7 @@ func (suite *PodMaxConnSuite) TestPodMaxConnConfigMap() {
 	suite.StartController()
 	cm := suite.setupTest()
 
-	///////////////////////////////////////
+	// /////////////////////////////////////
 	// pod-maxconn setup in:
 	// - configmap only
 	cm.Status = store.MODIFIED
@@ -58,7 +58,7 @@ func (suite *PodMaxConnSuite) TestPodMaxConnConfigMapMisc() {
 	suite.StartController()
 	cm := suite.setupTest()
 
-	///////////////////////////////////////
+	// /////////////////////////////////////
 	// pod-maxconn setup in:
 	// - configmap only
 	cm.Status = store.MODIFIED
@@ -149,7 +149,7 @@ func (suite *PodMaxConnSuite) TestPodMaxConnService() {
 	suite.StartController()
 	cm := suite.setupTest()
 
-	///////////////////////////////////////
+	// /////////////////////////////////////
 	// pod-maxconn setup in:
 	// - configmap (128)
 	// - ingress (126)

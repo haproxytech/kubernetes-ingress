@@ -157,6 +157,7 @@ func addRules(list rules.List, h haproxy.HAProxy, ingressRule bool) []rules.Rule
 		frontends := defaultFrontends
 		switch rule.GetType() {
 		case rules.REQ_REDIRECT:
+			//revive:disable-next-line:unchecked-type-assertion
 			redirRule := rule.(*rules.RequestRedirect)
 			if redirRule.SSLRedirect {
 				frontends = []string{h.FrontHTTP}

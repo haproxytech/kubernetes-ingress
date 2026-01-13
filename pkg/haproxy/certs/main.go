@@ -183,11 +183,10 @@ func (c *certs) updateRuntime(filename string, payload []byte, isCa bool) (bool,
 	err = entryCreate(filename)
 	// If already exists
 	if err != nil {
-		if strings.Contains(err.Error(), "already exists") {
-			alreadyExists = true
-		} else {
+		if !strings.Contains(err.Error(), "already exists") {
 			return updated, err
 		}
+		alreadyExists = true
 	} else {
 		utils.GetLogger().Debugf("`new ssl %s` ok[%s]", certType, filename)
 	}
@@ -378,17 +377,16 @@ func (c *certs) writeCert(cert *cert, filename string, content []byte, isCa bool
 			// There need to be a valid certificate file.
 			// So, let's create the right content.
 			// Then, on update, it will be written with the delayed function.
-			if os.IsNotExist(err) {
-				err := renameio.WriteFile(filename, content, 0o666)
-				if err != nil {
-					logger.Error(err)
-					return
-				}
-				utils.GetLogger().Debugf("cert written on disk[%s]", filename)
-			} else {
+			if !os.IsNotExist(err) {
 				logger.Error(err)
 				return
 			}
+			err := renameio.WriteFile(filename, content, 0o666)
+			if err != nil {
+				logger.Error(err)
+				return
+			}
+			utils.GetLogger().Debugf("cert written on disk[%s]", filename)
 		}
 
 		updated, err := c.updateRuntime(filename, content, isCa)

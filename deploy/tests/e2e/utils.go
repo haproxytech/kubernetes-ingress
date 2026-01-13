@@ -36,6 +36,7 @@ type Test struct {
 type TearDownFunc func() error
 
 func NewTest() (test Test, err error) {
+	//revive:disable-next-line:deep-exit
 	flag.Parse()
 	devMode = *devModeFlag
 	test = Test{}
@@ -101,7 +102,7 @@ func (t *Test) GetNS() string {
 	return t.namespace
 }
 
-func (t *Test) Apply(path string, namespace string, tmplData interface{}) error {
+func (t *Test) Apply(path string, namespace string, tmplData any) error {
 	var err error
 	var file []byte
 	if tmplData != nil {
@@ -119,7 +120,7 @@ func (t *Test) Apply(path string, namespace string, tmplData interface{}) error 
 	return nil
 }
 
-func (t *Test) processTemplate(path string, tmplData interface{}) (string, error) {
+func (t *Test) processTemplate(path string, tmplData any) (string, error) {
 	file, err := os.ReadFile(path)
 	if err != nil {
 		return "", fmt.Errorf("error reading yaml template: %w", err)
@@ -150,7 +151,7 @@ func (t *Test) TearDown() error {
 	if devMode {
 		return nil
 	}
-	os.RemoveAll(t.templateDir)
+	_ = os.RemoveAll(t.templateDir)
 	for _, f := range t.tearDownFuncs {
 		if err := f(); err != nil {
 			return err
@@ -164,7 +165,7 @@ func (t *Test) AddTearDown(teardown TearDownFunc) {
 	t.tearDownFuncs = append(t.tearDownFuncs, teardown)
 }
 
-func (t *Test) GetK8sVersion() (major, minor int, err error) {
+func (*Test) GetK8sVersion() (major, minor int, err error) {
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return 0, 0, err
@@ -183,7 +184,7 @@ func (t *Test) GetK8sVersion() (major, minor int, err error) {
 	return major, minor, nil
 }
 
-func (t *Test) execute(entry, command string, args ...string) (string, error) { //nolint: unparam
+func (*Test) execute(entry, command string, args ...string) (string, error) {
 	cmd := exec.Command(command, args...)
 	var b bytes.Buffer
 	b.WriteString(entry)
@@ -192,6 +193,7 @@ func (t *Test) execute(entry, command string, args ...string) (string, error) { 
 	return string(output), err
 }
 
+//revive:disable-next-line:flag-parameter
 func deleteNamespace(namespace string, newSetup bool) {
 	if devMode && !newSetup {
 		return

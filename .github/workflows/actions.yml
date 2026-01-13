@@ -79,7 +79,7 @@ jobs:
       - name: changes
         run: test -z "$(git diff 2> /dev/null)" || exit "Go code not formatted, issue \`make gofumpt\` and commit the result"
   lint:
-    name: golangci-lint
+    name: linters
     needs: ["generate", "tidy"]
     runs-on: ubuntu-latest
     steps:
@@ -98,9 +98,13 @@ jobs:
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-
+      - name: Install Task
+        uses: go-task/setup-task@v1
+        with:
+          version: 3.x
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
       - name: Lint
-        run: |
-          make lint
+        run: task lint
   build:
     name: build
     runs-on: ubuntu-latest
