@@ -32,18 +32,37 @@ diff-crd:
     - test -z "$(git ls-files --others --exclude-standard 2> /dev/null)" || exit "CRD generation created untracked files, cannot proceed"
 check-large-files:
   stage: diff
+  rules:
+    - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
+  image:
+    name: $CI_REGISTRY_GO/golang:$GO_VERSION
+    entrypoint: [ "" ]
   tags:
     - go
   script:
     # List all files in the latest commit that are larger than 1MB
-    - git ls-tree -r HEAD --long | awk '$4 > 1048576 { print $0 }' > large_files.txt
+    - |
+      git fetch origin ${CI_MERGE_REQUEST_TARGET_BRANCH_NAME}
+      git diff --name-only origin/${CI_MERGE_REQUEST_TARGET_BRANCH_NAME}...HEAD | while read file; do
+        if [ -f "$file" ] && [ $(stat -c%s "$file") -gt 1048576 ]; then
+          echo "$file"
+        fi
+      done > large_files.txt
 
     # Fail the job if any file is larger than 1MB
     - |
       if [ -s large_files.txt ]; then
         echo "❌ The following files exceed 1MB:"
         cat large_files.txt
+        junit-report add --status=failed --file=large-files --message="large files found" --description="$(cat large_files.txt)"
         exit 1
       else
         echo "✅ No large files found in the latest commit."
+        junit-report add --status=ok --file=large-files --message="commit clean" --description="No large files found in the latest commit."
       fi
+  artifacts:
+    when: on_failure
+    paths:
+      - junit-report.xml
+    reports:
+      junit: junit-report.xml
