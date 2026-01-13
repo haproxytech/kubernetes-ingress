@@ -133,6 +133,13 @@ Example:
 cors-enable: "true"
 ```
 
+Example:
+
+```yaml
+haproxy.org/cors-enable: "true"
+
+```
+
 ##### `cors-allow-origin`
 
   Sets the `Access-Control-Allow-Origin` response header to tell browsers which origin is allowed to access the requested resource.
@@ -154,6 +161,15 @@ cors-allow-origin: "https://example.com"
 cors-allow-origin: "^https://(.+\.)?(example-1\.com|example-2\.com)(:\d{1,5})?$"
 ```
 
+Example:
+
+```yaml
+haproxy.org/cors-allow-origin: "*"
+haproxy.org/cors-allow-origin: "https://example.com"
+haproxy.org/cors-allow-origin: "^https://(.+\.)?(example-1\.com|example-2\.com)(:\d{1,5})?$"
+
+```
+
 ##### `cors-allow-methods`
 
   Sets the `Access-Control-Allow-Methods` response header to tell browsers the HTTP methods allowed when accessing the request resource.
@@ -173,6 +189,15 @@ cors-allow-methods: "GET"
 cors-allow-methods: "GET, POST"
 ```
 
+Example:
+
+```yaml
+haproxy.org/cors-allow-methods: "*"
+haproxy.org/cors-allow-methods: "GET"
+haproxy.org/cors-allow-methods: "GET, POST"
+
+```
+
 ##### `cors-allow-credentials`
 
   Sets the `Access-Control-Allow-Credentials` response header to tell browsers if credentials can be used to access the requested resource.
@@ -188,6 +213,13 @@ Example:
 
 ```yaml
 cors-allow-credentials: "true"
+```
+
+Example:
+
+```yaml
+haproxy.org/cors-allow-credentials: "true"
+
 ```
 
 ##### `cors-allow-headers`
@@ -209,6 +241,15 @@ cors-allow-headers: "X-Custom-Header"
 cors-allow-headers: "X-Custom-Header, Upgrade-Insecure-Requests"
 ```
 
+Example:
+
+```yaml
+haproxy.org/cors-allow-headers: "*"
+haproxy.org/cors-allow-headers: "X-Custom-Header"
+haproxy.org/cors-allow-headers: "X-Custom-Header, Upgrade-Insecure-Requests"
+
+```
+
 ##### `cors-max-age`
 
   Sets the `Access-Control-Allow-Age` response header to tell browsers how long the result of a preflight request can be cached.
@@ -223,6 +264,13 @@ Example:
 
 ```yaml
 cors-max-age: "1m"
+```
+
+Example:
+
+```yaml
+haproxy.org/cors-max-age: "1m"
+
 ```
 
 <p align='right'><a href='#available-annotations'>:arrow_up_small: back to top</a></p>
@@ -254,6 +302,13 @@ Example:
 blacklist: "192.168.1.0/24, 192.168.2.100"
 ```
 
+Example:
+
+```yaml
+haproxy.org/blacklist: "192.168.1.0/24, 192.168.2.100"
+
+```
+
 ##### `deny-list`
 
   Blocks given IP addresses and/or IP address ranges.
@@ -271,6 +326,13 @@ Example:
 
 ```yaml
 deny-list: "192.168.1.0/24, 192.168.2.100"
+```
+
+Example:
+
+```yaml
+haproxy.org/deny-list: "192.168.1.0/24, 192.168.2.100"
+
 ```
 
 ##### `whitelist`
@@ -293,6 +355,13 @@ Example:
 whitelist: "192.168.1.0/24, 192.168.2.100"
 ```
 
+Example:
+
+```yaml
+haproxy.org/whitelist: "192.168.1.0/24, 192.168.2.100"
+
+```
+
 ##### `allow-list`
 
   Blocks all IP addresses except the whitelisted ones (annotation value).
@@ -310,6 +379,13 @@ Example:
 
 ```yaml
 allow-list: "192.168.1.0/24, 192.168.2.100"
+```
+
+Example:
+
+```yaml
+haproxy.org/allow-list: "192.168.1.0/24, 192.168.2.100"
+
 ```
 
 <p align='right'><a href='#available-annotations'>:arrow_up_small: back to top</a></p>
@@ -333,6 +409,14 @@ Example:
 ```yaml
 auth-type: basic-auth
 auth-secret: default/haproxy-credentials
+```
+
+Example:
+
+```yaml
+haproxy.org/auth-type: basic-auth
+haproxy.org/auth-secret: default/haproxy-credentials
+
 ```
 
 ##### `auth-secret`
@@ -371,6 +455,14 @@ auth-type: basic-auth
 auth-secret: default/haproxy-credentials
 ```
 
+Example:
+
+```yaml
+haproxy.org/auth-type: basic-auth
+haproxy.org/auth-secret: default/haproxy-credentials
+
+```
+
 ##### `auth-realm`
 
   Provides the HTTP Authentication Realm
@@ -385,6 +477,13 @@ Example:
 
 ```yaml
 auth-realm: Admin Area
+```
+
+Example:
+
+```yaml
+haproxy.org/auth-realm: Admin Area
+
 ```
 
 ##### `client-ca`
@@ -403,6 +502,13 @@ Example:
 
 ```yaml
 client-ca: exp/client-ca.crt
+```
+
+Example:
+
+```yaml
+haproxy.org/client-ca: exp/client-ca.crt
+
 ```
 
 ##### `client-crt-optional`
@@ -425,6 +531,13 @@ Example:
 client-crt-optional: true
 ```
 
+Example:
+
+```yaml
+haproxy.org/client-crt-optional: true
+
+```
+
 ##### `server-ca`
 
   Sets the certificate authority for backend servers enabling HAProxy to check backend certificates (TLS authentication) when sending encrypted traffic to the kubernetes applications.
@@ -443,6 +556,13 @@ Example:
 
 ```yaml
 server-ca: "ns1/ca"
+```
+
+Example:
+
+```yaml
+haproxy.org/server-ca: "ns1/ca"
+
 ```
 
 <p align='right'><a href='#available-annotations'>:arrow_up_small: back to top</a></p>
@@ -468,6 +588,13 @@ Example:
 check: "true"
 ```
 
+Example:
+
+```yaml
+haproxy.org/check: "true"
+
+```
+
 ##### `check-http`
 
   Enables HTTP level health checks on pods and sends an HTTP request periodically. The `check` setting must be true.
@@ -487,6 +614,14 @@ check: "true"
 check-http: "/health"
 ```
 
+Example:
+
+```yaml
+haproxy.org/check: "true"
+haproxy.org/check-http: "/health"
+
+```
+
 ##### `check-interval`
 
   Sets the interval between health checks when `check` is enabled.
@@ -502,6 +637,14 @@ Example:
 ```yaml
 check: "true"
 check-interval: "1m"
+```
+
+Example:
+
+```yaml
+haproxy.org/check: "true"
+haproxy.org/check-interval: "1m"
+
 ```
 
 <p align='right'><a href='#available-annotations'>:arrow_up_small: back to top</a></p>
@@ -526,6 +669,13 @@ Example:
 
 ```yaml
 scale-server-slots: "75"
+```
+
+Example:
+
+```yaml
+haproxy.org/scale-server-slots: "75"
+
 ```
 
 <p align='right'><a href='#available-annotations'>:arrow_up_small: back to top</a></p>
@@ -559,6 +709,13 @@ Example:
 load-balance: "leastconn"
 ```
 
+Example:
+
+```yaml
+haproxy.org/load-balance: "leastconn"
+
+```
+
 <p align='right'><a href='#available-annotations'>:arrow_up_small: back to top</a></p>
 
 ***
@@ -582,6 +739,13 @@ Example:
 
 ```yaml
 clean-certs: "false"
+```
+
+Example:
+
+```yaml
+haproxy.org/clean-certs: "false"
+
 ```
 
 <p align='right'><a href='#available-annotations'>:arrow_up_small: back to top</a></p>
@@ -614,6 +778,12 @@ global-config-snippet: |
   tune.bufsize 32768
 ```
 
+Example:
+
+```yaml
+
+```
+
 ##### `frontend-config-snippet`
 
   Defines a group of configuration directives to insert in the main HTTP/HTTPS frontends.
@@ -638,6 +808,12 @@ frontend-config-snippet: |
   unique-id-header X-Unique-ID
 ```
 
+Example:
+
+```yaml
+
+```
+
 ##### `stats-config-snippet`
 
   Defines a group of configuration directives to insert in the stats frontend.
@@ -653,6 +829,12 @@ Example:
 ```yaml
 stats-config-snippet: |
   stats auth foo:test
+```
+
+Example:
+
+```yaml
+
 ```
 
 ##### `backend-config-snippet`
@@ -672,6 +854,16 @@ backend-config-snippet: |
       http-send-name-header x-dst-server
       stick-table type string len 32 size 100k expire 30m
       stick on req.cook(sessionid)
+```
+
+Example:
+
+```yaml
+haproxy.org/backend-config-snippet: |
+      http-send-name-header x-dst-server
+      stick-table type string len 32 size 100k expire 30m
+      stick on req.cook(sessionid)
+
 ```
 
 <p align='right'><a href='#available-annotations'>:arrow_up_small: back to top</a></p>
@@ -697,6 +889,13 @@ Example:
 
 ```yaml
 cookie-persistence: "mycookie"
+```
+
+Example:
+
+```yaml
+haproxy.org/cookie-persistence: "mycookie"
+
 ```
 
 <p align='right'><a href='#available-annotations'>:arrow_up_small: back to top</a></p>
@@ -729,6 +928,13 @@ Example:
 cookie-persistence-no-dynamic: "mycookie"
 ```
 
+Example:
+
+```yaml
+haproxy.org/cookie-persistence-no-dynamic: "mycookie"
+
+```
+
 <p align='right'><a href='#available-annotations'>:arrow_up_small: back to top</a></p>
 
 ***
@@ -749,6 +955,13 @@ Example:
 
 ```yaml
 hard-stop-after: 30s
+```
+
+Example:
+
+```yaml
+haproxy.org/hard-stop-after: 30s
+
 ```
 
 <p align='right'><a href='#available-annotations'>:arrow_up_small: back to top</a></p>
@@ -775,6 +988,13 @@ Example:
 http-connection-mode: "http-server-close"
 ```
 
+Example:
+
+```yaml
+haproxy.org/http-connection-mode: "http-server-close"
+
+```
+
 ##### `http-keep-alive`
 
   **Deprecated**, use `http-connection-mode` instead.
@@ -793,6 +1013,13 @@ Example:
 http-keep-alive: "true"
 ```
 
+Example:
+
+```yaml
+haproxy.org/http-keep-alive: "true"
+
+```
+
 ##### `http-server-close`
 
   **Deprecated**, use `http-connection-mode` instead.
@@ -809,6 +1036,13 @@ Example:
 
 ```yaml
 http-server-close: "true"
+```
+
+Example:
+
+```yaml
+haproxy.org/http-server-close: "true"
+
 ```
 
 <p align='right'><a href='#available-annotations'>:arrow_up_small: back to top</a></p>
@@ -840,6 +1074,13 @@ Example:
 ssl-passthrough: "true"
 ```
 
+Example:
+
+```yaml
+haproxy.org/ssl-passthrough: "true"
+
+```
+
 ##### `ssl-redirect`
 
   Sets whether to redirect traffic from HTTP to HTTPS.
@@ -862,6 +1103,14 @@ ssl-redirect: "false"
 ssl-certificate: "default/tls-secret"
 ```
 
+Example:
+
+```yaml
+haproxy.org/ssl-redirect: "false"
+haproxy.org/ssl-certificate: "default/tls-secret"
+
+```
+
 ##### `ssl-redirect-code`
 
   Sets the HTTP status code to use when `ssl-redirect` is true.
@@ -880,6 +1129,15 @@ Example:
 ssl-redirect: "true"
 ssl-certificate: "default/tls-secret"
 ssl-redirect-code: "301"
+```
+
+Example:
+
+```yaml
+haproxy.org/ssl-redirect: "true"
+haproxy.org/ssl-certificate: "default/tls-secret"
+haproxy.org/ssl-redirect-code: "301"
+
 ```
 
 ##### `ssl-redirect-port`
@@ -901,6 +1159,14 @@ ssl-redirect: "true"
 ssl-redirect-port: "8443"
 ```
 
+Example:
+
+```yaml
+haproxy.org/ssl-redirect: "true"
+haproxy.org/ssl-redirect-port: "8443"
+
+```
+
 ##### `tls-alpn`
 
   Define the TLS ALPN extension advertisement. This will change the alpn advertisement for the https frontend when ssl is enabled.
@@ -917,6 +1183,13 @@ Example:
 
 ```yaml
 tls-alpn: http/1.1
+```
+
+Example:
+
+```yaml
+haproxy.org/tls-alpn: http/1.1
+
 ```
 
 <p align='right'><a href='#available-annotations'>:arrow_up_small: back to top</a></p>
@@ -970,6 +1243,13 @@ Example:
 log-format: "%ci:%cp [%tr] %ft %b/%s %TR/%Tw/%Tc/%Tr/%Ta %ST %B %CC %CS %tsc %ac/%fc/%bc/%sc/%rc %sq/%bq %hr %hs \"%HM %[var(txn.base)] %HV\""
 ```
 
+Example:
+
+```yaml
+haproxy.org/log-format: "%ci:%cp [%tr] %ft %b/%s %TR/%Tw/%Tc/%Tr/%Ta %ST %B %CC %CS %tsc %ac/%fc/%bc/%sc/%rc %sq/%bq %hr %hs \"%HM %[var(txn.base)] %HV\""
+
+```
+
 ##### `log-format-tcp`
 
   Sets the log format string to use for TCP traffic.
@@ -988,6 +1268,13 @@ Example:
 
 ```yaml
 log-format-tcp: "%{+Q}o %t %s"
+```
+
+Example:
+
+```yaml
+haproxy.org/log-format-tcp: "%{+Q}o %t %s"
+
 ```
 
 <p align='right'><a href='#available-annotations'>:arrow_up_small: back to top</a></p>
@@ -1013,6 +1300,13 @@ Example:
 dontlognull: "true"
 ```
 
+Example:
+
+```yaml
+haproxy.org/dontlognull: "true"
+
+```
+
 ##### `logasap`
 
   Logs request and response data as soon as the server returns a complete set of HTTP response headers, instead of waiting for the response to finish sending all data.
@@ -1028,6 +1322,13 @@ Example:
 
 ```yaml
 logasap: "true"
+```
+
+Example:
+
+```yaml
+haproxy.org/logasap: "true"
+
 ```
 
 ##### `syslog-server`
@@ -1063,6 +1364,12 @@ syslog-server: |
   address:192.168.1.1, port:514, facility:local1
 ```
 
+Example:
+
+```yaml
+
+```
+
 <p align='right'><a href='#available-annotations'>:arrow_up_small: back to top</a></p>
 
 ***
@@ -1087,6 +1394,13 @@ Example:
 pod-maxconn: "30"
 ```
 
+Example:
+
+```yaml
+haproxy.org/pod-maxconn: "30"
+
+```
+
 <p align='right'><a href='#available-annotations'>:arrow_up_small: back to top</a></p>
 
 ***
@@ -1109,6 +1423,13 @@ Example:
 maxconn: "2000"
 ```
 
+Example:
+
+```yaml
+haproxy.org/maxconn: "2000"
+
+```
+
 <p align='right'><a href='#available-annotations'>:arrow_up_small: back to top</a></p>
 
 ***
@@ -1129,6 +1450,13 @@ Example:
 
 ```yaml
 nbthread: "8"
+```
+
+Example:
+
+```yaml
+haproxy.org/nbthread: "8"
+
 ```
 
 <p align='right'><a href='#available-annotations'>:arrow_up_small: back to top</a></p>
@@ -1204,6 +1532,13 @@ Example:
 proxy-protocol: "192.168.1.0/24, 192.168.2.100"
 ```
 
+Example:
+
+```yaml
+haproxy.org/proxy-protocol: "192.168.1.0/24, 192.168.2.100"
+
+```
+
 <p align='right'><a href='#available-annotations'>:arrow_up_small: back to top</a></p>
 
 ***
@@ -1228,6 +1563,13 @@ Example:
 quic-alt-svc-max-age: "900"
 ```
 
+Example:
+
+```yaml
+haproxy.org/quic-alt-svc-max-age: "900"
+
+```
+
 <p align='right'><a href='#available-annotations'>:arrow_up_small: back to top</a></p>
 
 ***
@@ -1250,6 +1592,13 @@ Example:
 rate-limit-period: "1m"
 ```
 
+Example:
+
+```yaml
+haproxy.org/rate-limit-period: "1m"
+
+```
+
 ##### `rate-limit-status-code`
 
   Sets the status code to return when rate limiting has been triggered.
@@ -1264,6 +1613,13 @@ Example:
 
 ```yaml
 rate-limit-status-code: "429"
+```
+
+Example:
+
+```yaml
+haproxy.org/rate-limit-status-code: "429"
+
 ```
 
 ##### `rate-limit-requests`
@@ -1286,6 +1642,13 @@ Example:
 rate-limit-requests: 15
 ```
 
+Example:
+
+```yaml
+haproxy.org/rate-limit-requests: 15
+
+```
+
 ##### `rate-limit-size`
 
   Sets how many source IP addresses to track, after which older entries are replaced by new entries.
@@ -1302,6 +1665,13 @@ Example:
 
 ```yaml
 rate-limit-size: 1000000
+```
+
+Example:
+
+```yaml
+haproxy.org/rate-limit-size: 1000000
+
 ```
 
 <p align='right'><a href='#available-annotations'>:arrow_up_small: back to top</a></p>
@@ -1367,6 +1737,14 @@ request-capture: cookie(my-cookie)
 request-capture-len: 350
 ```
 
+Example:
+
+```yaml
+haproxy.org/request-capture: cookie(my-cookie)
+haproxy.org/request-capture-len: 350
+
+```
+
 <p align='right'><a href='#available-annotations'>:arrow_up_small: back to top</a></p>
 
 ***
@@ -1395,6 +1773,14 @@ request-redirect: example.com
 request-redirect: example.com:8888
 ```
 
+Example:
+
+```yaml
+haproxy.org/request-redirect: example.com
+haproxy.org/request-redirect: example.com:8888
+
+```
+
 ##### `request-redirect-code`
 
   Defines the HTTP redirection code used in redirection set with request-redirect.
@@ -1409,6 +1795,13 @@ Example:
 
 ```yaml
 request-redirect-code: "303"
+```
+
+Example:
+
+```yaml
+haproxy.org/request-redirect-code: "303"
+
 ```
 
 <p align='right'><a href='#available-annotations'>:arrow_up_small: back to top</a></p>
@@ -1551,6 +1944,13 @@ Example:
 send-proxy-protocol: proxy-v2
 ```
 
+Example:
+
+```yaml
+haproxy.org/send-proxy-protocol: proxy-v2
+
+```
+
 <p align='right'><a href='#available-annotations'>:arrow_up_small: back to top</a></p>
 
 ***
@@ -1577,6 +1977,13 @@ Example:
 server-crt: "ns1/client"
 ```
 
+Example:
+
+```yaml
+haproxy.org/server-crt: "ns1/client"
+
+```
+
 <p align='right'><a href='#available-annotations'>:arrow_up_small: back to top</a></p>
 
 ***
@@ -1598,6 +2005,13 @@ Example:
 
 ```yaml
 server-proto: "h2"
+```
+
+Example:
+
+```yaml
+haproxy.org/server-proto: "h2"
+
 ```
 
 <p align='right'><a href='#available-annotations'>:arrow_up_small: back to top</a></p>
@@ -1625,6 +2039,13 @@ Example:
 server-ssl: "true"
 ```
 
+Example:
+
+```yaml
+haproxy.org/server-ssl: "true"
+
+```
+
 <p align='right'><a href='#available-annotations'>:arrow_up_small: back to top</a></p>
 
 ***
@@ -1647,6 +2068,13 @@ Example:
 set-host: "example.local"
 ```
 
+Example:
+
+```yaml
+haproxy.org/set-host: "example.local"
+
+```
+
 <p align='right'><a href='#available-annotations'>:arrow_up_small: back to top</a></p>
 
 ***
@@ -1667,6 +2095,13 @@ Example:
 
 ```yaml
 src-ip-header: "True-Client-IP"
+```
+
+Example:
+
+```yaml
+haproxy.org/src-ip-header: "True-Client-IP"
+
 ```
 
 <p align='right'><a href='#available-annotations'>:arrow_up_small: back to top</a></p>
@@ -1698,6 +2133,13 @@ Example:
 client-strict-sni: true
 ```
 
+Example:
+
+```yaml
+haproxy.org/client-strict-sni: true
+
+```
+
 ##### `ssl-certificate`
 
   Sets the name of the Kubernetes secret that contains both the TLS key and certificate.
@@ -1716,6 +2158,13 @@ Example:
 
 ```yaml
 ssl-certificate: "default/tls-secret"
+```
+
+Example:
+
+```yaml
+haproxy.org/ssl-certificate: "default/tls-secret"
+
 ```
 
 - A secret can be of `tls` type (most common) created via :
@@ -1785,6 +2234,13 @@ Example:
 timeout-check: 5s
 ```
 
+Example:
+
+```yaml
+haproxy.org/timeout-check: 5s
+
+```
+
 ##### `timeout-client`
 
   Set the maximum inactivity time on the client side.
@@ -1799,6 +2255,13 @@ Example:
 
 ```yaml
 timeout-client: 5s
+```
+
+Example:
+
+```yaml
+haproxy.org/timeout-client: 5s
+
 ```
 
 ##### `timeout-client-fin`
@@ -1817,6 +2280,13 @@ Example:
 timeout-client-fin: 5s
 ```
 
+Example:
+
+```yaml
+haproxy.org/timeout-client-fin: 5s
+
+```
+
 ##### `timeout-connect`
 
   Sets the maximum time to wait for a connection attempt to a server to succeed.
@@ -1831,6 +2301,13 @@ Example:
 
 ```yaml
 timeout-connect: 5s
+```
+
+Example:
+
+```yaml
+haproxy.org/timeout-connect: 5s
+
 ```
 
 ##### `timeout-http-request`
@@ -1849,6 +2326,13 @@ Example:
 timeout-http-request: 5s
 ```
 
+Example:
+
+```yaml
+haproxy.org/timeout-http-request: 5s
+
+```
+
 ##### `timeout-http-keep-alive`
 
   Sets the maximum allowed time to wait for a new HTTP request to appear.
@@ -1865,6 +2349,13 @@ Example:
 timeout-http-keep-alive: 5s
 ```
 
+Example:
+
+```yaml
+haproxy.org/timeout-http-keep-alive: 5s
+
+```
+
 ##### `timeout-queue`
 
   Sets the maximum time to wait in the queue for a connection slot to be free.
@@ -1879,6 +2370,13 @@ Example:
 
 ```yaml
 timeout-queue: 5s
+```
+
+Example:
+
+```yaml
+haproxy.org/timeout-queue: 5s
+
 ```
 
 ##### `timeout-server`
@@ -1898,6 +2396,13 @@ Example:
 timeout-server: 5s
 ```
 
+Example:
+
+```yaml
+haproxy.org/timeout-server: 5s
+
+```
+
 ##### `timeout-server-fin`
 
   Sets the inactivity timeout on the server side for half-closed connections.
@@ -1914,6 +2419,13 @@ Example:
 timeout-server-fin: 5s
 ```
 
+Example:
+
+```yaml
+haproxy.org/timeout-server-fin: 5s
+
+```
+
 ##### `timeout-tunnel`
 
   Set the maximum inactivity time on the client and server side for tunnels.
@@ -1928,6 +2440,13 @@ Example:
 
 ```yaml
 timeout-tunnel: 30m
+```
+
+Example:
+
+```yaml
+haproxy.org/timeout-tunnel: 30m
+
 ```
 
 <p align='right'><a href='#available-annotations'>:arrow_up_small: back to top</a></p>
@@ -1951,6 +2470,13 @@ Example:
 
 ```yaml
 forwarded-for: "true"
+```
+
+Example:
+
+```yaml
+haproxy.org/forwarded-for: "true"
+
 ```
 
 <p align='right'><a href='#available-annotations'>:arrow_up_small: back to top</a></p>

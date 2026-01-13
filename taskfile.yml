@@ -1,0 +1,39 @@
+#https://taskfile.dev/
+version: '3'
+
+env:
+  TASK_INTERNAL: true
+
+dotenv:
+  - .env
+
+includes:
+  tools:
+    taskfile: taskfile/.tools.yml
+    flatten: true
+  vars:
+    taskfile: taskfile/.vars.yml
+    flatten: true
+  go-tools:
+    taskfile: taskfile/go-tools.yml
+    flatten: true
+
+vars:
+
+tasks:
+
+  ci:
+    desc: ''
+    cmds:
+      - task: lint
+
+  lint:
+    desc: "run Go linters"
+    deps:
+      - task: check-go-tools
+        vars:
+          TOOLS: [REVIVE, STATICCHECK]
+    cmds:
+      - /{{.TMP}}/revive/{{.REVIVE_VERSION}}/revive -config revive.toml -formatter friendly -set_exit_status ./...
+      - /{{.TMP}}/staticcheck/{{.STATICCHECK_VERSION}}/staticcheck ./...
+#      - /{{.TMP}}/betteralign/{{.BETTERALIGN_VERSION}}/betteralign ./...

@@ -23,6 +23,7 @@ import (
 	"strconv"
 
 	"github.com/GehirnInc/crypt"
+	//revive:disable-next-line:blank-imports
 	_ "github.com/GehirnInc/crypt/sha256_crypt"
 	"github.com/fasthttp/router"
 	"github.com/prometheus/client_golang/prometheus/promhttp"

@@ -99,12 +99,10 @@ func (handler *HTTPS) handleClientTLSAuth(k store.K8s, h haproxy.HAProxy) (err e
 	var notFound store.ErrNotFound
 	secret, annErr := annotations.Secret("client-ca", "", k, k.ConfigMaps.Main.Annotations)
 	if annErr != nil {
-		if errors.Is(annErr, notFound) {
-			logger.Warningf("client TLS Auth: %s", annErr)
-		} else {
-			err = fmt.Errorf("client TLS Auth: %w", annErr)
-			return err
+		if !errors.Is(annErr, notFound) {
+			return fmt.Errorf("client TLS Auth: %w", annErr)
 		}
+		logger.Warningf("client TLS Auth: %s", annErr)
 	}
 	if secret != nil {
 		caFile, err = h.Certificates.AddSecret(secret, certs.CA_CERT)
@@ -252,10 +250,7 @@ func (handler *HTTPS) disableSSLPassthrough(h haproxy.HAProxy) (err error) {
 	if err != nil {
 		return err
 	}
-	if err = handler.toggleSSLPassthrough(false, h); err != nil {
-		return err
-	}
-	return nil
+	return handler.toggleSSLPassthrough(false, h)
 }
 
 func (handler *HTTPS) toggleSSLPassthrough(passthrough bool, h haproxy.HAProxy) (err error) {

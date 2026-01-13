@@ -23,7 +23,8 @@ import (
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
 )
 
-func DeepConvertDefaultsSpecA2toV1(o corev1alpha2.DefaultsSpec) v1.DefaultsSpec { //nolint:cyclop,maintidx
+//revive:disable-next-line:cyclomatic,function-length,cognitive-complexity
+func DeepConvertDefaultsSpecA2toV1(o corev1alpha2.DefaultsSpec) v1.DefaultsSpec {
 	var cp v1.DefaultsSpec
 	if o.Config != nil {
 		cp.Config = new(models.Defaults)

@@ -47,6 +47,7 @@ func ConvertToIngress(resource interface{}) (ingress *Ingress, err error) {
 func GetIngress(resource interface{}) (ingress *networkingv1.Ingress, err error) {
 	switch t := resource.(type) {
 	case *networkingv1.Ingress:
+		//revive:disable-next-line:unchecked-type-assertion
 		return resource.(*networkingv1.Ingress), nil
 	default:
 		err = fmt.Errorf("unrecognized type for: %T", t)

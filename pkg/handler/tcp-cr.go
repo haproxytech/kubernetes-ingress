@@ -77,7 +77,7 @@ func (handler TCPCustomResource) Update(k store.K8s, h haproxy.HAProxy, a annota
 
 	for _, ns := range k.Namespaces {
 		for _, tcpCR := range ns.CRs.TCPsPerCR {
-			//----------------------------------
+			// ----------------------------------
 			// ingress.class migration
 			// To log in 3.0
 			// Not in 3.1
@@ -96,7 +96,7 @@ func (handler TCPCustomResource) Update(k store.K8s, h haproxy.HAProxy, a annota
 				continue
 			}
 			// end ingress.class migration
-			//----------------------------
+			// ----------------------------
 
 			// Cleanup will done after Haproxy config transaction succeeds
 			if tcpCR.Status == store.DELETED {

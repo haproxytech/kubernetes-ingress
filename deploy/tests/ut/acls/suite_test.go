@@ -68,7 +68,7 @@ func (suite *ACLSuite) BeforeTest(suiteName, testName string) {
 }
 
 func (suite *ACLSuite) TearDownSuite() {
-	os.Unsetenv("POD_NAME")
+	_ = os.Unsetenv("POD_NAME")
 }
 
 func (suite *ACLSuite) UseACLFixture() (eventChan chan k8ssync.SyncDataEvent) {
@@ -81,7 +81,7 @@ func (suite *ACLSuite) UseACLFixture() (eventChan chan k8ssync.SyncDataEvent) {
 	}
 
 	s := store.NewK8sStore(osArgs)
-	os.Setenv("POD_NAME", "haproxy-kubernetes-ingress-68c9fc6d86-zn9qz")
+	_ = os.Setenv("POD_NAME", "haproxy-kubernetes-ingress-68c9fc6d86-zn9qz")
 
 	haproxyEnv := env.Env{
 		CfgDir: suite.test.TempDir,

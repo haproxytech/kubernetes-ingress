@@ -45,39 +45,51 @@ func (c *HAProxyController) SyncData() {
 		case k8ssync.CR_GLOBAL:
 			var data *v1.Global
 			if job.Data != nil {
-				data = job.Data.(*v1.Global) //nolint:forcetypeassert
+				//revive:disable-next-line:unchecked-type-assertion
+				data = job.Data.(*v1.Global)
 			}
 			change = c.store.EventGlobalCR(job.Namespace, job.Name, data)
 		case k8ssync.CR_DEFAULTS:
 			var data *v1.Defaults
 			if job.Data != nil {
-				data = job.Data.(*v1.Defaults) //nolint:forcetypeassert
+				//revive:disable-next-line:unchecked-type-assertion
+				data = job.Data.(*v1.Defaults)
 			}
 			change = c.store.EventDefaultsCR(job.Namespace, job.Name, data)
 		case k8ssync.CR_BACKEND:
 			var data *v1.Backend
 			if job.Data != nil {
-				data = job.Data.(*v1.Backend) //nolint:forcetypeassert
+				//revive:disable-next-line:unchecked-type-assertion
+				data = job.Data.(*v1.Backend)
 			}
 			change = c.store.EventBackendCR(job.Namespace, job.Name, data)
 		case k8ssync.NAMESPACE:
-			change = c.store.EventNamespace(ns, job.Data.(*store.Namespace)) //nolint:forcetypeassert
+			//revive:disable-next-line:unchecked-type-assertion
+			change = c.store.EventNamespace(ns, job.Data.(*store.Namespace))
 		case k8ssync.INGRESS:
-			change = c.store.EventIngress(ns, job.Data.(*store.Ingress), job.UID, job.ResourceVersion) //nolint:forcetypeassert
+			//revive:disable-next-line:unchecked-type-assertion
+			change = c.store.EventIngress(ns, job.Data.(*store.Ingress), job.UID, job.ResourceVersion)
 		case k8ssync.INGRESS_CLASS:
-			change = c.store.EventIngressClass(job.Data.(*store.IngressClass)) //nolint:forcetypeassert
+			//revive:disable-next-line:unchecked-type-assertion
+			change = c.store.EventIngressClass(job.Data.(*store.IngressClass))
 		case k8ssync.ENDPOINTS:
-			change = c.store.EventEndpoints(ns, job.Data.(*store.Endpoints), c.haproxy.SyncBackendSrvs) //nolint:forcetypeassert
+			//revive:disable-next-line:unchecked-type-assertion
+			change = c.store.EventEndpoints(ns, job.Data.(*store.Endpoints), c.haproxy.SyncBackendSrvs)
 		case k8ssync.SERVICE:
-			change = c.store.EventService(ns, job.Data.(*store.Service)) //nolint:forcetypeassert
+			//revive:disable-next-line:unchecked-type-assertion
+			change = c.store.EventService(ns, job.Data.(*store.Service))
 		case k8ssync.CONFIGMAP:
-			change = c.store.EventConfigMap(ns, job.Data.(*store.ConfigMap)) //nolint:forcetypeassert
+			//revive:disable-next-line:unchecked-type-assertion
+			change = c.store.EventConfigMap(ns, job.Data.(*store.ConfigMap))
 		case k8ssync.SECRET:
-			change = c.store.EventSecret(ns, job.Data.(*store.Secret)) //nolint:forcetypeassert
+			//revive:disable-next-line:unchecked-type-assertion
+			change = c.store.EventSecret(ns, job.Data.(*store.Secret))
 		case k8ssync.POD:
-			change = c.store.EventPod(job.Data.(store.PodEvent)) //nolint:forcetypeassert
+			//revive:disable-next-line:unchecked-type-assertion
+			change = c.store.EventPod(job.Data.(store.PodEvent))
 		case k8ssync.PUBLISH_SERVICE:
-			change = c.store.EventPublishService(ns, job.Data.(*store.Service)) //nolint:forcetypeassert
+			//revive:disable-next-line:unchecked-type-assertion
+			change = c.store.EventPublishService(ns, job.Data.(*store.Service))
 		case k8ssync.GATEWAYCLASS:
 			change = c.store.EventGatewayClass(job.Data.(*store.GatewayClass))
 		case k8ssync.GATEWAY:
@@ -89,7 +101,8 @@ func (c *HAProxyController) SyncData() {
 		case k8ssync.CR_TCP:
 			var data *store.TCPs
 			if job.Data != nil {
-				data = job.Data.(*store.TCPs) //nolint:forcetypeassert
+				//revive:disable-next-line:unchecked-type-assertion
+				data = job.Data.(*store.TCPs)
 			}
 			change = c.store.EventTCPCR(job.Namespace, job.Name, data)
 		}

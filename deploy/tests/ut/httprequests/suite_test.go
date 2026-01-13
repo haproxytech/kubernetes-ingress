@@ -68,7 +68,7 @@ func (suite *HTTPRequestsSuite) BeforeTest(suiteName, testName string) {
 }
 
 func (suite *HTTPRequestsSuite) TearDownSuite() {
-	os.Unsetenv("POD_NAME")
+	_ = os.Unsetenv("POD_NAME")
 }
 
 func (suite *HTTPRequestsSuite) UseHTTPRequestsFixture() (eventChan chan k8ssync.SyncDataEvent) {
@@ -81,7 +81,7 @@ func (suite *HTTPRequestsSuite) UseHTTPRequestsFixture() (eventChan chan k8ssync
 	}
 
 	s := store.NewK8sStore(osArgs)
-	os.Setenv("POD_NAME", "haproxy-kubernetes-ingress-68c9fc6d86-zn9qz")
+	_ = os.Setenv("POD_NAME", "haproxy-kubernetes-ingress-68c9fc6d86-zn9qz")
 
 	haproxyEnv := env.Env{
 		CfgDir: suite.test.TempDir,

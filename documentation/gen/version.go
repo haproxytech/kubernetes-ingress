@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -21,7 +22,7 @@ func (v *Version) UnmarshalYAML(unmarshal func(interface{}) error) error {
 
 	parts := strings.Split(data, ".")
 	if len(parts) != 2 {
-		return fmt.Errorf("version is not in correct format")
+		return errors.New("version is not in correct format")
 	}
 	v.Major, err = strconv.Atoi(parts[0])
 	if err != nil {

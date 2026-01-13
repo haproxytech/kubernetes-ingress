@@ -40,6 +40,7 @@ func (k k8s) runCRDefinitionsInformer(eventChan chan GroupKind, stop chan struct
 	logger.Error(errW)
 	_, err := informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
+			//revive:disable-next-line:unchecked-type-assertion
 			crd := obj.(*apiextensionsv1.CustomResourceDefinition)
 			if !(crd.Spec.Group == "core.haproxy.org" || crd.Spec.Group == "ingress.v1.haproxy.org") {
 				return

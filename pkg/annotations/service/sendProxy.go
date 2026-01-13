@@ -38,6 +38,7 @@ func (a *SendProxy) Process(k store.K8s, annotations ...map[string]string) error
 	} else if a.backend.DefaultServer == nil {
 		a.backend.DefaultServer = &models.DefaultServer{}
 	}
+	//revive:disable-next-line:identical-switch-branches
 	switch v {
 	case "proxy":
 		a.backend.DefaultServer.SendProxy = "enabled"

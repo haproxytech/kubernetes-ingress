@@ -22,6 +22,7 @@ import (
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
 )
 
+//revive:disable-next-line:cyclomatic,function-length,cognitive-complexity
 func DeepConvertGlobalSpecA2toV1(o corev1alpha2.GlobalSpec) v1.GlobalSpec {
 	var cp v1.GlobalSpec
 	if o.Config != nil {

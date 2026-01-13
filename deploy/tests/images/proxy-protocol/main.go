@@ -14,7 +14,7 @@ func main() {
 	addr := ":8080"
 	tcpListener, err := net.Listen("tcp", addr)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error creating TCP listener: %v\n", err)
+		_, _ = fmt.Fprintf(os.Stderr, "Error creating TCP listener: %v\n", err)
 		os.Exit(1)
 	}
 
@@ -26,13 +26,13 @@ func main() {
 
 	// HTTP handler
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprint(w, "hello!")
+		_, _ = fmt.Fprint(w, "hello!")
 	})
 
 	// Serve using custom listener
-	fmt.Printf("Listening on %s with PROXY protocol support...\n", addr)
+	_, _ = fmt.Printf("Listening on %s with PROXY protocol support...\n", addr)
 	if err := http.Serve(proxyListener, nil); err != nil {
-		fmt.Fprintf(os.Stderr, "HTTP server error: %v\n", err)
+		_, _ = fmt.Fprintf(os.Stderr, "HTTP server error: %v\n", err)
 		os.Exit(1)
 	}
 }

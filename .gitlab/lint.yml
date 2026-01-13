@@ -27,7 +27,7 @@ gofumpt:
   script:
     - make gofumpt
     - test -z "$(git diff 2> /dev/null)" || exit 'Go code not formatted, issue \`make gofumpt\` and commit the result'
-golangci_lint:
+linters:
   stage: lint
   needs: []
   rules:
@@ -39,7 +39,7 @@ golangci_lint:
   tags:
     - go
   script:
-    - make lint-seq
+    - task lint
 commit-policy:
   stage: lint
   needs: []

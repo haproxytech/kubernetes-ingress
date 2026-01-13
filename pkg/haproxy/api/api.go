@@ -198,10 +198,7 @@ func (c *clientNative) APICommitTransaction() error {
 		return err
 	}
 	if !c.activeTransactionHasChanges {
-		if errDel := configuration.DeleteTransaction(c.activeTransaction); errDel != nil {
-			return errDel
-		}
-		return nil
+		return configuration.DeleteTransaction(c.activeTransaction)
 	}
 	_, err = configuration.CommitTransaction(c.activeTransaction)
 	return err

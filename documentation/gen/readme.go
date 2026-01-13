@@ -72,18 +72,16 @@ func selectExamples(ann *ConfItem, buff *strings.Builder) {
 				buff.WriteString(ann.ExampleConfigmap)
 			}
 			buff.WriteString("\n```\n\n")
-		} else {
-			buff.WriteString("Example:\n\n```yaml\n")
-			for _, line := range ann.Example {
-				if line[0] != '#' && ann.Title != "ingress.class" {
-					buff.WriteString("haproxy.org/")
-				}
-				buff.WriteString(line)
-				buff.WriteString("\n")
-			}
-			buff.WriteString("\n```\n\n")
-
 		}
+		buff.WriteString("Example:\n\n```yaml\n")
+		for _, line := range ann.Example {
+			if line[0] != '#' && ann.Title != "ingress.class" {
+				buff.WriteString("haproxy.org/")
+			}
+			buff.WriteString(line)
+			buff.WriteString("\n")
+		}
+		buff.WriteString("\n```\n\n")
 		return
 	}
 

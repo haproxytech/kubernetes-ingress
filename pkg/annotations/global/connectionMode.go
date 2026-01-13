@@ -69,6 +69,7 @@ func (a *HTTPConnectionMode) Process(k store.K8s, annotations ...map[string]stri
 		"http-keep-alive",
 		"http-server-close",
 		"httpclose":
+		//revive:disable-next-line:useless-break,unnecessary-stmt
 		break
 	default:
 		return fmt.Errorf("invalid http-connection-mode value '%s'", input)

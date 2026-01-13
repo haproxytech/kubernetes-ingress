@@ -50,11 +50,10 @@ func (a *SyslogServers) Process(k store.K8s, annotations ...map[string]string) e
 			}
 			parts := strings.Split(param, ":")
 			// param should be key: value
-			if len(parts) == 2 {
-				logParams[parts[0]] = parts[1]
-			} else {
+			if len(parts) != 2 {
 				return fmt.Errorf("incorrect syslog param: '%s' in '%s'", param, syslogLine)
 			}
+			logParams[parts[0]] = parts[1]
 		}
 		// populate annotation data
 		logTarget := models.LogTarget{Index: utils.PtrInt64(int64(i))}

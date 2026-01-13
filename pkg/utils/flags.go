@@ -1,5 +1,7 @@
 package utils
 
+//revive:disable:line-length-limit
+
 import (
 	"errors"
 	"fmt"

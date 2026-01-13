@@ -193,7 +193,7 @@ func TestTCPs_HasCollisionAddressPort(t *testing.T) {
 				gotList.OrderByCreationTime()
 			}
 
-			if tt.hasCollision == true {
+			if tt.hasCollision {
 				if got == nil {
 					t.Errorf("test %s TCPs.HasCollisionAddressPort() got should not be nil", tt.name)
 				}
@@ -252,7 +252,7 @@ func TestTCPs_HasCollisionFrontendName(t *testing.T) {
 			if hasColl != tt.hasCollision {
 				t.Errorf("test %s TCPs.TestTCPs_HasCollisionFrontendName() got = %v, want %v", tt.name, hasColl, tt.hasCollision)
 			}
-			if tt.hasCollision == true {
+			if tt.hasCollision {
 				if got == nil {
 					t.Errorf("test %s TCPs.TestTCPs_HasCollisionFrontendName() got should not be nil", tt.name)
 				}

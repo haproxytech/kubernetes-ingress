@@ -18,7 +18,8 @@ func ModelBackend(name, defaultNS string, k store.K8s, annotations ...map[string
 		return backend, err
 	}
 	if b != nil {
-		backend = b.(*v1.BackendSpec) //nolint:forcetypeassert
+		//revive:disable-next-line:unchecked-type-assertion
+		backend = b.(*v1.BackendSpec)
 	}
 	return backend, err
 }
@@ -31,6 +32,7 @@ func ModelDefaults(name, defaultNS string, k store.K8s, annotations ...map[strin
 		return defaults, err
 	}
 	if d != nil {
+		//revive:disable-next-line:unchecked-type-assertion
 		defaults = d.(*models.Defaults)
 	}
 	return defaults, err
@@ -44,6 +46,7 @@ func ModelGlobal(name, defaultNS string, k store.K8s, annotations ...map[string]
 		return global, err
 	}
 	if g != nil {
+		//revive:disable-next-line:unchecked-type-assertion
 		global = g.(*models.Global)
 	}
 	return global, err
@@ -57,7 +60,8 @@ func ModelLog(name, defaultNS string, k store.K8s, annotations ...map[string]str
 		return log, err
 	}
 	if l != nil {
-		log = l.(models.LogTargets) //nolint:forcetypeassert
+		//revive:disable-next-line:unchecked-type-assertion
+		log = l.(models.LogTargets)
 	}
 	return log, err
 }

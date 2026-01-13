@@ -50,11 +50,8 @@ func (d *s6Control) Service(action string) (string, error) {
 	var cmd *exec.Cmd
 
 	switch action {
-	case "start":
-		// no need to start it is up already (s6)
-		return "", nil
-	case "stop":
-		// no need to stop it (s6)
+	case "start", "stop":
+		// no need to start/stop it (s6)
 		return "", nil
 	case "reload":
 		if d.masterSocketValid {

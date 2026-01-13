@@ -22,7 +22,8 @@ import (
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
 )
 
-func DeepConvertBackendSpecA2toV1(o corev1alpha2.BackendSpec) v1.BackendSpec { //nolint:cyclop,maintidx
+//revive:disable-next-line:cyclomatic,function-length,cognitive-complexity
+func DeepConvertBackendSpecA2toV1(o corev1alpha2.BackendSpec) v1.BackendSpec {
 	var cp v1.BackendSpec
 	if o.Config != nil {
 		cp.Config = new(models.Backend)

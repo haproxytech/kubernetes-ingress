@@ -62,11 +62,11 @@ func getParamsFromInput(value string) (*models.Balance, error) {
 		case "hdr":
 			balance.HdrName = algorithmTokens[1]
 		case "random":
-			if rand, err := strconv.Atoi(algorithmTokens[1]); err == nil {
-				balance.RandomDraws = int64(rand)
-			} else {
+			rand, err := strconv.Atoi(algorithmTokens[1])
+			if err != nil {
 				return balance, err
 			}
+			balance.RandomDraws = int64(rand)
 		case "rdp-cookie":
 			balance.RdpCookieName = algorithmTokens[1]
 		}
@@ -87,22 +87,22 @@ func getParamsFromInput(value string) (*models.Balance, error) {
 			if i+1 >= len(tokens) {
 				return balance, fmt.Errorf("missing parameter for option '%s' in balance configuration", token)
 			}
-			if length, err := strconv.Atoi(tokens[i+1]); err == nil {
-				balance.URILen = int64(length)
-			} else {
+			length, err := strconv.Atoi(tokens[i+1])
+			if err != nil {
 				return balance, err
 			}
+			balance.URILen = int64(length)
 			// We already got the next token
 			i++
 		case "depth":
 			if i+1 >= len(tokens) {
 				return balance, fmt.Errorf("missing parameter for option '%s' in balance configuration", token)
 			}
-			if depth, err := strconv.Atoi(tokens[i+1]); err == nil {
-				balance.URIDepth = int64(depth)
-			} else {
+			depth, err := strconv.Atoi(tokens[i+1])
+			if err != nil {
 				return balance, err
 			}
+			balance.URIDepth = int64(depth)
 			// We already got the next token
 			i++
 		case "whole":
@@ -111,11 +111,11 @@ func getParamsFromInput(value string) (*models.Balance, error) {
 			if i+1 >= len(tokens) {
 				return balance, fmt.Errorf("missing parameter for option '%s' in balance configuration", token)
 			}
-			if maxWait, err := strconv.Atoi(tokens[i+1]); err == nil {
-				balance.URLParamMaxWait = int64(maxWait)
-			} else {
+			maxWait, err := strconv.Atoi(tokens[i+1])
+			if err != nil {
 				return balance, err
 			}
+			balance.URLParamMaxWait = int64(maxWait)
 			// We already got the next token
 			i++
 		case "path-only":
@@ -124,11 +124,11 @@ func getParamsFromInput(value string) (*models.Balance, error) {
 			if i+1 >= len(tokens) {
 				return balance, fmt.Errorf("missing parameter for option '%s' in balance configuration", token)
 			}
-			if checkPost, err := strconv.Atoi(tokens[i+1]); err == nil {
-				balance.URLParamCheckPost = int64(checkPost)
-			} else {
+			checkPost, err := strconv.Atoi(tokens[i+1])
+			if err != nil {
 				return balance, err
 			}
+			balance.URLParamCheckPost = int64(checkPost)
 			// We already got the next token
 			i++
 		case "use_domain_only":

@@ -210,16 +210,16 @@ func logInfo(logger utils.Logger, osArgs utils.OSArgs) bool {
 		logger.Printf("Frontend HTTPS listening on: %s:%d", osArgs.IPV4BindAddr, osArgs.HTTPSBindPort)
 	}
 	if osArgs.DisableHTTP {
-		logger.Printf("Disabling HTTP frontend")
+		logger.Print("Disabling HTTP frontend")
 	}
 	if osArgs.DisableHTTPS {
-		logger.Printf("Disabling HTTPS frontend")
+		logger.Print("Disabling HTTPS frontend")
 	}
 	if osArgs.DisableIPV4 {
-		logger.Printf("Disabling IPv4 support")
+		logger.Print("Disabling IPv4 support")
 	}
 	if osArgs.DisableIPV6 {
-		logger.Printf("Disabling IPv6 support")
+		logger.Print("Disabling IPv6 support")
 	}
 	if osArgs.ConfigMapTCPServices.Name != "" {
 		logger.Printf("TCP Services provided in '%s'", osArgs.ConfigMapTCPServices)
@@ -234,7 +234,7 @@ func logInfo(logger utils.Logger, osArgs utils.OSArgs) bool {
 		logger.Printf("Disabling config snippets for [%s]", osArgs.DisableConfigSnippets)
 	}
 	if osArgs.DisableDelayedWritingOnlyIfReload {
-		logger.Printf("Disabling the delayed writing of files to disk only in case of haproxy reload (write to disk even if no reload)")
+		logger.Print("Disabling the delayed writing of files to disk only in case of haproxy reload (write to disk even if no reload)")
 	}
 	logger.Debugf("Kubernetes Informers resync period: %s", osArgs.CacheResyncPeriod.String())
 	logger.Printf("Controller initial sync period: %s", osArgs.InitialSyncPeriod.String())

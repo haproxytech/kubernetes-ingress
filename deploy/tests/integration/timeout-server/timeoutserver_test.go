@@ -27,7 +27,7 @@ func (suite *TimeoutServerSuite) TestTimeoutServerConfigMap() {
 	suite.StartController()
 	cm := suite.setupTest()
 
-	///////////////////////////////////////
+	// ////////////////////////////////////
 	// timeout server setup in:
 	// - configmap only
 	cm.Status = store.MODIFIED
@@ -56,7 +56,7 @@ func (suite *TimeoutServerSuite) TestTimeoutServerService() {
 	suite.StartController()
 	cm := suite.setupTest()
 
-	///////////////////////////////////////
+	// ////////////////////////////////////
 	// timeout server setup in:
 	// - configmap (77000)
 	// - ingress (76000)
@@ -94,7 +94,7 @@ func (suite *TimeoutServerSuite) TestTimeoutServerIngress() {
 	suite.StartController()
 	cm := suite.setupTest()
 
-	///////////////////////////////////////
+	// ////////////////////////////////////
 	// timeout server setup in:
 	// - configmap (77000)
 	// - ingress (76000)

@@ -48,11 +48,8 @@ func (d *pebbleControl) Service(action string) (string, error) {
 	var cmd *exec.Cmd
 
 	switch action {
-	case "start":
-		// no need to start it is up already (pebble)
-		return "", nil
-	case "stop":
-		// no need to stop it (pebble)
+	case "start", "stop":
+		// no need to start/stop it (pebble)
 		return "", nil
 	case "reload":
 		if d.masterSocketValid {

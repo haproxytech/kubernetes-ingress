@@ -76,10 +76,7 @@ func (c *HAProxyController) clientAPIClosure(fn func() error) (err error) {
 		return err
 	}
 
-	if err = c.haproxy.APICommitTransaction(); err != nil {
-		return err
-	}
-	return nil
+	return c.haproxy.APICommitTransaction()
 }
 
 // Start initializes and runs HAProxyController

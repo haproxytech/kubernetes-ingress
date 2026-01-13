@@ -8,8 +8,7 @@ import (
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
 )
 
-//nolint:golint,stylecheck
-var MIME_TYPE_TEXT_PLAIN string = "text/plain"
+var MIME_TYPE_TEXT_PLAIN = "text/plain"
 
 type ReqReturnStatus struct {
 	StatusCode int64

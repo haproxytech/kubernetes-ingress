@@ -1,0 +1,7 @@
+#https://taskfile.dev/
+version: "3"
+
+env:
+  TMP: tmp
+
+vars:

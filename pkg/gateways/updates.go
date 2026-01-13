@@ -78,7 +78,7 @@ func (statusMgr *StatusManagerImpl) UpdateStatusGateways(gatewayStatusRecords []
 		}
 		for i, listenerStatusRecord := range gatewayStatusRecord.listenersStatusesRecords {
 			listenerConditions := []metav1.Condition{}
-			var numRoutes int32 = 0
+			var numRoutes int32
 			if numRoutesByListener := numRoutesByListenerByGateway[gatewayStatusRecord.namespace+"/"+gatewayStatusRecord.name]; numRoutesByListener != nil {
 				numRoutes = numRoutesByListener[listenerStatusRecord.name]
 			}
@@ -248,13 +248,12 @@ func hasNumberOfRoutesForAnyListenerChanged(gatewayStatusRecord gatewayStatusRec
 	if numRoutesByListener != nil {
 		for _, listenerStatusRecord := range gatewayStatusRecord.listenersStatusesRecords {
 			num := numRoutesByListener[listenerStatusRecord.name]
-			if previousNumRoutesByListener != nil {
-				numRoutesHasChanged = num != previousNumRoutesByListener[listenerStatusRecord.name]
-				if numRoutesHasChanged {
-					break
-				}
-			} else {
+			if previousNumRoutesByListener == nil {
 				numRoutesHasChanged = true
+				break
+			}
+			numRoutesHasChanged = num != previousNumRoutesByListener[listenerStatusRecord.name]
+			if numRoutesHasChanged {
 				break
 			}
 		}

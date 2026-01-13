@@ -22,6 +22,7 @@ func (i *Ingress) UpdateStatus(client *kubernetes.Clientset) (err error) {
 		}
 	}
 
+	//revive:disable-next-line:unnecessary-stmt
 	switch i.resource.APIVersion {
 	case "networking.k8s.io/v1":
 		var ingSource *networkingv1.Ingress

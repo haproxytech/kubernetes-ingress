@@ -551,7 +551,8 @@ func (k *k8s) getPodInformer(namespace, podPrefix string, resyncPeriod time.Dura
 					eventChan <- ToSyncDataEvent(item, item, meta.UID, meta.ResourceVersion)
 				},
 				DeleteFunc: func(obj interface{}) {
-					meta := obj.(*corev1.Pod).ObjectMeta //nolint:forcetypeassert
+					//revive:disable-next-line:unchecked-type-assertion
+					meta := obj.(*corev1.Pod).ObjectMeta
 					prefix, _ = utils.GetPodPrefix(meta.Name)
 					if prefix != podPrefix {
 						return
@@ -560,7 +561,8 @@ func (k *k8s) getPodInformer(namespace, podPrefix string, resyncPeriod time.Dura
 					eventChan <- ToSyncDataEvent(item, item, meta.UID, meta.ResourceVersion)
 				},
 				UpdateFunc: func(oldObj, newObj interface{}) {
-					meta := newObj.(*corev1.Pod).ObjectMeta //nolint:forcetypeassert
+					//revive:disable-next-line:unchecked-type-assertion
+					meta := newObj.(*corev1.Pod).ObjectMeta
 					prefix, _ = utils.GetPodPrefix(meta.Name)
 					if prefix != podPrefix {
 						return
@@ -802,7 +804,7 @@ func (k k8s) convertToEndpoints(obj interface{}, status store.Status) (*store.En
 			}
 		}
 		return item, nil
-	case *corev1.Endpoints:
+	case *corev1.Endpoints: //lint:ignore SA1019 EndpointSlice are future, but we still want to keep support
 		item := &store.Endpoints{
 			Namespace: data.GetNamespace(),
 			Service:   data.GetName(),
@@ -1011,6 +1013,7 @@ func (k k8s) getTCPRouteInformer(eventChan chan k8ssync.SyncDataEvent, factory g
 }
 
 func PopulateInformer[IT InformerGetter, GWType GatewayRelatedType, GWF GatewayInformerFunc[GWType]](eventChan chan k8ssync.SyncDataEvent, informer IT, handler GWF) cache.SharedIndexInformer {
+	//revive:disable:unchecked-type-assertion
 	_, err := informer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			gatewaytype := obj.(GWType)
@@ -1025,6 +1028,7 @@ func PopulateInformer[IT InformerGetter, GWType GatewayRelatedType, GWF GatewayI
 			handler(gatewaytype, eventChan, store.DELETED)
 		},
 	})
+	//revive:enable:unchecked-type-assertion
 	logger.Error(err)
 	return informer.Informer()
 }
