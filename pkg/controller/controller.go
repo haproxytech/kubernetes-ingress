@@ -216,6 +216,7 @@ func (c *HAProxyController) updateHAProxy() {
 		var msg string
 		if msg, err = c.haproxy.Service("reload"); err != nil {
 			logger.Error(err)
+			c.prometheusMetricsManager.UpdateReloadMetrics(err)
 			errLines := strings.Split(msg, "\n")
 			msg := ""
 			// Extract only lines with [ALERT] prefix to reuse functions
@@ -239,8 +240,8 @@ func (c *HAProxyController) updateHAProxy() {
 			}
 		} else {
 			logger.Info("HAProxy reloaded")
+			c.prometheusMetricsManager.UpdateReloadMetrics(err)
 		}
-		c.prometheusMetricsManager.UpdateReloadMetrics(err)
 	} else if c.osArgs.DisableDelayedWritingOnlyIfReload {
 		// If the osArgs flag is set, then write the files to disk even if there is no reload of haproxy
 		fs.RunDelayedFuncs()
