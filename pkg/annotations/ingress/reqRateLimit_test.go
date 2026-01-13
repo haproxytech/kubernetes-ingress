@@ -37,6 +37,8 @@ import (
 // - Invalid IP addresses are rejected with appropriate error messages
 // - Invalid CIDR ranges (e.g., /33 prefix) are rejected with appropriate error messages
 // - Mixed valid and invalid entries in the whitelist are rejected entirely
+//
+//revive:disable-next-line:function-length
 func TestReqRateLimit_Whitelist(t *testing.T) {
 	tests := []struct {
 		name              string
