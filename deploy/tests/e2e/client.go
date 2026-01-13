@@ -46,13 +46,16 @@ type GlobalHAProxyInfo struct {
 	Uptime  string
 }
 
-//nolint:golint, stylecheck
+//revive:disable:var-naming
 const (
 	HTTP_PORT  = 30080
 	HTTPS_PORT = 30443
 	STATS_PORT = 31024
 )
 
+//revive:enable:var-naming
+
+//revive:disable-next-line:import-shadowing,flag-parameter
 func newClient(host string, port int, tls bool) (*Client, error) {
 	kindURL := os.Getenv("KIND_URL")
 	if kindURL == "" {
@@ -76,7 +79,7 @@ func newClient(host string, port int, tls bool) (*Client, error) {
 		Port: dstPort,
 		Req:  req,
 		Transport: &http.Transport{
-			DialContext: func(ctx context.Context, network, addr string) (conn net.Conn, e error) {
+			DialContext: func(ctx context.Context, network, _ string) (conn net.Conn, e error) {
 				dialer := &net.Dialer{}
 				return dialer.DialContext(ctx, network, fmt.Sprintf("%s:%d", kindURL, dstPort))
 			},
@@ -118,7 +121,7 @@ func (c *Client) DoMethod(method string) (res *http.Response, closeFunc func() e
 		client.Transport = c.Transport
 	}
 	if c.NoRedirect {
-		client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
+		client.CheckRedirect = func(_ *http.Request, _ []*http.Request) error {
 			return http.ErrUseLastResponse
 		}
 	}
@@ -204,7 +207,10 @@ func runtimeCommand(command string) (result []byte, err error) {
 	}
 	result = make([]byte, 2048)
 	_, err = conn.Read(result)
-	conn.Close()
+	if err != nil {
+		return []byte{}, err
+	}
+	err = conn.Close()
 	return result, err
 }
 

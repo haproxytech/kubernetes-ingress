@@ -272,7 +272,6 @@ func (c *clientNative) computeConfigurationHash(configuration configuration.Conf
 	}
 	// Note that p.String() does not include the hash!!!
 	content := p.String()
-	//nolint: gosec
 	hash := md5.Sum([]byte(content))
 	return hex.EncodeToString(hash[:]), err
 }
@@ -289,10 +288,7 @@ func (c *clientNative) APICommitTransaction() error {
 	}
 
 	if c.configurationHashAtTransactionStart == hash {
-		if errDel := configuration.DeleteTransaction(c.activeTransaction); errDel != nil {
-			return errDel
-		}
-		return nil
+		return configuration.DeleteTransaction(c.activeTransaction)
 	}
 	_, err = configuration.CommitTransaction(c.activeTransaction)
 	return err
@@ -392,9 +388,8 @@ func (c *clientNative) processConfigSnippets(backendName string, configSnippets 
 	}
 	if len(configSnippets) > 0 {
 		return config.Set("backend", backendName, "config-snippet", types.StringSliceC{Value: configSnippets})
-	} else {
-		return config.Set("backend", backendName, "config-snippet", nil)
 	}
+	return config.Set("backend", backendName, "config-snippet", nil)
 }
 
 func (c *clientNative) processACLs(backendName string, aclsList models.Acls, configuration configuration.Configuration) utils.Errors {

@@ -14,6 +14,8 @@
 
 package main
 
+//revive:disable:unhandled-error
+
 import (
 	"fmt"
 	"log"

@@ -31,15 +31,15 @@ const (
 )
 
 type TCPResource struct {
-	CreationTimestamp time.Time `json:"creation_timestamp" yaml:"creation_timestamp"` //nolint: tagliatelle
+	CreationTimestamp time.Time `json:"creation_timestamp" yaml:"creation_timestamp"`
 	// ParentName is the name of TCP CR containing this TCP resource
-	ParentName      string `json:"parent_name,omitempty" yaml:"parent_name,omitempty"`           //nolint: tagliatelle
-	Namespace       string `json:"namespace,omitempty" yaml:"namespace,omitempty"`               //nolint: tagliatelle
-	CollisionStatus Status `json:"collision_status,omitempty" yaml:"collision_status,omitempty"` //nolint: tagliatelle
+	ParentName      string `json:"parent_name,omitempty" yaml:"parent_name,omitempty"`
+	Namespace       string `json:"namespace,omitempty" yaml:"namespace,omitempty"`
+	CollisionStatus Status `json:"collision_status,omitempty" yaml:"collision_status,omitempty"`
 	// If Status is ERROR, Reason will contain the reason
 	// Leave it as a fully flexible string
-	Reason      string            `json:"reason,omitempty" yaml:"reason,omitempty"` //nolint: tagliatelle
-	v3.TCPModel `json:"tcpmodel"` //nolint: tagliatellet
+	Reason      string `json:"reason,omitempty" yaml:"reason,omitempty"`
+	v3.TCPModel `json:"tcpmodel"`
 }
 
 type TCPResourceList []*TCPResource

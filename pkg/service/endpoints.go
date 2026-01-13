@@ -74,6 +74,7 @@ func (s *Service) updateHAProxySrv(client api.HAProxyClient, srvSlot store.HAPro
 		srv.Port = &port
 		srv.Maintenance = "disabled"
 	}
+	//revive:disable-next-line:line-length-limit
 	logger.Tracef("[CONFIG] [BACKEND] [SERVER] backend %s: about to update server in configuration file :  models.Server { Name: %s, Port: %d, Address: %s, Maintenance: %s }", s.backend.Name, srv.Name, *srv.Port, srv.Address, srv.Maintenance)
 
 	errAPI := client.BackendServerCreateOrUpdate(s.backend.Name, srv)

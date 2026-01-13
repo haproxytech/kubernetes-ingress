@@ -72,7 +72,7 @@ func (mf *mapFile) getContent() (result []string, hash uint64) {
 			chunk.Reset()
 		}
 		chunk.WriteString(r)
-		chunk.WriteRune('\n')
+		_, _ = chunk.WriteRune('\n')
 		_, _ = h.Write([]byte(r))
 	}
 	if chunk.Len() > 0 {
@@ -137,18 +137,16 @@ func (m mapFiles) RefreshMaps(client api.HAProxyClient) {
 				mapFilesToDelete = append(mapFilesToDelete, name)
 				mapMutex.Unlock()
 				return
-			} else {
-				if _, err = os.Stat(string(filename)); err != nil {
-					if os.IsNotExist(err) {
-						err = renameio.WriteFile(string(filename), []byte{}, 0o666)
-						if err != nil {
-							logger.Error(err)
-							return
-						}
-					} else {
-						logger.Error(err)
-						return
-					}
+			}
+			if _, err = os.Stat(string(filename)); err != nil {
+				if !os.IsNotExist(err) {
+					logger.Error(err)
+					return
+				}
+				err = renameio.WriteFile(string(filename), []byte{}, 0o666)
+				if err != nil {
+					logger.Error(err)
+					return
 				}
 			}
 			var buff strings.Builder

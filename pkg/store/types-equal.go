@@ -14,6 +14,8 @@
 
 package store
 
+//revive:disable:line-length-limit
+
 import (
 	"bytes"
 

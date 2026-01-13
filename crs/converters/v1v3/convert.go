@@ -49,9 +49,8 @@ func ConvertV1V3(osArgs utils.OSArgs) error {
 
 	if unstructured.Object["apiVersion"] != "ingress.v1.haproxy.org/v1" {
 		return errors.New("apiVersion is not ingress.v1.haproxy.org/v1 - Only conversion from ingress.v1.haproxy.org/v1 is supported")
-	} else {
-		utils.GetLogger().Infof("Converting from version %s", unstructured.Object["apiVersion"])
 	}
+	utils.GetLogger().Infof("Converting from version %s", unstructured.Object["apiVersion"])
 
 	switch unstructured.Object["kind"] {
 	case "Backend":

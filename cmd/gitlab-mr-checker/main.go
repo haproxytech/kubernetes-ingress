@@ -33,6 +33,8 @@ import (
 	docs "github.com/haproxytech/kubernetes-ingress/documentation"
 )
 
+//revive:disable:deep-exit
+
 type Issue struct {
 	Title string `json:"title"`
 	State string `json:"state"`
@@ -82,16 +84,18 @@ type MergeRequest struct {
 
 var baseURL string
 
-const LABEL_COLOR = "#8fbc8f" //nolint:stylecheck
+//revive:disable-next-line:var-naming
+const LABEL_COLOR = "#8fbc8f"
 
 func main() {
 	fmt.Print(hello) //nolint:forbidigo
 
 	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
 		AddSource: true,
-		ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
+		ReplaceAttr: func(_ []string, a slog.Attr) slog.Attr {
 			if a.Key == "source" {
 				x := a.Value
+				//revive:disable-next-line:unchecked-type-assertion
 				src := x.Any().(*slog.Source)
 				path := strings.Split(src.File, "/")
 				src.File = path[len(path)-1]
@@ -111,7 +115,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	docs, err := docs.GetLifecycle()
+	docsData, err := docs.GetLifecycle()
 	if err != nil {
 		slog.Error(err.Error())
 		os.Exit(1)
@@ -119,18 +123,21 @@ func main() {
 
 	token := os.Getenv("GITLAB_TOKEN")
 
-	CI_MERGE_REQUEST_IID_STR := os.Getenv("CI_MERGE_REQUEST_IID") //nolint:stylecheck
+	//revive:disable-next-line:var-naming,unexported-naming
+	CI_MERGE_REQUEST_IID_STR := os.Getenv("CI_MERGE_REQUEST_IID")
 	if CI_MERGE_REQUEST_IID_STR == "" {
 		slog.Error("CI_MERGE_REQUEST_IID not set")
 		os.Exit(1)
 	}
-	CI_MERGE_REQUEST_IID, err := strconv.Atoi(CI_MERGE_REQUEST_IID_STR) //nolint:stylecheck
+	//revive:disable-next-line:var-naming,unexported-naming
+	CI_MERGE_REQUEST_IID, err := strconv.Atoi(CI_MERGE_REQUEST_IID_STR)
 	if err != nil {
 		slog.Error(err.Error())
 		os.Exit(1)
 	}
 
-	CI_PROJECT_ID := os.Getenv("CI_PROJECT_ID") //nolint:stylecheck
+	//revive:disable-next-line:var-naming,unexported-naming
+	CI_PROJECT_ID := os.Getenv("CI_PROJECT_ID")
 	if CI_PROJECT_ID == "" {
 		slog.Error("CI_PROJECT_ID not set")
 		os.Exit(1)
@@ -139,7 +146,7 @@ func main() {
 	backportLabels := map[string]struct{}{
 		"backport-ee": {},
 	}
-	for _, version := range docs.Versions {
+	for _, version := range docsData.Versions {
 		if !version.Maintained {
 			continue
 		}
@@ -183,7 +190,7 @@ func main() {
 
 func startThreadOnMergeRequest(baseURL, token, projectID string, mergeRequestIID int, threadBody string) {
 	client := &http.Client{}
-	threadData := map[string]interface{}{
+	threadData := map[string]any{
 		"body": threadBody,
 	}
 	threadDataBytes, err := json.Marshal(threadData)
@@ -335,7 +342,7 @@ func getProjectlabels(backportLabels map[string]struct{}, projectID string) erro
 		if err != nil {
 			return fmt.Errorf("failed to create label %s: %w", label, err)
 		}
-		defer resp.Body.Close()
+		_ = resp.Body.Close()
 		if resp.StatusCode != http.StatusCreated {
 			return fmt.Errorf("failed to create label %s, status code: %d", label, resp.StatusCode)
 		}

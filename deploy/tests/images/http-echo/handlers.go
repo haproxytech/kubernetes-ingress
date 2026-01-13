@@ -12,7 +12,7 @@ import (
 
 func (c context) echoHostname(writer http.ResponseWriter, request *http.Request) {
 	writer.Header().Set("Content-Type", "text/plain")
-	fmt.Fprintln(writer, c.hostname)
+	_, _ = fmt.Fprintln(writer, c.hostname)
 }
 
 // echoAll echos back request in response
@@ -64,5 +64,5 @@ func (c context) echoAll(writer http.ResponseWriter, request *http.Request) {
 	}
 	res, _ := json.MarshalIndent(attr, "", "  ")
 	writer.Header().Set("Content-Type", "application/json")
-	fmt.Fprintln(writer, string(res))
+	_, _ = fmt.Fprintln(writer, string(res))
 }

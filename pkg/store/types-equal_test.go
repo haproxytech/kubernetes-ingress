@@ -1,5 +1,7 @@
 package store
 
+//revive:disable:line-length-limit
+
 import "testing"
 
 func TestGatewayClassEquality(t *testing.T) {

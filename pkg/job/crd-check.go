@@ -105,13 +105,12 @@ func CRDRefresh(log utils.Logger, osArgs utils.OSArgs) error {
 				log.Infof("CRD %s updated, CN[v%s] -> CN[v%s]", crdName, vK8s.String(), vNew.String())
 			}
 			continue
-		} else {
-			_, err = clientset.ApiextensionsV1().CustomResourceDefinitions().Update(context.Background(), &crd, metav1.UpdateOptions{})
-			if err != nil {
-				return err
-			}
-			log.Infof("CRD %s updated", crdName)
 		}
+		_, err = clientset.ApiextensionsV1().CustomResourceDefinitions().Update(context.Background(), &crd, metav1.UpdateOptions{})
+		if err != nil {
+			return err
+		}
+		log.Infof("CRD %s updated", crdName)
 	}
 
 	log.Info("")

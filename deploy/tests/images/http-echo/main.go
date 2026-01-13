@@ -1,5 +1,7 @@
 package main
 
+//revive:disable:deep-exit
+
 import (
 	"flag"
 	"log"
@@ -20,7 +22,7 @@ type context struct {
 	hostname string
 }
 
-func (c *context) getParams() {
+func (c *context) setParams() {
 	c.params = make(map[string]string)
 	httpPtr := flag.Int("http", HTTPPort, "http port value")
 	httpsPtr := flag.Int("https", HTTPSPort, "https port value")
@@ -58,7 +60,7 @@ func main() {
 	if err != nil {
 		log.Println(err)
 	}
-	ctx.getParams()
+	ctx.setParams()
 	http.HandleFunc("/hostname", ctx.echoHostname)
 	http.HandleFunc("/all", ctx.echoAll)
 	switch ctx.params["response"] {

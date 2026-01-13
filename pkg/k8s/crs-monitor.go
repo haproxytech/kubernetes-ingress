@@ -41,6 +41,7 @@ func (k k8s) runCRDefinitionsInformer(eventChan chan GroupKind, stop chan struct
 	logger.Error(errW)
 	_, err := informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
+			//revive:disable-next-line:unchecked-type-assertion
 			crd := obj.(*apiextensionsv1.CustomResourceDefinition)
 			if !(crd.Spec.Group == "ingress.v1.haproxy.org" || crd.Spec.Group == "ingress.v3.haproxy.org") {
 				return
@@ -78,6 +79,7 @@ func (k k8s) runCRDefinitionsInformer(eventChan chan GroupKind, stop chan struct
 	logger.Error(err)
 }
 
+//revive:disable-next-line:cognitive-complexity
 func (k k8s) RunCRSCreationMonitoring(eventChan chan k8ssync.SyncDataEvent, stop chan struct{}, osArgs utils.OSArgs) {
 	eventCRS := make(chan GroupKind)
 	k.runCRDefinitionsInformer(eventCRS, stop)

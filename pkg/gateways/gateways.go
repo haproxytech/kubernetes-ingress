@@ -415,6 +415,7 @@ func (gm GatewayManagerImpl) addServersToRoute(route store.TCPRoute) (reload boo
 		}
 		if portName == nil {
 			gm.statusManager.SetRouteReasonBackendNotFound(fmt.Sprintf("backend port '%s/%s' not found", *nsBackendRef, backendRef.Name))
+			//revive:disable-next-line:line-length-limit
 			logger.Errorf("gwapi: unexisting port '%d' for backendRef '%spkg/gateways/gateways.go' number '%d' from tcp route '%s/%s'", backendRefPort, backendRef.Name, id, route.Namespace, route.Name)
 			continue
 		}
