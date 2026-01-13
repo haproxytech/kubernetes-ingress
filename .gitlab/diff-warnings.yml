@@ -41,3 +41,46 @@ check-revive-flags:
       - junit-report.xml
     reports:
       junit: junit-report.xml
+check-static-check-flags:
+  stage: diff
+  allow_failure: true
+  rules:
+    - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
+  image:
+    name: $CI_REGISTRY_GO/golang:$GO_VERSION
+    entrypoint: [ "" ]
+  tags:
+    - go
+  script:
+    - git fetch origin ${CI_MERGE_REQUEST_TARGET_BRANCH_NAME}
+    # Parse the diff to find 'lint:ignore' and track file/line info
+    - |
+      git diff -U0 origin/${CI_MERGE_REQUEST_TARGET_BRANCH_NAME}...HEAD | perl -ne '
+        if (/^\+\+\+ b\/(.*)/) { $file = $1; }
+        if (/^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@/) { $line = $1; }
+        if (/^\+(.*lint:ignore.*)/) {
+          print "$file:$line:$1\n";
+          $line++;
+        } elsif (/^\+/) {
+          $line++;
+        }
+      ' > found_disables.txt || true
+
+    - |
+      if [ -s found_disables.txt ]; then
+        echo "⚠️ Found 'lint:ignore' in the following locations:"
+        cat found_disables.txt
+
+        DESCRIPTION=$(cat found_disables.txt)
+        junit-report add --status=failed --file=static-check-check --message="lint:ignore found" --description="$DESCRIPTION"
+        exit 1
+      else
+        echo "✅ No 'lint:ignore' tags found in the diff."
+        junit-report add --status=ok --file=static-check-check --message="clean" --description="No linter disables found."
+      fi
+  artifacts:
+    when: always
+    paths:
+      - junit-report.xml
+    reports:
+      junit: junit-report.xml
