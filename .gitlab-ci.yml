@@ -19,6 +19,7 @@ variables:
 include:
   - local: .gitlab/bots.yml
   - local: .gitlab/diff.yml
+  - local: .gitlab/diff-warnings.yml
   - local: .gitlab/lint.yml
   - local: .gitlab/unit-tests.yml
   - local: .gitlab/build.yml
