@@ -95,8 +95,8 @@ func (c *clientNative) GlobalPushLogTargets(logTargets models.LogTargets) error 
 			break
 		}
 	}
-	for _, log := range logTargets {
-		err = configuration.CreateLogTarget(0, string(parser.Global), parser.GlobalSectionName, log, c.activeTransaction, 0)
+	for i, log := range logTargets {
+		err = configuration.CreateLogTarget(int64(i), string(parser.Global), parser.GlobalSectionName, log, c.activeTransaction, 0)
 		if err != nil {
 			return fmt.Errorf("unable to update HAProxy's global log targets: %w", err)
 		}
