@@ -1359,7 +1359,7 @@ annotations:
     applies_to:
       - configmap
       - ingress
-    version_min: "1.4"
+    version_min: "3.2"
     example:
       - |
         rate-limit-period: "10s"
