@@ -1,6 +1,6 @@
 module github.com/haproxytech/kubernetes-ingress
 
-go 1.24.0
+go 1.25.0
 
 require (
 	github.com/GehirnInc/crypt v0.0.0-20230320061759-8cc1b52080c5

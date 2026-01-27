@@ -21,7 +21,7 @@ COPY pkg/protection/haproxy_wrapper.c .
 RUN gcc -O3 -Wall -flto -fPIC -shared -s -o libblock_secrets.so block_secrets.c -ldl
 RUN gcc -O3 -Wall -g -s -o haproxy_wrapper haproxy_wrapper.c
 
-FROM golang:1.24-alpine AS builder
+FROM golang:1.25-alpine AS builder
 RUN apk --no-cache add git openssh
 
 COPY /go.mod /src/go.mod

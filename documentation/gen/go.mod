@@ -1,6 +1,6 @@
 module doc-gen
 
-go 1.24
+go 1.25
 
 require (
 	github.com/google/renameio v1.0.1
