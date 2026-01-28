@@ -58,4 +58,5 @@ checksum:
   name_template: 'checksums.txt'
 release:
   draft: false
+  make_latest: false
   name_template: '{{- if .IsSnapshot }}{{ .Tag }}-next{{ else }}HAProxy Ingress Controller v{{ .Version }}{{ end -}}'
