@@ -76,9 +76,18 @@ type Service struct {
 	Faked       bool
 }
 
+// RuntimeEndpoint describes a single endpoint of a HAProxy backend
+type RuntimeEndpoint struct {
+	Address string
+	Port    int64
+}
+
+// RuntimeEndpoints is a set of different RuntimeEndpoint of a HAProxy backend
+type RuntimeEndpoints = map[RuntimeEndpoint]struct{}
+
 // RuntimeBackend holds the runtime state of an HAProxy backend
 type RuntimeBackend struct {
-	Endpoints       PortEndpoints
+	Endpoints       RuntimeEndpoints
 	Name            string
 	HAProxySrvs     []*HAProxySrv
 	DynUpdateFailed bool

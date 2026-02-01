@@ -1,0 +1,44 @@
+{{ range $instanceIndex, $instance := .Instances }}
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: http-echo-{{ $instanceIndex }}
+spec:
+  replicas: {{ $instance.Replicas }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: http-echo
+      app.kubernetes.io/instance: http-echo-{{ $instanceIndex }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: http-echo
+        app.kubernetes.io/instance: http-echo-{{ $instanceIndex }}
+    spec:
+      containers:
+        - name: http-echo
+          image: haproxytech/http-echo:latest
+          imagePullPolicy: Never
+          args:
+          - --http={{ $instance.Port }}
+          - --default-response=hostname
+          ports:
+            - name: http
+              containerPort: {{ $instance.Port }}
+              protocol: TCP
+{{- end }}
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: http-echo
+spec:
+  ipFamilyPolicy: RequireDualStack
+  ports:
+    - name: http
+      protocol: TCP
+      port: 80
+      targetPort: http
+  selector:
+    app.kubernetes.io/name: http-echo
