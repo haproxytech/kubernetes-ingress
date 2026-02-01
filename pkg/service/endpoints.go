@@ -49,7 +49,7 @@ func (s *Service) HandleHAProxySrvs(k8s store.K8s, client api.HAProxyClient) {
 	// update servers
 	for _, srvSlot := range backend.HAProxySrvs {
 		if srvSlot.Modified || s.newBackend || s.serversToEdit {
-			s.updateHAProxySrv(client, *srvSlot, backend.Endpoints.Port)
+			s.updateHAProxySrv(client, *srvSlot)
 		}
 	}
 	if backend.DynUpdateFailed {
@@ -58,7 +58,7 @@ func (s *Service) HandleHAProxySrvs(k8s store.K8s, client api.HAProxyClient) {
 	}
 }
 
-func (s *Service) updateHAProxySrv(client api.HAProxyClient, srvSlot store.HAProxySrv, port int64) {
+func (s *Service) updateHAProxySrv(client api.HAProxyClient, srvSlot store.HAProxySrv) {
 	srv := models.Server{
 		Name:         srvSlot.Name,
 		Port:         utils.PtrInt64(1),
@@ -71,7 +71,7 @@ func (s *Service) updateHAProxySrv(client api.HAProxyClient, srvSlot store.HAPro
 	// Enable Server
 	if srvSlot.Address != "" {
 		srv.Address = srvSlot.Address
-		srv.Port = &port
+		srv.Port = utils.PtrInt64(srvSlot.Port)
 		srv.Maintenance = "disabled"
 	}
 	//revive:disable-next-line:line-length-limit
@@ -100,10 +100,10 @@ func (s *Service) scaleHAProxySrvs(backend *store.RuntimeBackend) {
 			break
 		}
 	}
-	// We expect to have these slots : the already existing ones from backend.HAProxySrvs and the new ones to be added backend.Endpoints.Addresses
+	// We expect to have these slots : the already existing ones from backend.HAProxySrvs and the new ones to be added backend.Endpoints
 	// Keep in mind this is about slots not servers. New servers can be already added to backend.HAProxySrvs if the room is sufficient.
-	// The name backend.Endpoints.Addresses is misleading, it's really about new slots that are parts of new servers and can't have been added directly.
-	expectedSrvSlots := len(backend.Endpoints.Addresses) + len(backend.HAProxySrvs)
+	// The name backend.Endpoints is misleading, it's really about new slots that are parts of new servers and can't have been added directly.
+	expectedSrvSlots := len(backend.Endpoints) + len(backend.HAProxySrvs)
 	// We want at least the expected number of slots ...
 	newSrvSlots := expectedSrvSlots
 	// ... but if it's not a modulo srvSlots or if it's zero (shouldn't happen) ...
@@ -121,8 +121,8 @@ func (s *Service) scaleHAProxySrvs(backend *store.RuntimeBackend) {
 	}
 	// If we have to add new slots we'll have to reload, so we can expand the number of free slots by the number srvSlots.
 	// But we should add any only if there is no room left in the existing list of servers.
-	if enabledSlots+len(backend.Endpoints.Addresses) > len(backend.HAProxySrvs) &&
-		newSrvSlots-(enabledSlots+len(backend.Endpoints.Addresses)) < srvSlots && newSrvSlots > srvSlots {
+	if enabledSlots+len(backend.Endpoints) > len(backend.HAProxySrvs) &&
+		newSrvSlots-(enabledSlots+len(backend.Endpoints)) < srvSlots && newSrvSlots > srvSlots {
 		newSrvSlots += srvSlots
 	}
 
@@ -132,10 +132,11 @@ func (s *Service) scaleHAProxySrvs(backend *store.RuntimeBackend) {
 	copy(slots, backend.HAProxySrvs)
 	i := len(backend.HAProxySrvs)
 	// ... then add the new slots ...
-	for addr := range backend.Endpoints.Addresses {
+	for endpoint := range backend.Endpoints {
 		srv := &store.HAProxySrv{
 			Name:     fmt.Sprintf("SRV_%d", i+1),
-			Address:  addr,
+			Address:  endpoint.Address,
+			Port:     endpoint.Port,
 			Modified: true,
 		}
 		slots[i] = srv
@@ -146,12 +147,13 @@ func (s *Service) scaleHAProxySrvs(backend *store.RuntimeBackend) {
 		srv := &store.HAProxySrv{
 			Name:     fmt.Sprintf("SRV_%d", j+1),
 			Address:  "",
+			Port:     1,
 			Modified: true,
 		}
 		slots[j] = srv
 	}
 	instance.ReloadIf(len(backend.HAProxySrvs) < len(slots), "[CONFIG] [BACKEND] [SERVER] Server slots in backend '%s' scaled to match available endpoints", s.backend.Name)
-	backend.Endpoints.Addresses = map[string]struct{}{}
+	backend.Endpoints = store.RuntimeEndpoints{}
 	backend.HAProxySrvs = slots
 }
 
@@ -193,11 +195,11 @@ func (s *Service) getExternalNameEndpoints() (endpoints *store.RuntimeBackend, e
 		return nil, fmt.Errorf("service '%s': service port '%s' not found", s.resource.Name, ingressPort)
 	}
 	endpoints = &store.RuntimeBackend{
-		Endpoints: store.PortEndpoints{Port: port},
 		HAProxySrvs: []*store.HAProxySrv{
 			{
 				Name:     "SRV_1",
 				Address:  s.resource.DNS,
+				Port:     port,
 				Modified: true,
 			},
 		},
