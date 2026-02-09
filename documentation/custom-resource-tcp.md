@@ -30,29 +30,32 @@ The definition can be found [definitions](../crs/definition/)
 Current implementation relies on the client-native library and its models to configure HAProxy.
 
 ```yaml
-apiVersion: ingress.v1.haproxy.org/v1
+apiVersion: ingress.v3.haproxy.org/v3
 kind: TCP
 metadata:
-  name: tcp-1
-  namespace: test
   annotations:
     ingress.class: haproxy
+  name: tcp-1
+  namespace: test
 spec:
-  - name: tcp-http-echo-8443
-    frontend:
-      name: fe-http-echo-8443
-      tcplog: true
-      log_format: "%{+Q}o %t %s"
-      binds:
-        - name: v4
-          port: 32766
-        - name: v4v6
-          address: "::"
-          port: 32766
-          v4v6: true
-    service:
-      name: "http-echo"
-      port: 8443
+- frontend:
+    binds:
+      v4:
+        name: v4
+        port: 32766
+      v4v6:
+        address: '::'
+        name: v4v6
+        port: 32766
+        v4v6: true
+    log_format: '%{+Q}o %t %s'
+    name: fe-http-echo-8443
+    tcplog: true
+  name: tcp-http-echo-8443
+  service:
+    name: http-echo
+    port: 8443
+
 ```
 
 A `TCP` CR contains a list of TCP services definitions.
@@ -233,23 +236,23 @@ For example, by adding the following Backend CR in the `test` namespace:
 <summary>Backend CR</summary>
 
 ```yaml
-apiVersion: ingress.v1.haproxy.org/v1
+apiVersion: ingress.v3.haproxy.org/v3
 kind: Backend
 metadata:
   name: mybackend
   namespace: haproxy-controller
 spec:
-  config:
-    mode: http
-    balance:
-      algorithm: "leastconn"
-    abortonclose: disabled
-    name: toto
-    default_server:
-      verify: none
-      resolve-prefer: ipv4
-      check-sni: example.com
-      sni: str(example.com)
+  abortonclose: disabled
+  balance:
+    algorithm: leastconn
+  default_server:
+    check-sni: example.com
+    resolve-prefer: ipv4
+    sni: str(example.com)
+    verify: none
+  mode: http
+  name: toto
+
 ```
 </details>
 
@@ -279,25 +282,26 @@ In case several TCPs (*accross all namespaces*) have this kind of collisions, we
 
 For example, with using the previous `http-echo` deployement and service, and the already deplyed TCP `tcp-1` in namespace `test`, if we try to deploy the following TCP (that has a collision on Address/Port with the existing TCP `tcp-1`):
 ```yaml
-apiVersion: ingress.v1.haproxy.org/v1
+apiVersion: ingress.v3.haproxy.org/v3
 kind: TCP
 metadata:
-  name: tcp-2
-  namespace: test
   annotations:
     ingress.class: haproxy
+  name: tcp-2
+  namespace: test
 spec:
-  - name: tcp-http-echo-test2-8443
-    frontend:
-      name: fe-http-echo-test2-8443
-      tcplog: true
-      log_format: "%{+Q}o"
-      binds:
-        - name: v4
-          port: 32766
-    service:
-      name: "http-echo"
-      port: 8443
+- frontend:
+    binds:
+      v4:
+        name: v4
+        port: 32766
+    log_format: '%{+Q}o'
+    name: fe-http-echo-test2-8443
+    tcplog: true
+  name: tcp-http-echo-test2-8443
+  service:
+    name: http-echo
+    port: 8443
 ```
 
 
@@ -320,31 +324,33 @@ explaining that :
 To setup SSL in a TCP CR (with the same Service and Pod defined above):
 
 ```yaml
-apiVersion: ingress.v1.haproxy.org/v1
+apiVersion: ingress.v3.haproxy.org/v3
 kind: TCP
 metadata:
-  name: tcp-1
-  namespace: test
   annotations:
     ingress.class: haproxy
+  name: tcp-1
+  namespace: test
 spec:
-  - name: tcp-http-echo-443
-    frontend:
-      name: fe-http-echo-443
-      tcplog: true
-      log_format: "%{+Q}o %t %s"
-      binds:
-        - name: v4
-          ssl: true
-          ssl_certificate: tcp-test-cert
-          port: 32766
-        - name: v4v6
-          address: "::"
-          port: 32766
-          v4v6: true
-    service:
-      name: "http-echo"
-      port: 443
+- frontend:
+    binds:
+      v4:
+        name: v4
+        port: 32766
+        ssl: true
+        ssl_certificate: tcp-test-cert
+      v4v6:
+        address: '::'
+        name: v4v6
+        port: 32766
+        v4v6: true
+    log_format: '%{+Q}o %t %s'
+    name: fe-http-echo-443
+    tcplog: true
+  name: tcp-http-echo-443
+  service:
+    name: http-echo
+    port: 443
 ---
 kind: Secret
 apiVersion: v1
