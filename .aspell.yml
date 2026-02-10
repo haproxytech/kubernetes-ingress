@@ -70,3 +70,4 @@ allowed:
   - CIDR
   - auth
   - userlist
+  - tmp

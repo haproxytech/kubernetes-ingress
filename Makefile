@@ -36,8 +36,8 @@ lint:
 
 .PHONY: check-commit
 check-commit:
-	cd bin;CHECK_COMMIT=${CHECK_COMMIT} sh check-commit.sh
-	bin/check-commit
+	CHECK_COMMIT=${CHECK_COMMIT} sh bin/check-commit.sh
+	/tmp/check-commit/v${CHECK_COMMIT}/check-commit
 
 .PHONY: yaml-lint
 yaml-lint:
