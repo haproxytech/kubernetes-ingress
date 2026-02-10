@@ -72,3 +72,10 @@ allowed:
   - params
   - configmap
   - junit
+  - healthz
+  - liveness
+  - ipv
+  - CIDR
+  - auth
+  - userlist
+  - tmp
