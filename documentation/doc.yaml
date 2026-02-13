@@ -1383,8 +1383,12 @@ annotations:
     tip:
       - Captures samples of the request using [sample expression](#sample-expression)
         and log them in HAProxy traffic logs.
+      - '**Important**: When capturing headers that may contain commas (like `User-Agent`),
+        use `req.fhdr(header-name)` instead of `hdr(header-name)`. The `hdr()` function
+        splits values on commas, which can result in truncated or malformed log entries.
+        The `req.fhdr()` function returns the full header value without splitting on commas.'
     values:
-      - A header value, e.g. `hdr(header-name)`
+      - A header value, e.g. `hdr(header-name)` or `req.fhdr(header-name)` for headers with commas
       - A cookie value, e.g. `cookie(cookie-name)`
       - Multiple expressions by using a multiline YAML string
     applies_to:
@@ -1399,7 +1403,7 @@ annotations:
       request-capture: |
         cookie(my-cookie)
         hdr(Host)
-        hdr(User-Agent)
+        req.fhdr(user-agent)
     example_ingress: |-
       # capture a single value
       haproxy.org/request-capture: cookie(my-cookie)
@@ -1408,7 +1412,7 @@ annotations:
       haproxy.org/request-capture: |
         cookie(my-cookie)
         hdr(Host)
-        hdr(User-Agent)
+        req.fhdr(user-agent)
   - title: request-capture-len
     type: number
     group: request-capture
