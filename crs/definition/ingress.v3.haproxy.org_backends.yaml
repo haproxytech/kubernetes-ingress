@@ -5069,8 +5069,7 @@ spec:
                 use_fcgi_app:
                   description: use fcgi app
                   type: string
-              required:
-                - name
+              required: []
               type: object
           required:
             - spec
