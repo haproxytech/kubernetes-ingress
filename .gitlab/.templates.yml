@@ -19,7 +19,7 @@
     exclude:
       - tar/*
   before_script:
-    - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN $CI_REGISTRY_GO
+    - docker login -u='$app' -p $CI_REGISTRY_TOKEN $CI_REGISTRY_GO
     - docker load -i tar/k8sIC.tar
     - go version
     - go mod download &
