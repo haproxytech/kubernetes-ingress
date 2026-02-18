@@ -58,6 +58,7 @@ func (c *HAProxyController) globalCfg() {
 		logger.Error(errL)
 		return
 	}
+	global.LogTargetList = lg
 	newGlobal, err = annotations.ModelGlobal("cr-global", c.podNamespace, c.store, c.store.ConfigMaps.Main.Annotations)
 	if err != nil {
 		logger.Errorf("Global config: %s", err)
@@ -80,6 +81,7 @@ func (c *HAProxyController) globalCfg() {
 	if newGlobal.TuneSslOptions == nil {
 		newGlobal.TuneSslOptions = &models.TuneSslOptions{}
 	}
+	newGlobal.LogTargetList = newLg
 
 	env.SetGlobal(newGlobal, &newLg, c.haproxy.Env)
 	diff := newGlobal.Diff(*global)
