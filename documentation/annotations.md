@@ -402,12 +402,12 @@ auth-realm: Admin Area
 
 Possible values:
 
-- secret path in "namespace/name" format.
+- secret path in "namespace/name" format. Secret should contain the CA certificate in `tls.crt` key. Multiple CAs can be provided by concatenating them in the same `tls.crt` key.
 
 Example:
 
 ```yaml
-client-ca: exp/client-ca.crt
+client-ca: exp/client-ca-secret
 ```
 
 ##### `client-crt-optional`
