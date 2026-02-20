@@ -71,3 +71,5 @@ allowed:
   - auth
   - userlist
   - tmp
+  - PEM
+  - redact
