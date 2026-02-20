@@ -90,7 +90,7 @@ type HAProxyClient interface { //nolint:interfacebloat
 	SetMapContent(mapFile string, payload []string) error
 	SetServerAddrAndState([]RuntimeServerData) error
 	SetAuxCfgFile(auxCfgFile string)
-	SyncBackendSrvs(backend *store.RuntimeBackend, portUpdated bool) error
+	SyncBackendSrvs(backend *store.RuntimeBackend) error
 	UserListDeleteAll() error
 	UserListExistsByGroup(group string) (bool, error)
 	UserListCreateByGroup(group string, userPasswordMap map[string][]byte) error
