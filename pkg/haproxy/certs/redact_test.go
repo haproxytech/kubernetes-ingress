@@ -15,11 +15,19 @@
 package certs
 
 import (
+	"bytes"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
+	"crypto/x509"
+	"encoding/pem"
 	"errors"
 	"fmt"
+	"math/big"
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/api"
 )
@@ -63,18 +71,42 @@ func (m *mockHAProxyClient) CertEntryAbort(filename string) error {
 	return nil
 }
 
-// samplePEMPayload is a realistic PEM payload containing a private key and
-// certificate, similar to what the controller sends to the HAProxy runtime API.
-var samplePEMPayload = strings.Join([]string{
-	"-----BEGIN PRIVATE KEY-----",
-	"MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQC7o4qne60TB3pO",
-	"YaBy2F8KBr0pCf4gOFMKN/GEMmN5BjMiLXKMRjEEfHBbDUKa2LlWL3rETLnJq0y",
-	"-----END PRIVATE KEY-----",
-	"-----BEGIN CERTIFICATE-----",
-	"MIIDazCCAlOgAwIBAgIUY3K3MkYVBFPqnPGSg8WekwEwDQYJKoZIhvcNAQELBQAw",
-	"ADAeFw0yMzAxMDEwMDAwMDBaFw0yNDAxMDEwMDAwMDBaMAAwggEiMA0GCSqGSIb3",
-	"-----END CERTIFICATE-----",
-}, "\n")
+// generateTestPEM creates an ephemeral ECDSA private key and self-signed
+// certificate encoded as PEM. The material is generated fresh on every call
+// so no real secrets are stored in the source code.
+func generateTestPEM(t *testing.T) string {
+	t.Helper()
+
+	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		t.Fatalf("failed to generate test key: %v", err)
+	}
+
+	keyDER, err := x509.MarshalPKCS8PrivateKey(key)
+	if err != nil {
+		t.Fatalf("failed to marshal test key: %v", err)
+	}
+
+	tmpl := &x509.Certificate{
+		SerialNumber: big.NewInt(1),
+		NotBefore:    time.Now(),
+		NotAfter:     time.Now().Add(time.Hour),
+	}
+	certDER, err := x509.CreateCertificate(rand.Reader, tmpl, tmpl, &key.PublicKey, key)
+	if err != nil {
+		t.Fatalf("failed to create test certificate: %v", err)
+	}
+
+	var buf bytes.Buffer
+	if err := pem.Encode(&buf, &pem.Block{Type: "PRIVATE KEY", Bytes: keyDER}); err != nil {
+		t.Fatalf("failed to encode test key PEM: %v", err)
+	}
+	if err := pem.Encode(&buf, &pem.Block{Type: "CERTIFICATE", Bytes: certDER}); err != nil {
+		t.Fatalf("failed to encode test cert PEM: %v", err)
+	}
+
+	return buf.String()
+}
 
 // simulateHAProxyRuntimeError creates an error message identical to what the
 // HAProxy runtime API returns when a cert operation via the UNIX socket fails.
@@ -106,7 +138,7 @@ func simulateHAProxyRuntimeError(certPath, pemContent string) error {
 // Anyone with access to controller logs can extract TLS private keys.
 func TestCertErrorForLog_MustNotContainPEMContent(t *testing.T) {
 	certPath := "/etc/haproxy/certs/frontend/test-cert.pem"
-	runtimeErr := simulateHAProxyRuntimeError(certPath, samplePEMPayload)
+	runtimeErr := simulateHAProxyRuntimeError(certPath, generateTestPEM(t))
 
 	result := certErrorForLog(runtimeErr)
 
@@ -128,7 +160,7 @@ func TestCertErrorForLog_MustNotContainPEMContent(t *testing.T) {
 // (the file path, the HAProxy error description, etc.)
 func TestCertErrorForLog_PreservesUsefulErrorContext(t *testing.T) {
 	certPath := "/etc/haproxy/certs/frontend/test-cert.pem"
-	runtimeErr := simulateHAProxyRuntimeError(certPath, samplePEMPayload)
+	runtimeErr := simulateHAProxyRuntimeError(certPath, generateTestPEM(t))
 
 	result := certErrorForLog(runtimeErr)
 
@@ -177,9 +209,10 @@ func TestCertErrorForLog_ErrorWithoutPEM(t *testing.T) {
 // certErrorForLog() removes private key material from such errors.
 func TestUpdateRuntime_CommitFailure_LogSafeError(t *testing.T) {
 	certPath := "/etc/haproxy/certs/frontend/app-cert.pem"
-	payload := []byte(samplePEMPayload)
+	pemData := generateTestPEM(t)
+	payload := []byte(pemData)
 
-	runtimeErr := simulateHAProxyRuntimeError(certPath, samplePEMPayload)
+	runtimeErr := simulateHAProxyRuntimeError(certPath, pemData)
 
 	mock := &mockHAProxyClient{
 		onCertEntryCreate: func(string) error { return nil },
@@ -213,9 +246,10 @@ func TestUpdateRuntime_CommitFailure_LogSafeError(t *testing.T) {
 // cert update pipeline must have PEM content redacted before logging.
 func TestUpdateRuntime_SetFailure_LogSafeError(t *testing.T) {
 	certPath := "/etc/haproxy/certs/frontend/app-cert.pem"
-	payload := []byte(samplePEMPayload)
+	pemData := generateTestPEM(t)
+	payload := []byte(pemData)
 
-	runtimeErr := simulateHAProxyRuntimeError(certPath, samplePEMPayload)
+	runtimeErr := simulateHAProxyRuntimeError(certPath, pemData)
 
 	mock := &mockHAProxyClient{
 		onCertEntryCreate: func(string) error { return nil },
