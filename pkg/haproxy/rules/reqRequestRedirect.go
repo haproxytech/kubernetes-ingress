@@ -18,6 +18,8 @@ type RequestRedirect struct {
 	SSLRedirect  bool
 }
 
+const DefaultHTTPSPort = 443
+
 func (r RequestRedirect) GetType() Type {
 	return REQ_REDIRECT
 }
@@ -37,14 +39,18 @@ func (r RequestRedirect) Create(client api.HAProxyClient, frontend *models.Front
 }
 
 func (r RequestRedirect) sslRedirect() models.HTTPRequestRule {
-	rule := fmt.Sprintf("https://%%[hdr(host),field(1,:)]:%d%%[capture.req.uri]", r.RedirectPort)
 	httpRule := models.HTTPRequestRule{
-		Type:       "redirect",
-		RedirCode:  utils.PtrInt64(r.RedirectCode),
-		RedirValue: rule,
-		RedirType:  "location",
+		Type:      "redirect",
+		RedirCode: utils.PtrInt64(r.RedirectCode),
 	}
-
+	if r.RedirectPort == DefaultHTTPSPort {
+		httpRule.RedirType = "scheme"
+		httpRule.RedirValue = "https"
+	} else {
+		rule := fmt.Sprintf("https://%%[hdr(host),field(1,:)]:%d%%[capture.req.uri]", r.RedirectPort)
+		httpRule.RedirType = "location"
+		httpRule.RedirValue = rule
+	}
 	return httpRule
 }
 
