@@ -71,3 +71,4 @@ allowed:
   - auth
   - userlist
   - tmp
+  - kubectl

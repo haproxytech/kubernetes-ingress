@@ -31,10 +31,9 @@
     - docker image tag $CI_REGISTRY_GO/haproxytech/http-echo:latest haproxytech/http-echo:latest
     - docker pull -q $CI_REGISTRY_GO/haproxytech/proxy-protocol:latest
     - docker image tag $CI_REGISTRY_GO/haproxytech/proxy-protocol:latest haproxytech/proxy-protocol:latest
-    - wget -nv -O /usr/local/bin/kind https://github.com/kubernetes-sigs/kind/releases/download/${KIND}/kind-linux-amd64
-    - chmod +x /usr/local/bin/kind
-    - wget -nv -O /usr/local/bin/kubectl https://dl.k8s.io/release/${KUBECTL}/bin/linux/amd64/kubectl
-    - chmod +x /usr/local/bin/kubectl
+    - ln -sf /tmp/kind/${KIND}/kind /usr/local/bin/kind
+    - echo "expected kind version is $KIND"
+    - kind version
     - sed -i "s/K8S_VERSION/$K8S_VERSION/g" ".gitlab/kind-config.yaml"
     - sed -i "s/KUBEADM_VER/$KUBEADM_VER/g" ".gitlab/kind-config.yaml"
     - sed -i "s~CI_REGISTRY_GO~$CI_REGISTRY_GO~g" ".gitlab/kind-config.yaml"
