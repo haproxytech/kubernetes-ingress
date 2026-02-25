@@ -664,12 +664,12 @@ annotations:
     tip:
       - NB, [ssl-offloading](#ssl-offloading) **should be enabled** for TLS authentication to work.
     values:
-      - secret path in "namespace/name" format.
+      - secret path in "namespace/name" format. Secret should contain the CA certificate in `tls.crt` key. Multiple CAs can be provided by concatenating them in the same `tls.crt` key.
     applies_to:
       - configmap
     version_min: "1.6"
     example:
-      - "client-ca: exp/client-ca.crt"
+      - "client-ca: exp/client-ca-secret"
   - title: client-crt-optional
     type: bool
     group: authentication
