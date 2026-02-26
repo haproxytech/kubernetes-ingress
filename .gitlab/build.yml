@@ -13,7 +13,7 @@ docker-build:
   tags:
     - go
   before_script:
-    - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN $CI_REGISTRY_GO
+    - docker login -u='$app' -p $CI_REGISTRY_TOKEN $CI_REGISTRY_GO
     - go version
     - docker pull -q $CI_REGISTRY_GO/alpine:3
     - docker image tag $CI_REGISTRY_GO/alpine:3 alpine:3

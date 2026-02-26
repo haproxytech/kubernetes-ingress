@@ -433,7 +433,31 @@ func certContent(key, crt []byte) []byte {
 		buff = append(buff, byte('\n'))
 	}
 	buff = append(buff, crt...)
+	buff = normalizePEM(buff)
 	return buff
+}
+
+func normalizePEM(data []byte) []byte {
+	if len(data) == 0 {
+		return data
+	}
+
+	result := make([]byte, 0, len(data))
+	lastWasNewline := false
+
+	for _, b := range data {
+		if b == '\n' {
+			if !lastWasNewline {
+				result = append(result, b)
+				lastWasNewline = true
+			}
+		} else {
+			result = append(result, b)
+			lastWasNewline = false
+		}
+	}
+
+	return result
 }
 
 func (c *certs) SetAPI(api api.HAProxyClient) {
