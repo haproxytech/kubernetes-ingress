@@ -6,6 +6,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"sync"
 
@@ -321,7 +322,7 @@ func (c *certs) refreshCerts(certs map[string]*cert, certDir string) {
 		if !crtOk || !crt.inUse {
 			err := c.deleteRuntime(certDir, filename)
 			if err != nil {
-				instance.Reload("Runtime delete of cert file '%s' failed : %s", filename, err.Error())
+				instance.Reload("Runtime delete of cert file '%s' failed : %s", filename, certErrorForLog(err))
 			} else {
 				utils.GetLogger().Debugf("Runtime delete of cert ok [%s]", filename)
 			}
@@ -391,7 +392,7 @@ func (c *certs) writeCert(cert *cert, filename string, content []byte, isCa bool
 
 		updated, err := c.updateRuntime(filename, content, isCa)
 		if err != nil {
-			instance.Reload("Runtime update of cert file '%s' failed : %s", filename, err.Error())
+			instance.Reload("Runtime update of cert file '%s' failed : %s", filename, certErrorForLog(err))
 		} else if updated {
 			utils.GetLogger().Debugf("Runtime update of cert ok [%s]", filename)
 			cert.updated = true
@@ -409,6 +410,20 @@ func (c *certs) writeCert(cert *cert, filename string, content []byte, isCa bool
 	})
 
 	return nil
+}
+
+// pemBlockRegexp matches PEM-encoded blocks (private keys, certificates, etc.)
+// that must never appear in log output.
+var pemBlockRegexp = regexp.MustCompile(`(?s)-----BEGIN [A-Z0-9 ]+-----.*?-----END [A-Z0-9 ]+-----`)
+
+// certErrorForLog returns a log-safe string representation of a cert-related error.
+// It redacts any PEM-encoded blocks (private keys, certificates) to prevent
+// sensitive cryptographic material from leaking into controller logs.
+func certErrorForLog(err error) string {
+	if err == nil {
+		return ""
+	}
+	return pemBlockRegexp.ReplaceAllString(err.Error(), "[REDACTED]")
 }
 
 func certContent(key, crt []byte) []byte {
