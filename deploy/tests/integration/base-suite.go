@@ -152,7 +152,8 @@ func (suite *BaseSuite) StartController() {
 	annotations.InitCfgSnippet()
 	annotations.DisableConfigSnippets(testController.OSArgs.DisableConfigSnippets)
 
-	go testController.Controller.Start()
+	testController.Controller.Start()
+	go testController.Controller.SyncData()
 }
 
 func (suite *BaseSuite) StopController() {
