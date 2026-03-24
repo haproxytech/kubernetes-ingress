@@ -127,4 +127,5 @@ type OSArgs struct {
 	DisableIngressStatusUpdate        bool           `long:"disable-ingress-status-update" description:"If true, disables updating the status field of Ingress resources"`
 	EnableCustomAnnotationsOnIngress  bool           `long:"enable-custom-annotations-on-ingress" description:"allow custom user annotations on ingress"`
 	CustomValidationRules             NamespaceValue `long:"custom-validation-rules" description:"custom validation rules object" default:""`
+	CaseInsensitive                   bool           `long:"case-insensitive-path-match" description:"enable case-insensitive path matching"`
 }
