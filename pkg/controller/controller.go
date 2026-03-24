@@ -288,6 +288,12 @@ func (c *HAProxyController) setupHAProxyRules() error {
 			ForwardedProto: true,
 		}, false),
 	)
+
+	pathExpr := "path"
+	if c.osArgs.CaseInsensitive {
+		pathExpr = "path,lower"
+	}
+
 	for _, frontend := range []string{c.haproxy.FrontHTTP, c.haproxy.FrontHTTPS} {
 		errs.Add(
 			// txn.base var used for logging
@@ -300,7 +306,7 @@ func (c *HAProxyController) setupHAProxyRules() error {
 			c.haproxy.AddRule(frontend, rules.ReqSetVar{
 				Name:       "path",
 				Scope:      "txn",
-				Expression: "path",
+				Expression: pathExpr,
 			}, false),
 			c.haproxy.AddRule(frontend, rules.ReqSetVar{
 				Name:       "host",
