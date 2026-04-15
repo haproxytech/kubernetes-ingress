@@ -177,8 +177,9 @@ func main() {
 
 	c.SetGatewayAPIInstalled(isGatewayAPIInstalled)
 
+	c.Start()
 	go k.MonitorChanges(eventChan, stop, osArgs, isGatewayAPIInstalled)
-	go c.Start()
+	go c.SyncData()
 	// Catch QUIT signals
 	signalC := make(chan os.Signal, 1)
 	signal.Notify(signalC, os.Interrupt, syscall.SIGTERM, syscall.SIGUSR1)
