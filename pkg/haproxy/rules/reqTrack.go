@@ -38,16 +38,14 @@ func (r ReqTrack) Create(client api.HAProxyClient, frontend *models.Frontend, in
 
 	// Create tracking table.
 	if !client.BackendUsed(r.TableName) {
-		backend := models.Backend{
-			BackendBase: models.BackendBase{
-				From: constants.DefaultsSectionName,
-				Name: r.TableName,
-				StickTable: &models.ConfigStickTable{
-					Peers: "localinstance",
-					Type:  "ip",
-					Size:  r.TableSize,
-					Store: fmt.Sprintf("http_req_rate(%d)", *r.TablePeriod),
-				},
+		backend := models.BackendBase{
+			From: constants.DefaultsSectionName,
+			Name: r.TableName,
+			StickTable: &models.ConfigStickTable{
+				Peers: "localinstance",
+				Type:  "ip",
+				Size:  r.TableSize,
+				Store: fmt.Sprintf("http_req_rate(%d)", *r.TablePeriod),
 			},
 		}
 		// Create tracking table.

@@ -40,9 +40,9 @@ type HAProxyClient interface { //nolint:interfacebloat
 	BackendExists(backendName string) bool
 	// This function tests if a backend is existing AND IT'S USED.
 	BackendUsed(backendName string) bool
-	BackendCreatePermanently(backend models.Backend)
-	BackendCreateIfNotExist(backend models.Backend)
-	BackendCreateOrUpdate(backend models.Backend) (map[string][]interface{}, bool)
+	BackendCreatePermanently(backend models.BackendBase)
+	BackendCreateIfNotExist(backend models.BackendBase)
+	BackendCreateOrUpdate(backend models.BackendBase) (map[string][]interface{}, bool)
 	BackendDelete(backendName string)
 	BackendDeleteAllUnnecessary() ([]string, error)
 	BackendCfgSnippetSet(backendName string, value []string) error
@@ -82,6 +82,7 @@ type HAProxyClient interface { //nolint:interfacebloat
 	GlobalCfgSnippet(snippet []string) error
 	GetMap(mapFile string) (*models.Map, error)
 	HTTPRequestRule
+	HTTPResponseRule
 	LogTarget
 	TCPRequestRule
 	PeerEntryDelete(peerSection string, name string) error
@@ -181,9 +182,16 @@ type HTTPRequestRule interface {
 	HTTPRequestRuleCreate(id int64, parentType string, parentName string, data *models.HTTPRequestRule) error
 	HTTPRequestRulesReplace(parentType, parentName string, rules models.HTTPRequestRules) error
 	FrontendHTTPRequestRuleCreate(id int64, frontend string, rule models.HTTPRequestRule, ingressACL string) error
+	FrontendHTTPAfterResponseRuleCreate(id int64, frontend string, rule models.HTTPAfterResponseRule, ingressACL string) error
+}
+
+type HTTPResponseRule interface {
+	HTTPResponseRulesGet(parentType, parentName string) (models.HTTPResponseRules, error)
+	HTTPResponseRuleDeleteAll(parentType string, parentName string) error
+	HTTPResponseRuleCreate(id int64, parentType string, parentName string, data *models.HTTPResponseRule) error
+	HTTPResponseRulesReplace(parentType, parentName string, rules models.HTTPResponseRules) error
 	FrontendHTTPResponseRuleCreate(id int64, frontend string, rule models.HTTPResponseRule, ingressACL string) error
 	FrontendHTTPAfterResponseRuleCreate(id int64, frontend string, rule models.HTTPAfterResponseRule, ingressACL string) error
-	BackendHTTPRequestRuleCreate(id int64, backend string, rule models.HTTPRequestRule) error
 }
 
 type Frontend struct {
@@ -313,6 +321,7 @@ func (c *clientNative) APIFinalCommitTransaction() error {
 		errs.Add(c.processConfigSnippets(backendName, backend.ConfigSnippets, configuration))
 		errs.AddErrors(c.processACLs(backendName, backend.ACLList, configuration))
 		errs.AddErrors(c.processHTTPRequestRules(backendName, backend.HTTPRequestRuleList, configuration))
+		errs.AddErrors(c.processHTTPResponseRules(backendName, backend.HTTPResponseRuleList, configuration))
 		backend.Used = false
 		c.backends[backendName] = backend
 	}
@@ -402,6 +411,13 @@ func (c *clientNative) processHTTPRequestRules(backendName string, httpRequestsR
 	var errs utils.Errors
 	// we (re)create all http request rules
 	errs.Add(configuration.ReplaceHTTPRequestRules("backend", backendName, httpRequestsRules, c.activeTransaction, 0))
+	return errs
+}
+
+func (c *clientNative) processHTTPResponseRules(backendName string, httpResponsesRules models.HTTPResponseRules, configuration configuration.Configuration) utils.Errors {
+	var errs utils.Errors
+	// we (re)create all http response rules
+	errs.Add(configuration.ReplaceHTTPResponseRules("backend", backendName, httpResponsesRules, c.activeTransaction, 0))
 	return errs
 }
 

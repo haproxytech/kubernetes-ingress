@@ -74,3 +74,4 @@ allowed:
   - kubectl
   - PEM
   - redact
+  - httpresponses
