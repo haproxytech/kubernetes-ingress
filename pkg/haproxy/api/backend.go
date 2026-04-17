@@ -31,14 +31,14 @@ func (c *clientNative) BackendGet(backendName string) (*models.Backend, error) {
 	return nil, fmt.Errorf("backend %s not found", backendName)
 }
 
-func (c *clientNative) BackendCreatePermanently(backend models.Backend) {
+func (c *clientNative) BackendCreatePermanently(backend models.BackendBase) {
 	c.BackendCreateOrUpdate(backend)
 	newBackend := c.backends[backend.Name]
 	newBackend.Permanent = true
 	c.backends[backend.Name] = newBackend
 }
 
-func (c *clientNative) BackendCreateIfNotExist(backend models.Backend) {
+func (c *clientNative) BackendCreateIfNotExist(backend models.BackendBase) {
 	existingBackend := c.backends[backend.Name]
 	existingBackend.Used = true
 	c.backends[backend.Name] = existingBackend
@@ -48,19 +48,18 @@ func (c *clientNative) BackendCreateIfNotExist(backend models.Backend) {
 	c.BackendCreateOrUpdate(backend)
 }
 
-func (c *clientNative) BackendCreateOrUpdate(backend models.Backend) (diff map[string][]interface{}, created bool) {
+func (c *clientNative) BackendCreateOrUpdate(backend models.BackendBase) (diff map[string][]interface{}, created bool) {
 	oldBackend, ok := c.backends[backend.Name]
 	if !ok {
 		c.backends[backend.Name] = Backend{
-			Backend: backend,
+			Backend: models.Backend{BackendBase: backend},
 			Used:    true,
 		}
 		return nil, true
 	}
 
-	diff = oldBackend.BackendBase.Diff(backend.BackendBase)
-
-	oldBackend.Backend = backend
+	diff = oldBackend.BackendBase.Diff(backend)
+	oldBackend.BackendBase = backend
 	oldBackend.Used = true
 	c.backends[backend.Name] = oldBackend
 	return diff, false
@@ -83,17 +82,6 @@ func (c *clientNative) BackendCfgSnippetSet(backendName string, value []string) 
 	}
 
 	backend.ConfigSnippets = value
-	c.backends[backendName] = backend
-	return nil
-}
-
-// To remove ?
-func (c *clientNative) BackendHTTPRequestRuleCreate(id int64, backendName string, rule models.HTTPRequestRule) error {
-	backend, exists := c.backends[backendName]
-	if !exists {
-		return fmt.Errorf("can't add http request rule for unexisting backend %s, %w", backendName, ErrNotFound)
-	}
-	backend.HTTPRequestRuleList = append(backend.HTTPRequestRuleList, &rule)
 	c.backends[backendName] = backend
 	return nil
 }

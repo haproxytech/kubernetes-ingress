@@ -30,6 +30,7 @@ import (
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/instance"
 	"github.com/haproxytech/kubernetes-ingress/pkg/rules/acls"
 	"github.com/haproxytech/kubernetes-ingress/pkg/rules/httprequests"
+	"github.com/haproxytech/kubernetes-ingress/pkg/rules/httpresponses"
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
 )
@@ -150,7 +151,7 @@ func (s *Service) HandleBackend(storeK8s store.K8s, client api.HAProxyClient, a 
 	s.backend = &newBackend.Backend
 	backend, _ := client.BackendGet(newBackend.BackendBase.Name)
 	// Get/Create Backend
-	diff, created := client.BackendCreateOrUpdate(newBackend.Backend)
+	diff, created := client.BackendCreateOrUpdate(newBackend.BackendBase)
 	instance.ReloadIf(len(diff) > 0 || created, "Service '%s/%s': backend '%s' upserted: %v", s.resource.Namespace, s.resource.Name, newBackend.BackendBase.Name, diff)
 	s.newBackend = created
 	// if updated but not created
@@ -162,6 +163,8 @@ func (s *Service) HandleBackend(storeK8s store.K8s, client api.HAProxyClient, a 
 	acls.PopulateBackend(client, newBackend.BackendBase.Name, newBackend.ACLList)
 	// HTTP requests
 	httprequests.PopulateBackend(client, newBackend.BackendBase.Name, newBackend.HTTPRequestRuleList)
+	// HTTP responses
+	httpresponses.PopulateBackend(client, newBackend.BackendBase.Name, newBackend.HTTPResponseRuleList)
 
 	// config-snippet: backend
 	backendCfgSnippetHandler := annotations.NewCfgSnippet(
