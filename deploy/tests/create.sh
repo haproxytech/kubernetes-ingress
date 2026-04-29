@@ -119,4 +119,4 @@ while [  $COUNTER -lt 150 ]; do
     fi
 done
 
-kubectl wait --for=condition=ready --timeout=10s pod -l run=haproxy-ingress -n haproxy-controller
+time kubectl wait --for=condition=ready --timeout=10m pod -l run=haproxy-ingress -n haproxy-controller

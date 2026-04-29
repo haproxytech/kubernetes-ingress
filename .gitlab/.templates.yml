@@ -10,6 +10,8 @@
   services:
     - name: $CI_REGISTRY_GO/docker:$DOCKER_VERSION-dind
       alias: docker
+      variables:
+        DOCKER_INSECURE_NO_IPTABLES_RAW: "1"
   tags:
     - go
   artifacts:
