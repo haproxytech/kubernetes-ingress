@@ -72,5 +72,7 @@ allowed:
   - userlist
   - tmp
   - kubectl
+  - Kubernetes
+  - HTTPS
   - PEM
   - redact
