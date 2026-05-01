@@ -203,6 +203,16 @@ func (s *Service) getBackendModel(store store.K8s, a annotations.Annotations, cl
 	// get/create backend Model
 	backend, err = annotations.ModelBackend("cr-backend", s.resource.Namespace, store, s.annotations...)
 	logger.Warning(err)
+	if backend != nil {
+		// Deep-copy the CR object before mutating it: multiple services may share the
+		// same cr-backend annotation and therefore the same *v3.BackendSpec pointer in
+		// the store.  Without a copy, mutations below (BackendBase.Name, Servers map,
+		// etc.) bleed across services, causing one backend's server list to contaminate
+		// another's.
+		var backendCopy v3.BackendSpec
+		backend.DeepCopyInto(&backendCopy)
+		backend = &backendCopy
+	}
 	if backend == nil {
 		backend = &v3.BackendSpec{
 			Backend: models.Backend{
