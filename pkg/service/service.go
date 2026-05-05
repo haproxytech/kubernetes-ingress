@@ -29,6 +29,7 @@ import (
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/certs"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/instance"
 	"github.com/haproxytech/kubernetes-ingress/pkg/rules/acls"
+	"github.com/haproxytech/kubernetes-ingress/pkg/rules/httpafterresponses"
 	"github.com/haproxytech/kubernetes-ingress/pkg/rules/httprequests"
 	"github.com/haproxytech/kubernetes-ingress/pkg/rules/httpresponses"
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
@@ -165,6 +166,8 @@ func (s *Service) HandleBackend(storeK8s store.K8s, client api.HAProxyClient, a 
 	httprequests.PopulateBackend(client, newBackend.BackendBase.Name, newBackend.HTTPRequestRuleList)
 	// HTTP responses
 	httpresponses.PopulateBackend(client, newBackend.BackendBase.Name, newBackend.HTTPResponseRuleList)
+	// HTTP after responses
+	httpafterresponses.PopulateBackend(client, newBackend.BackendBase.Name, newBackend.HTTPAfterResponseRuleList)
 
 	// config-snippet: backend
 	backendCfgSnippetHandler := annotations.NewCfgSnippet(
