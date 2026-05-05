@@ -24,6 +24,15 @@ func (c *clientNative) FilterCreate(id int64, parentType, parentName string, rul
 		frontend.FilterList[id] = &rule
 		return nil
 	}
+	if parentType == "backend" {
+		backend, exists := c.backends[parentName]
+		if !exists {
+			return fmt.Errorf("can't create filter for unexisting backend %s : %w", parentName, ErrNotFound)
+		}
+		backend.FilterList = append(backend.FilterList, &rule)
+		c.backends[parentName] = backend
+		return nil
+	}
 	configuration, err := c.nativeAPI.Configuration()
 	if err != nil {
 		return err
@@ -38,6 +47,15 @@ func (c *clientNative) FilterDeleteAll(parentType, parentName string) (err error
 			return fmt.Errorf("can't delete filter for unexisting frontend %s : %w", parentName, ErrNotFound)
 		}
 		frontend.FilterList = models.Filters{}
+		return nil
+	}
+	if parentType == "backend" {
+		backend, exists := c.backends[parentName]
+		if !exists {
+			return fmt.Errorf("can't delete filter for unexisting backend %s : %w", parentName, ErrNotFound)
+		}
+		backend.FilterList = nil
+		c.backends[parentName] = backend
 		return nil
 	}
 
@@ -65,6 +83,13 @@ func (c *clientNative) FiltersGet(parentType, parentName string) (models.Filters
 		}
 		return frontend.FilterList, nil
 	}
+	if parentType == "backend" {
+		backend, exists := c.backends[parentName]
+		if !exists {
+			return nil, fmt.Errorf("can't get filters for unexisting backend %s : %w", parentName, ErrNotFound)
+		}
+		return backend.FilterList, nil
+	}
 
 	configuration, err := c.nativeAPI.Configuration()
 	if err != nil {
@@ -84,6 +109,15 @@ func (c *clientNative) FiltersReplace(parentType, parentName string, rules model
 			return fmt.Errorf("can't replace filters for unexisting frontend %s : %w", parentName, ErrNotFound)
 		}
 		frontend.FilterList = rules
+		return nil
+	}
+	if parentType == "backend" {
+		backend, exists := c.backends[parentName]
+		if !exists {
+			return fmt.Errorf("can't replace filters for unexisting backend %s : %w", parentName, ErrNotFound)
+		}
+		backend.FilterList = rules
+		c.backends[parentName] = backend
 		return nil
 	}
 	configuration, err := c.nativeAPI.Configuration()

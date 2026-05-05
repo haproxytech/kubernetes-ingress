@@ -33,6 +33,7 @@ import (
 	"github.com/haproxytech/kubernetes-ingress/pkg/rules/httprequests"
 	"github.com/haproxytech/kubernetes-ingress/pkg/rules/httpresponses"
 	"github.com/haproxytech/kubernetes-ingress/pkg/rules"
+	"github.com/haproxytech/kubernetes-ingress/pkg/rules/filters"
 	"github.com/haproxytech/kubernetes-ingress/pkg/rules/serverswitching"
 	"github.com/haproxytech/kubernetes-ingress/pkg/rules/stick"
 	tcprequestrules "github.com/haproxytech/kubernetes-ingress/pkg/rules/tcp_request_rules"
@@ -183,6 +184,10 @@ func (s *Service) HandleBackend(storeK8s store.K8s, client api.HAProxyClient, a 
 	}
 	// TCP responses
 	tcpresponses.PopulateBackend(client, newBackend.BackendBase.Name, newBackend.TCPResponseRuleList)
+	// Filters
+	if errFilters := filters.Reconcile(client, rules.ParentTypeBackend, newBackend.BackendBase.Name, newBackend.FilterList); errFilters != nil {
+		logger.Error(errFilters)
+	}
 
 	// config-snippet: backend
 	backendCfgSnippetHandler := annotations.NewCfgSnippet(
