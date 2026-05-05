@@ -32,6 +32,7 @@ import (
 	"github.com/haproxytech/kubernetes-ingress/pkg/rules/httpafterresponses"
 	"github.com/haproxytech/kubernetes-ingress/pkg/rules/httprequests"
 	"github.com/haproxytech/kubernetes-ingress/pkg/rules/httpresponses"
+	"github.com/haproxytech/kubernetes-ingress/pkg/rules/serverswitching"
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
 )
@@ -168,6 +169,8 @@ func (s *Service) HandleBackend(storeK8s store.K8s, client api.HAProxyClient, a 
 	httpresponses.PopulateBackend(client, newBackend.BackendBase.Name, newBackend.HTTPResponseRuleList)
 	// HTTP after responses
 	httpafterresponses.PopulateBackend(client, newBackend.BackendBase.Name, newBackend.HTTPAfterResponseRuleList)
+	// Server switching
+	serverswitching.PopulateBackend(client, newBackend.BackendBase.Name, newBackend.ServerSwitchingRuleList)
 
 	// config-snippet: backend
 	backendCfgSnippetHandler := annotations.NewCfgSnippet(
