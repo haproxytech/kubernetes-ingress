@@ -32,8 +32,11 @@ import (
 	"github.com/haproxytech/kubernetes-ingress/pkg/rules/httpafterresponses"
 	"github.com/haproxytech/kubernetes-ingress/pkg/rules/httprequests"
 	"github.com/haproxytech/kubernetes-ingress/pkg/rules/httpresponses"
+	"github.com/haproxytech/kubernetes-ingress/pkg/rules"
 	"github.com/haproxytech/kubernetes-ingress/pkg/rules/serverswitching"
 	"github.com/haproxytech/kubernetes-ingress/pkg/rules/stick"
+	tcprequestrules "github.com/haproxytech/kubernetes-ingress/pkg/rules/tcp_request_rules"
+	"github.com/haproxytech/kubernetes-ingress/pkg/rules/tcpresponses"
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
 )
@@ -174,6 +177,12 @@ func (s *Service) HandleBackend(storeK8s store.K8s, client api.HAProxyClient, a 
 	serverswitching.PopulateBackend(client, newBackend.BackendBase.Name, newBackend.ServerSwitchingRuleList)
 	// Stick rules
 	stick.PopulateBackend(client, newBackend.BackendBase.Name, newBackend.StickRuleList)
+	// TCP requests
+	if errTCP := tcprequestrules.Reconcile(client, rules.ParentTypeBackend, newBackend.BackendBase.Name, newBackend.TCPRequestRuleList); errTCP != nil {
+		logger.Error(errTCP)
+	}
+	// TCP responses
+	tcpresponses.PopulateBackend(client, newBackend.BackendBase.Name, newBackend.TCPResponseRuleList)
 
 	// config-snippet: backend
 	backendCfgSnippetHandler := annotations.NewCfgSnippet(

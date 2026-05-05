@@ -24,6 +24,15 @@ func (c *clientNative) TCPRequestRuleCreate(id int64, parentType, parentName str
 		frontend.TCPRequestRuleList[id] = &rule
 		return nil
 	}
+	if parentType == "backend" {
+		backend, exists := c.backends[parentName]
+		if !exists {
+			return fmt.Errorf("can't create tcp request rule for unexisting backend %s : %w", parentName, ErrNotFound)
+		}
+		backend.TCPRequestRuleList = append(backend.TCPRequestRuleList, &rule)
+		c.backends[parentName] = backend
+		return nil
+	}
 	configuration, err := c.nativeAPI.Configuration()
 	if err != nil {
 		return err
@@ -38,6 +47,15 @@ func (c *clientNative) TCPRequestRuleDeleteAll(parentType, parentName string) (e
 			return fmt.Errorf("can't delete tcp request rule for unexisting frontend %s : %w", parentName, ErrNotFound)
 		}
 		frontend.TCPRequestRuleList = models.TCPRequestRules{}
+		return nil
+	}
+	if parentType == "backend" {
+		backend, exists := c.backends[parentName]
+		if !exists {
+			return fmt.Errorf("can't delete tcp request rule for unexisting backend %s : %w", parentName, ErrNotFound)
+		}
+		backend.TCPRequestRuleList = nil
+		c.backends[parentName] = backend
 		return nil
 	}
 	configuration, err := c.nativeAPI.Configuration()
@@ -64,6 +82,13 @@ func (c *clientNative) TCPRequestRulesGet(parentType, parentName string) (models
 		}
 		return frontend.TCPRequestRuleList, nil
 	}
+	if parentType == "backend" {
+		backend, exists := c.backends[parentName]
+		if !exists {
+			return nil, fmt.Errorf("can't get tcp request rules for unexisting backend %s : %w", parentName, ErrNotFound)
+		}
+		return backend.TCPRequestRuleList, nil
+	}
 	configuration, err := c.nativeAPI.Configuration()
 	if err != nil {
 		return nil, err
@@ -83,6 +108,15 @@ func (c *clientNative) TCPRequestRulesReplace(parentType, parentName string, rul
 			return fmt.Errorf("can't replace tcp request rules for unexisting frontend %s : %w", parentName, ErrNotFound)
 		}
 		frontend.TCPRequestRuleList = rules
+		return nil
+	}
+	if parentType == "backend" {
+		backend, exists := c.backends[parentName]
+		if !exists {
+			return fmt.Errorf("can't replace tcp request rules for unexisting backend %s : %w", parentName, ErrNotFound)
+		}
+		backend.TCPRequestRuleList = rules
+		c.backends[parentName] = backend
 		return nil
 	}
 	configuration, err := c.nativeAPI.Configuration()

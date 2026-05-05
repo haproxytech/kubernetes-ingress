@@ -86,6 +86,7 @@ type HAProxyClient interface { //nolint:interfacebloat
 	HTTPAfterResponseRule
 	ServerSwitchingRule
 	StickRule
+	TCPResponseRule
 	LogTarget
 	TCPRequestRule
 	PeerEntryDelete(peerSection string, name string) error
@@ -216,6 +217,13 @@ type StickRule interface {
 	StickRuleDeleteAll(backendName string) error
 	StickRuleCreate(id int64, backendName string, data *models.StickRule) error
 	StickRulesReplace(backendName string, rules models.StickRules) error
+}
+
+type TCPResponseRule interface {
+	TCPResponseRulesGet(parentType, parentName string) (models.TCPResponseRules, error)
+	TCPResponseRuleDeleteAll(parentType, parentName string) error
+	TCPResponseRuleCreate(id int64, parentType, parentName string, data *models.TCPResponseRule) error
+	TCPResponseRulesReplace(parentType, parentName string, rules models.TCPResponseRules) error
 }
 
 type Frontend struct {
@@ -349,6 +357,8 @@ func (c *clientNative) APIFinalCommitTransaction() error {
 		errs.AddErrors(c.processHTTPAfterResponseRules(backendName, backend.HTTPAfterResponseRuleList, configuration))
 		errs.AddErrors(c.processServerSwitchingRules(backendName, backend.ServerSwitchingRuleList, configuration))
 		errs.AddErrors(c.processStickRules(backendName, backend.StickRuleList, configuration))
+		errs.AddErrors(c.processTCPRequestRules(backendName, backend.TCPRequestRuleList, configuration))
+		errs.AddErrors(c.processTCPResponseRules(backendName, backend.TCPResponseRuleList, configuration))
 		backend.Used = false
 		c.backends[backendName] = backend
 	}
@@ -463,6 +473,18 @@ func (c *clientNative) processServerSwitchingRules(backendName string, rules mod
 func (c *clientNative) processStickRules(backendName string, rules models.StickRules, configuration configuration.Configuration) utils.Errors {
 	var errs utils.Errors
 	errs.Add(configuration.ReplaceStickRules(backendName, rules, c.activeTransaction, 0))
+	return errs
+}
+
+func (c *clientNative) processTCPRequestRules(backendName string, rules models.TCPRequestRules, configuration configuration.Configuration) utils.Errors {
+	var errs utils.Errors
+	errs.Add(configuration.ReplaceTCPRequestRules("backend", backendName, rules, c.activeTransaction, 0))
+	return errs
+}
+
+func (c *clientNative) processTCPResponseRules(backendName string, rules models.TCPResponseRules, configuration configuration.Configuration) utils.Errors {
+	var errs utils.Errors
+	errs.Add(configuration.ReplaceTCPResponseRules("backend", backendName, rules, c.activeTransaction, 0))
 	return errs
 }
 
