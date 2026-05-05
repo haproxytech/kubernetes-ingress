@@ -85,6 +85,7 @@ type HAProxyClient interface { //nolint:interfacebloat
 	HTTPResponseRule
 	HTTPAfterResponseRule
 	ServerSwitchingRule
+	StickRule
 	LogTarget
 	TCPRequestRule
 	PeerEntryDelete(peerSection string, name string) error
@@ -208,6 +209,13 @@ type ServerSwitchingRule interface {
 	ServerSwitchingRuleDeleteAll(backendName string) error
 	ServerSwitchingRuleCreate(id int64, backendName string, data *models.ServerSwitchingRule) error
 	ServerSwitchingRulesReplace(backendName string, rules models.ServerSwitchingRules) error
+}
+
+type StickRule interface {
+	StickRulesGet(backendName string) (models.StickRules, error)
+	StickRuleDeleteAll(backendName string) error
+	StickRuleCreate(id int64, backendName string, data *models.StickRule) error
+	StickRulesReplace(backendName string, rules models.StickRules) error
 }
 
 type Frontend struct {
@@ -340,6 +348,7 @@ func (c *clientNative) APIFinalCommitTransaction() error {
 		errs.AddErrors(c.processHTTPResponseRules(backendName, backend.HTTPResponseRuleList, configuration))
 		errs.AddErrors(c.processHTTPAfterResponseRules(backendName, backend.HTTPAfterResponseRuleList, configuration))
 		errs.AddErrors(c.processServerSwitchingRules(backendName, backend.ServerSwitchingRuleList, configuration))
+		errs.AddErrors(c.processStickRules(backendName, backend.StickRuleList, configuration))
 		backend.Used = false
 		c.backends[backendName] = backend
 	}
@@ -448,6 +457,12 @@ func (c *clientNative) processHTTPAfterResponseRules(backendName string, rules m
 func (c *clientNative) processServerSwitchingRules(backendName string, rules models.ServerSwitchingRules, configuration configuration.Configuration) utils.Errors {
 	var errs utils.Errors
 	errs.Add(configuration.ReplaceServerSwitchingRules(backendName, rules, c.activeTransaction, 0))
+	return errs
+}
+
+func (c *clientNative) processStickRules(backendName string, rules models.StickRules, configuration configuration.Configuration) utils.Errors {
+	var errs utils.Errors
+	errs.Add(configuration.ReplaceStickRules(backendName, rules, c.activeTransaction, 0))
 	return errs
 }
 
