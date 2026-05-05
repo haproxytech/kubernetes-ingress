@@ -87,6 +87,9 @@ type HAProxyClient interface { //nolint:interfacebloat
 	ServerSwitchingRule
 	StickRule
 	TCPResponseRule
+	HTTPCheck
+	HTTPErrorRule
+	TCPCheck
 	LogTarget
 	TCPRequestRule
 	PeerEntryDelete(peerSection string, name string) error
@@ -226,6 +229,27 @@ type TCPResponseRule interface {
 	TCPResponseRulesReplace(parentType, parentName string, rules models.TCPResponseRules) error
 }
 
+type HTTPCheck interface {
+	HTTPChecksGet(parentType, parentName string) (models.HTTPChecks, error)
+	HTTPCheckDeleteAll(parentType, parentName string) error
+	HTTPCheckCreate(id int64, parentType, parentName string, data *models.HTTPCheck) error
+	HTTPChecksReplace(parentType, parentName string, rules models.HTTPChecks) error
+}
+
+type HTTPErrorRule interface {
+	HTTPErrorRulesGet(parentType, parentName string) (models.HTTPErrorRules, error)
+	HTTPErrorRuleDeleteAll(parentType, parentName string) error
+	HTTPErrorRuleCreate(id int64, parentType, parentName string, data *models.HTTPErrorRule) error
+	HTTPErrorRulesReplace(parentType, parentName string, rules models.HTTPErrorRules) error
+}
+
+type TCPCheck interface {
+	TCPChecksGet(parentType, parentName string) (models.TCPChecks, error)
+	TCPCheckDeleteAll(parentType, parentName string) error
+	TCPCheckCreate(id int64, parentType, parentName string, data *models.TCPCheck) error
+	TCPChecksReplace(parentType, parentName string, rules models.TCPChecks) error
+}
+
 type Frontend struct {
 	models.Frontend
 	ConfigSnippets []string
@@ -251,7 +275,8 @@ func New(transactionDir, configFile, programPath, runtimeSocket string) (client 
 		return nil, err
 	}
 
-	confClient, err := configuration.New(context.Background(),
+	confClient, err := configuration.New(
+		context.Background(),
 		cfgoptions.ConfigurationFile(configFile),
 		cfgoptions.HAProxyBin(programPath),
 		cfgoptions.UseModelsValidation,
@@ -360,6 +385,10 @@ func (c *clientNative) APIFinalCommitTransaction() error {
 		errs.AddErrors(c.processTCPRequestRules(backendName, backend.TCPRequestRuleList, configuration))
 		errs.AddErrors(c.processTCPResponseRules(backendName, backend.TCPResponseRuleList, configuration))
 		errs.AddErrors(c.processFilters(backendName, backend.FilterList, configuration))
+		errs.AddErrors(c.processHTTPChecks(backendName, backend.HTTPCheckList, configuration))
+		errs.AddErrors(c.processLogTargets(backendName, backend.LogTargetList, configuration))
+		errs.AddErrors(c.processHTTPErrorRules(backendName, backend.HTTPErrorRuleList, configuration))
+		errs.AddErrors(c.processTCPChecks(backendName, backend.TCPCheckRuleList, configuration))
 		backend.Used = false
 		c.backends[backendName] = backend
 	}
@@ -492,6 +521,30 @@ func (c *clientNative) processTCPResponseRules(backendName string, rules models.
 func (c *clientNative) processFilters(backendName string, rules models.Filters, configuration configuration.Configuration) utils.Errors {
 	var errs utils.Errors
 	errs.Add(configuration.ReplaceFilters("backend", backendName, rules, c.activeTransaction, 0))
+	return errs
+}
+
+func (c *clientNative) processHTTPChecks(backendName string, rules models.HTTPChecks, configuration configuration.Configuration) utils.Errors {
+	var errs utils.Errors
+	errs.Add(configuration.ReplaceHTTPChecks("backend", backendName, rules, c.activeTransaction, 0))
+	return errs
+}
+
+func (c *clientNative) processLogTargets(backendName string, rules models.LogTargets, configuration configuration.Configuration) utils.Errors {
+	var errs utils.Errors
+	errs.Add(configuration.ReplaceLogTargets("backend", backendName, rules, c.activeTransaction, 0))
+	return errs
+}
+
+func (c *clientNative) processHTTPErrorRules(backendName string, rules models.HTTPErrorRules, configuration configuration.Configuration) utils.Errors {
+	var errs utils.Errors
+	errs.Add(configuration.ReplaceHTTPErrorRules("backend", backendName, rules, c.activeTransaction, 0))
+	return errs
+}
+
+func (c *clientNative) processTCPChecks(backendName string, rules models.TCPChecks, configuration configuration.Configuration) utils.Errors {
+	var errs utils.Errors
+	errs.Add(configuration.ReplaceTCPChecks("backend", backendName, rules, c.activeTransaction, 0))
 	return errs
 }
 

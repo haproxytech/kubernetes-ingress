@@ -24,6 +24,15 @@ func (c *clientNative) LogTargetCreate(id int64, parentType, parentName string, 
 		frontend.LogTargetList[id] = &rule
 		return nil
 	}
+	if parentType == "backend" {
+		backend, exists := c.backends[parentName]
+		if !exists {
+			return fmt.Errorf("can't create log target for unexisting backend %s : %w", parentName, ErrNotFound)
+		}
+		backend.LogTargetList = append(backend.LogTargetList, &rule)
+		c.backends[parentName] = backend
+		return nil
+	}
 
 	configuration, err := c.nativeAPI.Configuration()
 	if err != nil {
@@ -39,6 +48,15 @@ func (c *clientNative) LogTargetDeleteAll(parentType, parentName string) (err er
 			return fmt.Errorf("can't delete log target for unexisting frontend %s : %w", parentName, ErrNotFound)
 		}
 		frontend.LogTargetList = models.LogTargets{}
+		return nil
+	}
+	if parentType == "backend" {
+		backend, exists := c.backends[parentName]
+		if !exists {
+			return fmt.Errorf("can't delete log target for unexisting backend %s : %w", parentName, ErrNotFound)
+		}
+		backend.LogTargetList = nil
+		c.backends[parentName] = backend
 		return nil
 	}
 
@@ -66,6 +84,13 @@ func (c *clientNative) LogTargetsGet(parentType, parentName string) (models.LogT
 		}
 		return frontend.LogTargetList, nil
 	}
+	if parentType == "backend" {
+		backend, exists := c.backends[parentName]
+		if !exists {
+			return nil, fmt.Errorf("can't get log targets for unexisting backend %s : %w", parentName, ErrNotFound)
+		}
+		return backend.LogTargetList, nil
+	}
 	configuration, err := c.nativeAPI.Configuration()
 	if err != nil {
 		return nil, err
@@ -85,6 +110,15 @@ func (c *clientNative) LogTargetsReplace(parentType, parentName string, rules mo
 			return fmt.Errorf("can't replace log targets for unexisting frontend %s : %w", parentName, ErrNotFound)
 		}
 		frontend.LogTargetList = rules
+		return nil
+	}
+	if parentType == "backend" {
+		backend, exists := c.backends[parentName]
+		if !exists {
+			return fmt.Errorf("can't replace log targets for unexisting backend %s : %w", parentName, ErrNotFound)
+		}
+		backend.LogTargetList = rules
+		c.backends[parentName] = backend
 		return nil
 	}
 
