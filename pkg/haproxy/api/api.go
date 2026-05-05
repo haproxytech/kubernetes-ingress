@@ -359,6 +359,7 @@ func (c *clientNative) APIFinalCommitTransaction() error {
 		errs.AddErrors(c.processStickRules(backendName, backend.StickRuleList, configuration))
 		errs.AddErrors(c.processTCPRequestRules(backendName, backend.TCPRequestRuleList, configuration))
 		errs.AddErrors(c.processTCPResponseRules(backendName, backend.TCPResponseRuleList, configuration))
+		errs.AddErrors(c.processFilters(backendName, backend.FilterList, configuration))
 		backend.Used = false
 		c.backends[backendName] = backend
 	}
@@ -485,6 +486,12 @@ func (c *clientNative) processTCPRequestRules(backendName string, rules models.T
 func (c *clientNative) processTCPResponseRules(backendName string, rules models.TCPResponseRules, configuration configuration.Configuration) utils.Errors {
 	var errs utils.Errors
 	errs.Add(configuration.ReplaceTCPResponseRules("backend", backendName, rules, c.activeTransaction, 0))
+	return errs
+}
+
+func (c *clientNative) processFilters(backendName string, rules models.Filters, configuration configuration.Configuration) utils.Errors {
+	var errs utils.Errors
+	errs.Add(configuration.ReplaceFilters("backend", backendName, rules, c.activeTransaction, 0))
 	return errs
 }
 
