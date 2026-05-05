@@ -83,6 +83,7 @@ type HAProxyClient interface { //nolint:interfacebloat
 	GetMap(mapFile string) (*models.Map, error)
 	HTTPRequestRule
 	HTTPResponseRule
+	HTTPAfterResponseRule
 	LogTarget
 	TCPRequestRule
 	PeerEntryDelete(peerSection string, name string) error
@@ -192,6 +193,13 @@ type HTTPResponseRule interface {
 	HTTPResponseRulesReplace(parentType, parentName string, rules models.HTTPResponseRules) error
 	FrontendHTTPResponseRuleCreate(id int64, frontend string, rule models.HTTPResponseRule, ingressACL string) error
 	FrontendHTTPAfterResponseRuleCreate(id int64, frontend string, rule models.HTTPAfterResponseRule, ingressACL string) error
+}
+
+type HTTPAfterResponseRule interface {
+	HTTPAfterResponseRulesGet(parentType, parentName string) (models.HTTPAfterResponseRules, error)
+	HTTPAfterResponseRuleDeleteAll(parentType string, parentName string) error
+	HTTPAfterResponseRuleCreate(id int64, parentType string, parentName string, data *models.HTTPAfterResponseRule) error
+	HTTPAfterResponseRulesReplace(parentType, parentName string, rules models.HTTPAfterResponseRules) error
 }
 
 type Frontend struct {
@@ -322,6 +330,7 @@ func (c *clientNative) APIFinalCommitTransaction() error {
 		errs.AddErrors(c.processACLs(backendName, backend.ACLList, configuration))
 		errs.AddErrors(c.processHTTPRequestRules(backendName, backend.HTTPRequestRuleList, configuration))
 		errs.AddErrors(c.processHTTPResponseRules(backendName, backend.HTTPResponseRuleList, configuration))
+		errs.AddErrors(c.processHTTPAfterResponseRules(backendName, backend.HTTPAfterResponseRuleList, configuration))
 		backend.Used = false
 		c.backends[backendName] = backend
 	}
@@ -418,6 +427,12 @@ func (c *clientNative) processHTTPResponseRules(backendName string, httpResponse
 	var errs utils.Errors
 	// we (re)create all http response rules
 	errs.Add(configuration.ReplaceHTTPResponseRules("backend", backendName, httpResponsesRules, c.activeTransaction, 0))
+	return errs
+}
+
+func (c *clientNative) processHTTPAfterResponseRules(backendName string, rules models.HTTPAfterResponseRules, configuration configuration.Configuration) utils.Errors {
+	var errs utils.Errors
+	errs.Add(configuration.ReplaceHTTPAfterResponseRules("backend", backendName, rules, c.activeTransaction, 0))
 	return errs
 }
 
