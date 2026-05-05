@@ -28,15 +28,19 @@ import (
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/api"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/certs"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/instance"
+	"github.com/haproxytech/kubernetes-ingress/pkg/rules"
 	"github.com/haproxytech/kubernetes-ingress/pkg/rules/acls"
+	"github.com/haproxytech/kubernetes-ingress/pkg/rules/filters"
 	"github.com/haproxytech/kubernetes-ingress/pkg/rules/httpafterresponses"
+	"github.com/haproxytech/kubernetes-ingress/pkg/rules/httpchecks"
+	"github.com/haproxytech/kubernetes-ingress/pkg/rules/httperrors"
 	"github.com/haproxytech/kubernetes-ingress/pkg/rules/httprequests"
 	"github.com/haproxytech/kubernetes-ingress/pkg/rules/httpresponses"
-	"github.com/haproxytech/kubernetes-ingress/pkg/rules"
-	"github.com/haproxytech/kubernetes-ingress/pkg/rules/filters"
+	logtargets "github.com/haproxytech/kubernetes-ingress/pkg/rules/log_targets"
 	"github.com/haproxytech/kubernetes-ingress/pkg/rules/serverswitching"
 	"github.com/haproxytech/kubernetes-ingress/pkg/rules/stick"
 	tcprequestrules "github.com/haproxytech/kubernetes-ingress/pkg/rules/tcp_request_rules"
+	"github.com/haproxytech/kubernetes-ingress/pkg/rules/tcpchecks"
 	"github.com/haproxytech/kubernetes-ingress/pkg/rules/tcpresponses"
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
@@ -188,6 +192,16 @@ func (s *Service) HandleBackend(storeK8s store.K8s, client api.HAProxyClient, a 
 	if errFilters := filters.Reconcile(client, rules.ParentTypeBackend, newBackend.BackendBase.Name, newBackend.FilterList); errFilters != nil {
 		logger.Error(errFilters)
 	}
+	// HTTP checks
+	httpchecks.PopulateBackend(client, newBackend.BackendBase.Name, newBackend.HTTPCheckList)
+	// Log targets
+	if errLog := logtargets.Reconcile(client, rules.ParentTypeBackend, newBackend.BackendBase.Name, newBackend.LogTargetList); errLog != nil {
+		logger.Error(errLog)
+	}
+	// HTTP errors
+	httperrors.PopulateBackend(client, newBackend.BackendBase.Name, newBackend.HTTPErrorRuleList)
+	// TCP checks
+	tcpchecks.PopulateBackend(client, newBackend.BackendBase.Name, newBackend.TCPCheckRuleList)
 
 	// config-snippet: backend
 	backendCfgSnippetHandler := annotations.NewCfgSnippet(
@@ -195,7 +209,8 @@ func (s *Service) HandleBackend(storeK8s store.K8s, client api.HAProxyClient, a 
 			Name:    "backend-config-snippet",
 			Backend: utils.PtrString(newBackend.BackendBase.Name),
 			Ingress: s.ingress,
-		})
+		},
+	)
 	backendCfgSnippetHandler.SetService(s.resource)
 	logger.Error(backendCfgSnippetHandler.Process(storeK8s, s.annotations...))
 	return err
