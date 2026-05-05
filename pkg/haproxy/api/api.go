@@ -84,6 +84,7 @@ type HAProxyClient interface { //nolint:interfacebloat
 	HTTPRequestRule
 	HTTPResponseRule
 	HTTPAfterResponseRule
+	ServerSwitchingRule
 	LogTarget
 	TCPRequestRule
 	PeerEntryDelete(peerSection string, name string) error
@@ -200,6 +201,13 @@ type HTTPAfterResponseRule interface {
 	HTTPAfterResponseRuleDeleteAll(parentType string, parentName string) error
 	HTTPAfterResponseRuleCreate(id int64, parentType string, parentName string, data *models.HTTPAfterResponseRule) error
 	HTTPAfterResponseRulesReplace(parentType, parentName string, rules models.HTTPAfterResponseRules) error
+}
+
+type ServerSwitchingRule interface {
+	ServerSwitchingRulesGet(backendName string) (models.ServerSwitchingRules, error)
+	ServerSwitchingRuleDeleteAll(backendName string) error
+	ServerSwitchingRuleCreate(id int64, backendName string, data *models.ServerSwitchingRule) error
+	ServerSwitchingRulesReplace(backendName string, rules models.ServerSwitchingRules) error
 }
 
 type Frontend struct {
@@ -331,6 +339,7 @@ func (c *clientNative) APIFinalCommitTransaction() error {
 		errs.AddErrors(c.processHTTPRequestRules(backendName, backend.HTTPRequestRuleList, configuration))
 		errs.AddErrors(c.processHTTPResponseRules(backendName, backend.HTTPResponseRuleList, configuration))
 		errs.AddErrors(c.processHTTPAfterResponseRules(backendName, backend.HTTPAfterResponseRuleList, configuration))
+		errs.AddErrors(c.processServerSwitchingRules(backendName, backend.ServerSwitchingRuleList, configuration))
 		backend.Used = false
 		c.backends[backendName] = backend
 	}
@@ -433,6 +442,12 @@ func (c *clientNative) processHTTPResponseRules(backendName string, httpResponse
 func (c *clientNative) processHTTPAfterResponseRules(backendName string, rules models.HTTPAfterResponseRules, configuration configuration.Configuration) utils.Errors {
 	var errs utils.Errors
 	errs.Add(configuration.ReplaceHTTPAfterResponseRules("backend", backendName, rules, c.activeTransaction, 0))
+	return errs
+}
+
+func (c *clientNative) processServerSwitchingRules(backendName string, rules models.ServerSwitchingRules, configuration configuration.Configuration) utils.Errors {
+	var errs utils.Errors
+	errs.Add(configuration.ReplaceServerSwitchingRules(backendName, rules, c.activeTransaction, 0))
 	return errs
 }
 
