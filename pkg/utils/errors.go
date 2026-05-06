@@ -27,6 +27,6 @@ func (e *Errors) Result() error {
 
 func (e *Errors) AddErrors(errors Errors) {
 	for _, err := range errors {
-		e.Add((err))
+		e.Add(err)
 	}
 }

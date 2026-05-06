@@ -87,7 +87,7 @@ func (a *SyslogServers) Process(k store.K8s, annotations ...map[string]string) e
 				return fmt.Errorf("unknown syslog param: '%s' in '%s' ", k, syslogLine)
 			}
 		}
-		*(a.logTargets) = append(*(a.logTargets), &logTarget)
+		*a.logTargets = append(*a.logTargets, &logTarget)
 	}
 	return nil
 }

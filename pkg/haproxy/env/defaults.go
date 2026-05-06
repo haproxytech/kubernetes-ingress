@@ -23,7 +23,7 @@ func SetGlobal(global *models.Global, logTargets *models.LogTargets, env Env) {
 	}
 	if len(global.RuntimeAPIs) == 0 {
 		global.RuntimeAPIs = runtimeAPIs
-	} else if *(global.RuntimeAPIs[0].Address) != env.RuntimeSocket {
+	} else if *global.RuntimeAPIs[0].Address != env.RuntimeSocket {
 		global.RuntimeAPIs = append(runtimeAPIs, global.RuntimeAPIs...)
 	}
 	// Default values

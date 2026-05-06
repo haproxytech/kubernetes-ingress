@@ -90,7 +90,8 @@ func updateConfigSnippet(api api.HAProxyClient, configmapCfgSnippetValue []strin
 			if cfgData.disabled {
 				instance.ReloadIf(
 					cfgData.status == store.ADDED || cfgData.status == store.MODIFIED,
-					"config snippet from %s has been disabled", origin)
+					"config snippet from %s has been disabled", origin,
+				)
 				continue
 			}
 			instance.ReloadIf(cfgData.status != store.EMPTY,

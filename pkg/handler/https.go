@@ -257,7 +257,8 @@ func (handler *HTTPS) enableSSLPassthrough(h haproxy.HAProxy) (err error) {
 		h.BackendSwitchingRuleCreate(0, h.FrontSSL, models.BackendSwitchingRule{
 			Name: "%[var(txn.sni_match),field(1,.)]",
 		}),
-		handler.toggleSSLPassthrough(true, h))
+		handler.toggleSSLPassthrough(true, h),
+	)
 	return errors.Result()
 }
 
@@ -306,7 +307,8 @@ func (handler *HTTPS) sslPassthroughRules(k store.K8s, h haproxy.HAProxy, a anno
 		inspectTimeout = utils.PtrInt64(5000)
 	}
 	errors := utils.Errors{}
-	errors.Add(h.Rules.AddRule(h.FrontSSL, rules.ReqAcceptContent{}, false),
+	errors.Add(
+		h.Rules.AddRule(h.FrontSSL, rules.ReqAcceptContent{}, false),
 		h.Rules.AddRule(h.FrontSSL, rules.ReqInspectDelay{
 			Timeout: inspectTimeout,
 		}, false),
