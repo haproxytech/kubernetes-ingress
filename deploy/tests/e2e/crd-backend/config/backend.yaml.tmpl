@@ -1,0 +1,48 @@
+apiVersion: ingress.v3.haproxy.org/v3
+kind: Backend
+metadata:
+  name: be-test
+spec:
+  name: {{ .BackendName }}
+  mode: http
+  stick_table:
+    type: ip
+    size: 1048576
+    expire: 30000
+  acl_list:
+    - acl_name: is_admin
+      criterion: path_beg
+      value: /admin
+  http_request_rule_list:
+    - type: set-header
+      hdr_name: {{ .HeaderName }}
+      hdr_format: {{ .HeaderValue }}
+  http_response_rule_list:
+    - type: set-header
+      hdr_name: X-Resp-Test
+      hdr_format: {{ .HeaderValue }}
+  http_after_response_rule_list:
+    - type: set-header
+      hdr_name: X-After-Test
+      hdr_format: {{ .HeaderValue }}
+  http_check_list:
+    - type: send
+      method: GET
+      uri: {{ .HealthURI }}
+  log_target_list:
+    - address: {{ .LogAddress }}
+      facility: local0
+  filter_list:
+    - type: compression
+  server_switching_rule_list:
+    - target_server: SRV_1
+      cond: if
+      cond_test: is_admin
+  stick_rule_list:
+    - type: "on"
+      pattern: src
+  tcp_request_rule_list:
+    - type: content
+      action: accept
+      cond: if
+      cond_test: "{ src 10.0.0.0/8 }"

@@ -1,0 +1,58 @@
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: http-echo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: http-echo
+  template:
+    metadata:
+      labels:
+        app: http-echo
+    spec:
+      containers:
+        - name: http-echo
+          image: haproxytech/http-echo:latest
+          imagePullPolicy: Never
+          args:
+          - --default-response=hostname
+          ports:
+            - name: http
+              containerPort: 8888
+              protocol: TCP
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: http-echo
+  annotations:
+    cr-backend: be-test
+spec:
+  ports:
+    - name: http
+      protocol: TCP
+      port: 80
+      targetPort: http
+  selector:
+    app: http-echo
+---
+kind: Ingress
+apiVersion: networking.k8s.io/v1
+metadata:
+  name: http-echo
+spec:
+  ingressClassName: haproxy
+  rules:
+    - host: {{ .Host }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: http-echo
+                port:
+                  name: http
