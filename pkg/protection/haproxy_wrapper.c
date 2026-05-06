@@ -13,37 +13,37 @@
 /* limitations under the License.                                             */
 
 #define _GNU_SOURCE
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 
-#define LIB_PATH "LD_PRELOAD=/usr/local/lib/libblock_secrets.so"
+#define LIB_PATH "/usr/local/lib/libblock_secrets.so"
 #define TARGET_PATH "/usr/local/sbin/haproxy"
 
-int main(int argc, char *argv[], char *envp[]) {
-    char **newargv = malloc((argc + 1) * sizeof(char *));
+int main(int argc, char *argv[]) {
+    int n = argc > 0 ? argc : 1;
+    char **newargv = malloc((n + 1) * sizeof(char *));
     if (!newargv) {
         perror("malloc");
-        return 1;
+        return EXIT_FAILURE;
     }
     newargv[0] = (char *)TARGET_PATH;
-    for (int i = 1; i < argc; i++) {
+    for (int i = 1; i < n; i++) {
         newargv[i] = argv[i];
     }
-    newargv[argc] = NULL;
+    newargv[n] = NULL;
 
-    int envc = 0;
-    while (environ[envc]) envc++;
-
-    char **new_envp = malloc((envc + 2) * sizeof(char *));
-    for (int i = 0; i < envc; i++) {
-        new_envp[i] = environ[i];
+    if (setenv("LD_PRELOAD", LIB_PATH, 1) != 0) {
+        perror("setenv LD_PRELOAD");
+        free(newargv);
+        return EXIT_FAILURE;
     }
-    new_envp[envc] = LIB_PATH;
-    new_envp[envc + 1] = NULL;
 
-    execve(TARGET_PATH, newargv, new_envp);
+    execv(TARGET_PATH, newargv);
 
-    perror("execve");
-    return 1;
+    fprintf(stderr, "execv %s: %s\n", TARGET_PATH, strerror(errno));
+    free(newargv);
+    return EXIT_FAILURE;
 }

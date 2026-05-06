@@ -12,6 +12,8 @@
 /* See the License for the specific language governing permissions and        */
 /* limitations under the License.                                             */
 
+#define _XOPEN_SOURCE 700
+
 #include <dirent.h>
 #include <dlfcn.h>
 #include <errno.h>
@@ -263,7 +265,7 @@ static int (*real_symlinkat)(const char *, int, const char *) = NULL;
 
 /* Priority 101 (0–100 reserved). dlsym before realpath so any internal
    hook recursion finds populated pointers. */
-__attribute__((constructor(101), cold)) static void block_secrets_init() {
+__attribute__((constructor(101), cold)) static void block_secrets_init(void) {
   real_open = dlsym(RTLD_NEXT, "open");
   real_open64 = dlsym(RTLD_NEXT, "open64");
   real_fopen = dlsym(RTLD_NEXT, "fopen");

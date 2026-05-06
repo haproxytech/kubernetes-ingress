@@ -17,8 +17,24 @@ WORKDIR /src
 
 COPY pkg/protection/block_secrets.c .
 COPY pkg/protection/haproxy_wrapper.c .
-RUN gcc -O3 -Wall -flto -fPIC -shared -s -o libblock_secrets.so block_secrets.c -ldl
-RUN gcc -O3 -Wall -g -s -o haproxy_wrapper haproxy_wrapper.c
+RUN gcc -O3 -std=c11 -pipe \
+    -Wall -Wextra -Wformat=2 -Wformat-security \
+    -Wnull-dereference -Wshadow -Wstrict-prototypes \
+    -D_FORTIFY_SOURCE=2 \
+    -fstack-protector-strong -fstack-clash-protection \
+    -fno-omit-frame-pointer \
+    -flto -fPIC -shared -s \
+    -Wl,-z,relro -Wl,-z,now -Wl,-z,noexecstack -Wl,--as-needed -Wl,-z,defs \
+    -o libblock_secrets.so block_secrets.c -ldl
+RUN gcc -O3 -std=c11 -pipe \
+    -Wall -Wextra -Wformat=2 -Wformat-security \
+    -Wnull-dereference -Wshadow -Wstrict-prototypes \
+    -D_FORTIFY_SOURCE=2 \
+    -fstack-protector-strong -fstack-clash-protection \
+    -fno-omit-frame-pointer \
+    -fPIE -pie -s \
+    -Wl,-z,relro -Wl,-z,now -Wl,-z,noexecstack -Wl,--as-needed \
+    -o haproxy_wrapper haproxy_wrapper.c
 
 FROM golang:1.25-alpine AS builder
 
