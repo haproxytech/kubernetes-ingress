@@ -27,7 +27,8 @@ func processCustomAnnotationsFrontend(customAnnotations map[string]string, a *Cf
 		"FRONTEND": a.frontend,
 	}
 	keys := validator.GetSortedAnnotationKeys(
-		customAnnotations, filterValues)
+		customAnnotations, filterValues,
+	)
 
 	for index, k := range keys {
 		customAnnotationValue := customAnnotations[k]
@@ -116,7 +117,8 @@ func processCustomAnnotationsBackend(customAnnotations map[string]string, a *Cfg
 		filterValues.Service = a.service.Name
 	}
 	keys := validator.GetSortedAnnotationKeys(
-		customAnnotations, filterValues)
+		customAnnotations, filterValues,
+	)
 
 	for index, k := range keys {
 		customAnnotationValue := customAnnotations[k]

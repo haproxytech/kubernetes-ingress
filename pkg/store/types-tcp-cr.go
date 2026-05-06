@@ -114,7 +114,7 @@ func (a TCPResourceList) OrderByCreationTime() {
 		if a[i].CreationTimestamp.Equal(a[j].CreationTimestamp) {
 			return a[i].Name < a[j].Name
 		}
-		return (a)[i].CreationTimestamp.After((a)[j].CreationTimestamp)
+		return a[i].CreationTimestamp.After(a[j].CreationTimestamp)
 	})
 }
 

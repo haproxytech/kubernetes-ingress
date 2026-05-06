@@ -89,7 +89,8 @@ func (c *HAProxyController) Start() {
 		if err != nil {
 			return err
 		}
-		return c.haproxy.PeerEntryCreateOrEdit("localinstance",
+		return c.haproxy.PeerEntryCreateOrEdit(
+			"localinstance",
 			models.PeerEntry{
 				Name:    c.Hostname,
 				Address: &c.PodIP,
@@ -100,7 +101,7 @@ func (c *HAProxyController) Start() {
 	c.initHandlers()
 	logger.Error(c.setupHAProxyRules())
 	logger.Error(os.Chdir(c.haproxy.Env.CfgDir))
-	_, errStart := (c.haproxy.Service("start"))
+	_, errStart := c.haproxy.Service("start")
 	logger.Panic(errStart)
 
 	c.SyncData()
@@ -145,7 +146,8 @@ func (c *HAProxyController) updateHAProxy() {
 			Name:    "backend-config-snippet",
 			Backend: utils.Ptr("configmap"),
 			Ingress: nil,
-		}).
+		},
+	).
 		Process(c.store, c.store.ConfigMaps.Main.Annotations))
 
 	for _, handler := range c.beforeUpdateHandlers {
@@ -261,7 +263,8 @@ func (c *HAProxyController) setToReady() {
 			}))
 	}
 
-	logger.Panic(c.haproxy.FrontendBindCreate("stats",
+	logger.Panic(c.haproxy.FrontendBindCreate(
+		"stats",
 		models.Bind{
 			BindParams: models.BindParams{
 				Name:   "stats",

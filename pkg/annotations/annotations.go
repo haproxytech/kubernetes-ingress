@@ -58,20 +58,23 @@ func (a annImpl) GlobalCfgSnipp() []Annotation {
 		// global
 		NewCfgSnippet(ConfigSnippetOptions{Name: "global-config-snippet"}),
 		// frontend
-		NewCfgSnippet(ConfigSnippetOptions{
-			Name:     "frontend-config-snippet",
-			Frontend: utils.Ptr("http"),
-		},
+		NewCfgSnippet(
+			ConfigSnippetOptions{
+				Name:     "frontend-config-snippet",
+				Frontend: utils.Ptr("http"),
+			},
 		),
-		NewCfgSnippet(ConfigSnippetOptions{
-			Name:     "frontend-config-snippet",
-			Frontend: utils.Ptr("https"),
-		},
+		NewCfgSnippet(
+			ConfigSnippetOptions{
+				Name:     "frontend-config-snippet",
+				Frontend: utils.Ptr("https"),
+			},
 		),
-		NewCfgSnippet(ConfigSnippetOptions{
-			Name:     "stats-config-snippet",
-			Frontend: utils.Ptr("stats"),
-		},
+		NewCfgSnippet(
+			ConfigSnippetOptions{
+				Name:     "stats-config-snippet",
+				Frontend: utils.Ptr("stats"),
+			},
 		),
 	}
 }
@@ -164,7 +167,8 @@ func (a annImpl) Backend(b *models.Backend, s store.K8s, c certs.Certificates) [
 		service.NewProto("server-proto", b),
 	}
 	if b.Mode == "http" {
-		annotations = append(annotations,
+		annotations = append(
+			annotations,
 			service.NewCheckHTTP("check-http", b),
 			service.NewForwardedFor("forwarded-for", b),
 		)

@@ -165,7 +165,8 @@ func (r SectionRules) refreshRule(client api.HAProxyClient, ruleType Type, i int
 	}
 	instance.ReloadIf(
 		frontendRuleSet.meta[id].state == TO_CREATE,
-		"New HAProxy rule '%s' created", constLookup[ruleType])
+		"New HAProxy rule '%s' created", constLookup[ruleType],
+	)
 }
 
 func GetID(rule Rule) RuleID {

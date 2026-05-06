@@ -125,7 +125,7 @@ func (a *MapStringW) Equal(b MapStringW) bool {
 		return false
 	}
 	for k, v := range *a {
-		value, ok := (b)[k]
+		value, ok := b[k]
 		if !ok || !v.Equal(value) {
 			return false
 		}

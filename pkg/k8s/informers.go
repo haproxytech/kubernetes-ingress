@@ -580,7 +580,8 @@ func (k *k8s) getPodInformer(namespace, podPrefix string, resyncPeriod time.Dura
 					eventChan <- ToSyncDataEvent(item, item, meta.UID, meta.ResourceVersion)
 				},
 			},
-		})
+		},
+	)
 
 	return eController
 }

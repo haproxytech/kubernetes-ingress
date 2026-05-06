@@ -210,7 +210,8 @@ func (gm GatewayManagerImpl) manageTCPRoutes() {
 					Name:          getBackendName(*tcproute),
 					Mode:          "tcp",
 					DefaultServer: &models.DefaultServer{ServerParams: models.ServerParams{Check: "enabled"}},
-				})
+				},
+			)
 
 			_, backendExists := gm.backends[tcpRouteBackendName]
 			instance.ReloadIf(!backendExists, "modification in backend for tcproute '%s/%s'", tcproute.Namespace, tcproute.Name)
@@ -280,7 +281,8 @@ MAIN_LOOP:
 						return "0.0.0.0"
 					}(),
 					BindParams: models.BindParams{Name: "v4"},
-				})
+				},
+			)
 			if errBinCreate != nil {
 				errs.Add(errBinCreate)
 				continue
@@ -297,7 +299,8 @@ MAIN_LOOP:
 						return ":::"
 					}(),
 					BindParams: models.BindParams{Name: "v6"},
-				})
+				},
+			)
 			if errBinCreate != nil {
 				errs.Add(errBinCreate)
 				continue
@@ -564,13 +567,13 @@ func (gm GatewayManagerImpl) isTCPRouteAllowedByListener(listener store.Listener
 	if allowedRoutesNamespaces != nil {
 		from := allowedRoutesNamespaces.From
 		if from == nil {
-			v := (string)(v1alpha2.NamespacesFromSame)
+			v := string(v1alpha2.NamespacesFromSame)
 			from = &v
 		}
 		if *from == "Same" {
 			return routeNamespace == gatewayNamespace
 		}
-		if *from == (string)(v1alpha2.NamespacesFromSelector) {
+		if *from == string(v1alpha2.NamespacesFromSelector) {
 			if allowedRoutesNamespaces.Selector == nil {
 				return false
 			}
