@@ -59,6 +59,9 @@ func (c *clientNative) ServerSwitchingRuleCreate(id int64, backendName string, d
 }
 
 func (c *clientNative) ServerSwitchingRulesReplace(backendName string, rules models.ServerSwitchingRules) error {
+	if backendName == "" {
+		return fmt.Errorf("can't replace server-switching rules: backend has no name : %w", ErrNotFound)
+	}
 	configuration, err := c.nativeAPI.Configuration()
 	if err != nil {
 		return err
@@ -67,9 +70,6 @@ func (c *clientNative) ServerSwitchingRulesReplace(backendName string, rules mod
 		backend.ServerSwitchingRuleList = rules
 		c.backends[backendName] = backend
 		return nil
-	}
-	if backendName == "" {
-		return fmt.Errorf("can't replace server-switching rules: backend %s : %w", backendName, ErrNotFound)
 	}
 	return configuration.ReplaceServerSwitchingRules(backendName, rules, c.activeTransaction, 0)
 }

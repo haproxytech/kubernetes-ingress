@@ -10,6 +10,7 @@ import (
 func PopulateBackend(client api.HTTPCheck, name string, rules models.HTTPChecks) {
 	current, errGet := client.HTTPChecksGet("backend", name)
 	if errGet != nil {
+		utils.GetLogger().Err(errGet)
 		return
 	}
 	diff := rules.Diff(current)

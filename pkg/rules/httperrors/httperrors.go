@@ -10,6 +10,7 @@ import (
 func PopulateBackend(client api.HTTPErrorRule, name string, rules models.HTTPErrorRules) {
 	current, errGet := client.HTTPErrorRulesGet("backend", name)
 	if errGet != nil {
+		utils.GetLogger().Err(errGet)
 		return
 	}
 	diff := rules.Diff(current)

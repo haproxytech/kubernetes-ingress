@@ -22,24 +22,21 @@ import (
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
 )
 
-func Reconcile(client api.TCPRequestRule, parentType rules.ParentType, parentName string, rules models.TCPRequestRules) error {
-	var errors utils.Errors
-	currentRules, err := client.TCPRequestRulesGet(string(parentType), parentName)
+func Reconcile(client api.TCPRequestRule, parentType rules.ParentType, parentName string, desired models.TCPRequestRules) error {
+	current, err := client.TCPRequestRulesGet(string(parentType), parentName)
 	if err != nil {
+		utils.GetLogger().Err(err)
 		return err
 	}
 
-	// Diff includes diff in order
-	diffRules := rules.Diff(currentRules)
-	if len(diffRules) != 0 {
-		err = client.TCPRequestRulesReplace(string(parentType), parentName, rules)
-		if err != nil {
-			utils.GetLogger().Err(err)
-			return err
-		}
-		// ... we reload because we created some http requests.
-		instance.Reload("parent '%s/%s', tcp_request_rule rules updated: %+v", string(parentType), parentName, utils.JSONDiff(diffRules))
+	diff := desired.Diff(current)
+	if len(diff) == 0 {
+		return nil
 	}
-
-	return errors.Result()
+	if err = client.TCPRequestRulesReplace(string(parentType), parentName, desired); err != nil {
+		utils.GetLogger().Err(err)
+		return err
+	}
+	instance.Reload("parent '%s/%s', tcp request rules updated: %+v", string(parentType), parentName, utils.JSONDiff(diff))
+	return nil
 }

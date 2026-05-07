@@ -10,6 +10,7 @@ import (
 func PopulateBackend(client api.TCPResponseRule, name string, rules models.TCPResponseRules) {
 	current, errGet := client.TCPResponseRulesGet("backend", name)
 	if errGet != nil {
+		utils.GetLogger().Err(errGet)
 		return
 	}
 	diff := rules.Diff(current)
