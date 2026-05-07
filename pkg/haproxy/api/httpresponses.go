@@ -14,7 +14,7 @@ func (c *clientNative) HTTPResponseRulesGet(parentType, parentName string) (mode
 	if parentType == "backend" {
 		backend, exists := c.backends[parentName]
 		if !exists {
-			return nil, fmt.Errorf("can't get http requests rules for unexisting backend %s : %w", parentName, ErrNotFound)
+			return nil, fmt.Errorf("can't get http response rules for unexisting backend %s : %w", parentName, ErrNotFound)
 		}
 		return backend.HTTPResponseRuleList, nil
 	}
@@ -22,7 +22,7 @@ func (c *clientNative) HTTPResponseRulesGet(parentType, parentName string) (mode
 	if parentType == "frontend" {
 		frontend, exists := c.frontends[parentName]
 		if !exists {
-			return nil, fmt.Errorf("can't get http requests rules for unexisting frontend %s : %w", parentName, ErrNotFound)
+			return nil, fmt.Errorf("can't get http response rules for unexisting frontend %s : %w", parentName, ErrNotFound)
 		}
 		return frontend.HTTPResponseRuleList, nil
 	}
@@ -42,7 +42,7 @@ func (c *clientNative) HTTPResponseRuleDeleteAll(parentType string, parentName s
 	if parentType == "backend" {
 		backend, exists := c.backends[parentName]
 		if !exists {
-			return fmt.Errorf("can't delete http requests rules for unexisting backend %s : %w", parentName, ErrNotFound)
+			return fmt.Errorf("can't delete http response rules for unexisting backend %s : %w", parentName, ErrNotFound)
 		}
 		backend.HTTPResponseRuleList = nil
 		c.backends[parentName] = backend
@@ -52,7 +52,7 @@ func (c *clientNative) HTTPResponseRuleDeleteAll(parentType string, parentName s
 	if parentType == "frontend" {
 		frontend, exists := c.frontends[parentName]
 		if !exists {
-			return fmt.Errorf("can't delete http requests rules for unexisting frontend %s : %w", parentName, ErrNotFound)
+			return fmt.Errorf("can't delete http response rules for unexisting frontend %s : %w", parentName, ErrNotFound)
 		}
 		frontend.HTTPResponseRuleList = nil
 		c.frontends[parentName] = frontend
@@ -81,7 +81,7 @@ func (c *clientNative) HTTPResponseRuleCreate(id int64, parentType string, paren
 	if parentType == "backend" {
 		backend, exists := c.backends[parentName]
 		if !exists {
-			return fmt.Errorf("can't create http request rule for unexisting backend %s : %w", parentName, ErrNotFound)
+			return fmt.Errorf("can't create http response rule for unexisting backend %s : %w", parentName, ErrNotFound)
 		}
 		backend.HTTPResponseRuleList = append(backend.HTTPResponseRuleList, data)
 		c.backends[parentName] = backend
@@ -90,7 +90,7 @@ func (c *clientNative) HTTPResponseRuleCreate(id int64, parentType string, paren
 	if parentType == "frontend" {
 		frontend, exists := c.frontends[parentName]
 		if !exists {
-			return fmt.Errorf("can't create http request rule for unexisting frontend %s : %w", parentName, ErrNotFound)
+			return fmt.Errorf("can't create http response rule for unexisting frontend %s : %w", parentName, ErrNotFound)
 		}
 		frontend.HTTPResponseRuleList = append(frontend.HTTPResponseRuleList, data)
 		c.frontends[parentName] = frontend
@@ -108,7 +108,7 @@ func (c *clientNative) HTTPResponseRulesReplace(parentType, parentName string, r
 	if parentType == "backend" {
 		backend, exists := c.backends[parentName]
 		if !exists {
-			return fmt.Errorf("can't replace http request rule for unexisting backend %s : %w", parentName, ErrNotFound)
+			return fmt.Errorf("can't replace http response rule for unexisting backend %s : %w", parentName, ErrNotFound)
 		}
 		backend.HTTPResponseRuleList = rules
 		c.backends[parentName] = backend
@@ -118,7 +118,7 @@ func (c *clientNative) HTTPResponseRulesReplace(parentType, parentName string, r
 	if parentType == "frontend" {
 		frontend, exists := c.frontends[parentName]
 		if !exists {
-			return fmt.Errorf("can't replace http request rule for unexisting frontend %s : %w", parentName, ErrNotFound)
+			return fmt.Errorf("can't replace http response rule for unexisting frontend %s : %w", parentName, ErrNotFound)
 		}
 		frontend.HTTPResponseRuleList = rules
 		c.frontends[parentName] = frontend
