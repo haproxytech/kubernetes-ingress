@@ -22,24 +22,21 @@ import (
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
 )
 
-func Reconcile(client api.LogTarget, parentType rules.ParentType, parentName string, rules models.LogTargets) error {
-	var errors utils.Errors
-	currentRules, err := client.LogTargetsGet(string(parentType), parentName)
+func Reconcile(client api.LogTarget, parentType rules.ParentType, parentName string, desired models.LogTargets) error {
+	current, err := client.LogTargetsGet(string(parentType), parentName)
 	if err != nil {
+		utils.GetLogger().Err(err)
 		return err
 	}
 
-	// Diff includes diff in order
-	diffRules := rules.Diff(currentRules)
-	if len(diffRules) != 0 {
-		err = client.LogTargetsReplace(string(parentType), parentName, rules)
-		if err != nil {
-			utils.GetLogger().Err(err)
-			return err
-		}
-		// ... we reload because we created some http requests.
-		instance.Reload("parent '%s/%s', log_target rules updated: %+v", string(parentType), parentName, utils.JSONDiff(diffRules))
+	diff := desired.Diff(current)
+	if len(diff) == 0 {
+		return nil
 	}
-
-	return errors.Result()
+	if err = client.LogTargetsReplace(string(parentType), parentName, desired); err != nil {
+		utils.GetLogger().Err(err)
+		return err
+	}
+	instance.Reload("parent '%s/%s', log target rules updated: %+v", string(parentType), parentName, utils.JSONDiff(diff))
+	return nil
 }

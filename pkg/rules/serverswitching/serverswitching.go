@@ -10,6 +10,7 @@ import (
 func PopulateBackend(client api.ServerSwitchingRule, name string, rules models.ServerSwitchingRules) {
 	current, errGet := client.ServerSwitchingRulesGet(name)
 	if errGet != nil {
+		utils.GetLogger().Err(errGet)
 		return
 	}
 	diff := rules.Diff(current)

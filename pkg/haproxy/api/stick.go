@@ -58,6 +58,9 @@ func (c *clientNative) StickRuleCreate(id int64, backendName string, data *model
 }
 
 func (c *clientNative) StickRulesReplace(backendName string, rules models.StickRules) error {
+	if backendName == "" {
+		return fmt.Errorf("can't replace stick rules: backend has no name : %w", ErrNotFound)
+	}
 	configuration, err := c.nativeAPI.Configuration()
 	if err != nil {
 		return err
@@ -66,9 +69,6 @@ func (c *clientNative) StickRulesReplace(backendName string, rules models.StickR
 		backend.StickRuleList = rules
 		c.backends[backendName] = backend
 		return nil
-	}
-	if backendName == "" {
-		return fmt.Errorf("can't replace stick rules: backend %s : %w", backendName, ErrNotFound)
 	}
 	return configuration.ReplaceStickRules(backendName, rules, c.activeTransaction, 0)
 }

@@ -4,41 +4,31 @@ import (
 	"github.com/haproxytech/client-native/v6/models"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/api"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/instance"
+	"github.com/haproxytech/kubernetes-ingress/pkg/rules"
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
 )
 
-//nolint:golint,stylecheck
-type HTTP_REQUEST_DESTINATION string
-
-//nolint:golint,stylecheck
-const (
-	HTTP_REQUEST_FRONTEND HTTP_REQUEST_DESTINATION = "frontend"
-	HTTP_REQUEST_BACKEND  HTTP_REQUEST_DESTINATION = "backend"
-)
-
 func PopulateBackend(client api.HAProxyClient, name string, httpRequests models.HTTPRequestRules) {
-	Populate(client, name, httpRequests, HTTP_REQUEST_BACKEND)
+	Populate(client, name, httpRequests, rules.ParentTypeBackend)
 }
 
 func PopulateFrontend(client api.HAProxyClient, name string, httpRequests models.HTTPRequestRules) {
-	Populate(client, name, httpRequests, HTTP_REQUEST_FRONTEND)
+	Populate(client, name, httpRequests, rules.ParentTypeFrontend)
 }
 
-func Populate(client api.HTTPRequestRule, name string, rules models.HTTPRequestRules, resource HTTP_REQUEST_DESTINATION) {
-	currentHTTPRequests, errHTTPRequests := client.HTTPRequestRulesGet(string(resource), name)
-
-	// There is a resource ...
-	if errHTTPRequests == nil {
-		diffHTTPRequests := rules.Diff(currentHTTPRequests)
-		// ... with different http requests from the resource.
-		if len(diffHTTPRequests) != 0 {
-			err := client.HTTPRequestRulesReplace(string(resource), name, rules)
-			if err != nil {
-				utils.GetLogger().Err(err)
-				return
-			}
-			// ... we reload because we created some http requests.
-			instance.Reload("%s '%s', http requests updated: %+v", resource, name, diffHTTPRequests)
-		}
+func Populate(client api.HTTPRequestRule, name string, desired models.HTTPRequestRules, parentType rules.ParentType) {
+	current, errGet := client.HTTPRequestRulesGet(string(parentType), name)
+	if errGet != nil {
+		utils.GetLogger().Err(errGet)
+		return
 	}
+	diff := desired.Diff(current)
+	if len(diff) == 0 {
+		return
+	}
+	if err := client.HTTPRequestRulesReplace(string(parentType), name, desired); err != nil {
+		utils.GetLogger().Err(err)
+		return
+	}
+	instance.Reload("%s '%s', http request rules updated: %+v", parentType, name, diff)
 }

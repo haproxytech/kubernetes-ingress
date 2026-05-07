@@ -10,6 +10,7 @@ import (
 func PopulateBackend(client api.StickRule, name string, rules models.StickRules) {
 	current, errGet := client.StickRulesGet(name)
 	if errGet != nil {
+		utils.GetLogger().Err(errGet)
 		return
 	}
 	diff := rules.Diff(current)
