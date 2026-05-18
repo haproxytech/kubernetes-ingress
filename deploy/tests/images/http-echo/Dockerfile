@@ -1,4 +1,5 @@
-FROM golang:1.25-alpine AS builder
+FROM golang:1.26-alpine AS builder
+ENV GOTOOLCHAIN=auto
 
 COPY *.go /src/
 COPY go.mod /src/go.mod
