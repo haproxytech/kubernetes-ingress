@@ -158,15 +158,15 @@ func (s *Service) scaleHAProxySrvs(backend *store.RuntimeBackend) {
 }
 
 func (s *Service) getRuntimeBackend(k8s store.K8s) (backend *store.RuntimeBackend, err error) {
+	if s.resource.DNS != "" {
+		return s.getExternalNameEndpoints()
+	}
 	var ok bool
 	var backends map[string]*store.RuntimeBackend
 	if ns := k8s.Namespaces[s.resource.Namespace]; ns != nil {
 		backends, ok = ns.HAProxyRuntime[s.resource.Name]
 	}
 	if !ok {
-		if s.resource.DNS != "" {
-			return s.getExternalNameEndpoints()
-		}
 		return nil, errors.New("no available endpoints")
 	}
 	svcPort := s.path.SvcPortResolved
