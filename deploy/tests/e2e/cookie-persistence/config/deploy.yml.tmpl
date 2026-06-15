@@ -28,6 +28,12 @@ kind: Service
 apiVersion: v1
 metadata:
   name: http-echo
+  annotations:
+{{ if .CookiePersistenceDynamic }}
+    cookie-persistence: "mycookie"
+{{ else if .CookiePersistenceNoDynamic }}
+    cookie-persistence-no-dynamic: "mycookie"
+{{ end }}
 spec:
   ports:
     - name: http
@@ -45,12 +51,6 @@ kind: Ingress
 apiVersion: networking.k8s.io/v1
 metadata:
   name: http-echo
-  annotations:
-{{ if .CookiePersistenceDynamic }}
-    cookie-persistence: "mycookie"
-{{ else if .CookiePersistenceNoDynamic }}
-    cookie-persistence-no-dynamic: "mycookie"
-{{ end }}
 spec:
   ingressClassName: haproxy
   rules:

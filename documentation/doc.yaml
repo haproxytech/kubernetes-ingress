@@ -918,11 +918,11 @@ annotations:
       - Dynamic cookies are used by default via a [dynamic-cookie-key](https://cbonte.github.io/haproxy-dconv/2.4/configuration.html#4.2-dynamic-cookie-key) in order to support sticky sessions across multiple Ingress Controller instances/replicas.
     tip:
       - This will insert the following cookie configuration in the corresponding backend `cookie <cookie-name> insert indirect nocache dynamic` with `<cookie-name>` the value of this annotation.
+      - This annotation is resolved at the service level, falling back to the configmap default. As the HAProxy backend is shared by every ingress referencing the same service, setting it on an ingress is ignored to avoid a non-deterministic backend configuration. The service value takes precedence over the configmap default.
     values:
       - A name for the cookie
     applies_to:
       - configmap
-      - ingress
       - service
     version_min: "1.4"
     example: ['cookie-persistence: "mycookie"']
@@ -938,11 +938,11 @@ annotations:
         This will insert the following cookie configuration in the corresponding backend
         `cookie <cokkie-name> indirect nocache insert` with `<cookie-name>` the value of this annotation.
         The server line will have `server <server-name> <server-address> enabled cookie <server-name>`
+      - This annotation is resolved at the service level, falling back to the configmap default. As the HAProxy backend is shared by every ingress referencing the same service, setting it on an ingress is ignored to avoid a non-deterministic backend configuration. The service value takes precedence over the configmap default.
     values:
       - A name for the cookie
     applies_to:
       - configmap
-      - ingress
       - service
     version_min: "3.1"
     example: ['cookie-persistence-no-dynamic: "mycookie"']
