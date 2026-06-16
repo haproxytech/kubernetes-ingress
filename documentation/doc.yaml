@@ -917,6 +917,7 @@ annotations:
         to before.
       - Dynamic cookies are used by default via a [dynamic-cookie-key](https://cbonte.github.io/haproxy-dconv/2.4/configuration.html#4.2-dynamic-cookie-key) in order to support sticky sessions across multiple Ingress Controller instances/replicas.
     tip:
+      - ":warning: Using `cookie-persistence` on Ingress objects is deprecated and will be removed in a future release. Use this annotation at the Service or ConfigMap level instead."
       - This will insert the following cookie configuration in the corresponding backend `cookie <cookie-name> insert indirect nocache dynamic` with `<cookie-name>` the value of this annotation.
     values:
       - A name for the cookie

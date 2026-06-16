@@ -692,6 +692,8 @@ backend-config-snippet: |
 
   Available on:  `configmap`  `ingress`  `service`
 
+  :information_source: :warning: Using `cookie-persistence` on Ingress objects is deprecated and will be removed in a future release. Use this annotation at the Service or ConfigMap level instead.
+
   :information_source: This will insert the following cookie configuration in the corresponding backend `cookie <cookie-name> insert indirect nocache dynamic` with `<cookie-name>` the value of this annotation.
 
 Possible values:
