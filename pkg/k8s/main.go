@@ -21,27 +21,26 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
-
-	k8sinformers "k8s.io/client-go/informers"
-	k8sclientset "k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/cache"
-	"k8s.io/client-go/tools/clientcmd"
 
 	crclientsetv1 "github.com/haproxytech/kubernetes-ingress/crs/generated/api/ingress/v1/clientset/versioned"
 	crinformersv1 "github.com/haproxytech/kubernetes-ingress/crs/generated/api/ingress/v1/informers/externalversions"
 	crclientsetv3 "github.com/haproxytech/kubernetes-ingress/crs/generated/api/ingress/v3/clientset/versioned"
 	crinformersv3 "github.com/haproxytech/kubernetes-ingress/crs/generated/api/ingress/v3/informers/externalversions"
-
 	k8ssync "github.com/haproxytech/kubernetes-ingress/pkg/k8s/sync"
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
+	corev1 "k8s.io/api/core/v1"
 	crdclientset "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
-	"k8s.io/apimachinery/pkg/fields"
-	"k8s.io/apimachinery/pkg/types"
-
 	errGw "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/apimachinery/pkg/types"
+	k8sinformers "k8s.io/client-go/informers"
+	k8sclientset "k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/cache"
+	"k8s.io/client-go/tools/clientcmd"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayclientset "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 	scheme "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned/scheme"
@@ -87,6 +86,7 @@ type k8s struct {
 	gatewayRestClient      client.Client
 	crsV1                  map[string]CRV1
 	crsV3                  map[string]CRV3
+	crsMu                  *sync.RWMutex
 	crsRegisteredOnStart   map[string]struct{}
 	builtInClient          *k8sclientset.Clientset
 	crClientV1             *crclientsetv1.Clientset
@@ -103,6 +103,13 @@ type k8s struct {
 	cacheResyncPeriod      time.Duration
 	disableSvcExternalName bool // CVE-2021-25740
 	cmMain                 types.NamespacedName
+	dynamic                *dynamicNSManager
+}
+
+type dynamicNSManager struct {
+	stopChans map[string]chan struct{}
+	mu        sync.RWMutex
+	closed    bool
 }
 
 func New(osArgs utils.OSArgs, whitelist map[string]struct{}, publishSvc *utils.NamespaceValue) K8s { //nolint:ireturn
@@ -140,6 +147,7 @@ func New(osArgs utils.OSArgs, whitelist map[string]struct{}, publishSvc *utils.N
 		apiExtensionsClient:    crdclientset.NewForConfigOrDie(restconfig),
 		crsV1:                  map[string]CRV1{},
 		crsV3:                  map[string]CRV3{},
+		crsMu:                  &sync.RWMutex{},
 		crsRegisteredOnStart:   map[string]struct{}{},
 		whiteListedNS:          getWhitelistedNS(whitelist, osArgs.ConfigMap.Namespace),
 		publishSvc:             publishSvc,
@@ -152,6 +160,9 @@ func New(osArgs utils.OSArgs, whitelist map[string]struct{}, publishSvc *utils.N
 		gatewayClient:          gatewayClient,
 		gatewayRestClient:      gatewayRestClient,
 		crdClient:              crdClient,
+		dynamic: &dynamicNSManager{
+			stopChans: make(map[string]chan struct{}),
+		},
 		cmMain: types.NamespacedName{
 			Name:      osArgs.ConfigMap.Name,
 			Namespace: osArgs.ConfigMap.Namespace,
@@ -184,14 +195,32 @@ func (k k8s) GetClientset() *k8sclientset.Clientset {
 
 func (k k8s) MonitorChanges(eventChan chan k8ssync.SyncDataEvent, stop chan struct{}, osArgs utils.OSArgs, gatewayAPIInstalled bool) {
 	informersSynced := &[]cache.InformerSynced{}
+	labelSelectorActive := namespaceLabelSelectorActive(osArgs)
+
 	k.runPodInformer(eventChan, stop, informersSynced)
-	for _, namespace := range k.whiteListedNS {
-		k.runInformers(eventChan, stop, namespace, informersSynced, osArgs)
-		k.runCRInformers(eventChan, stop, namespace, informersSynced, k.crsV1, k.crsV3, osArgs)
-		if gatewayAPIInstalled {
-			k.runInformersGwAPI(eventChan, stop, namespace, informersSynced)
+
+	k.runConfigMapInformers(eventChan, stop, informersSynced, osArgs.ConfigMap)
+	k.runConfigMapInformers(eventChan, stop, informersSynced, osArgs.ConfigMapTCPServices)
+	k.runConfigMapInformers(eventChan, stop, informersSynced, osArgs.ConfigMapErrorFiles)
+	k.runConfigMapInformers(eventChan, stop, informersSynced, osArgs.ConfigMapPatternFiles)
+
+	if labelSelectorActive {
+		k.watchNamespacesByLabel(eventChan, stop, informersSynced, osArgs, gatewayAPIInstalled)
+	} else {
+		for _, namespace := range k.whiteListedNS {
+			k.runInformers(eventChan, stop, namespace, informersSynced, osArgs)
+			k.crsMu.RLock()
+			k.runCRInformers(eventChan, stop, namespace, informersSynced, k.crsV1, k.crsV3, osArgs)
+			k.crsMu.RUnlock()
+			if gatewayAPIInstalled {
+				k.runInformersGwAPI(eventChan, stop, namespace, informersSynced)
+			}
 		}
 	}
+	if osArgs.NamespaceLabelSelector != "" && !labelSelectorActive {
+		logger.Warningf("--namespace-label-selector is ignored because --namespace-whitelist or --namespace-blacklist is configured")
+	}
+
 	// check if we need to also watch CRS creation (in case not all alpha2 definitions are already installed)
 	k.RunCRSCreationMonitoring(eventChan, stop, osArgs)
 
@@ -216,6 +245,156 @@ func (k k8s) MonitorChanges(eventChan chan k8ssync.SyncDataEvent, stop chan stru
 	}
 }
 
+func namespaceLabelSelectorActive(osArgs utils.OSArgs) bool {
+	return osArgs.NamespaceLabelSelector != "" && len(osArgs.NamespaceWhitelist) == 0 && len(osArgs.NamespaceBlacklist) == 0
+}
+
+// watchNamespacesByLabel dynamically discovers namespaces matching a label selector,
+// starts per-namespace informers for each, and keeps them in sync as namespaces are
+// created, deleted, or their labels change.
+func (k k8s) watchNamespacesByLabel(eventChan chan k8ssync.SyncDataEvent, stop chan struct{},
+	informersSynced *[]cache.InformerSynced, osArgs utils.OSArgs, gatewayAPIInstalled bool,
+) {
+	// Ensure all dynamic namespace informers are stopped on global shutdown
+	go func() {
+		<-stop
+		k.dynamic.mu.Lock()
+		defer k.dynamic.mu.Unlock()
+		k.dynamic.closed = true
+		for ns, nsStop := range k.dynamic.stopChans {
+			logger.Infof("Stopping dynamic informers for namespace: %s", ns)
+			close(nsStop)
+			delete(k.dynamic.stopChans, ns)
+		}
+	}()
+
+	// Watch namespace objects filtered by label selector
+	factory := k8sinformers.NewSharedInformerFactoryWithOptions(k.builtInClient, k.cacheResyncPeriod,
+		k8sinformers.WithTweakListOptions(func(opts *metav1.ListOptions) {
+			opts.LabelSelector = osArgs.NamespaceLabelSelector
+		}))
+	nsInformer := k.getNamespaceInfomer(eventChan, factory)
+
+	go nsInformer.Run(stop)
+	*informersSynced = append(*informersSynced, nsInformer.HasSynced)
+
+	if !cache.WaitForCacheSync(stop, nsInformer.HasSynced) {
+		logger.Panic("Namespace caches are not populated due to an underlying error")
+	}
+
+	// Register handlers before iterating the store so add events cannot be lost
+	// between the initial list and handler installation.
+	_, err := nsInformer.AddEventHandler(cache.ResourceEventHandlerDetailedFuncs{
+		AddFunc: func(obj interface{}, isInInitialList bool) {
+			if isInInitialList {
+				return
+			}
+			ns, ok := obj.(*corev1.Namespace)
+			if !ok {
+				return
+			}
+			go func() {
+				var dynamicSynced []cache.InformerSynced
+				nsStop := k.startDynamicNamespaceInformers(eventChan, ns.Name, &dynamicSynced, osArgs, gatewayAPIInstalled)
+				if nsStop == nil {
+					return
+				}
+				if !cache.WaitForCacheSync(nsStop, dynamicSynced...) {
+					logger.Errorf("Caches not synced for dynamically added namespace: %s", ns.Name)
+				}
+			}()
+		},
+		UpdateFunc: func(oldObj, newObj interface{}) {
+			// Kubernetes server-side label filtering translates match↔no-match
+			// transitions into DELETE/ADD events in the watch stream. MODIFIED
+			// only fires when the namespace still matches the selector, so no
+			// action is needed here (the per-namespace informer handles label
+			// updates to keep the store up-to-date).
+		},
+		DeleteFunc: func(obj interface{}) {
+			ns, ok := obj.(*corev1.Namespace)
+			if !ok {
+				tombstone, ok := obj.(cache.DeletedFinalStateUnknown)
+				if !ok {
+					return
+				}
+				ns, ok = tombstone.Obj.(*corev1.Namespace)
+				if !ok {
+					return
+				}
+			}
+			k.stopDynamicNamespaceInformers(ns.Name)
+		},
+	})
+	if err != nil {
+		logger.Panicf("Failed to register namespace event handlers: %s", err)
+	}
+
+	// Process initial list of matching namespaces synchronously so the controller
+	// waits for their caches before the first sync.
+	matchedCount := 0
+	for _, obj := range nsInformer.GetStore().List() {
+		ns, ok := obj.(*corev1.Namespace)
+		if !ok {
+			continue
+		}
+		k.startDynamicNamespaceInformers(eventChan, ns.Name, informersSynced, osArgs, gatewayAPIInstalled)
+		matchedCount++
+	}
+	if matchedCount == 0 {
+		logger.Warningf("namespace-label-selector '%s' matched zero namespaces", osArgs.NamespaceLabelSelector)
+	}
+}
+
+func (k k8s) startDynamicNamespaceInformers(eventChan chan k8ssync.SyncDataEvent, namespace string,
+	informersSynced *[]cache.InformerSynced, osArgs utils.OSArgs, gatewayAPIInstalled bool,
+) chan struct{} {
+	k.dynamic.mu.Lock()
+	if k.dynamic.closed {
+		k.dynamic.mu.Unlock()
+		return nil
+	}
+	if _, exists := k.dynamic.stopChans[namespace]; exists {
+		k.dynamic.mu.Unlock()
+		return nil
+	}
+	logger.Infof("Dynamically starting informers for namespace: %s", namespace)
+	nsStop := make(chan struct{})
+	k.dynamic.stopChans[namespace] = nsStop
+
+	k.crsMu.RLock()
+	crV1Snapshot := make(map[string]CRV1, len(k.crsV1))
+	crV3Snapshot := make(map[string]CRV3, len(k.crsV3))
+	for k2, v := range k.crsV1 {
+		crV1Snapshot[k2] = v
+	}
+	for k2, v := range k.crsV3 {
+		crV3Snapshot[k2] = v
+	}
+	k.crsMu.RUnlock()
+	k.dynamic.mu.Unlock()
+
+	k.runNamespacedInformersWithoutConfigMaps(eventChan, nsStop, namespace, informersSynced, osArgs)
+
+	k.runCRInformers(eventChan, nsStop, namespace, informersSynced, crV1Snapshot, crV3Snapshot, osArgs)
+	if gatewayAPIInstalled {
+		k.runInformersGwAPI(eventChan, nsStop, namespace, informersSynced)
+	}
+	return nsStop
+}
+
+func (k k8s) stopDynamicNamespaceInformers(namespace string) bool {
+	k.dynamic.mu.Lock()
+	defer k.dynamic.mu.Unlock()
+	if nsStop, exists := k.dynamic.stopChans[namespace]; exists {
+		logger.Infof("Dynamically stopping informers for namespace: %s", namespace)
+		close(nsStop)
+		delete(k.dynamic.stopChans, namespace)
+		return true
+	}
+	return false
+}
+
 func (k k8s) registerCoreCRV1(cr CRV1) {
 	groupVersion := CRSGroupVersionV1
 	resources, err := k.crClientV1.DiscoveryClient.ServerResourcesForGroupVersion(groupVersion)
@@ -227,7 +406,9 @@ func (k k8s) registerCoreCRV1(cr CRV1) {
 	groupVersion = strings.Split(resources.GroupVersion, "/")[0]
 	for _, resource := range resources.APIResources {
 		if resource.Kind == kindName {
+			k.crsMu.Lock()
 			k.crsV1[groupVersion+" - "+kindName] = cr
+			k.crsMu.Unlock()
 			k.crsRegisteredOnStart[groupVersion+" - "+kindName] = struct{}{}
 			logger.Infof("%s CR defined in API %s", kindName, resources.GroupVersion)
 			break
@@ -246,7 +427,9 @@ func (k k8s) registerCoreCRV3(cr CRV3) {
 	groupVersion = strings.Split(resources.GroupVersion, "/")[0]
 	for _, resource := range resources.APIResources {
 		if resource.Kind == kindName {
+			k.crsMu.Lock()
 			k.crsV3[groupVersion+" - "+kindName] = cr
+			k.crsMu.Unlock()
 			k.crsRegisteredOnStart[groupVersion+" - "+kindName] = struct{}{}
 			logger.Infof("%s CR defined in API %s", kindName, resources.GroupVersion)
 			break
@@ -292,16 +475,24 @@ func (k k8s) runInformers(eventChan chan k8ssync.SyncDataEvent, stop chan struct
 	// Core.V1 Resources
 	nsi := k.getNamespaceInfomer(eventChan, factory)
 	go nsi.Run(stop)
+	*informersSynced = append(*informersSynced, nsi.HasSynced)
+
+	k.runNamespacedInformers(eventChan, stop, informersSynced, osArgs, factory)
+}
+
+func (k k8s) runNamespacedInformersWithoutConfigMaps(eventChan chan k8ssync.SyncDataEvent, stop chan struct{}, namespace string, informersSynced *[]cache.InformerSynced, osArgs utils.OSArgs) {
+	factory := k8sinformers.NewSharedInformerFactoryWithOptions(k.builtInClient, k.cacheResyncPeriod, k8sinformers.WithNamespace(namespace))
+	k.runNamespacedInformers(eventChan, stop, informersSynced, osArgs, factory)
+}
+
+func (k k8s) runNamespacedInformers(eventChan chan k8ssync.SyncDataEvent, stop chan struct{}, informersSynced *[]cache.InformerSynced, osArgs utils.OSArgs,
+	factory k8sinformers.SharedInformerFactory,
+) {
 	svci := k.getServiceInformer(eventChan, factory)
 	go svci.Run(stop)
 	seci := k.getSecretInformer(eventChan, factory)
 	go seci.Run(stop)
-	*informersSynced = append(*informersSynced, svci.HasSynced, nsi.HasSynced, seci.HasSynced)
-
-	k.runConfigMapInformers(eventChan, stop, informersSynced, osArgs.ConfigMap)
-	k.runConfigMapInformers(eventChan, stop, informersSynced, osArgs.ConfigMapTCPServices)
-	k.runConfigMapInformers(eventChan, stop, informersSynced, osArgs.ConfigMapErrorFiles)
-	k.runConfigMapInformers(eventChan, stop, informersSynced, osArgs.ConfigMapPatternFiles)
+	*informersSynced = append(*informersSynced, svci.HasSynced, seci.HasSynced)
 
 	// Ingress and IngressClass Resources
 	ii, ici := k.getIngressInformers(eventChan, factory, osArgs)
