@@ -223,12 +223,8 @@ static int (*real_faccessat)(int, const char *, int, int) = NULL;
 static ssize_t (*real_readlink)(const char *, char *, size_t) = NULL;
 static ssize_t (*real_readlinkat)(int, const char *, char *, size_t) = NULL;
 static DIR *(*real_opendir)(const char *) = NULL;
-static int (*real_stat)(const char *, struct stat *) = NULL;
 static int (*real_lstat)(const char *, struct stat *) = NULL;
 static int (*real_fstatat)(int, const char *, struct stat *, int) = NULL;
-/* void * avoids _LARGEFILE64_SOURCE, which on musl macro-aliases stat64
-   to stat and would break our hook symbol. */
-static int (*real_stat64)(const char *, void *) = NULL;
 static int (*real_lstat64)(const char *, void *) = NULL;
 static int (*real_fstatat64)(int, const char *, void *, int) = NULL;
 static int (*real_statx)(int, const char *, int, unsigned int,
@@ -281,10 +277,8 @@ __attribute__((constructor(101), cold)) static void block_secrets_init(void) {
   real_readlink = dlsym(RTLD_NEXT, "readlink");
   real_readlinkat = dlsym(RTLD_NEXT, "readlinkat");
   real_opendir = dlsym(RTLD_NEXT, "opendir");
-  real_stat = dlsym(RTLD_NEXT, "stat");
   real_lstat = dlsym(RTLD_NEXT, "lstat");
   real_fstatat = dlsym(RTLD_NEXT, "fstatat");
-  real_stat64 = dlsym(RTLD_NEXT, "stat64");
   real_lstat64 = dlsym(RTLD_NEXT, "lstat64");
   real_fstatat64 = dlsym(RTLD_NEXT, "fstatat64");
   real_statx = dlsym(RTLD_NEXT, "statx");
@@ -524,15 +518,6 @@ HOOK_VISIBLE DIR *opendir(const char *name) {
   return real_opendir(name);
 }
 
-HOOK_VISIBLE int stat(const char *pathname, struct stat *buf) {
-  if (path_blocked(pathname)) {
-    errno = EACCES;
-    return -1;
-  }
-  HOOK_GUARD(real_stat, -1);
-  return real_stat(pathname, buf);
-}
-
 HOOK_VISIBLE int lstat(const char *pathname, struct stat *buf) {
   if (path_blocked(pathname)) {
     errno = EACCES;
@@ -550,15 +535,6 @@ HOOK_VISIBLE int fstatat(int dirfd, const char *pathname, struct stat *buf,
   }
   HOOK_GUARD(real_fstatat, -1);
   return real_fstatat(dirfd, pathname, buf, flags);
-}
-
-HOOK_VISIBLE int stat64(const char *pathname, void *buf) {
-  if (path_blocked(pathname)) {
-    errno = EACCES;
-    return -1;
-  }
-  HOOK_GUARD(real_stat64, -1);
-  return real_stat64(pathname, buf);
 }
 
 HOOK_VISIBLE int lstat64(const char *pathname, void *buf) {
