@@ -155,6 +155,7 @@ func (c *HAProxyController) updateHAProxy() {
 		logger.Error(err)
 	}
 
+	c.processSSLPassthroughInConfigFile()
 	c.processIngress()
 
 	updated := deep.Equal(route.CurentCustomRoutes, route.CustomRoutes, deep.FLAG_IGNORE_SLICE_ORDER)
@@ -472,6 +473,26 @@ func (c *HAProxyController) processIngressesDefaultImplementation() {
 				continue
 			}
 			c.manageIngress(ingResource)
+		}
+	}
+}
+
+func (c *HAProxyController) processSSLPassthroughInConfigFile() {
+	for _, namespace := range c.store.Namespaces {
+		for _, ingResource := range namespace.Ingresses {
+			if !namespace.Relevant && !ingResource.Faked {
+				// As we watch only for white-listed namespaces, we should not worry about iterating over
+				// many ingresses in irrelevant namespaces.
+				// There should only be fake ingresses in irrelevant namespaces so loop should be whithin small amount of ingresses (Prometheus)
+				continue
+			}
+			enabled, err := annotations.Bool("ssl-passthrough", ingResource.Annotations, c.store.ConfigMaps.Main.Annotations)
+			if err != nil {
+				logger.Errorf("Ingress '%s/%s': SSL Passthrough parsing: %s", ingResource.Namespace, ingResource.Name, err)
+			} else if enabled {
+				haproxy.SSLPassthrough = true
+				return
+			}
 		}
 	}
 }
