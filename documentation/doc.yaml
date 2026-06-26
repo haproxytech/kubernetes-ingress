@@ -953,6 +953,56 @@ annotations:
       - service
     version_min: "3.1"
     example: ['cookie-persistence-no-dynamic: "mycookie"']
+  - title: source-ip-persistence
+    type: bool
+    description:
+      - Enables source IP based persistent connections (sticky sessions) between a client and a pod by creating a backend stick table and sticking on the request source address.
+      - This persistence mode works for HTTP and TCP backends and can be used together with source-hash or MagLev-style balancing so that hash-based placement chooses the initial pod while the stick table preserves the selected pod across later requests and failover events.
+    tip:
+      - When enabled, the controller inserts `stick-table type ip size <source-ip-persistence-size> expire <source-ip-persistence-expire> peers localinstance` and `stick on src` in the corresponding backend.
+      - Generated source-IP persistence stick tables use the `localinstance` peer section. When multiple controller pods expose a reachable `--localpeer-port`, the controller reconciles peer entries for pods in the same controller workload so stick-table updates can replicate between those pods.
+      - Backend endpoint addresses are assigned to server slots deterministically so every controller replica uses the same `SRV_<n>` identity for source-hash balancing and peer-replicated stick-table entries.
+      - This annotation is resolved at the service level, falling back to the configmap default. As the HAProxy backend is shared by every ingress referencing the same service, setting it on an ingress is ignored to avoid a non-deterministic backend configuration. The service value takes precedence over the configmap default.
+    values:
+      - "true"
+      - "false"
+    applies_to:
+      - configmap
+      - service
+    version_min: "3.3"
+    example: ['source-ip-persistence: "true"']
+  - title: source-ip-persistence-size
+    type: string
+    group: source-ip-persistence
+    dependencies: "source-ip-persistence"
+    default: "1m"
+    description:
+      - Sets the size of the source IP persistence stick table.
+    tip:
+      - This value is only used when `source-ip-persistence` is enabled.
+    values:
+      - A valid HAProxy stick-table size, such as `100k`, `1m`, or a plain integer value
+    applies_to:
+      - configmap
+      - service
+    version_min: "3.3"
+    example: ['source-ip-persistence-size: "1m"']
+  - title: source-ip-persistence-expire
+    type: string
+    group: source-ip-persistence
+    dependencies: "source-ip-persistence"
+    default: "30m"
+    description:
+      - Sets how long an idle source IP persistence table entry is kept.
+    tip:
+      - This value is only used when `source-ip-persistence` is enabled.
+    values:
+      - A valid HAProxy time value, such as `30s`, `30m`, or `1h`
+    applies_to:
+      - configmap
+      - service
+    version_min: "3.3"
+    example: ['source-ip-persistence-expire: "30m"']
   - title: dontlognull
     type: bool
     group: logging
