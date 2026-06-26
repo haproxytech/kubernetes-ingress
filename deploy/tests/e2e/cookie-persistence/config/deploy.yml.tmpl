@@ -3,7 +3,7 @@ apiVersion: apps/v1
 metadata:
   name: http-echo
 spec:
-  replicas: 1
+  replicas: {{ .Replicas }}
   selector:
     matchLabels:
       app: http-echo
@@ -33,6 +33,14 @@ metadata:
     cookie-persistence: "mycookie"
 {{ else if .CookiePersistenceNoDynamic }}
     cookie-persistence-no-dynamic: "mycookie"
+{{ end }}
+{{ if .SourceIPPersistence }}
+    source-ip-persistence: "true"
+    source-ip-persistence-size: "{{ .SourceIPPersistenceSize }}"
+    source-ip-persistence-expire: "{{ .SourceIPPersistenceExpire }}"
+{{ end }}
+{{ if .LoadBalance }}
+    load-balance: "{{ .LoadBalance }}"
 {{ end }}
 spec:
   ports:

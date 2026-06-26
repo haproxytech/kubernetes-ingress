@@ -14,7 +14,10 @@
 
 package e2e
 
-import "strings"
+import (
+	"fmt"
+	"strings"
+)
 
 func (t Test) GetIngressControllerFile(path string) (string, error) {
 	po, err := t.getIngressControllerPod()
@@ -30,5 +33,12 @@ func (t Test) GetIngressControllerFile(path string) (string, error) {
 func (t Test) getIngressControllerPod() (string, error) {
 	out, errExec := t.execute("", "kubectl", "get", "pods", "-n", "haproxy-controller",
 		"-l", "run=haproxy-ingress", "-o", "name", "--field-selector=status.phase==Running", "-l", "run=haproxy-ingress")
-	return strings.TrimSuffix(out, "\n"), errExec
+	if errExec != nil {
+		return "", errExec
+	}
+	pods := strings.Fields(out)
+	if len(pods) == 0 {
+		return "", fmt.Errorf("no running ingress controller pod found")
+	}
+	return pods[0], nil
 }
