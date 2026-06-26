@@ -21,6 +21,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/fake"
 
@@ -55,6 +56,17 @@ func TestControllerPodMatcherMatchesDaemonSetPodsExactly(t *testing.T) {
 	}
 	if matcher.matches(pod("default", "haproxy-other-ccccc", "pod-3", "DaemonSet", "haproxy-other", "ds-2")) {
 		t.Fatal("expected pod from another DaemonSet to be ignored")
+	}
+}
+
+func TestControllerPodFieldSelectorMatchesAnyPod(t *testing.T) {
+	selector := controllerPodFieldSelector()
+
+	if !selector.Matches(fields.Set{"metadata.name": "haproxy-ingress-abc123-aaaaa"}) {
+		t.Fatal("expected peer pod informer selector to match pod names")
+	}
+	if !selector.Matches(fields.Set{"spec.nodeName": "worker-1"}) {
+		t.Fatal("expected peer pod informer selector to match pods without a name field")
 	}
 }
 
