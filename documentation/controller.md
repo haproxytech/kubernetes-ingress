@@ -970,12 +970,7 @@ Example:
 
 ### `--localpeer-port`
 
-  Sets the port used by the HAProxy peers protocol to synchronize the rate limiting
-stick tables between controller replicas. Each replica announces itself as a peer
-on this port (pod IP and port), so rate limit counters are shared and a client is
-rate limited globally even when its requests hit different replicas.
-The port should be the same on all replicas and reachable between them, and it must
-not be already used inside the pod.
+  Sets the TCP port used in HAProxy peer entries managed by the controller's `localinstance` peer section. HAProxy uses this peer section for generated stick tables, including request rate limiting. The controller manages the running pod's peer entry and reconciles entries for pods that belong to the same controller Deployment, DaemonSet, or ReplicaSet. Expose this port between controller pods when peer replication is required. This option is not a general static peer mesh configuration; manually defined peer sections are not reconciled by this controller logic.
 
 Possible values:
 
@@ -1295,4 +1290,3 @@ Related documentation:
 <p align='right'><a href='#haproxy-kubernetes-ingress-controller'>:arrow_up_small: back to top</a></p>
 
 ***
-
