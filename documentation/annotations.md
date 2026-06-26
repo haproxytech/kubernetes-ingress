@@ -1255,6 +1255,8 @@ rate-limit-status-code: "429"
 
   :information_source: To track the http requests rate, a stick-table named "Ratelimit-<period-in-ms>" will be created. For example, if the `rate-limit-period` is set to *2s*, the name of the table will be *Ratelimit-2000*.
 
+  :information_source: Generated rate-limit stick tables use the `localinstance` peer section. When multiple controller pods expose a reachable `--localpeer-port`, the controller reconciles peer entries for pods in the same controller workload so stick-table updates can replicate between those pods.
+
 Possible values:
 
 - An integer representing the maximum number of requests to accept
