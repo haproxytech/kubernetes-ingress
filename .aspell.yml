@@ -75,3 +75,14 @@ allowed:
   - PEM
   - redact
   - httpresponses
+  - chk
+  - faccessat
+  - fstatat
+  - interposer
+  - lstat
+  - opendir
+  - readlink
+  - readlinkat
+  - realpath
+  - runnable
+  - statx
