@@ -41,6 +41,9 @@ more info about custom annotations can be found in [annotations-custom.md](annot
 | [backend-config-snippet](#config-snippet) | string |  |  |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:|
 | [cookie-persistence](#cookie-persistence) | string |  |  |:large_blue_circle:|:white_circle:|:large_blue_circle:|
 | [cookie-persistence-no-dynamic](#cookie-persistence-no-dynamic) | string |  |  |:large_blue_circle:|:white_circle:|:large_blue_circle:|
+| [source-ip-persistence](#source-ip-persistence) :construction:(dev) | [bool](#bool) |  |  |:large_blue_circle:|:white_circle:|:large_blue_circle:|
+| [source-ip-persistence-size](#source-ip-persistence) :construction:(dev) | string | "1m" | source-ip-persistence |:large_blue_circle:|:white_circle:|:large_blue_circle:|
+| [source-ip-persistence-expire](#source-ip-persistence) :construction:(dev) | string | "30m" | source-ip-persistence |:large_blue_circle:|:white_circle:|:large_blue_circle:|
 | [dontlognull](#logging) | [bool](#bool) | "true" |  |:large_blue_circle:|:white_circle:|:white_circle:|
 | [src-ip-header](#src-ip-header) | string | "null" |  |:large_blue_circle:|:large_blue_circle:|:white_circle:|
 | [forwarded-for](#x-forwarded-for) | [bool](#bool) | "true" |  |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:|
@@ -1255,6 +1258,8 @@ rate-limit-status-code: "429"
 
   :information_source: To track the http requests rate, a stick-table named "Ratelimit-<period-in-ms>" will be created. For example, if the `rate-limit-period` is set to *2s*, the name of the table will be *Ratelimit-2000*.
 
+  :information_source: Generated rate-limit stick tables use the `localinstance` peer section. When multiple controller pods expose a reachable `--localpeer-port`, the controller reconciles peer entries for pods in the same controller workload so stick-table updates can replicate between those pods.
+
 Possible values:
 
 - An integer representing the maximum number of requests to accept
@@ -1649,6 +1654,83 @@ Example:
 
 ```yaml
 set-host: "example.local"
+```
+
+<p align='right'><a href='#available-annotations'>:arrow_up_small: back to top</a></p>
+
+***
+
+#### Source Ip Persistence
+
+##### `source-ip-persistence`
+
+
+  > :construction: this is only available from next version, currently available in dev build
+
+  Enables source IP based persistent connections (sticky sessions) between a client and a pod by creating a backend stick table and sticking on the request source address.
+  This persistence mode works for HTTP and TCP backends and can be used together with source-hash or MagLev-style balancing so that hash-based placement chooses the initial pod while the stick table preserves the selected pod across later requests and failover events.
+
+  Available on:  `configmap`  `service`
+
+  :information_source: When enabled, the controller inserts `stick-table type ip size <source-ip-persistence-size> expire <source-ip-persistence-expire> peers localinstance` and `stick on src` in the corresponding backend.
+
+  :information_source: Generated source-IP persistence stick tables use the `localinstance` peer section. When multiple controller pods expose a reachable `--localpeer-port`, the controller reconciles peer entries for pods in the same controller workload so stick-table updates can replicate between those pods.
+
+  :information_source: Backend endpoint addresses are assigned to server slots deterministically so every controller replica uses the same `SRV_<n>` identity for source-hash balancing and peer-replicated stick-table entries.
+
+  :information_source: This annotation is resolved at the service level, falling back to the configmap default. As the HAProxy backend is shared by every ingress referencing the same service, setting it on an ingress is ignored to avoid a non-deterministic backend configuration. The service value takes precedence over the configmap default.
+
+Possible values:
+
+- true
+- false
+
+Example:
+
+```yaml
+source-ip-persistence: "true"
+```
+
+##### `source-ip-persistence-size`
+
+
+  > :construction: this is only available from next version, currently available in dev build
+
+  Sets the size of the source IP persistence stick table.
+
+  Available on:  `configmap`  `service`
+
+  :information_source: This value is only used when `source-ip-persistence` is enabled.
+
+Possible values:
+
+- A valid HAProxy stick-table size, such as `100k`, `1m`, or a plain integer value
+
+Example:
+
+```yaml
+source-ip-persistence-size: "1m"
+```
+
+##### `source-ip-persistence-expire`
+
+
+  > :construction: this is only available from next version, currently available in dev build
+
+  Sets how long an idle source IP persistence table entry is kept.
+
+  Available on:  `configmap`  `service`
+
+  :information_source: This value is only used when `source-ip-persistence` is enabled.
+
+Possible values:
+
+- A valid HAProxy time value, such as `30s`, `30m`, or `1h`
+
+Example:
+
+```yaml
+source-ip-persistence-expire: "30m"
 ```
 
 <p align='right'><a href='#available-annotations'>:arrow_up_small: back to top</a></p>

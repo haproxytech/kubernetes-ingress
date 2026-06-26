@@ -541,9 +541,8 @@ func (k k8s) getEndpointsInformer(eventChan chan k8ssync.SyncDataEvent, factory 
 	return informer
 }
 
-func (k *k8s) getPodInformer(namespace, podPrefix string, resyncPeriod time.Duration, eventChan chan k8ssync.SyncDataEvent) cache.Controller { //nolint:ireturn
-	var prefix string
-	watchlist := cache.NewListWatchFromClient(k.builtInClient.CoreV1().RESTClient(), "pods", namespace, fields.Nothing())
+func (k *k8s) getPodInformer(namespace string, podMatcher controllerPodMatcher, resyncPeriod time.Duration, eventChan chan k8ssync.SyncDataEvent) cache.Controller { //nolint:ireturn
+	watchlist := cache.NewListWatchFromClient(k.builtInClient.CoreV1().RESTClient(), "pods", namespace, controllerPodFieldSelector())
 	_, eController := cache.NewInformerWithOptions(
 		cache.InformerOptions{
 			ListerWatcher: watchlist,
@@ -551,19 +550,18 @@ func (k *k8s) getPodInformer(namespace, podPrefix string, resyncPeriod time.Dura
 			ResyncPeriod:  resyncPeriod,
 			Handler: cache.ResourceEventHandlerFuncs{
 				AddFunc: func(obj interface{}) {
-					meta := obj.(*corev1.Pod).ObjectMeta
-					prefix, _ = utils.GetPodPrefix(meta.Name)
-					if prefix != podPrefix {
+					pod := obj.(*corev1.Pod)
+					meta := pod.ObjectMeta
+					if !podMatcher.matches(pod) {
 						return
 					}
-					item := store.PodEvent{Status: store.ADDED, Name: meta.Name, Namespace: meta.Namespace}
+					item := store.PodEvent{Status: store.ADDED, Name: meta.Name, Namespace: meta.Namespace, IP: pod.Status.PodIP}
 					eventChan <- ToSyncDataEvent(item, item, meta.UID, meta.ResourceVersion)
 				},
 				DeleteFunc: func(obj interface{}) {
 					//revive:disable-next-line:unchecked-type-assertion
 					meta := obj.(*corev1.Pod).ObjectMeta
-					prefix, _ = utils.GetPodPrefix(meta.Name)
-					if prefix != podPrefix {
+					if !podMatcher.matches(obj.(*corev1.Pod)) {
 						return
 					}
 					item := store.PodEvent{Status: store.DELETED, Name: meta.Name, Namespace: meta.Namespace}
@@ -571,12 +569,12 @@ func (k *k8s) getPodInformer(namespace, podPrefix string, resyncPeriod time.Dura
 				},
 				UpdateFunc: func(oldObj, newObj interface{}) {
 					//revive:disable-next-line:unchecked-type-assertion
-					meta := newObj.(*corev1.Pod).ObjectMeta
-					prefix, _ = utils.GetPodPrefix(meta.Name)
-					if prefix != podPrefix {
+					pod := newObj.(*corev1.Pod)
+					meta := pod.ObjectMeta
+					if !podMatcher.matches(pod) {
 						return
 					}
-					item := store.PodEvent{Status: store.MODIFIED, Name: meta.Name, Namespace: meta.Namespace}
+					item := store.PodEvent{Status: store.MODIFIED, Name: meta.Name, Namespace: meta.Namespace, IP: pod.Status.PodIP}
 					eventChan <- ToSyncDataEvent(item, item, meta.UID, meta.ResourceVersion)
 				},
 			},
@@ -584,6 +582,10 @@ func (k *k8s) getPodInformer(namespace, podPrefix string, resyncPeriod time.Dura
 	)
 
 	return eController
+}
+
+func controllerPodFieldSelector() fields.Selector {
+	return fields.Everything()
 }
 
 func (k k8s) addIngressClassHandlers(eventChan chan k8ssync.SyncDataEvent, informer cache.SharedIndexInformer) {

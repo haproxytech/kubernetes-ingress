@@ -16,6 +16,8 @@ package store
 
 import (
 	"fmt"
+	"net/netip"
+	"sort"
 	"time"
 
 	"github.com/haproxytech/client-native/v6/models"
@@ -62,6 +64,7 @@ type PodEvent struct {
 	Status    Status
 	Name      string
 	Namespace string
+	IP        string
 }
 
 // Service is useful data from k8s structures about service
@@ -84,6 +87,31 @@ type RuntimeEndpoint struct {
 
 // RuntimeEndpoints is a set of different RuntimeEndpoint of a HAProxy backend
 type RuntimeEndpoints = map[RuntimeEndpoint]struct{}
+
+// SortedRuntimeEndpoints returns endpoints in stable address and port order.
+func SortedRuntimeEndpoints(endpoints RuntimeEndpoints) []RuntimeEndpoint {
+	sortedEndpoints := make([]RuntimeEndpoint, 0, len(endpoints))
+	for endpoint := range endpoints {
+		sortedEndpoints = append(sortedEndpoints, endpoint)
+	}
+	sort.SliceStable(sortedEndpoints, func(i, j int) bool {
+		return runtimeEndpointLess(sortedEndpoints[i], sortedEndpoints[j])
+	})
+	return sortedEndpoints
+}
+
+func runtimeEndpointLess(a, b RuntimeEndpoint) bool {
+	addrA, errA := netip.ParseAddr(a.Address)
+	addrB, errB := netip.ParseAddr(b.Address)
+	if errA == nil && errB == nil {
+		if cmp := addrA.Compare(addrB); cmp != 0 {
+			return cmp < 0
+		}
+	} else if a.Address != b.Address {
+		return a.Address < b.Address
+	}
+	return a.Port < b.Port
+}
 
 // RuntimeBackend holds the runtime state of an HAProxy backend
 type RuntimeBackend struct {

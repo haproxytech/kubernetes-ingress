@@ -39,6 +39,11 @@ type CookiePersistenceSuite struct {
 type tmplData struct {
 	CookiePersistenceDynamic   bool
 	CookiePersistenceNoDynamic bool
+	SourceIPPersistence        bool
+	SourceIPPersistenceSize    string
+	SourceIPPersistenceExpire  string
+	LoadBalance                string
+	Replicas                   int
 	Host                       string
 }
 
@@ -46,7 +51,7 @@ func (suite *CookiePersistenceSuite) SetupSuite() {
 	var err error
 	suite.test, err = e2e.NewTest()
 	suite.Require().NoError(err)
-	suite.tmplData = tmplData{Host: suite.test.GetNS() + ".test"}
+	suite.resetTemplateData()
 	suite.client, err = e2e.NewHTTPClient(suite.tmplData.Host)
 	suite.Require().NoError(err)
 }
@@ -57,6 +62,15 @@ func (suite *CookiePersistenceSuite) TearDownSuite() {
 
 func TestCookiePersistenceSuite(t *testing.T) {
 	suite.Run(t, new(CookiePersistenceSuite))
+}
+
+func (suite *CookiePersistenceSuite) resetTemplateData() {
+	suite.tmplData = tmplData{
+		Host:                      suite.test.GetNS() + ".test",
+		Replicas:                  1,
+		SourceIPPersistenceSize:   "1m",
+		SourceIPPersistenceExpire: "30m",
+	}
 }
 
 // Check that the server serverName for backend backendName

@@ -354,10 +354,13 @@ func (k *K8s) EventSecret(ns *Namespace, data *Secret) (updateRequired bool) {
 func (k *K8s) EventPod(podEvent PodEvent) (updateRequired bool) {
 	switch podEvent.Status {
 	case ADDED, MODIFIED:
-		if _, ok := k.HaProxyPods[podEvent.Name]; ok {
+		if podEvent.IP == "" {
 			return false
 		}
-		k.HaProxyPods[podEvent.Name] = struct{}{}
+		if currentIP, ok := k.HaProxyPods[podEvent.Name]; ok && currentIP == podEvent.IP {
+			return false
+		}
+		k.HaProxyPods[podEvent.Name] = podEvent.IP
 	case DELETED:
 		if _, ok := k.HaProxyPods[podEvent.Name]; !ok {
 			return false
