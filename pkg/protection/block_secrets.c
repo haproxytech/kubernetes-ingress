@@ -12,9 +12,14 @@
 /* See the License for the specific language governing permissions and        */
 /* limitations under the License.                                             */
 
+/* LD_PRELOAD shim that denies HAProxy access to the Kubernetes service-account
+   token dir (default /var/run/secrets/kubernetes.io). Interposes the libc
+   calls that read or mutate a path and returns EACCES for anything resolving
+   inside it. Metadata-only calls (stat/access/readlink) are deliberately NOT
+   hooked so they stay off HAProxy's hot path (issue #818). */
+
 #define _XOPEN_SOURCE 700
 
-#include <dirent.h>
 #include <dlfcn.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -34,7 +39,6 @@
 /* Forward-declared to avoid _GNU_SOURCE, which on musl macro-aliases the
    *64 stat names and would collide with our hook symbols. */
 struct file_handle;
-struct statx;
 
 #ifndef PATH_MAX
 #define PATH_MAX 4096
@@ -54,7 +58,7 @@ static char text_blocked[PATH_MAX] = {0};
 static size_t text_blocked_len = 0;
 static int text_canonical_same = 1;
 
-/* Recursion guard: musl's realpath() uses the public readlink symbol
+/* Recursion guard: realpath() resolves paths via the public open() symbol,
    which our hook would otherwise re-enter. */
 static __thread int in_is_blocked = 0;
 
@@ -218,21 +222,6 @@ static int (*real_creat)(const char *, mode_t) = NULL;
 static int (*real_creat64)(const char *, mode_t) = NULL;
 static int (*real_openat)(int, const char *, int, ...) = NULL;
 static int (*real_openat64)(int, const char *, int, ...) = NULL;
-static int (*real_access)(const char *, int) = NULL;
-static int (*real_faccessat)(int, const char *, int, int) = NULL;
-static ssize_t (*real_readlink)(const char *, char *, size_t) = NULL;
-static ssize_t (*real_readlinkat)(int, const char *, char *, size_t) = NULL;
-static DIR *(*real_opendir)(const char *) = NULL;
-static int (*real_stat)(const char *, struct stat *) = NULL;
-static int (*real_lstat)(const char *, struct stat *) = NULL;
-static int (*real_fstatat)(int, const char *, struct stat *, int) = NULL;
-/* void * avoids _LARGEFILE64_SOURCE, which on musl macro-aliases stat64
-   to stat and would break our hook symbol. */
-static int (*real_stat64)(const char *, void *) = NULL;
-static int (*real_lstat64)(const char *, void *) = NULL;
-static int (*real_fstatat64)(int, const char *, void *, int) = NULL;
-static int (*real_statx)(int, const char *, int, unsigned int,
-                         struct statx *) = NULL;
 static int (*real_name_to_handle_at)(int, const char *, struct file_handle *,
                                      int *, int) = NULL;
 static int (*real_mkdir)(const char *, mode_t) = NULL;
@@ -276,18 +265,6 @@ __attribute__((constructor(101), cold)) static void block_secrets_init(void) {
   real_creat64 = dlsym(RTLD_NEXT, "creat64");
   real_openat = dlsym(RTLD_NEXT, "openat");
   real_openat64 = dlsym(RTLD_NEXT, "openat64");
-  real_access = dlsym(RTLD_NEXT, "access");
-  real_faccessat = dlsym(RTLD_NEXT, "faccessat");
-  real_readlink = dlsym(RTLD_NEXT, "readlink");
-  real_readlinkat = dlsym(RTLD_NEXT, "readlinkat");
-  real_opendir = dlsym(RTLD_NEXT, "opendir");
-  real_stat = dlsym(RTLD_NEXT, "stat");
-  real_lstat = dlsym(RTLD_NEXT, "lstat");
-  real_fstatat = dlsym(RTLD_NEXT, "fstatat");
-  real_stat64 = dlsym(RTLD_NEXT, "stat64");
-  real_lstat64 = dlsym(RTLD_NEXT, "lstat64");
-  real_fstatat64 = dlsym(RTLD_NEXT, "fstatat64");
-  real_statx = dlsym(RTLD_NEXT, "statx");
   real_name_to_handle_at = dlsym(RTLD_NEXT, "name_to_handle_at");
   real_mkdir = dlsym(RTLD_NEXT, "mkdir");
   real_mkdirat = dlsym(RTLD_NEXT, "mkdirat");
@@ -313,6 +290,28 @@ __attribute__((constructor(101), cold)) static void block_secrets_init(void) {
   real_linkat = dlsym(RTLD_NEXT, "linkat");
   real_symlink = dlsym(RTLD_NEXT, "symlink");
   real_symlinkat = dlsym(RTLD_NEXT, "symlinkat");
+
+  /* musl exports no distinct LFS64 symbols, so the dlsym()s above leave these
+     NULL. off_t is 64-bit on every supported ABI, so *64 == base: alias them.
+     Otherwise the exported *64 hooks would return ENOSYS (issue #818). */
+  if (real_open64 == NULL) {
+    real_open64 = real_open;
+  }
+  if (real_fopen64 == NULL) {
+    real_fopen64 = real_fopen;
+  }
+  if (real_freopen64 == NULL) {
+    real_freopen64 = real_freopen;
+  }
+  if (real_creat64 == NULL) {
+    real_creat64 = real_creat;
+  }
+  if (real_openat64 == NULL) {
+    real_openat64 = real_openat;
+  }
+  if (real_truncate64 == NULL) {
+    real_truncate64 = (int (*)(const char *, int64_t))real_truncate;
+  }
 
   const char *src = getenv(BLOCKED_PATH_ENV);
   if (src == NULL) {
@@ -475,119 +474,6 @@ HOOK_VISIBLE int openat64(int dirfd, const char *pathname, int flags, ...) {
   mode_t mode = (mode_t)va_arg(args, int);
   va_end(args);
   return real_openat64(dirfd, pathname, flags, mode);
-}
-
-HOOK_VISIBLE int access(const char *pathname, int mode) {
-  if (path_blocked(pathname)) {
-    errno = EACCES;
-    return -1;
-  }
-  HOOK_GUARD(real_access, -1);
-  return real_access(pathname, mode);
-}
-
-HOOK_VISIBLE int faccessat(int dirfd, const char *pathname, int mode,
-                           int flags) {
-  if (path_blocked(pathname)) {
-    errno = EACCES;
-    return -1;
-  }
-  HOOK_GUARD(real_faccessat, -1);
-  return real_faccessat(dirfd, pathname, mode, flags);
-}
-
-HOOK_VISIBLE ssize_t readlink(const char *pathname, char *buf, size_t bufsiz) {
-  if (path_blocked(pathname)) {
-    errno = EACCES;
-    return -1;
-  }
-  HOOK_GUARD(real_readlink, -1);
-  return real_readlink(pathname, buf, bufsiz);
-}
-
-HOOK_VISIBLE ssize_t readlinkat(int dirfd, const char *pathname, char *buf,
-                                size_t bufsiz) {
-  if (path_blocked(pathname)) {
-    errno = EACCES;
-    return -1;
-  }
-  HOOK_GUARD(real_readlinkat, -1);
-  return real_readlinkat(dirfd, pathname, buf, bufsiz);
-}
-
-HOOK_VISIBLE DIR *opendir(const char *name) {
-  if (path_blocked(name)) {
-    errno = EACCES;
-    return NULL;
-  }
-  HOOK_GUARD(real_opendir, NULL);
-  return real_opendir(name);
-}
-
-HOOK_VISIBLE int stat(const char *pathname, struct stat *buf) {
-  if (path_blocked(pathname)) {
-    errno = EACCES;
-    return -1;
-  }
-  HOOK_GUARD(real_stat, -1);
-  return real_stat(pathname, buf);
-}
-
-HOOK_VISIBLE int lstat(const char *pathname, struct stat *buf) {
-  if (path_blocked(pathname)) {
-    errno = EACCES;
-    return -1;
-  }
-  HOOK_GUARD(real_lstat, -1);
-  return real_lstat(pathname, buf);
-}
-
-HOOK_VISIBLE int fstatat(int dirfd, const char *pathname, struct stat *buf,
-                         int flags) {
-  if (path_blocked(pathname)) {
-    errno = EACCES;
-    return -1;
-  }
-  HOOK_GUARD(real_fstatat, -1);
-  return real_fstatat(dirfd, pathname, buf, flags);
-}
-
-HOOK_VISIBLE int stat64(const char *pathname, void *buf) {
-  if (path_blocked(pathname)) {
-    errno = EACCES;
-    return -1;
-  }
-  HOOK_GUARD(real_stat64, -1);
-  return real_stat64(pathname, buf);
-}
-
-HOOK_VISIBLE int lstat64(const char *pathname, void *buf) {
-  if (path_blocked(pathname)) {
-    errno = EACCES;
-    return -1;
-  }
-  HOOK_GUARD(real_lstat64, -1);
-  return real_lstat64(pathname, buf);
-}
-
-HOOK_VISIBLE int fstatat64(int dirfd, const char *pathname, void *buf,
-                           int flags) {
-  if (path_blocked(pathname)) {
-    errno = EACCES;
-    return -1;
-  }
-  HOOK_GUARD(real_fstatat64, -1);
-  return real_fstatat64(dirfd, pathname, buf, flags);
-}
-
-HOOK_VISIBLE int statx(int dirfd, const char *pathname, int flags,
-                       unsigned int mask, struct statx *buf) {
-  if (path_blocked(pathname)) {
-    errno = EACCES;
-    return -1;
-  }
-  HOOK_GUARD(real_statx, -1);
-  return real_statx(dirfd, pathname, flags, mask, buf);
 }
 
 HOOK_VISIBLE int name_to_handle_at(int dirfd, const char *pathname,
@@ -783,7 +669,15 @@ HOOK_VISIBLE int renameat2(int olddirfd, const char *oldpath, int newdirfd,
     errno = EACCES;
     return -1;
   }
-  HOOK_GUARD(real_renameat2, -1);
+  /* No renameat2 on musl: flags==0 is plain renameat(); a non-zero flag is
+     genuinely unsupported, so ENOSYS is then the correct answer. */
+  if (real_renameat2 == NULL) {
+    if (flags == 0 && real_renameat != NULL) {
+      return real_renameat(olddirfd, oldpath, newdirfd, newpath);
+    }
+    errno = ENOSYS;
+    return -1;
+  }
   return real_renameat2(olddirfd, oldpath, newdirfd, newpath, flags);
 }
 

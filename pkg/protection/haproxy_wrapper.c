@@ -12,6 +12,10 @@
 /* See the License for the specific language governing permissions and        */
 /* limitations under the License.                                             */
 
+/* Thin entrypoint that forces LD_PRELOAD=libblock_secrets.so and execs the
+   real HAProxy, so the secrets-blocker is always loaded regardless of how the
+   process is started. The Dockerfile grants this binary cap_net_bind_service. */
+
 #define _GNU_SOURCE
 #include <errno.h>
 #include <stdio.h>
