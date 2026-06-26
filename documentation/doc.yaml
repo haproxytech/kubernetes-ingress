@@ -265,6 +265,13 @@ image_arguments:
     helm: |-
       helm install haproxy haproxytech/kubernetes-ingress \
         --set-string "controller.extraArgs={--https-bind-port=8443}"
+  - argument: --localpeer-port
+    description: Sets the TCP port used in HAProxy peer entries managed by the controller's `localinstance` peer section. HAProxy uses this peer section for generated stick tables, including request rate limiting. The controller manages the running pod's peer entry and reconciles entries for pods that belong to the same controller Deployment, DaemonSet, or ReplicaSet. Expose this port between controller pods when peer replication is required. This option is not a general static peer mesh configuration; manually defined peer sections are not reconciled by this controller logic.
+    values:
+      - "A valid port in the range. Default: 10000"
+    default: 10000
+    version_min: "1.9"
+    example: --localpeer-port=10000
   - argument: --disable-http
     description: Disabling the HTTP frontend.
     values:
@@ -1316,6 +1323,7 @@ annotations:
     tip:
       - If this number is exceeded, HAProxy will deny requests with 403 status code.
       - To track the http requests rate, a stick-table named "Ratelimit-<period-in-ms>" will be created. For example, if the `rate-limit-period` is set to *2s*, the name of the table will be *Ratelimit-2000*.
+      - Generated rate-limit stick tables use the `localinstance` peer section. When multiple controller pods expose a reachable `--localpeer-port`, the controller reconciles peer entries for pods in the same controller workload so stick-table updates can replicate between those pods.
     values:
       - An integer representing the maximum number of requests to accept
     applies_to:
