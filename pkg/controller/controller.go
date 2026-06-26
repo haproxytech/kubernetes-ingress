@@ -43,6 +43,8 @@ import (
 
 var logger = utils.GetLogger()
 
+const localPeerSection = "localinstance"
+
 // HAProxyController is ingress controller
 type HAProxyController struct {
 	store                    store.K8s
@@ -85,18 +87,11 @@ func (c *HAProxyController) clientAPIClosure(fn func() error) (err error) {
 // Start initializes and runs HAProxyController
 func (c *HAProxyController) Start() {
 	logger.Panic(c.clientAPIClosure(func() error {
-		err := c.haproxy.PeerEntryDelete("localinstance", "local")
+		err := c.haproxy.PeerEntryDelete(localPeerSection, "local")
 		if err != nil {
 			return err
 		}
-		return c.haproxy.PeerEntryCreateOrEdit(
-			"localinstance",
-			models.PeerEntry{
-				Name:    c.Hostname,
-				Address: &c.PodIP,
-				Port:    &c.osArgs.LocalPeerPort,
-			},
-		)
+		return c.haproxy.PeerEntryCreateOrEdit(localPeerSection, c.localPeerEntry(c.Hostname, c.PodIP))
 	}))
 	c.initHandlers()
 	logger.Error(c.setupHAProxyRules())
@@ -135,6 +130,7 @@ func (c *HAProxyController) updateHAProxy() {
 	logger.Trace("HAProxy config sync transaction started")
 
 	c.handleGlobalConfig()
+	logger.Error(c.reconcileLocalPeerEntries())
 
 	if len(route.CustomRoutes) != 0 {
 		logger.Error(route.CustomRoutesReset(c.haproxy))

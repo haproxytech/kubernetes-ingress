@@ -95,6 +95,7 @@ type HAProxyClient interface { //nolint:interfacebloat
 	PeerEntryDelete(peerSection string, name string) error
 	PeerEntryEdit(peerSection string, peer models.PeerEntry) error
 	PeerEntryCreateOrEdit(peerSection string, peer models.PeerEntry) error
+	PeerEntriesGet(peerSection string) (models.PeerEntries, error)
 	SetMapContent(mapFile string, payload []string) error
 	SetServerAddrAndState([]RuntimeServerData) error
 	SetAuxCfgFile(auxCfgFile string)
