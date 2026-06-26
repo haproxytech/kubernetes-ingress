@@ -542,7 +542,7 @@ func (k k8s) getEndpointsInformer(eventChan chan k8ssync.SyncDataEvent, factory 
 }
 
 func (k *k8s) getPodInformer(namespace string, podMatcher controllerPodMatcher, resyncPeriod time.Duration, eventChan chan k8ssync.SyncDataEvent) cache.Controller { //nolint:ireturn
-	watchlist := cache.NewListWatchFromClient(k.builtInClient.CoreV1().RESTClient(), "pods", namespace, fields.Nothing())
+	watchlist := cache.NewListWatchFromClient(k.builtInClient.CoreV1().RESTClient(), "pods", namespace, controllerPodFieldSelector())
 	_, eController := cache.NewInformerWithOptions(
 		cache.InformerOptions{
 			ListerWatcher: watchlist,
@@ -582,6 +582,10 @@ func (k *k8s) getPodInformer(namespace string, podMatcher controllerPodMatcher, 
 	)
 
 	return eController
+}
+
+func controllerPodFieldSelector() fields.Selector {
+	return fields.Everything()
 }
 
 func (k k8s) addIngressClassHandlers(eventChan chan k8ssync.SyncDataEvent, informer cache.SharedIndexInformer) {
