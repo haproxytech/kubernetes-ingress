@@ -16,6 +16,7 @@ package controller
 
 import (
 	"bytes"
+	"context"
 	"encoding/base64"
 	"errors"
 	"log"
@@ -178,7 +179,7 @@ func (builder *Builder) Build() *HAProxyController {
 
 	logger.Panic(haproxy.UploadFrontends())
 
-	prefix, errPrefix := utils.GetPodPrefix(os.Getenv("POD_NAME"))
+	prefix, errPrefix := getControllerPodPrefix(context.Background(), builder.clientSet, os.Getenv("POD_NAMESPACE"), os.Getenv("POD_NAME"))
 	logger.Error(errPrefix)
 
 	builder.store.GatewayControllerName = builder.osArgs.GatewayControllerName

@@ -63,6 +63,7 @@ type PodEvent struct {
 	Status    Status
 	Name      string
 	Namespace string
+	IP        string
 }
 
 // Service is useful data from k8s structures about service
