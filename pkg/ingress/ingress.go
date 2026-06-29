@@ -184,19 +184,11 @@ func addRules(list rules.List, h haproxy.HAProxy, ingressRule bool) []rules.Rule
 // Update processes a Kubernetes ingress resource and configures HAProxy accordingly
 // by creating corresponding backend, route and HTTP rules.
 func (i *Ingress) Update(k store.K8s, h haproxy.HAProxy, a annotations.Annotations) {
-	// Default Backend
-	if i.resource.DefaultBackend != nil {
-		svc, err := service.New(k, i.resource.DefaultBackend, h.Certificates, false, i.resource, i.resource.Annotations, k.ConfigMaps.Main.Annotations)
-		if svc != nil {
-			err = svc.SetDefaultBackend(k, h, []string{h.FrontHTTP, h.FrontHTTPS}, a)
-		}
-		if err != nil {
-			logger.Errorf("Ingress '%s/%s': default backend: %s", i.resource.Namespace, i.resource.Name, err)
-		} else {
-			backendName, _ := svc.GetBackendName()
-			logger.Infof("Setting http default backend to '%s'", backendName)
-		}
-	}
+	// The ingress spec.defaultBackend is NOT handled here. The HTTP/HTTPS frontends
+	// have a single shared default backend, so letting every ingress apply its own
+	// would make the result depend on the (random) order in which ingresses are
+	// iterated and trigger spurious reloads. Selection is centralized and made
+	// deterministic in HAProxyController.setIngressDefaultBackend.
 	// Ingress secrets
 	logger.Tracef("Ingress '%s/%s': processing secrets...", i.resource.Namespace, i.resource.Name)
 	secretManager := secret.NewManager(k, h)
