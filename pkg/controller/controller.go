@@ -64,6 +64,10 @@ type HAProxyController struct {
 	auxCfgModTime            int64
 	ready                    bool
 	processIngress           func()
+	// defaultBackend holds, for the current reconciliation pass, the ingress
+	// deterministically selected to provide the frontends' default backend.
+	// Reset before each processIngress() run and consumed by setIngressDefaultBackend().
+	defaultBackend *store.Ingress
 }
 
 // Wrapping a Native-Client transaction and commit it.
@@ -156,7 +160,9 @@ func (c *HAProxyController) updateHAProxy() {
 	}
 
 	c.processSSLPassthroughInConfigFile()
+	c.defaultBackend = nil
 	c.processIngress()
+	c.setIngressDefaultBackend()
 
 	updated := deep.Equal(route.CurentCustomRoutes, route.CustomRoutes, deep.FLAG_IGNORE_SLICE_ORDER)
 	if len(updated) != 0 {
@@ -366,6 +372,7 @@ func (c *HAProxyController) manageIngress(ing *store.Ingress) {
 		logger.Debugf("ingress '%s/%s' ignored: no matching", ing.Namespace, ing.Name)
 	} else {
 		i.Update(c.store, c.haproxy, c.annotations)
+		c.considerDefaultBackend(ing)
 	}
 	if ing.Status == store.ADDED || ing.ClassUpdated {
 		c.updateStatusManager.AddIngress(i)
