@@ -157,7 +157,9 @@ func (a annImpl) Backend(b *models.Backend, s store.K8s, c certs.Certificates) [
 		service.NewLoadBalance("load-balance", b),
 		service.NewCheck("check", b),
 		service.NewCheckInter("check-interval", b),
-		service.NewCookie("cookie-persistence", b),
+		// cookie-persistence is intentionally NOT registered here: it is a
+		// service-scoped annotation processed directly in service.HandleBackend
+		// (getBackendModel) against the Service annotations only. See there.
 		service.NewMaxconn("pod-maxconn", b),
 		service.NewSendProxy("send-proxy-protocol", b),
 		// Order is important for ssl annotations so they don't conflict

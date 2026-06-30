@@ -81,9 +81,11 @@ func (c *HAProxyController) globalCfg() {
 	if newGlobal.TuneSslOptions == nil {
 		newGlobal.TuneSslOptions = &models.TuneSslOptions{}
 	}
-	newGlobal.LogTargetList = newLg
 
 	env.SetGlobal(newGlobal, &newLg, c.haproxy.Env)
+	// SetGlobal may inject a default log target into newLg, so assign it afterwards;
+	// otherwise the comparison misses it and triggers a reload on every sync.
+	newGlobal.LogTargetList = newLg
 	diff := newGlobal.Diff(*global)
 	if len(diff) != 0 {
 		err := c.haproxy.GlobalPushConfiguration(*newGlobal)
