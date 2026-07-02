@@ -199,6 +199,14 @@ image_arguments:
     helm: |-
       helm install haproxy haproxytech/kubernetes-ingress \
         --set-string "controller.extraArgs={--namespace-whitelist=foo}"
+  - argument: --namespace-label-selector
+    description: Label selector for dynamically selecting namespaces that the ingress controller should monitor. This option is ignored when namespace whitelist or blacklist is configured.
+    values:
+      - Kubernetes label selector, e.g. environment=production
+    example: --namespace-label-selector=environment=production
+    helm: |-
+      helm install haproxy haproxytech/kubernetes-ingress \
+        --set-string "controller.extraArgs={--namespace-label-selector=environment=production}"
   - argument: --publish-service
     description: Copies the ingress controller's IP address to the 'Address' field in all Ingress objects that the controller manages. This is useful for tools like external-dns, which use this information to create DNS records.
     values:

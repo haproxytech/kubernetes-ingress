@@ -1,0 +1,25 @@
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ .IngressName }}
+  namespace: {{ .Namespace }}
+spec:
+  ingressClassName: haproxy
+{{if .TLSEnabled}}
+  tls:
+    - hosts:
+        -  {{ .Host }}
+      secretName: haproxy-offload-test
+{{end}}
+  rules:
+  - host: {{ .Host }}
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: {{ .ServiceName }}
+            port:
+              number: 80

@@ -24,6 +24,7 @@ Image can be run with arguments:
 | [`--gateway-controller-name`](#--gateway-controller-name) |  |
 | [`--namespace-blacklist`](#--namespace-blacklist) |  |
 | [`--namespace-whitelist`](#--namespace-whitelist) |  |
+| [`--namespace-label-selector`](#--namespace-label-selector) |  |
 | [`--publish-service`](#--publish-service) |  |
 | [`--disable-ipv4`](#--disable-ipv4) | `false` |
 | [`--disable-ipv6`](#--disable-ipv6) | `false` |
@@ -403,6 +404,24 @@ Example:
 
 ```yaml
 --namespace-whitelist=foo --namespace-whitelist=bar
+```
+
+<p align='right'><a href='#haproxy-kubernetes-ingress-controller'>:arrow_up_small: back to top</a></p>
+
+***
+
+### `--namespace-label-selector`
+
+  Label selector for dynamically selecting namespaces that the ingress controller should monitor. This option is ignored when namespace whitelist or blacklist is configured.
+
+Possible values:
+
+- Kubernetes label selector, e.g. environment=production
+
+Example:
+
+```yaml
+--namespace-label-selector=environment=production
 ```
 
 <p align='right'><a href='#haproxy-kubernetes-ingress-controller'>:arrow_up_small: back to top</a></p>
@@ -916,4 +935,3 @@ Example:
 <p align='right'><a href='#haproxy-kubernetes-ingress-controller'>:arrow_up_small: back to top</a></p>
 
 ***
-
