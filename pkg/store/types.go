@@ -15,7 +15,10 @@
 package store
 
 import (
+	"cmp"
 	"fmt"
+	"slices"
+	"strings"
 	"time"
 
 	"github.com/haproxytech/client-native/v6/models"
@@ -83,7 +86,25 @@ type RuntimeEndpoint struct {
 }
 
 // RuntimeEndpoints is a set of different RuntimeEndpoint of a HAProxy backend
-type RuntimeEndpoints = map[RuntimeEndpoint]struct{}
+type RuntimeEndpoints map[RuntimeEndpoint]struct{}
+
+// Sorted returns the endpoints as a slice ordered deterministically by address
+// then port. Iterating the map directly yields a random order, which would
+// assign a given endpoint to a random server slot and make the backend server
+// list differ from one run (and one controller instance) to another.
+func (e RuntimeEndpoints) Sorted() []RuntimeEndpoint {
+	sorted := make([]RuntimeEndpoint, 0, len(e))
+	for endpoint := range e {
+		sorted = append(sorted, endpoint)
+	}
+	slices.SortFunc(sorted, func(x, y RuntimeEndpoint) int {
+		if c := strings.Compare(x.Address, y.Address); c != 0 {
+			return c
+		}
+		return cmp.Compare(x.Port, y.Port)
+	})
+	return sorted
+}
 
 // RuntimeBackend holds the runtime state of an HAProxy backend
 type RuntimeBackend struct {

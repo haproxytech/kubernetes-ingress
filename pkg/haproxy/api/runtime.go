@@ -185,8 +185,10 @@ func (c *clientNative) SyncBackendSrvs(backend *store.RuntimeBackend) error {
 		}
 	}
 
-	// Configure new Endpoints in available HAProxySrvs
-	for newEndpoint := range endpoints {
+	// Configure new Endpoints in available HAProxySrvs, iterating in a
+	// deterministic order so the address-to-slot assignment is stable across
+	// controller instances (endpoints is a map with a random iteration order).
+	for _, newEndpoint := range endpoints.Sorted() {
 		if len(disabled) == 0 {
 			break
 		}

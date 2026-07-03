@@ -131,8 +131,10 @@ func (s *Service) scaleHAProxySrvs(backend *store.RuntimeBackend) {
 	// ... copy the existing servers into ...
 	copy(slots, backend.HAProxySrvs)
 	i := len(backend.HAProxySrvs)
-	// ... then add the new slots ...
-	for endpoint := range backend.Endpoints {
+	// ... then add the new slots, iterating endpoints in a deterministic order
+	// so a given endpoint always lands on the same slot across controller
+	// instances (backend.Endpoints is a map with a random iteration order).
+	for _, endpoint := range backend.Endpoints.Sorted() {
 		srv := &store.HAProxySrv{
 			Name:     fmt.Sprintf("SRV_%d", i+1),
 			Address:  endpoint.Address,
