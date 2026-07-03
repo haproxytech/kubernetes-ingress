@@ -17,6 +17,8 @@ package service
 import (
 	"testing"
 
+	"github.com/haproxytech/client-native/v6/models"
+
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -47,6 +49,42 @@ func newK8sWithRuntime(namespace, svcName, portName string, backend *store.Runti
 		},
 	}
 	return k8s
+}
+
+// TestScaleHAProxySrvs_DeterministicServerOrder verifies that scaleHAProxySrvs
+// assigns endpoints to server slots in a deterministic (address, port) order,
+// so the generated backend server list is identical from one controller
+// instance to another even though backend.Endpoints is a map with a random
+// iteration order. Slot names must remain positional/stable (SRV_1, SRV_2, ...).
+func TestScaleHAProxySrvs_DeterministicServerOrder(t *testing.T) {
+	buildBackend := func() *store.RuntimeBackend {
+		return &store.RuntimeBackend{
+			Endpoints: store.RuntimeEndpoints{
+				store.RuntimeEndpoint{Address: "10.0.0.3", Port: 80}: {},
+				store.RuntimeEndpoint{Address: "10.0.0.1", Port: 80}: {},
+				store.RuntimeEndpoint{Address: "10.0.0.2", Port: 80}: {},
+			},
+		}
+	}
+
+	svc := &Service{backend: &models.Backend{BackendBase: models.BackendBase{Name: "test-backend"}}}
+
+	// Run several times, each on a fresh backend, to defeat the randomized map
+	// iteration order: every run must produce the exact same assignment.
+	for i := 0; i < 100; i++ {
+		backend := buildBackend()
+		svc.scaleHAProxySrvs(backend)
+
+		require.GreaterOrEqual(t, len(backend.HAProxySrvs), 3)
+		// Enabled slots hold the endpoints in ascending address order.
+		assert.Equal(t, "10.0.0.1", backend.HAProxySrvs[0].Address)
+		assert.Equal(t, "10.0.0.2", backend.HAProxySrvs[1].Address)
+		assert.Equal(t, "10.0.0.3", backend.HAProxySrvs[2].Address)
+		// Slot names stay positional and stable.
+		assert.Equal(t, "SRV_1", backend.HAProxySrvs[0].Name)
+		assert.Equal(t, "SRV_2", backend.HAProxySrvs[1].Name)
+		assert.Equal(t, "SRV_3", backend.HAProxySrvs[2].Name)
+	}
 }
 
 // TestGetRuntimeBackend_ExternalName_IgnoresOrphanEndpointSlices verifies that an
