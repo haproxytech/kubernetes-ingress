@@ -167,7 +167,7 @@ func addRules(list rules.List, h haproxy.HAProxy, ingressRule bool) []rules.Rule
 		case rules.REQ_DENY, rules.REQ_CAPTURE:
 			if haproxy.SSLPassthrough {
 				// FrontHTTPS still terminates non-passthrough ingresses' TLS traffic
-				// (funnelled in via FrontSSL's default backend), so it needs the rule too.
+				// (funnelled in via FrontSSL's default backend), so it needs the rule too
 				frontends = []string{h.FrontHTTP, h.FrontSSL, h.FrontHTTPS}
 			}
 		}

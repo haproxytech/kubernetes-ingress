@@ -1,4 +1,4 @@
-// Copyright 2019 HAProxy Technologies LLC
+// Copyright 2026 HAProxy Technologies LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -24,13 +24,7 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
-// AllowListWithClusterPassthroughSuite reproduces a regression where an
-// unrelated ingress using ssl-passthrough elsewhere in the cluster flips the
-// controller-wide haproxy.SSLPassthrough flag, which in turn caused
-// allow-list/deny-list rules on a *different*, non-passthrough ingress to be
-// dropped from the "https" frontend - the frontend where that ingress's own
-// TLS-terminated traffic actually lands. The allow-list then went
-// unenforced for that ingress's real traffic.
+// Adding AllowListWithClusterPassthroughSuite, just to be able to debug directly here and not from CRDSuite
 type AllowListWithClusterPassthroughSuite struct {
 	HTTPSSuite
 }
@@ -39,11 +33,13 @@ func TestAllowListWithClusterPassthroughSuite(t *testing.T) {
 	suite.Run(t, new(AllowListWithClusterPassthroughSuite))
 }
 
-func (suite *AllowListWithClusterPassthroughSuite) Test_AllowList_Enforced_When_Another_Ingress_Uses_SSLPassthrough() {
+func (suite *AllowListWithClusterPassthroughSuite) Test_AllowList_With_ClusterPassthrough() {
 	// A second, unrelated ingress using ssl-passthrough. Its mere presence in
 	// the cluster flips haproxy.SSLPassthrough, which must not affect rule
-	// placement for other, non-passthrough ingresses.
-	defer suite.test.Delete("config/passthrough-sidecar-delete.yaml")
+	// placement for other, non-passthrough ingresses. Left in place for the
+	// rest of the suite run; TearDownSuite deletes the whole test namespace
+	// (Test.Delete has no way to target this dynamic namespace, so a
+	// per-test kubectl delete here would silently no-op against the wrong one).
 	passthroughData := tmplData{
 		Host: "passthrough-sidecar." + suite.test.GetNS() + ".test",
 		Port: "https",
