@@ -53,6 +53,26 @@ func TestGlobalCfgConvergesWithoutLogConfig(t *testing.T) {
 		"steady-state globalCfg must not request a reload when nothing changed")
 }
 
+// TestDefaultsCfgConvergesWithoutConfig guards the defaults path against the same
+// class of endless-reload bug: a steady-state sync must not request a reload.
+func TestDefaultsCfgConvergesWithoutConfig(t *testing.T) {
+	c := buildGlobalTestController(t)
+
+	require.NoError(t, c.haproxy.APIStartTransaction())
+	c.defaultsCfg()
+	require.NoError(t, c.haproxy.APICommitTransaction())
+	c.haproxy.APIDisposeTransaction()
+	instance.Reset()
+
+	require.NoError(t, c.haproxy.APIStartTransaction())
+	c.defaultsCfg()
+	require.NoError(t, c.haproxy.APICommitTransaction())
+	c.haproxy.APIDisposeTransaction()
+
+	require.False(t, instance.NeedReload(),
+		"steady-state defaultsCfg must not request a reload when nothing changed")
+}
+
 func buildGlobalTestController(t *testing.T) *HAProxyController {
 	t.Helper()
 	tempDir := t.TempDir()

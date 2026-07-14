@@ -422,11 +422,13 @@ func (k k8s) IsGatewayAPIInstalled(gatewayControllerName string) (installed bool
 	installed = true
 	gatewayCrd, err := k.crdClient.ApiextensionsV1().CustomResourceDefinitions().Get(context.Background(), "gateways.gateway.networking.k8s.io", metav1.GetOptions{})
 	if err != nil {
-		var errStatus *errGw.StatusError
-		if !errors.As(err, &errStatus) || errStatus.ErrStatus.Code != 404 {
+		// Missing CRD (404) or no RBAC to read CRDs (403) both mean Gateway API is unavailable.
+		if errGw.IsForbidden(err) {
+			logger.Warningf("Gateway API support disabled, missing RBAC to read CustomResourceDefinitions: %s", err)
+		} else if !errGw.IsNotFound(err) {
 			logger.Error(err)
-			return false
 		}
+		return false
 	}
 
 	if gatewayCrd.Name == "" {
