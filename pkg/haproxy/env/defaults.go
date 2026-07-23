@@ -31,17 +31,10 @@ func SetGlobal(global *models.Global, logTargets *models.LogTargets, env Env) {
 		global.StatsTimeout = utils.PtrInt64(36000)
 	}
 
-	// SSL options
-	if global.SslOptions == nil {
-		global.SslOptions = &models.SslOptions{}
-	}
-	if global.SslOptions.DefaultBindOptions == "" {
-		global.SslOptions.DefaultBindOptions = "no-sslv3 no-tls-tickets no-tlsv10"
-	}
-	if global.SslOptions.DefaultBindCiphers == "" {
-		//revive:disable-next-line:line-length-limit
-		global.SslOptions.DefaultBindCiphers = "ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES128-GCM-SHA256:DHE-DSS-AES128-GCM-SHA256:kEDH+AESGCM:ECDHE-RSA-AES128-SHA256:ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA:ECDHE-ECDSA-AES128-SHA:ECDHE-RSA-AES256-SHA384:ECDHE-ECDSA-AES256-SHA384:ECDHE-RSA-AES256-SHA:ECDHE-ECDSA-AES256-SHA:DHE-RSA-AES128-SHA256:DHE-RSA-AES128-SHA:DHE-DSS-AES128-SHA256:DHE-RSA-AES256-SHA256:DHE-DSS-AES256-SHA:DHE-RSA-AES256-SHA:AES256-GCM-SHA384:AES128-SHA256:AES256-SHA256:AES128-SHA:AES256-SHA:AES:CAMELLIA:!aNULL:!eNULL:!EXPORT:!DES:!RC4:!MD5:!PSK:!aECDH:!EDH-DSS-DES-CBC3-SHA:!EDH-RSA-DES-CBC3-SHA:!KRB5-DES-CBC3-SHA:!3DES"
-	}
+	// SSL options: intentionally left untouched so HAProxy uses its own
+	// built-in defaults. Overriding DefaultBindOptions/DefaultBindCiphers
+	// broke across HAProxy flavors (OpenSSL, AWS-LC, AWS-LC-FIPS), each of
+	// which has a different set of default/permitted ciphers.
 
 	// Tune options
 	if global.TuneOptions == nil {
