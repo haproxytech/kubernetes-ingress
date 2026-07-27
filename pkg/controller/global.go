@@ -213,8 +213,6 @@ func populateDefaultLocalBackendResources(k8sStore store.K8s, podNs string, defa
 		}
 		k8sStore.EventEndpoints(controllerNs, endpoints, nil)
 		logger.Debug("default backend event endpoints processed")
-	} else {
-		defaultLocalService.Annotations = k8sStore.ConfigMaps.Main.Annotations
 	}
 	return nil
 }
