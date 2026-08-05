@@ -165,6 +165,23 @@ func (handler *HTTPS) Update(k store.K8s, h haproxy.HAProxy, a annotations.Annot
 		return nil
 	}
 
+	var errs utils.Errors
+
+	// The proxy-chaining backend is only ever referenced by the ssl frontend
+	// default_backend, never by an ingress path, so no reconciliation marks it as
+	// used and only its "permanent" flag keeps it alive. That flag is in-memory
+	// state which a rollback after a failed transaction wipes out, so it has to be
+	// re-asserted on every single sync, or BackendDeleteAllUnnecessary()
+	// garbage-collects the backend while the frontend still points at it and every
+	// later transaction is rejected with "unable to find required default_backend".
+	//
+	// Hence doing it here, before anything that can fail: it depends on nothing else
+	// this handler computes, while everything below can give up on an unrelated
+	// error, a malformed generate-certificates-signer annotation being enough.
+	if haproxy.SSLPassthrough {
+		errs.Add(handler.ensureSSLPassthroughBackend(h))
+	}
+
 	// Fetch tls-alpn value for when SSL offloading is enabled
 	handler.alpn = a.String("tls-alpn", k.ConfigMaps.Main.Annotations)
 
@@ -177,15 +194,21 @@ func (handler *HTTPS) Update(k store.K8s, h haproxy.HAProxy, a annotations.Annot
 	secret, annErr := annotations.Secret("generate-certificates-signer", "", k, k.ConfigMaps.Main.Annotations)
 	if annErr != nil {
 		if !errors.Is(annErr, notFound) {
-			return fmt.Errorf("generate-certificates-signer: %w", annErr)
+			// The signer feeds FrontendEnableSSLOffload(), which both the ssl-offload
+			// section below and toggleSSLPassthrough() call. Applying either with an
+			// unresolved signer would silently drop it from the binds, so give up
+			// rather than downgrade the frontend. The invariant above is already
+			// applied at this point.
+			errs.Add(fmt.Errorf("generate-certificates-signer: %w", annErr))
+			return errs.Result()
 		}
 		logger.Debugf("generate-certificates-signer not configured: %s", annErr)
 	}
 	if secret != nil {
 		caFile, certErr := h.Certificates.AddSecret(secret, certs.FT_CERT)
 		if certErr != nil {
-			err = fmt.Errorf("generate-certificates-signer: %w", certErr)
-			return err
+			errs.Add(fmt.Errorf("generate-certificates-signer: %w", certErr))
+			return errs.Result()
 		}
 		handler.generateCertificatesSigner = caFile
 	}
@@ -197,10 +220,10 @@ func (handler *HTTPS) Update(k store.K8s, h haproxy.HAProxy, a annotations.Annot
 			logger.Panic(h.FrontendEnableSSLOffload(h.FrontHTTPS, handler.CertDir, handler.alpn, handler.strictSNI, handler.generateCertificatesSigner))
 			instance.Reload("SSL offload enabled")
 		}
-		err := handler.handleClientTLSAuth(k, h)
-		if err != nil {
-			return err
-		}
+		// Client TLS authentication is self-contained: failing to configure it says
+		// nothing about the ssl-passthrough configuration below, so collect the error
+		// instead of skipping the rest of the handler.
+		errs.Add(handler.handleClientTLSAuth(k, h))
 	} else if sslOffloadEnabled {
 		logger.Panic(h.FrontendDisableSSLOffload(h.FrontHTTPS))
 		instance.Reload("SSL offload disabled")
@@ -212,15 +235,8 @@ func (handler *HTTPS) Update(k store.K8s, h haproxy.HAProxy, a annotations.Annot
 			logger.Error(handler.enableSSLPassthrough(h))
 			instance.Reload("SSLPassthrough enabled")
 		}
-		// The proxy-chaining backend is only ever referenced by the ssl frontend
-		// default_backend, never by an ingress path, so no reconciliation marks it
-		// as used and only its "permanent" flag keeps it alive. That flag is
-		// in-memory state which a controller restart or a PopPreviousBackends()
-		// after a failed transaction wipes out: re-assert it on every sync,
-		// otherwise BackendDeleteAllUnnecessary garbage-collects the backend while
-		// the frontend still points at it, and every later transaction is rejected
-		// with "unable to find required default_backend".
-		logger.Error(handler.ensureSSLPassthroughBackend(h))
+		// The chaining backend is re-asserted at the top of this function, out of
+		// reach of the early returns above.
 		logger.Error(handler.sslPassthroughRules(k, h, a))
 	} else if errFtSSL == nil {
 		logger.Error(handler.disableSSLPassthrough(h))
@@ -229,7 +245,7 @@ func (handler *HTTPS) Update(k store.K8s, h haproxy.HAProxy, a annotations.Annot
 
 	instance.ReloadIf(h.CertsUpdated(), "certificates updated")
 
-	return nil
+	return errs.Result()
 }
 
 func (handler *HTTPS) enableSSLPassthrough(h haproxy.HAProxy) (err error) {
