@@ -133,6 +133,40 @@ type Backend struct { // use same names as in client native v6
 	Used           bool
 }
 
+// backendSnapshot is the serialization form of Backend, used to save and restore
+// the backends state around a failed transaction.
+//
+// It exists because models.Backend carries its own MarshalJSON/UnmarshalJSON
+// (client-native models are generated from an "allOf" schema). Embedded in
+// Backend, those methods are promoted to Backend itself, so marshalling a
+// Backend serializes only the models.Backend part and silently drops every
+// field the controller owns. Referencing the model through a named field keeps
+// the promoted methods scoped to it and makes the round-trip lossless.
+type backendSnapshot struct {
+	Backend        models.Backend `json:"backend"`
+	ConfigSnippets []string       `json:"config_snippets,omitempty"`
+	Permanent      bool           `json:"permanent"`
+	Used           bool           `json:"used"`
+}
+
+func newBackendSnapshot(backend Backend) backendSnapshot {
+	return backendSnapshot{
+		Backend:        backend.Backend,
+		ConfigSnippets: backend.ConfigSnippets,
+		Permanent:      backend.Permanent,
+		Used:           backend.Used,
+	}
+}
+
+func (snapshot backendSnapshot) toBackend() Backend {
+	return Backend{
+		Backend:        snapshot.Backend,
+		ConfigSnippets: snapshot.ConfigSnippets,
+		Permanent:      snapshot.Permanent,
+		Used:           snapshot.Used,
+	}
+}
+
 type ACL interface {
 	ACLsGet(parentType, parentName string, aclName ...string) (models.Acls, error)
 	ACLDeleteAll(parentType string, parentName string) error
@@ -550,7 +584,11 @@ func (c *clientNative) processTCPChecks(backendName string, rules models.TCPChec
 
 func (c *clientNative) PushPreviousBackends() error {
 	logger.Debug("Pushing backends as previous successfully applied backends")
-	jsonBackends, err := json.Marshal(c.backends)
+	snapshots := make(map[string]backendSnapshot, len(c.backends))
+	for name, backend := range c.backends {
+		snapshots[name] = newBackendSnapshot(backend)
+	}
+	jsonBackends, err := json.Marshal(snapshots)
 	if err != nil {
 		return err
 	}
@@ -564,10 +602,14 @@ func (c *clientNative) PopPreviousBackends() error {
 		clear(c.backends)
 		return nil
 	}
-	backends := map[string]Backend{}
-	err := json.Unmarshal(c.previousBackends, &backends)
+	snapshots := map[string]backendSnapshot{}
+	err := json.Unmarshal(c.previousBackends, &snapshots)
 	if err != nil {
 		return err
+	}
+	backends := make(map[string]Backend, len(snapshots))
+	for name, snapshot := range snapshots {
+		backends[name] = snapshot.toBackend()
 	}
 	c.backends = backends
 	return nil
