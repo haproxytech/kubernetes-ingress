@@ -211,6 +211,15 @@ func (handler *HTTPS) Update(k store.K8s, h haproxy.HAProxy, a annotations.Annot
 			logger.Error(handler.enableSSLPassthrough(h))
 			instance.Reload("SSLPassthrough enabled")
 		}
+		// The proxy-chaining backend is only ever referenced by the ssl frontend
+		// default_backend, never by an ingress path, so no reconciliation marks it
+		// as used and only its "permanent" flag keeps it alive. That flag is
+		// in-memory state which a controller restart or a PopPreviousBackends()
+		// after a failed transaction wipes out: re-assert it on every sync,
+		// otherwise BackendDeleteAllUnnecessary garbage-collects the backend while
+		// the frontend still points at it, and every later transaction is rejected
+		// with "unable to find required default_backend".
+		logger.Error(handler.ensureSSLPassthroughBackend(h))
 		logger.Error(handler.sslPassthroughRules(k, h, a))
 	} else if errFtSSL == nil {
 		logger.Error(handler.disableSSLPassthrough(h))
@@ -241,25 +250,35 @@ func (handler *HTTPS) enableSSLPassthrough(h haproxy.HAProxy) (err error) {
 	}
 	// Create backend for proxy chaining (chaining
 	// ssl-passthrough frontend to ssl-offload backend)
-	h.BackendCreatePermanently(models.BackendBase{
-		From: constants.DefaultsSectionName,
-		Name: h.BackSSL,
-		Mode: "tcp",
-	})
 	var errors utils.Errors
 
 	errors.Add(
-		h.BackendServerCreateOrUpdate(h.BackSSL, models.Server{
-			Name:         h.FrontHTTPS,
-			Address:      "unix@" + handler.unixSocketPath(h),
-			ServerParams: models.ServerParams{SendProxyV2: "enabled"},
-		}),
+		handler.ensureSSLPassthroughBackend(h),
 		h.BackendSwitchingRuleCreate(0, h.FrontSSL, models.BackendSwitchingRule{
 			Name: "%[var(txn.sni_match),field(1,.)]",
 		}),
 		handler.toggleSSLPassthrough(true, h),
 	)
 	return errors.Result()
+}
+
+// ensureSSLPassthroughBackend declares the backend chaining the ssl-passthrough
+// frontend to the ssl-offload one, and marks it permanent so that it is never
+// garbage-collected while it is referenced as the ssl frontend default_backend.
+// It is idempotent: both the backend and its server are create-or-update
+// operations, so calling it on every sync leaves an already correct
+// configuration untouched and requests no reload.
+func (handler *HTTPS) ensureSSLPassthroughBackend(h haproxy.HAProxy) error {
+	h.BackendCreatePermanently(models.BackendBase{
+		From: constants.DefaultsSectionName,
+		Name: h.BackSSL,
+		Mode: "tcp",
+	})
+	return h.BackendServerCreateOrUpdate(h.BackSSL, models.Server{
+		Name:         h.FrontHTTPS,
+		Address:      "unix@" + handler.unixSocketPath(h),
+		ServerParams: models.ServerParams{SendProxyV2: "enabled"},
+	})
 }
 
 func (handler *HTTPS) disableSSLPassthrough(h haproxy.HAProxy) (err error) {
