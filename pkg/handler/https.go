@@ -30,6 +30,7 @@ import (
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/maps"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/rules"
 	"github.com/haproxytech/kubernetes-ingress/pkg/route"
+	bindsrules "github.com/haproxytech/kubernetes-ingress/pkg/rules/binds"
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
 )
@@ -55,9 +56,9 @@ const (
 	BIND_IP_V6                      = "v6"
 )
 
-func (handler *HTTPS) bindList(h haproxy.HAProxy) (binds []models.Bind) {
+func (handler *HTTPS) bindList(h haproxy.HAProxy) (binds models.Binds) {
 	if handler.IPv4 {
-		binds = append(binds, models.Bind{
+		binds = append(binds, &models.Bind{
 			Address: handler.AddrIPv4,
 			Port:    utils.PtrInt64(handler.Port),
 			BindParams: models.BindParams{
@@ -67,7 +68,7 @@ func (handler *HTTPS) bindList(h haproxy.HAProxy) (binds []models.Bind) {
 		})
 	}
 	if handler.IPv6 {
-		binds = append(binds, models.Bind{
+		binds = append(binds, &models.Bind{
 			Address: handler.AddrIPv6,
 			Port:    utils.PtrInt64(handler.Port),
 			BindParams: models.BindParams{
@@ -80,8 +81,8 @@ func (handler *HTTPS) bindList(h haproxy.HAProxy) (binds []models.Bind) {
 	return binds
 }
 
-func (handler *HTTPS) bindListPassthrough(h haproxy.HAProxy) (binds []models.Bind) {
-	binds = append(binds, models.Bind{
+func (handler *HTTPS) bindListPassthrough(h haproxy.HAProxy) (binds models.Binds) {
+	binds = append(binds, &models.Bind{
 		Address: "unix@" + handler.unixSocketPath(h),
 		BindParams: models.BindParams{
 			Name:        BIND_UNIX_SOCKET,
@@ -239,19 +240,25 @@ func (handler *HTTPS) enableSSLPassthrough(h haproxy.HAProxy) (err error) {
 		LogFormat:      "'%ci:%cp [%t] %ft %b/%s %Tw/%Tc/%Tt %B %ts %ac/%fc/%bc/%sc/%rc %sq/%bq %hr %hs SNI: %[var(sess.sni)]'",
 		DefaultBackend: h.BackSSL,
 	}
+	var errors utils.Errors
+
 	err = h.FrontendCreate(frontend)
 	if err != nil {
 		return err
 	}
-	for _, b := range handler.bindList(h) {
-		if err = h.FrontendBindCreate(h.FrontSSL, b); err != nil {
-			return fmt.Errorf("cannot create bind for SSL Passthrough: %w", err)
-		}
+	// Declare the binds through the generic reconciliation instead of creating them
+	// blindly: this function is called from the reconciliation loop, which re-enters
+	// it on an already set up passthrough, and FrontendBindCreate() rejects a bind
+	// that is already declared. Reconciling compares against the binds in place, so
+	// an already correct bind is a no-op instead of an error, and only a real change
+	// asks for a reload. What is left is therefore a genuine failure: give up, since
+	// nothing declared after this point could be trusted and the in-memory state has
+	// no rollback.
+	if err = bindsrules.ReconcileBinds(h, h.FrontSSL, handler.bindList(h)); err != nil {
+		return fmt.Errorf("cannot reconcile binds for SSL Passthrough: %w", err)
 	}
 	// Create backend for proxy chaining (chaining
 	// ssl-passthrough frontend to ssl-offload backend)
-	var errors utils.Errors
-
 	errors.Add(
 		handler.ensureSSLPassthroughBackend(h),
 		h.BackendSwitchingRuleCreate(0, h.FrontSSL, models.BackendSwitchingRule{
@@ -298,7 +305,9 @@ func (handler *HTTPS) toggleSSLPassthrough(passthrough bool, h haproxy.HAProxy) 
 		bindListFunc = handler.bindListPassthrough
 	}
 	for _, bind := range bindListFunc(h) {
-		if err = h.FrontendBindCreate(h.FrontHTTPS, bind); err != nil {
+		// Not ReconcileBinds() here: the https frontend also carries binds this
+		// handler does not own (quic), which the reconciliation would delete.
+		if err = h.FrontendBindCreate(h.FrontHTTPS, *bind); err != nil {
 			return err
 		}
 	}
