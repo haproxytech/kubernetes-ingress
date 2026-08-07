@@ -67,8 +67,10 @@ func registerRoute(ns *store.Namespace, name, host, path string, pathType string
 	return ing
 }
 
-// syncOnce runs one reconciliation over the ingresses of the store, in name order so the
-// walk is reproducible, and returns what was logged.
+// syncOnce runs one reconciliation over the ingresses of the store, in name order so the walk
+// is reproducible, and returns what was logged. It borrows the controller's own sortedByKey:
+// name order, not the age order the reconciliation uses, since these tests are about the
+// collision report and not about the walk.
 func syncOnce(t *testing.T, c *HAProxyController) string {
 	t.Helper()
 	return capturedLogs(t, func() {
@@ -84,25 +86,6 @@ func syncOnce(t *testing.T, c *HAProxyController) string {
 		require.NoError(t, c.haproxy.APICommitTransaction())
 		c.haproxy.APIDisposeTransaction()
 	})
-}
-
-// sortedByKey walks a map of ingresses by name. Only the test needs it: the controller's own
-// walk order is not what is under test here.
-func sortedByKey(ingresses map[string]*store.Ingress) []*store.Ingress {
-	names := make([]string, 0, len(ingresses))
-	for name := range ingresses {
-		names = append(names, name)
-	}
-	for i := 1; i < len(names); i++ {
-		for j := i; j > 0 && names[j] < names[j-1]; j-- {
-			names[j], names[j-1] = names[j-1], names[j]
-		}
-	}
-	out := make([]*store.Ingress, 0, len(names))
-	for _, name := range names {
-		out = append(out, ingresses[name])
-	}
-	return out
 }
 
 // TestRouteKeyCollisionIsReported is the case found on a live cluster: two ingresses
