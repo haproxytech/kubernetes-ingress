@@ -18,6 +18,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"slices"
 	"strings"
 
 	"github.com/go-test/deep"
@@ -472,10 +473,57 @@ func (c *HAProxyController) processIngressesWithMerge() {
 	}
 }
 
+// sortedByKey returns the values of m ordered by their key, so that walking a Go map
+// — whose iteration order is randomized on every pass — becomes reproducible.
+func sortedByKey[V any](m map[string]V) []V {
+	out := make([]V, 0, len(m))
+	for _, key := range slices.Sorted(maps0.Keys(m)) {
+		out = append(out, m[key])
+	}
+	return out
+}
+
+// sortedIngresses returns the ingresses ordered by creation time, oldest first, and by
+// name for those created within the same second — Kubernetes stores creationTimestamp
+// with second granularity, so ingresses applied together commonly tie.
+//
+// Ownership of a shared backend goes to the first ingress processed, so ordering by age
+// is what makes it belong to the oldest one. Ordering by name would only protect an
+// established backend from newcomers whose name happens to sort after: one named to sort
+// before would still take it over, reconfigure it and force a reload, which is precisely
+// what ownership is meant to prevent.
+//
+// Ingresses sharing a backend are always in the same namespace, since an ingress can
+// only reference services of its own namespace and the backend name carries that
+// namespace. Ordering within a namespace is therefore enough, and the namespaces
+// themselves can keep being walked by name.
+func sortedIngresses(m map[string]*store.Ingress) []*store.Ingress {
+	out := make([]*store.Ingress, 0, len(m))
+	for _, ing := range m {
+		out = append(out, ing)
+	}
+	slices.SortFunc(out, func(a, b *store.Ingress) int {
+		if byAge := a.CreationTime.Compare(b.CreationTime); byAge != 0 {
+			return byAge
+		}
+		return strings.Compare(a.Name, b.Name)
+	})
+	return out
+}
+
 func (c *HAProxyController) processIngressesDefaultImplementation() {
-	for _, namespace := range c.store.Namespaces {
+	// Namespaces are walked by name and ingresses by age. Several
+	// decisions taken while walking depend on that order, the mode of a backend shared
+	// by two ingresses being the sharpest one: a backend name derives from
+	// (namespace, service, port name) and getBackendModel rebuilds its whole definition
+	// from the annotations of the single ingress being processed, so the last one
+	// processed wins. With map iteration order, that winner changed on every
+	// reconciliation, and with it the backend mode, balance algorithm and options.
+	// Sorting does not resolve the conflict — Ingress.claimBackendMode reports it — but
+	// it makes the outcome reproducible and diagnosable.
+	for _, namespace := range sortedByKey(c.store.Namespaces) {
 		c.store.SecretsProcessed = map[string]struct{}{}
-		for _, ingResource := range namespace.Ingresses {
+		for _, ingResource := range sortedIngresses(namespace.Ingresses) {
 			if !namespace.Relevant && !ingResource.Faked {
 				// As we watch only for white-listed namespaces, we should not worry about iterating over
 				// many ingresses in irrelevant namespaces.
