@@ -35,7 +35,7 @@ type K8s struct {
 	Namespaces        map[string]*Namespace
 	IngressClasses    map[string]*IngressClass
 	SecretsProcessed  map[string]struct{}
-	BackendsProcessed map[string]struct{}
+	BackendsProcessed map[string]BackendOwner // backend name -> ingress which built it
 	// RoutesProcessedByMapFile records, per map file, which ingress declared each of its keys
 	// during the current reconciliation. Reset at every reconciliation, like BackendsProcessed.
 	//
@@ -107,7 +107,7 @@ func NewK8sStore(args utils.OSArgs) K8s {
 			},
 		},
 		SecretsProcessed:             map[string]struct{}{},
-		BackendsProcessed:            map[string]struct{}{},
+		BackendsProcessed:            map[string]BackendOwner{},
 		RoutesProcessedByMapFile:     map[string]map[string]RouteOwner{},
 		GatewayClasses:               map[string]*GatewayClass{},
 		BackendsWithNoConfigSnippets: map[string]struct{}{},

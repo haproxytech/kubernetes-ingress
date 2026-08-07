@@ -69,12 +69,26 @@ func (i *Ingress) handlePath(k store.K8s, h haproxy.HAProxy, host string, path *
 	if err != nil {
 		return err
 	}
-	// Backend
-	err = svc.HandleBackend(k, h, a)
+	backendName, err := svc.GetBackendName()
 	if err != nil {
 		return err
 	}
-	backendName, _ := svc.GetBackendName()
+	// Backend. The first ingress to reference a backend constitutes it and owns it
+	// entirely: mode, balance, options, checks, config snippets - everything
+	// getBackendModel builds. Later ingresses referencing the same service port get their
+	// route below and share the servers, but do not rebuild the definition, which they
+	// would replace wholesale rather than merge into. Ownership by the first one rather
+	// than by the last is what keeps an established backend from being taken over, and
+	// reconfigured and reloaded, by an ingress created afterwards.
+	if owner, owned := k.BackendsProcessed[backendName]; !owned {
+		if err = svc.HandleBackend(k, h, a); err != nil {
+			return err
+		}
+		k.BackendsProcessed[backendName] = store.BackendOwner{Ingress: i.fqn(), Passthrough: i.sslPassthrough}
+		svc.HandleHAProxySrvs(k, h)
+	} else if owner.Ingress != i.fqn() && !i.servableWithBackendOwnedByOther(owner, backendName) {
+		return nil
+	}
 	// If we've got a standalone ingress, put an adhoc RuntimeBackend in HAProxyRuntimeStandalone
 	// This RuntimeBackend will be used for runtime update of server lists(enpoints) in EventEndpoints
 	if svc.IsStandalone() {
@@ -109,15 +123,40 @@ func (i *Ingress) handlePath(k store.K8s, h haproxy.HAProxy, host string, path *
 	} else {
 		err = route.AddCustomRoute(ingRoute, routeACLAnn, h)
 	}
-	if err != nil {
-		return err
-	}
-	// Endpoints
-	if _, ok := k.BackendsProcessed[backendName]; !ok {
-		svc.HandleHAProxySrvs(k, h)
-		k.BackendsProcessed[backendName] = struct{}{}
-	}
 	return err
+}
+
+// backendModeConflict is logged when an ingress cannot be served through the backend it
+// references, because another one constituted it in the other mode. Split over several
+// lines because revive caps source lines at 200 characters.
+const backendModeConflict = "backend '%s' is built from ingress '%s' with ssl-passthrough=%t, the first ingress to " +
+	"reference it, so ingress '%s' which asked for ssl-passthrough=%t is not routed to it at all: a backend has a " +
+	"single mode, and routing to one in the wrong mode would break the traffic of both ingresses. Set the " +
+	"'standalone-backend' annotation on it to give it a dedicated backend"
+
+// servableWithBackendOwnedByOther reports that the backend was constituted by another
+// ingress, and returns whether this ingress can still be served through it.
+//
+// It cannot when the two disagree on the mode. Its route must then not be created
+// either: a route to a backend in the wrong mode does not merely break this ingress, it
+// can break the owner as well. Two ingresses sharing a host is enough - the sni map
+// entry of a passthrough ingress makes the ssl frontend switch straight to the backend,
+// short-circuiting the offload path the owner relies on, so raw TLS bytes reach a
+// backend in http mode. Refusing the route keeps that host on the offload path, where it
+// works.
+//
+// A disagreement is therefore a warning. Anything else is a debug message: sharing a
+// backend is legitimate and common, the servers are the same ones since the service port
+// is the same, and only the tuning of the owner applies - which is now a deterministic
+// outcome rather than a surprise.
+func (i *Ingress) servableWithBackendOwnedByOther(owner store.BackendOwner, backendName string) bool {
+	if owner.Passthrough != i.sslPassthrough {
+		logger.Warningf(backendModeConflict, backendName, owner.Ingress, owner.Passthrough, i.fqn(), i.sslPassthrough)
+		return false
+	}
+	logger.Debugf("backend '%s' was constituted by ingress '%s', so the backend annotations of ingress '%s' are not applied",
+		backendName, owner.Ingress, i.fqn())
+	return true
 }
 
 // HandleAnnotations processes ingress annotations to create HAProxy Rules and constructs
