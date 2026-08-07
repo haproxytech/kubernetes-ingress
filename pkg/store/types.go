@@ -331,3 +331,17 @@ type ReferenceGrantTo struct {
 	Group string
 	Kind  string
 }
+
+// BackendOwner records which ingress constituted a backend during the current
+// reconciliation, and the mode it asked for.
+//
+// A backend name derives from (namespace, service, port name), not from the ingress, so
+// several ingresses referencing the same service port share one backend. Its definition
+// - mode, balance, options - is rebuilt from scratch out of the annotations of the
+// ingress being processed and replaces the previous one wholesale, so it can only ever
+// reflect one of them. The first one to reference it owns it; the others get their route
+// and share its servers.
+type BackendOwner struct {
+	Ingress     string // namespace/name of the ingress which built the backend
+	Passthrough bool   // mode it asked for
+}

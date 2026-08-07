@@ -75,7 +75,7 @@ func syncOnce(t *testing.T, c *HAProxyController) string {
 	t.Helper()
 	return capturedLogs(t, func() {
 		require.NoError(t, c.haproxy.APIStartTransaction())
-		c.store.BackendsProcessed = map[string]struct{}{}
+		c.store.BackendsProcessed = map[string]store.BackendOwner{}
 		c.store.RoutesProcessedByMapFile = map[string]map[string]store.RouteOwner{}
 		for _, namespace := range c.store.Namespaces {
 			for _, ing := range sortedByKey(namespace.Ingresses) {
@@ -216,7 +216,7 @@ func syncInOrder(t *testing.T, c *HAProxyController, ingresses ...*store.Ingress
 	t.Helper()
 	return capturedLogs(t, func() {
 		require.NoError(t, c.haproxy.APIStartTransaction())
-		c.store.BackendsProcessed = map[string]struct{}{}
+		c.store.BackendsProcessed = map[string]store.BackendOwner{}
 		c.store.RoutesProcessedByMapFile = map[string]map[string]store.RouteOwner{}
 		for _, ing := range ingresses {
 			ingress.New(ing, c.osArgs.IngressClass, c.osArgs.EmptyIngressClass, c.annotations).
