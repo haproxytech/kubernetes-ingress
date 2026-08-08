@@ -266,7 +266,10 @@ func declareRules(list rules.List, h haproxy.HAProxy, ingressRule bool) {
 			}
 		case rules.REQ_DENY, rules.REQ_CAPTURE:
 			if haproxy.SSLPassthrough {
-				frontends = []string{h.FrontHTTP, h.FrontSSL}
+				// FrontHTTPS also terminates the TLS traffic of an ingress that does
+				// not use ssl-passthrough. FrontSSL sends this traffic to FrontHTTPS
+				// with its default backend. So FrontHTTPS must also get the rule.
+				frontends = []string{h.FrontHTTP, h.FrontSSL, h.FrontHTTPS}
 			}
 		}
 		for _, frontend := range frontends {
