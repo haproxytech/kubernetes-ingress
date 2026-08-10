@@ -251,6 +251,30 @@ func Timeout(name string, annotations ...map[string]string) (out *int64, err err
 	return out, err
 }
 
+// BackendNames returns the names of every annotation which configures a backend, in
+// registry order so that a message listing them reads the same from one sync to the next.
+//
+// Two of them are not in the Backend() registry and are appended here: the backend config
+// snippet, applied directly by service.HandleBackend, and cr-backend, read by
+// getBackendModel. Both configure a backend and would otherwise be missed.
+//
+// The model declares http mode because Backend() only returns check-http and forwarded-for
+// for a backend already in that mode, and this is about the set of names, not about what
+// applies to a given backend. Only GetName() is called on the results, so the zero store
+// and the nil certificates are never dereferenced.
+//
+// cookie-persistence is deliberately absent, as it is in the registry: it is resolved from
+// the annotations of the service only, so an ingress cannot lose it to another one.
+func BackendNames() []string {
+	model := models.Backend{BackendBase: models.BackendBase{Mode: "http"}}
+	registered := annImpl{}.Backend(&model, store.K8s{}, nil)
+	names := make([]string, 0, len(registered)+2)
+	for _, a := range registered {
+		names = append(names, a.GetName())
+	}
+	return append(names, "backend-config-snippet", "cr-backend")
+}
+
 // SpecificAnnotations is a set of annotations that uses rules to produce specific configuration with rule ID in configuration file.
 // These annotations in an ingress can't be merged with other ingresses annotations when these ingresses point to the same service because specific paths must be treated specifically.
 var SpecificAnnotations = map[string]struct{}{
