@@ -15,6 +15,8 @@
 package ingress
 
 import (
+	"strings"
+
 	"github.com/haproxytech/kubernetes-ingress/pkg/annotations"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/certs"
@@ -134,6 +136,13 @@ const backendModeConflict = "backend '%s' is built from ingress '%s' with ssl-pa
 	"single mode, and routing to one in the wrong mode would break the traffic of both ingresses. Set the " +
 	"'standalone-backend' annotation on it to give it a dedicated backend"
 
+// backendAnnotationsDropped is logged when an ingress agrees with the owner on the mode,
+// so it is served, but carries backend annotations of its own which the owner's definition
+// leaves unapplied. Naming them is the point: the effect is otherwise invisible.
+const backendAnnotationsDropped = "backend '%s' was constituted by ingress '%s', so the backend annotations declared " +
+	"by ingress '%s' are not applied: %s. Move them to the service, which both ingresses share and which takes " +
+	"precedence over an ingress, or set the 'standalone-backend' annotation to get a dedicated backend"
+
 // servableWithBackendOwnedByOther reports that the backend was constituted by another
 // ingress, and returns whether this ingress can still be served through it.
 //
@@ -154,9 +163,29 @@ func (i *Ingress) servableWithBackendOwnedByOther(owner store.BackendOwner, back
 		logger.Warningf(backendModeConflict, backendName, owner.Ingress, owner.Passthrough, i.fqn(), i.sslPassthrough)
 		return false
 	}
-	logger.Debugf("backend '%s' was constituted by ingress '%s', so the backend annotations of ingress '%s' are not applied",
+	if dropped := i.declaredBackendAnnotations(); len(dropped) > 0 {
+		logger.Warningf(backendAnnotationsDropped, backendName, owner.Ingress, i.fqn(), strings.Join(dropped, ", "))
+		return true
+	}
+	logger.Debugf("backend '%s' was constituted by ingress '%s'; ingress '%s' declares no backend annotation of its own",
 		backendName, owner.Ingress, i.fqn())
 	return true
+}
+
+// declaredBackendAnnotations returns the backend annotations this ingress carries itself,
+// in registry order, or nothing when it carries none.
+//
+// Only the annotations of the ingress are looked at. Those of the service are shared with
+// every ingress referencing it and take precedence over the ingress ones in service.New,
+// so they are never what an ingress loses to the owner of a backend.
+func (i *Ingress) declaredBackendAnnotations() []string {
+	declared := make([]string, 0, 2)
+	for _, name := range annotations.BackendNames() {
+		if _, ok := i.resource.Annotations[name]; ok {
+			declared = append(declared, name)
+		}
+	}
+	return declared
 }
 
 // HandleAnnotations processes ingress annotations to create HAProxy Rules and constructs
