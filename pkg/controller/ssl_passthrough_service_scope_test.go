@@ -175,3 +175,42 @@ func TestOneIngressCanMixBothModes(t *testing.T) {
 	require.Contains(t, mapFileContent(t, c, "path-prefix"), "clear.local/	",
 		"the cleartext path must keep its layer 7 route")
 }
+
+// TestDefaultBackendIsNeverServedInPassthrough answers a question the per-path resolution
+// raises: Kubernetes lets an ingress declare a spec.defaultBackend instead of rules, and
+// that default backend does point at a service, which may carry the annotation. It must
+// still not be served in passthrough, nor turn the layer 4 topology on.
+//
+// SetDefaultBackend takes the mode from the frontend it attaches the backend to, so the
+// backend is in http mode whatever its service asks for - and that is a guard: a static
+// default_backend from an http frontend to a tcp backend is refused by haproxy at parse
+// time. Nothing better is available either, passthrough routing being keyed on sni.map,
+// which holds host entries only, while a default backend is what serves the requests no
+// host matched.
+func TestDefaultBackendIsNeverServedInPassthrough(t *testing.T) {
+	c := buildGlobalTestController(t)
+	setupFrontends(t, c)
+	ns := c.store.GetNamespace("ns")
+	passthroughService(t, c, ns, "tls-svc", map[string]string{"ssl-passthrough": "true"})
+	ing := registerDefaultBackendIngress(c.store, ns, "ing", "tls-svc")
+	t.Cleanup(func() { haproxy.SSLPassthrough = false })
+
+	c.processSSLPassthroughInConfigFile()
+	require.False(t, haproxy.SSLPassthrough,
+		"the service of a default backend must not turn the layer 4 topology on, no sni entry can route to it")
+
+	require.NoError(t, c.haproxy.APIStartTransaction())
+	c.store.BackendsProcessed = map[string]store.BackendOwner{}
+	c.defaultBackend = nil
+	c.considerDefaultBackend(ing)
+	c.setIngressDefaultBackend()
+	require.NoError(t, c.haproxy.APICommitTransaction())
+	c.haproxy.APIDisposeTransaction()
+
+	require.Equal(t, "http", backendMode(t, c, "tls-svc"),
+		"a default backend takes the mode of the frontends it is attached to")
+	frontend, err := c.haproxy.FrontendGet(c.haproxy.FrontHTTP)
+	require.NoError(t, err)
+	require.Equal(t, "ns_svc_tls-svc_http", frontend.DefaultBackend,
+		"and it must still be applied: the annotation is ignored, not the default backend")
+}
