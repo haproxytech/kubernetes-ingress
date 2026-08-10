@@ -576,9 +576,17 @@ func (c *HAProxyController) processSSLPassthroughInConfigFile() {
 // passthrough mode.
 //
 // The annotation being resolved against the service a path points at, the question is
-// asked per path. An ingress declaring no rule has no path to ask about, and no service
-// either, so it is resolved from its own annotations and from the configmap - which keeps
-// it able to turn the topology on, as it was before the service scope existed.
+// asked per path. An ingress declaring no rule has no path to ask about, so it is resolved
+// from its own annotations and from the configmap - which keeps it able to turn the
+// topology on, as it was before the service scope existed.
+//
+// A spec.defaultBackend is deliberately not consulted, although it does carry a service.
+// Kubernetes allows it in place of the rules, so a rule-less ingress may well have one, but
+// a default backend cannot be served in passthrough: it takes the mode of the frontends it
+// is attached to, and passthrough routing is keyed on sni.map, which only carries host
+// entries, while a default backend is what serves the requests no host matched. Consulting
+// it would move the https bind of the whole controller for a backend no passthrough route
+// can reach. reportPassthroughOnDefaultBackend warns about the annotation instead.
 func (c *HAProxyController) sslPassthroughRequested(ingResource *store.Ingress) bool {
 	report := func(err error) {
 		logger.Errorf("Ingress '%s/%s': SSL Passthrough parsing: %s", ingResource.Namespace, ingResource.Name, err)
