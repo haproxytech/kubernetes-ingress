@@ -385,10 +385,22 @@ func (c *HAProxyController) manageIngress(ing *store.Ingress) {
 
 //revive:disable-next-line:cognitive-complexity
 func (c *HAProxyController) processIngressesWithMerge() {
-	for _, namespace := range c.store.Namespaces {
+	// Namespaces and services are walked by name for the same reason as in
+	// processIngressesDefaultImplementation: rules are created in processing order and
+	// RefreshRules replays them in that order, so a random walk produced a different
+	// configuration text on every pass, hence a commit and a reload with nothing having
+	// changed.
+	//
+	// The ingresses of a service need no sorting here: IngressesByService is an ordered
+	// set, oldest first with the namespace and name settling equal creation times
+	// (pkg/store/events.go), which is the order backend ownership needs. That same order
+	// decides which annotation value wins the merge below, the first one found being kept,
+	// so the established ingress has precedence there too. The two go together: reversing
+	// the set without reversing the merge would give precedence to the newest ingress.
+	for _, namespace := range sortedByKey(c.store.Namespaces) {
 		c.store.SecretsProcessed = map[string]struct{}{}
 		// Iterate over services
-		for _, service := range namespace.Services {
+		for _, service := range sortedByKey(namespace.Services) {
 			ingressesOrderedList := c.store.IngressesByService[service.Namespace+"/"+service.Name]
 			if ingressesOrderedList == nil {
 				continue
@@ -418,12 +430,16 @@ func (c *HAProxyController) processIngressesWithMerge() {
 			annotationsFromAllIngresses := map[string]string{}
 
 			for _, ingressToMerge := range ingressesToMerge {
-				// Gather all annotations from all ingresses referring to the service in a consistent order based on ingress name.
+				// Gather all annotations from all ingresses referring to the service. The list
+				// is ordered oldest first and the first value found is the one kept, so the
+				// established ingress has precedence - the same rule as backend ownership.
 				for ann, value := range ingressToMerge.Annotations {
 					if _, specific := annotations.SpecificAnnotations[ann]; specific {
 						continue
 					}
-					annotationsFromAllIngresses[ann] = value
+					if _, alreadySet := annotationsFromAllIngresses[ann]; !alreadySet {
+						annotationsFromAllIngresses[ann] = value
+					}
 				}
 			}
 
