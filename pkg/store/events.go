@@ -104,12 +104,16 @@ func (k *K8s) EventIngress(ns *Namespace, data *Ingress, uid types.UID, resource
 				if ingresses == nil {
 					ingresses = utils.NewOrderedSet[string, *Ingress](func(i *Ingress) string { return i.Name },
 						func(a, b *Ingress) bool {
+							// Oldest first: the first ingress processed constitutes a shared backend and
+							// owns its definition, so the established one has to come first, and it also
+							// keeps precedence when the annotations of all the ingresses of a service are
+							// merged.
 							// We need to consider the case where two ingresses are created in the same second.
 							// Otherwise there could be any order in two instances;
 							if a.CreationTime.Equal(b.CreationTime) {
 								return a.Namespace+a.Name < b.Namespace+b.Name
 							}
-							return a.CreationTime.After(b.CreationTime)
+							return a.CreationTime.Before(b.CreationTime)
 						})
 					k.IngressesByService[key] = ingresses
 				}
