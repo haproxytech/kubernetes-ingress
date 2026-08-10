@@ -34,7 +34,6 @@ type Ingress struct {
 	controllerClass string
 	ruleIDs         []rules.RuleID
 	allowEmptyClass bool
-	sslPassthrough  bool
 }
 
 // New returns an Ingress instance to handle the k8s ingress resource given in params.
@@ -71,7 +70,14 @@ func (i Ingress) Supported(k8s store.K8s, a annotations.Annotations) (supported 
 // error: a path whose backend was constituted by another ingress in the other mode is
 // deliberately left unrouted.
 func (i *Ingress) handlePath(k store.K8s, h haproxy.HAProxy, host string, path *store.IngressPath, a annotations.Annotations) (routed bool, err error) {
-	svc, err := service.New(k, path, h.Certificates, i.sslPassthrough, i.resource, i.resource.Annotations, k.ConfigMaps.Main.Annotations)
+	// Resolved here rather than once for the whole ingress: the annotation describes the
+	// service behind the path, so each path gets the mode of its own service.
+	sslPassthrough, err := SSLPassthroughEnabled(k, path, i.resource.Annotations)
+	if err != nil {
+		logger.Errorf("Ingress '%s/%s': SSL Passthrough parsing for service '%s/%s': %s",
+			i.resource.Namespace, i.resource.Name, path.SvcNamespace, path.SvcName, err)
+	}
+	svc, err := service.New(k, path, h.Certificates, sslPassthrough, i.resource, i.resource.Annotations, k.ConfigMaps.Main.Annotations)
 	if err != nil {
 		return false, err
 	}
@@ -90,9 +96,9 @@ func (i *Ingress) handlePath(k store.K8s, h haproxy.HAProxy, host string, path *
 		if err = svc.HandleBackend(k, h, a); err != nil {
 			return false, err
 		}
-		k.BackendsProcessed[backendName] = store.BackendOwner{Ingress: i.fqn(), Passthrough: i.sslPassthrough}
+		k.BackendsProcessed[backendName] = store.BackendOwner{Ingress: i.fqn(), Passthrough: sslPassthrough}
 		svc.HandleHAProxySrvs(k, h)
-	} else if owner.Ingress != i.fqn() && !i.servableWithBackendOwnedByOther(owner, backendName) {
+	} else if owner.Ingress != i.fqn() && !i.servableWithBackendOwnedByOther(owner, backendName, sslPassthrough) {
 		return false, nil
 	}
 	// If we've got a standalone ingress, put an adhoc RuntimeBackend in HAProxyRuntimeStandalone
@@ -119,7 +125,7 @@ func (i *Ingress) handlePath(k store.K8s, h haproxy.HAProxy, host string, path *
 		Path:           path,
 		HAProxyRules:   i.ruleIDs,
 		BackendName:    backendName,
-		SSLPassthrough: i.sslPassthrough,
+		SSLPassthrough: sslPassthrough,
 	}
 
 	routeACLAnn := a.String("route-acl", svc.GetResource().Annotations)
@@ -162,9 +168,12 @@ const backendAnnotationsDropped = "backend '%s' was constituted by ingress '%s',
 // backend is legitimate and common, the servers are the same ones since the service port
 // is the same, and only the tuning of the owner applies - which is now a deterministic
 // outcome rather than a surprise.
-func (i *Ingress) servableWithBackendOwnedByOther(owner store.BackendOwner, backendName string) bool {
-	if owner.Passthrough != i.sslPassthrough {
-		logger.Warningf(backendModeConflict, backendName, owner.Ingress, owner.Passthrough, i.fqn(), i.sslPassthrough)
+// The mode is the one resolved for the path being handled, not a property of the ingress:
+// since ssl-passthrough is resolved per path against its own service, one ingress can ask for
+// both modes on two different services.
+func (i *Ingress) servableWithBackendOwnedByOther(owner store.BackendOwner, backendName string, sslPassthrough bool) bool {
+	if owner.Passthrough != sslPassthrough {
+		logger.Warningf(backendModeConflict, backendName, owner.Ingress, owner.Passthrough, i.fqn(), sslPassthrough)
 		return false
 	}
 	if dropped := i.declaredBackendAnnotations(); len(dropped) > 0 {
@@ -295,12 +304,6 @@ func (i *Ingress) Update(k store.K8s, h haproxy.HAProxy, a annotations.Annotatio
 		return
 	}
 	logger.Tracef("Ingress '%s/%s': processing annotations...", i.resource.Namespace, i.resource.Name)
-	enabled, err := annotations.Bool("ssl-passthrough", i.resource.Annotations, k.ConfigMaps.Main.Annotations)
-	if err != nil {
-		logger.Errorf("Ingress '%s/%s': SSL Passthrough parsing: %s", i.resource.Namespace, i.resource.Name, err)
-	} else if enabled {
-		i.sslPassthrough = true
-	}
 	frontendRules := i.resolveFrontendRules(k, h)
 	// Ingress rules
 	logger.Tracef("ingress '%s/%s': processing rules...", i.resource.Namespace, i.resource.Name)

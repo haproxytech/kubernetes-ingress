@@ -833,6 +833,10 @@ http-server-close: "true"
 
   :information_source: HTTPS frontend is conserved and still listening at port 8444 when previous HTTPS port is moved to SSL Frontend.
 
+  :information_source: This annotation is resolved per ingress path, against the service the path points at, then the ingress carrying it, then the configmap default. The service value takes precedence over the ingress one, so a single ingress can route one path to a service which terminates TLS itself and another to a service which does not.
+
+  :information_source: Prefer setting it on the service, as it describes the service rather than the route reaching it. A HAProxy backend is shared by every ingress referencing the same service port and has a single mode, so ingresses disagreeing on this annotation cannot all be served; setting it on the service makes them agree.
+
 Possible values:
 
 - true

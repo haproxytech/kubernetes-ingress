@@ -551,6 +551,10 @@ func (c *HAProxyController) processIngressesDefaultImplementation() {
 	}
 }
 
+// processSSLPassthroughInConfigFile turns the ssl-passthrough topology on as soon as a
+// single ingress needs it: the tcp ssl frontend is created and the https bind moves behind
+// it. That decision has to be taken before the ingresses are processed, since the frontend
+// a route is attached to depends on it, hence this separate pass.
 func (c *HAProxyController) processSSLPassthroughInConfigFile() {
 	for _, namespace := range c.store.Namespaces {
 		for _, ingResource := range namespace.Ingresses {
@@ -560,13 +564,41 @@ func (c *HAProxyController) processSSLPassthroughInConfigFile() {
 				// There should only be fake ingresses in irrelevant namespaces so loop should be whithin small amount of ingresses (Prometheus)
 				continue
 			}
-			enabled, err := annotations.Bool("ssl-passthrough", ingResource.Annotations, c.store.ConfigMaps.Main.Annotations)
-			if err != nil {
-				logger.Errorf("Ingress '%s/%s': SSL Passthrough parsing: %s", ingResource.Namespace, ingResource.Name, err)
-			} else if enabled {
+			if c.sslPassthroughRequested(ingResource) {
 				haproxy.SSLPassthrough = true
 				return
 			}
 		}
 	}
+}
+
+// sslPassthroughRequested reports whether any traffic of this ingress is to be served in
+// passthrough mode.
+//
+// The annotation being resolved against the service a path points at, the question is
+// asked per path. An ingress declaring no rule has no path to ask about, and no service
+// either, so it is resolved from its own annotations and from the configmap - which keeps
+// it able to turn the topology on, as it was before the service scope existed.
+func (c *HAProxyController) sslPassthroughRequested(ingResource *store.Ingress) bool {
+	report := func(err error) {
+		logger.Errorf("Ingress '%s/%s': SSL Passthrough parsing: %s", ingResource.Namespace, ingResource.Name, err)
+	}
+	if len(ingResource.Rules) == 0 {
+		enabled, err := annotations.Bool("ssl-passthrough", ingResource.Annotations, c.store.ConfigMaps.Main.Annotations)
+		if err != nil {
+			report(err)
+		}
+		return enabled
+	}
+	for _, rule := range ingResource.Rules {
+		for _, path := range rule.Paths {
+			enabled, err := ingress.SSLPassthroughEnabled(c.store, path, ingResource.Annotations)
+			if err != nil {
+				report(err)
+			} else if enabled {
+				return true
+			}
+		}
+	}
+	return false
 }
