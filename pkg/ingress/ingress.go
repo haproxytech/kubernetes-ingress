@@ -66,14 +66,18 @@ func (i Ingress) Supported(k8s store.K8s, a annotations.Annotations) (supported 
 	return supported
 }
 
-func (i *Ingress) handlePath(k store.K8s, h haproxy.HAProxy, host string, path *store.IngressPath, a annotations.Annotations) (err error) {
+// handlePath configures the backend, the servers and the route of one ingress path, and
+// reports whether a route was created for it - which is not the same as the absence of an
+// error: a path whose backend was constituted by another ingress in the other mode is
+// deliberately left unrouted.
+func (i *Ingress) handlePath(k store.K8s, h haproxy.HAProxy, host string, path *store.IngressPath, a annotations.Annotations) (routed bool, err error) {
 	svc, err := service.New(k, path, h.Certificates, i.sslPassthrough, i.resource, i.resource.Annotations, k.ConfigMaps.Main.Annotations)
 	if err != nil {
-		return err
+		return false, err
 	}
 	backendName, err := svc.GetBackendName()
 	if err != nil {
-		return err
+		return false, err
 	}
 	// Backend. The first ingress to reference a backend constitutes it and owns it
 	// entirely: mode, balance, options, checks, config snippets - everything
@@ -84,12 +88,12 @@ func (i *Ingress) handlePath(k store.K8s, h haproxy.HAProxy, host string, path *
 	// reconfigured and reloaded, by an ingress created afterwards.
 	if owner, owned := k.BackendsProcessed[backendName]; !owned {
 		if err = svc.HandleBackend(k, h, a); err != nil {
-			return err
+			return false, err
 		}
 		k.BackendsProcessed[backendName] = store.BackendOwner{Ingress: i.fqn(), Passthrough: i.sslPassthrough}
 		svc.HandleHAProxySrvs(k, h)
 	} else if owner.Ingress != i.fqn() && !i.servableWithBackendOwnedByOther(owner, backendName) {
-		return nil
+		return false, nil
 	}
 	// If we've got a standalone ingress, put an adhoc RuntimeBackend in HAProxyRuntimeStandalone
 	// This RuntimeBackend will be used for runtime update of server lists(enpoints) in EventEndpoints
@@ -125,7 +129,7 @@ func (i *Ingress) handlePath(k store.K8s, h haproxy.HAProxy, host string, path *
 	} else {
 		err = route.AddCustomRoute(ingRoute, routeACLAnn, h)
 	}
-	return err
+	return err == nil, err
 }
 
 // backendModeConflict is logged when an ingress cannot be served through the backend it
@@ -188,20 +192,24 @@ func (i *Ingress) declaredBackendAnnotations() []string {
 	return declared
 }
 
-// HandleAnnotations processes ingress annotations to create HAProxy Rules and constructs
-// corresponding list of RuleIDs.
-// If Ingress Annotations are at the ConfigMap scope, HAProxy Rules will be applied globally
-// without the need to map Rule IDs to specific ingress traffic.
-func (i *Ingress) handleAnnotations(k store.K8s, h haproxy.HAProxy) {
-	var err error
+// resolveFrontendRules processes the frontend annotations of the ingress and returns the
+// rules they ask for, recording their ids so the routes can carry them.
+//
+// The rules are returned undeclared on purpose. An ingress-scoped rule only applies to the
+// traffic whose route carries its id in the map value it resolves to, so declaring a rule
+// for an ingress which ends up with no route at all puts a condition in the configuration
+// that no map value can ever satisfy. rules.GetID being a pure hash of the rule content,
+// the ids are known before the declaration, which is what lets Update wait until a route
+// exists.
+func (i *Ingress) resolveFrontendRules(k store.K8s, h haproxy.HAProxy) rules.List {
 	result := rules.List{}
 	for _, a := range i.annotations.Frontend(i.resource, &result, h.Maps) {
-		err = a.Process(k, i.resource.Annotations, k.ConfigMaps.Main.Annotations)
-		if err != nil {
+		if err := a.Process(k, i.resource.Annotations, k.ConfigMaps.Main.Annotations); err != nil {
 			logger.Errorf("Ingress '%s/%s': annotation %s: %s", i.resource.Namespace, i.resource.Name, a.GetName(), err)
 		}
 	}
-	i.ruleIDs = addRules(result, h, true)
+	i.ruleIDs = ruleIDs(result)
+	return result
 }
 
 func HandleCfgMapAnnotations(k store.K8s, h haproxy.HAProxy, a annotations.Annotations) {
@@ -214,13 +222,27 @@ func HandleCfgMapAnnotations(k store.K8s, h haproxy.HAProxy, a annotations.Annot
 			logger.Errorf("ConfigMap: annotation %s: %s", a.GetName(), err)
 		}
 	}
-	addRules(result, h, false)
+	declareRules(result, h, false)
 }
 
-func addRules(list rules.List, h haproxy.HAProxy, ingressRule bool) []rules.RuleID {
-	ruleIDs := make([]rules.RuleID, 0, len(list))
-	// To avoid inserting twice the same rule id in destinating map file
-	ruleIDSet := map[rules.RuleID]struct{}{}
+// ruleIDs returns the ids of the rules of list, in order and without duplicates: the same
+// rule is attached to several frontends, and its id must appear once in a map value.
+func ruleIDs(list rules.List) []rules.RuleID {
+	ids := make([]rules.RuleID, 0, len(list))
+	seen := map[rules.RuleID]struct{}{}
+	for _, rule := range list {
+		id := rules.GetID(rule)
+		if _, ok := seen[id]; ok {
+			continue
+		}
+		seen[id] = struct{}{}
+		ids = append(ids, id)
+	}
+	return ids
+}
+
+// declareRules attaches each rule to the frontends which have to carry it.
+func declareRules(list rules.List, h haproxy.HAProxy, ingressRule bool) {
 	defaultFrontends := []string{h.FrontHTTP, h.FrontHTTPS}
 	for _, rule := range list {
 		frontends := defaultFrontends
@@ -240,14 +262,8 @@ func addRules(list rules.List, h haproxy.HAProxy, ingressRule bool) []rules.Rule
 		}
 		for _, frontend := range frontends {
 			logger.Error(h.AddRule(frontend, rule, ingressRule || rule.GetType() == rules.REQ_REDIRECT))
-			idRule := rules.GetID(rule)
-			if _, ok := ruleIDSet[idRule]; !ok {
-				ruleIDs = append(ruleIDs, idRule)
-				ruleIDSet[idRule] = struct{}{}
-			}
 		}
 	}
-	return ruleIDs
 }
 
 // Update processes a Kubernetes ingress resource and configures HAProxy accordingly
@@ -285,15 +301,30 @@ func (i *Ingress) Update(k store.K8s, h haproxy.HAProxy, a annotations.Annotatio
 	} else if enabled {
 		i.sslPassthrough = true
 	}
-	i.handleAnnotations(k, h)
+	frontendRules := i.resolveFrontendRules(k, h)
 	// Ingress rules
 	logger.Tracef("ingress '%s/%s': processing rules...", i.resource.Namespace, i.resource.Name)
+	routed := false
 	for _, rule := range i.resource.Rules {
 		for _, path := range rule.Paths {
-			if err := i.handlePath(k, h, rule.Host, path, a); err != nil {
+			pathRouted, err := i.handlePath(k, h, rule.Host, path, a)
+			if err != nil {
 				logger.Errorf("Ingress '%s/%s': %s", i.resource.Namespace, i.resource.Name, err)
 			}
+			routed = routed || pathRouted
 		}
+	}
+	// The frontend rules are declared last, and only once a route carries their ids. An
+	// ingress-scoped rule tests its own id against the map value the request resolves to,
+	// so an ingress left with no route at all would otherwise put rules in the generated
+	// configuration that no map value can satisfy: they can never match, yet they read as
+	// configured. Declaring them here rather than before the paths does not change their
+	// order in a frontend, which stays the order the ingresses are walked in.
+	if routed {
+		declareRules(frontendRules, h, true)
+	} else if len(frontendRules) > 0 {
+		logger.Debugf("Ingress '%s/%s': no route was created, so its %d frontend rule(s) are not declared",
+			i.resource.Namespace, i.resource.Name, len(frontendRules))
 	}
 }
 
