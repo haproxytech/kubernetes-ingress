@@ -53,10 +53,28 @@ type Route struct {
 	SSLPassthrough bool
 }
 
-// AddHostPathRoute adds Host/Path ingress route to haproxy Map files used for backend switching.
-func AddHostPathRoute(route Route, mapFiles maps.Maps) error {
+// Row is one line of a map file: the map it belongs to, the key haproxy looks up and the
+// value it resolves to.
+type Row struct {
+	Map   maps.Name
+	Key   string
+	Value string
+}
+
+// Line returns the row as written in the map file.
+func (r Row) Line() string {
+	return r.Key + "\t\t\t" + r.Value
+}
+
+// MapRows returns the map rows a route is made of.
+//
+// It is the single description of what routing a path means in terms of map files, so that
+// anything needing to reason about a route before it is written - a collision on a key, for
+// instance - reasons about the rows haproxy will actually look up rather than about a
+// reconstruction of them.
+func MapRows(route Route) ([]Row, error) {
 	if route.BackendName == "" {
-		return errors.New("backendName missing")
+		return nil, errors.New("backendName missing")
 	}
 	// Wildcard host
 	if route.Host != "" && route.Host[0] == '*' {
@@ -66,36 +84,51 @@ func AddHostPathRoute(route Route, mapFiles maps.Maps) error {
 	for _, id := range route.HAProxyRules {
 		value += "." + string(id)
 	}
+	rows := make([]Row, 0, 3)
 	// SSLPassthrough
 	if route.SSLPassthrough {
 		if route.Host == "" {
-			return fmt.Errorf("empty SNI for backend %s,", route.BackendName)
+			return nil, fmt.Errorf("empty SNI for backend %s,", route.BackendName)
 		}
-		mapFiles.MapAppend(SNI, route.Host+"\t\t\t"+value)
+		rows = append(rows, Row{Map: SNI, Key: route.Host, Value: value})
 	}
 	// HTTP
 	if route.Host != "" {
-		mapFiles.MapAppend(HOST, route.Host+"\t\t\t"+route.Host)
+		rows = append(rows, Row{Map: HOST, Key: route.Host, Value: route.Host})
 	} else if route.Path.Path == "" {
-		return fmt.Errorf("neither Host nor Path are provided for backend %v,", route.BackendName)
+		return nil, fmt.Errorf("neither Host nor Path are provided for backend %v,", route.BackendName)
 	}
 
 	path := route.Path.Path
 	switch {
 	case route.Path.PathTypeMatch == store.PATH_TYPE_EXACT:
-		mapFiles.MapAppend(PATH_EXACT, route.Host+path+"\t\t\t"+value)
+		rows = append(rows, Row{Map: PATH_EXACT, Key: route.Host + path, Value: value})
 	case path == "" || path == "/":
-		mapFiles.MapAppend(PATH_PREFIX, route.Host+"/"+"\t\t\t"+value)
+		rows = append(rows, Row{Map: PATH_PREFIX, Key: route.Host + "/", Value: value})
 	case route.Path.PathTypeMatch == store.PATH_TYPE_PREFIX:
 		path = strings.TrimSuffix(path, "/")
-		mapFiles.MapAppend(PATH_PREFIX_EXACT, route.Host+path+"\t\t\t"+value)
-		mapFiles.MapAppend(PATH_PREFIX, route.Host+path+"/"+"\t\t\t"+value)
+		rows = append(rows,
+			Row{Map: PATH_PREFIX_EXACT, Key: route.Host + path, Value: value},
+			Row{Map: PATH_PREFIX, Key: route.Host + path + "/", Value: value})
 	case route.Path.PathTypeMatch == store.PATH_TYPE_IMPLEMENTATION_SPECIFIC:
 		path = strings.TrimSuffix(path, "/")
-		mapFiles.MapAppend(PATH_PREFIX_EXACT, route.Host+path+"\t\t\t"+value)
-		mapFiles.MapAppend(PATH_PREFIX, route.Host+path+"\t\t\t"+value)
+		rows = append(rows,
+			Row{Map: PATH_PREFIX_EXACT, Key: route.Host + path, Value: value},
+			Row{Map: PATH_PREFIX, Key: route.Host + path, Value: value})
 	default:
-		return fmt.Errorf("unknown path type '%s' with backend '%s'", route.Path.PathTypeMatch, route.BackendName)
+		return nil, fmt.Errorf("unknown path type '%s' with backend '%s'", route.Path.PathTypeMatch, route.BackendName)
+	}
+	return rows, nil
+}
+
+// AddHostPathRoute adds Host/Path ingress route to haproxy Map files used for backend switching.
+func AddHostPathRoute(route Route, mapFiles maps.Maps) error {
+	rows, err := MapRows(route)
+	if err != nil {
+		return err
+	}
+	for _, row := range rows {
+		mapFiles.MapAppend(row.Map, row.Line())
 	}
 	return nil
 }
