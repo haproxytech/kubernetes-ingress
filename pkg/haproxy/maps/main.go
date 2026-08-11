@@ -19,7 +19,7 @@ import (
 	"hash/fnv"
 	"os"
 	"path"
-	"sort"
+	"slices"
 	"strings"
 	"sync"
 
@@ -60,11 +60,23 @@ type mapFile struct {
 	// because it is always referenced in a haproxy rule.
 }
 
+// Compare orders two rows of a map file, and is therefore the order in which haproxy matches
+// them: the file is written sorted, and haproxy answers with the first row whose key matches,
+// so among rows sharing a key the one Compare puts first is the one that answers.
+//
+// Exported because that makes it the single rule: anything reasoning about which of two rows
+// wins - a report on a duplicated key, for instance - has to use this and not reimplement it,
+// or the two would drift and the reasoning would silently describe an order the file does not
+// have.
+func Compare(a, b string) int {
+	return strings.Compare(a, b)
+}
+
 // getContent returns the content of a haproxy map file in a list of chunks
 // where each chunk is <= bufsie. It also returns a hash of the map content
 func (mf *mapFile) getContent() (result []string, hash uint64) {
 	var chunk strings.Builder
-	sort.Strings(mf.rows)
+	slices.SortFunc(mf.rows, Compare)
 	h := fnv.New64a()
 	for _, r := range mf.rows {
 		if chunk.Len()+len(r) >= api.BufferSize {
