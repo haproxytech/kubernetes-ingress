@@ -79,6 +79,16 @@ type Service struct {
 	Faked       bool
 }
 
+// RouteOwner records which ingress declared a routing map key during the current
+// reconciliation, and the value it wrote there. Two ingresses declaring the same key is not
+// a shared resource but a collision: a key has a single answer, and haproxy keeps the first
+// matching row of the map file, so the second value is unreachable. Keeping the value is what
+// lets the report say which of the two is in effect.
+type RouteOwner struct {
+	Ingress string
+	Value   string
+}
+
 // RuntimeEndpoint describes a single endpoint of a HAProxy backend
 type RuntimeEndpoint struct {
 	Address string
