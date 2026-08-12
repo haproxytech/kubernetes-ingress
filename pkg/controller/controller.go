@@ -195,6 +195,7 @@ func (c *HAProxyController) updateHAProxy() {
 			// We need to replay all these resources.
 			c.store.SecretsProcessed = map[string]struct{}{}
 			c.store.BackendsProcessed = map[string]struct{}{}
+			c.store.RoutesProcessedByMapFile = map[string]map[string]store.RouteOwner{}
 			c.updateHAProxy()
 			return
 		}
@@ -227,6 +228,7 @@ func (c *HAProxyController) updateHAProxy() {
 				// We need to replay all these resources.
 				c.store.SecretsProcessed = map[string]struct{}{}
 				c.store.BackendsProcessed = map[string]struct{}{}
+				c.store.RoutesProcessedByMapFile = map[string]map[string]store.RouteOwner{}
 				c.updateHAProxy()
 				return
 			}
@@ -355,6 +357,7 @@ func (c *HAProxyController) clean(failedSync bool) {
 	c.haproxy.Clean()
 	// Need to do that even if transaction failed otherwise at fix time, they won't be reprocessed.
 	c.store.BackendsProcessed = map[string]struct{}{}
+	c.store.RoutesProcessedByMapFile = map[string]map[string]store.RouteOwner{}
 	logger.Error(c.setupHAProxyRules())
 	if !failedSync {
 		c.store.Clean()

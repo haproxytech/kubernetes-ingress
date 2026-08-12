@@ -104,6 +104,7 @@ func (i *Ingress) handlePath(k store.K8s, h haproxy.HAProxy, host string, path *
 
 	routeACLAnn := a.String("route-acl", svc.GetResource().Annotations)
 	if routeACLAnn == "" {
+		i.reportRouteKeyCollisions(k, ingRoute)
 		err = route.AddHostPathRoute(ingRoute, h.Maps)
 	} else {
 		err = route.AddCustomRoute(ingRoute, routeACLAnn, h)

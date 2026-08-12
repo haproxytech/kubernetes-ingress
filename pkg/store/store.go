@@ -30,12 +30,37 @@ const (
 )
 
 type K8s struct {
-	ConfigMaps                   ConfigMaps
-	NamespacesAccess             NamespacesWatch
-	Namespaces                   map[string]*Namespace
-	IngressClasses               map[string]*IngressClass
-	SecretsProcessed             map[string]struct{}
-	BackendsProcessed            map[string]struct{}
+	ConfigMaps        ConfigMaps
+	NamespacesAccess  NamespacesWatch
+	Namespaces        map[string]*Namespace
+	IngressClasses    map[string]*IngressClass
+	SecretsProcessed  map[string]struct{}
+	BackendsProcessed map[string]struct{}
+	// RoutesProcessedByMapFile records, per map file, which ingress declared each of its keys
+	// during the current reconciliation. Reset at every reconciliation, like BackendsProcessed.
+	//
+	// The outer key is the name of the map file - "sni", "host", "path-exact",
+	// "path-prefix-exact", "path-prefix". A plain string and not a maps.Name, because
+	// pkg/haproxy/maps transitively imports this package.
+	//
+	// The inner key is the key haproxy looks up in that file, and its composition is not the
+	// same from one file to the next:
+	//
+	//   - "sni" and "host": the host alone. The path is not part of the key, so every path of
+	//     a host lands on the same one - which is why a passthrough host cannot serve two
+	//     paths through two different backends.
+	//   - "path-exact", "path-prefix-exact", "path-prefix": the host concatenated with the
+	//     path, normalised - a trailing slash trimmed or added depending on the path type, and
+	//     the host alone followed by a slash when the path is empty or "/".
+	//
+	// Those keys are not built here: they come from route.MapRows, which is the single
+	// description of the rows a route produces, and which normalises them. Anything reasoning
+	// about a key has to take it from there rather than rebuild it, since the same declaration
+	// can produce keys in several files and two different path types can produce the same key.
+	//
+	// Nesting per map file rather than joining the two into one string is what avoids reserving
+	// a separator that cannot appear in a host or a path.
+	RoutesProcessedByMapFile     map[string]map[string]RouteOwner
 	GatewayClasses               map[string]*GatewayClass
 	HaProxyPods                  map[string]struct{}
 	BackendsWithNoConfigSnippets map[string]struct{}
@@ -83,6 +108,7 @@ func NewK8sStore(args utils.OSArgs) K8s {
 		},
 		SecretsProcessed:             map[string]struct{}{},
 		BackendsProcessed:            map[string]struct{}{},
+		RoutesProcessedByMapFile:     map[string]map[string]RouteOwner{},
 		GatewayClasses:               map[string]*GatewayClass{},
 		BackendsWithNoConfigSnippets: map[string]struct{}{},
 		HaProxyPods:                  map[string]struct{}{},
