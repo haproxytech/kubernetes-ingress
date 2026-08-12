@@ -153,11 +153,11 @@ jobs:
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-
-      - uses: engineerd/setup-kind@v0.6.2
+      - uses: helm/kind-action@v1
         with:
-          name: dev
+          cluster_name: dev
           config: deploy/tests/kind-config.yaml
-          image: kindest/node:${{ matrix.k8s-version }}
+          node_image: kindest/node:${{ matrix.k8s-version }}
           version: v0.30.0
       - name: Setup
         run: CI_ENV=github deploy/tests/create.sh
