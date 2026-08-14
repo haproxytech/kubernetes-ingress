@@ -263,8 +263,11 @@ func Timeout(name string, annotations ...map[string]string) (out *int64, err err
 // applies to a given backend. Only GetName() is called on the results, so the zero store
 // and the nil certificates are never dereferenced.
 //
-// cookie-persistence is deliberately absent, as it is in the registry: it is resolved from
-// the annotations of the service only, so an ingress cannot lose it to another one.
+// cookie-persistence is in the list because it is a registry entry here, processed with the
+// service, ingress and configmap annotations like any other, so an ingress does lose it to the
+// owner of a shared backend. On the development branch it is resolved from the service
+// annotations only and is deliberately absent - do not carry that exclusion back here without
+// carrying the resolution with it.
 func BackendNames() []string {
 	model := models.Backend{BackendBase: models.BackendBase{Mode: "http"}}
 	registered := annImpl{}.Backend(&model, store.K8s{}, nil)

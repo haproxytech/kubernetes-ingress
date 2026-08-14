@@ -34,17 +34,21 @@ func TestBackendNamesCoversWhatIsEasyToMiss(t *testing.T) {
 	require.Contains(t, names, "cr-backend")
 	// A plain registry entry, to catch a list which would have lost its base.
 	require.Contains(t, names, "load-balance")
+	// A registry entry on this version line, processed with the service, ingress and configmap
+	// annotations, so an ingress does lose it to the owner of a shared backend. It is resolved
+	// from the service annotations only on the development branch, where it is excluded from
+	// this list instead.
+	require.Contains(t, names, "cookie-persistence")
 }
 
 // TestBackendNamesExcludesWhatIsNotBackendScoped keeps the list from drifting into a
-// catch-all: a frontend rule annotation is not something an ingress loses to the owner of
-// a backend, and cookie-persistence is resolved from the service annotations only.
+// catch-all: a frontend rule annotation, or one resolved outside the backend registry, is not
+// something an ingress loses to the owner of a backend.
 func TestBackendNamesExcludesWhatIsNotBackendScoped(t *testing.T) {
 	names := BackendNames()
 
 	require.NotContains(t, names, "allow-list")
 	require.NotContains(t, names, "ssl-redirect")
-	require.NotContains(t, names, "cookie-persistence")
 	require.NotContains(t, names, "ssl-passthrough")
 }
 
