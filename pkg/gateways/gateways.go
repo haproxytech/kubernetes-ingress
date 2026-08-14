@@ -16,7 +16,9 @@ package gateway
 
 import (
 	"fmt"
+	"net"
 	"sort"
+	"strconv"
 
 	"github.com/haproxytech/client-native/v6/models"
 	"github.com/haproxytech/kubernetes-ingress/pkg/controller/constants"
@@ -433,7 +435,7 @@ func (gm GatewayManagerImpl) addServersToRoute(route store.TCPRoute) (reload boo
 			}
 			if port, found := endpoints.Ports[*portName]; found {
 				for address := range port.Addresses {
-					servers = append(servers, fmt.Sprintf("%s:%d", address, port.Port))
+					servers = append(servers, net.JoinHostPort(address, strconv.FormatInt(port.Port, 10)))
 					err = gm.haproxyClient.BackendServerCreate(backendName, models.Server{
 						Address:      address,
 						Port:         &port.Port,
