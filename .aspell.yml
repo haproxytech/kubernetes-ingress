@@ -88,3 +88,4 @@ allowed:
   - realpath
   - runnable
   - statx
+  - unparsable

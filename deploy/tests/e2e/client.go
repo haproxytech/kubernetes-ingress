@@ -81,7 +81,7 @@ func newClient(host string, port int, tls bool) (*Client, error) {
 		Transport: &http.Transport{
 			DialContext: func(ctx context.Context, network, _ string) (conn net.Conn, e error) {
 				dialer := &net.Dialer{}
-				return dialer.DialContext(ctx, network, fmt.Sprintf("%s:%d", kindURL, dstPort))
+				return dialer.DialContext(ctx, network, net.JoinHostPort(kindURL, strconv.Itoa(dstPort)))
 			},
 		},
 	}, nil
@@ -153,7 +153,7 @@ func ProxyProtoConn() (result []byte, err error) {
 	}
 	dstPort := HTTP_PORT
 
-	target, errAddr := net.ResolveTCPAddr("tcp", fmt.Sprintf("%s:%d", kindURL, dstPort))
+	target, errAddr := net.ResolveTCPAddr("tcp", net.JoinHostPort(kindURL, strconv.Itoa(dstPort)))
 	if errAddr != nil {
 		return nil, errAddr
 	}
@@ -197,7 +197,7 @@ func runtimeCommand(command string) (result []byte, err error) {
 	if kindURL == "" {
 		kindURL = "127.0.0.1"
 	}
-	conn, err := net.Dial("tcp", fmt.Sprintf("%s:%d", kindURL, STATS_PORT))
+	conn, err := net.Dial("tcp", net.JoinHostPort(kindURL, strconv.Itoa(STATS_PORT)))
 	if err != nil {
 		return result, err
 	}
