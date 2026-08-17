@@ -14,9 +14,7 @@ import (
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
 )
 
-// Deprecated: s6-overlay support is kept for external mode backward compatibility
-// and will be removed in a future release.
-type s6Control struct {
+type gopherdControl struct {
 	API               api.HAProxyClient
 	Env               env.Env
 	OSArgs            utils.OSArgs
@@ -25,9 +23,8 @@ type s6Control struct {
 	logger            utils.Logger
 }
 
-// Deprecated: see gopherdControl and directControl for supported alternatives.
-func newS6Control(api api.HAProxyClient, env env.Env, osArgs utils.OSArgs) *s6Control {
-	sc := s6Control{
+func newGopherdControl(api api.HAProxyClient, env env.Env, osArgs utils.OSArgs) *gopherdControl {
+	gc := gopherdControl{
 		API:    api,
 		Env:    env,
 		OSArgs: osArgs,
@@ -36,16 +33,16 @@ func newS6Control(api api.HAProxyClient, env env.Env, osArgs utils.OSArgs) *s6Co
 
 	masterSocket, err := runtime.New(context.Background(), options.MasterSocket(MASTER_SOCKET_PATH), options.AllowDelayedStart(time.Minute, time.Second))
 	if err != nil {
-		sc.logger.Error(err)
-		return &sc
+		gc.logger.Error(err)
+		return &gc
 	}
-	sc.masterSocketValid = true
-	sc.masterSocket = masterSocket
+	gc.masterSocketValid = true
+	gc.masterSocket = masterSocket
 
-	return &sc
+	return &gc
 }
 
-func (d *s6Control) Service(action string) (string, error) {
+func (d *gopherdControl) Service(action string) (string, error) {
 	if d.OSArgs.Test {
 		logger.Infof("HAProxy would be %sed now", action)
 		return "", nil
@@ -54,7 +51,7 @@ func (d *s6Control) Service(action string) (string, error) {
 
 	switch action {
 	case "start", "stop":
-		// no need to start/stop it (s6)
+		// gopherd owns start/stop
 		return "", nil
 	case "reload":
 		if d.masterSocketValid {
@@ -67,7 +64,7 @@ func (d *s6Control) Service(action string) (string, error) {
 			return msg, err
 		}
 
-		cmd = exec.Command("s6-svc", "-2", "/run/service/haproxy")
+		cmd = exec.Command("gopherd", "signal", "haproxy", "SIGUSR2")
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 		return "", cmd.Run()
@@ -76,10 +73,10 @@ func (d *s6Control) Service(action string) (string, error) {
 	}
 }
 
-func (d *s6Control) UseAuxFile(useAuxFile bool) {
+func (d *gopherdControl) UseAuxFile(useAuxFile bool) {
 	// do nothing we always have it
 }
 
-func (d *s6Control) SetAPI(api api.HAProxyClient) {
+func (d *gopherdControl) SetAPI(api api.HAProxyClient) {
 	d.API = api
 }

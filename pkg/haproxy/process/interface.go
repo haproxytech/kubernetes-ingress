@@ -13,7 +13,7 @@ import (
 
 var logger = utils.GetLogger()
 
-// MUST be the same as in fs/etc/s6-overlay/s6-rc.d/haproxy/run
+// MUST be the same as in fs/etc/gopherd/gopherd.yml
 const MASTER_SOCKET_PATH = "/var/run/haproxy-master.sock" //nolint:stylecheck
 
 type Process interface {
@@ -24,9 +24,15 @@ type Process interface {
 
 func New(env env.Env, osArgs utils.OSArgs, auxCfgFile string, api api.HAProxyClient) (p Process) { //nolint:ireturn
 	switch {
+	case osArgs.UseWithGopherd:
+		// takes precedence over the deprecated s6-overlay/pebble flags so that
+		// leftover flags in user manifests are ignored in images managed by gopherd
+		p = newGopherdControl(api, env, osArgs)
 	case osArgs.UseWiths6Overlay:
+		logger.Warning("s6-overlay is DEPRECATED and will be removed in a future release")
 		p = newS6Control(api, env, osArgs)
 	case osArgs.UseWithPebble:
+		logger.Warning("pebble is DEPRECATED and will be removed in a future release")
 		p = newPebbleControl(env, osArgs)
 	default:
 		p = &directControl{

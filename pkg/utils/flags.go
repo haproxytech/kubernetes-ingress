@@ -111,13 +111,14 @@ type OSArgs struct {
 	Test                              bool           `short:"t" description:"simulate running HAProxy"`
 	EmptyIngressClass                 bool           `long:"empty-ingress-class" description:"empty-ingress-class manages the behavior in case an ingress has no explicit ingress class annotation. true: to process, false: to skip"`
 	DisableServiceExternalName        bool           `long:"disable-service-external-name" description:"disable forwarding to ExternalName Services due to CVE-2021-25740"`
-	UseWiths6Overlay                  bool           `long:"with-s6-overlay" description:"use s6 overlay to start/stpop/reload HAProxy"`
+	UseWiths6Overlay                  bool           `long:"with-s6-overlay" description:"DEPRECATED: use s6 overlay to start/stop/reload HAProxy, support will be removed in a future release"`
+	UseWithGopherd                    bool           `long:"with-gopherd" description:"use gopherd to start/stop/reload HAProxy"`
 	DisableHTTPS                      bool           `long:"disable-https" description:"toggle to disable the HTTPs frontend"`
 	PprofEnabled                      bool           `long:"pprof" short:"p" description:"enable pprof"`
 	PrometheusEnabled                 bool           `long:"prometheus" description:"enable prometheus of IC data"`
 	DisableHTTP                       bool           `long:"disable-http" description:"toggle to disable the HTTP frontend"`
 	DisableIPV6                       bool           `long:"disable-ipv6" description:"toggle to disable the IPv6 protocol from all frontends"`
-	UseWithPebble                     bool           `long:"with-pebble" description:"use pebble to start/stop/reload HAProxy"`
+	UseWithPebble                     bool           `long:"with-pebble" description:"DEPRECATED: use pebble to start/stop/reload HAProxy, support will be removed in a future release"`
 	JobCheckCRD                       bool           `long:"job-check-crd" description:"does not execute IC, but adds/updates CRDs"`
 	Experimental                      Experimental   `long:"experimental" description:"comma separated list of experimental features to activate"`
 	DisableQuic                       bool           `long:"disable-quic" description:"disable quic protocol in http frontend bindings"`

@@ -14,6 +14,8 @@ import (
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
 )
 
+// Deprecated: pebble support is kept for external mode backward compatibility
+// and will be removed in a future release.
 type pebbleControl struct {
 	Env               env.Env
 	OSArgs            utils.OSArgs
@@ -22,6 +24,7 @@ type pebbleControl struct {
 	logger            utils.Logger
 }
 
+// Deprecated: see gopherdControl and directControl for supported alternatives.
 func newPebbleControl(env env.Env, osArgs utils.OSArgs) *pebbleControl {
 	pb := pebbleControl{
 		Env:    env,
@@ -54,11 +57,11 @@ func (d *pebbleControl) Service(action string) (string, error) {
 	case "reload":
 		if d.masterSocketValid {
 			msg, err := d.masterSocket.Reload()
-			if err != nil {
-				d.logger.Error(err)
+			if err == nil {
+				d.logger.Debug(msg)
+				return "", nil
 			}
-			d.logger.Debug("Reload done")
-			d.logger.Debug(msg)
+			d.logger.Error(err)
 			return msg, err
 		}
 		cmd = exec.Command("pebble", "signal", "SIGUSR2", "haproxy")
