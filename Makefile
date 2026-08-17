@@ -1,5 +1,4 @@
 PROJECT_PATH=${PWD}
-TARGETPLATFORM?=linux/amd64
 GOOS?=linux
 GOARCH?=amd64
 CHECK_COMMIT=5.8.1
@@ -47,10 +46,6 @@ yaml-lint:
 example:
 	deploy/tests/create.sh
 
-.PHONY: example-pebble
-example-pebble:
-	CUSTOMDOCKERFILE=build/Dockerfile.pebble deploy/tests/create.sh
-
 ## Install the `example` with an image built from a local build.
 .PHONY: example-dev
 example-dev: build-dev
@@ -70,18 +65,14 @@ example-remove:
 
 .PHONY: build
 build:
-	docker build -t haproxytech/kubernetes-ingress --build-arg TARGETPLATFORM=$(TARGETPLATFORM) -f build/Dockerfile .
-
-.PHONY: build-pebble
-build-pebble:
-	docker build -t haproxytech/kubernetes-ingress --build-arg TARGETPLATFORM=$(TARGETPLATFORM) -f build/Dockerfile.pebble .
+	docker build -t haproxytech/kubernetes-ingress -f build/Dockerfile .
 
 ### build-dev builds locally an ingress-controller binary and copies it into the docker image.
 ### Can be used for example to use `go replace` and build with a local library,
 .PHONY: build-dev
 build-dev:
 	GOOS=$(GOOS) GOARCH=$(GOARCH) CGO_ENABLED='0' go build .
-	docker build -t haproxytech/kubernetes-ingress --build-arg TARGETPLATFORM=$(TARGETPLATFORM) -f build/Dockerfile.dev .
+	docker build -t haproxytech/kubernetes-ingress -f build/Dockerfile.dev .
 
 .PHONY: publish
 publish:

@@ -14,7 +14,7 @@ if [ -n "${CI_ENV}" ]; then
   if [ -n "${GITLAB_CI}" ]; then
     echo "haproxytech/kubernetes-ingress image already available from previous stage"
   else
-    docker build --build-arg TARGETPLATFORM="linux/amd64" -t haproxytech/kubernetes-ingress -f build/Dockerfile .
+    docker build -t haproxytech/kubernetes-ingress -f build/Dockerfile .
   fi
 
   echo "loading image of ingress controller in kind"
@@ -31,7 +31,7 @@ else
   kind create cluster --name $clustername --config $DIR/kind-config.yaml
 
   echo "building image for ingress controller"
-  docker build --build-arg TARGETPLATFORM="linux/amd64" -t haproxytech/kubernetes-ingress -f "${dockerfile}" .
+  docker build -t haproxytech/kubernetes-ingress -f "${dockerfile}" .
 
   echo "loading image of ingress controller in kind"
   kind load docker-image haproxytech/kubernetes-ingress:latest  --name=$clustername

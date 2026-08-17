@@ -1,0 +1,80 @@
+# Copyright 2026 HAProxy Technologies LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# 	http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+pass-env: true
+
+# SIGUSR1 to PID 1 also triggers graceful shutdown
+init-stop-signal: [SIGTERM, SIGINT, SIGUSR1]
+
+processes:
+  - name: aux-cfg
+    condition-file-missing: /etc/haproxy/haproxy-aux.cfg
+    command: /bin/touch
+    args:
+      - "/etc/haproxy/haproxy-aux.cfg"
+    startup: oneshot
+
+  - name: mem-info
+    command: /bin/echo
+    args:
+      - "Memory limit — HAProxy: {{mem 66%}}MiB, Ingress Controller: {{mem 33%}}MiB"
+    startup: oneshot
+
+  # if master socket is changed, that needs to be aligned in pkg/haproxy/process/interface.go
+  - name: haproxy
+    command: /usr/local/sbin/haproxy_wrapper
+    args:
+      - "-W"
+      - "-db"
+      - "-m"
+      - "{{mem 66%}}"
+      - "-S"
+      - "/var/run/haproxy-master.sock,level,admin"
+      - "-f"
+      - "/etc/haproxy/haproxy.cfg"
+      - "-f"
+      - "/etc/haproxy/haproxy-aux.cfg"
+    after: [aux-cfg, mem-info]
+    stop-signal: SIGUSR1
+    # kill-delays are additive under the default reverse-dep shutdown order,
+    # so controller (4s) + HAProxy (25s) must fit the default 30s pod
+    # termination grace period
+    kill-delay: 25s
+    on-success: restart
+    on-failure: restart
+    environment:
+      LD_PRELOAD: /usr/local/lib/libblock_secrets.so
+
+  - name: ingress-controller
+    command: /haproxy-ingress-controller
+    args:
+      - "--with-gopherd"
+    use-entrypoint-args: true
+    after: [aux-cfg, haproxy]
+    # clean exit restarts the controller, a fatal error takes the container down
+    on-success: restart
+    on-failure: shutdown
+    # death by signal (OOM kill etc.) only restarts the controller, HAProxy
+    # keeps serving, as was the case with the s6-overlay finish script
+    exit-code-map:
+      SIGKILL: 0
+      SIGTERM: 0
+      SIGQUIT: 0
+      SIGABRT: 0
+    kill-delay: 4s
+    environment:
+      GOMEMLIMIT: "{{mem 33%}}MiB"
+
+control:
+  socket: /run/gopherd.sock

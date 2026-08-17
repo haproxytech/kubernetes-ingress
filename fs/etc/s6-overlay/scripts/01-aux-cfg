@@ -1,7 +1,0 @@
-#!/command/with-contenv sh
-
-if [ ! -e /etc/haproxy/haproxy-aux.cfg ]; then
-	touch /etc/haproxy/haproxy-aux.cfg
-	chgrp haproxy /etc/haproxy/haproxy-aux.cfg
-	chmod g+w /etc/haproxy/haproxy-aux.cfg
-fi
