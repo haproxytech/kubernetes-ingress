@@ -90,6 +90,7 @@ type OSArgs struct {
 	Version                           []bool         `short:"v" long:"version" description:"version"`
 	NamespaceWhitelist                []string       `long:"namespace-whitelist" description:"whitelisted namespaces"`
 	NamespaceBlacklist                []string       `long:"namespace-blacklist" description:"blacklisted namespaces"`
+	NamespaceLabelSelector            string         `long:"namespace-label-selector" description:"label selector to dynamically watch namespaces"`
 	Help                              []bool         `short:"h" long:"help" description:"show this help message"`
 	LocalPeerPort                     int64          `long:"localpeer-port" default:"10000" description:"port to listen on for local peer"`
 	StatsBindPort                     int64          `long:"stats-bind-port" default:"1024" description:"port to listen on for stats page"`
