@@ -109,8 +109,6 @@ func (c *HAProxyController) Start() {
 	c.initHandlers()
 	logger.Error(c.setupHAProxyRules())
 	logger.Error(os.Chdir(c.haproxy.Env.CfgDir))
-
-	c.SyncData()
 }
 
 // Stop handles shutting down HAProxyController
