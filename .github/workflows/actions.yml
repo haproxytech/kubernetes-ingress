@@ -1,10 +1,16 @@
 name: CI
 on: [push, pull_request]
+permissions:
+  contents: read
+
 jobs:
   check:
     if: ${{ github.event_name == 'pull_request' }}
     name: HAProxy check commit message
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
     steps:
       - name: Check out code
         uses: actions/checkout@v4

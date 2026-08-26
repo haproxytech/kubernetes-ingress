@@ -3,6 +3,9 @@ on:
   push:
     tags:
       - "*"
+permissions:
+  contents: write  # goreleaser publishes the release
+
 jobs:
   goreleaser:
     runs-on: large_runner
