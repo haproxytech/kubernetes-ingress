@@ -372,7 +372,7 @@ func (c *HAProxyController) SetGatewayAPIInstalled(gatewayAPIInstalled bool) {
 
 func (c *HAProxyController) manageIngress(ing *store.Ingress) {
 	i := ingress.New(ing, c.osArgs.IngressClass, c.osArgs.EmptyIngressClass, c.annotations)
-	if !i.Supported(c.store, c.annotations) {
+	if !i.Admit(c.store) {
 		logger.Debugf("ingress '%s/%s' ignored: no matching", ing.Namespace, ing.Name)
 	} else {
 		i.Update(c.store, c.haproxy, c.annotations)
@@ -415,7 +415,7 @@ func (c *HAProxyController) processIngressesWithMerge() {
 			var ingressesToMerge []*store.Ingress
 			for _, ing := range ingresses {
 				i := ingress.New(ing, c.osArgs.IngressClass, c.osArgs.EmptyIngressClass, c.annotations)
-				if !i.Supported(c.store, c.annotations) {
+				if !i.Admit(c.store) {
 					continue
 				}
 				// if the ingress has standalone-backend annotation, put it aside and continue.
@@ -564,10 +564,9 @@ func (c *HAProxyController) processSSLPassthroughInConfigFile() {
 				// There should only be fake ingresses in irrelevant namespaces so loop should be whithin small amount of ingresses (Prometheus)
 				continue
 			}
-			// Same predicate as Ingress.Supported(), faked ingresses included - asked of the
-			// store directly because this pass must not mutate what it inspects, Supported()
-			// writing Ignored and Status on the way.
-			if !ingResource.Faked && !c.store.IsIngressClassSupported(ingResource.Class, c.osArgs.IngressClass, c.osArgs.EmptyIngressClass) {
+			// Supported and not Admit: this pass decides a global topology, it must not
+			// record a class decision on the ingresses it walks.
+			if !ingress.New(ingResource, c.osArgs.IngressClass, c.osArgs.EmptyIngressClass, c.annotations).Supported(c.store) {
 				continue
 			}
 			if c.sslPassthroughRequested(ingResource) {
