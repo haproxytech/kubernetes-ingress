@@ -49,20 +49,45 @@ func New(resource *store.Ingress, class string, emptyClass bool, a annotations.A
 // According to https://github.com/kubernetes/api/blob/master/networking/v1/types.go#L257
 // ingress.class annotation should have precedence over the IngressClass mechanism implemented
 // in "networking.k8s.io".
-func (i Ingress) Supported(k8s store.K8s, a annotations.Annotations) (supported bool) {
+// Supported reports whether this ingress belongs to this controller. A faked ingress
+// (prometheus, techdump) is exempt from class matching; anything else is decided by the
+// IngressClass its spec.ingressClassName names - by that class's spec.controller, never by
+// the name of the class resource itself.
+//
+// It answers the question and changes nothing, so a pass which only needs to know - the
+// status write path, or a pre-pass over the store - can ask without side effects. Recording
+// the answer is Admit's job.
+func (i Ingress) Supported(k8s store.K8s) bool {
 	if i.resource != nil && i.resource.Faked {
 		return true
 	}
+	return k8s.IsIngressClassSupported(i.resource.Class, i.controllerClass, i.allowEmptyClass)
+}
 
-	supported = k8s.IsIngressClassSupported(i.resource.Class, i.controllerClass, i.allowEmptyClass)
+// Admit answers Supported and records the answer on the store resource, re-admitting an
+// ingress which had been ignored.
+//
+// What that re-admission buys is the LoadBalancer status, and only that. Being served comes
+// from Supported alone: manageIngress calls Update on any supported ingress, whatever its
+// Status. But it queues a status update only for an ingress whose Status is ADDED, or whose
+// own class field changed - and an IngressClass handed over to this controller changes
+// neither. The ingress object does not change at all, so no event follows and no Status is
+// set. Without this latch a re-admitted ingress would be served while never publishing an
+// address. Measured by neutralising it: the backend still appears, the status does not.
+//
+// Kept apart from Supported so that the mutation happens on the reconciliation path only,
+// and never from the goroutine the status manager runs its API calls in.
+func (i *Ingress) Admit(k8s store.K8s) bool {
+	supported := i.Supported(k8s)
 	if !supported {
 		i.resource.Ignored = true
+		return false
 	}
-	if supported && i.resource.Ignored {
+	if i.resource.Ignored {
 		i.resource.Status = store.ADDED
 		i.resource.Ignored = false
 	}
-	return supported
+	return true
 }
 
 // handlePath configures the backend, the servers and the route of one ingress path, and
