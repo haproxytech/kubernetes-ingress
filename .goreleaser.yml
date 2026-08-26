@@ -20,7 +20,15 @@ builds:
       - CGO_ENABLED=0
     binary: haproxy-ingress-controller
     id: my-build
+    flags:
+      # keeps the build path of the machine that produced the binary out of it
+      - -trimpath
     ldflags:
+      # drops the symbol table, and the DWARF data with it: the linker derives
+      # -w from -s unless -w is given explicitly. about 29 MB of the binary.
+      # the pclntab is untouched, so a panic still prints a stack trace with
+      # function names and line numbers, and pprof still symbolises.
+      - -s
       - -X "main.GitRepo={{.GitURL}}"
       - -X "main.GitTag={{.Tag}}"
       - -X "main.GitCommit={{.ShortCommit}}"
