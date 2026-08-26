@@ -3,6 +3,8 @@ on:
   push:
     tags:
       - "v*"
+permissions: {}
+
 jobs:
   main:
     runs-on: large_runner
