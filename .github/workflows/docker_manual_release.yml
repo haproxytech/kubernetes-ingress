@@ -1,6 +1,8 @@
 name: Manual build latest tag and push to Docker Hub
 on:
   workflow_dispatch:
+permissions: {}
+
 jobs:
   main:
     runs-on: large_runner

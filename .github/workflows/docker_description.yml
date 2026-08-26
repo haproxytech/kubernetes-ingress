@@ -6,6 +6,9 @@ on:
     paths:
       - README.md
   workflow_dispatch:
+permissions:
+  contents: read
+
 jobs:
   main:
     runs-on: large_runner
