@@ -9,6 +9,7 @@ import (
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy"
 	k8ssync "github.com/haproxytech/kubernetes-ingress/pkg/k8s/sync"
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
+	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
 )
 
 type PrometheusEndpoint struct {
@@ -56,6 +57,7 @@ func (handler PrometheusEndpoint) Update(k store.K8s, h haproxy.HAProxy, a annot
 	if handler.PodNs == "" {
 		return nil
 	}
+	errs := utils.Errors{}
 
 	annSecret := annotations.String("prometheus-endpoint-auth-secret", k.ConfigMaps.Main.Annotations)
 	prometheusMu.RLock()
@@ -104,8 +106,14 @@ func (handler PrometheusEndpoint) Update(k store.K8s, h haproxy.HAProxy, a annot
 		prometheusMu.Lock()
 		prometheusUsers = make(map[string]prometheusAuthUser)
 		for user, password := range secret.Data {
-			partsPass := strings.Split(string(password), "$")
-			salt := fmt.Sprintf("$%s$%s$", partsPass[1], partsPass[2])
+			salt, ok := cryptSalt(string(password))
+			if !ok {
+				// Skipping the user leaves the endpoint closed for them, which is the only
+				// safe outcome: a value that is not a SHA-256 crypt hash can never match
+				// what crypt.Generate computes, so it would authenticate nobody either way.
+				errs.Add(fmt.Errorf("prometheus user '%s' in secret '%s': password is not a SHA-256 crypt hash (expected '%s...', as produced by `mkpasswd -m SHA-256`), user skipped", user, annSecret, sha256CryptPrefix))
+				continue
+			}
 			prometheusUsers[user] = prometheusAuthUser{
 				Password: string(password),
 				Salt:     salt,
@@ -115,5 +123,29 @@ func (handler PrometheusEndpoint) Update(k store.K8s, h haproxy.HAProxy, a annot
 		prometheusUsersActive = true
 		prometheusMu.Unlock()
 	}
-	return nil
+	return errs.Result()
+}
+
+// sha256CryptPrefix identifies a SHA-256 crypt hash. It is the only algorithm the
+// endpoint can verify, since prometheusHandler hashes with crypt.SHA256, so a hash
+// carrying any other identifier is refused here rather than at the first request.
+const sha256CryptPrefix = "$5$"
+
+// cryptSalt returns the salt that crypt.Generate expects from a hash produced by
+// `mkpasswd -m SHA-256`: the hash with its last '$' and everything after it removed.
+//
+// Cutting at the last '$' rather than at a fixed field index is what keeps an optional
+// "rounds=" parameter inside the salt, where crypt needs it. The trailing '$' has to go:
+// crypt tolerates it on a plain "$5$salt$" but folds it into the salt of a
+// "$5$rounds=N$salt$", which then hashes to something the stored hash never matches.
+//
+// Requiring the identifier, and not just a leading '$', is what separates a hash from a
+// plaintext password that happens to contain '$' - "$ecret$pass$word" is shaped like a
+// hash and would otherwise be kept with a salt read out of it, locking the user out with
+// nothing in the logs to say why.
+func cryptSalt(password string) (salt string, ok bool) {
+	if !strings.HasPrefix(password, sha256CryptPrefix) || strings.Count(password, "$") < 3 {
+		return "", false
+	}
+	return password[:strings.LastIndex(password, "$")], true
 }
