@@ -654,11 +654,6 @@ func (k k8s) addIngressHandlers(eventChan chan k8ssync.SyncDataEvent, informer c
 				uid, resourceVersion, err := store.GetUIDResourceVersion(obj)
 				logger.Error(err)
 				logIncomingK8sEvent(logger, item, uid, resourceVersion)
-				if item.Class != "" && item.Class != osArgs.IngressClass {
-					// Due to ingressclass.kubernetes.io/is-default-class annotation in ingressclass
-					// we need to keep also empty ingressclasses in ingress
-					return
-				}
 				eventChan <- ToSyncDataEvent(item, item, uid, resourceVersion)
 			},
 			DeleteFunc: func(obj interface{}) {
@@ -671,11 +666,6 @@ func (k k8s) addIngressHandlers(eventChan chan k8ssync.SyncDataEvent, informer c
 				uid, resourceVersion, err := store.GetUIDResourceVersion(obj)
 				logger.Error(err)
 				logIncomingK8sEvent(logger, item, uid, resourceVersion)
-				if item.Class != "" && item.Class != osArgs.IngressClass {
-					// Due to ingressclass.kubernetes.io/is-default-class annotation in ingressclass
-					// we need to keep also empty ingressclasses in ingress
-					return
-				}
 				eventChan <- ToSyncDataEvent(item, item, uid, resourceVersion)
 			},
 			UpdateFunc: func(oldObj, newObj interface{}) {

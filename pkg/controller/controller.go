@@ -377,9 +377,9 @@ func (c *HAProxyController) manageIngress(ing *store.Ingress) {
 	} else {
 		i.Update(c.store, c.haproxy, c.annotations)
 		c.considerDefaultBackend(ing)
-	}
-	if ing.Status == store.ADDED || ing.ClassUpdated {
-		c.updateStatusManager.AddIngress(i)
+		if ing.Status == store.ADDED || ing.ClassUpdated {
+			c.updateStatusManager.AddIngress(i)
+		}
 	}
 }
 
@@ -562,6 +562,12 @@ func (c *HAProxyController) processSSLPassthroughInConfigFile() {
 				// As we watch only for white-listed namespaces, we should not worry about iterating over
 				// many ingresses in irrelevant namespaces.
 				// There should only be fake ingresses in irrelevant namespaces so loop should be whithin small amount of ingresses (Prometheus)
+				continue
+			}
+			// Same predicate as Ingress.Supported(), faked ingresses included - asked of the
+			// store directly because this pass must not mutate what it inspects, Supported()
+			// writing Ignored and Status on the way.
+			if !ingResource.Faked && !c.store.IsIngressClassSupported(ingResource.Class, c.osArgs.IngressClass, c.osArgs.EmptyIngressClass) {
 				continue
 			}
 			if c.sslPassthroughRequested(ingResource) {
