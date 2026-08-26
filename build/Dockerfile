@@ -56,7 +56,8 @@ RUN mkdir -p /var/run/vars && \
     cd /src && \
     git describe --abbrev=0 --tags > /var/run/vars/GIT_LAST_TAG || echo "dev" > /var/run/vars/GIT_LAST_TAG && \
     CGO_ENABLED=0 go build \
-        -ldflags "-X github.com/haproxytech/kubernetes-ingress/pkg/version.GitTag=$(cat /var/run/vars/GIT_LAST_TAG)" \
+        -trimpath \
+        -ldflags "-s -X github.com/haproxytech/kubernetes-ingress/pkg/version.GitTag=$(cat /var/run/vars/GIT_LAST_TAG)" \
         -o fs/haproxy-ingress-controller .
 
 FROM haproxytech/haproxy-alpine:3.2
