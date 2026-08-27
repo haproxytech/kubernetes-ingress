@@ -15,9 +15,20 @@ diff:
     - test -z "$(git ls-files --others --exclude-standard 2> /dev/null)" || exit "Documentation created untracked files, cannot proceed"
 diff-crd:
   stage: diff
+  # Generation reads the CRD sources, the license header and the tool versions
+  # pinned in go.mod, so a change anywhere else cannot alter its output. The
+  # scheduled run is the backstop for anything this list misses.
   rules:
     - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
+      changes: &crd_inputs
+        - crs/**/*
+        - go.mod
+        - go.sum
+        - assets/license-header.txt
+        - Makefile
     - if: "$CI_PROJECT_NAMESPACE != 'haproxy-controller' && $CI_PIPELINE_SOURCE == 'push'"
+      changes: *crd_inputs
+    - if: $CI_PIPELINE_SOURCE == 'schedule'
   image:
     name: $CI_REGISTRY_GO/golang:$GO_VERSION
     entrypoint: [ "" ]
