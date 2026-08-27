@@ -22,12 +22,13 @@ import (
 )
 
 const (
-	defaultAPI      = "https://api-ci-go-runners-cycle.gtm.int.haproxy.com"
-	defaultManifest = ".gitlab/e2e-jobs.yml"
-	defaultOutput   = "generated-e2e.yml"
-	fetchAttempts   = 3
-	fetchBackoff    = 2 * time.Second
-	fetchTimeout    = 10 * time.Second
+	defaultAPI       = "https://api-ci-go-runners-cycle.gtm.int.haproxy.com"
+	defaultManifest  = ".gitlab/e2e-jobs.yml"
+	defaultTestsRoot = "deploy/tests/e2e"
+	defaultOutput    = "generated-e2e.yml"
+	fetchAttempts    = 3
+	fetchBackoff     = 2 * time.Second
+	fetchTimeout     = 10 * time.Second
 )
 
 func main() {
@@ -40,14 +41,35 @@ func main() {
 		log.Fatalf("cannot read %s: %v", manifestPath, err)
 	}
 
+	tests, err := discoverTests(envOr("E2E_TESTS_ROOT", defaultTestsRoot))
+	if err != nil {
+		log.Fatalf("cannot discover the e2e tests: %v", err)
+	}
+
 	jobs := manifest.selectedJobs(triggerFromEnv())
 	legCount := 0
 	for _, job := range jobs {
-		legCount += len(job.Parts)
+		for _, split := range job.Splits {
+			legCount += len(shardTests(tests, split.Tag, split.Shards))
+		}
 	}
-	log.Printf("%d job set(s) selected, %d leg(s) to place", len(jobs), legCount)
+	log.Printf("%d test(s) discovered, %d job set(s) selected, %d leg(s) to place", len(tests), len(jobs), legCount)
 
-	content, err := render(buildPipeline(jobs, runnerTags(legCount)))
+	for _, job := range jobs {
+		for _, split := range job.Splits {
+			if split.RunMode() != modeParallel {
+				continue
+			}
+			for _, shard := range shardTests(tests, split.Tag, split.Shards) {
+				if clashes := duplicateNames(shard); len(clashes) > 0 {
+					log.Fatalf("job %s split %s: %v appear in more than one package of a parallel shard",
+						job.Name, split.Tag, clashes)
+				}
+			}
+		}
+	}
+
+	content, err := render(buildPipeline(jobs, tests, runnerTags(legCount)))
 	if err != nil {
 		log.Fatalf("cannot render the child pipeline: %v", err)
 	}

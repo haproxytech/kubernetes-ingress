@@ -14,6 +14,7 @@
 package main
 
 import (
+	"log"
 	"slices"
 	"strings"
 	"text/template"
@@ -93,44 +94,108 @@ e2e-no-jobs:
     - echo "no e2e job set matches this pipeline"
 `
 
-// buildPipeline flattens job sets into one leg per test part and pins each leg.
-func buildPipeline(jobs []JobSet, tags []string) childPipeline {
-	legCount := 0
-	for _, job := range jobs {
-		legCount += len(job.Parts)
-	}
-	assigned := assignTags(legCount, tags)
-
+// buildPipeline turns each split shard into one job and pins it to a runner.
+func buildPipeline(jobs []JobSet, tests []TestCase, tags []string) childPipeline {
 	pipeline := childPipeline{
 		Stages: make([]string, 0, len(jobs)),
-		Legs:   make([]leg, 0, legCount),
+		Legs:   make([]leg, 0, len(jobs)),
 	}
-	index := 0
 	for _, job := range jobs {
-		if !slices.Contains(pipeline.Stages, job.Stage) {
-			pipeline.Stages = append(pipeline.Stages, job.Stage)
+		for _, split := range job.Splits {
+			shards := shardTests(tests, split.Tag, split.Shards)
+			if len(shards) == 0 {
+				log.Printf("job %s: no test carries tag %s, skipping", job.Name, split.Tag)
+				continue
+			}
+			if !slices.Contains(pipeline.Stages, job.Stage) {
+				pipeline.Stages = append(pipeline.Stages, job.Stage)
+			}
+			for shard, cases := range shards {
+				pipeline.Legs = append(pipeline.Legs, leg{
+					Name:         job.Name + ":" + split.Label(shard, len(shards)),
+					Stage:        job.Stage,
+					Variables:    jobVariables(job, split, cases),
+					AllowFailure: job.AllowFailure,
+				})
+			}
 		}
-		for _, part := range job.Parts {
-			pipeline.Legs = append(pipeline.Legs, leg{
-				Name:         job.Name + ":" + part,
-				Stage:        job.Stage,
-				Tag:          assigned[index],
-				Variables:    jobVariables(job, part),
-				AllowFailure: job.AllowFailure,
-			})
-			index++
-		}
+	}
+	for i, assigned := range assignTags(len(pipeline.Legs), tags) {
+		pipeline.Legs[i].Tag = assigned
 	}
 	return pipeline
 }
 
-// jobVariables merges the job set variables with TEST_PART, sorted by name.
-func jobVariables(job JobSet, part string) []variable {
-	variables := make([]variable, 0, len(job.Variables)+1)
+// testSpecs renders a shard as the package:test pairs the runner loops over.
+func testSpecs(cases []TestCase) string {
+	specs := make([]string, 0, len(cases))
+	for _, test := range cases {
+		specs = append(specs, test.Package+":"+test.Name)
+	}
+	return strings.Join(specs, " ")
+}
+
+// runRegex is the anchored -run expression selecting exactly the shard's tests.
+func runRegex(cases []TestCase) string {
+	names := make([]string, 0, len(cases))
+	for _, test := range cases {
+		if !slices.Contains(names, test.Name) {
+			names = append(names, test.Name)
+		}
+	}
+	return "^(" + strings.Join(names, "|") + ")$"
+}
+
+// shardPackages lists the shard's packages once each, in order.
+func shardPackages(cases []TestCase) string {
+	packages := make([]string, 0, len(cases))
+	for _, test := range cases {
+		if !slices.Contains(packages, test.Package) {
+			packages = append(packages, test.Package)
+		}
+	}
+	return strings.Join(packages, " ")
+}
+
+// duplicateNames reports test names that appear in more than one package of the
+// same shard. A parallel shard shares one -run expression across its packages,
+// so a repeated name would run the wrong test as well as the right one.
+func duplicateNames(cases []TestCase) []string {
+	packagesFor := map[string][]string{}
+	for _, test := range cases {
+		if !slices.Contains(packagesFor[test.Name], test.Package) {
+			packagesFor[test.Name] = append(packagesFor[test.Name], test.Package)
+		}
+	}
+	duplicates := []string{}
+	for name, packages := range packagesFor {
+		if len(packages) > 1 {
+			duplicates = append(duplicates, name)
+		}
+	}
+	slices.Sort(duplicates)
+	return duplicates
+}
+
+// jobVariables merges the job set variables with what the shard needs to run,
+// sorted by name.
+func jobVariables(job JobSet, split Split, cases []TestCase) []variable {
+	variables := make([]variable, 0, len(job.Variables)+4)
 	for name, value := range job.Variables {
 		variables = append(variables, variable{Name: name, Value: value})
 	}
-	variables = append(variables, variable{Name: "TEST_PART", Value: part})
+	variables = append(variables,
+		variable{Name: "E2E_TAG", Value: split.Tag},
+		variable{Name: "E2E_MODE", Value: split.RunMode()},
+	)
+	if split.RunMode() == modeSequential {
+		variables = append(variables, variable{Name: "E2E_TESTS", Value: testSpecs(cases)})
+	} else {
+		variables = append(variables,
+			variable{Name: "E2E_RUN", Value: runRegex(cases)},
+			variable{Name: "E2E_PACKAGES", Value: shardPackages(cases)},
+		)
+	}
 	slices.SortFunc(variables, func(a, b variable) int {
 		return strings.Compare(a.Name, b.Name)
 	})

@@ -1,10 +1,23 @@
 # Job sets rendered into the e2e child pipeline by cmd/gitlab-e2e-jobs.
-# when: mr_or_push | schedule_weekly_<day> | never
+# when:   mr_or_push | schedule_weekly_<day> | never
+# splits: one build tag per entry; its tests are dealt round robin across
+#         shards, and each shard becomes one job. mode parallel gives the whole
+#         shard to a single go test call, so its packages run concurrently;
+#         mode sequential runs the tests one at a time.
 jobs:
   - name: e2e_k8s
     stage: e2e_k8s
     when: mr_or_push
-    parts: [parallel, https, sequential-1, sequential-2]
+    splits:
+      - tag: e2e_parallel
+        mode: parallel
+        shards: 1
+      - tag: e2e_https
+        mode: parallel
+        shards: 1
+      - tag: e2e_sequential
+        mode: sequential
+        shards: 4
     variables:
       K8S_VERSION: v1.34.0
       KUBEADM_VER: v1beta3
@@ -16,7 +29,16 @@ jobs:
     stage: e2e_k8s_sch_1
     when: never
     allow_failure: true
-    parts: [parallel, https, sequential-1, sequential-2]
+    splits:
+      - tag: e2e_parallel
+        mode: parallel
+        shards: 1
+      - tag: e2e_https
+        mode: parallel
+        shards: 1
+      - tag: e2e_sequential
+        mode: sequential
+        shards: 4
     variables:
       K8S_VERSION: v1.31.9
       KUBEADM_VER: v1beta3
@@ -27,7 +49,16 @@ jobs:
     stage: e2e_k8s_sch_2
     when: never
     allow_failure: true
-    parts: [parallel, https, sequential-1, sequential-2]
+    splits:
+      - tag: e2e_parallel
+        mode: parallel
+        shards: 1
+      - tag: e2e_https
+        mode: parallel
+        shards: 1
+      - tag: e2e_sequential
+        mode: sequential
+        shards: 4
     variables:
       K8S_VERSION: v1.32.5
       KUBEADM_VER: v1beta3
@@ -37,7 +68,16 @@ jobs:
     stage: e2e_crd_versions
     when: schedule_weekly_wednesday
     allow_failure: true
-    parts: [parallel, https, sequential-1, sequential-2]
+    splits:
+      - tag: e2e_parallel
+        mode: parallel
+        shards: 1
+      - tag: e2e_https
+        mode: parallel
+        shards: 1
+      - tag: e2e_sequential
+        mode: sequential
+        shards: 4
     variables:
       K8S_VERSION: v1.34.0
       KUBEADM_VER: v1beta3
