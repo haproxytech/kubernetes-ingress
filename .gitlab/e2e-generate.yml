@@ -1,0 +1,32 @@
+.e2e_rules: &e2e_rules
+  - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
+  - if: "$CI_PROJECT_NAMESPACE != 'haproxy-controller' && $CI_PIPELINE_SOURCE == 'push'"
+  - if: $CI_PIPELINE_SOURCE == 'schedule'
+
+e2e-jobs-generate:
+  stage: e2e-generate
+  needs: []
+  rules: *e2e_rules
+  image:
+    name: $CI_REGISTRY_GO/golang:$GO_VERSION
+    entrypoint: [""]
+  tags:
+    - go
+  script:
+    - go run ./cmd/gitlab-e2e-jobs
+  artifacts:
+    paths:
+      - generated-e2e.yml
+    expire_in: 60 minutes
+
+e2e-trigger:
+  stage: e2e-tests
+  needs: ["docker-build", "e2e-jobs-generate"]
+  rules: *e2e_rules
+  variables:
+    PARENT_PIPELINE_ID: $CI_PIPELINE_ID
+  trigger:
+    include:
+      - artifact: generated-e2e.yml
+        job: e2e-jobs-generate
+    strategy: depend
