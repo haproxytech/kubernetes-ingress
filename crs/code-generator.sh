@@ -34,8 +34,11 @@ gobin="${GOBIN:-$(go env GOPATH)/bin}"
 go install k8s.io/code-generator/cmd/{deepcopy-gen,register-gen,client-gen,lister-gen,informer-gen,defaulter-gen}@v0.29.5
 
 # Generate Code
-IFS=','
-for API_PKG in $API_PKGS; do
+# Each API package writes to its own output directory, so the packages are
+# generated concurrently. Their logs are buffered and printed per package,
+# otherwise the two runs interleave into something unreadable.
+generate_api_pkg() {
+    API_PKG="$1"
     echo "Generating code for $API_PKG"
 
     echo "Generating deepcopy funcs"
@@ -80,7 +83,30 @@ for API_PKG in $API_PKGS; do
             --output-package "${CR_PKG}/generated/${CR_VERSION}/informers"\
             --go-header-file ${HDR_FILE}\
             --output-base ${OUTPUT_DIR}
+}
+
+LOG_DIR=$(mktemp -d)
+pids=""
+IFS=','
+for API_PKG in $API_PKGS; do
+    generate_api_pkg "$API_PKG" > "${LOG_DIR}/$(echo "$API_PKG" | tr '/' '_').log" 2>&1 &
+    pids="$pids $!"
 done
+
+unset IFS
+status=0
+for pid in $pids; do
+    wait "$pid" || status=1
+done
+for log in "${LOG_DIR}"/*.log; do
+    cat "$log"
+done
+rm -rf "${LOG_DIR}"
+if [ "$status" -ne 0 ]; then
+    echo "code generation failed" >&2
+    exit 1
+fi
+IFS=','
 
 # Copy generated code into the right location
 # This extra step is required because code generator seems to be working only in a GOPATH environment.
