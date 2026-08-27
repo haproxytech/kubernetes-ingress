@@ -37,12 +37,10 @@ func (m *UpdateStatusManagerImpl) AddIngress(ingress *ingress.Ingress) {
 	m.updateIngresses = append(m.updateIngresses, ingress)
 }
 
-func (m *UpdateStatusManagerImpl) Update(k store.K8s, h haproxy.HAProxy, a annotations.Annotations) (err error) {
-	errs := utils.Errors{}
-	defer func() {
-		err = errs.Result()
-	}()
-
+// Update returns no error on purpose: the API calls happen in a goroutine which outlives
+// this call, so nothing it could report would still be collectable here. It logs its own
+// failures instead.
+func (m *UpdateStatusManagerImpl) Update(k store.K8s, h haproxy.HAProxy, a annotations.Annotations) error {
 	ingresses := m.updateIngresses
 
 	if k.UpdateAllIngresses {
@@ -54,31 +52,41 @@ func (m *UpdateStatusManagerImpl) Update(k store.K8s, h haproxy.HAProxy, a annot
 
 			for _, ingResource := range namespace.Ingresses {
 				i := ingress.New(ingResource, m.ingressClass, m.emptyIngressClass, a)
-				supported := i.Supported(k)
-
-				if (!supported && (len(ingResource.Addresses) == 0 ||
-					!utils.EqualSliceStringsWithoutOrder(k.PublishServiceAddresses, ingResource.Addresses))) ||
-					(supported && utils.EqualSliceStringsWithoutOrder(k.PublishServiceAddresses, ingResource.Addresses)) {
-					continue
-				}
-
-				if supported {
-					ingResource.Addresses = k.PublishServiceAddresses
-				} else {
-					ingResource.Addresses = []string{""}
-				}
-				logger.Debugf("new ingress status ip address of '%s/%s' will be %+v", ingResource.Namespace, ingResource.Name, ingResource.Addresses)
-
 				ingresses = append(ingresses, i)
 			}
 		}
 	}
 
-	if len(ingresses) > 0 {
+	ingressesToUpdate := []*ingress.Ingress{}
+
+	for _, ing := range ingresses {
+		if ing == nil {
+			continue
+		}
+		supported := ing.Supported(k)
+
+		if (!supported && (len(ing.GetAddresses()) == 0 ||
+			!utils.EqualSliceStringsWithoutOrder(k.PublishServiceAddresses, ing.GetAddresses()))) ||
+			(supported && utils.EqualSliceStringsWithoutOrder(k.PublishServiceAddresses, ing.GetAddresses())) {
+			continue
+		}
+
+		if supported {
+			ing.SetAddresses(k.PublishServiceAddresses)
+		} else {
+			ing.SetAddresses([]string{""})
+		}
+		ingNamespacedName := ing.GetNamespacedName()
+		logger.Debugf("new ingress status ip address of '%s/%s' will be %+v", ingNamespacedName.Namespace, ingNamespacedName.Name, ing.GetAddresses())
+
+		ingressesToUpdate = append(ingressesToUpdate, ing)
+	}
+
+	if len(ingressesToUpdate) > 0 {
 		go func() {
-			for _, ing := range ingresses {
+			for _, ing := range ingressesToUpdate {
 				if ing != nil {
-					errs.Add(ing.UpdateStatus(m.client, m.disableIngressStatusUpdate))
+					logger.Error(ing.UpdateStatus(m.client, m.disableIngressStatusUpdate))
 				}
 			}
 		}()
@@ -86,5 +94,5 @@ func (m *UpdateStatusManagerImpl) Update(k store.K8s, h haproxy.HAProxy, a annot
 
 	k.UpdateAllIngresses = false
 	m.updateIngresses = nil
-	return err
+	return nil
 }
