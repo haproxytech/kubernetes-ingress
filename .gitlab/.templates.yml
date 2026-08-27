@@ -9,15 +9,8 @@
         DOCKER_INSECURE_NO_IPTABLES_RAW: "1"
   tags:
     - go
-  artifacts:
-    paths:
-      - tar
-    expire_in: 1 minutes
-    exclude:
-      - tar/*
   before_script:
     - docker login -u='$app' -p $CI_REGISTRY_TOKEN $CI_REGISTRY_GO
-    - docker load -i tar/k8sIC.tar
     - go version
     - go mod download &
     #- docker pull -q $CI_REGISTRY_GO/alpine:3
@@ -56,6 +49,8 @@
     - kubectl get pods -A
     - kind delete cluster --name=dev
   script:
+    - go run ./cmd/gitlab-e2e-image
+    - docker load -i tar/k8sIC.tar
     - CI_ENV=gitlab deploy/tests/create.sh
     - kubectl get pods -A
     - echo "running $E2E_TAG tests" && make -f Makefile.ci ci-e2e

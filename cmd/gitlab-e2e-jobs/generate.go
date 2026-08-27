@@ -56,10 +56,6 @@ stages:
   stage: {{ .Stage }}
   rules:
     - when: on_success
-  needs:
-    - pipeline: $PARENT_PIPELINE_ID
-      job: docker-build
-      artifacts: true
 {{- if .AllowFailure }}
   allow_failure: true
 {{- end }}

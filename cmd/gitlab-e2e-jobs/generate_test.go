@@ -101,10 +101,6 @@ stages:
   stage: e2e_k8s
   rules:
     - when: on_success
-  needs:
-    - pipeline: $PARENT_PIPELINE_ID
-      job: docker-build
-      artifacts: true
   variables:
     E2E_MODE: "sequential"
     E2E_TAG: "e2e_sequential"
@@ -119,10 +115,6 @@ stages:
   stage: e2e_k8s
   rules:
     - when: on_success
-  needs:
-    - pipeline: $PARENT_PIPELINE_ID
-      job: docker-build
-      artifacts: true
   variables:
     E2E_MODE: "sequential"
     E2E_TAG: "e2e_sequential"
