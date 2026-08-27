@@ -19,6 +19,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/haproxytech/kubernetes-ingress/pkg/annotations"
+	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy"
 	"github.com/haproxytech/kubernetes-ingress/pkg/ingress"
 	"github.com/haproxytech/kubernetes-ingress/pkg/status"
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
@@ -119,6 +121,106 @@ func TestIngressAdmittedWhenItsClassBecomesOurs(t *testing.T) {
 	require.False(t, ing.Ignored)
 	require.Equal(t, store.ADDED, ing.Status,
 		"re-admission must set Status back to ADDED, which is what queues the LoadBalancer status update")
+}
+
+// TestFakedIngressIsOursWhateverItsClass pins the exemption inside the predicate. A faked
+// ingress is one the controller builds itself, for the prometheus endpoint among others: it is
+// ours by construction and answers to no IngressClass. The exemption has to be *in* Supported,
+// not around it at each call site, or every caller has to reimplement it - and the one which
+// forgets refuses a route the controller itself asked for.
+func TestFakedIngressIsOursWhateverItsClass(t *testing.T) {
+	c := controllerWithClass(t)
+	ns := c.store.GetNamespace("ns")
+	addBackendService(t, c.store, ns, "app")
+	declareIngressClass(c, "shared", "example.com/other-controller")
+
+	ing := registerRoute(ns, "app-faked", "example.ingress", "/", store.PATH_TYPE_PREFIX, "app")
+	ing.Class = "shared"
+	ing.Faked = true
+
+	require.True(t, wrapIngress(c, ing).Supported(c.store),
+		"a faked ingress is the controller's own, no class can refuse it")
+
+	reconcile(t, c)
+
+	_, err := c.haproxy.BackendGet("ns_svc_app_http")
+	require.NoError(t, err)
+	require.False(t, ing.Ignored)
+}
+
+// TestPassthroughPassRecordsNoClassDecision covers the other caller of the predicate. The pass
+// deciding the passthrough topology walks the ingresses to answer a *global* question, and it
+// returns as soon as one of them says yes: the walk is partial, and in Go map order. Recording
+// a class decision from there would therefore stamp a different subset of the store on every
+// sync. It must ask, and only ask.
+func TestPassthroughPassRecordsNoClassDecision(t *testing.T) {
+	c := controllerWithClass(t)
+	ns := c.store.GetNamespace("ns")
+	passthroughService(t, c, ns, "app", map[string]string{"ssl-passthrough": "true"})
+	declareIngressClass(c, "shared", "example.com/other-controller")
+
+	ing := registerRoutedIngress(ns, "app-shared", nil, map[string]string{"example.ingress": "app"})
+	ing.Class = "shared"
+	ing.Ignored = false
+
+	syncIngresses(t, c)
+
+	require.False(t, haproxy.SSLPassthrough,
+		"the only ingress asking for passthrough is not ours, the topology must stay off")
+	require.False(t, ing.Ignored, "and the pass must have recorded nothing on it")
+	require.Equal(t, store.ADDED, ing.Status, "nor touched its status")
+}
+
+// TestClassUpdatedQueuesTheStatusUpdate pins the condition under which a reconciliation queues
+// a status update, and with it the reason ClassUpdated has to be consumed by the sync: the flag
+// alone queues, whatever the status. Left set - which it was, Clean not resetting it - the same
+// ingress was queued again on every reconciliation, each one writing back the addresses already
+// published.
+func TestClassUpdatedQueuesTheStatusUpdate(t *testing.T) {
+	for _, tc := range []struct {
+		name         string
+		status       store.Status
+		classUpdated bool
+		queued       bool
+	}{
+		{name: "freshly added", status: store.ADDED, queued: true},
+		{name: "class just changed", status: store.EMPTY, classUpdated: true, queued: true},
+		{name: "nothing happened to it", status: store.EMPTY, queued: false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			c := controllerWithClass(t)
+			recorder := &recordingStatusManager{}
+			c.updateStatusManager = recorder
+			ns := c.store.GetNamespace("ns")
+			addBackendService(t, c.store, ns, "app")
+			declareIngressClass(c, "haproxy", ourController)
+
+			ing := registerRoute(ns, "app-ing", "example.ingress", "/", store.PATH_TYPE_PREFIX, "app")
+			ing.Class = "haproxy"
+			ing.Status = tc.status
+			ing.ClassUpdated = tc.classUpdated
+
+			reconcile(t, c)
+
+			require.Equal(t, tc.queued, len(recorder.queued) == 1,
+				"queued=%v was expected, got %d ingress(es) queued", tc.queued, len(recorder.queued))
+		})
+	}
+}
+
+// recordingStatusManager records what a reconciliation queues for a status update. The real
+// manager keeps that list private and the assertion is on the queueing itself, not on what
+// publishing it would produce.
+type recordingStatusManager struct {
+	queued []*ingress.Ingress
+}
+
+func (m *recordingStatusManager) AddIngress(i *ingress.Ingress) {
+	m.queued = append(m.queued, i)
+}
+
+func (m *recordingStatusManager) Update(k store.K8s, h haproxy.HAProxy, a annotations.Annotations) error {
+	return nil
 }
 
 // TestSupportedDoesNotRecordAnything pins the split: a caller which only asks the question -
