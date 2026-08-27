@@ -17,19 +17,53 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 
 	"gopkg.in/yaml.v3"
 )
 
-// JobSet is one e2e job definition, fanned out over its test parts.
+// Split is one build tag and the number of jobs its tests are dealt across.
+// Mode picks how a shard runs its tests: parallel hands them all to one go
+// test call, which runs the packages concurrently, sequential runs them one at
+// a time. Tests tagged e2e_sequential must not share a cluster concurrently.
+type Split struct {
+	Tag    string `yaml:"tag"`
+	Mode   string `yaml:"mode"`
+	Shards int    `yaml:"shards"`
+}
+
+const (
+	modeParallel   = "parallel"
+	modeSequential = "sequential"
+)
+
+// RunMode is the split's mode, defaulting to parallel.
+func (s Split) RunMode() string {
+	if s.Mode == "" {
+		return modeParallel
+	}
+	return s.Mode
+}
+
+// JobSet is one e2e job definition, fanned out over its splits.
 type JobSet struct {
 	Variables    map[string]string `yaml:"variables"`
 	Name         string            `yaml:"name"`
 	Stage        string            `yaml:"stage"`
 	When         string            `yaml:"when"`
-	Parts        []string          `yaml:"parts"`
+	Splits       []Split           `yaml:"splits"`
 	AllowFailure bool              `yaml:"allow_failure"`
+}
+
+// Label is the job name suffix for one shard of a split, keeping the names
+// the pipeline used before the tests were discovered rather than declared.
+func (s Split) Label(shard, total int) string {
+	name := strings.TrimPrefix(s.Tag, "e2e_")
+	if total < 2 {
+		return name
+	}
+	return name + "-" + strconv.Itoa(shard+1)
 }
 
 // Manifest is the parsed .gitlab/e2e-jobs.yml.
@@ -56,7 +90,10 @@ const (
 	scheduleWeekly     = "weekly"
 )
 
-var errUnknownWhen = errors.New("unknown when value")
+var (
+	errUnknownWhen = errors.New("unknown when value")
+	errUnknownMode = errors.New("unknown split mode")
+)
 
 // loadManifest reads and validates the job manifest at path.
 func loadManifest(path string) (Manifest, error) {
@@ -77,8 +114,16 @@ func loadManifest(path string) (Manifest, error) {
 }
 
 func (j JobSet) validate() error {
-	if j.Name == "" || j.Stage == "" || len(j.Parts) == 0 {
-		return fmt.Errorf("job %q needs a name, a stage and at least one part", j.Name)
+	if j.Name == "" || j.Stage == "" || len(j.Splits) == 0 {
+		return fmt.Errorf("job %q needs a name, a stage and at least one split", j.Name)
+	}
+	for _, split := range j.Splits {
+		if split.Tag == "" || split.Shards < 1 {
+			return fmt.Errorf("job %q has a split without a tag or with fewer than one shard", j.Name)
+		}
+		if split.RunMode() != modeParallel && split.RunMode() != modeSequential {
+			return fmt.Errorf("%w %q for job %q", errUnknownMode, split.Mode, j.Name)
+		}
 	}
 	if j.When == whenNever || j.When == whenMROrPush || strings.HasPrefix(j.When, whenSchedulePrefix) {
 		return nil

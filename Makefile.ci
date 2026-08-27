@@ -1,19 +1,28 @@
-.PHONY: ci-e2e-parallel
-ci-e2e-parallel:
+# cmd/gitlab-e2e-jobs sets these on every generated job.
+#   E2E_TAG      build tag to run
+#   E2E_MODE     parallel: one go test call, packages run concurrently
+#                sequential: one go test call per test, run one at a time
+#   E2E_RUN      anchored -run expression        (parallel mode)
+#   E2E_PACKAGES packages to hand to go test     (parallel mode)
+#   E2E_TESTS    space separated package:TestName pairs (sequential mode)
+.PHONY: ci-e2e
+ci-e2e:
 	go clean -testcache
-	KIND_URL=docker CGO_ENABLED=0 gotest -t e2e_parallel
-
-.PHONY: ci-e2e-https
-ci-e2e-https:
-	go clean -testcache
-	KIND_URL=docker CGO_ENABLED=0 gotest -t e2e_https
-
-.PHONY: ci-e2e-sequential-1
-ci-e2e-sequential-1:
-	go clean -testcache
-	KIND_URL=docker CGO_ENABLED=0 gotest -t e2e_sequential -n 2 -s 0 -p 1
-
-.PHONY: ci-e2e-sequential-2
-ci-e2e-sequential-2:
-	go clean -testcache
-	KIND_URL=docker CGO_ENABLED=0 gotest -t e2e_sequential -n 2 -s 1 -p 1
+	@test -n "$(E2E_TAG)" || { echo "E2E_TAG is not set"; exit 1; }
+	@if [ "$(E2E_MODE)" = "sequential" ]; then \
+	  test -n "$(E2E_TESTS)" || { echo "E2E_TESTS is not set"; exit 1; }; \
+	  failed=""; \
+	  for spec in $(E2E_TESTS); do \
+	    pkg="$${spec%:*}"; name="$${spec##*:}"; \
+	    echo "--- $$name ($$pkg)"; \
+	    KIND_URL=docker CGO_ENABLED=0 go test -tags=$(E2E_TAG) -count=1 -run "^$$name$$" "$$pkg" \
+	      || failed="$$failed $$name"; \
+	  done; \
+	  if [ -n "$$failed" ]; then echo "FAILED:$$failed"; exit 1; fi; \
+	else \
+	  test -n "$(E2E_RUN)" || { echo "E2E_RUN is not set"; exit 1; }; \
+	  test -n "$(E2E_PACKAGES)" || { echo "E2E_PACKAGES is not set"; exit 1; }; \
+	  echo "--- $(E2E_TAG) in parallel: $(E2E_PACKAGES)"; \
+	  KIND_URL=docker CGO_ENABLED=0 go test -tags=$(E2E_TAG) -count=1 -run '$(E2E_RUN)' $(E2E_PACKAGES); \
+	fi
+	@echo "all tests passed"

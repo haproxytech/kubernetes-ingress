@@ -56,7 +56,6 @@
     - kubectl get pods -A
     - kind delete cluster --name=dev
   script:
-    - gotest --version
     - CI_ENV=gitlab deploy/tests/create.sh
     - kubectl get pods -A
-    - echo "running make -f Makefile.ci ci-e2e-$TEST_PART tests" && make -f Makefile.ci ci-e2e-$TEST_PART
+    - echo "running $E2E_TAG tests" && make -f Makefile.ci ci-e2e
