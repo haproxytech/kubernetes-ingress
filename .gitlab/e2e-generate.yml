@@ -21,7 +21,7 @@ e2e-jobs-generate:
 
 e2e-trigger:
   stage: e2e-tests
-  needs: ["docker-build", "e2e-jobs-generate"]
+  needs: ["e2e-jobs-generate"]
   rules: *e2e_rules
   variables:
     PARENT_PIPELINE_ID: $CI_PIPELINE_ID
