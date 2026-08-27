@@ -128,6 +128,7 @@ func (k *K8s) Clean() {
 	for _, namespace := range k.Namespaces {
 		for _, data := range namespace.Ingresses {
 			data.Status = EMPTY
+			data.ClassUpdated = false
 		}
 		for _, data := range namespace.Services {
 			switch data.Status {
