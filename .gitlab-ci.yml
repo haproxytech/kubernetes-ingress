@@ -4,25 +4,14 @@ stages:
   - lint
   - unit-tests
   - build
+  - e2e-generate
   - e2e-tests
-  - e2e_k8s
-  - e2e_k8s_sch_1
-  - e2e_k8s_sch_2
-  - e2e_crd_versions
-variables:
-  KIND: v0.30.0
-  DOCKER_HOST: tcp://docker:2375
-  DOCKER_DRIVER: overlay2
-  GO_VERSION: "1.26"
-  DOCKER_VERSION: "29.1"
-  JUNIT_FILE: "junit-report.xml"
-  GOTESTSUM_JUNITFILE: "junit-report.xml"
 include:
+  - local: .gitlab/variables.yml
   - local: .gitlab/bots.yml
   - local: .gitlab/diff.yml
   - local: .gitlab/diff-warnings.yml
   - local: .gitlab/lint.yml
   - local: .gitlab/unit-tests.yml
   - local: .gitlab/build.yml
-  - local: .gitlab/e2e_k8s.yml
-  - local: .gitlab/e2e_k8s_crd_versions_scheduled.yml
+  - local: .gitlab/e2e-generate.yml

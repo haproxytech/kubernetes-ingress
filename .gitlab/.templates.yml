@@ -1,11 +1,6 @@
 .kind_deployment:
-  stage: e2e-tests
   retry: 2
-  needs: ["diff", "tidy", "docker-build"]
-  rules:
-    - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
-    - if: "$CI_PROJECT_NAMESPACE != 'haproxy-controller' && $CI_PIPELINE_SOURCE == 'push'"
-    - if: $CI_PIPELINE_SOURCE == 'schedule'
+  needs: []
   image: $CI_REGISTRY_GO/docker:$DOCKER_VERSION-go$GO_VERSION
   services:
     - name: $CI_REGISTRY_GO/docker:$DOCKER_VERSION-dind
@@ -60,14 +55,8 @@
   after_script:
     - kubectl get pods -A
     - kind delete cluster --name=dev
-  parallel:
-    matrix:
-      - TEST_PART: ["parallel", "https", "sequential-1", "sequential-2"]
   script:
     - gotest --version
     - CI_ENV=gitlab deploy/tests/create.sh
     - kubectl get pods -A
     - echo "running make -f Makefile.ci ci-e2e-$TEST_PART tests" && make -f Makefile.ci ci-e2e-$TEST_PART
-.kind_deployment_schedules:
-  extends: .kind_deployment
-  allow_failure: true
