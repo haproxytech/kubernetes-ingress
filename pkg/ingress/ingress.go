@@ -362,3 +362,11 @@ func (i *Ingress) Update(k store.K8s, h haproxy.HAProxy, a annotations.Annotatio
 func (i Ingress) GetAddresses() []string {
 	return i.resource.Addresses
 }
+
+func (i *Ingress) SetAddresses(addresses []string) {
+	i.resource.Addresses = addresses
+}
+
+func (i *Ingress) GetNamespacedName() types.NamespacedName {
+	return types.NamespacedName{Namespace: i.resource.Namespace, Name: i.resource.Name}
+}
