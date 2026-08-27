@@ -32,8 +32,15 @@ nodes:
       - hostPort: 32060 # admin port
         containerPort: 32060
     kubeadmConfigPatches:
+    # A single node cluster has nobody to elect against, and a busy runner can
+    # stall the apiserver long enough for the lease to lapse, at which point
+    # both components exit and the kubelet restarts them mid test.
     - |
       kind: ClusterConfiguration
       controllerManager:
           extraArgs:
             max-endpoints-per-slice: "5"
+            leader-elect: "false"
+      scheduler:
+          extraArgs:
+            leader-elect: "false"
