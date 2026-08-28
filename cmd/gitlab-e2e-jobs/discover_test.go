@@ -14,8 +14,12 @@
 package main
 
 import (
+	"bufio"
+	"io/fs"
 	"os"
 	"path/filepath"
+	"slices"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -69,35 +73,76 @@ func TestDiscoverTestsIgnoresHelpersAndBenchmarks(t *testing.T) {
 	assert.Equal(t, "TestCorsSuite", found[0].Name)
 }
 
+// independentScan re-derives the tags and test counts with a plain line
+// scanner. Comparing the walker against a second implementation catches drift
+// without pinning the test to one branch's inventory, which differs between
+// main and the release branches.
+func independentScan(t *testing.T, root string) map[string]int {
+	t.Helper()
+	counts := map[string]int{}
+	err := filepath.WalkDir(root, func(path string, entry fs.DirEntry, err error) error {
+		if err != nil || entry.IsDir() || !strings.HasSuffix(path, "_test.go") {
+			return err
+		}
+		file, err := os.Open(path)
+		if err != nil {
+			return err
+		}
+		defer file.Close()
+
+		tag, found := "", 0
+		scanner := bufio.NewScanner(file)
+		for scanner.Scan() {
+			line := scanner.Text()
+			if tag == "" && strings.HasPrefix(line, "//go:build ") {
+				tag = strings.TrimSpace(strings.TrimPrefix(line, "//go:build "))
+			}
+			if strings.HasPrefix(line, "func Test") && strings.Contains(line, "(t *testing.T)") {
+				found++
+			}
+		}
+		if tag != "" {
+			counts[tag] += found
+		}
+		return scanner.Err()
+	})
+	require.NoError(t, err)
+	return counts
+}
+
 // TestDiscoverTestsMatchesTheRepository is the guard against the discovery
-// drifting from the real tree; the counts come from the e2e suites in git.
+// drifting from the real tree.
 func TestDiscoverTestsMatchesTheRepository(t *testing.T) {
-	found, err := discoverTests(filepath.Join("..", "..", "deploy", "tests", "e2e"))
+	root := filepath.Join("..", "..", "deploy", "tests", "e2e")
+	found, err := discoverTests(root)
 	require.NoError(t, err)
 
 	perTag := map[string]int{}
+	seen := map[string]bool{}
 	for _, tc := range found {
 		perTag[tc.Tag]++
+		key := tc.Package + ":" + tc.Name
+		assert.False(t, seen[key], "%s was discovered twice", key)
+		seen[key] = true
 	}
-	assert.Equal(t, 14, perTag["e2e_parallel"])
-	assert.Equal(t, 4, perTag["e2e_https"])
-	assert.Equal(t, 18, perTag["e2e_sequential"])
+	assert.NotEmpty(t, perTag, "no tagged e2e test found at all")
+	assert.Equal(t, independentScan(t, root), perTag)
 }
 
-// TestDiscoverTestsKeepsDuplicateNamesApart covers TestHTTPSSuite, which exists
-// in two packages under two different tags.
+// TestDiscoverTestsKeepsDuplicateNamesApart covers names that exist in more
+// than one package, which the pairing with a package is there to handle.
 func TestDiscoverTestsKeepsDuplicateNamesApart(t *testing.T) {
 	found, err := discoverTests(filepath.Join("..", "..", "deploy", "tests", "e2e"))
 	require.NoError(t, err)
 
-	packages := []string{}
+	packagesFor := map[string][]string{}
 	for _, tc := range found {
-		if tc.Name == "TestHTTPSSuite" {
-			packages = append(packages, tc.Package)
-		}
+		packagesFor[tc.Name] = append(packagesFor[tc.Name], tc.Package)
 	}
-	assert.Len(t, packages, 2)
-	assert.NotEqual(t, packages[0], packages[1])
+	for name, packages := range packagesFor {
+		assert.Len(t, slices.Compact(slices.Clone(packages)), len(packages),
+			"%s is discovered twice from the same package", name)
+	}
 }
 
 func TestShardTestsDealsRoundRobinAndKeepsEveryTest(t *testing.T) {
