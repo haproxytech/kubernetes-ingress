@@ -92,7 +92,9 @@ func (m *UpdateStatusManagerImpl) Update(k store.K8s, h haproxy.HAProxy, a annot
 		}()
 	}
 
-	k.UpdateAllIngresses = false
+	// UpdateAllIngresses is not reset here: this store is a copy, handlers receiving it by
+	// value, so the assignment was a no-op and every sync took the sweep branch. K8s.Clean()
+	// consumes it, with the Status fields it belongs with.
 	m.updateIngresses = nil
 	return nil
 }

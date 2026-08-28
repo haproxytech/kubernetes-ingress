@@ -188,6 +188,13 @@ func (k *K8s) Clean() {
 		}
 	}
 	k.SecretsProcessed = map[string]struct{}{}
+	// Same nature as the Status fields above: a publish service event raises it to ask for
+	// every ingress to be published again, and the sync which did it has consumed it. It
+	// cannot be reset by the status manager, which receives the store by value.
+	//
+	// Being reset here also means a failed sync keeps it, clean(failedSync) skipping this
+	// whole function: the sweep is retried instead of being lost.
+	k.UpdateAllIngresses = false
 }
 
 // GetNamespace returns Namespace. Creates one if not existing
