@@ -1,6 +1,8 @@
 mode: commit
 min_length: 3
 allowed:
+  - crashloop
+  - crashloops
   - acl
   - aspell
   - repo
