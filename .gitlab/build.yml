@@ -29,4 +29,4 @@ docker-build:
     when: on_success
     paths:
       - tar
-    expire_in: 60 minutes
+    expire_in: 2 hours
