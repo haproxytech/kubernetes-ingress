@@ -44,3 +44,8 @@ nodes:
       scheduler:
           extraArgs:
             leader-elect: "false"
+    # stacked clusters share the kernel; conntrack sysctls are not ours to set
+    - |
+      kind: KubeProxyConfiguration
+      conntrack:
+        maxPerCore: 0
