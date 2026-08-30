@@ -1,3 +1,10 @@
+# forks lack the group registry variables; their pipelines can only fail
+workflow:
+  rules:
+    - if: '$CI_REGISTRY_GO == null || $CI_REGISTRY_GO == ""'
+      when: never
+    - when: always
+
 stages:
   - bots
   - diff
