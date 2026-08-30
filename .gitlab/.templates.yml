@@ -9,6 +9,11 @@
         DOCKER_INSECURE_NO_IPTABLES_RAW: "1"
   tags:
     - go
+  artifacts:
+    when: on_failure
+    paths:
+      - logs
+    expire_in: 1 week
   before_script:
     - docker login -u='$app' -p $CI_REGISTRY_TOKEN $CI_REGISTRY_GO
     - go version
@@ -47,6 +52,17 @@
     - kubectl get pods -A
   after_script:
     - kubectl get pods -A
+    # keep enough state to explain a dead cluster
+    - |
+      if [ "$CI_JOB_STATUS" = "failed" ]; then
+        mkdir -p logs
+        kubectl get events -A --sort-by=.lastTimestamp > logs/events.log 2>&1 || true
+        kubectl -n kube-system logs -l k8s-app=kube-proxy --prefix --tail=-1 > logs/kube-proxy.log 2>&1 || true
+        kubectl -n kube-system logs -l k8s-app=kube-proxy --prefix --previous --tail=-1 > logs/kube-proxy-previous.log 2>&1 || true
+        kubectl -n kube-system logs -l k8s-app=kube-dns --prefix --tail=-1 > logs/coredns.log 2>&1 || true
+        kubectl -n local-path-storage logs -l app=local-path-provisioner --prefix --previous --tail=-1 > logs/local-path-previous.log 2>&1 || true
+        kubectl -n haproxy-controller logs -l run=haproxy-ingress --all-containers --prefix --tail=-1 > logs/ingress-controller.log 2>&1 || true
+      fi
     - kind delete cluster --name=dev
   script:
     - go run ./cmd/gitlab-e2e-image
