@@ -403,6 +403,13 @@ image_arguments:
     external: true
     version_min: "1.5"
     example: --external --runtime-dir=/haproxy-ingress/run
+  - argument: --kubeconfig
+    description: Path to the kubeconfig file to use when running controller in [external mode](#--external), combined with -e. Defaults to the kubeconfig file in the user home directory.
+    values:
+      - Path to a kubeconfig file
+    external: true
+    version_min: "1.8"
+    example: --external --kubeconfig=/home/user/.kube/config
   - argument: --version
     description: Prints the version of the Ingress Controller and exits.
     values:
@@ -427,6 +434,45 @@ image_arguments:
     helm: |-
       helm install haproxy haproxytech/kubernetes-ingress \
         --set-string "controller.extraArgs={--disable-service-external-name}"
+  - argument: --localpeer-port
+    description: |-
+      Sets the port used by the HAProxy peers protocol to synchronize the rate limiting
+      stick tables between controller replicas. Each replica announces itself as a peer
+      on this port (pod IP and port), so rate limit counters are shared and a client is
+      rate limited globally even when its requests hit different replicas.
+      The port should be the same on all replicas and reachable between them, and it must
+      not be already used inside the pod.
+    values:
+      - "A valid port in the range. Default: 10000"
+    default: 10000
+    version_min: "1.9"
+    example: --localpeer-port=10000
+  - argument: --with-gopherd
+    description: Use gopherd as the process supervisor inside the pod, to start/stop/reload HAProxy and to restart the controller when it exits. More details in the gopherd documentation.
+    values:
+      - this is boolean flag
+    version_min: "3.0"
+    example: --with-gopherd
+    related_docs:
+      - ./gopherd.md
+  - argument: --with-pebble
+    description: "Deprecated, use --with-gopherd instead. Use pebble to start/stop/reload HAProxy. A deprecation warning is logged and support will be removed in a future release."
+    values:
+      - this is boolean flag
+    version_min: "1.11"
+    version_max: "3.2"
+    example: --with-pebble
+    related_docs:
+      - ./gopherd.md
+  - argument: --with-s6-overlay
+    description: "Deprecated, use --with-gopherd instead. Use s6 overlay to start/stop/reload HAProxy. A deprecation warning is logged and support will be removed in a future release."
+    values:
+      - this is boolean flag
+    version_min: "1.8"
+    version_max: "3.2"
+    example: --with-s6-overlay
+    related_docs:
+      - ./gopherd.md
   - argument: --channel-size
     description: |-
       Sets the size of controller buffers used to receive and send k8s events.
