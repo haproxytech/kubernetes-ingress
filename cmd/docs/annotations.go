@@ -186,6 +186,7 @@ func (c *Conf) generateReadmeAnnotations() {
 			}
 			buff.WriteString("\n")
 			selectExamples(ann, &buff)
+			writeRelatedDocs(ann.RelatedDocs, &buff)
 		}
 		if haveGroupData && groupData.Footer != "" {
 			buff.WriteString(groupData.Footer)

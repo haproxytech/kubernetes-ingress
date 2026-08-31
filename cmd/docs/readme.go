@@ -15,6 +15,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"strings"
 
@@ -127,4 +128,19 @@ func writeValue(value, defaultValue string) string {
 		return value
 	}
 	return value + " `default`"
+}
+
+// writeRelatedDocs renders the optional related_docs field of doc.yaml as a
+// "Related documentation" list, so links to side documents stay structured
+// instead of being inlined in descriptions.
+func writeRelatedDocs(docs []string, buff *strings.Builder) {
+	if len(docs) == 0 {
+		return
+	}
+	buff.WriteString("Related documentation:\n\n")
+	for _, doc := range docs {
+		name := strings.TrimPrefix(doc, "./")
+		buff.WriteString(fmt.Sprintf("- [%s](%s)\n", name, doc))
+	}
+	buff.WriteString("\n")
 }

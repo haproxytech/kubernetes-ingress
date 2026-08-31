@@ -34,6 +34,7 @@ Image can be run with arguments:
 | [`--disable-http`](#--disable-http) | `false` |
 | [`--disable-https`](#--disable-https) | `false` |
 | [`--sync-period`](#--sync-period) | `5s` |
+| [`--initial-sync-period`](#--initial-sync-period) | `0s` |
 | [`--cache-resync-period`](#--cache-resync-period) | `10m` |
 | [`--log`](#--log) | `info` |
 | [`--external`](#--external) | `false` |
@@ -51,6 +52,8 @@ Image can be run with arguments:
 | [`--output-file`](#--output-file) |  |
 | [`--disable-ingress-status-update`](#--disable-ingress-status-update) | `false` |
 | [`--enable-custom-annotations-on-ingress`](#--enable-custom-annotations-on-ingress) |  |
+| [`--experimental`](#--experimental) |  |
+| [`--custom-validation-rules`](#--custom-validation-rules) |  |
 
 
 ### `--configmap`
@@ -589,6 +592,24 @@ Example:
 
 ***
 
+### `--initial-sync-period`
+
+  Sets the period to wait before the controller runs the first sync of the HAProxy configuration file after startup. Later syncs are performed at the --sync-period interval.
+
+Possible values:
+
+- An integer with unit of time (1s = 1 second, 1m = 1 minute, 1h = 1 hour); Defaults to 0s (first sync executed as soon as caches are populated)
+
+Example:
+
+```yaml
+--initial-sync-period=30s
+```
+
+<p align='right'><a href='#haproxy-kubernetes-ingress-controller'>:arrow_up_small: back to top</a></p>
+
+***
+
 ### `--cache-resync-period`
 
   Sets the default re-synchronization period at which the controller will re-apply the desired state.
@@ -912,6 +933,52 @@ Example:
 ```yaml
 --enable-custom-annotations-on-ingress
 ```
+
+<p align='right'><a href='#haproxy-kubernetes-ingress-controller'>:arrow_up_small: back to top</a></p>
+
+***
+
+### `--experimental`
+
+  Activates experimental features by providing a comma separated list of them.
+Experimental features may change or be removed in a future release.
+The only feature currently available is use-ingress-merge, which processes
+ingresses by merging the annotations of the ingresses that reference the same
+service, instead of handling each ingress separately.
+
+Possible values:
+
+- Comma separated list of experimental features to activate
+
+Example:
+
+```yaml
+--experimental=use-ingress-merge
+```
+
+<p align='right'><a href='#haproxy-kubernetes-ingress-controller'>:arrow_up_small: back to top</a></p>
+
+***
+
+### `--custom-validation-rules`
+
+  References the ValidationRules custom resource that defines user defined custom
+annotations with CEL validation. More details can be found in the
+custom annotations documentation.
+
+Possible values:
+
+- The name of the ValidationRules resource in namespace/name format
+
+Example:
+
+```yaml
+--custom-validation-rules=haproxy-controller/example-validationrules
+```
+
+Related documentation:
+
+- [annotations-custom.md](./annotations-custom.md)
 
 <p align='right'><a href='#haproxy-kubernetes-ingress-controller'>:arrow_up_small: back to top</a></p>
 

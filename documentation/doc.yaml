@@ -296,6 +296,13 @@ image_arguments:
       helm install haproxy haproxytech/kubernetes-ingress \
         --set-string "controller.extraArgs={--sync-period=60s}" \
         --set controller.startupProbe.initialDelaySeconds=80
+  - argument: --initial-sync-period
+    description: Sets the period to wait before the controller runs the first sync of the HAProxy configuration file after startup. Later syncs are performed at the --sync-period interval.
+    values:
+      - An integer with unit of time (1s = 1 second, 1m = 1 minute, 1h = 1 hour); Defaults to 0s (first sync executed as soon as caches are populated)
+    default: 0s
+    version_min: "3.1"
+    example: --initial-sync-period=30s
   - argument: --cache-resync-period
     description: Sets the default re-synchronization period at which the controller will re-apply the desired state.
     values:
@@ -438,6 +445,28 @@ image_arguments:
     version_min: "3.2"
     values:
       - Boolean value, just need to declare the flag
+  - argument: --experimental
+    description: |-
+      Activates experimental features by providing a comma separated list of them.
+      Experimental features may change or be removed in a future release.
+      The only feature currently available is use-ingress-merge, which processes
+      ingresses by merging the annotations of the ingresses that reference the same
+      service, instead of handling each ingress separately.
+    values:
+      - Comma separated list of experimental features to activate
+    version_min: "3.2"
+    example: --experimental=use-ingress-merge
+  - argument: --custom-validation-rules
+    description: |-
+      References the ValidationRules custom resource that defines user defined custom
+      annotations with CEL validation. More details can be found in the
+      custom annotations documentation.
+    values:
+      - The name of the ValidationRules resource in namespace/name format
+    related_docs:
+      - ./annotations-custom.md
+    version_min: "3.2"
+    example: --custom-validation-rules=haproxy-controller/example-validationrules
 groups:
   config-snippet:
     header: |-
