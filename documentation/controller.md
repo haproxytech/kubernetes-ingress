@@ -32,6 +32,12 @@ Image can be run with arguments:
 | [`--ipv6-bind-address`](#--ipv6-bind-address) | `::` |
 | [`--http-bind-port`](#--http-bind-port) | `8080` |
 | [`--https-bind-port`](#--https-bind-port) | `8443` |
+| [`--http-bind-thread`](#--http-bind-thread) |  |
+| [`--https-bind-thread`](#--https-bind-thread) |  |
+| [`--stats-bind-port`](#--stats-bind-port) | `1024` |
+| [`--stats-bind-thread`](#--stats-bind-thread) |  |
+| [`--healthz-bind-port`](#--healthz-bind-port) | `1042` |
+| [`--healthz-bind-thread`](#--healthz-bind-thread) |  |
 | [`--disable-http`](#--disable-http) | `false` |
 | [`--disable-https`](#--disable-https) | `false` |
 | [`--sync-period`](#--sync-period) | `5s` |
@@ -42,6 +48,8 @@ Image can be run with arguments:
 | [`--program`](#--program) | `haproxy in PATH location` |
 | [`--config-dir`](#--config-dir) | `/tmp/haproxy-ingress/etc` |
 | [`--runtime-dir`](#--runtime-dir) | `/tmp/haproxy-ingress/run` |
+| [`--version`](#--version) |  |
+| [`--help`](#--help) |  |
 | [`--disable-service-external-name`](#--disable-service-external-name) | `false` |
 | [`--channel-size`](#--channel-size) | `600` |
 | [`--disable-config-snippets`](#--disable-config-snippets) |  |
@@ -561,6 +569,114 @@ Example:
 
 ***
 
+### `--http-bind-thread`
+
+  Sets the thread parameter of the HTTP frontend bind line, pinning it to specific HAProxy worker threads. Useful when the nbthread annotation sets more than one thread.
+
+Possible values:
+
+- A thread or a range of threads in the 1-1 format, same syntax as the HAProxy thread bind parameter
+
+Example:
+
+```yaml
+--http-bind-thread=1-2
+```
+
+<p align='right'><a href='#haproxy-kubernetes-ingress-controller'>:arrow_up_small: back to top</a></p>
+
+***
+
+### `--https-bind-thread`
+
+  Sets the thread parameter of the HTTPS frontend bind line, pinning it to specific HAProxy worker threads. Useful when the nbthread annotation sets more than one thread.
+
+Possible values:
+
+- A thread or a range of threads in the 1-1 format, same syntax as the HAProxy thread bind parameter
+
+Example:
+
+```yaml
+--https-bind-thread=3-4
+```
+
+<p align='right'><a href='#haproxy-kubernetes-ingress-controller'>:arrow_up_small: back to top</a></p>
+
+***
+
+### `--stats-bind-port`
+
+  Port to listen on for the stats page.
+
+Possible values:
+
+- A valid port in the range. Default: 1024
+
+Example:
+
+```yaml
+--stats-bind-port=1024
+```
+
+<p align='right'><a href='#haproxy-kubernetes-ingress-controller'>:arrow_up_small: back to top</a></p>
+
+***
+
+### `--stats-bind-thread`
+
+  Sets the thread parameter of the stats frontend bind line, pinning it to specific HAProxy worker threads. Useful when the nbthread annotation sets more than one thread.
+
+Possible values:
+
+- A thread or a range of threads in the 1-1 format, same syntax as the HAProxy thread bind parameter
+
+Example:
+
+```yaml
+--stats-bind-thread=1-1
+```
+
+<p align='right'><a href='#haproxy-kubernetes-ingress-controller'>:arrow_up_small: back to top</a></p>
+
+***
+
+### `--healthz-bind-port`
+
+  Port to listen on for the health probes endpoint of the controller, used by the readiness probe.
+
+Possible values:
+
+- A valid port in the range. Default: 1042
+
+Example:
+
+```yaml
+--healthz-bind-port=1042
+```
+
+<p align='right'><a href='#haproxy-kubernetes-ingress-controller'>:arrow_up_small: back to top</a></p>
+
+***
+
+### `--healthz-bind-thread`
+
+  Sets the thread parameter of the healthz frontend bind line, pinning it to specific HAProxy worker threads. Useful when the nbthread annotation sets more than one thread.
+
+Possible values:
+
+- A thread or a range of threads in the 1-1 format, same syntax as the HAProxy thread bind parameter
+
+Example:
+
+```yaml
+--healthz-bind-thread=1-1
+```
+
+<p align='right'><a href='#haproxy-kubernetes-ingress-controller'>:arrow_up_small: back to top</a></p>
+
+***
+
 ### `--disable-http`
 
   Disabling the HTTP frontend.
@@ -748,6 +864,48 @@ Example:
 
 ```yaml
 --external --runtime-dir=/haproxy-ingress/run
+```
+
+<p align='right'><a href='#haproxy-kubernetes-ingress-controller'>:arrow_up_small: back to top</a></p>
+
+***
+
+### `--version`
+
+  Prints the version of the Ingress Controller and exits.
+
+:warning: this is only available in external mode
+
+
+Possible values:
+
+- this is boolean flag
+
+Example:
+
+```yaml
+--version
+```
+
+<p align='right'><a href='#haproxy-kubernetes-ingress-controller'>:arrow_up_small: back to top</a></p>
+
+***
+
+### `--help`
+
+  Prints the help message listing all the controller arguments and exits.
+
+:warning: this is only available in external mode
+
+
+Possible values:
+
+- this is boolean flag
+
+Example:
+
+```yaml
+--help
 ```
 
 <p align='right'><a href='#haproxy-kubernetes-ingress-controller'>:arrow_up_small: back to top</a></p>

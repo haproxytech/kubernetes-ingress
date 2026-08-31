@@ -274,6 +274,44 @@ image_arguments:
     helm: |-
       helm install haproxy haproxytech/kubernetes-ingress \
         --set-string "controller.extraArgs={--https-bind-port=8443}"
+  - argument: --http-bind-thread
+    description: Sets the thread parameter of the HTTP frontend bind line, pinning it to specific HAProxy worker threads. Useful when the nbthread annotation sets more than one thread.
+    values:
+      - A thread or a range of threads in the 1-1 format, same syntax as the HAProxy thread bind parameter
+    version_min: "3.1"
+    example: --http-bind-thread=1-2
+  - argument: --https-bind-thread
+    description: Sets the thread parameter of the HTTPS frontend bind line, pinning it to specific HAProxy worker threads. Useful when the nbthread annotation sets more than one thread.
+    values:
+      - A thread or a range of threads in the 1-1 format, same syntax as the HAProxy thread bind parameter
+    version_min: "3.1"
+    example: --https-bind-thread=3-4
+  - argument: --stats-bind-port
+    description: Port to listen on for the stats page.
+    values:
+      - "A valid port in the range. Default: 1024"
+    default: 1024
+    version_min: "1.9"
+    example: --stats-bind-port=1024
+  - argument: --stats-bind-thread
+    description: Sets the thread parameter of the stats frontend bind line, pinning it to specific HAProxy worker threads. Useful when the nbthread annotation sets more than one thread.
+    values:
+      - A thread or a range of threads in the 1-1 format, same syntax as the HAProxy thread bind parameter
+    version_min: "3.1"
+    example: --stats-bind-thread=1-1
+  - argument: --healthz-bind-port
+    description: Port to listen on for the health probes endpoint of the controller, used by the readiness probe.
+    values:
+      - "A valid port in the range. Default: 1042"
+    default: 1042
+    version_min: "1.9"
+    example: --healthz-bind-port=1042
+  - argument: --healthz-bind-thread
+    description: Sets the thread parameter of the healthz frontend bind line, pinning it to specific HAProxy worker threads. Useful when the nbthread annotation sets more than one thread.
+    values:
+      - A thread or a range of threads in the 1-1 format, same syntax as the HAProxy thread bind parameter
+    version_min: "3.1"
+    example: --healthz-bind-thread=1-1
   - argument: --disable-http
     description: Disabling the HTTP frontend.
     values:
@@ -365,6 +403,20 @@ image_arguments:
     external: true
     version_min: "1.5"
     example: --external --runtime-dir=/haproxy-ingress/run
+  - argument: --version
+    description: Prints the version of the Ingress Controller and exits.
+    values:
+      - this is boolean flag
+    external: true
+    version_min: "1.8"
+    example: --version
+  - argument: --help
+    description: Prints the help message listing all the controller arguments and exits.
+    values:
+      - this is boolean flag
+    external: true
+    version_min: "1.8"
+    example: --help
   - argument: --disable-service-external-name
     description: Disable forwarding to ExternalName Services due to CVE-2021-25740
     values:
