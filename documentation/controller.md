@@ -48,9 +48,14 @@ Image can be run with arguments:
 | [`--program`](#--program) | `haproxy in PATH location` |
 | [`--config-dir`](#--config-dir) | `/tmp/haproxy-ingress/etc` |
 | [`--runtime-dir`](#--runtime-dir) | `/tmp/haproxy-ingress/run` |
+| [`--kubeconfig`](#--kubeconfig) |  |
 | [`--version`](#--version) |  |
 | [`--help`](#--help) |  |
 | [`--disable-service-external-name`](#--disable-service-external-name) | `false` |
+| [`--localpeer-port`](#--localpeer-port) | `10000` |
+| [`--with-gopherd`](#--with-gopherd) |  |
+| [`--with-pebble`](#--with-pebble) |  |
+| [`--with-s6-overlay`](#--with-s6-overlay) |  |
 | [`--channel-size`](#--channel-size) | `600` |
 | [`--disable-config-snippets`](#--disable-config-snippets) |  |
 | [`--disable-quic`](#--disable-quic) | `false` |
@@ -870,6 +875,27 @@ Example:
 
 ***
 
+### `--kubeconfig`
+
+  Path to the kubeconfig file to use when running controller in [external mode](#--external), combined with -e. Defaults to the kubeconfig file in the user home directory.
+
+:warning: this is only available in external mode
+
+
+Possible values:
+
+- Path to a kubeconfig file
+
+Example:
+
+```yaml
+--external --kubeconfig=/home/user/.kube/config
+```
+
+<p align='right'><a href='#haproxy-kubernetes-ingress-controller'>:arrow_up_small: back to top</a></p>
+
+***
+
 ### `--version`
 
   Prints the version of the Ingress Controller and exits.
@@ -925,6 +951,95 @@ Example:
 ```yaml
 --disable-service-external-name
 ```
+
+<p align='right'><a href='#haproxy-kubernetes-ingress-controller'>:arrow_up_small: back to top</a></p>
+
+***
+
+### `--localpeer-port`
+
+  Sets the port used by the HAProxy peers protocol to synchronize the rate limiting
+stick tables between controller replicas. Each replica announces itself as a peer
+on this port (pod IP and port), so rate limit counters are shared and a client is
+rate limited globally even when its requests hit different replicas.
+The port should be the same on all replicas and reachable between them, and it must
+not be already used inside the pod.
+
+Possible values:
+
+- A valid port in the range. Default: 10000
+
+Example:
+
+```yaml
+--localpeer-port=10000
+```
+
+<p align='right'><a href='#haproxy-kubernetes-ingress-controller'>:arrow_up_small: back to top</a></p>
+
+***
+
+### `--with-gopherd`
+
+  Use gopherd as the process supervisor inside the pod, to start/stop/reload HAProxy and to restart the controller when it exits. More details in the gopherd documentation.
+
+Possible values:
+
+- this is boolean flag
+
+Example:
+
+```yaml
+--with-gopherd
+```
+
+Related documentation:
+
+- [gopherd.md](./gopherd.md)
+
+<p align='right'><a href='#haproxy-kubernetes-ingress-controller'>:arrow_up_small: back to top</a></p>
+
+***
+
+### `--with-pebble`
+
+  Deprecated, use --with-gopherd instead. Use pebble to start/stop/reload HAProxy. A deprecation warning is logged and support will be removed in a future release.
+
+Possible values:
+
+- this is boolean flag
+
+Example:
+
+```yaml
+--with-pebble
+```
+
+Related documentation:
+
+- [gopherd.md](./gopherd.md)
+
+<p align='right'><a href='#haproxy-kubernetes-ingress-controller'>:arrow_up_small: back to top</a></p>
+
+***
+
+### `--with-s6-overlay`
+
+  Deprecated, use --with-gopherd instead. Use s6 overlay to start/stop/reload HAProxy. A deprecation warning is logged and support will be removed in a future release.
+
+Possible values:
+
+- this is boolean flag
+
+Example:
+
+```yaml
+--with-s6-overlay
+```
+
+Related documentation:
+
+- [gopherd.md](./gopherd.md)
 
 <p align='right'><a href='#haproxy-kubernetes-ingress-controller'>:arrow_up_small: back to top</a></p>
 
