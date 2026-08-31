@@ -86,6 +86,7 @@ func (c *Conf) generateReadmeController() {
 		buff.WriteString("Example:\n\n```yaml\n")
 		buff.WriteString(ann.Example)
 		buff.WriteString("\n```\n\n")
+		writeRelatedDocs(ann.RelatedDocs, &buff)
 		buff.WriteString("<p align='right'><a href='#haproxy-kubernetes-ingress-controller'>:arrow_up_small: back to top</a></p>\n\n***\n\n")
 	}
 

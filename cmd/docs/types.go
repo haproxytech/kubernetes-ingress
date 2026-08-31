@@ -34,6 +34,7 @@ type ConfArg struct {
 	External    bool     `yaml:"external,omitempty"`
 	Example     string   `yaml:"example,omitempty,flow"`
 	Helm        string   `yaml:"helm,omitempty"`
+	RelatedDocs []string `yaml:"related_docs,omitempty"`
 }
 
 type ConfItem struct {
@@ -52,6 +53,7 @@ type ConfItem struct {
 	ExampleConfigmap string   `yaml:"example_configmap,omitempty,flow"`
 	ExampleIngress   string   `yaml:"example_ingress,omitempty,flow"`
 	ExampleService   string   `yaml:"example_service,omitempty,flow"`
+	RelatedDocs      []string `yaml:"related_docs,omitempty"`
 }
 
 type ConfGroup struct {
