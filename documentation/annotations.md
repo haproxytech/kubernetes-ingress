@@ -85,6 +85,7 @@ more info about custom annotations can be found in [annotations-custom.md](annot
 | [ssl-redirect-code](#https) | [301, 302, 303] | "302" | ssl-redirect |:large_blue_circle:|:large_blue_circle:|:white_circle:|
 | [ssl-redirect-port](#https) | number | 8443 | ssl-redirect |:large_blue_circle:|:large_blue_circle:|:white_circle:|
 | [syslog-server](#logging) | [syslog](#syslog-fields) | "address:127.0.0.1, facility: local0, level: notice" |  |:large_blue_circle:|:white_circle:|:white_circle:|
+| [prometheus-endpoint-auth-secret](#prometheus) | string |  |  |:large_blue_circle:|:white_circle:|:white_circle:|
 | [standalone-backend](#standalone-backend) | [bool](#bool) |  |  |:white_circle:|:large_blue_circle:|:large_blue_circle:|
 | [timeout-check](#timeouts) | [time](#time) |  |  |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:|
 | [timeout-client](#timeouts) | [time](#time) | "50s" |  |:large_blue_circle:|:white_circle:|:white_circle:|
@@ -1200,6 +1201,38 @@ haproxy.org/path-rewrite: |
   /foo/(.*) /\1
   /bar/(.*) /baz/\1
 ```
+
+<p align='right'><a href='#available-annotations'>:arrow_up_small: back to top</a></p>
+
+***
+
+#### Prometheus
+
+- The prometheus endpoint is activated with the [--prometheus](controller.md#--prometheus) controller argument and listens on [--controller-port](controller.md#--controller-port).
+- More details in the [prometheus documentation](./prometheus.md).
+
+##### `prometheus-endpoint-auth-secret`
+
+  Enables basic authentication for the prometheus endpoint and selects the Kubernetes Secret that contains the authorized users and their passwords.
+  The Secret data should contain user credentials in the form of `username: encrypted password`, with passwords encrypted with a tool like `mkpasswd` (for example `mkpasswd -m SHA-256`), the same way as for the [auth-secret](#auth-secret) annotation.
+
+  Available on:  `configmap`
+
+  :information_source: The prometheus endpoint is enabled with the [--prometheus](controller.md#--prometheus) controller argument and listens on [--controller-port](controller.md#--controller-port).
+
+Possible values:
+
+- The annotation format is a secret path namespace/secretName
+
+Example:
+
+```yaml
+prometheus-endpoint-auth-secret: haproxy-controller/prometheus-credentials
+```
+
+Related documentation:
+
+- [prometheus.md](./prometheus.md)
 
 <p align='right'><a href='#available-annotations'>:arrow_up_small: back to top</a></p>
 
