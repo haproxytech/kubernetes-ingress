@@ -86,6 +86,12 @@ more info about custom annotations can be found in [annotations-custom.md](annot
 | [ssl-redirect-port](#https) | number | 8443 | ssl-redirect |:large_blue_circle:|:large_blue_circle:|:white_circle:|
 | [syslog-server](#logging) | [syslog](#syslog-fields) | "address:127.0.0.1, facility: local0, level: notice" |  |:large_blue_circle:|:white_circle:|:white_circle:|
 | [prometheus-endpoint-auth-secret](#prometheus) | string |  |  |:large_blue_circle:|:white_circle:|:white_circle:|
+| [cr-global](#custom-resources) | string |  |  |:large_blue_circle:|:white_circle:|:white_circle:|
+| [cr-defaults](#custom-resources) | string |  |  |:large_blue_circle:|:white_circle:|:white_circle:|
+| [cr-backend](#custom-resources) | string |  |  |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:|
+| [cr-frontend-http](#custom-resources) | string |  |  |:large_blue_circle:|:white_circle:|:white_circle:|
+| [cr-frontend-https](#custom-resources) | string |  |  |:large_blue_circle:|:white_circle:|:white_circle:|
+| [cr-frontend-stats](#custom-resources) | string |  |  |:large_blue_circle:|:white_circle:|:white_circle:|
 | [standalone-backend](#standalone-backend) | [bool](#bool) |  |  |:white_circle:|:large_blue_circle:|:large_blue_circle:|
 | [timeout-check](#timeouts) | [time](#time) |  |  |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:|
 | [timeout-client](#timeouts) | [time](#time) | "50s" |  |:large_blue_circle:|:white_circle:|:white_circle:|
@@ -776,6 +782,137 @@ Example:
 ```yaml
 cookie-persistence-no-dynamic: "mycookie"
 ```
+
+<p align='right'><a href='#available-annotations'>:arrow_up_small: back to top</a></p>
+
+***
+
+#### Custom Resources
+
+- These annotations reference a Custom Resource (CR) which holds a full HAProxy configuration section, validated by its CRD.
+- More details in the [custom resources documentation](./custom-resources.md).
+
+##### `cr-global`
+
+  References the Global custom resource that configures the HAProxy global section.
+
+  Available on:  `configmap`
+
+Possible values:
+
+- The annotation format is a path namespace/name to the custom resource
+
+Example:
+
+```yaml
+cr-global: haproxy-controller/myglobal
+```
+
+Related documentation:
+
+- [custom-resources.md](./custom-resources.md)
+
+##### `cr-defaults`
+
+  References the Defaults custom resource that configures the HAProxy defaults section.
+
+  Available on:  `configmap`
+
+Possible values:
+
+- The annotation format is a path namespace/name to the custom resource
+
+Example:
+
+```yaml
+cr-defaults: haproxy-controller/mydefaults
+```
+
+Related documentation:
+
+- [custom-resources.md](./custom-resources.md)
+
+##### `cr-backend`
+
+  References the Backend custom resource that configures the HAProxy backend section of the corresponding service.
+
+  Available on:  `configmap`  `ingress`  `service`
+
+  :information_source: At the ConfigMap level it provides a default backend configuration for all services and at the Ingress level for the underlying services.
+
+Possible values:
+
+- The annotation format is a path namespace/name to the custom resource
+
+Example:
+
+```yaml
+cr-backend: haproxy-controller/mybackend
+```
+
+Related documentation:
+
+- [custom-resources.md](./custom-resources.md)
+
+##### `cr-frontend-http`
+
+  References the Frontend custom resource that amends the HTTP frontend of the HAProxy configuration.
+
+  Available on:  `configmap`
+
+Possible values:
+
+- The annotation format is a path namespace/name to the custom resource
+
+Example:
+
+```yaml
+cr-frontend-http: default/test
+```
+
+Related documentation:
+
+- [custom-resources.md](./custom-resources.md)
+
+##### `cr-frontend-https`
+
+  References the Frontend custom resource that amends the HTTPS frontend of the HAProxy configuration.
+
+  Available on:  `configmap`
+
+Possible values:
+
+- The annotation format is a path namespace/name to the custom resource
+
+Example:
+
+```yaml
+cr-frontend-https: default/test
+```
+
+Related documentation:
+
+- [custom-resources.md](./custom-resources.md)
+
+##### `cr-frontend-stats`
+
+  References the Frontend custom resource that amends the stats frontend of the HAProxy configuration.
+
+  Available on:  `configmap`
+
+Possible values:
+
+- The annotation format is a path namespace/name to the custom resource
+
+Example:
+
+```yaml
+cr-frontend-stats: default/test
+```
+
+Related documentation:
+
+- [custom-resources.md](./custom-resources.md)
 
 <p align='right'><a href='#available-annotations'>:arrow_up_small: back to top</a></p>
 

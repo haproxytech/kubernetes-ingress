@@ -519,6 +519,10 @@ groups:
     header: |-
       - The prometheus endpoint is activated with the [--prometheus](controller.md#--prometheus) controller argument and listens on [--controller-port](controller.md#--controller-port).
       - More details in the [prometheus documentation](./prometheus.md).
+  custom-resources:
+    header: |-
+      - These annotations reference a Custom Resource (CR) which holds a full HAProxy configuration section, validated by its CRD.
+      - More details in the [custom resources documentation](./custom-resources.md).
 annotations:
   - title: auth-type
     type: string
@@ -1918,6 +1922,111 @@ annotations:
       - "prometheus-endpoint-auth-secret: haproxy-controller/prometheus-credentials"
     related_docs:
       - ./prometheus.md
+  - title: cr-global
+    type: string
+    group: custom-resources
+    dependencies: ""
+    default: ""
+    description:
+      - References the Global custom resource that configures the HAProxy global section.
+    tip: []
+    values:
+      - "The annotation format is a path namespace/name to the custom resource"
+    applies_to:
+      - configmap
+    version_min: "1.8"
+    example:
+      - "cr-global: haproxy-controller/myglobal"
+    related_docs:
+      - ./custom-resources.md
+  - title: cr-defaults
+    type: string
+    group: custom-resources
+    dependencies: ""
+    default: ""
+    description:
+      - References the Defaults custom resource that configures the HAProxy defaults section.
+    tip: []
+    values:
+      - "The annotation format is a path namespace/name to the custom resource"
+    applies_to:
+      - configmap
+    version_min: "1.8"
+    example:
+      - "cr-defaults: haproxy-controller/mydefaults"
+    related_docs:
+      - ./custom-resources.md
+  - title: cr-backend
+    type: string
+    group: custom-resources
+    dependencies: ""
+    default: ""
+    description:
+      - References the Backend custom resource that configures the HAProxy backend section of the corresponding service.
+    tip:
+      - At the ConfigMap level it provides a default backend configuration for all services and at the Ingress level for the underlying services.
+    values:
+      - "The annotation format is a path namespace/name to the custom resource"
+    applies_to:
+      - configmap
+      - ingress
+      - service
+    version_min: "1.8"
+    example:
+      - "cr-backend: haproxy-controller/mybackend"
+    related_docs:
+      - ./custom-resources.md
+  - title: cr-frontend-http
+    type: string
+    group: custom-resources
+    dependencies: ""
+    default: ""
+    description:
+      - References the Frontend custom resource that amends the HTTP frontend of the HAProxy configuration.
+    tip: []
+    values:
+      - "The annotation format is a path namespace/name to the custom resource"
+    applies_to:
+      - configmap
+    version_min: "3.2"
+    example:
+      - "cr-frontend-http: default/test"
+    related_docs:
+      - ./custom-resources.md
+  - title: cr-frontend-https
+    type: string
+    group: custom-resources
+    dependencies: ""
+    default: ""
+    description:
+      - References the Frontend custom resource that amends the HTTPS frontend of the HAProxy configuration.
+    tip: []
+    values:
+      - "The annotation format is a path namespace/name to the custom resource"
+    applies_to:
+      - configmap
+    version_min: "3.2"
+    example:
+      - "cr-frontend-https: default/test"
+    related_docs:
+      - ./custom-resources.md
+  - title: cr-frontend-stats
+    type: string
+    group: custom-resources
+    dependencies: ""
+    default: ""
+    description:
+      - References the Frontend custom resource that amends the stats frontend of the HAProxy configuration.
+    tip: []
+    values:
+      - "The annotation format is a path namespace/name to the custom resource"
+    applies_to:
+      - configmap
+    version_min: "3.2"
+    example:
+      - "cr-frontend-stats: default/test"
+    related_docs:
+      - ./custom-resources.md
   - title: standalone-backend
     type: bool
     description:
