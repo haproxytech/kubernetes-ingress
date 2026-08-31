@@ -8,7 +8,7 @@ image_arguments:
     version_min: "1.4"
     example: --configmap=default/my-configmap
   - argument: --job-check-crd
-    description: Special mode for controller that checks if the CRDs are installed and are on latest version. Note that this will not run ingress controller, it just checks if CRDs are OK and exits
+    description: Special mode for controller that installs missing CRDs and updates the existing ones to the latest version. Note that this will not run ingress controller, it just creates or updates the CRDs and then exits
     values:
       - this is boolean flag
     default: false
@@ -144,6 +144,15 @@ image_arguments:
       - this is boolean flag
     version_min: "1.8"
     example: --prometheus
+  - argument: --controller-port
+    description: Port to listen on for the controller data server which serves the prometheus and pprof endpoints. The endpoints are available at the /metrics and /debug/pprof paths. More details can be found in the prometheus documentation.
+    values:
+      - "A valid port in the range. Default: 6060"
+    default: 6060
+    version_min: "1.8"
+    example: --controller-port=6060
+    related_docs:
+      - ./prometheus.md
   - argument: --default-ssl-certificate
     description: The name of a TLS Secret that contains the certificate to use for SSL/TLS traffic. This can be overridden with the <code>ssl-certificate</code> setting.
     values:

@@ -18,6 +18,7 @@ Image can be run with arguments:
 | [`--default-backend-port`](#--default-backend-port) |  |
 | [`--pprof`](#--pprof) |  |
 | [`--prometheus`](#--prometheus) |  |
+| [`--controller-port`](#--controller-port) | `6060` |
 | [`--default-ssl-certificate`](#--default-ssl-certificate) |  |
 | [`--ingress.class`](#--ingressclass) |  |
 | [`--empty-ingress-class`](#--empty-ingress-class) | `false` |
@@ -76,7 +77,7 @@ Example:
 
 ### `--job-check-crd`
 
-  Special mode for controller that checks if the CRDs are installed and are on latest version. Note that this will not run ingress controller, it just checks if CRDs are OK and exits
+  Special mode for controller that installs missing CRDs and updates the existing ones to the latest version. Note that this will not run ingress controller, it just creates or updates the CRDs and then exits
 
 Possible values:
 
@@ -297,6 +298,28 @@ Example:
 ```yaml
 --prometheus
 ```
+
+<p align='right'><a href='#haproxy-kubernetes-ingress-controller'>:arrow_up_small: back to top</a></p>
+
+***
+
+### `--controller-port`
+
+  Port to listen on for the controller data server which serves the prometheus and pprof endpoints. The endpoints are available at the /metrics and /debug/pprof paths. More details can be found in the prometheus documentation.
+
+Possible values:
+
+- A valid port in the range. Default: 6060
+
+Example:
+
+```yaml
+--controller-port=6060
+```
+
+Related documentation:
+
+- [prometheus.md](./prometheus.md)
 
 <p align='right'><a href='#haproxy-kubernetes-ingress-controller'>:arrow_up_small: back to top</a></p>
 
