@@ -438,6 +438,14 @@ image_arguments:
     version_min: "3.2"
     values:
       - Boolean value, just need to declare the flag
+  - argument: --case-insensitive-path-match
+    description: |-
+        Enable case-insensitive path matching for Ingress resources.
+        By default, path matching is case-sensitive. If enabled, HAProxy will perform case-insensitive matching for all Ingress paths. 
+    example: --case-insensitive-path-match
+    version_min: "3.2"
+    values:
+      - Boolean value, just need to declare the flag to enable
 groups:
   config-snippet:
     header: |-
