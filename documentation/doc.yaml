@@ -580,6 +580,24 @@ annotations:
       - ingress
     version_min: "1.11"
     example: [ 'deny-list: "192.168.1.0/24, 192.168.2.100"' ]
+  - title: abortonclose
+    type: bool
+    group: backend-checks
+    dependencies: ""
+    default: "false"
+    description:
+      - Enables the HAProxy `abortonclose` option on the corresponding backend. When a client closes its connection, HAProxy aborts the pending connection to the backend server instead of waiting for the server response.
+      - This frees backend capacity as soon as clients disconnect, at the cost of discarding responses that the server may still be sending.
+    tip: []
+    values:
+      - "true"
+      - "false"
+    applies_to:
+      - configmap
+      - ingress
+      - service
+    version_min: "1.5"
+    example: ['abortonclose: "true"']
   - title: check
     type: bool
     group: backend-checks
@@ -833,6 +851,24 @@ annotations:
     version_min: "1.5"
     example:
       - 'cors-max-age: "1m"'
+  - title: cors-respond-to-options
+    type: bool
+    group: CORS
+    dependencies: cors-enable
+    default: "false"
+    description:
+      - When enabled, answers CORS preflight requests (HTTP `OPTIONS` requests carrying an `Origin` header) directly with a `204 No Content` status, instead of forwarding them to the backend service.
+    tip:
+      - Requires [cors-enable](#cors-enable) to be enabled.
+      - This is a specific annotation; like the other CORS annotations it cannot be merged when multiple ingresses point to the same service.
+    values:
+      - "true"
+      - "false"
+    applies_to:
+      - configmap
+      - ingress
+    version_min: "3.2"
+    example: ['cors-respond-to-options: "true"']
   - title: global-config-snippet
     type: string
     group: config-snippet

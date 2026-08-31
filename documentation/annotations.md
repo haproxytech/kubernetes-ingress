@@ -21,6 +21,7 @@ more info about custom annotations can be found in [annotations-custom.md](annot
 | [auth-realm](#authentication) | string | "Protected Content" | auth-type, auth-secret |:large_blue_circle:|:large_blue_circle:|:white_circle:|
 | [blacklist](#access-control) | IPs/CIDRs or pattern file |  |  |:large_blue_circle:|:large_blue_circle:|:white_circle:|
 | [deny-list](#access-control) | IPs/CIDRs or pattern file |  |  |:large_blue_circle:|:large_blue_circle:|:white_circle:|
+| [abortonclose](#backend-checks) | [bool](#bool) | "false" |  |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:|
 | [check](#backend-checks) | [bool](#bool) | "true" |  |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:|
 | [check-http](#backend-checks) | string |  | check |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:|
 | [check-interval](#backend-checks) | [time](#time) |  | check |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:|
@@ -35,6 +36,7 @@ more info about custom annotations can be found in [annotations-custom.md](annot
 | [cors-allow-credentials](#CORS) | [bool](#bool) | "false" | cors-enable |:large_blue_circle:|:large_blue_circle:|:white_circle:|
 | [cors-allow-headers](#CORS) | string | "*" | cors-enable |:large_blue_circle:|:large_blue_circle:|:white_circle:|
 | [cors-max-age](#CORS) | [time](#time) | "5s" | cors-enable |:large_blue_circle:|:large_blue_circle:|:white_circle:|
+| [cors-respond-to-options](#CORS) | [bool](#bool) | "false" | cors-enable |:large_blue_circle:|:large_blue_circle:|:white_circle:|
 | [global-config-snippet](#config-snippet) | string |  |  |:large_blue_circle:|:white_circle:|:white_circle:|
 | [frontend-config-snippet](#config-snippet) | string |  |  |:large_blue_circle:|:white_circle:|:white_circle:|
 | [stats-config-snippet](#config-snippet) | string |  |  |:large_blue_circle:|:white_circle:|:white_circle:|
@@ -228,6 +230,27 @@ Example:
 
 ```yaml
 cors-max-age: "1m"
+```
+
+##### `cors-respond-to-options`
+
+  When enabled, answers CORS preflight requests (HTTP `OPTIONS` requests carrying an `Origin` header) directly with a `204 No Content` status, instead of forwarding them to the backend service.
+
+  Available on:  `configmap`  `ingress`
+
+  :information_source: Requires [cors-enable](#cors-enable) to be enabled.
+
+  :information_source: This is a specific annotation; like the other CORS annotations it cannot be merged when multiple ingresses point to the same service.
+
+Possible values:
+
+- true
+- false `default`
+
+Example:
+
+```yaml
+cors-respond-to-options: "true"
 ```
 
 <p align='right'><a href='#available-annotations'>:arrow_up_small: back to top</a></p>
@@ -455,6 +478,24 @@ server-ca: "ns1/ca"
 ***
 
 #### Backend Checks
+
+##### `abortonclose`
+
+  Enables the HAProxy `abortonclose` option on the corresponding backend. When a client closes its connection, HAProxy aborts the pending connection to the backend server instead of waiting for the server response.
+  This frees backend capacity as soon as clients disconnect, at the cost of discarding responses that the server may still be sending.
+
+  Available on:  `configmap`  `ingress`  `service`
+
+Possible values:
+
+- true
+- false `default`
+
+Example:
+
+```yaml
+abortonclose: "true"
+```
 
 ##### `check`
 
