@@ -95,7 +95,7 @@ type k8s struct {
 	publishSvc             *utils.NamespaceValue
 	gatewayClient          *gatewayclientset.Clientset
 	crdClient              *crdclientset.Clientset
-	podPrefix              string
+	podMatcher             controllerPodMatcher
 	podNamespace           string
 	whiteListedNS          []string
 	syncPeriod             time.Duration
@@ -132,7 +132,9 @@ func New(osArgs utils.OSArgs, whitelist map[string]struct{}, publishSvc *utils.N
 		logger.Error("CRD API client not present")
 	}
 
-	prefix, _ := utils.GetPodPrefix(os.Getenv("POD_NAME"))
+	podName := os.Getenv("POD_NAME")
+	podNamespace := os.Getenv("POD_NAMESPACE")
+	prefix, _ := utils.GetPodPrefix(podName)
 	k := k8s{
 		builtInClient:          builtInClient,
 		crClientV1:             crclientsetv1.NewForConfigOrDie(restconfig),
@@ -143,8 +145,8 @@ func New(osArgs utils.OSArgs, whitelist map[string]struct{}, publishSvc *utils.N
 		crsRegisteredOnStart:   map[string]struct{}{},
 		whiteListedNS:          getWhitelistedNS(whitelist, osArgs.ConfigMap.Namespace),
 		publishSvc:             publishSvc,
-		podNamespace:           os.Getenv("POD_NAMESPACE"),
-		podPrefix:              prefix,
+		podNamespace:           podNamespace,
+		podMatcher:             newControllerPodMatcher(context.Background(), builtInClient, podNamespace, podName, prefix),
 		syncPeriod:             osArgs.SyncPeriod,
 		initialSyncPeriod:      osArgs.InitialSyncPeriod,
 		cacheResyncPeriod:      osArgs.CacheResyncPeriod,
@@ -354,8 +356,8 @@ func (k k8s) runInformersGwAPI(eventChan chan k8ssync.SyncDataEvent, stop chan s
 }
 
 func (k k8s) runPodInformer(eventChan chan k8ssync.SyncDataEvent, stop chan struct{}, informersSynced *[]cache.InformerSynced) {
-	if k.podPrefix != "" {
-		pi := k.getPodInformer(k.podNamespace, k.podPrefix, k.cacheResyncPeriod, eventChan)
+	if k.podMatcher.enabled() {
+		pi := k.getPodInformer(k.podNamespace, k.podMatcher, k.cacheResyncPeriod, eventChan)
 		go pi.Run(stop)
 		*informersSynced = append(*informersSynced, pi.HasSynced)
 	}

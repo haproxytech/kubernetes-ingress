@@ -17,6 +17,7 @@ package service
 import (
 	"testing"
 
+	"github.com/haproxytech/client-native/v6/models"
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -195,4 +196,31 @@ func TestGetRuntimeBackend_ClusterIP_PortMismatch(t *testing.T) {
 
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "web")
+}
+
+func TestScaleHAProxySrvsOrdersEndpointsDeterministically(t *testing.T) {
+	svc := &Service{
+		backend: &models.Backend{BackendBase: models.BackendBase{Name: "backend"}},
+	}
+	backend := &store.RuntimeBackend{
+		Endpoints: store.RuntimeEndpoints{
+			{Address: "10.244.0.10", Port: 8080}: {},
+			{Address: "10.244.0.2", Port: 8080}:  {},
+			{Address: "10.244.0.2", Port: 8443}:  {},
+		},
+	}
+
+	svc.scaleHAProxySrvs(backend)
+
+	require.Len(t, backend.HAProxySrvs, 42)
+	assert.Equal(t, "SRV_1", backend.HAProxySrvs[0].Name)
+	assert.Equal(t, "10.244.0.2", backend.HAProxySrvs[0].Address)
+	assert.Equal(t, int64(8080), backend.HAProxySrvs[0].Port)
+	assert.Equal(t, "SRV_2", backend.HAProxySrvs[1].Name)
+	assert.Equal(t, "10.244.0.2", backend.HAProxySrvs[1].Address)
+	assert.Equal(t, int64(8443), backend.HAProxySrvs[1].Port)
+	assert.Equal(t, "SRV_3", backend.HAProxySrvs[2].Name)
+	assert.Equal(t, "10.244.0.10", backend.HAProxySrvs[2].Address)
+	assert.Equal(t, int64(8080), backend.HAProxySrvs[2].Port)
+	assert.Empty(t, backend.Endpoints)
 }

@@ -502,6 +502,15 @@ func (c *clientNative) PeerEntryCreateOrEdit(peerSection string, peerEntry model
 	return err
 }
 
+func (c *clientNative) PeerEntriesGet(peerSection string) (models.PeerEntries, error) {
+	configuration, err := c.nativeAPI.Configuration()
+	if err != nil {
+		return nil, err
+	}
+	_, peerEntries, err := configuration.GetPeerEntries(peerSection, c.activeTransaction)
+	return peerEntries, err
+}
+
 func (c *clientNative) PeerEntryDelete(peerSection, entry string) error {
 	cfg, err := c.nativeAPI.Configuration()
 	if err != nil {

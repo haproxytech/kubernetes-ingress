@@ -31,6 +31,7 @@ Image can be run with arguments:
 | [`--ipv6-bind-address`](#--ipv6-bind-address) | `::` |
 | [`--http-bind-port`](#--http-bind-port) | `8080` |
 | [`--https-bind-port`](#--https-bind-port) | `8443` |
+| [`--localpeer-port`](#--localpeer-port) | `10000` |
 | [`--disable-http`](#--disable-http) | `false` |
 | [`--disable-https`](#--disable-https) | `false` |
 | [`--sync-period`](#--sync-period) | `5s` |
@@ -529,6 +530,24 @@ Example:
 
 ```yaml
 --https-bind-port=8443
+```
+
+<p align='right'><a href='#haproxy-kubernetes-ingress-controller'>:arrow_up_small: back to top</a></p>
+
+***
+
+### `--localpeer-port`
+
+  Sets the TCP port used in HAProxy peer entries managed by the controller's `localinstance` peer section. HAProxy uses this peer section for generated stick tables, including request rate limiting. The controller manages the running pod's peer entry and reconciles entries for pods that belong to the same controller Deployment, DaemonSet, or ReplicaSet. Expose this port between controller pods when peer replication is required. This option is not a general static peer mesh configuration; manually defined peer sections are not reconciled by this controller logic.
+
+Possible values:
+
+- A valid port in the range. Default: 10000
+
+Example:
+
+```yaml
+--localpeer-port=10000
 ```
 
 <p align='right'><a href='#haproxy-kubernetes-ingress-controller'>:arrow_up_small: back to top</a></p>
