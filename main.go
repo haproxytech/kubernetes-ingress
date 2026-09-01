@@ -54,6 +54,7 @@ func main() {
 	defer func() {
 		if r := recover(); r != nil {
 			fmt.Println("Error : ", r)
+			exitCode = 1
 		}
 		os.Exit(exitCode)
 	}()
