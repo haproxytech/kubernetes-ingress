@@ -2021,7 +2021,7 @@ annotations:
       - Enables basic authentication for the prometheus endpoint and selects the Kubernetes Secret that contains the authorized users and their passwords.
       - "The Secret data should contain user credentials in the form of `username: encrypted password`, with passwords encrypted with a tool like `mkpasswd` (for example `mkpasswd -m SHA-256`), the same way as for the [auth-secret](#auth-secret) annotation."
     tip:
-      - The prometheus endpoint is enabled with the [--prometheus](controller.md#--prometheus) controller argument and listens on [--controller-port](controller.md#--controller-port).
+      - The prometheus endpoint is enabled with the `--prometheus` controller argument and listens on the port set by `--controller-port`.
     values:
       - "The annotation format is a secret path namespace/secretName"
     applies_to:
