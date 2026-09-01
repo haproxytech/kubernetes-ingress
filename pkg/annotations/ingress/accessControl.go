@@ -63,14 +63,24 @@ func (a *AccessControl) Process(k store.K8s, annotations ...map[string]string) (
 	}
 
 	if !a.maps.MapExists(mapName) {
+		hasValidAddress := false
 		for _, address := range strings.Split(input, ",") {
 			address = strings.TrimSpace(address)
+			if address == "" {
+				// skip empty elements coming from a trailing comma,
+				// consecutive commas or surrounding whitespace
+				continue
+			}
 			if ip := net.ParseIP(address); ip == nil {
 				if _, _, err := net.ParseCIDR(address); err != nil {
 					return fmt.Errorf("incorrect address '%s' in %s annotation", address, a.name)
 				}
 			}
 			a.maps.MapAppend(mapName, address)
+			hasValidAddress = true
+		}
+		if !hasValidAddress {
+			return fmt.Errorf("no valid address found in %s annotation", a.name)
 		}
 	}
 	a.rules.Add(&rules.ReqDeny{
