@@ -40,6 +40,19 @@ linters:
     - go
   script:
     - task lint
+doc-links:
+  stage: lint
+  needs: []
+  rules:
+    - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
+    - if: "$CI_PROJECT_NAMESPACE != 'haproxy-controller' && $CI_PIPELINE_SOURCE == 'push'"
+  image:
+    name: $CI_REGISTRY_GO/golang:$GO_VERSION
+    entrypoint: [""]
+  tags:
+    - go
+  script:
+    - go run ./cmd/check-doc-links documentation/doc.yaml
 commit-policy:
   stage: lint
   needs: []
