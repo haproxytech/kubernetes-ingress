@@ -1357,7 +1357,7 @@ haproxy.org/path-rewrite: |
 
   Available on:  `configmap`
 
-  :information_source: The prometheus endpoint is enabled with the [--prometheus](controller.md#--prometheus) controller argument and listens on [--controller-port](controller.md#--controller-port).
+  :information_source: The prometheus endpoint is enabled with the `--prometheus` controller argument and listens on the port set by `--controller-port`.
 
 Possible values:
 
