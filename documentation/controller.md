@@ -312,6 +312,10 @@ Example:
 --prometheus
 ```
 
+Related documentation:
+
+- [prometheus.md](./prometheus.md)
+
 <p align='right'><a href='#haproxy-kubernetes-ingress-controller'>:arrow_up_small: back to top</a></p>
 
 ***
@@ -372,6 +376,10 @@ Example:
 --ingress.class=haproxy
 ```
 
+Related documentation:
+
+- [ingressclass.md](./ingressclass.md)
+
 <p align='right'><a href='#haproxy-kubernetes-ingress-controller'>:arrow_up_small: back to top</a></p>
 
 ***
@@ -407,6 +415,10 @@ Example:
 ```yaml
 --gateway-controller-name=haproxy.org/gateway-controller
 ```
+
+Related documentation:
+
+- [gateway-api.md](./gateway-api.md)
 
 <p align='right'><a href='#haproxy-kubernetes-ingress-controller'>:arrow_up_small: back to top</a></p>
 
@@ -1229,6 +1241,10 @@ Example:
 ```yaml
 --enable-custom-annotations-on-ingress
 ```
+
+Related documentation:
+
+- [annotations-custom.md](./annotations-custom.md)
 
 <p align='right'><a href='#haproxy-kubernetes-ingress-controller'>:arrow_up_small: back to top</a></p>
 

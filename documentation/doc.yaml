@@ -144,6 +144,8 @@ image_arguments:
       - this is boolean flag
     version_min: "1.8"
     example: --prometheus
+    related_docs:
+      - ./prometheus.md
   - argument: --controller-port
     description: Port to listen on for the controller data server which serves the prometheus and pprof endpoints. The endpoints are available at the /metrics and /debug/pprof paths. More details can be found in the prometheus documentation.
     values:
@@ -171,6 +173,8 @@ image_arguments:
     helm: |-
       helm install intranet haproxytech/kubernetes-ingress \
         --set controller.ingressClass=haproxy
+    related_docs:
+      - ./ingressclass.md
   - argument: --empty-ingress-class
     description: A flag to indicate the controller should process ingresses with empty ingress.class annotation.
     values:
@@ -190,6 +194,8 @@ image_arguments:
     helm: |-
       helm install intranet haproxytech/kubernetes-ingress \
         --set controller.gatewayControllerName=haproxy.org/gateway-controller
+    related_docs:
+      - ./gateway-api.md
   - argument: --namespace-blacklist
     description: Namespaces that the ingress controller should not monitor for changes to pods and services.
     values:
@@ -552,6 +558,8 @@ image_arguments:
     version_min: "3.2"
     values:
       - Boolean value, just need to declare the flag
+    related_docs:
+      - ./annotations-custom.md
   - argument: --experimental
     description: |-
       Activates experimental features by providing a comma separated list of them.
@@ -1730,6 +1738,8 @@ annotations:
       - service
     version_min: "1.6"
     example: ["route-acl: cookie(staging) -m found"]
+    related_docs:
+      - ./canary-deployment.md
   - title: send-proxy-protocol
     type: '["proxy", "proxy-v1", "proxy-v2", "proxy-v2-ssl", "proxy-v2-ssl-cn"]'
     group: send-proxy-protocol
