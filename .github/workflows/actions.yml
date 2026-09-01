@@ -32,6 +32,19 @@ jobs:
         run: test -z "$(git diff 2> /dev/null)" || exit "Documentation is not generated, issue \`make doc\` and commit the result"
       - name: untracked files
         run: test -z "$(git ls-files --others --exclude-standard 2> /dev/null)" || exit "Documentation created untracked files, cannot proceed"
+  doc-links:
+    name: documentation links
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: "go.mod"
+          check-latest: true
+      - name: check documentation links
+        run: go run ./cmd/check-doc-links documentation/doc.yaml
   tidy:
     name: go mod tidy
     runs-on: ubuntu-latest
