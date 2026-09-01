@@ -1742,6 +1742,10 @@ haproxy.org/route-acl: cookie(staging) -m found
 
 ```
 
+Related documentation:
+
+- [canary-deployment.md](./canary-deployment.md)
+
 <p align='right'><a href='#available-annotations'>:arrow_up_small: back to top</a></p>
 
 ***
