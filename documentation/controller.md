@@ -364,7 +364,7 @@ Example:
 
   A name to assign to the ingress controller so that Ingress objects can target it apart from other running ingress controllers.
 
-  :information_source: In kubernetes 1.18+, a new `IngressClass` resource can be referenced by Ingress objects to target an Ingress Controller. More details can be found in the [IngressClass doc entry](./ingressclass.md).
+  :information_source: In kubernetes 1.18+, a new `IngressClass` resource can be referenced by Ingress objects to target an Ingress Controller. More details can be found in the IngressClass documentation.
 
 Possible values:
 
