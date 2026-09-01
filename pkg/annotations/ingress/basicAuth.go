@@ -82,7 +82,17 @@ func (a ReqAuthAnn) Process(k store.K8s, annotations ...map[string]string) (err 
 			// If the pwd is empty or has spaces, we do not create the user in the userlist
 			// This is not a valid setting
 			if len(pwd) < 1 || bytes.ContainsFunc(pwd, unicode.IsSpace) {
-				logger.Warningf("Ingress %s/%s: basic-auth: password for user %s is empty or has spaces. Ignoring it.", a.parent.ingress.Namespace, a.parent.ingress.Name, u)
+				msg := fmt.Sprintf(
+					"basic-auth: invalid password for user %s in secret %s/%s: password is empty or contains whitespace; ignoring it",
+					u, ns, name,
+				)
+				if a.parent.ingress != nil {
+					msg = fmt.Sprintf(
+						"Ingress %s/%s: %s",
+						a.parent.ingress.Namespace, a.parent.ingress.Name, msg,
+					)
+				}
+				logger.Warning(msg)
 				continue
 			}
 			a.parent.authRule.Credentials[u] = pwd
