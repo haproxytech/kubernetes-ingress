@@ -89,6 +89,9 @@ func (c *HAProxyController) clientAPIClosure(fn func() error) (err error) {
 
 // Start initializes and runs HAProxyController
 func (c *HAProxyController) Start() {
+	_, errStart := (c.haproxy.Service("start"))
+	logger.Panic(errStart)
+
 	logger.Panic(c.clientAPIClosure(func() error {
 		err := c.haproxy.PeerEntryDelete("localinstance", "local")
 		if err != nil {
@@ -106,10 +109,6 @@ func (c *HAProxyController) Start() {
 	c.initHandlers()
 	logger.Error(c.setupHAProxyRules())
 	logger.Error(os.Chdir(c.haproxy.Env.CfgDir))
-	_, errStart := c.haproxy.Service("start")
-	logger.Panic(errStart)
-
-	c.SyncData()
 }
 
 // Stop handles shutting down HAProxyController
