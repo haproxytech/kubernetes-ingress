@@ -64,11 +64,9 @@ func (a *AccessControl) Process(k store.K8s, annotations ...map[string]string) (
 
 	if !a.maps.MapExists(mapName) {
 		hasValidAddress := false
-		for _, address := range strings.Split(input, ",") {
+		for _, address := range strings.FieldsFunc(input, func(r rune) bool { return r == ',' }) {
 			address = strings.TrimSpace(address)
 			if address == "" {
-				// skip empty elements coming from a trailing comma,
-				// consecutive commas or surrounding whitespace
 				continue
 			}
 			if ip := net.ParseIP(address); ip == nil {
