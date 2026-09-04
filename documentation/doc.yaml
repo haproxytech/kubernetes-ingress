@@ -214,6 +214,22 @@ image_arguments:
     helm: |-
       helm install haproxy haproxytech/kubernetes-ingress \
         --set-string "controller.extraArgs={--namespace-whitelist=foo}"
+  - argument: --namespace-label-selector
+    description: >
+      Kubernetes label selector of namespaces to watch. Only namespaces that
+      currently match are watched. Labeling a namespace starts a watch;
+      removing or changing the label so it no longer matches stops the watch
+      and drops that namespace from the generated HAProxy configuration.
+      Ignored if --namespace-whitelist or --namespace-blacklist is set.
+      The controller namespace, publish-service namespace, and default
+      certificate namespace are not selected automatically.
+    values:
+      - A Kubernetes label selector, for example app=watch or env in (prod,staging)
+    version_min: "3.2"
+    example: --namespace-label-selector=app=watch
+    helm: |-
+      helm install haproxy haproxytech/kubernetes-ingress \
+        --set-string "controller.extraArgs={--namespace-label-selector=app=watch}"
   - argument: --publish-service
     description: Copies the ingress controller's IP address to the 'Address' field in all Ingress objects that the controller manages. This is useful for tools like external-dns, which use this information to create DNS records.
     values:

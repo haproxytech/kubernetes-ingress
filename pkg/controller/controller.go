@@ -69,6 +69,17 @@ type HAProxyController struct {
 	// deterministically selected to provide the frontends' default backend.
 	// Reset before each processIngress() run and consumed by setIngressDefaultBackend().
 	defaultBackend *store.Ingress
+	sessions       NamespaceSessions
+}
+
+// NamespaceSessions is the controller-side view of per-namespace watch
+// sessions. Nil when --namespace-label-selector is not active.
+type NamespaceSessions interface {
+	Start(namespace string) error
+	Stop(namespace string)
+	Accept(namespace string, epoch uint64) bool
+	MarkReady(namespace string, epoch uint64) bool
+	Close()
 }
 
 // Wrapping a Native-Client transaction and commit it.
@@ -384,6 +395,24 @@ func (c *HAProxyController) manageIngress(ing *store.Ingress) {
 }
 
 //revive:disable-next-line:cognitive-complexity
+func (c *HAProxyController) ingressesEligibleForMerge(service *store.Service) []*store.Ingress {
+	if service == nil {
+		return nil
+	}
+	ingressesOrderedList := c.store.IngressesByService[service.Namespace+"/"+service.Name]
+	if ingressesOrderedList == nil {
+		return nil
+	}
+	var out []*store.Ingress
+	for _, ing := range ingressesOrderedList.Items() {
+		if c.store.SkipIngressInConfig(ing) {
+			continue
+		}
+		out = append(out, ing)
+	}
+	return out
+}
+
 func (c *HAProxyController) processIngressesWithMerge() {
 	// Namespaces and services are walked by name for the same reason as in
 	// processIngressesDefaultImplementation: rules are created in processing order and
@@ -398,14 +427,13 @@ func (c *HAProxyController) processIngressesWithMerge() {
 	// so the established ingress has precedence there too. The two go together: reversing
 	// the set without reversing the merge would give precedence to the newest ingress.
 	for _, namespace := range sortedByKey(c.store.Namespaces) {
+		if c.store.SkipNamespaceInConfig(namespace) {
+			continue
+		}
 		c.store.SecretsProcessed = map[string]struct{}{}
 		// Iterate over services
 		for _, service := range sortedByKey(namespace.Services) {
-			ingressesOrderedList := c.store.IngressesByService[service.Namespace+"/"+service.Name]
-			if ingressesOrderedList == nil {
-				continue
-			}
-			ingresses := ingressesOrderedList.Items()
+			ingresses := c.ingressesEligibleForMerge(service)
 			if len(ingresses) == 0 {
 				continue
 			}

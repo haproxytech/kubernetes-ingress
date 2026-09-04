@@ -17,6 +17,7 @@ package store
 import (
 	"fmt"
 	"path/filepath"
+	"strings"
 
 	"github.com/haproxytech/client-native/v6/models"
 	v3 "github.com/haproxytech/kubernetes-ingress/crs/api/ingress/v3"
@@ -67,13 +68,17 @@ type K8s struct {
 	FrontendRC                   *rc.ResourceCounter
 	GatewayControllerName        string
 	PublishServiceAddresses      []string
+	publishServiceNS             string
+	publishServiceName           string
 	UpdateAllIngresses           bool
 	IngressesByService           map[string]*utils.OrderedSet[string, *Ingress] // service fqn -> ingress name -> ingress
 }
 
 type NamespacesWatch struct {
-	Whitelist map[string]struct{}
-	Blacklist map[string]struct{}
+	Whitelist           map[string]struct{}
+	Blacklist           map[string]struct{}
+	Selected            map[string]struct{}
+	LabelSelectorActive bool
 }
 
 type ErrNotFound error
@@ -87,6 +92,7 @@ func NewK8sStore(args utils.OSArgs) K8s {
 		NamespacesAccess: NamespacesWatch{
 			Whitelist: map[string]struct{}{},
 			Blacklist: map[string]struct{}{},
+			Selected:  map[string]struct{}{},
 		},
 		ConfigMaps: ConfigMaps{
 			Main: &ConfigMap{
@@ -120,6 +126,13 @@ func NewK8sStore(args utils.OSArgs) K8s {
 	}
 	for _, namespace := range args.NamespaceBlacklist {
 		store.NamespacesAccess.Blacklist[namespace] = struct{}{}
+	}
+	if args.NamespaceLabelSelectorActive() {
+		store.NamespacesAccess.LabelSelectorActive = true
+	}
+	if parts := strings.Split(args.PublishService, "/"); len(parts) == 2 {
+		store.publishServiceNS = parts[0]
+		store.publishServiceName = parts[1]
 	}
 	return store
 }
@@ -197,15 +210,10 @@ func (k *K8s) Clean() {
 	k.UpdateAllIngresses = false
 }
 
-// GetNamespace returns Namespace. Creates one if not existing
-func (k K8s) GetNamespace(name string) *Namespace {
-	namespace, ok := k.Namespaces[name]
-	if ok {
-		return namespace
-	}
-	newNamespace := &Namespace{
+func newEmptyNamespace(name string, relevant bool) *Namespace {
+	return &Namespace{
 		Name:                     name,
-		Relevant:                 k.isRelevantNamespace(name),
+		Relevant:                 relevant,
 		Endpoints:                make(map[string]map[string]*Endpoints),
 		Services:                 make(map[string]*Service),
 		Ingresses:                make(map[string]*Ingress),
@@ -225,13 +233,63 @@ func (k K8s) GetNamespace(name string) *Namespace {
 		Labels:          make(map[string]string),
 		Status:          ADDED,
 	}
+}
+
+// GetNamespace returns Namespace. Creates one if not existing, except when
+// label-selector mode is active and the name is not currently selected.
+func (k K8s) GetNamespace(name string) *Namespace {
+	namespace, ok := k.Namespaces[name]
+	if ok {
+		return namespace
+	}
+	if k.NamespacesAccess.LabelSelectorActive {
+		if _, selected := k.NamespacesAccess.Selected[name]; !selected {
+			return newEmptyNamespace(name, false)
+		}
+		newNamespace := newEmptyNamespace(name, false)
+		k.Namespaces[name] = newNamespace
+		return newNamespace
+	}
+	newNamespace := newEmptyNamespace(name, k.isRelevantNamespace(name))
 	k.Namespaces[name] = newNamespace
 	return newNamespace
 }
 
+// MarkNamespaceReady marks a selected namespace as ready for config generation.
+func (k *K8s) MarkNamespaceReady(name string) bool {
+	if !k.NamespacesAccess.LabelSelectorActive {
+		return false
+	}
+	if _, ok := k.NamespacesAccess.Selected[name]; !ok {
+		return false
+	}
+	ns, ok := k.Namespaces[name]
+	if !ok {
+		return false
+	}
+	if ns.Relevant {
+		return false
+	}
+	ns.Relevant = true
+	k.checkCollisionsAllNamespaces()
+	return true
+}
+
+func (k K8s) selectorNamespacePersistent(ns *Namespace) bool {
+	if ns == nil {
+		return false
+	}
+	stored, ok := k.Namespaces[ns.Name]
+	return ok && stored == ns
+}
+
+func (k K8s) dropDetachedMutation(ns *Namespace, status Status) bool {
+	return k.NamespacesAccess.LabelSelectorActive && status != DELETED && !k.selectorNamespacePersistent(ns)
+}
+
 func (k K8s) GetSecret(namespace, name string) (*Secret, error) {
 	ns, ok := k.Namespaces[namespace]
-	if !ok {
+	if !ok || k.configNamespaceMissing(ns) {
 		return nil, fmt.Errorf("secret '%s/%s' does not exist, namespace not found", namespace, name)
 	}
 	secret, secretOK := ns.Secret[name]
@@ -246,7 +304,7 @@ func (k K8s) GetSecret(namespace, name string) (*Secret, error) {
 
 func (k K8s) GetService(namespace, name string) (*Service, error) {
 	ns, nsOk := k.Namespaces[namespace]
-	if !nsOk {
+	if !nsOk || k.configNamespaceMissing(ns) {
 		return nil, fmt.Errorf("service '%s/%s' does not exist, namespace not found", namespace, name)
 	}
 	svc, svcOk := ns.Services[name]
@@ -262,7 +320,7 @@ func (k K8s) GetService(namespace, name string) (*Service, error) {
 // GetEndpoints takes the ns and name of a service and provides a map of endpoints: portName --> *PortEndpoints
 func (k K8s) GetEndpoints(namespace, name string) (endpoints map[string]*PortEndpoints, err error) {
 	ns, nsOk := k.Namespaces[namespace]
-	if !nsOk {
+	if !nsOk || k.configNamespaceMissing(ns) {
 		return nil, fmt.Errorf("service '%s/%s' does not exist, namespace not found", namespace, name)
 	}
 	slices, ok := ns.Endpoints[name]
@@ -288,6 +346,36 @@ func (k K8s) isRelevantNamespace(namespace string) bool {
 	}
 	_, ok := k.NamespacesAccess.Blacklist[namespace]
 	return !ok
+}
+
+func (k K8s) configNamespaceMissing(ns *Namespace) bool {
+	return k.NamespacesAccess.LabelSelectorActive && (ns == nil || !ns.Relevant)
+}
+
+// SkipNamespaceInConfig reports whether selector mode must omit this namespace
+// from HAProxy generation. Non-selector callers always get false so existing
+// Relevant checks keep their original meaning.
+func (k K8s) SkipNamespaceInConfig(ns *Namespace) bool {
+	if !k.NamespacesAccess.LabelSelectorActive {
+		return false
+	}
+	return ns == nil || !ns.Relevant
+}
+
+// SkipIngressInConfig reports whether selector mode must omit this Ingress,
+// including when it is reached through another namespace's service index.
+func (k K8s) SkipIngressInConfig(ing *Ingress) bool {
+	if ing == nil {
+		return true
+	}
+	if ing.Faked {
+		return false
+	}
+	if !k.NamespacesAccess.LabelSelectorActive {
+		return false
+	}
+	ns, ok := k.Namespaces[ing.Namespace]
+	return !ok || !ns.Relevant
 }
 
 func (k K8s) IsIngressClassSupported(ingressClass, controllerClass string, allowEmptyClass bool) bool {

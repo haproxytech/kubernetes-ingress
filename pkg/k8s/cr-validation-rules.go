@@ -30,7 +30,7 @@ func NewValidationCRV3() ValidationCR {
 	return ValidationCR{}
 }
 
-func (c ValidationCR) GetInformerV3(eventChan chan k8ssync.SyncDataEvent, factory informersv3.SharedInformerFactory, osArgs utils.OSArgs) cache.SharedIndexInformer { //nolint:ireturn
+func (c ValidationCR) GetInformerV3(eventChan chan k8ssync.SyncDataEvent, factory informersv3.SharedInformerFactory, osArgs utils.OSArgs) (cache.SharedIndexInformer, cache.ResourceEventHandlerRegistration) { //nolint:ireturn
 	informer := factory.Ingress().V3().ValidationRules().Informer()
 
 	sendToChannel := func(eventChan chan k8ssync.SyncDataEvent, newObject interface{}, status store.Status) {
@@ -78,7 +78,7 @@ func (c ValidationCR) GetInformerV3(eventChan chan k8ssync.SyncDataEvent, factor
 		go logger.Debug("ValidationRules CR informer error: %s", err)
 	})
 	logger.Error(errW)
-	_, err := informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+	reg, err := informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			sendToChannel(eventChan, obj, store.ADDED)
 		},
@@ -90,7 +90,7 @@ func (c ValidationCR) GetInformerV3(eventChan chan k8ssync.SyncDataEvent, factor
 		},
 	})
 	logger.Error(err)
-	return informer
+	return informer, reg
 }
 
 func (c ValidationCR) GetKind() string {

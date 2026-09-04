@@ -28,6 +28,13 @@ import (
 func (c *HAProxyController) SyncData() {
 	hadChanges := false
 	for job := range c.eventChan {
+		if c.sessions != nil && k8ssync.IsNamespacedSessionEvent(job.SyncType) &&
+			!c.sessions.Accept(job.Namespace, job.NamespaceEpoch) {
+			if job.EventProcessed != nil {
+				close(job.EventProcessed)
+			}
+			continue
+		}
 		ns := c.store.GetNamespace(job.Namespace)
 		change := false
 		switch job.SyncType {
@@ -72,7 +79,30 @@ func (c *HAProxyController) SyncData() {
 			change = c.store.EventFrontendCR(job.Namespace, job.Name, data)
 		case k8ssync.NAMESPACE:
 			//revive:disable-next-line:unchecked-type-assertion
-			change = c.store.EventNamespace(ns, job.Data.(*store.Namespace))
+			nsData := job.Data.(*store.Namespace)
+			change = c.store.EventNamespace(ns, nsData)
+			if c.sessions != nil {
+				switch nsData.Status {
+				case store.DELETED:
+					c.sessions.Stop(nsData.Name)
+				case store.ADDED:
+					if !job.IsInInitialList {
+						if err := c.sessions.Start(nsData.Name); err != nil {
+							logger.Panic(err)
+						}
+					}
+				}
+			}
+		case k8ssync.NAMESPACE_SESSION_READY:
+			if c.sessions != nil && !c.sessions.MarkReady(job.Namespace, job.NamespaceEpoch) {
+				break
+			}
+			change = c.store.MarkNamespaceReady(job.Namespace)
+			hadChanges = hadChanges || change
+			if job.EventProcessed != nil {
+				close(job.EventProcessed)
+			}
+			continue
 		case k8ssync.INGRESS:
 			//revive:disable-next-line:unchecked-type-assertion
 			change = c.store.EventIngress(ns, job.Data.(*store.Ingress), job.UID, job.ResourceVersion)

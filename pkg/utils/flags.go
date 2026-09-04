@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"strings"
 	"time"
+
+	"k8s.io/apimachinery/pkg/labels"
 )
 
 // NamespaceValue used to automatically distinct namespace/name string
@@ -90,6 +92,7 @@ type OSArgs struct {
 	Version                           []bool         `short:"v" long:"version" description:"version"`
 	NamespaceWhitelist                []string       `long:"namespace-whitelist" description:"whitelisted namespaces"`
 	NamespaceBlacklist                []string       `long:"namespace-blacklist" description:"blacklisted namespaces"`
+	NamespaceLabelSelector            string         `long:"namespace-label-selector" description:"label selector to dynamically watch namespaces. Ignored if --namespace-whitelist or --namespace-blacklist is set"`
 	Help                              []bool         `short:"h" long:"help" description:"show this help message"`
 	LocalPeerPort                     int64          `long:"localpeer-port" default:"10000" description:"port to listen on for local peer"`
 	StatsBindPort                     int64          `long:"stats-bind-port" default:"1024" description:"port to listen on for stats page"`
@@ -128,4 +131,47 @@ type OSArgs struct {
 	DisableIngressStatusUpdate        bool           `long:"disable-ingress-status-update" description:"If true, disables updating the status field of Ingress resources"`
 	EnableCustomAnnotationsOnIngress  bool           `long:"enable-custom-annotations-on-ingress" description:"allow custom user annotations on ingress"`
 	CustomValidationRules             NamespaceValue `long:"custom-validation-rules" description:"custom validation rules object" default:""`
+}
+
+// NamespaceLabelSelectorActive reports whether --namespace-label-selector is
+// the active namespace filter. Whitelist and blacklist take precedence.
+func (a OSArgs) NamespaceLabelSelectorActive() bool {
+	return strings.TrimSpace(a.NamespaceLabelSelector) != "" &&
+		len(a.NamespaceWhitelist) == 0 &&
+		len(a.NamespaceBlacklist) == 0
+}
+
+// NamespaceLabelSelectorIgnored reports that a selector was set but will not
+// be used because whitelist or blacklist is also set.
+func (a OSArgs) NamespaceLabelSelectorIgnored() bool {
+	return strings.TrimSpace(a.NamespaceLabelSelector) != "" &&
+		(len(a.NamespaceWhitelist) > 0 || len(a.NamespaceBlacklist) > 0)
+}
+
+// NamespaceLabelSelectorCanonical returns the trimmed selector string used for
+// labels.Parse and the Namespace informer. Empty when the selector is inactive.
+func (a OSArgs) NamespaceLabelSelectorCanonical() string {
+	if !a.NamespaceLabelSelectorActive() {
+		return ""
+	}
+	return strings.TrimSpace(a.NamespaceLabelSelector)
+}
+
+// ValidateNamespaceLabelSelector parses --namespace-label-selector when it is
+// the active filter. Whitespace-only or invalid selectors fail startup.
+func (a OSArgs) ValidateNamespaceLabelSelector() error {
+	if len(a.NamespaceWhitelist) > 0 || len(a.NamespaceBlacklist) > 0 {
+		return nil
+	}
+	if a.NamespaceLabelSelector == "" {
+		return nil
+	}
+	sel := strings.TrimSpace(a.NamespaceLabelSelector)
+	if sel == "" {
+		return fmt.Errorf("invalid --namespace-label-selector %q: selector must not be empty or whitespace-only", a.NamespaceLabelSelector)
+	}
+	if _, err := labels.Parse(sel); err != nil {
+		return fmt.Errorf("invalid --namespace-label-selector %q: %w", a.NamespaceLabelSelector, err)
+	}
+	return nil
 }

@@ -36,7 +36,7 @@ func (c BackendCR) GetKind() string {
 	return "Backend"
 }
 
-func (c BackendCR) GetInformerV3(eventChan chan k8ssync.SyncDataEvent, factory informers.SharedInformerFactory, osArgs utils.OSArgs) cache.SharedIndexInformer { //nolint:ireturn
+func (c BackendCR) GetInformerV3(eventChan chan k8ssync.SyncDataEvent, factory informers.SharedInformerFactory, osArgs utils.OSArgs) (cache.SharedIndexInformer, cache.ResourceEventHandlerRegistration) { //nolint:ireturn
 	informer := factory.Ingress().V3().Backends().Informer()
 
 	sendToChannel := func(eventChan chan k8ssync.SyncDataEvent, object interface{}, status store.Status) {
@@ -63,7 +63,7 @@ func (c BackendCR) GetInformerV3(eventChan chan k8ssync.SyncDataEvent, factory i
 		go logger.Debug("Backend CR informer error: %s", err)
 	})
 	logger.Error(errW)
-	_, err := informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+	reg, err := informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			sendToChannel(eventChan, obj, store.ADDED)
 		},
@@ -78,5 +78,5 @@ func (c BackendCR) GetInformerV3(eventChan chan k8ssync.SyncDataEvent, factory i
 	// Use TransformFunc to modify/filter objects before passing them to handlers
 	err = informer.SetTransform(k8stransform.TransformBackend)
 	logger.Error(err)
-	return informer
+	return informer, reg
 }

@@ -34,7 +34,7 @@ func (c DefaultsCR) GetKind() string {
 	return "Defaults"
 }
 
-func (c DefaultsCR) GetInformerV3(eventChan chan k8ssync.SyncDataEvent, factory informersv3.SharedInformerFactory, osArgs utils.OSArgs) cache.SharedIndexInformer { //nolint:ireturn
+func (c DefaultsCR) GetInformerV3(eventChan chan k8ssync.SyncDataEvent, factory informersv3.SharedInformerFactory, osArgs utils.OSArgs) (cache.SharedIndexInformer, cache.ResourceEventHandlerRegistration) { //nolint:ireturn
 	informer := factory.Ingress().V3().Defaults().Informer()
 
 	sendToChannel := func(eventChan chan k8ssync.SyncDataEvent, object interface{}, status store.Status) {
@@ -61,7 +61,7 @@ func (c DefaultsCR) GetInformerV3(eventChan chan k8ssync.SyncDataEvent, factory 
 		go logger.Debug("Defaults CR informer error: %s", err)
 	})
 	logger.Error(errW)
-	_, err := informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+	reg, err := informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			sendToChannel(eventChan, obj, store.ADDED)
 		},
@@ -73,5 +73,5 @@ func (c DefaultsCR) GetInformerV3(eventChan chan k8ssync.SyncDataEvent, factory 
 		},
 	})
 	logger.Error(err)
-	return informer
+	return informer, reg
 }

@@ -53,7 +53,7 @@ func (c GlobalCRV1) GetKind() string {
 	return "Global"
 }
 
-func (c GlobalCRV1) GetInformerV1(eventChan chan k8ssync.SyncDataEvent, factory informersv1.SharedInformerFactory) cache.SharedIndexInformer { //nolint:ireturn
+func (c GlobalCRV1) GetInformerV1(eventChan chan k8ssync.SyncDataEvent, factory informersv1.SharedInformerFactory) (cache.SharedIndexInformer, cache.ResourceEventHandlerRegistration) { //nolint:ireturn
 	informer := factory.Ingress().V1().Globals().Informer()
 
 	sendToChannel := func(eventChan chan k8ssync.SyncDataEvent, object interface{}, status store.Status) {
@@ -84,7 +84,7 @@ func (c GlobalCRV1) GetInformerV1(eventChan chan k8ssync.SyncDataEvent, factory 
 		}
 	}
 
-	_, err := informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+	reg, err := informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			sendToChannel(eventChan, obj, store.ADDED)
 		},
@@ -96,14 +96,14 @@ func (c GlobalCRV1) GetInformerV1(eventChan chan k8ssync.SyncDataEvent, factory 
 		},
 	})
 	logger.Error(err)
-	return informer
+	return informer, reg
 }
 
 func (c DefaultsCRV1) GetKind() string {
 	return "Defaults"
 }
 
-func (c DefaultsCRV1) GetInformerV1(eventChan chan k8ssync.SyncDataEvent, factory informersv1.SharedInformerFactory) cache.SharedIndexInformer { //nolint:ireturn
+func (c DefaultsCRV1) GetInformerV1(eventChan chan k8ssync.SyncDataEvent, factory informersv1.SharedInformerFactory) (cache.SharedIndexInformer, cache.ResourceEventHandlerRegistration) { //nolint:ireturn
 	informer := factory.Ingress().V1().Defaults().Informer()
 
 	sendToChannel := func(eventChan chan k8ssync.SyncDataEvent, object interface{}, status store.Status) {
@@ -131,7 +131,7 @@ func (c DefaultsCRV1) GetInformerV1(eventChan chan k8ssync.SyncDataEvent, factor
 		}
 	}
 
-	_, err := informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+	reg, err := informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			sendToChannel(eventChan, obj, store.ADDED)
 		},
@@ -143,14 +143,14 @@ func (c DefaultsCRV1) GetInformerV1(eventChan chan k8ssync.SyncDataEvent, factor
 		},
 	})
 	logger.Error(err)
-	return informer
+	return informer, reg
 }
 
 func (c BackendCRV1) GetKind() string {
 	return "Backend"
 }
 
-func (c BackendCRV1) GetInformerV1(eventChan chan k8ssync.SyncDataEvent, factory informersv1.SharedInformerFactory) cache.SharedIndexInformer { //nolint:ireturn
+func (c BackendCRV1) GetInformerV1(eventChan chan k8ssync.SyncDataEvent, factory informersv1.SharedInformerFactory) (cache.SharedIndexInformer, cache.ResourceEventHandlerRegistration) { //nolint:ireturn
 	informer := factory.Ingress().V1().Backends().Informer()
 
 	sendToChannel := func(eventChan chan k8ssync.SyncDataEvent, object interface{}, status store.Status) {
@@ -179,7 +179,7 @@ func (c BackendCRV1) GetInformerV1(eventChan chan k8ssync.SyncDataEvent, factory
 		}
 	}
 
-	_, err := informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+	reg, err := informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			sendToChannel(eventChan, obj, store.ADDED)
 		},
@@ -191,14 +191,14 @@ func (c BackendCRV1) GetInformerV1(eventChan chan k8ssync.SyncDataEvent, factory
 		},
 	})
 	logger.Error(err)
-	return informer
+	return informer, reg
 }
 
 func (c TCPCRV1) GetKind() string {
 	return "TCP"
 }
 
-func (c TCPCRV1) GetInformerV1(eventChan chan k8ssync.SyncDataEvent, factory informersv1.SharedInformerFactory) cache.SharedIndexInformer { //nolint:ireturn
+func (c TCPCRV1) GetInformerV1(eventChan chan k8ssync.SyncDataEvent, factory informersv1.SharedInformerFactory) (cache.SharedIndexInformer, cache.ResourceEventHandlerRegistration) { //nolint:ireturn
 	informer := factory.Ingress().V1().TCPs().Informer()
 
 	sendToChannel := func(eventChan chan k8ssync.SyncDataEvent, object interface{}, status store.Status) {
@@ -228,7 +228,7 @@ func (c TCPCRV1) GetInformerV1(eventChan chan k8ssync.SyncDataEvent, factory inf
 		}
 	}
 
-	_, err := informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+	reg, err := informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			sendToChannel(eventChan, obj, store.ADDED)
 		},
@@ -240,5 +240,5 @@ func (c TCPCRV1) GetInformerV1(eventChan chan k8ssync.SyncDataEvent, factory inf
 		},
 	})
 	logger.Error(err)
-	return informer
+	return informer, reg
 }

@@ -92,7 +92,7 @@ func model(name, defaultNS string, crType int, k store.K8s, annotations ...map[s
 		crNS = defaultNS
 	}
 	ns, nsOk := k.Namespaces[crNS]
-	if !nsOk {
+	if !nsOk || k.SkipNamespaceInConfig(ns) {
 		return nil, fmt.Errorf("annotation %s: custom resource '%s/%s' does not exist, namespace not found", name, crNS, crName)
 	}
 	switch crType {

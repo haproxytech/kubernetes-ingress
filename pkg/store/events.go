@@ -27,8 +27,15 @@ func (k *K8s) EventNamespace(ns *Namespace, data *Namespace) (updateRequired boo
 	updateRequired = false
 	switch data.Status {
 	case ADDED:
+		if k.NamespacesAccess.LabelSelectorActive {
+			k.NamespacesAccess.Selected[data.Name] = struct{}{}
+		}
+		_, existed := k.Namespaces[data.Name]
 		nsStore := k.GetNamespace(data.Name)
 		nsStore.Labels = utils.CopyMap(data.Labels)
+		if k.NamespacesAccess.LabelSelectorActive && !existed {
+			nsStore.Relevant = false
+		}
 		updateRequired = true
 	case MODIFIED:
 		nsStore := k.GetNamespace(data.Name)
@@ -37,6 +44,17 @@ func (k *K8s) EventNamespace(ns *Namespace, data *Namespace) (updateRequired boo
 			nsStore.Labels = utils.CopyMap(data.Labels)
 		}
 	case DELETED:
+		if k.NamespacesAccess.LabelSelectorActive {
+			k.unselectNamespace(data.Name)
+			nsStore, ok := k.Namespaces[data.Name]
+			if ok {
+				nsStore.Relevant = false
+				k.teardownNamespaceResources(nsStore)
+				delete(k.Namespaces, data.Name)
+				updateRequired = true
+			}
+			return updateRequired
+		}
 		_, ok := k.Namespaces[data.Name]
 		if ok {
 			delete(k.Namespaces, data.Name)
@@ -46,6 +64,66 @@ func (k *K8s) EventNamespace(ns *Namespace, data *Namespace) (updateRequired boo
 		}
 	}
 	return updateRequired
+}
+
+func (k *K8s) unselectNamespace(name string) {
+	if !k.NamespacesAccess.LabelSelectorActive {
+		return
+	}
+	delete(k.NamespacesAccess.Selected, name)
+}
+
+func (k *K8s) teardownNamespaceResources(nsStore *Namespace) {
+	if nsStore == nil {
+		return
+	}
+	ingresses := make([]*Ingress, 0, len(nsStore.Ingresses))
+	for _, ing := range nsStore.Ingresses {
+		ingresses = append(ingresses, ing)
+	}
+	for _, ing := range ingresses {
+		ing.Status = DELETED
+		k.EventIngress(nsStore, ing, "", "")
+	}
+	if k.publishServiceNS == nsStore.Name && k.publishServiceName != "" {
+		if svc, ok := nsStore.Services[k.publishServiceName]; ok {
+			svc.Status = DELETED
+			k.EventPublishService(nsStore, svc)
+		} else {
+			k.PublishServiceAddresses = nil
+			k.UpdateAllIngresses = true
+		}
+	}
+	if nsStore.CRs != nil {
+		tcps := make([]*TCPs, 0, len(nsStore.CRs.TCPsPerCR))
+		for _, tcp := range nsStore.CRs.TCPsPerCR {
+			tcps = append(tcps, tcp)
+		}
+		for _, tcp := range tcps {
+			tcp.Status = DELETED
+			k.EventTCPCR(nsStore.Name, tcp.Name, tcp)
+		}
+		for name := range nsStore.CRs.Global {
+			k.EventGlobalCR(nsStore.Name, name, nil)
+		}
+		for name := range nsStore.CRs.Defaults {
+			k.EventDefaultsCR(nsStore.Name, name, nil)
+		}
+		for name := range nsStore.CRs.Backends {
+			k.EventBackendCR(nsStore.Name, name, nil)
+		}
+		for name := range nsStore.CRs.Frontends {
+			k.EventFrontendCR(nsStore.Name, name, nil)
+		}
+	}
+	clear(nsStore.Services)
+	clear(nsStore.Secret)
+	clear(nsStore.Endpoints)
+	clear(nsStore.HAProxyRuntime)
+	clear(nsStore.HAProxyRuntimeStandalone)
+	clear(nsStore.Gateways)
+	clear(nsStore.TCPRoutes)
+	clear(nsStore.ReferenceGrants)
 }
 
 func (k *K8s) EventIngressClass(data *IngressClass) (updateRequired bool) {
@@ -62,11 +140,21 @@ func (k *K8s) EventIngressClass(data *IngressClass) (updateRequired bool) {
 func (k *K8s) EventIngress(ns *Namespace, data *Ingress, uid types.UID, resourceVersion string) (updateRequired bool) {
 	updateRequired = true
 
+	if k.dropDetachedMutation(ns, data.Status) {
+		return false
+	}
+
 	if data.Status == DELETED {
 		delete(ns.Ingresses, data.Name)
 		for _, rule := range data.Rules {
 			for _, path := range rule.Paths {
-				k.IngressesByService[path.SvcNamespace+"/"+path.SvcName].Remove(data)
+				key := path.SvcNamespace + "/" + path.SvcName
+				if set := k.IngressesByService[key]; set != nil {
+					set.Remove(data)
+					if k.NamespacesAccess.LabelSelectorActive && len(set.Items()) == 0 {
+						delete(k.IngressesByService, key)
+					}
+				}
 			}
 		}
 		meta.GetMetaStore().ProcessedResourceVersion.Delete(data, uid)
@@ -89,7 +177,13 @@ func (k *K8s) EventIngress(ns *Namespace, data *Ingress, uid types.UID, resource
 
 			for _, rule := range oldIngress.Rules {
 				for _, path := range rule.Paths {
-					k.IngressesByService[path.SvcNamespace+"/"+path.SvcName].Remove(data)
+					key := path.SvcNamespace + "/" + path.SvcName
+					if set := k.IngressesByService[key]; set != nil {
+						set.Remove(data)
+						if k.NamespacesAccess.LabelSelectorActive && len(set.Items()) == 0 {
+							delete(k.IngressesByService, key)
+						}
+					}
 				}
 			}
 		}
@@ -147,6 +241,9 @@ func getEndpoints(slices map[string]*Endpoints) (endpoints map[string]RuntimeEnd
 }
 
 func (k *K8s) EventEndpoints(ns *Namespace, data *Endpoints, syncHAproxySrvs func(backend *RuntimeBackend) error) (updateRequired bool) {
+	if k.dropDetachedMutation(ns, data.Status) {
+		return false
+	}
 	if _, ok := ns.Endpoints[data.Service]; !ok {
 		ns.Endpoints[data.Service] = make(map[string]*Endpoints)
 	}
@@ -225,6 +322,9 @@ func (k *K8s) EventEndpoints(ns *Namespace, data *Endpoints, syncHAproxySrvs fun
 }
 
 func (k *K8s) EventService(ns *Namespace, data *Service) (updateRequired bool) {
+	if k.dropDetachedMutation(ns, data.Status) {
+		return false
+	}
 	updateRequired = false
 	switch data.Status {
 	case MODIFIED:
@@ -313,6 +413,9 @@ func (k *K8s) EventConfigMap(ns *Namespace, data *ConfigMap) (updateRequired boo
 }
 
 func (k *K8s) EventSecret(ns *Namespace, data *Secret) (updateRequired bool) {
+	if k.dropDetachedMutation(ns, data.Status) {
+		return false
+	}
 	updateRequired = false
 	switch data.Status {
 	case MODIFIED:
@@ -373,6 +476,9 @@ func (k *K8s) EventPod(podEvent PodEvent) (updateRequired bool) {
 }
 
 func (k *K8s) EventPublishService(ns *Namespace, data *Service) (updateRequired bool) {
+	if k.dropDetachedMutation(ns, data.Status) {
+		return false
+	}
 	updateRequired = false
 	switch data.Status {
 	case MODIFIED:

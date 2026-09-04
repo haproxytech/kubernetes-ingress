@@ -17,10 +17,12 @@ package k8s
 import (
 	"context"
 	"errors"
+	"maps"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	k8sinformers "k8s.io/client-go/informers"
@@ -64,6 +66,16 @@ type K8s interface {
 	GetClientset() *k8sclientset.Clientset
 	MonitorChanges(eventChan chan k8ssync.SyncDataEvent, stop chan struct{}, osArgs utils.OSArgs, gatewayAPIInstalled bool)
 	IsGatewayAPIInstalled(gatewayControllerName string) bool
+	NewSessionManager(eventChan chan k8ssync.SyncDataEvent, gatewayAPI bool) NamespaceSessions
+}
+
+// NamespaceSessions is the watch lifecycle for --namespace-label-selector.
+type NamespaceSessions interface {
+	Start(namespace string) error
+	Stop(namespace string)
+	Accept(namespace string, epoch uint64) bool
+	MarkReady(namespace string, epoch uint64) bool
+	Close()
 }
 
 // A Custom Resource interface
@@ -74,12 +86,12 @@ type CRKind interface {
 }
 type CRV1 interface {
 	CRKind
-	GetInformerV1(chan k8ssync.SyncDataEvent, crinformersv1.SharedInformerFactory) cache.SharedIndexInformer //nolint:inamedparam
+	GetInformerV1(chan k8ssync.SyncDataEvent, crinformersv1.SharedInformerFactory) (cache.SharedIndexInformer, cache.ResourceEventHandlerRegistration) //nolint:inamedparam
 }
 
 type CRV3 interface {
 	CRKind
-	GetInformerV3(chan k8ssync.SyncDataEvent, crinformersv3.SharedInformerFactory, utils.OSArgs) cache.SharedIndexInformer //nolint:inamedparam
+	GetInformerV3(chan k8ssync.SyncDataEvent, crinformersv3.SharedInformerFactory, utils.OSArgs) (cache.SharedIndexInformer, cache.ResourceEventHandlerRegistration) //nolint:inamedparam
 }
 
 // k8s is structure with all data required to synchronize with k8s
@@ -103,6 +115,12 @@ type k8s struct {
 	cacheResyncPeriod      time.Duration
 	disableSvcExternalName bool // CVE-2021-25740
 	cmMain                 types.NamespacedName
+	osArgs                 utils.OSArgs
+	eventEpoch             uint64
+	handlerRegs            *[]cache.ResourceEventHandlerRegistration
+	sessions               *sessionManager
+	gatewayAPI             bool
+	crsMu                  *sync.RWMutex
 }
 
 func New(osArgs utils.OSArgs, whitelist map[string]struct{}, publishSvc *utils.NamespaceValue) K8s { //nolint:ireturn
@@ -133,7 +151,7 @@ func New(osArgs utils.OSArgs, whitelist map[string]struct{}, publishSvc *utils.N
 	}
 
 	prefix, _ := utils.GetPodPrefix(os.Getenv("POD_NAME"))
-	k := k8s{
+	k := &k8s{
 		builtInClient:          builtInClient,
 		crClientV1:             crclientsetv1.NewForConfigOrDie(restconfig),
 		crClientV3:             crclientsetv3.NewForConfigOrDie(restconfig),
@@ -156,6 +174,8 @@ func New(osArgs utils.OSArgs, whitelist map[string]struct{}, publishSvc *utils.N
 			Name:      osArgs.ConfigMap.Name,
 			Namespace: osArgs.ConfigMap.Namespace,
 		},
+		osArgs: osArgs,
+		crsMu:  &sync.RWMutex{},
 	}
 
 	// ingress/v1 is deprecated
@@ -182,12 +202,30 @@ func (k k8s) GetClientset() *k8sclientset.Clientset {
 	return k.builtInClient
 }
 
+func (k k8s) send(ch chan k8ssync.SyncDataEvent, ev k8ssync.SyncDataEvent) {
+	if k.eventEpoch != 0 {
+		ev.NamespaceEpoch = k.eventEpoch
+	}
+	ch <- ev
+}
+
+func (k k8s) noteReg(reg cache.ResourceEventHandlerRegistration, err error) {
+	logger.Error(err)
+	if k.handlerRegs != nil && reg != nil {
+		*k.handlerRegs = append(*k.handlerRegs, reg)
+	}
+}
+
 func (k k8s) MonitorChanges(eventChan chan k8ssync.SyncDataEvent, stop chan struct{}, osArgs utils.OSArgs, gatewayAPIInstalled bool) {
 	informersSynced := &[]cache.InformerSynced{}
 	k.runPodInformer(eventChan, stop, informersSynced)
+	if osArgs.NamespaceLabelSelectorActive() {
+		k.watchNamespacesByLabel(eventChan, stop, osArgs, gatewayAPIInstalled)
+		return
+	}
 	for _, namespace := range k.whiteListedNS {
 		k.runInformers(eventChan, stop, namespace, informersSynced, osArgs)
-		k.runCRInformers(eventChan, stop, namespace, informersSynced, k.crsV1, k.crsV3, osArgs)
+		k.runCRInformers(eventChan, stop, namespace, informersSynced, k.crsV1, k.crsV3, osArgs, true, nil, nil)
 		if gatewayAPIInstalled {
 			k.runInformersGwAPI(eventChan, stop, namespace, informersSynced)
 		}
@@ -227,8 +265,14 @@ func (k k8s) registerCoreCRV1(cr CRV1) {
 	groupVersion = strings.Split(resources.GroupVersion, "/")[0]
 	for _, resource := range resources.APIResources {
 		if resource.Kind == kindName {
+			if k.crsMu != nil {
+				k.crsMu.Lock()
+			}
 			k.crsV1[groupVersion+" - "+kindName] = cr
 			k.crsRegisteredOnStart[groupVersion+" - "+kindName] = struct{}{}
+			if k.crsMu != nil {
+				k.crsMu.Unlock()
+			}
 			logger.Infof("%s CR defined in API %s", kindName, resources.GroupVersion)
 			break
 		}
@@ -246,8 +290,14 @@ func (k k8s) registerCoreCRV3(cr CRV3) {
 	groupVersion = strings.Split(resources.GroupVersion, "/")[0]
 	for _, resource := range resources.APIResources {
 		if resource.Kind == kindName {
+			if k.crsMu != nil {
+				k.crsMu.Lock()
+			}
 			k.crsV3[groupVersion+" - "+kindName] = cr
 			k.crsRegisteredOnStart[groupVersion+" - "+kindName] = struct{}{}
+			if k.crsMu != nil {
+				k.crsMu.Unlock()
+			}
 			logger.Infof("%s CR defined in API %s", kindName, resources.GroupVersion)
 			break
 		}
@@ -256,21 +306,43 @@ func (k k8s) registerCoreCRV3(cr CRV3) {
 
 func (k k8s) runCRInformers(eventChan chan k8ssync.SyncDataEvent, stop chan struct{}, namespace string,
 	informersSynced *[]cache.InformerSynced, crsV1 map[string]CRV1, crsV3 map[string]CRV3,
-	osArgs utils.OSArgs,
+	osArgs utils.OSArgs, startEach bool, informerFactoryV1 crinformersv1.SharedInformerFactory, informerFactoryV3 crinformersv3.SharedInformerFactory,
 ) {
-	informerFactoryV3 := crinformersv3.NewSharedInformerFactoryWithOptions(k.crClientV3, k.cacheResyncPeriod, crinformersv3.WithNamespace(namespace))
-	informerFactoryV1 := crinformersv1.NewSharedInformerFactoryWithOptions(k.crClientV1, k.cacheResyncPeriod, crinformersv1.WithNamespace(namespace))
+	if informerFactoryV3 == nil {
+		informerFactoryV3 = crinformersv3.NewSharedInformerFactoryWithOptions(k.crClientV3, k.cacheResyncPeriod, crinformersv3.WithNamespace(namespace))
+	}
+	if informerFactoryV1 == nil {
+		informerFactoryV1 = crinformersv1.NewSharedInformerFactoryWithOptions(k.crClientV1, k.cacheResyncPeriod, crinformersv1.WithNamespace(namespace))
+	}
 
 	for _, cr := range crsV1 {
-		informer := cr.GetInformerV1(eventChan, informerFactoryV1)
-		go informer.Run(stop)
+		informer, reg := cr.GetInformerV1(eventChan, informerFactoryV1)
+		k.noteReg(reg, nil)
+		if startEach {
+			go informer.Run(stop)
+		}
 		*informersSynced = append(*informersSynced, informer.HasSynced)
 	}
 	for _, cr := range crsV3 {
-		informer := cr.GetInformerV3(eventChan, informerFactoryV3, osArgs)
-		go informer.Run(stop)
+		if cr.GetKind() == "ValidationRules" && !startEach &&
+			(osArgs.CustomValidationRules.Name == "" || namespace != osArgs.CustomValidationRules.Namespace) {
+			continue
+		}
+		informer, reg := cr.GetInformerV3(eventChan, informerFactoryV3, osArgs)
+		k.noteReg(reg, nil)
+		if startEach {
+			go informer.Run(stop)
+		}
 		*informersSynced = append(*informersSynced, informer.HasSynced)
 	}
+}
+
+func (k k8s) crsSnapshot() (map[string]CRV1, map[string]CRV3) {
+	if k.crsMu != nil {
+		k.crsMu.RLock()
+		defer k.crsMu.RUnlock()
+	}
+	return maps.Clone(k.crsV1), maps.Clone(k.crsV3)
 }
 
 func (k k8s) runConfigMapInformers(eventChan chan k8ssync.SyncDataEvent, stop chan struct{}, informersSynced *[]cache.InformerSynced, configMap utils.NamespaceValue) {

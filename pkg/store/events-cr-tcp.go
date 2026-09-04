@@ -16,6 +16,9 @@ package store
 
 func (k *K8s) EventTCPCR(namespace, name string, data *TCPs) bool {
 	ns := k.GetNamespace(namespace)
+	if data != nil && k.dropDetachedMutation(ns, data.Status) {
+		return false
+	}
 
 	updateRequired := false
 	switch data.Status {
@@ -117,6 +120,12 @@ func (k *K8s) checkCollisionsAllNamespaces() {
 func (k *K8s) tcpsAllNamespaces() TCPResourceList {
 	allTCPs := make(TCPResourceList, 0)
 	for _, ns := range k.Namespaces {
+		if k.NamespacesAccess.LabelSelectorActive && !ns.Relevant {
+			continue
+		}
+		if ns.CRs == nil {
+			continue
+		}
 		for _, v := range ns.CRs.TCPsPerCR {
 			allTCPs = append(allTCPs, v.Items...)
 		}

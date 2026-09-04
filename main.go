@@ -68,6 +68,11 @@ func main() {
 		exitCode = 1
 		return
 	}
+	if err = osArgs.ValidateNamespaceLabelSelector(); err != nil {
+		fmt.Println(err)
+		exitCode = 1
+		return
+	}
 
 	// Set Logger
 	logger := utils.GetLogger()
@@ -166,26 +171,36 @@ func main() {
 		meta.GetMetaStore().ProcessedResourceVersion.SetTestMode()
 	}
 
+	if osArgs.NamespaceLabelSelectorIgnored() {
+		logger.Warning("--namespace-label-selector is ignored because --namespace-whitelist or --namespace-blacklist is set")
+	}
+
+	isGatewayAPIInstalled := k.IsGatewayAPIInstalled(osArgs.GatewayControllerName)
+	sessions := k.NewSessionManager(eventChan, isGatewayAPIInstalled)
+
 	c := controller.NewBuilder().
 		WithHaproxyCfgFile(haproxyConf).
 		WithEventChan(eventChan).
 		WithStore(s).
 		WithClientSet(k.GetClientset()).
 		WithRestClientSet(k.GetRestClientset()).
-		WithArgs(osArgs).Build()
-
-	isGatewayAPIInstalled := k.IsGatewayAPIInstalled(osArgs.GatewayControllerName)
+		WithArgs(osArgs).
+		WithNamespaceSessions(sessions).
+		Build()
 
 	c.SetGatewayAPIInstalled(isGatewayAPIInstalled)
 
-	go k.MonitorChanges(eventChan, stop, osArgs, isGatewayAPIInstalled)
 	go c.Start()
+	go k.MonitorChanges(eventChan, stop, osArgs, isGatewayAPIInstalled)
 	// Catch QUIT signals
 	signalC := make(chan os.Signal, 1)
 	signal.Notify(signalC, os.Interrupt, syscall.SIGTERM, syscall.SIGUSR1)
 	<-signalC
 	logger.Print("Graceful shutdown requested ....")
 	c.Stop()
+	if sessions != nil {
+		sessions.Close()
+	}
 	close(stop)
 	logger.Print("Graceful shutdown done, exiting")
 }

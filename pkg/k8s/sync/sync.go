@@ -29,29 +29,45 @@ type SyncDataEvent struct {
 	Name            string
 	UID             types.UID
 	ResourceVersion string
+	NamespaceEpoch  uint64
+	IsInInitialList bool
 }
 
 //nolint:golint,stylecheck
 const (
 	// SyncType values
-	COMMAND         SyncType = "COMMAND"
-	CONFIGMAP       SyncType = "CONFIGMAP"
-	ENDPOINTS       SyncType = "ENDPOINTS"
-	INGRESS         SyncType = "INGRESS"
-	INGRESS_CLASS   SyncType = "INGRESS_CLASS"
-	NAMESPACE       SyncType = "NAMESPACE"
-	POD             SyncType = "POD"
-	SERVICE         SyncType = "SERVICE"
-	SECRET          SyncType = "SECRET"
-	CR_GLOBAL       SyncType = "Global"
-	CR_DEFAULTS     SyncType = "Defaults"
-	CR_BACKEND      SyncType = "Backend"
-	CR_TCP          SyncType = "TCP"
-	CR_FRONTEND     SyncType = "Frontend"
-	PUBLISH_SERVICE SyncType = "PUBLISH_SERVICE"
-	GATEWAYCLASS    SyncType = "GATEWAYCLASS"
-	GATEWAY         SyncType = "GATEWAY"
-	TCPROUTE        SyncType = "TCPROUTE"
-	REFERENCEGRANT  SyncType = "REFERENCEGRANT"
-	CUSTOM_RESOURCE SyncType = "CUSTOM_RESOURCE"
+	COMMAND                 SyncType = "COMMAND"
+	CONFIGMAP               SyncType = "CONFIGMAP"
+	ENDPOINTS               SyncType = "ENDPOINTS"
+	INGRESS                 SyncType = "INGRESS"
+	INGRESS_CLASS           SyncType = "INGRESS_CLASS"
+	NAMESPACE               SyncType = "NAMESPACE"
+	POD                     SyncType = "POD"
+	SERVICE                 SyncType = "SERVICE"
+	SECRET                  SyncType = "SECRET"
+	CR_GLOBAL               SyncType = "Global"
+	CR_DEFAULTS             SyncType = "Defaults"
+	CR_BACKEND              SyncType = "Backend"
+	CR_TCP                  SyncType = "TCP"
+	CR_FRONTEND             SyncType = "Frontend"
+	PUBLISH_SERVICE         SyncType = "PUBLISH_SERVICE"
+	GATEWAYCLASS            SyncType = "GATEWAYCLASS"
+	GATEWAY                 SyncType = "GATEWAY"
+	TCPROUTE                SyncType = "TCPROUTE"
+	REFERENCEGRANT          SyncType = "REFERENCEGRANT"
+	CUSTOM_RESOURCE         SyncType = "CUSTOM_RESOURCE"
+	NAMESPACE_SESSION_READY SyncType = "NAMESPACE_SESSION_READY"
 )
+
+// IsNamespacedSessionEvent reports whether the event is emitted by a
+// per-namespace session and must be epoch-checked in selector mode.
+func IsNamespacedSessionEvent(t SyncType) bool {
+	switch t {
+	case SERVICE, SECRET, INGRESS, ENDPOINTS,
+		CR_GLOBAL, CR_DEFAULTS, CR_BACKEND, CR_FRONTEND, CR_TCP,
+		GATEWAY, TCPROUTE, REFERENCEGRANT, PUBLISH_SERVICE, CUSTOM_RESOURCE:
+		return true
+	default:
+		return false
+	}
+}

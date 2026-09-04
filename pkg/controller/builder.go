@@ -66,6 +66,7 @@ type Builder struct {
 	haproxyCfgFile           []byte
 	haproxyEnv               env.Env
 	osArgs                   utils.OSArgs
+	sessions                 NamespaceSessions
 }
 
 var defaultEnv = env.Env{
@@ -155,6 +156,11 @@ func (builder *Builder) WithUpdateStatusManager(updateStatusManager status.Updat
 	return builder
 }
 
+func (builder *Builder) WithNamespaceSessions(sessions NamespaceSessions) *Builder {
+	builder.sessions = sessions
+	return builder
+}
+
 func (builder *Builder) Build() *HAProxyController {
 	if builder.haproxyCfgFile == nil {
 		logger.Panic(errors.New("no HAProxy Config file provided"))
@@ -210,6 +216,7 @@ func (builder *Builder) Build() *HAProxyController {
 		prometheusMetricsManager: metrics.New(),
 		PodIP:                    podIP,
 		Hostname:                 hostname,
+		sessions:                 builder.sessions,
 	}
 	haproxyController.processIngress = haproxyController.processIngressesDefaultImplementation
 	if builder.osArgs.Experimental.UseIngressMerge {

@@ -25,6 +25,7 @@ Image can be run with arguments:
 | [`--gateway-controller-name`](#--gateway-controller-name) |  |
 | [`--namespace-blacklist`](#--namespace-blacklist) |  |
 | [`--namespace-whitelist`](#--namespace-whitelist) |  |
+| [`--namespace-label-selector`](#--namespace-label-selector) |  |
 | [`--publish-service`](#--publish-service) |  |
 | [`--disable-ipv4`](#--disable-ipv4) | `false` |
 | [`--disable-ipv6`](#--disable-ipv6) | `false` |
@@ -454,6 +455,24 @@ Example:
 
 ```yaml
 --namespace-whitelist=foo --namespace-whitelist=bar
+```
+
+<p align='right'><a href='#haproxy-kubernetes-ingress-controller'>:arrow_up_small: back to top</a></p>
+
+***
+
+### `--namespace-label-selector`
+
+  Kubernetes label selector of namespaces to watch. Only namespaces that currently match are watched. Labeling a namespace starts a watch; removing or changing the label so it no longer matches stops the watch and drops that namespace from the generated HAProxy configuration. Ignored if `--namespace-whitelist` or `--namespace-blacklist` is set. The controller namespace, publish-service namespace, and default certificate namespace are not selected automatically.
+
+Possible values:
+
+- A Kubernetes label selector, for example `app=watch` or `env in (prod,staging)`
+
+Example:
+
+```yaml
+--namespace-label-selector=app=watch
 ```
 
 <p align='right'><a href='#haproxy-kubernetes-ingress-controller'>:arrow_up_small: back to top</a></p>

@@ -1,0 +1,17 @@
+apiVersion: ingress.v3.haproxy.org/v3
+kind: TCP
+metadata:
+  name: namespace-selector-tcp
+  annotations:
+    ingress.class: haproxy
+spec:
+  - name: namespace-selector-http
+    frontend:
+      name: namespace-selector-http
+      binds:
+        v4:
+          name: v4
+          port: 32766
+    service:
+      name: http-echo
+      port: 80

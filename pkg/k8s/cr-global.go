@@ -34,7 +34,7 @@ func (c GlobalCR) GetKind() string {
 	return "Global"
 }
 
-func (c GlobalCR) GetInformerV3(eventChan chan k8ssync.SyncDataEvent, factory informersv3.SharedInformerFactory, osArgs utils.OSArgs) cache.SharedIndexInformer { //nolint:ireturn
+func (c GlobalCR) GetInformerV3(eventChan chan k8ssync.SyncDataEvent, factory informersv3.SharedInformerFactory, osArgs utils.OSArgs) (cache.SharedIndexInformer, cache.ResourceEventHandlerRegistration) { //nolint:ireturn
 	informer := factory.Ingress().V3().Globals().Informer()
 
 	sendToChannel := func(eventChan chan k8ssync.SyncDataEvent, object interface{}, status store.Status) {
@@ -61,7 +61,7 @@ func (c GlobalCR) GetInformerV3(eventChan chan k8ssync.SyncDataEvent, factory in
 		go logger.Debug("Global CR informer error: %s", err)
 	})
 	logger.Error(errW)
-	_, err := informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+	reg, err := informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			sendToChannel(eventChan, obj, store.ADDED)
 		},
@@ -73,5 +73,5 @@ func (c GlobalCR) GetInformerV3(eventChan chan k8ssync.SyncDataEvent, factory in
 		},
 	})
 	logger.Error(err)
-	return informer
+	return informer, reg
 }
