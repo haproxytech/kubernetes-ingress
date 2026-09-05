@@ -98,6 +98,8 @@ func (suite *NamespaceSelectorSuite) SetupSuite() {
 func (suite *NamespaceSelectorSuite) SetupTest() {
 	suite.Require().NoError(clearWatchLabel(suite.test.GetNS()))
 	suite.Require().NoError(clearWatchLabel(suite.foreignNS))
+	suite.waitStatus(suite.client, 404)
+	suite.waitStatus(suite.foreignClient, 404)
 }
 
 func (suite *NamespaceSelectorSuite) TearDownSuite() {
@@ -113,6 +115,17 @@ func (suite *NamespaceSelectorSuite) waitStatus(client *e2e.Client, want int) {
 		}
 		defer cls()
 		return r.StatusCode == want
+	}, e2e.WaitDuration, e2e.TickDuration)
+}
+
+func (suite *NamespaceSelectorSuite) waitNoTCPFrontends() {
+	suite.Require().Eventually(func() bool {
+		cfg, err := suite.test.GetIngressControllerFile("/etc/haproxy/haproxy.cfg")
+		if err != nil {
+			suite.T().Log(err)
+			return false
+		}
+		return !strings.Contains(cfg, "frontend tcpcr_")
 	}, e2e.WaitDuration, e2e.TickDuration)
 }
 

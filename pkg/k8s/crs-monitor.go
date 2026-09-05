@@ -92,33 +92,11 @@ func (k k8s) RunCRSCreationMonitoring(eventChan chan k8ssync.SyncDataEvent, stop
 				}
 				informersSyncedEvent := &[]cache.InformerSynced{}
 				crsV1, crsV3 := lateCRMaps(groupKind, osArgs)
-				k.rememberLateCR(groupKind, crsV1, crsV3)
 				if k.sessions != nil {
-					sessions := k.sessions.snapshot()
-					for _, sess := range sessions {
-						var synced []cache.InformerSynced
-						sink := sessionResourceChan(sess, eventChan)
-						k.runCRInformers(sink, sess.stopCh, sess.namespace, &synced, crsV1, crsV3, osArgs, false, sess.crV1, sess.crV3)
-						if sess.crV1 != nil {
-							sess.crV1.Start(sess.stopCh)
-						}
-						if sess.crV3 != nil {
-							sess.crV3.Start(sess.stopCh)
-						}
-						if len(synced) > 0 {
-							cache.WaitForCacheSync(sess.stopCh, synced...)
-						}
-					}
-					// WaitForCacheSync only means handlers sent on the proxy.
-					// Drain each proxy so those List events are in the store
-					// before the COMMAND rebuild (the drain COMMAND itself).
-					for _, sess := range sessions {
-						if drainSessionEvents(sess, eventChan, stop) {
-							return
-						}
-					}
+					k.registerSessionCR(groupKind, crsV1, crsV3, eventChan, stop, osArgs)
 					continue
 				}
+				k.rememberLateCR(groupKind, crsV1, crsV3)
 				for _, namespace := range k.whiteListedNS {
 					k.runCRInformers(eventChan, stop, namespace, informersSyncedEvent, crsV1, crsV3, osArgs, true, nil, nil)
 				}
@@ -131,6 +109,59 @@ func (k k8s) RunCRSCreationMonitoring(eventChan chan k8ssync.SyncDataEvent, stop
 			}
 		}
 	}(eventCRS)
+}
+
+// registerSessionCR serializes publication of the CR set with session.run and
+// Stop. Placeholders consume the updated set when their construction completes.
+func (k k8s) registerSessionCR(groupKind GroupKind, crsV1 map[string]CRV1, crsV3 map[string]CRV3,
+	eventChan chan k8ssync.SyncDataEvent, stop <-chan struct{}, osArgs utils.OSArgs,
+) {
+	k.sessions.mu.Lock()
+	defer k.sessions.mu.Unlock()
+	if k.sessions.closed || k.crAlreadyWatched(groupKind) {
+		return
+	}
+	k.rememberLateCR(groupKind, crsV1, crsV3)
+	for _, sess := range k.sessions.sessions {
+		if !sess.constructed {
+			continue
+		}
+		var synced []cache.InformerSynced
+		var regs []cache.ResourceEventHandlerRegistration
+		sk := k
+		sk.handlerRegs = &regs
+		sk.runCRInformers(sessionResourceChan(sess, eventChan), sess.stopCh, sess.namespace,
+			&synced, crsV1, crsV3, osArgs, false, sess.crV1, sess.crV3)
+		// Handler sync, rather than just informer sync, guarantees initial
+		// callbacks have sent their events before the FIFO drain.
+		for _, reg := range regs {
+			if reg != nil {
+				synced = append(synced, reg.HasSynced)
+			}
+		}
+		sess.crV1.Start(sess.stopCh)
+		sess.crV3.Start(sess.stopCh)
+		go syncSessionCR(sess, synced, eventChan, stop)
+	}
+}
+
+// Each CRD/session pair waits independently: a failed LIST must not prevent
+// another namespace or a subsequently discovered CRD from starting.
+func syncSessionCR(sess *nsSession, synced []cache.InformerSynced, eventChan chan k8ssync.SyncDataEvent, stop <-chan struct{}) {
+	waitStop := make(chan struct{})
+	done := make(chan struct{})
+	defer close(done)
+	go func() {
+		select {
+		case <-stop:
+		case <-sess.stopCh:
+		case <-done:
+		}
+		close(waitStop)
+	}()
+	if cache.WaitForCacheSync(waitStop, synced...) {
+		drainSessionEvents(sess, eventChan, stop)
+	}
 }
 
 func crMapKey(group, kind string) string {

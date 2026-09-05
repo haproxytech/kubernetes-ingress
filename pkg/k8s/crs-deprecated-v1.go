@@ -236,6 +236,9 @@ func (c TCPCRV1) GetInformerV1(eventChan chan k8ssync.SyncDataEvent, factory inf
 			sendToChannel(eventChan, newObj, store.MODIFIED)
 		},
 		DeleteFunc: func(obj interface{}) {
+			if tombstone, ok := obj.(cache.DeletedFinalStateUnknown); ok {
+				obj = tombstone.Obj
+			}
 			sendToChannel(eventChan, obj, store.DELETED)
 		},
 	})

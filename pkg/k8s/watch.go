@@ -87,10 +87,8 @@ func (k *k8s) startNSSession(namespace string, epoch uint64, stopCh chan struct{
 		sk.getEndpointsInformer(proxy, core)
 	}
 
-	crsV1, crsV3 := k.crsSnapshot()
 	crV1 := crinformersv1.NewSharedInformerFactoryWithOptions(k.crClientV1, k.cacheResyncPeriod, crinformersv1.WithNamespace(namespace))
 	crV3 := crinformersv3.NewSharedInformerFactoryWithOptions(k.crClientV3, k.cacheResyncPeriod, crinformersv3.WithNamespace(namespace))
-	sk.runCRInformers(proxy, stopCh, namespace, &[]cache.InformerSynced{}, crsV1, crsV3, k.osArgs, false, crV1, crV3)
 
 	var gw gatewaynetworking.SharedInformerFactory
 	var gwWait sync.WaitGroup
@@ -115,6 +113,12 @@ func (k *k8s) startNSSession(namespace string, epoch uint64, stopCh chan struct{
 	sess.gw = gw
 	sess.proxy = proxy
 	sess.run = func() {
+		// The manager lock serializes this snapshot with late CR registration.
+		// Construction may have overlapped CRD discovery while only a placeholder
+		// was published; read the latest set now, not in the starter.
+		crsV1, crsV3 := k.crsSnapshot()
+		sk.runCRInformers(proxy, stopCh, namespace, &[]cache.InformerSynced{}, crsV1, crsV3, k.osArgs, false, crV1, crV3)
+		sess.handlers = regs
 		for _, inf := range gwRun {
 			gwWait.Add(1)
 			go func(inf cache.SharedIndexInformer) {
@@ -132,7 +136,7 @@ func (k *k8s) startNSSession(namespace string, epoch uint64, stopCh chan struct{
 			crV1.Shutdown()
 			crV3.Shutdown()
 			gwWait.Wait()
-		}, proxy, &stampWg)
+		}, sess, &stampWg)
 	}
 	return sess, nil
 }
@@ -172,14 +176,12 @@ func (k k8s) watchNamespacesByLabel(eventChan chan k8ssync.SyncDataEvent, stop c
 		logger.Panic("Caches are not populated due to an underlying error, cannot run the Ingress Controller")
 	}
 
-	for _, obj := range nsInformer.GetStore().List() {
-		ns, ok := obj.(*corev1.Namespace)
-		if !ok || ns == nil {
-			continue
-		}
-		if err := k.sessions.Start(ns.Name); err != nil {
-			logger.Panic(err)
-		}
+	// Handler sync means all initial namespace events have been sent, not
+	// processed. Wait for their Start/Stop calls in SyncData before checking
+	// session readiness. Unlike COMMAND, this barrier does not publish a
+	// configuration while the initial resource caches are still warming up.
+	if !waitForNamespaceEvents(eventChan, stop) {
+		return
 	}
 	if !k.sessions.WaitAllReady(stop) {
 		logger.Panic("Caches are not populated due to an underlying error, cannot run the Ingress Controller")
@@ -205,6 +207,21 @@ func (k k8s) watchNamespacesByLabel(eventChan chan k8ssync.SyncDataEvent, stop c
 			EventProcessed: ep,
 		}
 		<-ep
+	}
+}
+
+func waitForNamespaceEvents(eventChan chan<- k8ssync.SyncDataEvent, stop <-chan struct{}) bool {
+	processed := make(chan struct{})
+	select {
+	case <-stop:
+		return false
+	case eventChan <- k8ssync.SyncDataEvent{SyncType: k8ssync.BARRIER, EventProcessed: processed}:
+	}
+	select {
+	case <-stop:
+		return false
+	case <-processed:
+		return true
 	}
 }
 

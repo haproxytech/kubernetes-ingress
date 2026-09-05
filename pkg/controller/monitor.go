@@ -38,6 +38,8 @@ func (c *HAProxyController) SyncData() {
 		ns := c.store.GetNamespace(job.Namespace)
 		change := false
 		switch job.SyncType {
+		case k8ssync.BARRIER:
+			// Acknowledge prior store events without generating configuration.
 		case k8ssync.COMMAND:
 			c.auxCfgManager()
 			// create a NeedAction function.
@@ -86,10 +88,10 @@ func (c *HAProxyController) SyncData() {
 				case store.DELETED:
 					c.sessions.Stop(nsData.Name)
 				case store.ADDED:
-					if !job.IsInInitialList {
-						if err := c.sessions.Start(nsData.Name); err != nil {
-							logger.Panic(err)
-						}
+					// Initial and runtime membership share this queue so DELETE
+					// cannot be overtaken by a stale bootstrap snapshot.
+					if err := c.sessions.Start(nsData.Name); err != nil {
+						logger.Panic(err)
 					}
 				}
 			}

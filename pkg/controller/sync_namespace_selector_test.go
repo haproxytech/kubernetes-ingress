@@ -29,13 +29,18 @@ type mockSessions struct {
 	stops  []string
 	accept map[uint64]bool
 	allow  bool
+	calls  []string
 }
 
 func (m *mockSessions) Start(namespace string) error {
 	m.starts = append(m.starts, namespace)
+	m.calls = append(m.calls, "start:"+namespace)
 	return nil
 }
-func (m *mockSessions) Stop(namespace string) { m.stops = append(m.stops, namespace) }
+func (m *mockSessions) Stop(namespace string) {
+	m.stops = append(m.stops, namespace)
+	m.calls = append(m.calls, "stop:"+namespace)
+}
 func (m *mockSessions) Accept(_ string, epoch uint64) bool {
 	if m.accept != nil {
 		if v, ok := m.accept[epoch]; ok {
@@ -147,7 +152,7 @@ func TestSyncDataStartsAndStopsSessions(t *testing.T) {
 	}
 }
 
-func TestSyncDataInitialListDoesNotStartSession(t *testing.T) {
+func TestSyncDataInitialListStartsSession(t *testing.T) {
 	st := store.NewK8sStore(utils.OSArgs{NamespaceLabelSelector: "watch=true"})
 	ch := make(chan k8ssync.SyncDataEvent, 4)
 	mock := &mockSessions{allow: true}
@@ -158,11 +163,63 @@ func TestSyncDataInitialListDoesNotStartSession(t *testing.T) {
 		SyncType: k8ssync.NAMESPACE, Namespace: "app", IsInInitialList: true,
 		Data: &store.Namespace{Name: "app", Status: store.ADDED},
 	})
-	if len(mock.starts) != 0 {
-		t.Fatalf("initial-list ADD must not Start, got %v", mock.starts)
+	if len(mock.starts) != 1 || mock.starts[0] != "app" {
+		t.Fatalf("initial-list ADD must Start in the event queue, got %v", mock.starts)
 	}
 	if _, ok := st.NamespacesAccess.Selected["app"]; !ok {
 		t.Fatal("initial-list ADD must still select the namespace")
+	}
+}
+
+func TestSyncDataBootstrapDeleteAndRelabelAreOrdered(t *testing.T) {
+	st := store.NewK8sStore(utils.OSArgs{NamespaceLabelSelector: "watch=true"})
+	ch := make(chan k8ssync.SyncDataEvent, 6)
+	mock := &mockSessions{allow: true}
+	c := &HAProxyController{store: st, eventChan: ch, sessions: mock}
+
+	ch <- k8ssync.SyncDataEvent{
+		SyncType: k8ssync.NAMESPACE, Namespace: "app", IsInInitialList: true,
+		Data: &store.Namespace{Name: "app", Status: store.ADDED},
+	}
+	ch <- k8ssync.SyncDataEvent{
+		SyncType: k8ssync.NAMESPACE, Namespace: "app",
+		Data: &store.Namespace{Name: "app", Status: store.DELETED},
+	}
+	bootstrapDone := make(chan struct{})
+	ch <- k8ssync.SyncDataEvent{SyncType: k8ssync.BARRIER, EventProcessed: bootstrapDone}
+	close(ch)
+	// No HAProxy client is installed: a bootstrap barrier must not generate
+	// configuration, even though the namespace events marked the store dirty.
+	c.SyncData()
+	select {
+	case <-bootstrapDone:
+	default:
+		t.Fatal("bootstrap barrier was not acknowledged")
+	}
+	if len(mock.calls) != 2 || mock.calls[0] != "start:app" || mock.calls[1] != "stop:app" {
+		t.Fatalf("initial ADD and DELETE must execute in order, got %v", mock.calls)
+	}
+	if _, ok := st.NamespacesAccess.Selected["app"]; ok {
+		t.Fatal("deleted bootstrap namespace must not remain selected")
+	}
+	if _, ok := st.Namespaces["app"]; ok {
+		t.Fatal("deleted bootstrap namespace must not remain in the store")
+	}
+
+	ch = make(chan k8ssync.SyncDataEvent, 2)
+	c.eventChan = ch
+	ch <- k8ssync.SyncDataEvent{
+		SyncType: k8ssync.NAMESPACE, Namespace: "app",
+		Data: &store.Namespace{Name: "app", Status: store.ADDED},
+	}
+	ch <- k8ssync.SyncDataEvent{SyncType: k8ssync.NAMESPACE_SESSION_READY, Namespace: "app", NamespaceEpoch: 2}
+	close(ch)
+	c.SyncData()
+	if len(mock.calls) != 3 || mock.calls[2] != "start:app" {
+		t.Fatalf("relabel must start a fresh session, got %v", mock.calls)
+	}
+	if !st.Namespaces["app"].Relevant {
+		t.Fatal("relabelled namespace must become ready")
 	}
 }
 

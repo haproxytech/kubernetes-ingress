@@ -105,6 +105,8 @@ func (suite *NamespaceSelectorSuite) Test_UnlabelMutationRelabelUsesLatestIngres
 
 func (suite *NamespaceSelectorSuite) Test_TCPCRLabelUnlabelBounce() {
 	suite.Require().NoError(suite.test.Apply("config/tcp.yaml", suite.test.GetNS(), nil))
+	client, err := e2e.NewHTTPClient(suite.host, 32766)
+	suite.Require().NoError(err)
 	suite.T().Cleanup(func() {
 		out, err := kubectl(
 			"-n", suite.test.GetNS(),
@@ -112,9 +114,13 @@ func (suite *NamespaceSelectorSuite) Test_TCPCRLabelUnlabelBounce() {
 			"--ignore-not-found=true",
 		)
 		suite.Require().NoError(err, out)
+		suite.waitUnavailable(client)
+		suite.waitNoTCPFrontends()
+		// The Ingress backend is shared with the TCP CR. Wait until HTTP is
+		// restored while this namespace is still selected, otherwise the next
+		// test sees EOF/500 from a leftover TCP-mode backend.
+		suite.waitStatus(suite.client, 200)
 	})
-	client, err := e2e.NewHTTPClient(suite.host, 32766)
-	suite.Require().NoError(err)
 
 	suite.Require().NoError(labelNS(suite.test.GetNS(), "app=watch"))
 	suite.waitStatus(client, 200)

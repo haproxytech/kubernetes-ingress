@@ -36,6 +36,7 @@ type SyncDataEvent struct {
 //nolint:golint,stylecheck
 const (
 	// SyncType values
+	BARRIER                 SyncType = "BARRIER"
 	COMMAND                 SyncType = "COMMAND"
 	CONFIGMAP               SyncType = "CONFIGMAP"
 	ENDPOINTS               SyncType = "ENDPOINTS"

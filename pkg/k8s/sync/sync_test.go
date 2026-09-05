@@ -14,7 +14,7 @@ func TestIsNamespacedSessionEvent(t *testing.T) {
 			t.Errorf("%s should be a namespaced session event", typ)
 		}
 	}
-	for _, typ := range []SyncType{NAMESPACE, COMMAND, CONFIGMAP, POD, INGRESS_CLASS, GATEWAYCLASS, NAMESPACE_SESSION_READY} {
+	for _, typ := range []SyncType{NAMESPACE, BARRIER, COMMAND, CONFIGMAP, POD, INGRESS_CLASS, GATEWAYCLASS, NAMESPACE_SESSION_READY} {
 		if IsNamespacedSessionEvent(typ) {
 			t.Errorf("%s must not be epoch-checked", typ)
 		}

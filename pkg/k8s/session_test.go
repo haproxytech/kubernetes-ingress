@@ -495,7 +495,7 @@ func TestCloseSessionProxyAfterWaitsBeforeClose(t *testing.T) {
 		proxy <- k8ssync.SyncDataEvent{SyncType: k8ssync.GATEWAY, Namespace: "app"}
 		close(sent)
 	}
-	closeSessionProxyAfter(wait, proxy, &stampWg)
+	closeSessionProxyAfter(wait, &nsSession{proxy: proxy}, &stampWg)
 	select {
 	case <-sent:
 	default:

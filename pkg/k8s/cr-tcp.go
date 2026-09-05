@@ -73,6 +73,9 @@ func (c TCPCR) GetKind() string {
 }
 
 func convertToStoreTCP(k8sData interface{}, status store.Status) *store.TCPs {
+	if tombstone, ok := k8sData.(cache.DeletedFinalStateUnknown); ok {
+		k8sData = tombstone.Obj
+	}
 	data, ok := k8sData.(*v3.TCP)
 	if !ok {
 		logger.Warning(CRSGroupVersionV3 + ": type mismatch with TCP CR kind")

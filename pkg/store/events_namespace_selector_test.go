@@ -20,6 +20,7 @@ import (
 
 	"github.com/haproxytech/client-native/v6/models"
 	v3 "github.com/haproxytech/kubernetes-ingress/crs/api/ingress/v3"
+	rc "github.com/haproxytech/kubernetes-ingress/pkg/reference-counter"
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
 	"k8s.io/apimachinery/pkg/types"
 )
@@ -115,6 +116,12 @@ func TestSelectorUnmatchRemovesStoreAndIndexes(t *testing.T) {
 	k.EventSecret(ns, &Secret{Namespace: "app", Name: "tls", Status: ADDED})
 
 	k.EventTCPCR("app", "tcp", selectorTCP("app", "tcp", "fe-app", 8000))
+	storedTCP := k.Namespaces["app"].CRs.TCPsPerCR["tcp"]
+	if storedTCP == nil || len(storedTCP.Items) == 0 {
+		t.Fatal("expected stored TCP CR items")
+	}
+	fe := rc.HaproxyCfgResourceName("tcpcr_app_fe-app")
+	k.FrontendRC.AddOwner(fe, storedTCP.Items[0].Owner())
 
 	if k.IngressesByService["app/svc"] == nil {
 		t.Fatal("expected IngressesByService entry")
@@ -133,6 +140,9 @@ func TestSelectorUnmatchRemovesStoreAndIndexes(t *testing.T) {
 	}
 	if _, ok := k.IngressesByService["app/svc"]; ok {
 		t.Fatal("empty IngressesByService key must be deleted")
+	}
+	if k.FrontendRC.HasOwners(fe) {
+		t.Fatal("selector DELETE must drop TCP frontend owners")
 	}
 }
 

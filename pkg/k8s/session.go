@@ -45,6 +45,10 @@ type nsSession struct {
 	crV3      crinformersv3.SharedInformerFactory
 	gw        gatewaynetworking.SharedInformerFactory
 	proxy     chan k8ssync.SyncDataEvent
+	// proxyMu coordinates non-informer sends with proxy closure.
+	proxyMu     sync.RWMutex
+	proxyClosed bool
+	constructed bool
 	// run starts informers. Start calls it only after the session is in the
 	// manager map so Accept sees this generation and Stop can cancel it.
 	run func()
@@ -128,6 +132,7 @@ func (m *sessionManager) Start(namespace string) error {
 		}
 		return nil
 	}
+	sess.constructed = true
 	m.sessions[namespace] = sess
 	// Starting the informer goroutines is part of publishing the session.
 	// Keep it serialized with Stop so shutdown cannot overtake run setup.
@@ -182,10 +187,8 @@ func (m *sessionManager) waitAndSignalReady(sess *nsSession) {
 	if sess.proxy != nil {
 		readyChan = sess.proxy
 	}
-	select {
-	case <-sess.stopCh:
+	if !sess.sendEvent(readyChan, ev, nil) {
 		return
-	case readyChan <- ev:
 	}
 	select {
 	case <-sess.stopCh:
@@ -340,13 +343,13 @@ func stampSessionEvents(in <-chan k8ssync.SyncDataEvent, out chan<- k8ssync.Sync
 }
 
 // closeSessionProxyAfter runs wait (factory Shutdown / gateway informer
-// WaitGroup) then closes proxy so the stamp goroutine can exit. wait must
-// return only after informers will no longer send on proxy.
-func closeSessionProxyAfter(wait func(), proxy chan k8ssync.SyncDataEvent, stampDone *sync.WaitGroup) {
+// WaitGroup), excludes READY/drain senders, then closes proxy so the stamp
+// goroutine can exit. wait must return only after informers stop sending.
+func closeSessionProxyAfter(wait func(), sess *nsSession, stampDone *sync.WaitGroup) {
 	if wait != nil {
 		wait()
 	}
-	close(proxy)
+	sess.closeProxy()
 	if stampDone != nil {
 		stampDone.Wait()
 	}
@@ -380,12 +383,13 @@ func drainSessionEvents(sess *nsSession, processChan chan k8ssync.SyncDataEvent,
 	if sess.stopCh != nil {
 		sessionStop = sess.stopCh
 	}
-	select {
-	case <-stop:
-		return true
-	case <-sessionStop:
-		return false
-	case ch <- ev:
+	if !sess.sendEvent(ch, ev, stop) {
+		select {
+		case <-stop:
+			return true
+		default:
+			return false
+		}
 	}
 	select {
 	case <-stop:
@@ -395,6 +399,31 @@ func drainSessionEvents(sess *nsSession, processChan chan k8ssync.SyncDataEvent,
 	case <-ep:
 		return false
 	}
+}
+
+// sendEvent holds the proxy open until this send finishes. A stop check alone
+// cannot protect a select containing a send on a closed channel.
+func (sess *nsSession) sendEvent(ch chan k8ssync.SyncDataEvent, ev k8ssync.SyncDataEvent, stop <-chan struct{}) bool {
+	sess.proxyMu.RLock()
+	defer sess.proxyMu.RUnlock()
+	if sess.proxyClosed {
+		return false
+	}
+	select {
+	case <-stop:
+		return false
+	case <-sess.stopCh:
+		return false
+	case ch <- ev:
+		return true
+	}
+}
+
+func (sess *nsSession) closeProxy() {
+	sess.proxyMu.Lock()
+	defer sess.proxyMu.Unlock()
+	sess.proxyClosed = true
+	close(sess.proxy)
 }
 
 func (m *sessionManager) snapshot() []*nsSession {
