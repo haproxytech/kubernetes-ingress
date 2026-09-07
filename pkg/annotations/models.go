@@ -2,12 +2,23 @@ package annotations
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/haproxytech/client-native/v6/models"
 
 	v3 "github.com/haproxytech/kubernetes-ingress/crs/api/ingress/v3"
 	"github.com/haproxytech/kubernetes-ingress/pkg/annotations/common"
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
+)
+
+// Lists merge modes of the cr-frontend-ssl annotation.
+const (
+	// ListsMergeAppend appends the custom resource entries after the live ones. Default.
+	ListsMergeAppend = "append"
+	// ListsMergePrepend puts the custom resource entries before the live ones.
+	ListsMergePrepend = "prepend"
+	// ListsMergeOverride replaces a live list with a non-empty custom resource one.
+	ListsMergeOverride = "override"
 )
 
 // ModelBackend takes an annotation holding the path of a backend cr and returns corresponding Backend model
@@ -66,6 +77,7 @@ func ModelLog(name, defaultNS string, k store.K8s, annotations ...map[string]str
 	return log, err
 }
 
+// ModelFrontend takes an annotation holding the path of a frontend cr and returns corresponding Frontend model
 func ModelFrontend(name, defaultNS string, k store.K8s, annotations ...map[string]string) (frontend *models.Frontend, err error) {
 	modelFound, err := model(name, defaultNS, 4, k, annotations...)
 	if err != nil {
@@ -76,6 +88,42 @@ func ModelFrontend(name, defaultNS string, k store.K8s, annotations ...map[strin
 		frontend = &modelFound.(*v3.FrontendSpec).Frontend
 	}
 	return frontend, err
+}
+
+// ModelFrontendSSL parses a "namespace/name[:mode]" annotation value into a
+// Frontend model and its lists merge mode ("append" default, "prepend", "override").
+func ModelFrontendSSL(name, defaultNS string, k store.K8s, annotations ...map[string]string) (frontend *models.Frontend, mode string, err error) {
+	value := common.GetValue(name, annotations...)
+	if value == "" {
+		return nil, "", nil
+	}
+	path, modeSuffix, hasMode := strings.Cut(value, ":")
+	mode = ListsMergeAppend
+	if hasMode {
+		switch modeSuffix {
+		case ListsMergeAppend, ListsMergePrepend, ListsMergeOverride:
+			mode = modeSuffix
+		default:
+			return nil, "", fmt.Errorf("annotation '%s': invalid lists merge mode '%s', must be one of '%s', '%s' or '%s'",
+				name, modeSuffix, ListsMergeAppend, ListsMergePrepend, ListsMergeOverride)
+		}
+	}
+	crNS, crName, pathErr := common.GetNamespaceAndName(path)
+	if pathErr != nil {
+		return nil, "", fmt.Errorf("annotation '%s': %w", name, pathErr)
+	}
+	if crNS == "" {
+		crNS = defaultNS
+	}
+	ns, nsOk := k.Namespaces[crNS]
+	if !nsOk {
+		return nil, "", fmt.Errorf("annotation '%s': custom resource '%s/%s' does not exist, namespace not found", name, crNS, crName)
+	}
+	cr, crOk := ns.CRs.Frontends[crName]
+	if !crOk {
+		return nil, "", fmt.Errorf("annotation '%s': custom resource '%s/%s' does not exist", name, crNS, crName)
+	}
+	return &cr.Frontend, mode, nil
 }
 
 func model(name, defaultNS string, crType int, k store.K8s, annotations ...map[string]string) (model interface{}, err error) {

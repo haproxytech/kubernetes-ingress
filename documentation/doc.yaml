@@ -2121,6 +2121,26 @@ annotations:
       - "cr-frontend-https: default/test"
     related_docs:
       - ./custom-resources.md
+  - title: cr-frontend-ssl
+    type: string
+    group: custom-resources
+    dependencies: ""
+    default: ""
+    description:
+      - References the Frontend custom resource that amends the ssl (SSL passthrough) frontend of the HAProxy configuration.
+      - The custom resource is merged over the controller-generated configuration, and lists are merged according to an optional lists merge mode suffix.
+      - The frontend name, the defaults inheritance, the mode, the default backend and the binds are owned by the controller and are never amended.
+      - The annotation has no effect when SSL passthrough is disabled.
+    tip: []
+    values:
+      - "The annotation format is a path namespace/name to the custom resource, with an optional lists merge mode suffix: append (default), prepend or override"
+    applies_to:
+      - configmap
+    version_min: "3.2"
+    example:
+      - "cr-frontend-ssl: default/test:prepend"
+    related_docs:
+      - ./custom-resources.md
   - title: cr-frontend-stats
     type: string
     group: custom-resources

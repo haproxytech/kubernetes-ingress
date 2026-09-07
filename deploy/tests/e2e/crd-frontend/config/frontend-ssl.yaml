@@ -1,0 +1,27 @@
+apiVersion: ingress.v3.haproxy.org/v3
+kind: Frontend
+metadata:
+  name: test-ssl
+spec:
+  # Guarded fields: ignored by the controller, which owns the ssl frontend.
+  name: should-be-ignored
+  mode: http
+  default_backend: should-be-ignored
+  binds:
+    should-be-ignored:
+      address: 127.0.0.1
+      port: 9999
+      name: should-be-ignored
+  # Scalar override; the quotes are part of the value: log-format is one argument.
+  log_format: "'%ci:%cp [%t] custom-ssl-cr'"
+  # Lists merged with the controller-generated ones according to the
+  # cr-frontend-ssl annotation suffix.
+  acl_list:
+    - acl_name: cr_ssl_test
+      criterion: src
+      value: 1.2.3.4
+  tcp_request_rule_list:
+    - type: content
+      action: reject
+      cond: if
+      cond_test: '{ src 5.6.7.8 }'

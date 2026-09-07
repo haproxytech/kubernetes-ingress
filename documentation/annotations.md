@@ -91,6 +91,7 @@ more info about custom annotations can be found in [annotations-custom.md](annot
 | [cr-backend](#custom-resources) | string |  |  |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:|
 | [cr-frontend-http](#custom-resources) | string |  |  |:large_blue_circle:|:white_circle:|:white_circle:|
 | [cr-frontend-https](#custom-resources) | string |  |  |:large_blue_circle:|:white_circle:|:white_circle:|
+| [cr-frontend-ssl](#custom-resources) | string |  |  |:large_blue_circle:|:white_circle:|:white_circle:|
 | [cr-frontend-stats](#custom-resources) | string |  |  |:large_blue_circle:|:white_circle:|:white_circle:|
 | [standalone-backend](#standalone-backend) | [bool](#bool) |  |  |:white_circle:|:large_blue_circle:|:large_blue_circle:|
 | [timeout-check](#timeouts) | [time](#time) |  |  |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:|
@@ -886,6 +887,29 @@ Example:
 
 ```yaml
 cr-frontend-https: default/test
+```
+
+Related documentation:
+
+- [custom-resources.md](./custom-resources.md)
+
+##### `cr-frontend-ssl`
+
+  References the Frontend custom resource that amends the ssl (SSL passthrough) frontend of the HAProxy configuration.
+  The custom resource is merged over the controller-generated configuration, and lists are merged according to an optional lists merge mode suffix.
+  The frontend name, the defaults inheritance, the mode, the default backend and the binds are owned by the controller and are never amended.
+  The annotation has no effect when SSL passthrough is disabled.
+
+  Available on:  `configmap`
+
+Possible values:
+
+- The annotation format is a path namespace/name to the custom resource, with an optional lists merge mode suffix: append (default), prepend or override
+
+Example:
+
+```yaml
+cr-frontend-ssl: default/test:prepend
 ```
 
 Related documentation:

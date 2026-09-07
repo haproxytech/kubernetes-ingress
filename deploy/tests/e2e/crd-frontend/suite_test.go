@@ -71,6 +71,12 @@ func (suite *CRDFrontendSuite) getFrontendConfiguration(frontendName string) (*m
 		return nil, err
 	}
 	f.Binds = ConvertBinds(binds)
+
+	tcpRules, err := configuration.ParseTCPRequestRules(configuration.FrontendParentName, frontendName, p)
+	if err != nil {
+		return nil, err
+	}
+	f.TCPRequestRuleList = tcpRules
 	return f, nil
 }
 

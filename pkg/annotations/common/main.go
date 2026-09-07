@@ -34,7 +34,11 @@ func GetK8sPath(annotationName string, annotations ...map[string]string) (ns, na
 	if a == "" {
 		return ns, name, err
 	}
-	parts := strings.Split(a, "/")
+	return GetNamespaceAndName(a)
+}
+
+func GetNamespaceAndName(value string) (ns, name string, err error) {
+	parts := strings.Split(value, "/")
 	switch len(parts) {
 	case 1:
 		name = parts[0]

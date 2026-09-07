@@ -162,10 +162,10 @@ func (c *clientNative) FrontendsGet() (models.Frontends, error) {
 
 func (c *clientNative) FrontendGet(frontendName string) (models.Frontend, error) {
 	oldFrontend, ok := c.frontends[frontendName]
-	if ok {
-		return oldFrontend.Frontend, nil
+	if !ok || oldFrontend == nil {
+		return models.Frontend{}, fmt.Errorf("frontend %s not found", frontendName)
 	}
-	return models.Frontend{}, fmt.Errorf("frontend %s not found", frontendName)
+	return oldFrontend.Frontend, nil
 }
 
 // func (c *clientNative) FrontendEdit(frontend models.FrontendBase) error {
