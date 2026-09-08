@@ -46,13 +46,16 @@ func TestEventPodTracksPodIPChanges(t *testing.T) {
 	}
 }
 
-func TestEventPodIgnoresEmptyPodIP(t *testing.T) {
+func TestEventPodTracksPodsWithoutIPForMaxconn(t *testing.T) {
 	store := NewK8sStore(utils.OSArgs{})
 
-	if store.EventPod(PodEvent{Status: ADDED, Name: "haproxy-ingress-abcde-fghij", Namespace: "default"}) {
-		t.Fatal("expected empty pod IP to skip update")
+	if !store.EventPod(PodEvent{Status: ADDED, Name: "haproxy-ingress-abcde-fghij", Namespace: "default"}) {
+		t.Fatal("expected pod add to require an update")
 	}
-	if len(store.HaProxyPods) != 0 {
-		t.Fatalf("expected no tracked pods, got %d", len(store.HaProxyPods))
+	if len(store.HaProxyPods) != 1 {
+		t.Fatalf("expected one tracked pod, got %d", len(store.HaProxyPods))
+	}
+	if store.EventPod(PodEvent{Status: MODIFIED, Name: "haproxy-ingress-abcde-fghij", Namespace: "default"}) {
+		t.Fatal("expected unchanged empty pod IP to skip update")
 	}
 }
