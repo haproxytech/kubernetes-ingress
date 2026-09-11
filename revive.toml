@@ -70,3 +70,6 @@ enableAllRules = true
 
 [rule.confusing-naming]
   Disabled = true
+
+[rule.package-naming]
+  Disabled = true

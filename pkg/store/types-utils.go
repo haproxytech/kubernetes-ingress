@@ -2,6 +2,7 @@ package store
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
 )
@@ -26,11 +27,10 @@ func (gw *Gateway) IsValid() error {
 	return err.Result()
 }
 
-func (tcproutes TCPRoutes) Less(i, j int) bool {
-	tcprouteI := tcproutes[i]
-	tcprouteJ := tcproutes[j]
-	if !tcprouteI.CreationTime.Equal(tcprouteJ.CreationTime) {
-		return tcprouteI.CreationTime.Before(tcprouteJ.CreationTime)
+// CompareTCPRoutes orders routes by creation time, then by namespaced name.
+func CompareTCPRoutes(a, b TCPRoute) int {
+	if c := a.CreationTime.Compare(b.CreationTime); c != 0 {
+		return c
 	}
-	return tcprouteI.Namespace+tcprouteI.Name < tcprouteJ.Namespace+tcprouteJ.Name
+	return strings.Compare(a.Namespace+a.Name, b.Namespace+b.Name)
 }

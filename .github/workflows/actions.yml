@@ -191,7 +191,7 @@ jobs:
           cluster_name: dev
           config: deploy/tests/kind-config.yaml
           node_image: kindest/node:${{ matrix.k8s-version }}
-          version: v0.30.0
+          version: v0.33.0
       - name: Setup
         run: CI_ENV=github deploy/tests/create.sh
       - name: Run parallel e2e tests

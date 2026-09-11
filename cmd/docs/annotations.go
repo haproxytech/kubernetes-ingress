@@ -17,7 +17,7 @@ package main
 import (
 	"fmt"
 	"log"
-	"sort"
+	"slices"
 	"strings"
 
 	"github.com/google/renameio"
@@ -152,7 +152,7 @@ func (c *Conf) generateReadmeAnnotations() {
 	for group := range groups {
 		sortedGroups = append(sortedGroups, group)
 	}
-	sort.Strings(sortedGroups)
+	slices.Sort(sortedGroups)
 	caser := cases.Title(language.Und)
 	for _, group := range sortedGroups {
 		buff.WriteString(fmt.Sprintf("#### %s\n\n", strings.ReplaceAll(caser.String(group), "-", " ")))

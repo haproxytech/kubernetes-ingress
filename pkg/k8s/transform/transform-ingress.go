@@ -15,7 +15,7 @@
 package k8stransform
 
 import (
-	"sort"
+	"slices"
 
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
 	networkingv1 "k8s.io/api/networking/v1"
@@ -106,7 +106,7 @@ func RemoveIngressTLSDuplicates(tlsList []networkingv1.IngressTLS) ([]networking
 		if len(newHosts) != len(ingtls.Hosts) {
 			containsDups = true
 		}
-		sort.Strings(newHosts)
+		slices.Sort(newHosts)
 		ingtls.Hosts = newHosts
 		tlsWithoutHostDupls = append(tlsWithoutHostDupls, ingtls)
 	}

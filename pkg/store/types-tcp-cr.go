@@ -16,8 +16,9 @@ package store
 
 import (
 	"fmt"
-	"sort"
+	"slices"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/haproxytech/client-native/v6/models"
@@ -99,22 +100,20 @@ func (a TCPResource) Owner() rc.Owner {
 // - first the TCP name
 // - then the CreationTime descending if same names
 func (a TCPResourceList) Order() {
-	sort.SliceStable(a, func(i, j int) bool {
-		// Sort on TCP names
-		if a[i].TCPModel.Name != a[j].TCPModel.Name {
-			return a[i].TCPModel.Name < a[j].TCPModel.Name
+	slices.SortStableFunc(a, func(x, y *TCPResource) int {
+		if c := strings.Compare(x.TCPModel.Name, y.TCPModel.Name); c != 0 {
+			return c
 		}
-		// Then CreationTime
-		return a[i].CreationTimestamp.After(a[j].CreationTimestamp)
+		return y.CreationTimestamp.Compare(x.CreationTimestamp)
 	})
 }
 
 func (a TCPResourceList) OrderByCreationTime() {
-	sort.SliceStable(a, func(i, j int) bool {
-		if a[i].CreationTimestamp.Equal(a[j].CreationTimestamp) {
-			return a[i].Name < a[j].Name
+	slices.SortStableFunc(a, func(x, y *TCPResource) int {
+		if c := y.CreationTimestamp.Compare(x.CreationTimestamp); c != 0 {
+			return c
 		}
-		return a[i].CreationTimestamp.After(a[j].CreationTimestamp)
+		return strings.Compare(x.Name, y.Name)
 	})
 }
 

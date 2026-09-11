@@ -125,23 +125,23 @@ func (c *HAProxyController) SyncData() {
 func (c *HAProxyController) auxCfgManager() {
 	info, errStat := os.Stat(c.haproxy.AuxCFGFile)
 	var (
-		modifTime  int64
-		auxCfgFile = c.haproxy.AuxCFGFile
-		useAuxFile bool
+		modifTimeSec int64
+		auxCfgFile   = c.haproxy.AuxCFGFile
+		useAuxFile   bool
 	)
 
 	defer func() {
 		// Nothing changed
-		if c.auxCfgModTime == modifTime {
+		if c.auxCfgModTime == modifTimeSec {
 			return
 		}
 		// Apply decisions
 		c.haproxy.SetAuxCfgFile(auxCfgFile)
 		c.haproxy.UseAuxFile(useAuxFile)
-		// The file exists now  (modifTime !=0 otherwise nothing changed case).
+		// The file exists now  (modifTimeSec !=0 otherwise nothing changed case).
 		instance.ReloadIf(c.auxCfgModTime == 0, "auxiliary configuration file created")
 		instance.ReloadIf(c.auxCfgModTime != 0, "auxiliary configuration file modified")
-		c.auxCfgModTime = modifTime
+		c.auxCfgModTime = modifTimeSec
 		if c.auxCfgModTime != 0 {
 			logger.Infof("Auxiliary HAProxy config '%s' updated", auxCfgFile)
 		}
@@ -160,5 +160,5 @@ func (c *HAProxyController) auxCfgManager() {
 	}
 	// File exists
 	useAuxFile = true
-	modifTime = info.ModTime().Unix()
+	modifTimeSec = info.ModTime().Unix()
 }

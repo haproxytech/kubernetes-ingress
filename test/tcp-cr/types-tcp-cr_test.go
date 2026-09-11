@@ -18,7 +18,7 @@ import (
 	_ "embed"
 	"encoding/json"
 	"os"
-	"sort"
+	"slices"
 	"strings"
 	"testing"
 
@@ -195,7 +195,7 @@ func TestTCPs_HasCollisionAddressPort(t *testing.T) {
 				// Order reasons to avoid randon failures
 				for _, r := range gotList {
 					parts := strings.Split(r.Reason, "--")
-					sort.Strings(parts)
+					slices.Sort(parts)
 					r.Reason = strings.Join(parts, "--")
 				}
 			}
@@ -257,7 +257,7 @@ func TestTCPs_HasCollisionFrontendName(t *testing.T) {
 				// Order reasons to avoid randon failures
 				for _, r := range gotList {
 					parts := strings.Split(r.Reason, "--")
-					sort.Strings(parts)
+					slices.Sort(parts)
 					r.Reason = strings.Join(parts, "--")
 				}
 			}
@@ -336,7 +336,7 @@ func TestTCPs_CheckCollision(t *testing.T) {
 			// Order reasons to avoid randon failures
 			for _, r := range resourceList.Items {
 				parts := strings.Split(r.Reason, "--")
-				sort.Strings(parts)
+				slices.Sort(parts)
 				r.Reason = strings.Join(parts, "--")
 			}
 			got, _ := json.Marshal(resourceList.Items)

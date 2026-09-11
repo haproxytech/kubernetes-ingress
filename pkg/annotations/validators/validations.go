@@ -2,12 +2,12 @@ package validators
 
 import (
 	"bytes"
+	"cmp"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
 	"slices"
-	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -442,13 +442,13 @@ func (v *Validator) GetSortedAnnotationKeys(annotations map[string]string, filte
 		keys = append(keys, k)
 	}
 	// now sort the keys based on SortPriority, if same priority, sort alphabetically
-	sort.SliceStable(keys, func(i, j int) bool {
-		ruleI := v.config.ValidationRules[keys[i]]
-		ruleJ := v.config.ValidationRules[keys[j]]
-		if ruleI.OrderPriority == ruleJ.OrderPriority {
-			return keys[i] < keys[j]
+	slices.SortStableFunc(keys, func(a, b string) int {
+		ruleA := v.config.ValidationRules[a]
+		ruleB := v.config.ValidationRules[b]
+		if ruleA.OrderPriority == ruleB.OrderPriority {
+			return strings.Compare(a, b)
 		}
-		return ruleI.OrderPriority > ruleJ.OrderPriority
+		return cmp.Compare(ruleB.OrderPriority, ruleA.OrderPriority)
 	})
 
 	return keys

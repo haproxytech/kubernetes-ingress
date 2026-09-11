@@ -17,7 +17,7 @@ package gateway
 import (
 	"fmt"
 	"net"
-	"sort"
+	"slices"
 	"strconv"
 
 	"github.com/haproxytech/client-native/v6/models"
@@ -230,7 +230,7 @@ func (gm GatewayManagerImpl) manageTCPRoutes() {
 		if len(rbl.P2) == 0 {
 			continue
 		}
-		sort.SliceStable(rbl.P2, rbl.P2.Less)
+		slices.SortStableFunc(rbl.P2, store.CompareTCPRoutes)
 		logger.Error(gm.addRouteToListener(fontendName, rbl.P2[0], rbl.P1))
 	}
 }
