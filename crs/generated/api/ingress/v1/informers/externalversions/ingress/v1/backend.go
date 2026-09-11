@@ -33,11 +33,39 @@ import (
 )
 
 // BackendInformer provides access to a shared informer and lister for
-// Backends.
+// Backends. Prefer using the type-safe variant (see [TypedBackendInformer]).
 type BackendInformer interface {
 	Informer() cache.SharedIndexInformer
 	Lister() ingressv1.BackendLister
 }
+
+// TypedBackendInformer provides access to a shared informer and lister for
+// Backends, including the type-safe TypedInformer variant.
+// It is a superset of BackendInformer.
+type TypedBackendInformer interface {
+	Informer() cache.SharedIndexInformer
+	TypedInformer() BackendIndexInformer
+	Lister() ingressv1.BackendLister
+}
+
+// BackendIndexInformer is a wrapper around the underlying [cache.SharedIndexInformer]
+// with type-safe variants of several methods.
+type BackendIndexInformer cache.TypedSharedIndexInformer[*apiingressv1.Backend]
+
+// BackendHandlerFuncs is a specialization of [cache.TypedResourceEventHandlerFuncs] for Backend.
+type BackendHandlerFuncs = cache.TypedResourceEventHandlerFuncs[*apiingressv1.Backend]
+
+// BackendDetailedHandlerFuncs is a specialization of [cache.TypedResourceEventHandlerDetailedFuncs] for Backend.
+type BackendDetailedHandlerFuncs = cache.TypedResourceEventHandlerDetailedFuncs[*apiingressv1.Backend]
+
+// BackendFilteringHandler is a specialization of [cache.TypedFilteringResourceEventHandler] for Backend.
+type BackendFilteringHandler = cache.TypedFilteringResourceEventHandler[*apiingressv1.Backend]
+
+// BackendIndexers is a specialization of [cache.TypedIndexers] for Backend.
+type BackendIndexers = cache.TypedIndexers[*apiingressv1.Backend]
+
+// DeletedBackend is a specialization of [cache.DeletedObject] for Backend.
+type DeletedBackend = cache.DeletedObject[*apiingressv1.Backend]
 
 type backendInformer struct {
 	factory          internalinterfaces.SharedInformerFactory
@@ -48,25 +76,49 @@ type backendInformer struct {
 // NewBackendInformer constructs a new informer for Backend type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
+// If you really need an independent one, prefer using the type-safe variant (see [NewTypedBackendInformer]).
 func NewBackendInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers) cache.SharedIndexInformer {
 	return NewBackendInformerWithOptions(client, namespace, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: indexers})
+}
+
+// NewTypedBackendInformer constructs a new informer for Backend type.
+// Always prefer using an informer factory to get a shared informer instead of getting an independent
+// one. This reduces memory footprint and number of connections to the server.
+func NewTypedBackendInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers BackendIndexers) BackendIndexInformer {
+	return NewTypedBackendInformerWithOptions(client, namespace, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: cache.TypedIndexersToIndexers(indexers)})
 }
 
 // NewFilteredBackendInformer constructs a new informer for Backend type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
+// If you really need an independent one, prefer using the type-safe variant (see [NewTypedFilteredBackendInformer]).
 func NewFilteredBackendInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) cache.SharedIndexInformer {
-	return NewBackendInformerWithOptions(client, namespace, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: indexers, TweakListOptions: tweakListOptions})
+	return NewTypedBackendInformerWithOptions(client, namespace, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: indexers, TweakListOptions: tweakListOptions})
+}
+
+// NewTypedFilteredBackendInformer constructs a new informer for Backend type.
+// Always prefer using an informer factory to get a shared informer instead of getting an independent
+// one. This reduces memory footprint and number of connections to the server.
+func NewTypedFilteredBackendInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers BackendIndexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) BackendIndexInformer {
+	return NewTypedBackendInformerWithOptions(client, namespace, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: cache.TypedIndexersToIndexers(indexers), TweakListOptions: tweakListOptions})
 }
 
 // NewBackendInformerWithOptions constructs a new informer for Backend type with additional options.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
+// If you really need an independent one, prefer using the type-safe variant (see [NewTypedBackendInformerWithOptions]).
 func NewBackendInformerWithOptions(client versioned.Interface, namespace string, options internalinterfaces.InformerOptions) cache.SharedIndexInformer {
+	return NewTypedBackendInformerWithOptions(client, namespace, options)
+}
+
+// NewTypedBackendInformerWithOptions constructs a new informer for Backend type with additional options.
+// Always prefer using an informer factory to get a shared informer instead of getting an independent
+// one. This reduces memory footprint and number of connections to the server.
+func NewTypedBackendInformerWithOptions(client versioned.Interface, namespace string, options internalinterfaces.InformerOptions) BackendIndexInformer {
 	gvr := schema.GroupVersionResource{Group: "ingress.v1.haproxy.org", Version: "v1", Resource: "backends"}
 	identifier := options.InformerName.WithResource(gvr)
 	tweakListOptions := options.TweakListOptions
-	return cache.NewSharedIndexInformerWithOptions(
+	return cache.NewTypedSharedIndexInformer[*apiingressv1.Backend](cache.NewSharedIndexInformerWithOptions(
 		cache.ToListWatcherWithWatchListSemantics(&cache.ListWatch{
 			ListFunc: func(opts metav1.ListOptions) (runtime.Object, error) {
 				if tweakListOptions != nil {
@@ -99,17 +151,57 @@ func NewBackendInformerWithOptions(client versioned.Interface, namespace string,
 			Indexers:     options.Indexers,
 			Identifier:   identifier,
 		},
-	)
+	))
 }
 
 func (f *backendInformer) defaultInformer(client versioned.Interface, resyncPeriod time.Duration) cache.SharedIndexInformer {
-	return NewBackendInformerWithOptions(client, f.namespace, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, InformerName: f.factory.InformerName(), TweakListOptions: f.tweakListOptions})
+	return NewTypedBackendInformerWithOptions(client, f.namespace, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, InformerName: f.factory.InformerName(), TweakListOptions: f.tweakListOptions})
 }
 
 func (f *backendInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&apiingressv1.Backend{}, f.defaultInformer)
+	return f.TypedInformer()
+}
+
+func (f *backendInformer) TypedInformer() BackendIndexInformer {
+	return cache.NewTypedSharedIndexInformer[*apiingressv1.Backend](f.factory.InformerFor(&apiingressv1.Backend{}, f.defaultInformer))
 }
 
 func (f *backendInformer) Lister() ingressv1.BackendLister {
 	return ingressv1.NewBackendLister(f.Informer().GetIndexer())
+}
+
+// ToTypedBackendInformer converts an untyped informer into a TypedBackendInformer.
+//
+// WARNING: this conversion is only safe if the informer handles objects of type
+// *Backend. If that is not the case, calling type-safe methods of the returned
+// TypedBackendInformer leads to runtime panics. A safer alternative is to pass
+// around a TypedBackendInformer instances that was obtained from a
+// SharedInformerFactory.
+func ToTypedBackendInformer(informer BackendInformer) TypedBackendInformer {
+	if informer, ok := informer.(TypedBackendInformer); ok {
+		return informer
+	}
+	return &backendTypedInformerAdapter{informer}
+}
+
+type backendTypedInformerAdapter struct {
+	BackendInformer
+}
+
+func (a *backendTypedInformerAdapter) TypedInformer() BackendIndexInformer {
+	return cache.NewTypedSharedIndexInformer[*apiingressv1.Backend](a.Informer())
+}
+
+// ToBackendIndexInformer converts an untyped informer into a BackendIndexInformer.
+//
+// WARNING: this conversion is only safe if the informer handles objects of type
+// *Backend. If that is not the case, calling type-safe methods of the returned
+// BackendIndexInformer leads to runtime panics. A safer alternative is to pass
+// around a BackendIndexInformer instances that was obtained from a
+// SharedInformerFactory.
+func ToBackendIndexInformer(informer cache.SharedIndexInformer) BackendIndexInformer {
+	if informer, ok := informer.(BackendIndexInformer); ok {
+		return informer
+	}
+	return cache.NewTypedSharedIndexInformer[*apiingressv1.Backend](informer)
 }

@@ -33,11 +33,39 @@ import (
 )
 
 // DefaultsInformer provides access to a shared informer and lister for
-// Defaults.
+// Defaults. Prefer using the type-safe variant (see [TypedDefaultsInformer]).
 type DefaultsInformer interface {
 	Informer() cache.SharedIndexInformer
 	Lister() ingressv1.DefaultsLister
 }
+
+// TypedDefaultsInformer provides access to a shared informer and lister for
+// Defaults, including the type-safe TypedInformer variant.
+// It is a superset of DefaultsInformer.
+type TypedDefaultsInformer interface {
+	Informer() cache.SharedIndexInformer
+	TypedInformer() DefaultsIndexInformer
+	Lister() ingressv1.DefaultsLister
+}
+
+// DefaultsIndexInformer is a wrapper around the underlying [cache.SharedIndexInformer]
+// with type-safe variants of several methods.
+type DefaultsIndexInformer cache.TypedSharedIndexInformer[*apiingressv1.Defaults]
+
+// DefaultsHandlerFuncs is a specialization of [cache.TypedResourceEventHandlerFuncs] for Defaults.
+type DefaultsHandlerFuncs = cache.TypedResourceEventHandlerFuncs[*apiingressv1.Defaults]
+
+// DefaultsDetailedHandlerFuncs is a specialization of [cache.TypedResourceEventHandlerDetailedFuncs] for Defaults.
+type DefaultsDetailedHandlerFuncs = cache.TypedResourceEventHandlerDetailedFuncs[*apiingressv1.Defaults]
+
+// DefaultsFilteringHandler is a specialization of [cache.TypedFilteringResourceEventHandler] for Defaults.
+type DefaultsFilteringHandler = cache.TypedFilteringResourceEventHandler[*apiingressv1.Defaults]
+
+// DefaultsIndexers is a specialization of [cache.TypedIndexers] for Defaults.
+type DefaultsIndexers = cache.TypedIndexers[*apiingressv1.Defaults]
+
+// DeletedDefaults is a specialization of [cache.DeletedObject] for Defaults.
+type DeletedDefaults = cache.DeletedObject[*apiingressv1.Defaults]
 
 type defaultsInformer struct {
 	factory          internalinterfaces.SharedInformerFactory
@@ -48,25 +76,49 @@ type defaultsInformer struct {
 // NewDefaultsInformer constructs a new informer for Defaults type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
+// If you really need an independent one, prefer using the type-safe variant (see [NewTypedDefaultsInformer]).
 func NewDefaultsInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers) cache.SharedIndexInformer {
 	return NewDefaultsInformerWithOptions(client, namespace, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: indexers})
+}
+
+// NewTypedDefaultsInformer constructs a new informer for Defaults type.
+// Always prefer using an informer factory to get a shared informer instead of getting an independent
+// one. This reduces memory footprint and number of connections to the server.
+func NewTypedDefaultsInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers DefaultsIndexers) DefaultsIndexInformer {
+	return NewTypedDefaultsInformerWithOptions(client, namespace, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: cache.TypedIndexersToIndexers(indexers)})
 }
 
 // NewFilteredDefaultsInformer constructs a new informer for Defaults type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
+// If you really need an independent one, prefer using the type-safe variant (see [NewTypedFilteredDefaultsInformer]).
 func NewFilteredDefaultsInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) cache.SharedIndexInformer {
-	return NewDefaultsInformerWithOptions(client, namespace, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: indexers, TweakListOptions: tweakListOptions})
+	return NewTypedDefaultsInformerWithOptions(client, namespace, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: indexers, TweakListOptions: tweakListOptions})
+}
+
+// NewTypedFilteredDefaultsInformer constructs a new informer for Defaults type.
+// Always prefer using an informer factory to get a shared informer instead of getting an independent
+// one. This reduces memory footprint and number of connections to the server.
+func NewTypedFilteredDefaultsInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers DefaultsIndexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) DefaultsIndexInformer {
+	return NewTypedDefaultsInformerWithOptions(client, namespace, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: cache.TypedIndexersToIndexers(indexers), TweakListOptions: tweakListOptions})
 }
 
 // NewDefaultsInformerWithOptions constructs a new informer for Defaults type with additional options.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
+// If you really need an independent one, prefer using the type-safe variant (see [NewTypedDefaultsInformerWithOptions]).
 func NewDefaultsInformerWithOptions(client versioned.Interface, namespace string, options internalinterfaces.InformerOptions) cache.SharedIndexInformer {
+	return NewTypedDefaultsInformerWithOptions(client, namespace, options)
+}
+
+// NewTypedDefaultsInformerWithOptions constructs a new informer for Defaults type with additional options.
+// Always prefer using an informer factory to get a shared informer instead of getting an independent
+// one. This reduces memory footprint and number of connections to the server.
+func NewTypedDefaultsInformerWithOptions(client versioned.Interface, namespace string, options internalinterfaces.InformerOptions) DefaultsIndexInformer {
 	gvr := schema.GroupVersionResource{Group: "ingress.v1.haproxy.org", Version: "v1", Resource: "defaultss"}
 	identifier := options.InformerName.WithResource(gvr)
 	tweakListOptions := options.TweakListOptions
-	return cache.NewSharedIndexInformerWithOptions(
+	return cache.NewTypedSharedIndexInformer[*apiingressv1.Defaults](cache.NewSharedIndexInformerWithOptions(
 		cache.ToListWatcherWithWatchListSemantics(&cache.ListWatch{
 			ListFunc: func(opts metav1.ListOptions) (runtime.Object, error) {
 				if tweakListOptions != nil {
@@ -99,17 +151,57 @@ func NewDefaultsInformerWithOptions(client versioned.Interface, namespace string
 			Indexers:     options.Indexers,
 			Identifier:   identifier,
 		},
-	)
+	))
 }
 
 func (f *defaultsInformer) defaultInformer(client versioned.Interface, resyncPeriod time.Duration) cache.SharedIndexInformer {
-	return NewDefaultsInformerWithOptions(client, f.namespace, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, InformerName: f.factory.InformerName(), TweakListOptions: f.tweakListOptions})
+	return NewTypedDefaultsInformerWithOptions(client, f.namespace, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, InformerName: f.factory.InformerName(), TweakListOptions: f.tweakListOptions})
 }
 
 func (f *defaultsInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&apiingressv1.Defaults{}, f.defaultInformer)
+	return f.TypedInformer()
+}
+
+func (f *defaultsInformer) TypedInformer() DefaultsIndexInformer {
+	return cache.NewTypedSharedIndexInformer[*apiingressv1.Defaults](f.factory.InformerFor(&apiingressv1.Defaults{}, f.defaultInformer))
 }
 
 func (f *defaultsInformer) Lister() ingressv1.DefaultsLister {
 	return ingressv1.NewDefaultsLister(f.Informer().GetIndexer())
+}
+
+// ToTypedDefaultsInformer converts an untyped informer into a TypedDefaultsInformer.
+//
+// WARNING: this conversion is only safe if the informer handles objects of type
+// *Defaults. If that is not the case, calling type-safe methods of the returned
+// TypedDefaultsInformer leads to runtime panics. A safer alternative is to pass
+// around a TypedDefaultsInformer instances that was obtained from a
+// SharedInformerFactory.
+func ToTypedDefaultsInformer(informer DefaultsInformer) TypedDefaultsInformer {
+	if informer, ok := informer.(TypedDefaultsInformer); ok {
+		return informer
+	}
+	return &defaultsTypedInformerAdapter{informer}
+}
+
+type defaultsTypedInformerAdapter struct {
+	DefaultsInformer
+}
+
+func (a *defaultsTypedInformerAdapter) TypedInformer() DefaultsIndexInformer {
+	return cache.NewTypedSharedIndexInformer[*apiingressv1.Defaults](a.Informer())
+}
+
+// ToDefaultsIndexInformer converts an untyped informer into a DefaultsIndexInformer.
+//
+// WARNING: this conversion is only safe if the informer handles objects of type
+// *Defaults. If that is not the case, calling type-safe methods of the returned
+// DefaultsIndexInformer leads to runtime panics. A safer alternative is to pass
+// around a DefaultsIndexInformer instances that was obtained from a
+// SharedInformerFactory.
+func ToDefaultsIndexInformer(informer cache.SharedIndexInformer) DefaultsIndexInformer {
+	if informer, ok := informer.(DefaultsIndexInformer); ok {
+		return informer
+	}
+	return cache.NewTypedSharedIndexInformer[*apiingressv1.Defaults](informer)
 }

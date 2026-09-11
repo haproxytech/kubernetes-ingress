@@ -33,11 +33,39 @@ import (
 )
 
 // ValidationRulesInformer provides access to a shared informer and lister for
-// ValidationRules.
+// ValidationRules. Prefer using the type-safe variant (see [TypedValidationRulesInformer]).
 type ValidationRulesInformer interface {
 	Informer() cache.SharedIndexInformer
 	Lister() ingressv3.ValidationRulesLister
 }
+
+// TypedValidationRulesInformer provides access to a shared informer and lister for
+// ValidationRules, including the type-safe TypedInformer variant.
+// It is a superset of ValidationRulesInformer.
+type TypedValidationRulesInformer interface {
+	Informer() cache.SharedIndexInformer
+	TypedInformer() ValidationRulesIndexInformer
+	Lister() ingressv3.ValidationRulesLister
+}
+
+// ValidationRulesIndexInformer is a wrapper around the underlying [cache.SharedIndexInformer]
+// with type-safe variants of several methods.
+type ValidationRulesIndexInformer cache.TypedSharedIndexInformer[*apiingressv3.ValidationRules]
+
+// ValidationRulesHandlerFuncs is a specialization of [cache.TypedResourceEventHandlerFuncs] for ValidationRules.
+type ValidationRulesHandlerFuncs = cache.TypedResourceEventHandlerFuncs[*apiingressv3.ValidationRules]
+
+// ValidationRulesDetailedHandlerFuncs is a specialization of [cache.TypedResourceEventHandlerDetailedFuncs] for ValidationRules.
+type ValidationRulesDetailedHandlerFuncs = cache.TypedResourceEventHandlerDetailedFuncs[*apiingressv3.ValidationRules]
+
+// ValidationRulesFilteringHandler is a specialization of [cache.TypedFilteringResourceEventHandler] for ValidationRules.
+type ValidationRulesFilteringHandler = cache.TypedFilteringResourceEventHandler[*apiingressv3.ValidationRules]
+
+// ValidationRulesIndexers is a specialization of [cache.TypedIndexers] for ValidationRules.
+type ValidationRulesIndexers = cache.TypedIndexers[*apiingressv3.ValidationRules]
+
+// DeletedValidationRules is a specialization of [cache.DeletedObject] for ValidationRules.
+type DeletedValidationRules = cache.DeletedObject[*apiingressv3.ValidationRules]
 
 type validationRulesInformer struct {
 	factory          internalinterfaces.SharedInformerFactory
@@ -48,25 +76,49 @@ type validationRulesInformer struct {
 // NewValidationRulesInformer constructs a new informer for ValidationRules type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
+// If you really need an independent one, prefer using the type-safe variant (see [NewTypedValidationRulesInformer]).
 func NewValidationRulesInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers) cache.SharedIndexInformer {
 	return NewValidationRulesInformerWithOptions(client, namespace, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: indexers})
+}
+
+// NewTypedValidationRulesInformer constructs a new informer for ValidationRules type.
+// Always prefer using an informer factory to get a shared informer instead of getting an independent
+// one. This reduces memory footprint and number of connections to the server.
+func NewTypedValidationRulesInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers ValidationRulesIndexers) ValidationRulesIndexInformer {
+	return NewTypedValidationRulesInformerWithOptions(client, namespace, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: cache.TypedIndexersToIndexers(indexers)})
 }
 
 // NewFilteredValidationRulesInformer constructs a new informer for ValidationRules type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
+// If you really need an independent one, prefer using the type-safe variant (see [NewTypedFilteredValidationRulesInformer]).
 func NewFilteredValidationRulesInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) cache.SharedIndexInformer {
-	return NewValidationRulesInformerWithOptions(client, namespace, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: indexers, TweakListOptions: tweakListOptions})
+	return NewTypedValidationRulesInformerWithOptions(client, namespace, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: indexers, TweakListOptions: tweakListOptions})
+}
+
+// NewTypedFilteredValidationRulesInformer constructs a new informer for ValidationRules type.
+// Always prefer using an informer factory to get a shared informer instead of getting an independent
+// one. This reduces memory footprint and number of connections to the server.
+func NewTypedFilteredValidationRulesInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers ValidationRulesIndexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) ValidationRulesIndexInformer {
+	return NewTypedValidationRulesInformerWithOptions(client, namespace, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: cache.TypedIndexersToIndexers(indexers), TweakListOptions: tweakListOptions})
 }
 
 // NewValidationRulesInformerWithOptions constructs a new informer for ValidationRules type with additional options.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
+// If you really need an independent one, prefer using the type-safe variant (see [NewTypedValidationRulesInformerWithOptions]).
 func NewValidationRulesInformerWithOptions(client versioned.Interface, namespace string, options internalinterfaces.InformerOptions) cache.SharedIndexInformer {
+	return NewTypedValidationRulesInformerWithOptions(client, namespace, options)
+}
+
+// NewTypedValidationRulesInformerWithOptions constructs a new informer for ValidationRules type with additional options.
+// Always prefer using an informer factory to get a shared informer instead of getting an independent
+// one. This reduces memory footprint and number of connections to the server.
+func NewTypedValidationRulesInformerWithOptions(client versioned.Interface, namespace string, options internalinterfaces.InformerOptions) ValidationRulesIndexInformer {
 	gvr := schema.GroupVersionResource{Group: "ingress.v3.haproxy.org", Version: "v3", Resource: "validationruless"}
 	identifier := options.InformerName.WithResource(gvr)
 	tweakListOptions := options.TweakListOptions
-	return cache.NewSharedIndexInformerWithOptions(
+	return cache.NewTypedSharedIndexInformer[*apiingressv3.ValidationRules](cache.NewSharedIndexInformerWithOptions(
 		cache.ToListWatcherWithWatchListSemantics(&cache.ListWatch{
 			ListFunc: func(opts v1.ListOptions) (runtime.Object, error) {
 				if tweakListOptions != nil {
@@ -99,17 +151,57 @@ func NewValidationRulesInformerWithOptions(client versioned.Interface, namespace
 			Indexers:     options.Indexers,
 			Identifier:   identifier,
 		},
-	)
+	))
 }
 
 func (f *validationRulesInformer) defaultInformer(client versioned.Interface, resyncPeriod time.Duration) cache.SharedIndexInformer {
-	return NewValidationRulesInformerWithOptions(client, f.namespace, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, InformerName: f.factory.InformerName(), TweakListOptions: f.tweakListOptions})
+	return NewTypedValidationRulesInformerWithOptions(client, f.namespace, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, InformerName: f.factory.InformerName(), TweakListOptions: f.tweakListOptions})
 }
 
 func (f *validationRulesInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&apiingressv3.ValidationRules{}, f.defaultInformer)
+	return f.TypedInformer()
+}
+
+func (f *validationRulesInformer) TypedInformer() ValidationRulesIndexInformer {
+	return cache.NewTypedSharedIndexInformer[*apiingressv3.ValidationRules](f.factory.InformerFor(&apiingressv3.ValidationRules{}, f.defaultInformer))
 }
 
 func (f *validationRulesInformer) Lister() ingressv3.ValidationRulesLister {
 	return ingressv3.NewValidationRulesLister(f.Informer().GetIndexer())
+}
+
+// ToTypedValidationRulesInformer converts an untyped informer into a TypedValidationRulesInformer.
+//
+// WARNING: this conversion is only safe if the informer handles objects of type
+// *ValidationRules. If that is not the case, calling type-safe methods of the returned
+// TypedValidationRulesInformer leads to runtime panics. A safer alternative is to pass
+// around a TypedValidationRulesInformer instances that was obtained from a
+// SharedInformerFactory.
+func ToTypedValidationRulesInformer(informer ValidationRulesInformer) TypedValidationRulesInformer {
+	if informer, ok := informer.(TypedValidationRulesInformer); ok {
+		return informer
+	}
+	return &validationRulesTypedInformerAdapter{informer}
+}
+
+type validationRulesTypedInformerAdapter struct {
+	ValidationRulesInformer
+}
+
+func (a *validationRulesTypedInformerAdapter) TypedInformer() ValidationRulesIndexInformer {
+	return cache.NewTypedSharedIndexInformer[*apiingressv3.ValidationRules](a.Informer())
+}
+
+// ToValidationRulesIndexInformer converts an untyped informer into a ValidationRulesIndexInformer.
+//
+// WARNING: this conversion is only safe if the informer handles objects of type
+// *ValidationRules. If that is not the case, calling type-safe methods of the returned
+// ValidationRulesIndexInformer leads to runtime panics. A safer alternative is to pass
+// around a ValidationRulesIndexInformer instances that was obtained from a
+// SharedInformerFactory.
+func ToValidationRulesIndexInformer(informer cache.SharedIndexInformer) ValidationRulesIndexInformer {
+	if informer, ok := informer.(ValidationRulesIndexInformer); ok {
+		return informer
+	}
+	return cache.NewTypedSharedIndexInformer[*apiingressv3.ValidationRules](informer)
 }

@@ -33,11 +33,39 @@ import (
 )
 
 // TCPInformer provides access to a shared informer and lister for
-// TCPs.
+// TCPs. Prefer using the type-safe variant (see [TypedTCPInformer]).
 type TCPInformer interface {
 	Informer() cache.SharedIndexInformer
 	Lister() ingressv3.TCPLister
 }
+
+// TypedTCPInformer provides access to a shared informer and lister for
+// TCPs, including the type-safe TypedInformer variant.
+// It is a superset of TCPInformer.
+type TypedTCPInformer interface {
+	Informer() cache.SharedIndexInformer
+	TypedInformer() TCPIndexInformer
+	Lister() ingressv3.TCPLister
+}
+
+// TCPIndexInformer is a wrapper around the underlying [cache.SharedIndexInformer]
+// with type-safe variants of several methods.
+type TCPIndexInformer cache.TypedSharedIndexInformer[*apiingressv3.TCP]
+
+// TCPHandlerFuncs is a specialization of [cache.TypedResourceEventHandlerFuncs] for TCP.
+type TCPHandlerFuncs = cache.TypedResourceEventHandlerFuncs[*apiingressv3.TCP]
+
+// TCPDetailedHandlerFuncs is a specialization of [cache.TypedResourceEventHandlerDetailedFuncs] for TCP.
+type TCPDetailedHandlerFuncs = cache.TypedResourceEventHandlerDetailedFuncs[*apiingressv3.TCP]
+
+// TCPFilteringHandler is a specialization of [cache.TypedFilteringResourceEventHandler] for TCP.
+type TCPFilteringHandler = cache.TypedFilteringResourceEventHandler[*apiingressv3.TCP]
+
+// TCPIndexers is a specialization of [cache.TypedIndexers] for TCP.
+type TCPIndexers = cache.TypedIndexers[*apiingressv3.TCP]
+
+// DeletedTCP is a specialization of [cache.DeletedObject] for TCP.
+type DeletedTCP = cache.DeletedObject[*apiingressv3.TCP]
 
 type tCPInformer struct {
 	factory          internalinterfaces.SharedInformerFactory
@@ -48,25 +76,49 @@ type tCPInformer struct {
 // NewTCPInformer constructs a new informer for TCP type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
+// If you really need an independent one, prefer using the type-safe variant (see [NewTypedTCPInformer]).
 func NewTCPInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers) cache.SharedIndexInformer {
 	return NewTCPInformerWithOptions(client, namespace, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: indexers})
+}
+
+// NewTypedTCPInformer constructs a new informer for TCP type.
+// Always prefer using an informer factory to get a shared informer instead of getting an independent
+// one. This reduces memory footprint and number of connections to the server.
+func NewTypedTCPInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers TCPIndexers) TCPIndexInformer {
+	return NewTypedTCPInformerWithOptions(client, namespace, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: cache.TypedIndexersToIndexers(indexers)})
 }
 
 // NewFilteredTCPInformer constructs a new informer for TCP type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
+// If you really need an independent one, prefer using the type-safe variant (see [NewTypedFilteredTCPInformer]).
 func NewFilteredTCPInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) cache.SharedIndexInformer {
-	return NewTCPInformerWithOptions(client, namespace, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: indexers, TweakListOptions: tweakListOptions})
+	return NewTypedTCPInformerWithOptions(client, namespace, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: indexers, TweakListOptions: tweakListOptions})
+}
+
+// NewTypedFilteredTCPInformer constructs a new informer for TCP type.
+// Always prefer using an informer factory to get a shared informer instead of getting an independent
+// one. This reduces memory footprint and number of connections to the server.
+func NewTypedFilteredTCPInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers TCPIndexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) TCPIndexInformer {
+	return NewTypedTCPInformerWithOptions(client, namespace, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: cache.TypedIndexersToIndexers(indexers), TweakListOptions: tweakListOptions})
 }
 
 // NewTCPInformerWithOptions constructs a new informer for TCP type with additional options.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
+// If you really need an independent one, prefer using the type-safe variant (see [NewTypedTCPInformerWithOptions]).
 func NewTCPInformerWithOptions(client versioned.Interface, namespace string, options internalinterfaces.InformerOptions) cache.SharedIndexInformer {
+	return NewTypedTCPInformerWithOptions(client, namespace, options)
+}
+
+// NewTypedTCPInformerWithOptions constructs a new informer for TCP type with additional options.
+// Always prefer using an informer factory to get a shared informer instead of getting an independent
+// one. This reduces memory footprint and number of connections to the server.
+func NewTypedTCPInformerWithOptions(client versioned.Interface, namespace string, options internalinterfaces.InformerOptions) TCPIndexInformer {
 	gvr := schema.GroupVersionResource{Group: "ingress.v3.haproxy.org", Version: "v3", Resource: "tcps"}
 	identifier := options.InformerName.WithResource(gvr)
 	tweakListOptions := options.TweakListOptions
-	return cache.NewSharedIndexInformerWithOptions(
+	return cache.NewTypedSharedIndexInformer[*apiingressv3.TCP](cache.NewSharedIndexInformerWithOptions(
 		cache.ToListWatcherWithWatchListSemantics(&cache.ListWatch{
 			ListFunc: func(opts v1.ListOptions) (runtime.Object, error) {
 				if tweakListOptions != nil {
@@ -99,17 +151,57 @@ func NewTCPInformerWithOptions(client versioned.Interface, namespace string, opt
 			Indexers:     options.Indexers,
 			Identifier:   identifier,
 		},
-	)
+	))
 }
 
 func (f *tCPInformer) defaultInformer(client versioned.Interface, resyncPeriod time.Duration) cache.SharedIndexInformer {
-	return NewTCPInformerWithOptions(client, f.namespace, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, InformerName: f.factory.InformerName(), TweakListOptions: f.tweakListOptions})
+	return NewTypedTCPInformerWithOptions(client, f.namespace, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, InformerName: f.factory.InformerName(), TweakListOptions: f.tweakListOptions})
 }
 
 func (f *tCPInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&apiingressv3.TCP{}, f.defaultInformer)
+	return f.TypedInformer()
+}
+
+func (f *tCPInformer) TypedInformer() TCPIndexInformer {
+	return cache.NewTypedSharedIndexInformer[*apiingressv3.TCP](f.factory.InformerFor(&apiingressv3.TCP{}, f.defaultInformer))
 }
 
 func (f *tCPInformer) Lister() ingressv3.TCPLister {
 	return ingressv3.NewTCPLister(f.Informer().GetIndexer())
+}
+
+// ToTypedTCPInformer converts an untyped informer into a TypedTCPInformer.
+//
+// WARNING: this conversion is only safe if the informer handles objects of type
+// *TCP. If that is not the case, calling type-safe methods of the returned
+// TypedTCPInformer leads to runtime panics. A safer alternative is to pass
+// around a TypedTCPInformer instances that was obtained from a
+// SharedInformerFactory.
+func ToTypedTCPInformer(informer TCPInformer) TypedTCPInformer {
+	if informer, ok := informer.(TypedTCPInformer); ok {
+		return informer
+	}
+	return &tCPTypedInformerAdapter{informer}
+}
+
+type tCPTypedInformerAdapter struct {
+	TCPInformer
+}
+
+func (a *tCPTypedInformerAdapter) TypedInformer() TCPIndexInformer {
+	return cache.NewTypedSharedIndexInformer[*apiingressv3.TCP](a.Informer())
+}
+
+// ToTCPIndexInformer converts an untyped informer into a TCPIndexInformer.
+//
+// WARNING: this conversion is only safe if the informer handles objects of type
+// *TCP. If that is not the case, calling type-safe methods of the returned
+// TCPIndexInformer leads to runtime panics. A safer alternative is to pass
+// around a TCPIndexInformer instances that was obtained from a
+// SharedInformerFactory.
+func ToTCPIndexInformer(informer cache.SharedIndexInformer) TCPIndexInformer {
+	if informer, ok := informer.(TCPIndexInformer); ok {
+		return informer
+	}
+	return cache.NewTypedSharedIndexInformer[*apiingressv3.TCP](informer)
 }
