@@ -18,10 +18,10 @@
 package v3
 
 import (
-	v3 "github.com/haproxytech/kubernetes-ingress/crs/api/ingress/v3"
-	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/client-go/tools/cache"
+	ingressv3 "github.com/haproxytech/kubernetes-ingress/crs/api/ingress/v3"
+	labels "k8s.io/apimachinery/pkg/labels"
+	listers "k8s.io/client-go/listers"
+	cache "k8s.io/client-go/tools/cache"
 )
 
 // TCPLister helps list TCPs.
@@ -29,7 +29,7 @@ import (
 type TCPLister interface {
 	// List lists all TCPs in the indexer.
 	// Objects returned here must be treated as read-only.
-	List(selector labels.Selector) (ret []*v3.TCP, err error)
+	List(selector labels.Selector) (ret []*ingressv3.TCP, err error)
 	// TCPs returns an object that can list and get TCPs.
 	TCPs(namespace string) TCPNamespaceLister
 	TCPListerExpansion
@@ -37,25 +37,17 @@ type TCPLister interface {
 
 // tCPLister implements the TCPLister interface.
 type tCPLister struct {
-	indexer cache.Indexer
+	listers.ResourceIndexer[*ingressv3.TCP]
 }
 
 // NewTCPLister returns a new TCPLister.
 func NewTCPLister(indexer cache.Indexer) TCPLister {
-	return &tCPLister{indexer: indexer}
-}
-
-// List lists all TCPs in the indexer.
-func (s *tCPLister) List(selector labels.Selector) (ret []*v3.TCP, err error) {
-	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
-		ret = append(ret, m.(*v3.TCP))
-	})
-	return ret, err
+	return &tCPLister{listers.New[*ingressv3.TCP](indexer, ingressv3.Resource("tcp"))}
 }
 
 // TCPs returns an object that can list and get TCPs.
 func (s *tCPLister) TCPs(namespace string) TCPNamespaceLister {
-	return tCPNamespaceLister{indexer: s.indexer, namespace: namespace}
+	return tCPNamespaceLister{listers.NewNamespaced[*ingressv3.TCP](s.ResourceIndexer, namespace)}
 }
 
 // TCPNamespaceLister helps list and get TCPs.
@@ -63,36 +55,15 @@ func (s *tCPLister) TCPs(namespace string) TCPNamespaceLister {
 type TCPNamespaceLister interface {
 	// List lists all TCPs in the indexer for a given namespace.
 	// Objects returned here must be treated as read-only.
-	List(selector labels.Selector) (ret []*v3.TCP, err error)
+	List(selector labels.Selector) (ret []*ingressv3.TCP, err error)
 	// Get retrieves the TCP from the indexer for a given namespace and name.
 	// Objects returned here must be treated as read-only.
-	Get(name string) (*v3.TCP, error)
+	Get(name string) (*ingressv3.TCP, error)
 	TCPNamespaceListerExpansion
 }
 
 // tCPNamespaceLister implements the TCPNamespaceLister
 // interface.
 type tCPNamespaceLister struct {
-	indexer   cache.Indexer
-	namespace string
-}
-
-// List lists all TCPs in the indexer for a given namespace.
-func (s tCPNamespaceLister) List(selector labels.Selector) (ret []*v3.TCP, err error) {
-	err = cache.ListAllByNamespace(s.indexer, s.namespace, selector, func(m interface{}) {
-		ret = append(ret, m.(*v3.TCP))
-	})
-	return ret, err
-}
-
-// Get retrieves the TCP from the indexer for a given namespace and name.
-func (s tCPNamespaceLister) Get(name string) (*v3.TCP, error) {
-	obj, exists, err := s.indexer.GetByKey(s.namespace + "/" + name)
-	if err != nil {
-		return nil, err
-	}
-	if !exists {
-		return nil, errors.NewNotFound(v3.Resource("tcp"), name)
-	}
-	return obj.(*v3.TCP), nil
+	listers.ResourceIndexer[*ingressv3.TCP]
 }

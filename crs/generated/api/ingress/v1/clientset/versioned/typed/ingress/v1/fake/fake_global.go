@@ -18,111 +18,30 @@
 package fake
 
 import (
-	"context"
-
 	v1 "github.com/haproxytech/kubernetes-ingress/crs/api/ingress/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	labels "k8s.io/apimachinery/pkg/labels"
-	types "k8s.io/apimachinery/pkg/types"
-	watch "k8s.io/apimachinery/pkg/watch"
-	testing "k8s.io/client-go/testing"
+	ingressv1 "github.com/haproxytech/kubernetes-ingress/crs/generated/api/ingress/v1/clientset/versioned/typed/ingress/v1"
+	gentype "k8s.io/client-go/gentype"
 )
 
-// FakeGlobals implements GlobalInterface
-type FakeGlobals struct {
+// fakeGlobals implements GlobalInterface
+type fakeGlobals struct {
+	*gentype.FakeClientWithList[*v1.Global, *v1.GlobalList]
 	Fake *FakeIngressV1
-	ns   string
 }
 
-var globalsResource = v1.SchemeGroupVersion.WithResource("globals")
-
-var globalsKind = v1.SchemeGroupVersion.WithKind("Global")
-
-// Get takes name of the global, and returns the corresponding global object, and an error if there is any.
-func (c *FakeGlobals) Get(ctx context.Context, name string, options metav1.GetOptions) (result *v1.Global, err error) {
-	obj, err := c.Fake.
-		Invokes(testing.NewGetAction(globalsResource, c.ns, name), &v1.Global{})
-
-	if obj == nil {
-		return nil, err
+func newFakeGlobals(fake *FakeIngressV1, namespace string) ingressv1.GlobalInterface {
+	return &fakeGlobals{
+		gentype.NewFakeClientWithList[*v1.Global, *v1.GlobalList](
+			fake.Fake,
+			namespace,
+			v1.SchemeGroupVersion.WithResource("globals"),
+			v1.SchemeGroupVersion.WithKind("Global"),
+			func() *v1.Global { return &v1.Global{} },
+			func() *v1.GlobalList { return &v1.GlobalList{} },
+			func(dst, src *v1.GlobalList) { dst.ListMeta = src.ListMeta },
+			func(list *v1.GlobalList) []*v1.Global { return gentype.ToPointerSlice(list.Items) },
+			func(list *v1.GlobalList, items []*v1.Global) { list.Items = gentype.FromPointerSlice(items) },
+		),
+		fake,
 	}
-	return obj.(*v1.Global), err
-}
-
-// List takes label and field selectors, and returns the list of Globals that match those selectors.
-func (c *FakeGlobals) List(ctx context.Context, opts metav1.ListOptions) (result *v1.GlobalList, err error) {
-	obj, err := c.Fake.
-		Invokes(testing.NewListAction(globalsResource, globalsKind, c.ns, opts), &v1.GlobalList{})
-
-	if obj == nil {
-		return nil, err
-	}
-
-	label, _, _ := testing.ExtractFromListOptions(opts)
-	if label == nil {
-		label = labels.Everything()
-	}
-	list := &v1.GlobalList{ListMeta: obj.(*v1.GlobalList).ListMeta}
-	for _, item := range obj.(*v1.GlobalList).Items {
-		if label.Matches(labels.Set(item.Labels)) {
-			list.Items = append(list.Items, item)
-		}
-	}
-	return list, err
-}
-
-// Watch returns a watch.Interface that watches the requested globals.
-func (c *FakeGlobals) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
-	return c.Fake.
-		InvokesWatch(testing.NewWatchAction(globalsResource, c.ns, opts))
-
-}
-
-// Create takes the representation of a global and creates it.  Returns the server's representation of the global, and an error, if there is any.
-func (c *FakeGlobals) Create(ctx context.Context, global *v1.Global, opts metav1.CreateOptions) (result *v1.Global, err error) {
-	obj, err := c.Fake.
-		Invokes(testing.NewCreateAction(globalsResource, c.ns, global), &v1.Global{})
-
-	if obj == nil {
-		return nil, err
-	}
-	return obj.(*v1.Global), err
-}
-
-// Update takes the representation of a global and updates it. Returns the server's representation of the global, and an error, if there is any.
-func (c *FakeGlobals) Update(ctx context.Context, global *v1.Global, opts metav1.UpdateOptions) (result *v1.Global, err error) {
-	obj, err := c.Fake.
-		Invokes(testing.NewUpdateAction(globalsResource, c.ns, global), &v1.Global{})
-
-	if obj == nil {
-		return nil, err
-	}
-	return obj.(*v1.Global), err
-}
-
-// Delete takes name of the global and deletes it. Returns an error if one occurs.
-func (c *FakeGlobals) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
-	_, err := c.Fake.
-		Invokes(testing.NewDeleteActionWithOptions(globalsResource, c.ns, name, opts), &v1.Global{})
-
-	return err
-}
-
-// DeleteCollection deletes a collection of objects.
-func (c *FakeGlobals) DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error {
-	action := testing.NewDeleteCollectionAction(globalsResource, c.ns, listOpts)
-
-	_, err := c.Fake.Invokes(action, &v1.GlobalList{})
-	return err
-}
-
-// Patch applies the patch and returns the patched global.
-func (c *FakeGlobals) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.Global, err error) {
-	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceAction(globalsResource, c.ns, name, pt, data, subresources...), &v1.Global{})
-
-	if obj == nil {
-		return nil, err
-	}
-	return obj.(*v1.Global), err
 }

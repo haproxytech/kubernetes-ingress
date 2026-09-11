@@ -18,10 +18,10 @@
 package v3
 
 import (
-	v3 "github.com/haproxytech/kubernetes-ingress/crs/api/ingress/v3"
-	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/client-go/tools/cache"
+	ingressv3 "github.com/haproxytech/kubernetes-ingress/crs/api/ingress/v3"
+	labels "k8s.io/apimachinery/pkg/labels"
+	listers "k8s.io/client-go/listers"
+	cache "k8s.io/client-go/tools/cache"
 )
 
 // GlobalLister helps list Globals.
@@ -29,7 +29,7 @@ import (
 type GlobalLister interface {
 	// List lists all Globals in the indexer.
 	// Objects returned here must be treated as read-only.
-	List(selector labels.Selector) (ret []*v3.Global, err error)
+	List(selector labels.Selector) (ret []*ingressv3.Global, err error)
 	// Globals returns an object that can list and get Globals.
 	Globals(namespace string) GlobalNamespaceLister
 	GlobalListerExpansion
@@ -37,25 +37,17 @@ type GlobalLister interface {
 
 // globalLister implements the GlobalLister interface.
 type globalLister struct {
-	indexer cache.Indexer
+	listers.ResourceIndexer[*ingressv3.Global]
 }
 
 // NewGlobalLister returns a new GlobalLister.
 func NewGlobalLister(indexer cache.Indexer) GlobalLister {
-	return &globalLister{indexer: indexer}
-}
-
-// List lists all Globals in the indexer.
-func (s *globalLister) List(selector labels.Selector) (ret []*v3.Global, err error) {
-	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
-		ret = append(ret, m.(*v3.Global))
-	})
-	return ret, err
+	return &globalLister{listers.New[*ingressv3.Global](indexer, ingressv3.Resource("global"))}
 }
 
 // Globals returns an object that can list and get Globals.
 func (s *globalLister) Globals(namespace string) GlobalNamespaceLister {
-	return globalNamespaceLister{indexer: s.indexer, namespace: namespace}
+	return globalNamespaceLister{listers.NewNamespaced[*ingressv3.Global](s.ResourceIndexer, namespace)}
 }
 
 // GlobalNamespaceLister helps list and get Globals.
@@ -63,36 +55,15 @@ func (s *globalLister) Globals(namespace string) GlobalNamespaceLister {
 type GlobalNamespaceLister interface {
 	// List lists all Globals in the indexer for a given namespace.
 	// Objects returned here must be treated as read-only.
-	List(selector labels.Selector) (ret []*v3.Global, err error)
+	List(selector labels.Selector) (ret []*ingressv3.Global, err error)
 	// Get retrieves the Global from the indexer for a given namespace and name.
 	// Objects returned here must be treated as read-only.
-	Get(name string) (*v3.Global, error)
+	Get(name string) (*ingressv3.Global, error)
 	GlobalNamespaceListerExpansion
 }
 
 // globalNamespaceLister implements the GlobalNamespaceLister
 // interface.
 type globalNamespaceLister struct {
-	indexer   cache.Indexer
-	namespace string
-}
-
-// List lists all Globals in the indexer for a given namespace.
-func (s globalNamespaceLister) List(selector labels.Selector) (ret []*v3.Global, err error) {
-	err = cache.ListAllByNamespace(s.indexer, s.namespace, selector, func(m interface{}) {
-		ret = append(ret, m.(*v3.Global))
-	})
-	return ret, err
-}
-
-// Get retrieves the Global from the indexer for a given namespace and name.
-func (s globalNamespaceLister) Get(name string) (*v3.Global, error) {
-	obj, exists, err := s.indexer.GetByKey(s.namespace + "/" + name)
-	if err != nil {
-		return nil, err
-	}
-	if !exists {
-		return nil, errors.NewNotFound(v3.Resource("global"), name)
-	}
-	return obj.(*v3.Global), nil
+	listers.ResourceIndexer[*ingressv3.Global]
 }

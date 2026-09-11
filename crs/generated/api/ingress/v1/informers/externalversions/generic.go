@@ -18,7 +18,7 @@
 package externalversions
 
 import (
-	"fmt"
+	fmt "fmt"
 
 	v1 "github.com/haproxytech/kubernetes-ingress/crs/api/ingress/v1"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"

@@ -18,10 +18,10 @@
 package v3
 
 import (
-	v3 "github.com/haproxytech/kubernetes-ingress/crs/api/ingress/v3"
-	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/client-go/tools/cache"
+	ingressv3 "github.com/haproxytech/kubernetes-ingress/crs/api/ingress/v3"
+	labels "k8s.io/apimachinery/pkg/labels"
+	listers "k8s.io/client-go/listers"
+	cache "k8s.io/client-go/tools/cache"
 )
 
 // ValidationRulesLister helps list ValidationRules.
@@ -29,7 +29,7 @@ import (
 type ValidationRulesLister interface {
 	// List lists all ValidationRules in the indexer.
 	// Objects returned here must be treated as read-only.
-	List(selector labels.Selector) (ret []*v3.ValidationRules, err error)
+	List(selector labels.Selector) (ret []*ingressv3.ValidationRules, err error)
 	// ValidationRules returns an object that can list and get ValidationRules.
 	ValidationRules(namespace string) ValidationRulesNamespaceLister
 	ValidationRulesListerExpansion
@@ -37,25 +37,17 @@ type ValidationRulesLister interface {
 
 // validationRulesLister implements the ValidationRulesLister interface.
 type validationRulesLister struct {
-	indexer cache.Indexer
+	listers.ResourceIndexer[*ingressv3.ValidationRules]
 }
 
 // NewValidationRulesLister returns a new ValidationRulesLister.
 func NewValidationRulesLister(indexer cache.Indexer) ValidationRulesLister {
-	return &validationRulesLister{indexer: indexer}
-}
-
-// List lists all ValidationRules in the indexer.
-func (s *validationRulesLister) List(selector labels.Selector) (ret []*v3.ValidationRules, err error) {
-	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
-		ret = append(ret, m.(*v3.ValidationRules))
-	})
-	return ret, err
+	return &validationRulesLister{listers.New[*ingressv3.ValidationRules](indexer, ingressv3.Resource("validationrules"))}
 }
 
 // ValidationRules returns an object that can list and get ValidationRules.
 func (s *validationRulesLister) ValidationRules(namespace string) ValidationRulesNamespaceLister {
-	return validationRulesNamespaceLister{indexer: s.indexer, namespace: namespace}
+	return validationRulesNamespaceLister{listers.NewNamespaced[*ingressv3.ValidationRules](s.ResourceIndexer, namespace)}
 }
 
 // ValidationRulesNamespaceLister helps list and get ValidationRules.
@@ -63,36 +55,15 @@ func (s *validationRulesLister) ValidationRules(namespace string) ValidationRule
 type ValidationRulesNamespaceLister interface {
 	// List lists all ValidationRules in the indexer for a given namespace.
 	// Objects returned here must be treated as read-only.
-	List(selector labels.Selector) (ret []*v3.ValidationRules, err error)
+	List(selector labels.Selector) (ret []*ingressv3.ValidationRules, err error)
 	// Get retrieves the ValidationRules from the indexer for a given namespace and name.
 	// Objects returned here must be treated as read-only.
-	Get(name string) (*v3.ValidationRules, error)
+	Get(name string) (*ingressv3.ValidationRules, error)
 	ValidationRulesNamespaceListerExpansion
 }
 
 // validationRulesNamespaceLister implements the ValidationRulesNamespaceLister
 // interface.
 type validationRulesNamespaceLister struct {
-	indexer   cache.Indexer
-	namespace string
-}
-
-// List lists all ValidationRules in the indexer for a given namespace.
-func (s validationRulesNamespaceLister) List(selector labels.Selector) (ret []*v3.ValidationRules, err error) {
-	err = cache.ListAllByNamespace(s.indexer, s.namespace, selector, func(m interface{}) {
-		ret = append(ret, m.(*v3.ValidationRules))
-	})
-	return ret, err
-}
-
-// Get retrieves the ValidationRules from the indexer for a given namespace and name.
-func (s validationRulesNamespaceLister) Get(name string) (*v3.ValidationRules, error) {
-	obj, exists, err := s.indexer.GetByKey(s.namespace + "/" + name)
-	if err != nil {
-		return nil, err
-	}
-	if !exists {
-		return nil, errors.NewNotFound(v3.Resource("validationrules"), name)
-	}
-	return obj.(*v3.ValidationRules), nil
+	listers.ResourceIndexer[*ingressv3.ValidationRules]
 }

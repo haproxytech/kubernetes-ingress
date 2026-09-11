@@ -18,10 +18,10 @@
 package v3
 
 import (
-	v3 "github.com/haproxytech/kubernetes-ingress/crs/api/ingress/v3"
-	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/client-go/tools/cache"
+	ingressv3 "github.com/haproxytech/kubernetes-ingress/crs/api/ingress/v3"
+	labels "k8s.io/apimachinery/pkg/labels"
+	listers "k8s.io/client-go/listers"
+	cache "k8s.io/client-go/tools/cache"
 )
 
 // BackendLister helps list Backends.
@@ -29,7 +29,7 @@ import (
 type BackendLister interface {
 	// List lists all Backends in the indexer.
 	// Objects returned here must be treated as read-only.
-	List(selector labels.Selector) (ret []*v3.Backend, err error)
+	List(selector labels.Selector) (ret []*ingressv3.Backend, err error)
 	// Backends returns an object that can list and get Backends.
 	Backends(namespace string) BackendNamespaceLister
 	BackendListerExpansion
@@ -37,25 +37,17 @@ type BackendLister interface {
 
 // backendLister implements the BackendLister interface.
 type backendLister struct {
-	indexer cache.Indexer
+	listers.ResourceIndexer[*ingressv3.Backend]
 }
 
 // NewBackendLister returns a new BackendLister.
 func NewBackendLister(indexer cache.Indexer) BackendLister {
-	return &backendLister{indexer: indexer}
-}
-
-// List lists all Backends in the indexer.
-func (s *backendLister) List(selector labels.Selector) (ret []*v3.Backend, err error) {
-	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
-		ret = append(ret, m.(*v3.Backend))
-	})
-	return ret, err
+	return &backendLister{listers.New[*ingressv3.Backend](indexer, ingressv3.Resource("backend"))}
 }
 
 // Backends returns an object that can list and get Backends.
 func (s *backendLister) Backends(namespace string) BackendNamespaceLister {
-	return backendNamespaceLister{indexer: s.indexer, namespace: namespace}
+	return backendNamespaceLister{listers.NewNamespaced[*ingressv3.Backend](s.ResourceIndexer, namespace)}
 }
 
 // BackendNamespaceLister helps list and get Backends.
@@ -63,36 +55,15 @@ func (s *backendLister) Backends(namespace string) BackendNamespaceLister {
 type BackendNamespaceLister interface {
 	// List lists all Backends in the indexer for a given namespace.
 	// Objects returned here must be treated as read-only.
-	List(selector labels.Selector) (ret []*v3.Backend, err error)
+	List(selector labels.Selector) (ret []*ingressv3.Backend, err error)
 	// Get retrieves the Backend from the indexer for a given namespace and name.
 	// Objects returned here must be treated as read-only.
-	Get(name string) (*v3.Backend, error)
+	Get(name string) (*ingressv3.Backend, error)
 	BackendNamespaceListerExpansion
 }
 
 // backendNamespaceLister implements the BackendNamespaceLister
 // interface.
 type backendNamespaceLister struct {
-	indexer   cache.Indexer
-	namespace string
-}
-
-// List lists all Backends in the indexer for a given namespace.
-func (s backendNamespaceLister) List(selector labels.Selector) (ret []*v3.Backend, err error) {
-	err = cache.ListAllByNamespace(s.indexer, s.namespace, selector, func(m interface{}) {
-		ret = append(ret, m.(*v3.Backend))
-	})
-	return ret, err
-}
-
-// Get retrieves the Backend from the indexer for a given namespace and name.
-func (s backendNamespaceLister) Get(name string) (*v3.Backend, error) {
-	obj, exists, err := s.indexer.GetByKey(s.namespace + "/" + name)
-	if err != nil {
-		return nil, err
-	}
-	if !exists {
-		return nil, errors.NewNotFound(v3.Resource("backend"), name)
-	}
-	return obj.(*v3.Backend), nil
+	listers.ResourceIndexer[*ingressv3.Backend]
 }

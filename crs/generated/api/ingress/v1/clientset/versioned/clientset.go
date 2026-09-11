@@ -18,8 +18,8 @@
 package versioned
 
 import (
-	"fmt"
-	"net/http"
+	fmt "fmt"
+	http "net/http"
 
 	ingressv1 "github.com/haproxytech/kubernetes-ingress/crs/generated/api/ingress/v1/clientset/versioned/typed/ingress/v1"
 	discovery "k8s.io/client-go/discovery"

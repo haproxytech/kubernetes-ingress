@@ -18,111 +18,30 @@
 package fake
 
 import (
-	"context"
-
 	v1 "github.com/haproxytech/kubernetes-ingress/crs/api/ingress/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	labels "k8s.io/apimachinery/pkg/labels"
-	types "k8s.io/apimachinery/pkg/types"
-	watch "k8s.io/apimachinery/pkg/watch"
-	testing "k8s.io/client-go/testing"
+	ingressv1 "github.com/haproxytech/kubernetes-ingress/crs/generated/api/ingress/v1/clientset/versioned/typed/ingress/v1"
+	gentype "k8s.io/client-go/gentype"
 )
 
-// FakeBackends implements BackendInterface
-type FakeBackends struct {
+// fakeBackends implements BackendInterface
+type fakeBackends struct {
+	*gentype.FakeClientWithList[*v1.Backend, *v1.BackendList]
 	Fake *FakeIngressV1
-	ns   string
 }
 
-var backendsResource = v1.SchemeGroupVersion.WithResource("backends")
-
-var backendsKind = v1.SchemeGroupVersion.WithKind("Backend")
-
-// Get takes name of the backend, and returns the corresponding backend object, and an error if there is any.
-func (c *FakeBackends) Get(ctx context.Context, name string, options metav1.GetOptions) (result *v1.Backend, err error) {
-	obj, err := c.Fake.
-		Invokes(testing.NewGetAction(backendsResource, c.ns, name), &v1.Backend{})
-
-	if obj == nil {
-		return nil, err
+func newFakeBackends(fake *FakeIngressV1, namespace string) ingressv1.BackendInterface {
+	return &fakeBackends{
+		gentype.NewFakeClientWithList[*v1.Backend, *v1.BackendList](
+			fake.Fake,
+			namespace,
+			v1.SchemeGroupVersion.WithResource("backends"),
+			v1.SchemeGroupVersion.WithKind("Backend"),
+			func() *v1.Backend { return &v1.Backend{} },
+			func() *v1.BackendList { return &v1.BackendList{} },
+			func(dst, src *v1.BackendList) { dst.ListMeta = src.ListMeta },
+			func(list *v1.BackendList) []*v1.Backend { return gentype.ToPointerSlice(list.Items) },
+			func(list *v1.BackendList, items []*v1.Backend) { list.Items = gentype.FromPointerSlice(items) },
+		),
+		fake,
 	}
-	return obj.(*v1.Backend), err
-}
-
-// List takes label and field selectors, and returns the list of Backends that match those selectors.
-func (c *FakeBackends) List(ctx context.Context, opts metav1.ListOptions) (result *v1.BackendList, err error) {
-	obj, err := c.Fake.
-		Invokes(testing.NewListAction(backendsResource, backendsKind, c.ns, opts), &v1.BackendList{})
-
-	if obj == nil {
-		return nil, err
-	}
-
-	label, _, _ := testing.ExtractFromListOptions(opts)
-	if label == nil {
-		label = labels.Everything()
-	}
-	list := &v1.BackendList{ListMeta: obj.(*v1.BackendList).ListMeta}
-	for _, item := range obj.(*v1.BackendList).Items {
-		if label.Matches(labels.Set(item.Labels)) {
-			list.Items = append(list.Items, item)
-		}
-	}
-	return list, err
-}
-
-// Watch returns a watch.Interface that watches the requested backends.
-func (c *FakeBackends) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
-	return c.Fake.
-		InvokesWatch(testing.NewWatchAction(backendsResource, c.ns, opts))
-
-}
-
-// Create takes the representation of a backend and creates it.  Returns the server's representation of the backend, and an error, if there is any.
-func (c *FakeBackends) Create(ctx context.Context, backend *v1.Backend, opts metav1.CreateOptions) (result *v1.Backend, err error) {
-	obj, err := c.Fake.
-		Invokes(testing.NewCreateAction(backendsResource, c.ns, backend), &v1.Backend{})
-
-	if obj == nil {
-		return nil, err
-	}
-	return obj.(*v1.Backend), err
-}
-
-// Update takes the representation of a backend and updates it. Returns the server's representation of the backend, and an error, if there is any.
-func (c *FakeBackends) Update(ctx context.Context, backend *v1.Backend, opts metav1.UpdateOptions) (result *v1.Backend, err error) {
-	obj, err := c.Fake.
-		Invokes(testing.NewUpdateAction(backendsResource, c.ns, backend), &v1.Backend{})
-
-	if obj == nil {
-		return nil, err
-	}
-	return obj.(*v1.Backend), err
-}
-
-// Delete takes name of the backend and deletes it. Returns an error if one occurs.
-func (c *FakeBackends) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
-	_, err := c.Fake.
-		Invokes(testing.NewDeleteActionWithOptions(backendsResource, c.ns, name, opts), &v1.Backend{})
-
-	return err
-}
-
-// DeleteCollection deletes a collection of objects.
-func (c *FakeBackends) DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error {
-	action := testing.NewDeleteCollectionAction(backendsResource, c.ns, listOpts)
-
-	_, err := c.Fake.Invokes(action, &v1.BackendList{})
-	return err
-}
-
-// Patch applies the patch and returns the patched backend.
-func (c *FakeBackends) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.Backend, err error) {
-	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceAction(backendsResource, c.ns, name, pt, data, subresources...), &v1.Backend{})
-
-	if obj == nil {
-		return nil, err
-	}
-	return obj.(*v1.Backend), err
 }

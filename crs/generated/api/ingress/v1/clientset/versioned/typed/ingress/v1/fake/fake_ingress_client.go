@@ -28,19 +28,19 @@ type FakeIngressV1 struct {
 }
 
 func (c *FakeIngressV1) Backends(namespace string) v1.BackendInterface {
-	return &FakeBackends{c, namespace}
+	return newFakeBackends(c, namespace)
 }
 
 func (c *FakeIngressV1) Defaults(namespace string) v1.DefaultsInterface {
-	return &FakeDefaults{c, namespace}
+	return newFakeDefaults(c, namespace)
 }
 
 func (c *FakeIngressV1) Globals(namespace string) v1.GlobalInterface {
-	return &FakeGlobals{c, namespace}
+	return newFakeGlobals(c, namespace)
 }
 
 func (c *FakeIngressV1) TCPs(namespace string) v1.TCPInterface {
-	return &FakeTCPs{c, namespace}
+	return newFakeTCPs(c, namespace)
 }
 
 // RESTClient returns a RESTClient that is used to communicate

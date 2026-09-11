@@ -18,15 +18,14 @@
 package v3
 
 import (
-	"context"
-	"time"
+	context "context"
 
-	v3 "github.com/haproxytech/kubernetes-ingress/crs/api/ingress/v3"
+	ingressv3 "github.com/haproxytech/kubernetes-ingress/crs/api/ingress/v3"
 	scheme "github.com/haproxytech/kubernetes-ingress/crs/generated/api/ingress/v3/clientset/versioned/scheme"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
-	rest "k8s.io/client-go/rest"
+	gentype "k8s.io/client-go/gentype"
 )
 
 // DefaultsGetter has a method to return a DefaultsInterface.
@@ -37,141 +36,32 @@ type DefaultsGetter interface {
 
 // DefaultsInterface has methods to work with Defaults resources.
 type DefaultsInterface interface {
-	Create(ctx context.Context, defaults *v3.Defaults, opts v1.CreateOptions) (*v3.Defaults, error)
-	Update(ctx context.Context, defaults *v3.Defaults, opts v1.UpdateOptions) (*v3.Defaults, error)
+	Create(ctx context.Context, defaults *ingressv3.Defaults, opts v1.CreateOptions) (*ingressv3.Defaults, error)
+	Update(ctx context.Context, defaults *ingressv3.Defaults, opts v1.UpdateOptions) (*ingressv3.Defaults, error)
 	Delete(ctx context.Context, name string, opts v1.DeleteOptions) error
 	DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error
-	Get(ctx context.Context, name string, opts v1.GetOptions) (*v3.Defaults, error)
-	List(ctx context.Context, opts v1.ListOptions) (*v3.DefaultsList, error)
+	Get(ctx context.Context, name string, opts v1.GetOptions) (*ingressv3.Defaults, error)
+	List(ctx context.Context, opts v1.ListOptions) (*ingressv3.DefaultsList, error)
 	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v3.Defaults, err error)
+	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *ingressv3.Defaults, err error)
 	DefaultsExpansion
 }
 
 // defaults implements DefaultsInterface
 type defaults struct {
-	client rest.Interface
-	ns     string
+	*gentype.ClientWithList[*ingressv3.Defaults, *ingressv3.DefaultsList]
 }
 
 // newDefaults returns a Defaults
 func newDefaults(c *IngressV3Client, namespace string) *defaults {
 	return &defaults{
-		client: c.RESTClient(),
-		ns:     namespace,
+		gentype.NewClientWithList[*ingressv3.Defaults, *ingressv3.DefaultsList](
+			"defaults",
+			c.RESTClient(),
+			scheme.ParameterCodec,
+			namespace,
+			func() *ingressv3.Defaults { return &ingressv3.Defaults{} },
+			func() *ingressv3.DefaultsList { return &ingressv3.DefaultsList{} },
+		),
 	}
-}
-
-// Get takes name of the defaults, and returns the corresponding defaults object, and an error if there is any.
-func (c *defaults) Get(ctx context.Context, name string, options v1.GetOptions) (result *v3.Defaults, err error) {
-	result = &v3.Defaults{}
-	err = c.client.Get().
-		Namespace(c.ns).
-		Resource("defaults").
-		Name(name).
-		VersionedParams(&options, scheme.ParameterCodec).
-		Do(ctx).
-		Into(result)
-	return
-}
-
-// List takes label and field selectors, and returns the list of Defaults that match those selectors.
-func (c *defaults) List(ctx context.Context, opts v1.ListOptions) (result *v3.DefaultsList, err error) {
-	var timeout time.Duration
-	if opts.TimeoutSeconds != nil {
-		timeout = time.Duration(*opts.TimeoutSeconds) * time.Second
-	}
-	result = &v3.DefaultsList{}
-	err = c.client.Get().
-		Namespace(c.ns).
-		Resource("defaults").
-		VersionedParams(&opts, scheme.ParameterCodec).
-		Timeout(timeout).
-		Do(ctx).
-		Into(result)
-	return
-}
-
-// Watch returns a watch.Interface that watches the requested defaults.
-func (c *defaults) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
-	var timeout time.Duration
-	if opts.TimeoutSeconds != nil {
-		timeout = time.Duration(*opts.TimeoutSeconds) * time.Second
-	}
-	opts.Watch = true
-	return c.client.Get().
-		Namespace(c.ns).
-		Resource("defaults").
-		VersionedParams(&opts, scheme.ParameterCodec).
-		Timeout(timeout).
-		Watch(ctx)
-}
-
-// Create takes the representation of a defaults and creates it.  Returns the server's representation of the defaults, and an error, if there is any.
-func (c *defaults) Create(ctx context.Context, defaults *v3.Defaults, opts v1.CreateOptions) (result *v3.Defaults, err error) {
-	result = &v3.Defaults{}
-	err = c.client.Post().
-		Namespace(c.ns).
-		Resource("defaults").
-		VersionedParams(&opts, scheme.ParameterCodec).
-		Body(defaults).
-		Do(ctx).
-		Into(result)
-	return
-}
-
-// Update takes the representation of a defaults and updates it. Returns the server's representation of the defaults, and an error, if there is any.
-func (c *defaults) Update(ctx context.Context, defaults *v3.Defaults, opts v1.UpdateOptions) (result *v3.Defaults, err error) {
-	result = &v3.Defaults{}
-	err = c.client.Put().
-		Namespace(c.ns).
-		Resource("defaults").
-		Name(defaults.Name).
-		VersionedParams(&opts, scheme.ParameterCodec).
-		Body(defaults).
-		Do(ctx).
-		Into(result)
-	return
-}
-
-// Delete takes name of the defaults and deletes it. Returns an error if one occurs.
-func (c *defaults) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
-	return c.client.Delete().
-		Namespace(c.ns).
-		Resource("defaults").
-		Name(name).
-		Body(&opts).
-		Do(ctx).
-		Error()
-}
-
-// DeleteCollection deletes a collection of objects.
-func (c *defaults) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
-	var timeout time.Duration
-	if listOpts.TimeoutSeconds != nil {
-		timeout = time.Duration(*listOpts.TimeoutSeconds) * time.Second
-	}
-	return c.client.Delete().
-		Namespace(c.ns).
-		Resource("defaults").
-		VersionedParams(&listOpts, scheme.ParameterCodec).
-		Timeout(timeout).
-		Body(&opts).
-		Do(ctx).
-		Error()
-}
-
-// Patch applies the patch and returns the patched defaults.
-func (c *defaults) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v3.Defaults, err error) {
-	result = &v3.Defaults{}
-	err = c.client.Patch(pt).
-		Namespace(c.ns).
-		Resource("defaults").
-		Name(name).
-		SubResource(subresources...).
-		VersionedParams(&opts, scheme.ParameterCodec).
-		Body(data).
-		Do(ctx).
-		Into(result)
-	return
 }

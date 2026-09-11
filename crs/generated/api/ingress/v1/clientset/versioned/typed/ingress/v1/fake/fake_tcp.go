@@ -18,111 +18,30 @@
 package fake
 
 import (
-	"context"
-
 	v1 "github.com/haproxytech/kubernetes-ingress/crs/api/ingress/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	labels "k8s.io/apimachinery/pkg/labels"
-	types "k8s.io/apimachinery/pkg/types"
-	watch "k8s.io/apimachinery/pkg/watch"
-	testing "k8s.io/client-go/testing"
+	ingressv1 "github.com/haproxytech/kubernetes-ingress/crs/generated/api/ingress/v1/clientset/versioned/typed/ingress/v1"
+	gentype "k8s.io/client-go/gentype"
 )
 
-// FakeTCPs implements TCPInterface
-type FakeTCPs struct {
+// fakeTCPs implements TCPInterface
+type fakeTCPs struct {
+	*gentype.FakeClientWithList[*v1.TCP, *v1.TCPList]
 	Fake *FakeIngressV1
-	ns   string
 }
 
-var tcpsResource = v1.SchemeGroupVersion.WithResource("tcps")
-
-var tcpsKind = v1.SchemeGroupVersion.WithKind("TCP")
-
-// Get takes name of the tCP, and returns the corresponding tCP object, and an error if there is any.
-func (c *FakeTCPs) Get(ctx context.Context, name string, options metav1.GetOptions) (result *v1.TCP, err error) {
-	obj, err := c.Fake.
-		Invokes(testing.NewGetAction(tcpsResource, c.ns, name), &v1.TCP{})
-
-	if obj == nil {
-		return nil, err
+func newFakeTCPs(fake *FakeIngressV1, namespace string) ingressv1.TCPInterface {
+	return &fakeTCPs{
+		gentype.NewFakeClientWithList[*v1.TCP, *v1.TCPList](
+			fake.Fake,
+			namespace,
+			v1.SchemeGroupVersion.WithResource("tcps"),
+			v1.SchemeGroupVersion.WithKind("TCP"),
+			func() *v1.TCP { return &v1.TCP{} },
+			func() *v1.TCPList { return &v1.TCPList{} },
+			func(dst, src *v1.TCPList) { dst.ListMeta = src.ListMeta },
+			func(list *v1.TCPList) []*v1.TCP { return gentype.ToPointerSlice(list.Items) },
+			func(list *v1.TCPList, items []*v1.TCP) { list.Items = gentype.FromPointerSlice(items) },
+		),
+		fake,
 	}
-	return obj.(*v1.TCP), err
-}
-
-// List takes label and field selectors, and returns the list of TCPs that match those selectors.
-func (c *FakeTCPs) List(ctx context.Context, opts metav1.ListOptions) (result *v1.TCPList, err error) {
-	obj, err := c.Fake.
-		Invokes(testing.NewListAction(tcpsResource, tcpsKind, c.ns, opts), &v1.TCPList{})
-
-	if obj == nil {
-		return nil, err
-	}
-
-	label, _, _ := testing.ExtractFromListOptions(opts)
-	if label == nil {
-		label = labels.Everything()
-	}
-	list := &v1.TCPList{ListMeta: obj.(*v1.TCPList).ListMeta}
-	for _, item := range obj.(*v1.TCPList).Items {
-		if label.Matches(labels.Set(item.Labels)) {
-			list.Items = append(list.Items, item)
-		}
-	}
-	return list, err
-}
-
-// Watch returns a watch.Interface that watches the requested tCPs.
-func (c *FakeTCPs) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
-	return c.Fake.
-		InvokesWatch(testing.NewWatchAction(tcpsResource, c.ns, opts))
-
-}
-
-// Create takes the representation of a tCP and creates it.  Returns the server's representation of the tCP, and an error, if there is any.
-func (c *FakeTCPs) Create(ctx context.Context, tCP *v1.TCP, opts metav1.CreateOptions) (result *v1.TCP, err error) {
-	obj, err := c.Fake.
-		Invokes(testing.NewCreateAction(tcpsResource, c.ns, tCP), &v1.TCP{})
-
-	if obj == nil {
-		return nil, err
-	}
-	return obj.(*v1.TCP), err
-}
-
-// Update takes the representation of a tCP and updates it. Returns the server's representation of the tCP, and an error, if there is any.
-func (c *FakeTCPs) Update(ctx context.Context, tCP *v1.TCP, opts metav1.UpdateOptions) (result *v1.TCP, err error) {
-	obj, err := c.Fake.
-		Invokes(testing.NewUpdateAction(tcpsResource, c.ns, tCP), &v1.TCP{})
-
-	if obj == nil {
-		return nil, err
-	}
-	return obj.(*v1.TCP), err
-}
-
-// Delete takes name of the tCP and deletes it. Returns an error if one occurs.
-func (c *FakeTCPs) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
-	_, err := c.Fake.
-		Invokes(testing.NewDeleteActionWithOptions(tcpsResource, c.ns, name, opts), &v1.TCP{})
-
-	return err
-}
-
-// DeleteCollection deletes a collection of objects.
-func (c *FakeTCPs) DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error {
-	action := testing.NewDeleteCollectionAction(tcpsResource, c.ns, listOpts)
-
-	_, err := c.Fake.Invokes(action, &v1.TCPList{})
-	return err
-}
-
-// Patch applies the patch and returns the patched tCP.
-func (c *FakeTCPs) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.TCP, err error) {
-	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceAction(tcpsResource, c.ns, name, pt, data, subresources...), &v1.TCP{})
-
-	if obj == nil {
-		return nil, err
-	}
-	return obj.(*v1.TCP), err
 }

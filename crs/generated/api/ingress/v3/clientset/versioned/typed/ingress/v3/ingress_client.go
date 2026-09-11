@@ -18,10 +18,10 @@
 package v3
 
 import (
-	"net/http"
+	http "net/http"
 
-	v3 "github.com/haproxytech/kubernetes-ingress/crs/api/ingress/v3"
-	"github.com/haproxytech/kubernetes-ingress/crs/generated/api/ingress/v3/clientset/versioned/scheme"
+	ingressv3 "github.com/haproxytech/kubernetes-ingress/crs/api/ingress/v3"
+	scheme "github.com/haproxytech/kubernetes-ingress/crs/generated/api/ingress/v3/clientset/versioned/scheme"
 	rest "k8s.io/client-go/rest"
 )
 
@@ -69,9 +69,7 @@ func (c *IngressV3Client) ValidationRules(namespace string) ValidationRulesInter
 // where httpClient was generated with rest.HTTPClientFor(c).
 func NewForConfig(c *rest.Config) (*IngressV3Client, error) {
 	config := *c
-	if err := setConfigDefaults(&config); err != nil {
-		return nil, err
-	}
+	setConfigDefaults(&config)
 	httpClient, err := rest.HTTPClientFor(&config)
 	if err != nil {
 		return nil, err
@@ -83,9 +81,7 @@ func NewForConfig(c *rest.Config) (*IngressV3Client, error) {
 // Note the http client provided takes precedence over the configured transport values.
 func NewForConfigAndClient(c *rest.Config, h *http.Client) (*IngressV3Client, error) {
 	config := *c
-	if err := setConfigDefaults(&config); err != nil {
-		return nil, err
-	}
+	setConfigDefaults(&config)
 	client, err := rest.RESTClientForConfigAndClient(&config, h)
 	if err != nil {
 		return nil, err
@@ -108,17 +104,15 @@ func New(c rest.Interface) *IngressV3Client {
 	return &IngressV3Client{c}
 }
 
-func setConfigDefaults(config *rest.Config) error {
-	gv := v3.SchemeGroupVersion
+func setConfigDefaults(config *rest.Config) {
+	gv := ingressv3.SchemeGroupVersion
 	config.GroupVersion = &gv
 	config.APIPath = "/apis"
-	config.NegotiatedSerializer = scheme.Codecs.WithoutConversion()
+	config.NegotiatedSerializer = rest.CodecFactoryForGeneratedClient(scheme.Scheme, scheme.Codecs).WithoutConversion()
 
 	if config.UserAgent == "" {
 		config.UserAgent = rest.DefaultKubernetesUserAgent()
 	}
-
-	return nil
 }
 
 // RESTClient returns a RESTClient that is used to communicate

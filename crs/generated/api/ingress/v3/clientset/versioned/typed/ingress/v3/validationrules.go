@@ -18,15 +18,14 @@
 package v3
 
 import (
-	"context"
-	"time"
+	context "context"
 
-	v3 "github.com/haproxytech/kubernetes-ingress/crs/api/ingress/v3"
+	ingressv3 "github.com/haproxytech/kubernetes-ingress/crs/api/ingress/v3"
 	scheme "github.com/haproxytech/kubernetes-ingress/crs/generated/api/ingress/v3/clientset/versioned/scheme"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
-	rest "k8s.io/client-go/rest"
+	gentype "k8s.io/client-go/gentype"
 )
 
 // ValidationRulesGetter has a method to return a ValidationRulesInterface.
@@ -37,141 +36,32 @@ type ValidationRulesGetter interface {
 
 // ValidationRulesInterface has methods to work with ValidationRules resources.
 type ValidationRulesInterface interface {
-	Create(ctx context.Context, validationRules *v3.ValidationRules, opts v1.CreateOptions) (*v3.ValidationRules, error)
-	Update(ctx context.Context, validationRules *v3.ValidationRules, opts v1.UpdateOptions) (*v3.ValidationRules, error)
+	Create(ctx context.Context, validationRules *ingressv3.ValidationRules, opts v1.CreateOptions) (*ingressv3.ValidationRules, error)
+	Update(ctx context.Context, validationRules *ingressv3.ValidationRules, opts v1.UpdateOptions) (*ingressv3.ValidationRules, error)
 	Delete(ctx context.Context, name string, opts v1.DeleteOptions) error
 	DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error
-	Get(ctx context.Context, name string, opts v1.GetOptions) (*v3.ValidationRules, error)
-	List(ctx context.Context, opts v1.ListOptions) (*v3.ValidationRulesList, error)
+	Get(ctx context.Context, name string, opts v1.GetOptions) (*ingressv3.ValidationRules, error)
+	List(ctx context.Context, opts v1.ListOptions) (*ingressv3.ValidationRulesList, error)
 	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v3.ValidationRules, err error)
+	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *ingressv3.ValidationRules, err error)
 	ValidationRulesExpansion
 }
 
 // validationRules implements ValidationRulesInterface
 type validationRules struct {
-	client rest.Interface
-	ns     string
+	*gentype.ClientWithList[*ingressv3.ValidationRules, *ingressv3.ValidationRulesList]
 }
 
 // newValidationRules returns a ValidationRules
 func newValidationRules(c *IngressV3Client, namespace string) *validationRules {
 	return &validationRules{
-		client: c.RESTClient(),
-		ns:     namespace,
+		gentype.NewClientWithList[*ingressv3.ValidationRules, *ingressv3.ValidationRulesList](
+			"validationrules",
+			c.RESTClient(),
+			scheme.ParameterCodec,
+			namespace,
+			func() *ingressv3.ValidationRules { return &ingressv3.ValidationRules{} },
+			func() *ingressv3.ValidationRulesList { return &ingressv3.ValidationRulesList{} },
+		),
 	}
-}
-
-// Get takes name of the validationRules, and returns the corresponding validationRules object, and an error if there is any.
-func (c *validationRules) Get(ctx context.Context, name string, options v1.GetOptions) (result *v3.ValidationRules, err error) {
-	result = &v3.ValidationRules{}
-	err = c.client.Get().
-		Namespace(c.ns).
-		Resource("validationrules").
-		Name(name).
-		VersionedParams(&options, scheme.ParameterCodec).
-		Do(ctx).
-		Into(result)
-	return
-}
-
-// List takes label and field selectors, and returns the list of ValidationRules that match those selectors.
-func (c *validationRules) List(ctx context.Context, opts v1.ListOptions) (result *v3.ValidationRulesList, err error) {
-	var timeout time.Duration
-	if opts.TimeoutSeconds != nil {
-		timeout = time.Duration(*opts.TimeoutSeconds) * time.Second
-	}
-	result = &v3.ValidationRulesList{}
-	err = c.client.Get().
-		Namespace(c.ns).
-		Resource("validationrules").
-		VersionedParams(&opts, scheme.ParameterCodec).
-		Timeout(timeout).
-		Do(ctx).
-		Into(result)
-	return
-}
-
-// Watch returns a watch.Interface that watches the requested validationRules.
-func (c *validationRules) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
-	var timeout time.Duration
-	if opts.TimeoutSeconds != nil {
-		timeout = time.Duration(*opts.TimeoutSeconds) * time.Second
-	}
-	opts.Watch = true
-	return c.client.Get().
-		Namespace(c.ns).
-		Resource("validationrules").
-		VersionedParams(&opts, scheme.ParameterCodec).
-		Timeout(timeout).
-		Watch(ctx)
-}
-
-// Create takes the representation of a validationRules and creates it.  Returns the server's representation of the validationRules, and an error, if there is any.
-func (c *validationRules) Create(ctx context.Context, validationRules *v3.ValidationRules, opts v1.CreateOptions) (result *v3.ValidationRules, err error) {
-	result = &v3.ValidationRules{}
-	err = c.client.Post().
-		Namespace(c.ns).
-		Resource("validationrules").
-		VersionedParams(&opts, scheme.ParameterCodec).
-		Body(validationRules).
-		Do(ctx).
-		Into(result)
-	return
-}
-
-// Update takes the representation of a validationRules and updates it. Returns the server's representation of the validationRules, and an error, if there is any.
-func (c *validationRules) Update(ctx context.Context, validationRules *v3.ValidationRules, opts v1.UpdateOptions) (result *v3.ValidationRules, err error) {
-	result = &v3.ValidationRules{}
-	err = c.client.Put().
-		Namespace(c.ns).
-		Resource("validationrules").
-		Name(validationRules.Name).
-		VersionedParams(&opts, scheme.ParameterCodec).
-		Body(validationRules).
-		Do(ctx).
-		Into(result)
-	return
-}
-
-// Delete takes name of the validationRules and deletes it. Returns an error if one occurs.
-func (c *validationRules) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
-	return c.client.Delete().
-		Namespace(c.ns).
-		Resource("validationrules").
-		Name(name).
-		Body(&opts).
-		Do(ctx).
-		Error()
-}
-
-// DeleteCollection deletes a collection of objects.
-func (c *validationRules) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
-	var timeout time.Duration
-	if listOpts.TimeoutSeconds != nil {
-		timeout = time.Duration(*listOpts.TimeoutSeconds) * time.Second
-	}
-	return c.client.Delete().
-		Namespace(c.ns).
-		Resource("validationrules").
-		VersionedParams(&listOpts, scheme.ParameterCodec).
-		Timeout(timeout).
-		Body(&opts).
-		Do(ctx).
-		Error()
-}
-
-// Patch applies the patch and returns the patched validationRules.
-func (c *validationRules) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v3.ValidationRules, err error) {
-	result = &v3.ValidationRules{}
-	err = c.client.Patch(pt).
-		Namespace(c.ns).
-		Resource("validationrules").
-		Name(name).
-		SubResource(subresources...).
-		VersionedParams(&opts, scheme.ParameterCodec).
-		Body(data).
-		Do(ctx).
-		Into(result)
-	return
 }

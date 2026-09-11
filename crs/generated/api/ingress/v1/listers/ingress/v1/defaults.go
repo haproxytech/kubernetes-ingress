@@ -18,10 +18,10 @@
 package v1
 
 import (
-	v1 "github.com/haproxytech/kubernetes-ingress/crs/api/ingress/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/client-go/tools/cache"
+	ingressv1 "github.com/haproxytech/kubernetes-ingress/crs/api/ingress/v1"
+	labels "k8s.io/apimachinery/pkg/labels"
+	listers "k8s.io/client-go/listers"
+	cache "k8s.io/client-go/tools/cache"
 )
 
 // DefaultsLister helps list Defaults.
@@ -29,7 +29,7 @@ import (
 type DefaultsLister interface {
 	// List lists all Defaults in the indexer.
 	// Objects returned here must be treated as read-only.
-	List(selector labels.Selector) (ret []*v1.Defaults, err error)
+	List(selector labels.Selector) (ret []*ingressv1.Defaults, err error)
 	// Defaults returns an object that can list and get Defaults.
 	Defaults(namespace string) DefaultsNamespaceLister
 	DefaultsListerExpansion
@@ -37,25 +37,17 @@ type DefaultsLister interface {
 
 // defaultsLister implements the DefaultsLister interface.
 type defaultsLister struct {
-	indexer cache.Indexer
+	listers.ResourceIndexer[*ingressv1.Defaults]
 }
 
 // NewDefaultsLister returns a new DefaultsLister.
 func NewDefaultsLister(indexer cache.Indexer) DefaultsLister {
-	return &defaultsLister{indexer: indexer}
-}
-
-// List lists all Defaults in the indexer.
-func (s *defaultsLister) List(selector labels.Selector) (ret []*v1.Defaults, err error) {
-	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
-		ret = append(ret, m.(*v1.Defaults))
-	})
-	return ret, err
+	return &defaultsLister{listers.New[*ingressv1.Defaults](indexer, ingressv1.Resource("defaults"))}
 }
 
 // Defaults returns an object that can list and get Defaults.
 func (s *defaultsLister) Defaults(namespace string) DefaultsNamespaceLister {
-	return defaultsNamespaceLister{indexer: s.indexer, namespace: namespace}
+	return defaultsNamespaceLister{listers.NewNamespaced[*ingressv1.Defaults](s.ResourceIndexer, namespace)}
 }
 
 // DefaultsNamespaceLister helps list and get Defaults.
@@ -63,36 +55,15 @@ func (s *defaultsLister) Defaults(namespace string) DefaultsNamespaceLister {
 type DefaultsNamespaceLister interface {
 	// List lists all Defaults in the indexer for a given namespace.
 	// Objects returned here must be treated as read-only.
-	List(selector labels.Selector) (ret []*v1.Defaults, err error)
+	List(selector labels.Selector) (ret []*ingressv1.Defaults, err error)
 	// Get retrieves the Defaults from the indexer for a given namespace and name.
 	// Objects returned here must be treated as read-only.
-	Get(name string) (*v1.Defaults, error)
+	Get(name string) (*ingressv1.Defaults, error)
 	DefaultsNamespaceListerExpansion
 }
 
 // defaultsNamespaceLister implements the DefaultsNamespaceLister
 // interface.
 type defaultsNamespaceLister struct {
-	indexer   cache.Indexer
-	namespace string
-}
-
-// List lists all Defaults in the indexer for a given namespace.
-func (s defaultsNamespaceLister) List(selector labels.Selector) (ret []*v1.Defaults, err error) {
-	err = cache.ListAllByNamespace(s.indexer, s.namespace, selector, func(m interface{}) {
-		ret = append(ret, m.(*v1.Defaults))
-	})
-	return ret, err
-}
-
-// Get retrieves the Defaults from the indexer for a given namespace and name.
-func (s defaultsNamespaceLister) Get(name string) (*v1.Defaults, error) {
-	obj, exists, err := s.indexer.GetByKey(s.namespace + "/" + name)
-	if err != nil {
-		return nil, err
-	}
-	if !exists {
-		return nil, errors.NewNotFound(v1.Resource("defaults"), name)
-	}
-	return obj.(*v1.Defaults), nil
+	listers.ResourceIndexer[*ingressv1.Defaults]
 }

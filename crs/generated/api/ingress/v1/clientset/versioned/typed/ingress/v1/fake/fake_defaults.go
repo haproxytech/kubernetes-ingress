@@ -18,111 +18,30 @@
 package fake
 
 import (
-	"context"
-
 	v1 "github.com/haproxytech/kubernetes-ingress/crs/api/ingress/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	labels "k8s.io/apimachinery/pkg/labels"
-	types "k8s.io/apimachinery/pkg/types"
-	watch "k8s.io/apimachinery/pkg/watch"
-	testing "k8s.io/client-go/testing"
+	ingressv1 "github.com/haproxytech/kubernetes-ingress/crs/generated/api/ingress/v1/clientset/versioned/typed/ingress/v1"
+	gentype "k8s.io/client-go/gentype"
 )
 
-// FakeDefaults implements DefaultsInterface
-type FakeDefaults struct {
+// fakeDefaults implements DefaultsInterface
+type fakeDefaults struct {
+	*gentype.FakeClientWithList[*v1.Defaults, *v1.DefaultsList]
 	Fake *FakeIngressV1
-	ns   string
 }
 
-var defaultsResource = v1.SchemeGroupVersion.WithResource("defaults")
-
-var defaultsKind = v1.SchemeGroupVersion.WithKind("Defaults")
-
-// Get takes name of the defaults, and returns the corresponding defaults object, and an error if there is any.
-func (c *FakeDefaults) Get(ctx context.Context, name string, options metav1.GetOptions) (result *v1.Defaults, err error) {
-	obj, err := c.Fake.
-		Invokes(testing.NewGetAction(defaultsResource, c.ns, name), &v1.Defaults{})
-
-	if obj == nil {
-		return nil, err
+func newFakeDefaults(fake *FakeIngressV1, namespace string) ingressv1.DefaultsInterface {
+	return &fakeDefaults{
+		gentype.NewFakeClientWithList[*v1.Defaults, *v1.DefaultsList](
+			fake.Fake,
+			namespace,
+			v1.SchemeGroupVersion.WithResource("defaults"),
+			v1.SchemeGroupVersion.WithKind("Defaults"),
+			func() *v1.Defaults { return &v1.Defaults{} },
+			func() *v1.DefaultsList { return &v1.DefaultsList{} },
+			func(dst, src *v1.DefaultsList) { dst.ListMeta = src.ListMeta },
+			func(list *v1.DefaultsList) []*v1.Defaults { return gentype.ToPointerSlice(list.Items) },
+			func(list *v1.DefaultsList, items []*v1.Defaults) { list.Items = gentype.FromPointerSlice(items) },
+		),
+		fake,
 	}
-	return obj.(*v1.Defaults), err
-}
-
-// List takes label and field selectors, and returns the list of Defaults that match those selectors.
-func (c *FakeDefaults) List(ctx context.Context, opts metav1.ListOptions) (result *v1.DefaultsList, err error) {
-	obj, err := c.Fake.
-		Invokes(testing.NewListAction(defaultsResource, defaultsKind, c.ns, opts), &v1.DefaultsList{})
-
-	if obj == nil {
-		return nil, err
-	}
-
-	label, _, _ := testing.ExtractFromListOptions(opts)
-	if label == nil {
-		label = labels.Everything()
-	}
-	list := &v1.DefaultsList{ListMeta: obj.(*v1.DefaultsList).ListMeta}
-	for _, item := range obj.(*v1.DefaultsList).Items {
-		if label.Matches(labels.Set(item.Labels)) {
-			list.Items = append(list.Items, item)
-		}
-	}
-	return list, err
-}
-
-// Watch returns a watch.Interface that watches the requested defaults.
-func (c *FakeDefaults) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
-	return c.Fake.
-		InvokesWatch(testing.NewWatchAction(defaultsResource, c.ns, opts))
-
-}
-
-// Create takes the representation of a defaults and creates it.  Returns the server's representation of the defaults, and an error, if there is any.
-func (c *FakeDefaults) Create(ctx context.Context, defaults *v1.Defaults, opts metav1.CreateOptions) (result *v1.Defaults, err error) {
-	obj, err := c.Fake.
-		Invokes(testing.NewCreateAction(defaultsResource, c.ns, defaults), &v1.Defaults{})
-
-	if obj == nil {
-		return nil, err
-	}
-	return obj.(*v1.Defaults), err
-}
-
-// Update takes the representation of a defaults and updates it. Returns the server's representation of the defaults, and an error, if there is any.
-func (c *FakeDefaults) Update(ctx context.Context, defaults *v1.Defaults, opts metav1.UpdateOptions) (result *v1.Defaults, err error) {
-	obj, err := c.Fake.
-		Invokes(testing.NewUpdateAction(defaultsResource, c.ns, defaults), &v1.Defaults{})
-
-	if obj == nil {
-		return nil, err
-	}
-	return obj.(*v1.Defaults), err
-}
-
-// Delete takes name of the defaults and deletes it. Returns an error if one occurs.
-func (c *FakeDefaults) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
-	_, err := c.Fake.
-		Invokes(testing.NewDeleteActionWithOptions(defaultsResource, c.ns, name, opts), &v1.Defaults{})
-
-	return err
-}
-
-// DeleteCollection deletes a collection of objects.
-func (c *FakeDefaults) DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error {
-	action := testing.NewDeleteCollectionAction(defaultsResource, c.ns, listOpts)
-
-	_, err := c.Fake.Invokes(action, &v1.DefaultsList{})
-	return err
-}
-
-// Patch applies the patch and returns the patched defaults.
-func (c *FakeDefaults) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.Defaults, err error) {
-	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceAction(defaultsResource, c.ns, name, pt, data, subresources...), &v1.Defaults{})
-
-	if obj == nil {
-		return nil, err
-	}
-	return obj.(*v1.Defaults), err
 }

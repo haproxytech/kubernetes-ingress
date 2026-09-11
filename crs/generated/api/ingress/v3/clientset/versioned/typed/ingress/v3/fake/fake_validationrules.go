@@ -18,111 +18,32 @@
 package fake
 
 import (
-	"context"
-
 	v3 "github.com/haproxytech/kubernetes-ingress/crs/api/ingress/v3"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	labels "k8s.io/apimachinery/pkg/labels"
-	types "k8s.io/apimachinery/pkg/types"
-	watch "k8s.io/apimachinery/pkg/watch"
-	testing "k8s.io/client-go/testing"
+	ingressv3 "github.com/haproxytech/kubernetes-ingress/crs/generated/api/ingress/v3/clientset/versioned/typed/ingress/v3"
+	gentype "k8s.io/client-go/gentype"
 )
 
-// FakeValidationRules implements ValidationRulesInterface
-type FakeValidationRules struct {
+// fakeValidationRules implements ValidationRulesInterface
+type fakeValidationRules struct {
+	*gentype.FakeClientWithList[*v3.ValidationRules, *v3.ValidationRulesList]
 	Fake *FakeIngressV3
-	ns   string
 }
 
-var validationrulesResource = v3.SchemeGroupVersion.WithResource("validationrules")
-
-var validationrulesKind = v3.SchemeGroupVersion.WithKind("ValidationRules")
-
-// Get takes name of the validationRules, and returns the corresponding validationRules object, and an error if there is any.
-func (c *FakeValidationRules) Get(ctx context.Context, name string, options v1.GetOptions) (result *v3.ValidationRules, err error) {
-	obj, err := c.Fake.
-		Invokes(testing.NewGetAction(validationrulesResource, c.ns, name), &v3.ValidationRules{})
-
-	if obj == nil {
-		return nil, err
+func newFakeValidationRules(fake *FakeIngressV3, namespace string) ingressv3.ValidationRulesInterface {
+	return &fakeValidationRules{
+		gentype.NewFakeClientWithList[*v3.ValidationRules, *v3.ValidationRulesList](
+			fake.Fake,
+			namespace,
+			v3.SchemeGroupVersion.WithResource("validationrules"),
+			v3.SchemeGroupVersion.WithKind("ValidationRules"),
+			func() *v3.ValidationRules { return &v3.ValidationRules{} },
+			func() *v3.ValidationRulesList { return &v3.ValidationRulesList{} },
+			func(dst, src *v3.ValidationRulesList) { dst.ListMeta = src.ListMeta },
+			func(list *v3.ValidationRulesList) []*v3.ValidationRules { return gentype.ToPointerSlice(list.Items) },
+			func(list *v3.ValidationRulesList, items []*v3.ValidationRules) {
+				list.Items = gentype.FromPointerSlice(items)
+			},
+		),
+		fake,
 	}
-	return obj.(*v3.ValidationRules), err
-}
-
-// List takes label and field selectors, and returns the list of ValidationRules that match those selectors.
-func (c *FakeValidationRules) List(ctx context.Context, opts v1.ListOptions) (result *v3.ValidationRulesList, err error) {
-	obj, err := c.Fake.
-		Invokes(testing.NewListAction(validationrulesResource, validationrulesKind, c.ns, opts), &v3.ValidationRulesList{})
-
-	if obj == nil {
-		return nil, err
-	}
-
-	label, _, _ := testing.ExtractFromListOptions(opts)
-	if label == nil {
-		label = labels.Everything()
-	}
-	list := &v3.ValidationRulesList{ListMeta: obj.(*v3.ValidationRulesList).ListMeta}
-	for _, item := range obj.(*v3.ValidationRulesList).Items {
-		if label.Matches(labels.Set(item.Labels)) {
-			list.Items = append(list.Items, item)
-		}
-	}
-	return list, err
-}
-
-// Watch returns a watch.Interface that watches the requested validationRules.
-func (c *FakeValidationRules) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
-	return c.Fake.
-		InvokesWatch(testing.NewWatchAction(validationrulesResource, c.ns, opts))
-
-}
-
-// Create takes the representation of a validationRules and creates it.  Returns the server's representation of the validationRules, and an error, if there is any.
-func (c *FakeValidationRules) Create(ctx context.Context, validationRules *v3.ValidationRules, opts v1.CreateOptions) (result *v3.ValidationRules, err error) {
-	obj, err := c.Fake.
-		Invokes(testing.NewCreateAction(validationrulesResource, c.ns, validationRules), &v3.ValidationRules{})
-
-	if obj == nil {
-		return nil, err
-	}
-	return obj.(*v3.ValidationRules), err
-}
-
-// Update takes the representation of a validationRules and updates it. Returns the server's representation of the validationRules, and an error, if there is any.
-func (c *FakeValidationRules) Update(ctx context.Context, validationRules *v3.ValidationRules, opts v1.UpdateOptions) (result *v3.ValidationRules, err error) {
-	obj, err := c.Fake.
-		Invokes(testing.NewUpdateAction(validationrulesResource, c.ns, validationRules), &v3.ValidationRules{})
-
-	if obj == nil {
-		return nil, err
-	}
-	return obj.(*v3.ValidationRules), err
-}
-
-// Delete takes name of the validationRules and deletes it. Returns an error if one occurs.
-func (c *FakeValidationRules) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
-	_, err := c.Fake.
-		Invokes(testing.NewDeleteActionWithOptions(validationrulesResource, c.ns, name, opts), &v3.ValidationRules{})
-
-	return err
-}
-
-// DeleteCollection deletes a collection of objects.
-func (c *FakeValidationRules) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
-	action := testing.NewDeleteCollectionAction(validationrulesResource, c.ns, listOpts)
-
-	_, err := c.Fake.Invokes(action, &v3.ValidationRulesList{})
-	return err
-}
-
-// Patch applies the patch and returns the patched validationRules.
-func (c *FakeValidationRules) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v3.ValidationRules, err error) {
-	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceAction(validationrulesResource, c.ns, name, pt, data, subresources...), &v3.ValidationRules{})
-
-	if obj == nil {
-		return nil, err
-	}
-	return obj.(*v3.ValidationRules), err
 }
