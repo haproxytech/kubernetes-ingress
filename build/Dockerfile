@@ -39,7 +39,7 @@ RUN gcc -O3 -std=c11 -pipe \
     -Wl,-z,relro -Wl,-z,now -Wl,-z,noexecstack -Wl,--as-needed \
     -o haproxy_wrapper haproxy_wrapper.c
 
-FROM golang:1.26-alpine AS builder
+FROM golang:1.27-alpine AS builder
 ENV GOTOOLCHAIN=auto
 ARG GOPHERD_VERSION
 RUN apk --no-cache add git openssh
