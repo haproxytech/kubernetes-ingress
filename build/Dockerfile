@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-ARG GOPHERD_VERSION=1.2.0
+ARG GOPHERD_VERSION=1.3.0
 
 FROM haproxytech/haproxy-alpine:3.2 AS builder-c
 RUN apk add --no-cache build-base gcc musl-dev
