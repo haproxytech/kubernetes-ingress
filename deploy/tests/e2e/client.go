@@ -79,6 +79,8 @@ func newClient(host string, port int, tls bool) (*Client, error) {
 		Port: dstPort,
 		Req:  req,
 		Transport: &http.Transport{
+			// Tests reconfigure HAProxy between requests; a reused connection would hide that.
+			DisableKeepAlives: true,
 			DialContext: func(ctx context.Context, network, _ string) (conn net.Conn, e error) {
 				dialer := &net.Dialer{}
 				return dialer.DialContext(ctx, network, net.JoinHostPort(kindURL, strconv.Itoa(dstPort)))
