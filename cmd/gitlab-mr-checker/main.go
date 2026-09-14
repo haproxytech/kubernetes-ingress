@@ -254,28 +254,39 @@ func getMergeRequest(baseURL, token, projectID string, mergeRequestIID int) (*Me
 func getMergeRequestComments(baseURL, token, projectID string, mergeRequestIID int) ([]Note, error) {
 	client := &http.Client{}
 
-	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet,
-		fmt.Sprintf("%s/projects/%s/merge_requests/%d/notes", baseURL, url.PathEscape(projectID), mergeRequestIID), nil)
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Add("PRIVATE-TOKEN", token) //nolint:canonicalheader
-
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, err
-	}
-
+	// Notes come newest first, 20 per page by default: an old question would
+	// fall off the first page and be asked again. Walk every page.
 	var notes []Note
-	err = json.Unmarshal(body, &notes)
-	if err != nil {
-		return nil, err
+	for page := 1; page != 0; {
+		req, err := http.NewRequestWithContext(context.Background(), http.MethodGet,
+			fmt.Sprintf("%s/projects/%s/merge_requests/%d/notes?per_page=100&page=%d", baseURL, url.PathEscape(projectID), mergeRequestIID, page), nil)
+		if err != nil {
+			return nil, err
+		}
+		req.Header.Add("PRIVATE-TOKEN", token) //nolint:canonicalheader
+
+		resp, err := client.Do(req)
+		if err != nil {
+			return nil, err
+		}
+		body, err := io.ReadAll(resp.Body)
+		_ = resp.Body.Close()
+		if err != nil {
+			return nil, err
+		}
+		if resp.StatusCode != http.StatusOK {
+			return nil, fmt.Errorf("failed to get merge request notes: status %s, body: %s", resp.Status, string(body))
+		}
+
+		var batch []Note
+		err = json.Unmarshal(body, &batch)
+		if err != nil {
+			return nil, err
+		}
+		notes = append(notes, batch...)
+
+		// empty header on the last page
+		page, _ = strconv.Atoi(resp.Header.Get("X-Next-Page"))
 	}
 
 	return notes, nil
