@@ -109,6 +109,8 @@ func (c *clientNative) BackendRuleDeleteAll(backend string) {
 	}
 }
 
+// This function tests if a backend is existing
+// Check if you're not rather looking for BackendUsed function.
 func (c *clientNative) BackendExists(backendName string) (exists bool) {
 	_, exists = c.backends[backendName]
 	return exists

@@ -124,7 +124,7 @@ func (c *clientNative) BackendServerRuntimeDelete(backendName, serverName string
 
 	err = runtime.DeleteServer(backendName, serverName)
 	utils.GetLogger().Debugf("[RUNTIME] [BACKEND] [SERVER] [DEL] del server %s/%s", backendName, serverName)
-	if err != nil && !strings.Contains(err.Error(), "No such server") {
+	if err != nil && !strings.Contains(err.Error(), "No such server") && !strings.Contains(err.Error(), "No such backend") {
 		tracker.TrackCommandForServer(backendName, serverName, rutracker.TypeDeletion, rutracker.StatusData{
 			Status: rutracker.StatusFailure,
 			Error:  err,

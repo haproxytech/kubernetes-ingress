@@ -113,7 +113,6 @@ func (s *Service) updateHAProxySrv(client api.HAProxyClient, srvSlot store.HAPro
 		srv.Maintenance = "disabled"
 	}
 
-	// Create or Update
 	//revive:disable-next-line:line-length-limit
 	logger.Debugf("[CONFIG] [BACKEND] [SERVER] [UPDATE] backend %s: about to update server in configuration file :  models.Server { Name: %s, Port: %d, Address: %s, Maintenance: %s }", s.backend.Name, srv.Name, *srv.Port, srv.Address, srv.Maintenance)
 	errAPI := client.BackendServerCreateOrUpdate(s.backend.Name, srv)
@@ -132,9 +131,6 @@ func (s *Service) getRuntimeBackend(k8s store.K8s) (backend *store.RuntimeBacken
 		backends, ok = ns.HAProxyRuntime[s.resource.Name]
 	}
 	if !ok {
-		if s.resource.DNS != "" {
-			return s.getExternalNameEndpoints()
-		}
 		return nil, errors.New("no available endpoints")
 	}
 	svcPort := s.path.SvcPortResolved

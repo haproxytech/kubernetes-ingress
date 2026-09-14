@@ -485,13 +485,7 @@ func (c *clientNative) processServers(backendName string, configuration configur
 				errs.Add(errEditServer)
 			}
 		} else {
-			// Server has been created, a reload is required
-			// It covers the case where there was a failure, scaleHAProxySrvs has already been called in a previous loop
-			// but the sync failed (wrong config)
-			// When the config is fixed, servers will be created
-
-			// To know if a Reload is needed, we need to check if some runtime commands were performed
-			// if all were successful, then no reload is necessary
+			// Skip the reload when the runtime already created this server.
 			tracker := rutracker.GetRuntimeUpdateTracker()
 			status := tracker.GlobalStatusForServer(backendName, server.Name)
 			if status == rutracker.StatusSuccess {

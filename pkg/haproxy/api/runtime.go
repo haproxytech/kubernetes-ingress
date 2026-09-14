@@ -142,9 +142,7 @@ func (c *clientNative) SyncBackendSrvs(backend *store.RuntimeBackend) error {
 	logger.Tracef("[RUNTIME] [BACKEND] [SERVER] backend %s: list of servers after treatment  %+v", backend.Name, haproxySrvs)
 	logger.Tracef("[RUNTIME] [BACKEND] [SERVER] backend %s: list of endpoints after treatment  %+v", backend.Name, endpoints)
 
-	// Add new servers if needed
-	// - if a server with the same IP/PORT is found in MAINT, re-use it
-	// - if not add a server through runtime
+	// New addresses: reuse a MAINT server or add one at runtime.
 	errNew := c.SyncNewServers(backend, endpoints)
 	if errNew != nil {
 		backend.DynUpdateFailed = true

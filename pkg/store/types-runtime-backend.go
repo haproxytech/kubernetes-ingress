@@ -22,16 +22,16 @@ import (
 	"github.com/haproxytech/client-native/v6/misc"
 )
 
-func (re RuntimeEndpoint) ComputeServerName() string {
-	// Find the port for the given address and compute the server name based on the address and port
+// serverNameHashLen keeps names short in logs, stats and cookies while staying unique per backend.
+const serverNameHashLen = 24
 
+// ComputeServerName derives a stable server name from the endpoint address and port.
+func (re RuntimeEndpoint) ComputeServerName() string {
 	serverAddr := fmt.Sprintf("%s:%d", misc.SanitizeIPv6Address(re.Address), re.Port)
-	hashData := HashSHA1(serverAddr)
-	return "s" + hashData
+	return "s" + hashHex(serverAddr)[:serverNameHashLen]
 }
 
-// HashSHA1 returns the SHA-1 hash of a string in hexadecimal
-func HashSHA1(data string) string {
+func hashHex(data string) string {
 	hash := sha256.Sum256([]byte(data))
 	return hex.EncodeToString(hash[:])
 }
