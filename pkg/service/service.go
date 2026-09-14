@@ -178,9 +178,7 @@ func (s *Service) HandleBackend(storeK8s store.K8s, client api.HAProxyClient, a 
 	httpresponses.PopulateBackend(client, newBackend.BackendBase.Name, newBackend.HTTPResponseRuleList)
 	// HTTP after responses
 	httpafterresponses.PopulateBackend(client, newBackend.BackendBase.Name, newBackend.HTTPAfterResponseRuleList)
-	// Server switching
-	// We DO NOT populate the server switching rules. The server names are dynamic and we can not have a switching rule with a hard coded name like "SRV_1"
-	// server s31e84e9bff56a6100f8d388594cecb61ad8e4ae8d27be3987c7c5d696234134d 127.0.0.1:6061 enabled
+	// Server switching rules are dropped at CR ingestion: server names are hashes.
 	// Stick rules
 	stick.PopulateBackend(client, newBackend.BackendBase.Name, newBackend.StickRuleList)
 	// TCP requests

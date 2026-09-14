@@ -16,6 +16,7 @@ package k8stransform
 
 import (
 	v3 "github.com/haproxytech/kubernetes-ingress/crs/api/ingress/v3"
+	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
 )
 
 func TransformBackend(obj interface{}) (interface{}, error) {
@@ -26,6 +27,11 @@ func TransformBackend(obj interface{}) (interface{}, error) {
 
 	// Fields to remove
 	backend.Spec.Servers = nil
+	if len(backend.Spec.ServerSwitchingRuleList) > 0 {
+		// Server names are hashes; a use-server rule cannot target them.
+		utils.GetLogger().Warningf("backend CR '%s/%s': server_switching_rule_list is not supported anymore and is ignored", backend.Namespace, backend.Name)
+		backend.Spec.ServerSwitchingRuleList = nil
+	}
 
 	return backend, nil
 }

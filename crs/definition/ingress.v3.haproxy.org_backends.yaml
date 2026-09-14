@@ -3342,41 +3342,6 @@ spec:
                 server_state_file_name:
                   description: server state file name
                   type: string
-                server_switching_rule_list:
-                  description: server switching rule list
-                  items:
-                    description: |-
-                      ServerSwitchingRule Server Switching Rule
-
-                      HAProxy server switching rule configuration (corresponds to use-server directive)
-                      Example: {"cond":"if","cond_test":"{ req_ssl_sni -i www.example.com }","target_server":"www"}
-
-                      swagger:model server_switching_rule
-                    properties:
-                      cond:
-                        description: |-
-                          cond
-                          Enum: ["if","unless"]
-                        enum:
-                          - if
-                          - unless
-                        type: string
-                      cond_test:
-                        description: cond test
-                        type: string
-                      metadata:
-                        x-kubernetes-preserve-unknown-fields: true
-                      target_server:
-                        description: |-
-                          target server
-                          Required: true
-                          Pattern: ^[^\s]+$
-                        pattern: ^[^\s]+$
-                        type: string
-                    required:
-                      - target_server
-                    type: object
-                  type: array
                 server_templates:
                   additionalProperties:
                     description: |-

@@ -86,7 +86,6 @@ type HAProxyClient interface { //nolint:interfacebloat
 	HTTPRequestRule
 	HTTPResponseRule
 	HTTPAfterResponseRule
-	ServerSwitchingRule
 	StickRule
 	TCPResponseRule
 	HTTPCheck
@@ -242,13 +241,6 @@ type HTTPAfterResponseRule interface {
 	HTTPAfterResponseRuleDeleteAll(parentType string, parentName string) error
 	HTTPAfterResponseRuleCreate(id int64, parentType string, parentName string, data *models.HTTPAfterResponseRule) error
 	HTTPAfterResponseRulesReplace(parentType, parentName string, rules models.HTTPAfterResponseRules) error
-}
-
-type ServerSwitchingRule interface {
-	ServerSwitchingRulesGet(backendName string) (models.ServerSwitchingRules, error)
-	ServerSwitchingRuleDeleteAll(backendName string) error
-	ServerSwitchingRuleCreate(id int64, backendName string, data *models.ServerSwitchingRule) error
-	ServerSwitchingRulesReplace(backendName string, rules models.ServerSwitchingRules) error
 }
 
 type StickRule interface {
@@ -417,7 +409,6 @@ func (c *clientNative) APIFinalCommitTransaction() error {
 		errs.AddErrors(c.processHTTPRequestRules(backendName, backend.HTTPRequestRuleList, configuration))
 		errs.AddErrors(c.processHTTPResponseRules(backendName, backend.HTTPResponseRuleList, configuration))
 		errs.AddErrors(c.processHTTPAfterResponseRules(backendName, backend.HTTPAfterResponseRuleList, configuration))
-		errs.AddErrors(c.processServerSwitchingRules(backendName, backend.ServerSwitchingRuleList, configuration))
 		errs.AddErrors(c.processStickRules(backendName, backend.StickRuleList, configuration))
 		errs.AddErrors(c.processTCPRequestRules(backendName, backend.TCPRequestRuleList, configuration))
 		errs.AddErrors(c.processTCPResponseRules(backendName, backend.TCPResponseRuleList, configuration))
@@ -547,12 +538,6 @@ func (c *clientNative) processHTTPResponseRules(backendName string, httpResponse
 func (c *clientNative) processHTTPAfterResponseRules(backendName string, rules models.HTTPAfterResponseRules, configuration configuration.Configuration) utils.Errors {
 	var errs utils.Errors
 	errs.Add(configuration.ReplaceHTTPAfterResponseRules("backend", backendName, rules, c.activeTransaction, 0))
-	return errs
-}
-
-func (c *clientNative) processServerSwitchingRules(backendName string, rules models.ServerSwitchingRules, configuration configuration.Configuration) utils.Errors {
-	var errs utils.Errors
-	errs.Add(configuration.ReplaceServerSwitchingRules(backendName, rules, c.activeTransaction, 0))
 	return errs
 }
 
