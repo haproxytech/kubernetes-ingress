@@ -212,6 +212,8 @@ The frontend name `tcpcr_test_fe-http-echo-443` follow the pattern:
 
 #### Backend sections
 
+Server names are derived from the endpoint address and port; there are no spare disabled slots.
+
 ```
 backend test_svc_http-echo_https
   mode tcp
@@ -219,10 +221,8 @@ backend test_svc_http-echo_https
   no option abortonclose
   timeout server 50000
   default-server check
-  server SRV_1 [fd00:10:244::8]:8443 enabled
-  server SRV_2 10.244.0.8:8443 enabled
-  server SRV_3 127.0.0.1:8443 disabled
-  server SRV_4 127.0.0.1:8443 disabled
+  server s8a3c0d9e2f14b6a7c5d1e0f [fd00:10:244::8]:8443 enabled
+  server s1f2e3d4c5b6a79880716253 10.244.0.8:8443 enabled
 ```
 
 
@@ -265,10 +265,7 @@ backend test_svc_http-echo_https
   balance leastconn
   no option abortonclose
   default-server check-sni example.com resolve-prefer ipv4 sni str(example.com) verify none
-  server SRV_1 10.244.0.64:8443 enabled
-  server SRV_2 127.0.0.1:8443 disabled
-  server SRV_3 127.0.0.1:8443 disabled
-  server SRV_4 127.0.0.1:8443 disabled
+  server s8a3c0d9e2f14b6a7c5d1e0f 10.244.0.64:8443 enabled
 
 ```
 
@@ -450,8 +447,6 @@ backend test_svc_http-echo_https
   no option abortonclose
   timeout server 50000
   default-server check
-  server SRV_1 10.244.0.8:8443 enabled
-  server SRV_2 [fd00:10:244::8]:8443 enabled
-  server SRV_3 127.0.0.1:8443 disabled
-  server SRV_4 127.0.0.1:8443 disabled
+  server s8a3c0d9e2f14b6a7c5d1e0f 10.244.0.8:8443 enabled
+  server s1f2e3d4c5b6a79880716253 [fd00:10:244::8]:8443 enabled
 ```

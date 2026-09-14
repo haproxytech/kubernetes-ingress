@@ -78,7 +78,6 @@ more info about custom annotations can be found in [annotations-custom.md](annot
 | [server-proto](#server-proto) | ["h2"] |  |  |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:|
 | [server-ssl](#server-ssl) | [bool](#bool) | "false" |  |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:|
 | [set-host](#set-host) | string |  |  |:large_blue_circle:|:large_blue_circle:|:white_circle:|
-| [scale-server-slots](#backend-scaling) | number | 42 |  |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:|
 | [ssl-certificate](#ssl-offloading) | string |  |  |:large_blue_circle:|:white_circle:|:white_circle:|
 | [ssl-passthrough](#https) | [bool](#bool) | "false" |  |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:|
 | [ssl-redirect](#https) | [bool](#bool) | "false" | https |:large_blue_circle:|:large_blue_circle:|:white_circle:|
@@ -556,30 +555,6 @@ Example:
 ```yaml
 check: "true"
 check-interval: "1m"
-```
-
-<p align='right'><a href='#available-annotations'>:arrow_up_small: back to top</a></p>
-
-***
-
-#### Backend Scaling
-
-##### `scale-server-slots`
-
-  Sets the number of server slots to provision in order for HAProxy to scale dynamically with no reload. If this number is greater than the available endpoints/addresses, the remaining slots will be disabled (put on stand-by) and ready to be used. If this number is lower, the remaining endpoints/addresses will be added after scaling the HAProxy backend with a reload.
-
-  Available on:  `configmap`  `ingress`  `service`
-
-  :information_source: Equivalent old annotations are `servers-increment` and `server-slots`
-
-Possible values:
-
-- Integer value indicating the number of backend servers to provision. Defaults to 42.
-
-Example:
-
-```yaml
-scale-server-slots: "75"
 ```
 
 <p align='right'><a href='#available-annotations'>:arrow_up_small: back to top</a></p>

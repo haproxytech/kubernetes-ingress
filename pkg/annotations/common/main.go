@@ -73,7 +73,6 @@ var DefaultValues = map[string]string{
 	"ssl-redirect-port":     "8443",
 	"ssl-passthrough":       "false",
 	"server-ssl":            "false",
-	"scale-server-slots":    "42",
 	"client-crt-optional":   "false",
 	"tls-alpn":              "h2,http/1.1",
 	"quic-alt-svc-max-age":  "60",

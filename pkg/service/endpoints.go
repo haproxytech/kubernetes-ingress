@@ -21,6 +21,7 @@ import (
 
 	"github.com/haproxytech/client-native/v6/models"
 
+	"github.com/haproxytech/kubernetes-ingress/pkg/annotations"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/api"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/instance"
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
@@ -44,6 +45,11 @@ func (s *Service) HandleHAProxySrvs(k8s store.K8s, client api.HAProxyClient) {
 		return
 	}
 	backend.Name = s.backend.Name // set backendName in store.PortEndpoints for runtime updates.
+	for _, name := range []string{"scale-server-slots", "server-slots", "servers-increment"} {
+		if annotations.String(name, s.annotations...) != "" {
+			logger.Warningf("backend '%s': annotation [%s] is DEPRECATED and ignored, servers are added through the runtime API", s.backend.Name, name)
+		}
+	}
 	// scale servers
 	if s.resource.DNS == "" {
 		s.scaleHAProxySrvs(backend)
