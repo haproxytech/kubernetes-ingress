@@ -58,8 +58,7 @@ func (suite *ScaleServerTestSuite) Test_ScaleServer() {
 	suite.Require().NoError(err)
 
 	//---------------------------------
-	// Now scale up to 6 replicas (6 > number of slots (4))
-	// This will create new sever slots
+	// Scale to 6 replicas: servers must appear through the runtime, without a reload.
 	suite.tmplData.Replicas = 6
 	suite.Require().NoError(suite.test.Apply("config/deploy.yaml.tmpl", suite.test.GetNS(), suite.tmplData))
 	suite.Require().Eventually(func() bool {
@@ -67,6 +66,7 @@ func (suite *ScaleServerTestSuite) Test_ScaleServer() {
 		suite.Require().NoError(err)
 		return strings.Contains(out, "6/6")
 	}, e2e.WaitDuration, e2e.TickDuration)
+	// Dual-stack service: two servers per pod.
 	suite.WaitForUpServersOnRuntime(fmt.Sprintf("%s_svc_http-echo_http", suite.test.GetNS()), 12)
 
 	// 	Check that no reload occurs !!!!!
@@ -77,7 +77,6 @@ func (suite *ScaleServerTestSuite) Test_ScaleServer() {
 
 func (suite *ScaleServerTestSuite) Test_ScaleServer_WithBackendCRD_NoReload() {
 	var err error
-	suite.Require().NoError(err)
 
 	suite.tmplData.Replicas = 1
 	suite.tmplData.BackendCR = true
@@ -99,10 +98,10 @@ func (suite *ScaleServerTestSuite) Test_ScaleServer_WithBackendCRD_NoReload() {
 
 	// Check Pid
 	oldInfo, err := e2e.GetGlobalHAProxyInfo()
+	suite.Require().NoError(err)
 
 	//---------------------------------
-	// Now scale up to 6 replicas (6 > number of slots (4))
-	// This will create new sever slots
+	// Scale to 6 replicas: servers must appear through the runtime, without a reload.
 	suite.tmplData.Replicas = 6
 
 	suite.Require().NoError(suite.test.Apply("config/deploy.yaml.tmpl", suite.test.GetNS(), suite.tmplData))
@@ -111,6 +110,7 @@ func (suite *ScaleServerTestSuite) Test_ScaleServer_WithBackendCRD_NoReload() {
 		suite.Require().NoError(err)
 		return strings.Contains(out, "6/6")
 	}, e2e.WaitDuration, e2e.TickDuration)
+	// Dual-stack service: two servers per pod.
 	suite.WaitForUpServersOnRuntime(fmt.Sprintf("%s_svc_http-echo_http", suite.test.GetNS()), 12)
 
 	// 	Check that no reload occurs !!!!!
@@ -124,7 +124,6 @@ func (suite *ScaleServerTestSuite) Test_ScaleServer_WithBackendCRD_NoReload() {
 // This should not trigger a reload (error on runtime `add server`)
 func (suite *ScaleServerTestSuite) Test_ScaleServer_WithBackendCRD_Reload() {
 	var err error
-	suite.Require().NoError(err)
 
 	startInfo, err := e2e.GetGlobalHAProxyInfo()
 	suite.T().Logf("startInfo.Pid(%s)", startInfo.Pid)
@@ -152,8 +151,7 @@ func (suite *ScaleServerTestSuite) Test_ScaleServer_WithBackendCRD_Reload() {
 	suite.T().Logf("oldInfo.Pid(%s)", oldInfo.Pid)
 
 	//---------------------------------
-	// Now scale up to 6 replicas (6 > number of slots (4))
-	// This will create new sever slots
+	// Scale to 6 replicas: servers must appear through the runtime, without a reload.
 	suite.tmplData.Replicas = 6
 
 	suite.Require().NoError(suite.test.Apply("config/deploy.yaml.tmpl", suite.test.GetNS(), suite.tmplData))
@@ -162,6 +160,7 @@ func (suite *ScaleServerTestSuite) Test_ScaleServer_WithBackendCRD_Reload() {
 		suite.Require().NoError(err)
 		return strings.Contains(out, "6/6")
 	}, e2e.WaitDuration, e2e.TickDuration)
+	// Dual-stack service: two servers per pod.
 	suite.WaitForUpServersOnRuntime(fmt.Sprintf("%s_svc_http-echo_http", suite.test.GetNS()), 12)
 
 	var newInfo e2e.GlobalHAProxyInfo

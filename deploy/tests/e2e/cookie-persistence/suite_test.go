@@ -40,13 +40,14 @@ type tmplData struct {
 	CookiePersistenceDynamic   bool
 	CookiePersistenceNoDynamic bool
 	Host                       string
+	Replicas                   int
 }
 
 func (suite *CookiePersistenceSuite) SetupSuite() {
 	var err error
 	suite.test, err = e2e.NewTest()
 	suite.Require().NoError(err)
-	suite.tmplData = tmplData{Host: suite.test.GetNS() + ".test"}
+	suite.tmplData = tmplData{Host: suite.test.GetNS() + ".test", Replicas: 1}
 	suite.client, err = e2e.NewHTTPClient(suite.tmplData.Host)
 	suite.Require().NoError(err)
 }

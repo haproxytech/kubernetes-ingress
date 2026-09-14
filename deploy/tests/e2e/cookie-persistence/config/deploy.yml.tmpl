@@ -3,7 +3,7 @@ apiVersion: apps/v1
 metadata:
   name: http-echo
 spec:
-  replicas: 1
+  replicas: {{ .Replicas }}
   selector:
     matchLabels:
       app: http-echo
