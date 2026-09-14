@@ -123,37 +123,41 @@ func (c *clientNative) BackendServerCreateOrUpdate(backendName string, data mode
 	return nil
 }
 
+// maintServers lists, per backend, the in-memory servers in maintenance.
+func (c *clientNative) maintServers() map[string][]string {
+	result := map[string][]string{}
+	for backendName, backend := range c.backends {
+		names := make([]string, 0, len(backend.Servers))
+		for serverName, server := range backend.Servers {
+			if server.Maintenance == "enabled" {
+				names = append(names, serverName)
+			}
+		}
+		if len(names) > 0 {
+			slices.Sort(names)
+			result[backendName] = names
+		}
+	}
+	return result
+}
+
+// BackendServersDeleteAllInMaint drops MAINT servers from the file and memory.
+// A failed runtime deletion is covered later: the server comes back as disabled and triggers a reload.
 func (c *clientNative) BackendServersDeleteAllInMaint() error {
 	configuration, err := c.nativeAPI.Configuration()
 	if err != nil {
 		return err
 	}
-	_, backends, err := configuration.GetBackends(c.activeTransaction)
-	if err != nil {
-		return err
-	}
 	var errs utils.Errors
-	for _, backend := range backends {
-		_, servers, err := configuration.GetServers("backend", backend.Name, c.activeTransaction)
-		if err != nil {
-			return err
-		}
-		for _, server := range servers {
-			if server.Maintenance == "enabled" {
-				logger.Debugf("[CONFIG] [BACKEND] [SERVER] [DEL] server %s/%s: deleting server in configuration file", backend.Name, server.Name)
-				// Delete from configuration
-				err = configuration.DeleteServer(server.Name, "backend", backend.Name, c.activeTransaction, 0)
-				if err != nil {
-					errs.Add(err)
-				}
-				// Delete from interal staorage
-				logger.Tracef("[CONFIG] [BACKEND] [SERVER] [DEL] server %s/%s: deleting server in storage", backend.Name, server.Name)
-
-				err = c.BackendServerDelete(backend.Name, server.Name)
-				if err != nil {
-					errs.Add(err)
-				}
+	for backendName, serverNames := range c.maintServers() {
+		for _, serverName := range serverNames {
+			logger.Debugf("[CONFIG] [BACKEND] [SERVER] [DEL] server %s/%s: deleting server in configuration file", backendName, serverName)
+			// Already absent from the file is the desired end state.
+			if err := configuration.DeleteServer(serverName, "backend", backendName, c.activeTransaction, 0); err != nil &&
+				!strings.Contains(err.Error(), "does not exist") {
+				errs.Add(err)
 			}
+			errs.Add(c.BackendServerDelete(backendName, serverName))
 		}
 	}
 	return errs.Result()

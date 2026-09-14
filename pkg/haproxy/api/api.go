@@ -509,15 +509,6 @@ func (c *clientNative) processServers(backendName string, configuration configur
 			instance.Reload("server '%s' created in backend '%s' . runtime status [%s]", server.Name, backendName, status)
 		}
 	}
-	// serversToDelete, _ := c.BackendServersToDeleteGet(backendName)
-	// for srvToDelete := range serversToDelete {
-	// 	errDeleteServer := configuration.DeleteServer(srvToDelete, "backend", backendName, c.activeTransaction, 0)
-	// 	if errDeleteServer != nil {
-	// 		errs.Add(errDeleteServer)
-	// 	}
-	// 	// No reload due to server deletion, servers are in MAINT, no need
-	// 	// next time a reload occurs, they will be deleted
-	// }
 	return errs
 }
 
