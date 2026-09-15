@@ -3,6 +3,7 @@ ENV GOTOOLCHAIN=auto
 
 COPY *.go /src/
 COPY go.mod /src/go.mod
+COPY go.sum /src/go.sum
 
 RUN cd /src && go build -o echo-http
 
