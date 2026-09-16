@@ -19,9 +19,9 @@ jobs:
         mode: sequential
         shards: 4
     variables:
-      K8S_VERSION: v1.34.0
-      KUBEADM_VER: v1beta3
-      KUBECTL: v1.34.0
+      K8S_VERSION: v1.37.0
+      KUBEADM_VER: v1beta4
+      KUBECTL: v1.37.0
 
   # Disabled: this job set was already dormant, its file was never included.
   # Set when to schedule_weekly_monday to bring it back.
@@ -40,9 +40,9 @@ jobs:
         mode: sequential
         shards: 4
     variables:
-      K8S_VERSION: v1.31.9
+      K8S_VERSION: v1.35.8
       KUBEADM_VER: v1beta3
-      KUBECTL: v1.31.0
+      KUBECTL: v1.35.0
 
   # Disabled, see e2e_k8s_sch_1. Set when to schedule_weekly_tuesday to enable.
   - name: e2e_k8s_sch_2
@@ -60,9 +60,9 @@ jobs:
         mode: sequential
         shards: 4
     variables:
-      K8S_VERSION: v1.32.5
-      KUBEADM_VER: v1beta3
-      KUBECTL: v1.32.0
+      K8S_VERSION: v1.36.4
+      KUBEADM_VER: v1beta4
+      KUBECTL: v1.36.0
 
   - name: e2e_crd_v1
     stage: e2e_crd_versions
@@ -79,7 +79,7 @@ jobs:
         mode: sequential
         shards: 4
     variables:
-      K8S_VERSION: v1.34.0
-      KUBEADM_VER: v1beta3
-      KUBECTL: v1.34.0
+      K8S_VERSION: v1.37.0
+      KUBEADM_VER: v1beta4
+      KUBECTL: v1.37.0
       CRD_VERSION: v1

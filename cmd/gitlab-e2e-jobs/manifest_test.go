@@ -80,7 +80,7 @@ func TestLoadManifestReadsTheRepositoryManifest(t *testing.T) {
 		{Tag: "e2e_https", Mode: "parallel", Shards: 1},
 		{Tag: "e2e_sequential", Mode: "sequential", Shards: 4},
 	}, manifest.Jobs[0].Splits)
-	assert.Equal(t, "v1.34.0", manifest.Jobs[0].Variables["K8S_VERSION"])
+	assert.Equal(t, "v1.37.0", manifest.Jobs[0].Variables["K8S_VERSION"])
 }
 
 func TestLoadManifestRejectsAnUnknownWhenValue(t *testing.T) {
