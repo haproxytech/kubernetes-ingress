@@ -19,6 +19,8 @@ package main
 import (
 	"fmt"
 	"log"
+	"slices"
+	"strconv"
 	"strings"
 
 	"github.com/google/renameio"
@@ -45,16 +47,17 @@ func (c *Conf) generateSupport() {
 	buff.WriteString(`### Lifecycle`)
 	buff.WriteByte('\n')
 	buff.WriteByte('\n')
-	buff.WriteString(`| Version | GA | EOL | HAProxy | *k8s versions |`)
+	buff.WriteString(`| Version | GA | EOL | HAProxy | *k8s min | *k8s max |`)
 	buff.WriteByte('\n')
-	buff.WriteString(`| -:|:-:|:-:|:-:|:-:|`)
+	buff.WriteString(`| -:|:-:|:-:|:-:|:-:|:-:|`)
 	buff.WriteByte('\n')
 
 	for _, version := range c.Support {
 		if version.HAProxy == "" {
 			version.HAProxy = version.Version
 		}
-		buff.WriteString(fmt.Sprintf(`| **%s** | %s | %s | %s | %s |`, version.Version, version.GA, version.MinEOL, version.HAProxy, strings.Join(version.K8S, ", ")))
+		k8sMin, k8sMax := versionRange(version.K8S)
+		buff.WriteString(fmt.Sprintf(`| **%s** | %s | %s | %s | %s | %s |`, version.Version, version.GA, version.MinEOL, version.HAProxy, k8sMin, k8sMax))
 		buff.WriteByte('\n')
 	}
 
@@ -69,4 +72,31 @@ func (c *Conf) generateSupport() {
 	if err != nil {
 		log.Println(err)
 	}
+}
+
+// versionRange picks the lowest and highest dotted version numerically.
+func versionRange(versions []string) (lowest, highest string) {
+	if len(versions) == 0 {
+		return "", ""
+	}
+	sorted := slices.Clone(versions)
+	slices.SortFunc(sorted, compareVersions)
+	return sorted[0], sorted[len(sorted)-1]
+}
+
+func compareVersions(a, b string) int {
+	as, bs := strings.Split(a, "."), strings.Split(b, ".")
+	for i := 0; i < len(as) || i < len(bs); i++ {
+		var ai, bi int
+		if i < len(as) {
+			ai, _ = strconv.Atoi(as[i])
+		}
+		if i < len(bs) {
+			bi, _ = strconv.Atoi(bs[i])
+		}
+		if ai != bi {
+			return ai - bi
+		}
+	}
+	return 0
 }
