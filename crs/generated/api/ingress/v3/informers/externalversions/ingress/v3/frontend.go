@@ -33,11 +33,39 @@ import (
 )
 
 // FrontendInformer provides access to a shared informer and lister for
-// Frontends.
+// Frontends. Prefer using the type-safe variant (see [TypedFrontendInformer]).
 type FrontendInformer interface {
 	Informer() cache.SharedIndexInformer
 	Lister() ingressv3.FrontendLister
 }
+
+// TypedFrontendInformer provides access to a shared informer and lister for
+// Frontends, including the type-safe TypedInformer variant.
+// It is a superset of FrontendInformer.
+type TypedFrontendInformer interface {
+	Informer() cache.SharedIndexInformer
+	TypedInformer() FrontendIndexInformer
+	Lister() ingressv3.FrontendLister
+}
+
+// FrontendIndexInformer is a wrapper around the underlying [cache.SharedIndexInformer]
+// with type-safe variants of several methods.
+type FrontendIndexInformer cache.TypedSharedIndexInformer[*apiingressv3.Frontend]
+
+// FrontendHandlerFuncs is a specialization of [cache.TypedResourceEventHandlerFuncs] for Frontend.
+type FrontendHandlerFuncs = cache.TypedResourceEventHandlerFuncs[*apiingressv3.Frontend]
+
+// FrontendDetailedHandlerFuncs is a specialization of [cache.TypedResourceEventHandlerDetailedFuncs] for Frontend.
+type FrontendDetailedHandlerFuncs = cache.TypedResourceEventHandlerDetailedFuncs[*apiingressv3.Frontend]
+
+// FrontendFilteringHandler is a specialization of [cache.TypedFilteringResourceEventHandler] for Frontend.
+type FrontendFilteringHandler = cache.TypedFilteringResourceEventHandler[*apiingressv3.Frontend]
+
+// FrontendIndexers is a specialization of [cache.TypedIndexers] for Frontend.
+type FrontendIndexers = cache.TypedIndexers[*apiingressv3.Frontend]
+
+// DeletedFrontend is a specialization of [cache.DeletedObject] for Frontend.
+type DeletedFrontend = cache.DeletedObject[*apiingressv3.Frontend]
 
 type frontendInformer struct {
 	factory          internalinterfaces.SharedInformerFactory
@@ -48,25 +76,49 @@ type frontendInformer struct {
 // NewFrontendInformer constructs a new informer for Frontend type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
+// If you really need an independent one, prefer using the type-safe variant (see [NewTypedFrontendInformer]).
 func NewFrontendInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers) cache.SharedIndexInformer {
 	return NewFrontendInformerWithOptions(client, namespace, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: indexers})
+}
+
+// NewTypedFrontendInformer constructs a new informer for Frontend type.
+// Always prefer using an informer factory to get a shared informer instead of getting an independent
+// one. This reduces memory footprint and number of connections to the server.
+func NewTypedFrontendInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers FrontendIndexers) FrontendIndexInformer {
+	return NewTypedFrontendInformerWithOptions(client, namespace, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: cache.TypedIndexersToIndexers(indexers)})
 }
 
 // NewFilteredFrontendInformer constructs a new informer for Frontend type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
+// If you really need an independent one, prefer using the type-safe variant (see [NewTypedFilteredFrontendInformer]).
 func NewFilteredFrontendInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) cache.SharedIndexInformer {
-	return NewFrontendInformerWithOptions(client, namespace, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: indexers, TweakListOptions: tweakListOptions})
+	return NewTypedFrontendInformerWithOptions(client, namespace, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: indexers, TweakListOptions: tweakListOptions})
+}
+
+// NewTypedFilteredFrontendInformer constructs a new informer for Frontend type.
+// Always prefer using an informer factory to get a shared informer instead of getting an independent
+// one. This reduces memory footprint and number of connections to the server.
+func NewTypedFilteredFrontendInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers FrontendIndexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) FrontendIndexInformer {
+	return NewTypedFrontendInformerWithOptions(client, namespace, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: cache.TypedIndexersToIndexers(indexers), TweakListOptions: tweakListOptions})
 }
 
 // NewFrontendInformerWithOptions constructs a new informer for Frontend type with additional options.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
+// If you really need an independent one, prefer using the type-safe variant (see [NewTypedFrontendInformerWithOptions]).
 func NewFrontendInformerWithOptions(client versioned.Interface, namespace string, options internalinterfaces.InformerOptions) cache.SharedIndexInformer {
+	return NewTypedFrontendInformerWithOptions(client, namespace, options)
+}
+
+// NewTypedFrontendInformerWithOptions constructs a new informer for Frontend type with additional options.
+// Always prefer using an informer factory to get a shared informer instead of getting an independent
+// one. This reduces memory footprint and number of connections to the server.
+func NewTypedFrontendInformerWithOptions(client versioned.Interface, namespace string, options internalinterfaces.InformerOptions) FrontendIndexInformer {
 	gvr := schema.GroupVersionResource{Group: "ingress.v3.haproxy.org", Version: "v3", Resource: "frontends"}
 	identifier := options.InformerName.WithResource(gvr)
 	tweakListOptions := options.TweakListOptions
-	return cache.NewSharedIndexInformerWithOptions(
+	return cache.NewTypedSharedIndexInformer[*apiingressv3.Frontend](cache.NewSharedIndexInformerWithOptions(
 		cache.ToListWatcherWithWatchListSemantics(&cache.ListWatch{
 			ListFunc: func(opts v1.ListOptions) (runtime.Object, error) {
 				if tweakListOptions != nil {
@@ -99,17 +151,57 @@ func NewFrontendInformerWithOptions(client versioned.Interface, namespace string
 			Indexers:     options.Indexers,
 			Identifier:   identifier,
 		},
-	)
+	))
 }
 
 func (f *frontendInformer) defaultInformer(client versioned.Interface, resyncPeriod time.Duration) cache.SharedIndexInformer {
-	return NewFrontendInformerWithOptions(client, f.namespace, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, InformerName: f.factory.InformerName(), TweakListOptions: f.tweakListOptions})
+	return NewTypedFrontendInformerWithOptions(client, f.namespace, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, InformerName: f.factory.InformerName(), TweakListOptions: f.tweakListOptions})
 }
 
 func (f *frontendInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&apiingressv3.Frontend{}, f.defaultInformer)
+	return f.TypedInformer()
+}
+
+func (f *frontendInformer) TypedInformer() FrontendIndexInformer {
+	return cache.NewTypedSharedIndexInformer[*apiingressv3.Frontend](f.factory.InformerFor(&apiingressv3.Frontend{}, f.defaultInformer))
 }
 
 func (f *frontendInformer) Lister() ingressv3.FrontendLister {
 	return ingressv3.NewFrontendLister(f.Informer().GetIndexer())
+}
+
+// ToTypedFrontendInformer converts an untyped informer into a TypedFrontendInformer.
+//
+// WARNING: this conversion is only safe if the informer handles objects of type
+// *Frontend. If that is not the case, calling type-safe methods of the returned
+// TypedFrontendInformer leads to runtime panics. A safer alternative is to pass
+// around a TypedFrontendInformer instances that was obtained from a
+// SharedInformerFactory.
+func ToTypedFrontendInformer(informer FrontendInformer) TypedFrontendInformer {
+	if informer, ok := informer.(TypedFrontendInformer); ok {
+		return informer
+	}
+	return &frontendTypedInformerAdapter{informer}
+}
+
+type frontendTypedInformerAdapter struct {
+	FrontendInformer
+}
+
+func (a *frontendTypedInformerAdapter) TypedInformer() FrontendIndexInformer {
+	return cache.NewTypedSharedIndexInformer[*apiingressv3.Frontend](a.Informer())
+}
+
+// ToFrontendIndexInformer converts an untyped informer into a FrontendIndexInformer.
+//
+// WARNING: this conversion is only safe if the informer handles objects of type
+// *Frontend. If that is not the case, calling type-safe methods of the returned
+// FrontendIndexInformer leads to runtime panics. A safer alternative is to pass
+// around a FrontendIndexInformer instances that was obtained from a
+// SharedInformerFactory.
+func ToFrontendIndexInformer(informer cache.SharedIndexInformer) FrontendIndexInformer {
+	if informer, ok := informer.(FrontendIndexInformer); ok {
+		return informer
+	}
+	return cache.NewTypedSharedIndexInformer[*apiingressv3.Frontend](informer)
 }

@@ -24,17 +24,17 @@ import (
 // Interface provides access to all the informers in this group version.
 type Interface interface {
 	// Backends returns a BackendInformer.
-	Backends() BackendInformer
+	Backends() TypedBackendInformer
 	// Defaults returns a DefaultsInformer.
-	Defaults() DefaultsInformer
+	Defaults() TypedDefaultsInformer
 	// Frontends returns a FrontendInformer.
-	Frontends() FrontendInformer
+	Frontends() TypedFrontendInformer
 	// Globals returns a GlobalInformer.
-	Globals() GlobalInformer
+	Globals() TypedGlobalInformer
 	// TCPs returns a TCPInformer.
-	TCPs() TCPInformer
+	TCPs() TypedTCPInformer
 	// ValidationRules returns a ValidationRulesInformer.
-	ValidationRules() ValidationRulesInformer
+	ValidationRules() TypedValidationRulesInformer
 }
 
 type version struct {
@@ -48,32 +48,32 @@ func New(f internalinterfaces.SharedInformerFactory, namespace string, tweakList
 	return &version{factory: f, namespace: namespace, tweakListOptions: tweakListOptions}
 }
 
-// Backends returns a BackendInformer.
-func (v *version) Backends() BackendInformer {
+// Backends returns a TypedBackendInformer.
+func (v *version) Backends() TypedBackendInformer {
 	return &backendInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }
 
-// Defaults returns a DefaultsInformer.
-func (v *version) Defaults() DefaultsInformer {
+// Defaults returns a TypedDefaultsInformer.
+func (v *version) Defaults() TypedDefaultsInformer {
 	return &defaultsInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }
 
-// Frontends returns a FrontendInformer.
-func (v *version) Frontends() FrontendInformer {
+// Frontends returns a TypedFrontendInformer.
+func (v *version) Frontends() TypedFrontendInformer {
 	return &frontendInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }
 
-// Globals returns a GlobalInformer.
-func (v *version) Globals() GlobalInformer {
+// Globals returns a TypedGlobalInformer.
+func (v *version) Globals() TypedGlobalInformer {
 	return &globalInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }
 
-// TCPs returns a TCPInformer.
-func (v *version) TCPs() TCPInformer {
+// TCPs returns a TypedTCPInformer.
+func (v *version) TCPs() TypedTCPInformer {
 	return &tCPInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }
 
-// ValidationRules returns a ValidationRulesInformer.
-func (v *version) ValidationRules() ValidationRulesInformer {
+// ValidationRules returns a TypedValidationRulesInformer.
+func (v *version) ValidationRules() TypedValidationRulesInformer {
 	return &validationRulesInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }
