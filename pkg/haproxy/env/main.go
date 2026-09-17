@@ -20,7 +20,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/google/renameio"
+	"github.com/google/renameio/v2"
 
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/certs"
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"

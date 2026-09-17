@@ -12,7 +12,7 @@ require (
 	github.com/go-test/deep v1.1.1
 	github.com/google/cel-go v0.31.0
 	github.com/google/go-cmp v0.7.0
-	github.com/google/renameio v1.0.1
+	github.com/google/renameio/v2 v2.0.2
 	github.com/haproxytech/client-native/v5 v5.1.16-0.20241206145631-acb903fd9ec2
 	github.com/haproxytech/client-native/v6 v6.2.4
 	github.com/jessevdk/go-flags v1.4.0
@@ -68,6 +68,7 @@ require (
 	github.com/go-viper/mapstructure/v2 v2.5.0 // indirect
 	github.com/gofrs/flock v0.13.0 // indirect
 	github.com/google/gnostic-models v0.7.1 // indirect
+	github.com/google/renameio v1.0.1 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/haproxytech/go-logger v1.1.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
