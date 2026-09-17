@@ -20,7 +20,7 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/google/renameio"
+	"github.com/google/renameio/v2"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 )

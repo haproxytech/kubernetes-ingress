@@ -23,7 +23,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/google/renameio"
+	"github.com/google/renameio/v2"
 )
 
 type SupportVersion struct {

@@ -10,7 +10,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/google/renameio"
+	"github.com/google/renameio/v2"
 	"github.com/haproxytech/client-native/v6/runtime"
 	"github.com/haproxytech/kubernetes-ingress/pkg/fs"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/api"
