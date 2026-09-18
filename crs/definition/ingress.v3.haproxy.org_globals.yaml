@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    haproxy.org/client-native: v6.2.4
+    haproxy.org/client-native: v6.2.18
   name: globals.ingress.v3.haproxy.org
 spec:
   group: ingress.v3.haproxy.org
@@ -748,6 +748,10 @@ spec:
                   busy_polling:
                     description: busy polling
                     type: boolean
+                  fd_hard_limit:
+                    description: fd hard limit
+                    format: int64
+                    type: integer
                   max_spread_checks:
                     description: |-
                       max spread checks
@@ -1122,6 +1126,12 @@ spec:
                       - none
                       - number
                       - string
+                      type: string
+                    shards:
+                      description: |-
+                        shards
+                        Pattern: ^(by-thread|by-group|[0-9]+)$
+                      pattern: ^(by-thread|by-group|[0-9]+)$
                       type: string
                     sigalgs:
                       description: sigalgs

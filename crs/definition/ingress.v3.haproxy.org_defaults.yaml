@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    haproxy.org/client-native: v6.2.4
+    haproxy.org/client-native: v6.2.18
   name: defaults.ingress.v3.haproxy.org
 spec:
   group: ingress.v3.haproxy.org
@@ -1338,6 +1338,60 @@ spec:
                   Pattern: ^[^\s]+$
                 pattern: ^[^\s]+$
                 type: string
+              forwarded:
+                description: forwarded
+                properties:
+                  by:
+                    description: Adds the by parameter using the local address.
+                    type: boolean
+                  by_expr:
+                    description: Adds the by parameter using the specified log-format
+                      expression.
+                    type: string
+                  by_port:
+                    description: Adds the by parameter port using the local port.
+                    type: boolean
+                  by_port_expr:
+                    description: Adds the by parameter port using the specified log-format
+                      expression.
+                    type: string
+                  enabled:
+                    description: |-
+                      Enables or disables insertion of the HTTP Forwarded header field.
+                      Required: true
+                      Enum: ["enabled","disabled"]
+                    enum:
+                    - enabled
+                    - disabled
+                    type: string
+                  for:
+                    description: Adds the for parameter using the client address.
+                    type: boolean
+                  for_expr:
+                    description: Adds the for parameter using the specified log-format
+                      expression.
+                    type: string
+                  for_port:
+                    description: Adds the for parameter port using the client port.
+                    type: boolean
+                  for_port_expr:
+                    description: Adds the for parameter port using the specified log-format
+                      expression.
+                    type: string
+                  host:
+                    description: Adds the host parameter using the request authority.
+                    type: boolean
+                  host_expr:
+                    description: Adds the host parameter using the specified log-format
+                      expression.
+                    type: string
+                  proto:
+                    description: Adds the proto parameter using the incoming request
+                      protocol.
+                    type: boolean
+                required:
+                - enabled
+                type: object
               forwardfor:
                 description: forwardfor
                 properties:
@@ -2896,7 +2950,7 @@ spec:
                 - safe
                 type: string
               http_send_name_header:
-                description: http send name header
+                description: Add the server name to a request
                 type: string
               http_use_proxy_header:
                 description: |-
@@ -3127,7 +3181,8 @@ spec:
                 - disabled
                 type: string
               max_keep_alive_queue:
-                description: max keep alive queue
+                description: Maximum server queue size for maintaining keep-alive
+                  connections
                 format: int64
                 type: integer
               maxconn:
@@ -3316,7 +3371,8 @@ spec:
                 format: int64
                 type: integer
               retry_on:
-                description: retry on
+                description: Specify when to attempt to automatically retry a failed
+                  request
                 type: string
               server_fin_timeout:
                 description: |-

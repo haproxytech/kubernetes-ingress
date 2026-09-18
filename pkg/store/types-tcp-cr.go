@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/haproxytech/client-native/v6/models"
+	"github.com/haproxytech/go-method-gen/pkg/eqdiff"
 	v3 "github.com/haproxytech/kubernetes-ingress/crs/api/ingress/v3"
 	rc "github.com/haproxytech/kubernetes-ingress/pkg/reference-counter"
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
@@ -53,7 +54,7 @@ type TCPs struct {
 	Items        TCPResourceList `json:"items"`
 }
 
-func (a *TCPs) Equal(b *TCPs, opt ...models.Options) bool {
+func (a *TCPs) Equal(b *TCPs, opt ...eqdiff.GoMethodGenOptions) bool {
 	if a == nil && b == nil {
 		return true
 	}
@@ -76,7 +77,7 @@ func (a *TCPs) Equal(b *TCPs, opt ...models.Options) bool {
 	return utils.EqualSlice(a.Items, b.Items)
 }
 
-func (a *TCPResource) Equal(b *TCPResource, opt ...models.Options) bool {
+func (a *TCPResource) Equal(b *TCPResource, opt ...eqdiff.GoMethodGenOptions) bool {
 	return a.TCPModel.Equal(b.TCPModel, opt...)
 }
 

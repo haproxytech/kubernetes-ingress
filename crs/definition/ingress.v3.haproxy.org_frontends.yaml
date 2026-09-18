@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    haproxy.org/client-native: v6.2.4
+    haproxy.org/client-native: v6.2.18
   name: frontends.ingress.v3.haproxy.org
 spec:
   group: ingress.v3.haproxy.org
@@ -97,7 +97,7 @@ spec:
                     BackendSwitchingRule Backend Switching Rule
 
                     HAProxy backend switching rule configuration (corresponds to use_backend directive)
-                    Example: {"cond":"if","cond_test":"{ req_ssl_sni -i www.example.com }","index":0,"name":"test_backend"}
+                    Example: {"cond":"if","cond_test":"{ req.ssl_sni -i www.example.com }","index":0,"name":"test_backend"}
 
                     swagger:model backend_switching_rule
                   properties:
@@ -423,6 +423,12 @@ spec:
                       - none
                       - number
                       - string
+                      type: string
+                    shards:
+                      description: |-
+                        shards
+                        Pattern: ^(by-thread|by-group|[0-9]+)$
+                      pattern: ^(by-thread|by-group|[0-9]+)$
                       type: string
                     sigalgs:
                       description: sigalgs
@@ -969,6 +975,17 @@ spec:
                         It follows the HAProxy size format and is expressed in bytes.
                       format: int64
                       type: integer
+                    lua_args:
+                      description: Optional arguments passed to the Lua filter constructor.
+                      items:
+                        type: string
+                      type: array
+                    lua_name:
+                      description: |-
+                        Name of the Lua filter as registered by core.register_filter(), used in the 'filter lua.<name>' directive.
+                        Pattern: ^[^\s]+$
+                      pattern: ^[^\s]+$
+                      type: string
                     metadata:
                       x-kubernetes-preserve-unknown-fields: true
                     min_size:
@@ -1014,7 +1031,7 @@ spec:
                       description: |-
                         type
                         Required: true
-                        Enum: ["bwlim-in","bwlim-out","cache","compression","fcgi-app","spoe","trace"]
+                        Enum: ["bwlim-in","bwlim-out","cache","compression","fcgi-app","spoe","trace","lua"]
                       enum:
                       - bwlim-in
                       - bwlim-out
@@ -1023,11 +1040,66 @@ spec:
                       - fcgi-app
                       - spoe
                       - trace
+                      - lua
                       type: string
                   required:
                   - type
                   type: object
                 type: array
+              forwarded:
+                description: forwarded
+                properties:
+                  by:
+                    description: Adds the by parameter using the local address.
+                    type: boolean
+                  by_expr:
+                    description: Adds the by parameter using the specified log-format
+                      expression.
+                    type: string
+                  by_port:
+                    description: Adds the by parameter port using the local port.
+                    type: boolean
+                  by_port_expr:
+                    description: Adds the by parameter port using the specified log-format
+                      expression.
+                    type: string
+                  enabled:
+                    description: |-
+                      Enables or disables insertion of the HTTP Forwarded header field.
+                      Required: true
+                      Enum: ["enabled","disabled"]
+                    enum:
+                    - enabled
+                    - disabled
+                    type: string
+                  for:
+                    description: Adds the for parameter using the client address.
+                    type: boolean
+                  for_expr:
+                    description: Adds the for parameter using the specified log-format
+                      expression.
+                    type: string
+                  for_port:
+                    description: Adds the for parameter port using the client port.
+                    type: boolean
+                  for_port_expr:
+                    description: Adds the for parameter port using the specified log-format
+                      expression.
+                    type: string
+                  host:
+                    description: Adds the host parameter using the request authority.
+                    type: boolean
+                  host_expr:
+                    description: Adds the host parameter using the specified log-format
+                      expression.
+                    type: string
+                  proto:
+                    description: Adds the proto parameter using the incoming request
+                      protocol.
+                    type: boolean
+                required:
+                - enabled
+                type: object
               forwardfor:
                 description: forwardfor
                 properties:
@@ -2359,8 +2431,8 @@ spec:
               log_tag:
                 description: |-
                   log tag
-                  Pattern: ^[A-Za-z0-9-_.:]+$
-                pattern: ^[A-Za-z0-9-_.:]+$
+                  Pattern: ^[A-Za-z0-9-_.:${}"]+$
+                pattern: ^[A-Za-z0-9-_.:${}"]+$
                 type: string
               log_target_list:
                 description: log target list
