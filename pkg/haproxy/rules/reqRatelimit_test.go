@@ -206,3 +206,53 @@ func TestReqRateLimit_WhitelistFields(t *testing.T) {
 		})
 	}
 }
+
+// TestReqRateLimit_CondTest tests the generated deny-rule condition string.
+// It validates that:
+//   - The base condition is the rate check alone
+//   - Source whitelists append negated src matches
+//   - Excluded path suffixes append a negated path_end match, so excluded
+//     requests are never denied
+//   - Whitelist and path exclusion compose in a single condition
+func TestReqRateLimit_CondTest(t *testing.T) {
+	tests := []struct {
+		name             string
+		rateLimit        ReqRateLimit
+		expectedCondTest string
+	}{
+		{
+			name: "rate check only",
+			rateLimit: ReqRateLimit{
+				TableName: "RateLimit-60000",
+				ReqsLimit: 100,
+			},
+			expectedCondTest: "{ sc0_http_req_rate(RateLimit-60000) gt 100 }",
+		},
+		{
+			name: "with excluded path suffixes",
+			rateLimit: ReqRateLimit{
+				TableName:      "RateLimit-60000",
+				ReqsLimit:      100,
+				ExcludePathEnd: []string{".css", ".js", "robots.txt"},
+			},
+			expectedCondTest: "{ sc0_http_req_rate(RateLimit-60000) gt 100 } !{ path_end .css .js robots.txt }",
+		},
+		{
+			name: "with whitelist and excluded path suffixes",
+			rateLimit: ReqRateLimit{
+				TableName:      "RateLimit-60000",
+				ReqsLimit:      100,
+				WhitelistIPs:   []string{"10.0.0.0/8"},
+				WhitelistMaps:  []maps.Path{maps.Path("patterns/whitelist")},
+				ExcludePathEnd: []string{".png"},
+			},
+			expectedCondTest: "{ sc0_http_req_rate(RateLimit-60000) gt 100 } !{ src 10.0.0.0/8 } !{ src -f patterns/whitelist } !{ path_end .png }",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.expectedCondTest, tt.rateLimit.condTest())
+		})
+	}
+}

@@ -289,3 +289,153 @@ func TestReqRateLimit_AllAnnotations(t *testing.T) {
 	assert.Contains(t, reqRateLimit.limit.WhitelistIPs, "192.168.1.100")
 	assert.NotNil(t, reqRateLimit.track.TableSize)
 }
+
+// TestReqRateLimit_ExcludePathEnd tests the rate-limit-exclude-path-end annotation processing.
+// It validates that:
+//   - Comma-separated and space-separated suffix lists are parsed correctly
+//   - Suffixes are stored on BOTH the track rule (so excluded requests are not
+//     counted) and the limit rule (so they are not denied)
+//   - The annotation fails when rate-limit-requests is not configured first
+//   - Entries with characters outside [A-Za-z0-9._/-] are rejected (config injection guard)
+//   - An input with no usable entries is rejected
+func TestReqRateLimit_ExcludePathEnd(t *testing.T) {
+	tests := []struct {
+		name             string
+		annotations      map[string]string
+		wantErr          bool
+		expectedSuffixes []string
+	}{
+		{
+			name: "comma separated suffixes",
+			annotations: map[string]string{
+				"rate-limit-requests":         "100",
+				"rate-limit-exclude-path-end": ".css, .js, robots.txt",
+			},
+			expectedSuffixes: []string{".css", ".js", "robots.txt"},
+		},
+		{
+			name: "space separated suffixes",
+			annotations: map[string]string{
+				"rate-limit-requests":         "100",
+				"rate-limit-exclude-path-end": ".css .js .woff2",
+			},
+			expectedSuffixes: []string{".css", ".js", ".woff2"},
+		},
+		{
+			name: "missing rate-limit-requests",
+			annotations: map[string]string{
+				"rate-limit-exclude-path-end": ".css",
+			},
+			wantErr: true,
+		},
+		{
+			name: "invalid characters rejected",
+			annotations: map[string]string{
+				"rate-limit-requests":         "100",
+				"rate-limit-exclude-path-end": ".css }{ always_true",
+			},
+			wantErr: true,
+		},
+		{
+			name: "empty list rejected",
+			annotations: map[string]string{
+				"rate-limit-requests":         "100",
+				"rate-limit-exclude-path-end": ", ,",
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockMaps, err := maps.New("/tmp/maps", nil)
+			require.NoError(t, err)
+			rulesList := &rules.List{}
+			reqRateLimit := NewReqRateLimit(rulesList, mockMaps)
+
+			if _, ok := tt.annotations["rate-limit-requests"]; ok {
+				ann := reqRateLimit.NewAnnotation("rate-limit-requests")
+				require.NoError(t, ann.Process(store.K8s{}, tt.annotations))
+			}
+
+			ann := reqRateLimit.NewAnnotation("rate-limit-exclude-path-end")
+			err = ann.Process(store.K8s{}, tt.annotations)
+
+			if tt.wantErr {
+				assert.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
+			assert.Equal(t, tt.expectedSuffixes, reqRateLimit.limit.ExcludePathEnd)
+			assert.Equal(t, tt.expectedSuffixes, reqRateLimit.track.ExcludePathEnd)
+		})
+	}
+}
+
+// TestReqRateLimit_ExcludePathEndCascade tests the multi-source semantics of
+// rate-limit-exclude-path-end (Ingress annotations first, ConfigMap second).
+// It validates that:
+// - A ConfigMap-only value acts as the default for every ingress
+// - A plain Ingress value replaces the ConfigMap default entirely
+// - An Ingress value starting with '+' extends the ConfigMap default
+// - A '+' value with nothing below it still works on its own
+func TestReqRateLimit_ExcludePathEndCascade(t *testing.T) {
+	tests := []struct {
+		name             string
+		ingressAnns      map[string]string
+		configMapAnns    map[string]string
+		expectedSuffixes []string
+	}{
+		{
+			name:             "configmap default only",
+			ingressAnns:      map[string]string{"rate-limit-requests": "100"},
+			configMapAnns:    map[string]string{"rate-limit-exclude-path-end": ".css .js"},
+			expectedSuffixes: []string{".css", ".js"},
+		},
+		{
+			name: "ingress replaces configmap default",
+			ingressAnns: map[string]string{
+				"rate-limit-requests":         "100",
+				"rate-limit-exclude-path-end": ".pdf",
+			},
+			configMapAnns:    map[string]string{"rate-limit-exclude-path-end": ".css .js"},
+			expectedSuffixes: []string{".pdf"},
+		},
+		{
+			name: "ingress extends configmap default with + prefix",
+			ingressAnns: map[string]string{
+				"rate-limit-requests":         "100",
+				"rate-limit-exclude-path-end": "+.pdf .zip",
+			},
+			configMapAnns:    map[string]string{"rate-limit-exclude-path-end": ".css .js"},
+			expectedSuffixes: []string{".pdf", ".zip", ".css", ".js"},
+		},
+		{
+			name: "+ prefix with no configmap default",
+			ingressAnns: map[string]string{
+				"rate-limit-requests":         "100",
+				"rate-limit-exclude-path-end": "+.pdf",
+			},
+			configMapAnns:    map[string]string{},
+			expectedSuffixes: []string{".pdf"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockMaps, err := maps.New("/tmp/maps", nil)
+			require.NoError(t, err)
+			rulesList := &rules.List{}
+			reqRateLimit := NewReqRateLimit(rulesList, mockMaps)
+
+			ann := reqRateLimit.NewAnnotation("rate-limit-requests")
+			require.NoError(t, ann.Process(store.K8s{}, tt.ingressAnns, tt.configMapAnns))
+
+			ann = reqRateLimit.NewAnnotation("rate-limit-exclude-path-end")
+			require.NoError(t, ann.Process(store.K8s{}, tt.ingressAnns, tt.configMapAnns))
+
+			assert.Equal(t, tt.expectedSuffixes, reqRateLimit.limit.ExcludePathEnd)
+			assert.Equal(t, tt.expectedSuffixes, reqRateLimit.track.ExcludePathEnd)
+		})
+	}
+}

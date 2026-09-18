@@ -18,6 +18,7 @@ type ReqRateLimit struct {
 	DenyStatusCode int64
 	WhitelistIPs   []string    // Direct IPs and CIDRs
 	WhitelistMaps  []maps.Path // Pattern file references
+	ExcludePathEnd []string    // Path suffixes excluded from rate limiting
 }
 
 const (
@@ -37,12 +38,25 @@ func (r ReqRateLimit) Create(client api.HAProxyClient, frontend *models.Frontend
 	if r.ReqsLimit == 0 {
 		return nil
 	}
-	condTest := fmt.Sprintf("{ sc0_http_req_rate(%s) gt %d }", r.TableName, r.ReqsLimit)
 
 	err := r.applyDefaults()
 	if err != nil {
 		return err
 	}
+
+	httpRule := models.HTTPRequestRule{
+		Type:       "deny",
+		DenyStatus: utils.PtrInt64(r.DenyStatusCode),
+		Cond:       "if",
+		CondTest:   r.condTest(),
+	}
+	return client.FrontendHTTPRequestRuleCreate(0, frontend.Name, httpRule, ingressACL)
+}
+
+// condTest builds the HAProxy condition of the deny rule: the rate check,
+// optionally narrowed by the source whitelist and the path-suffix exclusion.
+func (r ReqRateLimit) condTest() string {
+	condTest := fmt.Sprintf("{ sc0_http_req_rate(%s) gt %d }", r.TableName, r.ReqsLimit)
 
 	// Build whitelist conditions if configured
 	// If whitelist is set, only apply rate limiting if source IP is NOT in the whitelist
@@ -64,13 +78,14 @@ func (r ReqRateLimit) Create(client api.HAProxyClient, frontend *models.Frontend
 		condTest = fmt.Sprintf("%s %s", condTest, strings.Join(whitelistConditions, " "))
 	}
 
-	httpRule := models.HTTPRequestRule{
-		Type:       "deny",
-		DenyStatus: utils.PtrInt64(r.DenyStatusCode),
-		Cond:       "if",
-		CondTest:   condTest,
+	// Never deny requests whose path ends with an excluded suffix. The
+	// matching ReqTrack rule skips them too, so they are neither counted
+	// nor rate limited.
+	if len(r.ExcludePathEnd) > 0 {
+		condTest = fmt.Sprintf("%s !{ path_end %s }", condTest, strings.Join(r.ExcludePathEnd, " "))
 	}
-	return client.FrontendHTTPRequestRuleCreate(0, frontend.Name, httpRule, ingressACL)
+
+	return condTest
 }
 
 func (r *ReqRateLimit) applyDefaults() error {
