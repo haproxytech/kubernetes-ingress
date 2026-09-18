@@ -1,8 +1,10 @@
 package ingress
 
 import (
+	"bytes"
 	"fmt"
 	"strings"
+	"unicode"
 
 	"github.com/haproxytech/kubernetes-ingress/pkg/annotations/common"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/rules"
@@ -76,15 +78,24 @@ func (a ReqAuthAnn) Process(k store.K8s, annotations ...map[string]string) (err 
 		}
 		a.parent.authRule.Credentials = make(map[string][]byte)
 		for u, pwd := range secret.Data {
-			// If the pwd length is 0, we do not create the user in the userlist
+			pwd = bytes.TrimSpace(pwd)
+			// If the pwd is empty or has spaces, we do not create the user in the userlist
 			// This is not a valid setting
-			if len(pwd) > 0 {
-				if pwd[len(pwd)-1] == '\n' {
-					// logger.Warningf("Ingress %s/%s: basic-auth: password for user %s ends with '\\n'. Ignoring last character.", ingress.Namespace, ingress.Name, u)
-					pwd = pwd[:len(pwd)-1]
+			if len(pwd) < 1 || bytes.ContainsFunc(pwd, unicode.IsSpace) {
+				msg := fmt.Sprintf(
+					"basic-auth: invalid password for user %s in secret %s/%s: password is empty or contains whitespace; ignoring it",
+					u, ns, name,
+				)
+				if a.parent.ingress != nil {
+					msg = fmt.Sprintf(
+						"Ingress %s/%s: %s",
+						a.parent.ingress.Namespace, a.parent.ingress.Name, msg,
+					)
 				}
-				a.parent.authRule.Credentials[u] = pwd
+				logger.Warning(msg)
+				continue
 			}
+			a.parent.authRule.Credentials[u] = pwd
 		}
 	default:
 		err = fmt.Errorf("unknown auth-type annotation '%s'", a.name)
