@@ -126,7 +126,8 @@ func (suite *UseBackendSuite) UseBackendFixture() (eventChan chan k8ssync.SyncDa
 		WithUpdateStatusManager(&updateStatusManager{}).
 		WithArgs(osArgs).Build()
 
-	go controller.Start()
+	controller.Start()
+	go controller.SyncData()
 
 	// Now sending store events for test setup
 	ns := store.Namespace{Name: "ns", Status: store.ADDED}
@@ -239,7 +240,8 @@ func (suite *UseBackendSuite) NonWildcardHostFixture() (eventChan chan k8ssync.S
 		WithUpdateStatusManager(&updateStatusManager{}).
 		WithArgs(osArgs).Build()
 
-	go controller.Start()
+	controller.Start()
+	go controller.SyncData()
 
 	// Now sending store events for test setup
 	ns := store.Namespace{Name: "ns", Status: store.ADDED}
@@ -345,7 +347,8 @@ func (suite *UseBackendSuite) WildcardHostFixture() (eventChan chan k8ssync.Sync
 		WithUpdateStatusManager(&updateStatusManager{}).
 		WithArgs(osArgs).Build()
 
-	go controller.Start()
+	controller.Start()
+	go controller.SyncData()
 
 	// Now sending store events for test setup
 	ns := store.Namespace{Name: "ns", Status: store.ADDED}
