@@ -57,8 +57,8 @@ func (q *Quic) Update(k store.K8s, h haproxy.HAProxy, a annotations.Annotations)
 				return addr
 			}(),
 			Port: utils.PtrInt64(q.QuicBindPort),
+			Name: QUIC4BIND,
 			BindParams: models.BindParams{
-				Name:           QUIC4BIND,
 				Ssl:            true,
 				SslCertificate: q.CertDir,
 				Alpn:           "h3",
@@ -78,8 +78,8 @@ func (q *Quic) Update(k store.K8s, h haproxy.HAProxy, a annotations.Annotations)
 				return addr
 			}(),
 			Port: utils.PtrInt64(q.QuicBindPort),
+			Name: QUIC6BIND,
 			BindParams: models.BindParams{
-				Name:           QUIC6BIND,
 				Ssl:            true,
 				SslCertificate: q.CertDir,
 				Alpn:           "h3",

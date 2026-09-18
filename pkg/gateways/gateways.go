@@ -282,7 +282,8 @@ MAIN_LOOP:
 						}
 						return "0.0.0.0"
 					}(),
-					BindParams: models.BindParams{Name: "v4"},
+					BindParams: models.BindParams{},
+					Name:       "v4",
 				},
 			)
 			if errBinCreate != nil {
@@ -300,7 +301,8 @@ MAIN_LOOP:
 						}
 						return ":::"
 					}(),
-					BindParams: models.BindParams{Name: "v6"},
+					BindParams: models.BindParams{},
+					Name:       "v6",
 				},
 			)
 			if errBinCreate != nil {

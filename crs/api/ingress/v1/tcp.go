@@ -200,39 +200,27 @@ func (a TCPModel) Equal(b TCPModel, opt ...models.Options) bool {
 		}
 	}
 
-	if !a.Frontend.Acls.Equal(b.Frontend.Acls, models.Options{
-		NilSameAsEmpty: true,
-	}) {
+	if !a.Frontend.Acls.Equal(b.Frontend.Acls) {
 		return false
 	}
 
-	if !a.Frontend.BackendSwitchingRules.Equal(b.Frontend.BackendSwitchingRules, models.Options{
-		NilSameAsEmpty: true,
-	}) {
+	if !a.Frontend.BackendSwitchingRules.Equal(b.Frontend.BackendSwitchingRules) {
 		return false
 	}
 
-	if !a.Frontend.Captures.Equal(b.Frontend.Captures, models.Options{
-		NilSameAsEmpty: true,
-	}) {
+	if !a.Frontend.Captures.Equal(b.Frontend.Captures) {
 		return false
 	}
 
-	if !a.Frontend.Filters.Equal(b.Frontend.Filters, models.Options{
-		NilSameAsEmpty: true,
-	}) {
+	if !a.Frontend.Filters.Equal(b.Frontend.Filters) {
 		return false
 	}
 
-	if !a.Frontend.LogTargets.Equal(b.Frontend.LogTargets, models.Options{
-		NilSameAsEmpty: true,
-	}) {
+	if !a.Frontend.LogTargets.Equal(b.Frontend.LogTargets) {
 		return false
 	}
 
-	if !a.Frontend.TCPRequestRules.Equal(b.Frontend.TCPRequestRules, models.Options{
-		NilSameAsEmpty: true,
-	}) {
+	if !a.Frontend.TCPRequestRules.Equal(b.Frontend.TCPRequestRules) {
 		return false
 	}
 

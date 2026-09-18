@@ -39,25 +39,22 @@ func (suite *FrontendSuite) Test_CR_Frontend() {
 	var portTest int64 = 9080
 	binds := map[string]models.Bind{
 		"v4": {
-			BindParams: models.BindParams{
-				Name: "v4",
-			},
-			Address: "0.0.0.0",
-			Port:    &port,
+			BindParams: models.BindParams{},
+			Name:       "v4",
+			Address:    "0.0.0.0",
+			Port:       &port,
 		},
 		"v6": {
-			BindParams: models.BindParams{
-				Name: "v6",
-			},
-			Address: "::",
-			Port:    &port,
+			BindParams: models.BindParams{},
+			Name:       "v6",
+			Address:    "::",
+			Port:       &port,
 		},
 		"test-http": {
-			BindParams: models.BindParams{
-				Name: "test-http",
-			},
-			Address: "127.0.0.1",
-			Port:    &portTest,
+			BindParams: models.BindParams{},
+			Name:       "test-http",
+			Address:    "127.0.0.1",
+			Port:       &portTest,
 		},
 	}
 

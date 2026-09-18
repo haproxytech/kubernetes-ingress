@@ -26,6 +26,7 @@ import (
 	actions "github.com/haproxytech/client-native/v6/config-parser/parsers/actions"
 	tcptypes "github.com/haproxytech/client-native/v6/config-parser/parsers/tcp/types"
 	"github.com/haproxytech/client-native/v6/config-parser/types"
+	"github.com/haproxytech/client-native/v6/models"
 	"github.com/haproxytech/kubernetes-ingress/deploy/tests/e2e"
 	"github.com/stretchr/testify/suite"
 )
@@ -183,14 +184,14 @@ func (suite *TCPSuiteBackendSwitchingRule) Test_CRD_TCP_BackendSwitchingRule_Wit
 			}
 
 			// Add Acls checks
-			acls := []types.ACL{
+			acls := []models.ACL{
 				{
-					Name:      "switch_be_0",
+					ACLName:   "switch_be_0",
 					Criterion: "req_ssl_sni",
 					Value:     "-i backend0.example.com",
 				},
 				{
-					Name:      "switch_be_1",
+					ACLName:   "switch_be_1",
 					Criterion: "req_ssl_sni",
 					Value:     "-i backend1.example.com",
 				},

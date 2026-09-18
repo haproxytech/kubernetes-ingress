@@ -68,9 +68,9 @@ func (handler HTTPBind) Update(k store.K8s, h haproxy.HAProxy, a annotations.Ann
 		errors.Add(h.FrontendBindCreate("stats",
 			models.Bind{
 				BindParams: models.BindParams{
-					Name: "v6",
 					V4v6: false,
 				},
+				Name:    "v6",
 				Address: ":::1024",
 			}))
 	}
@@ -80,9 +80,9 @@ func (handler HTTPBind) Update(k store.K8s, h haproxy.HAProxy, a annotations.Ann
 		for proto, addr := range protos {
 			bind := models.Bind{
 				BindParams: models.BindParams{
-					Name:   proto,
 					Thread: thread,
 				},
+				Name:    proto,
 				Address: addr,
 				Port:    utils.PtrInt64(ftPort),
 			}

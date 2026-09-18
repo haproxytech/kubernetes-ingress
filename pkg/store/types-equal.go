@@ -19,7 +19,7 @@ package store
 import (
 	"bytes"
 
-	"github.com/haproxytech/client-native/v6/models"
+	"github.com/haproxytech/go-method-gen/pkg/eqdiff"
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
 )
 
@@ -288,7 +288,7 @@ func (labelSelector *LabelSelector) Equal(other *LabelSelector) bool {
 	return labelSelector == nil && other == nil || (NoNilPointer(labelSelector, other) && utils.EqualMap(labelSelector.MatchLabels, other.MatchLabels) && utils.EqualSlice(labelSelector.MatchExpressions, other.MatchExpressions))
 }
 
-func (lsr LabelSelectorRequirement) Equal(other LabelSelectorRequirement, opt ...models.Options) bool {
+func (lsr LabelSelectorRequirement) Equal(other LabelSelectorRequirement, opt ...eqdiff.GoMethodGenOptions) bool {
 	return lsr.Key == other.Key && lsr.Operator == other.Operator && utils.EqualSliceComparable(lsr.Values, other.Values)
 }
 
@@ -296,7 +296,7 @@ func (ns *Namespace) Equal(other *Namespace) bool {
 	return ns == nil && other == nil || (NoNilPointer(ns, other) && ns.Name == other.Name && utils.EqualMap(ns.Labels, other.Labels))
 }
 
-func (refto ReferenceGrantTo) Equal(other ReferenceGrantTo, opt ...models.Options) bool {
+func (refto ReferenceGrantTo) Equal(other ReferenceGrantTo, opt ...eqdiff.GoMethodGenOptions) bool {
 	return refto.Group == other.Group && refto.Kind == other.Kind && utils.EqualPointers(refto.Name, other.Name)
 }
 

@@ -258,19 +258,19 @@ func (c *HAProxyController) setToReady() {
 	logger.Panic(c.haproxy.FrontendBindCreate("healthz",
 		models.Bind{
 			BindParams: models.BindParams{
-				Name:   "v4",
 				Thread: c.osArgs.HealthzBindThread,
 			},
+			Name:    "v4",
 			Address: fmt.Sprintf("0.0.0.0:%d", healthzPort),
 		}))
 	if !c.osArgs.DisableIPV6 {
 		logger.Panic(c.haproxy.FrontendBindCreate("healthz",
 			models.Bind{
 				BindParams: models.BindParams{
-					Name:   "v6",
 					V4v6:   true,
 					Thread: c.osArgs.HealthzBindThread,
 				},
+				Name:    "v6",
 				Address: fmt.Sprintf(":::%d", healthzPort),
 			}))
 	}
@@ -279,9 +279,9 @@ func (c *HAProxyController) setToReady() {
 		"stats",
 		models.Bind{
 			BindParams: models.BindParams{
-				Name:   "stats",
 				Thread: c.osArgs.StatsBindThread,
 			},
+			Name:    "stats",
 			Address: fmt.Sprintf("*:%d", c.osArgs.StatsBindPort),
 		},
 	))

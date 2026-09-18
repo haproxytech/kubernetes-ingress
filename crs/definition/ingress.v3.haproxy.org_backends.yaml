@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    haproxy.org/client-native: v6.2.4
+    haproxy.org/client-native: v6.4.2
   name: backends.ingress.v3.haproxy.org
 spec:
   group: ingress.v3.haproxy.org
@@ -406,6 +406,9 @@ spec:
                         - enabled
                         - disabled
                       type: string
+                    cc:
+                      description: cc
+                      type: string
                     check:
                       description: |-
                         check
@@ -461,6 +464,14 @@ spec:
                         check proto
                         Pattern: ^[^\s]+$
                       pattern: ^[^\s]+$
+                      type: string
+                    check_sni_auto:
+                      description: |-
+                        check sni auto
+                        Enum: ["enabled","disabled"]
+                      enum:
+                        - enabled
+                        - disabled
                       type: string
                     check_via_socks4:
                       description: |-
@@ -610,6 +621,14 @@ spec:
                       format: int64
                       minimum: 0
                       type: integer
+                    ktls:
+                      description: |-
+                        ktls
+                        Enum: ["on","off"]
+                      enum:
+                        - "on"
+                        - "off"
+                      type: string
                     log-bufsize:
                       description: log bufsize
                       format: int64
@@ -764,8 +783,35 @@ spec:
                       items:
                         type: string
                       type: array
+                    quic-cc-algo:
+                      description: |-
+                        quic cc algo
+                        Enum: ["cubic","newreno","bbr","nocc"]
+                      enum:
+                        - cubic
+                        - newreno
+                        - bbr
+                        - nocc
+                      type: string
+                    quic_cc_algo_max_window:
+                      description: |-
+                        quic cc algo max window
+                        Maximum: 4.194304e+06
+                        Minimum: 10
+                      format: int64
+                      maximum: 4194304
+                      minimum: 10
+                      type: integer
                     redir:
                       description: redir
+                      type: string
+                    renegotiate:
+                      description: |-
+                        Toggles the secure renegotiation mechanism for an SSL backend.
+                        Enum: ["enabled","disabled"]
+                      enum:
+                        - enabled
+                        - disabled
                       type: string
                     resolve-net:
                       description: |-
@@ -866,6 +912,14 @@ spec:
                         Pattern: ^[^\s]+$
                       pattern: ^[^\s]+$
                       type: string
+                    sni_auto:
+                      description: |-
+                        sni auto
+                        Enum: ["enabled","disabled"]
+                      enum:
+                        - enabled
+                        - disabled
+                      type: string
                     socks4:
                       description: |-
                         socks4
@@ -944,6 +998,12 @@ spec:
                     strict-maxconn:
                       description: strict maxconn
                       type: boolean
+                    tcp_md5sig:
+                      description: |-
+                        tcp md5sig
+                        Pattern: ^[^\s]+$
+                      pattern: ^[^\s]+$
+                      type: string
                     tcp_ut:
                       description: |-
                         tcp ut
@@ -1300,6 +1360,17 @@ spec:
                           It follows the HAProxy size format and is expressed in bytes.
                         format: int64
                         type: integer
+                      lua_args:
+                        description: Optional arguments passed to the Lua filter constructor.
+                        items:
+                          type: string
+                        type: array
+                      lua_name:
+                        description: |-
+                          Name of the Lua filter as registered by core.register_filter(), used in the 'filter lua.<name>' directive.
+                          Pattern: ^[^\s]+$
+                        pattern: ^[^\s]+$
+                        type: string
                       metadata:
                         x-kubernetes-preserve-unknown-fields: true
                       min_size:
@@ -1329,6 +1400,10 @@ spec:
                       trace_hexdump:
                         description: trace hexdump
                         type: boolean
+                      trace_max_fwd:
+                        description: trace max fwd
+                        format: int64
+                        type: integer
                       trace_name:
                         description: |-
                           trace name
@@ -1345,18 +1420,55 @@ spec:
                         description: |-
                           type
                           Required: true
-                          Enum: ["bwlim-in","bwlim-out","cache","compression","fcgi-app","spoe","trace"]
+                          Enum: ["bwlim-in","bwlim-out","cache","compression","comp-req","comp-res","fcgi-app","spoe","trace","lua"]
                         enum:
                           - bwlim-in
                           - bwlim-out
                           - cache
                           - compression
+                          - comp-req
+                          - comp-res
                           - fcgi-app
                           - spoe
                           - trace
+                          - lua
                         type: string
                     required:
                       - type
+                    type: object
+                  type: array
+                filter_sequence_list:
+                  description: filter sequence list
+                  items:
+                    description: |-
+                      FilterSequence Filter Sequence
+
+                      Specifies in which order filters declared on the proxy should be executed
+                      for the request or response path. Corresponds to the HAProxy filter-sequence directive.
+
+                      swagger:model filter_sequence
+                    properties:
+                      direction:
+                        description: |-
+                          direction
+                          Required: true
+                          Enum: ["request","response"]
+                        enum:
+                          - request
+                          - response
+                        type: string
+                      filters:
+                        description: |-
+                          filters
+                          Required: true
+                        items:
+                          type: string
+                        type: array
+                      metadata:
+                        x-kubernetes-preserve-unknown-fields: true
+                    required:
+                      - direction
+                      - filters
                     type: object
                   type: array
                 force_persist:
@@ -1407,6 +1519,54 @@ spec:
                       - cond_test
                     type: object
                   type: array
+                forwarded:
+                  description: forwarded
+                  properties:
+                    by:
+                      description: Adds the by parameter using the local address.
+                      type: boolean
+                    by_expr:
+                      description: Adds the by parameter using the specified log-format expression.
+                      type: string
+                    by_port:
+                      description: Adds the by parameter port using the local port.
+                      type: boolean
+                    by_port_expr:
+                      description: Adds the by parameter port using the specified log-format expression.
+                      type: string
+                    enabled:
+                      description: |-
+                        Enables or disables insertion of the HTTP Forwarded header field.
+                        Required: true
+                        Enum: ["enabled","disabled"]
+                      enum:
+                        - enabled
+                        - disabled
+                      type: string
+                    for:
+                      description: Adds the for parameter using the client address.
+                      type: boolean
+                    for_expr:
+                      description: Adds the for parameter using the specified log-format expression.
+                      type: string
+                    for_port:
+                      description: Adds the for parameter port using the client port.
+                      type: boolean
+                    for_port_expr:
+                      description: Adds the for parameter port using the specified log-format expression.
+                      type: string
+                    host:
+                      description: Adds the host parameter using the request authority.
+                      type: boolean
+                    host_expr:
+                      description: Adds the host parameter using the specified log-format expression.
+                      type: string
+                    proto:
+                      description: Adds the proto parameter using the incoming request protocol.
+                      type: boolean
+                  required:
+                    - enabled
+                  type: object
                 forwardfor:
                   description: forwardfor
                   properties:
@@ -1527,16 +1687,6 @@ spec:
                     - enabled
                     - disabled
                   type: string
-                http-use-htx:
-                  description: |-
-                    http use htx
-                    Pattern: ^[^\s]+$
-                    Enum: ["enabled","disabled"]
-                  enum:
-                    - enabled
-                    - disabled
-                  pattern: ^[^\s]+$
-                  type: string
                 http_after_response_rule_list:
                   description: HTTP after response rule list
                   items:
@@ -1585,6 +1735,9 @@ spec:
                       cond_test:
                         description: cond test
                         type: string
+                      hdr_expr:
+                        description: hdr expr
+                        type: string
                       hdr_format:
                         description: hdr format
                         type: string
@@ -1596,6 +1749,9 @@ spec:
                         type: string
                       hdr_name:
                         description: hdr name
+                        type: string
+                      hdr_prefix:
+                        description: hdr prefix
                         type: string
                       log_level:
                         description: |-
@@ -1611,6 +1767,9 @@ spec:
                           - info
                           - debug
                           - silent
+                        type: string
+                      log_profile:
+                        description: log profile
                         type: string
                       map_file:
                         description: |-
@@ -1671,13 +1830,15 @@ spec:
                         description: |-
                           type
                           Required: true
-                          Enum: ["add-header","allow","capture","del-acl","del-header","del-map","replace-header","replace-value","sc-add-gpc","sc-inc-gpc","sc-inc-gpc0","sc-inc-gpc1","sc-set-gpt","sc-set-gpt0","set-header","set-log-level","set-map","set-status","set-var","set-var-fmt","strict-mode","unset-var","do-log"]
+                          Enum: ["add-header","add-headers-bin","allow","capture","del-acl","del-header","del-headers-bin","del-map","replace-header","replace-value","sc-add-gpc","sc-inc-gpc","sc-inc-gpc0","sc-inc-gpc1","sc-set-gpt","sc-set-gpt0","set-header","set-headers-bin","set-log-level","set-map","set-status","set-var","set-var-fmt","strict-mode","unset-var","do-log"]
                         enum:
                           - add-header
+                          - add-headers-bin
                           - allow
                           - capture
                           - del-acl
                           - del-header
+                          - del-headers-bin
                           - del-map
                           - replace-header
                           - replace-value
@@ -1688,6 +1849,7 @@ spec:
                           - sc-set-gpt
                           - sc-set-gpt0
                           - set-header
+                          - set-headers-bin
                           - set-log-level
                           - set-map
                           - set-status
@@ -2048,14 +2210,6 @@ spec:
                     - enabled
                     - disabled
                   type: string
-                http_proxy:
-                  description: |-
-                    http proxy
-                    Enum: ["enabled","disabled"]
-                  enum:
-                    - enabled
-                    - disabled
-                  type: string
                 http_request_rule_list:
                   description: HTTP request rule list
                   items:
@@ -2137,6 +2291,9 @@ spec:
                       expr:
                         description: expr
                         type: string
+                      hdr_expr:
+                        description: hdr expr
+                        type: string
                       hdr_format:
                         description: hdr format
                         type: string
@@ -2148,6 +2305,9 @@ spec:
                         type: string
                       hdr_name:
                         description: hdr name
+                        type: string
+                      hdr_prefix:
+                        description: hdr prefix
                         type: string
                       hint_format:
                         description: |-
@@ -2175,6 +2335,9 @@ spec:
                           - info
                           - debug
                           - silent
+                        type: string
+                      log_profile:
+                        description: log profile
                         type: string
                       lua_action:
                         description: |-
@@ -2401,11 +2564,14 @@ spec:
                       timeout_type:
                         description: |-
                           timeout type
-                          Enum: ["server","tunnel","client"]
+                          Enum: ["client","connect","queue","server","tarpit","tunnel"]
                         enum:
-                          - server
-                          - tunnel
                           - client
+                          - connect
+                          - queue
+                          - server
+                          - tarpit
+                          - tunnel
                         type: string
                       tos_value:
                         description: |-
@@ -2433,16 +2599,18 @@ spec:
                         description: |-
                           type
                           Required: true
-                          Enum: ["add-acl","add-header","allow","auth","cache-use","capture","del-acl","del-header","del-map","deny","disable-l7-retry","do-resolve","early-hint","lua","normalize-uri","pause","redirect","reject","replace-header","replace-path","replace-pathq","replace-uri","replace-value","return","sc-add-gpc","sc-inc-gpc","sc-inc-gpc0","sc-inc-gpc1","sc-set-gpt","sc-set-gpt0","send-spoe-group","set-bc-mark","set-bc-tos","set-dst","set-dst-port","set-fc-mark","set-fc-tos","set-header","set-log-level","set-map","set-mark","set-method","set-nice","set-path","set-pathq","set-priority-class","set-priority-offset","set-query","set-src","set-src-port","set-timeout","set-tos","set-uri","set-var","set-var-fmt","silent-drop","strict-mode","tarpit","track-sc","unset-var","use-service","wait-for-body","wait-for-handshake","set-bandwidth-limit","set-retries","do-log"]
+                          Enum: ["add-acl","add-header","add-headers-bin","allow","auth","cache-use","capture","del-acl","del-header","del-headers-bin","del-map","deny","disable-l7-retry","do-resolve","early-hint","lua","normalize-uri","pause","redirect","reject","replace-header","replace-path","replace-pathq","replace-uri","replace-value","return","sc-add-gpc","sc-inc-gpc","sc-inc-gpc0","sc-inc-gpc1","sc-set-gpt","sc-set-gpt0","send-spoe-group","set-bc-mark","set-bc-tos","set-dst","set-dst-port","set-fc-mark","set-fc-tos","set-header","set-headers-bin","set-log-level","set-map","set-mark","set-method","set-nice","set-path","set-pathq","set-priority-class","set-priority-offset","set-query","set-src","set-src-port","set-timeout","set-tos","set-uri","set-var","set-var-fmt","silent-drop","strict-mode","tarpit","track-sc","unset-var","use-service","wait-for-body","wait-for-handshake","set-bandwidth-limit","set-retries","do-log"]
                         enum:
                           - add-acl
                           - add-header
+                          - add-headers-bin
                           - allow
                           - auth
                           - cache-use
                           - capture
                           - del-acl
                           - del-header
+                          - del-headers-bin
                           - del-map
                           - deny
                           - disable-l7-retry
@@ -2473,6 +2641,7 @@ spec:
                           - set-fc-mark
                           - set-fc-tos
                           - set-header
+                          - set-headers-bin
                           - set-log-level
                           - set-map
                           - set-mark
@@ -2619,6 +2788,9 @@ spec:
                       expr:
                         description: expr
                         type: string
+                      hdr_expr:
+                        description: hdr expr
+                        type: string
                       hdr_format:
                         description: hdr format
                         type: string
@@ -2630,6 +2802,9 @@ spec:
                         type: string
                       hdr_name:
                         description: hdr name
+                        type: string
+                      hdr_prefix:
+                        description: hdr prefix
                         type: string
                       log_level:
                         description: |-
@@ -2645,6 +2820,9 @@ spec:
                           - info
                           - debug
                           - silent
+                        type: string
+                      log_profile:
+                        description: log profile
                         type: string
                       lua_action:
                         description: |-
@@ -2828,11 +3006,14 @@ spec:
                       timeout_type:
                         description: |-
                           timeout type
-                          Enum: ["server","tunnel","client"]
+                          Enum: ["client","connect","queue","server","tarpit","tunnel"]
                         enum:
-                          - server
-                          - tunnel
                           - client
+                          - connect
+                          - queue
+                          - server
+                          - tarpit
+                          - tunnel
                         type: string
                       tos_value:
                         description: |-
@@ -2860,15 +3041,17 @@ spec:
                         description: |-
                           type
                           Required: true
-                          Enum: ["add-acl","add-header","allow","cache-store","capture","del-acl","del-header","del-map","deny","lua","pause","redirect","replace-header","replace-value","return","sc-add-gpc","sc-inc-gpc","sc-inc-gpc0","sc-inc-gpc1","sc-set-gpt","sc-set-gpt0","send-spoe-group","set-fc-mark","set-fc-tos","set-header","set-log-level","set-map","set-mark","set-nice","set-status","set-timeout","set-tos","set-var","set-var-fmt","silent-drop","strict-mode","track-sc","unset-var","wait-for-body","set-bandwidth-limit","do-log"]
+                          Enum: ["add-acl","add-header","add-headers-bin","allow","cache-store","capture","del-acl","del-header","del-headers-bin","del-map","deny","lua","pause","redirect","replace-header","replace-value","return","sc-add-gpc","sc-inc-gpc","sc-inc-gpc0","sc-inc-gpc1","sc-set-gpt","sc-set-gpt0","send-spoe-group","set-fc-mark","set-fc-tos","set-header","set-headers-bin","set-log-level","set-map","set-mark","set-nice","set-status","set-timeout","set-tos","set-var","set-var-fmt","silent-drop","strict-mode","track-sc","unset-var","wait-for-body","set-bandwidth-limit","do-log"]
                         enum:
                           - add-acl
                           - add-header
+                          - add-headers-bin
                           - allow
                           - cache-store
                           - capture
                           - del-acl
                           - del-header
+                          - del-headers-bin
                           - del-map
                           - deny
                           - lua
@@ -2887,6 +3070,7 @@ spec:
                           - set-fc-mark
                           - set-fc-tos
                           - set-header
+                          - set-headers-bin
                           - set-log-level
                           - set-map
                           - set-mark
@@ -2957,7 +3141,7 @@ spec:
                     - safe
                   type: string
                 http_send_name_header:
-                  description: http send name header
+                  description: The header string to use to send the server name
                   type: string
                 httpchk_params:
                   description: httpchk params
@@ -3402,6 +3586,9 @@ spec:
                           - enabled
                           - disabled
                         type: string
+                      cc:
+                        description: cc
+                        type: string
                       check:
                         description: |-
                           check
@@ -3457,6 +3644,14 @@ spec:
                           check proto
                           Pattern: ^[^\s]+$
                         pattern: ^[^\s]+$
+                        type: string
+                      check_sni_auto:
+                        description: |-
+                          check sni auto
+                          Enum: ["enabled","disabled"]
+                        enum:
+                          - enabled
+                          - disabled
                         type: string
                       check_via_socks4:
                         description: |-
@@ -3615,6 +3810,14 @@ spec:
                         format: int64
                         minimum: 0
                         type: integer
+                      ktls:
+                        description: |-
+                          ktls
+                          Enum: ["on","off"]
+                        enum:
+                          - "on"
+                          - "off"
+                        type: string
                       log-bufsize:
                         description: log bufsize
                         format: int64
@@ -3792,8 +3995,35 @@ spec:
                         items:
                           type: string
                         type: array
+                      quic-cc-algo:
+                        description: |-
+                          quic cc algo
+                          Enum: ["cubic","newreno","bbr","nocc"]
+                        enum:
+                          - cubic
+                          - newreno
+                          - bbr
+                          - nocc
+                        type: string
+                      quic_cc_algo_max_window:
+                        description: |-
+                          quic cc algo max window
+                          Maximum: 4.194304e+06
+                          Minimum: 10
+                        format: int64
+                        maximum: 4194304
+                        minimum: 10
+                        type: integer
                       redir:
                         description: redir
+                        type: string
+                      renegotiate:
+                        description: |-
+                          Toggles the secure renegotiation mechanism for an SSL backend.
+                          Enum: ["enabled","disabled"]
+                        enum:
+                          - enabled
+                          - disabled
                         type: string
                       resolve-net:
                         description: |-
@@ -3894,6 +4124,14 @@ spec:
                           Pattern: ^[^\s]+$
                         pattern: ^[^\s]+$
                         type: string
+                      sni_auto:
+                        description: |-
+                          sni auto
+                          Enum: ["enabled","disabled"]
+                        enum:
+                          - enabled
+                          - disabled
+                        type: string
                       socks4:
                         description: |-
                           socks4
@@ -3972,6 +4210,12 @@ spec:
                       strict-maxconn:
                         description: strict maxconn
                         type: boolean
+                      tcp_md5sig:
+                        description: |-
+                          tcp md5sig
+                          Pattern: ^[^\s]+$
+                        pattern: ^[^\s]+$
+                        type: string
                       tcp_ut:
                         description: |-
                           tcp ut
@@ -4293,6 +4537,9 @@ spec:
                         Pattern: ^[^\s]+$
                       pattern: ^[^\s]+$
                       type: string
+                    stats_show_version:
+                      description: stats show version
+                      type: boolean
                     stats_uri_prefix:
                       description: |-
                         stats uri prefix
@@ -4708,6 +4955,9 @@ spec:
                           - debug
                           - silent
                         type: string
+                      log_profile:
+                        description: log profile
+                        type: string
                       lua_action:
                         description: |-
                           lua action
@@ -4905,6 +5155,9 @@ spec:
                           - debug
                           - silent
                         type: string
+                      log_profile:
+                        description: log profile
+                        type: string
                       lua_action:
                         description: |-
                           lua action
@@ -5034,6 +5287,30 @@ spec:
                 use_fcgi_app:
                   description: use fcgi app
                   type: string
+                use_small_buffers:
+                  description: use small buffers
+                  properties:
+                    check:
+                      description: check
+                      type: boolean
+                    enabled:
+                      description: |-
+                        enabled
+                        Required: true
+                        Enum: ["enabled","disabled"]
+                      enum:
+                        - enabled
+                        - disabled
+                      type: string
+                    l7_retries:
+                      description: l7 retries
+                      type: boolean
+                    queue:
+                      description: queue
+                      type: boolean
+                  required:
+                    - enabled
+                  type: object
               required: []
               type: object
           required:

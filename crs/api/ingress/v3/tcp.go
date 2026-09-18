@@ -18,12 +18,13 @@ package v3
 import (
 	"github.com/go-openapi/swag/jsonutils"
 	"github.com/haproxytech/client-native/v6/models"
+	"github.com/haproxytech/go-method-gen/pkg/eqdiff"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-// +kubebuilder:metadata:annotations="haproxy.org/client-native=v6.2.4"
+// +kubebuilder:metadata:annotations="haproxy.org/client-native=v6.4.2"
 
 // TCP is a specification for a TCP resource
 type TCP struct {
@@ -100,7 +101,7 @@ func (s *TCPService) UnmarshalBinary(b []byte) error {
 	return nil
 }
 
-func (a TCPModel) Equal(b TCPModel, opt ...models.Options) bool {
+func (a TCPModel) Equal(b TCPModel, opt ...eqdiff.GoMethodGenOptions) bool {
 	if a.Name != b.Name {
 		return false
 	}
@@ -134,6 +135,6 @@ func (a TCPModel) Equal(b TCPModel, opt ...models.Options) bool {
 	return true
 }
 
-func (s TCPService) Equal(b TCPService, opt ...models.Options) bool {
+func (s TCPService) Equal(b TCPService, opt ...eqdiff.GoMethodGenOptions) bool {
 	return s.Name == b.Name && s.Port == b.Port
 }

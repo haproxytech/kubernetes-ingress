@@ -86,6 +86,10 @@ func (c *HAProxyController) globalCfg() {
 	// SetGlobal may inject a default log target into newLg, so assign it afterwards;
 	// otherwise the comparison misses it and triggers a reload on every sync.
 	newGlobal.LogTargetList = newLg
+	// client-native v6.4 diff no longer treats nil and empty struct pointers as equal,
+	// and empty tune options are not persisted, so normalize both sides before diffing.
+	normalizeTuneOptions(newGlobal)
+	normalizeTuneOptions(global)
 	diff := newGlobal.Diff(*global)
 	if len(diff) != 0 {
 		err := c.haproxy.GlobalPushConfiguration(*newGlobal)
@@ -99,6 +103,11 @@ func (c *HAProxyController) globalCfg() {
 		instance.Reload("Global log targets updated: %+v", utils.JSONDiff(diff))
 	}
 	c.globalCfgSnipp()
+}
+
+func normalizeTuneOptions(global *models.Global) {
+	global.TuneOptions = utils.NilIfZero(global.TuneOptions)
+	global.TuneSslOptions = utils.NilIfZero(global.TuneSslOptions)
 }
 
 func (c *HAProxyController) globalCfgSnipp() {
