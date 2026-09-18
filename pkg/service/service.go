@@ -240,6 +240,16 @@ func (s *Service) getBackendModel(store store.K8s, a annotations.Annotations, cl
 	// get/create backend Model
 	backend, err = annotations.ModelBackend("cr-backend", s.resource.Namespace, store, s.annotations...)
 	logger.Warning(err)
+	var crKey string
+	if backend != nil {
+		crNS, crName := annotations.BackendCRPath("cr-backend", s.resource.Namespace, s.annotations...)
+		crKey = crNS + "/" + crName
+		if store.BackendCRDisabled(crNS, crName) {
+			logger.Warningf("service '%s/%s': backend custom resource '%s' rejected by HAProxy, falling back to annotations", s.resource.Namespace, s.resource.Name, crKey)
+			backend = nil
+			crKey = ""
+		}
+	}
 	if backend != nil {
 		// Deep-copy the CR object before mutating it: multiple services may share the
 		// same cr-backend annotation and therefore the same *v3.BackendSpec pointer in
@@ -285,6 +295,9 @@ func (s *Service) getBackendModel(store store.K8s, a annotations.Annotations, cl
 	backend.BackendBase.Name, err = s.GetBackendName()
 	if err != nil {
 		return nil, err
+	}
+	if crKey != "" {
+		store.BackendsFromCR[backend.BackendBase.Name] = crKey
 	}
 
 	servers, err := client.BackendServersGet(backend.BackendBase.Name)

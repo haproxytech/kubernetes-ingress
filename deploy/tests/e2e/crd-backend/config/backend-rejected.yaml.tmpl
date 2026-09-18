@@ -1,0 +1,16 @@
+apiVersion: ingress.v3.haproxy.org/v3
+kind: Backend
+metadata:
+  name: be-test
+spec:
+  name: {{ .BackendName }}
+  mode: http
+  {{- if .ErrorFile }}
+  error_files:
+    - code: 503
+      file: {{ .ErrorFile }}
+  {{- end }}
+  http_request_rule_list:
+    - type: set-header
+      hdr_name: {{ .HeaderName }}
+      hdr_format: {{ .HeaderValue }}

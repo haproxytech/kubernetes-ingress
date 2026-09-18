@@ -325,3 +325,13 @@ type BackendOwner struct {
 	Ingress     string // namespace/name of the ingress which built the backend
 	Passthrough bool   // mode it asked for
 }
+
+// BackendCRState is what the store knows of a Backend custom resource beyond its spec.
+//
+// HAProxy validates the whole configuration at once, so a resource it rejects blocks
+// every other change until fixed. Disabled marks the stored Generation as rejected;
+// a new generation clears it so the resource gets retried once edited.
+type BackendCRState struct {
+	Generation int64
+	Disabled   bool
+}

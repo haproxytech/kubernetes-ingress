@@ -20,10 +20,39 @@ import (
 
 func (k *K8s) EventBackendCR(namespace, name string, data *v3.Backend) bool {
 	ns := k.GetNamespace(namespace)
+	key := namespace + "/" + name
 	if data == nil {
 		delete(ns.CRs.Backends, name)
+		delete(k.BackendCRs, key)
 		return true
 	}
 	ns.CRs.Backends[name] = &data.Spec
+	state, known := k.BackendCRs[key]
+	if !known {
+		state = &BackendCRState{}
+		k.BackendCRs[key] = state
+	}
+	if state.Generation != data.Generation {
+		state.Disabled = false
+	}
+	state.Generation = data.Generation
 	return true
+}
+
+// DisableBackendCR marks the current generation of a Backend custom resource as
+// rejected by HAProxy. Returns that generation, and false for an unknown resource.
+func (k *K8s) DisableBackendCR(namespace, name string) (generation int64, ok bool) {
+	state, known := k.BackendCRs[namespace+"/"+name]
+	if !known {
+		return 0, false
+	}
+	state.Disabled = true
+	return state.Generation, true
+}
+
+// BackendCRDisabled tells whether the stored generation of a Backend custom resource
+// was rejected by HAProxy.
+func (k *K8s) BackendCRDisabled(namespace, name string) bool {
+	state, known := k.BackendCRs[namespace+"/"+name]
+	return known && state.Disabled
 }

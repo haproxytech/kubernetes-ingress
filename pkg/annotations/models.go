@@ -35,6 +35,15 @@ func ModelBackend(name, defaultNS string, k store.K8s, annotations ...map[string
 	return backend, err
 }
 
+// BackendCRPath returns the namespace and name of the backend cr an annotation points to.
+func BackendCRPath(name, defaultNS string, annotations ...map[string]string) (crNS, crName string) {
+	crNS, crName, _ = common.GetK8sPath(name, annotations...)
+	if crNS == "" {
+		crNS = defaultNS
+	}
+	return crNS, crName
+}
+
 // ModelDefaults takes an annotation holding the path of a defaults cr and returns corresponding Defaults model
 func ModelDefaults(name, defaultNS string, k store.K8s, annotations ...map[string]string) (defaults *models.Defaults, err error) {
 	d, modelErr := model(name, defaultNS, 2, k, annotations...)

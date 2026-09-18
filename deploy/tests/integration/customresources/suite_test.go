@@ -15,6 +15,7 @@
 package customresources
 
 import (
+	"os"
 	"testing"
 
 	"github.com/haproxytech/client-native/v6/models"
@@ -32,6 +33,15 @@ type CustomResourceSuite struct {
 
 func TestCustomResource(t *testing.T) {
 	suite.Run(t, new(CustomResourceSuite))
+}
+
+func (suite *CustomResourceSuite) BeforeTest(suiteName, testName string) {
+	suite.BaseSuite.BeforeTest(suiteName, testName)
+	_ = os.Unsetenv("POD_NAME")
+	_ = os.Unsetenv("POD_NAMESPACE")
+	testController := suite.TestControllers[suite.T().Name()]
+	testController.OSArgs.ConfigMap.Name = configMapName
+	testController.OSArgs.ConfigMap.Namespace = configMapNamespace
 }
 
 func (suite *CustomResourceSuite) GlobalCRFixture() {

@@ -18,6 +18,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"slices"
 	"strings"
 
@@ -192,9 +193,10 @@ func (c *HAProxyController) updateHAProxy() {
 		logger.Error(err)
 		rerun, errCfgSnippet := annotations.CheckBackendConfigSnippetError(err, c.haproxy.Env.CfgDir)
 		logger.Error(errCfgSnippet)
+		rerun = c.disableRejectedBackendCRs(err, filepath.Join(c.haproxy.Env.CfgDir, "failed")) || rerun
 		c.clean(true)
 		if rerun {
-			logger.Debug("disabling some config snippets because of errors")
+			logger.Debug("disabling some config snippets or custom resources because of errors")
 			// We need to replay all these resources.
 			c.store.SecretsProcessed = map[string]struct{}{}
 			c.store.BackendsProcessed = map[string]store.BackendOwner{}
@@ -225,9 +227,10 @@ func (c *HAProxyController) updateHAProxy() {
 			c.prometheusMetricsManager.SetUnableSyncGauge()
 			rerun, errCfgSnippet := annotations.CheckBackendConfigSnippetErrorOnReload(errors.New(msg), c.haproxy.Env.CfgDir)
 			logger.Error(errCfgSnippet)
+			rerun = c.disableRejectedBackendCRs(errors.New(msg), c.haproxy.Env.CfgDir) || rerun
 			c.clean(true)
 			if rerun {
-				logger.Debug("disabling some config snippets because of errors")
+				logger.Debug("disabling some config snippets or custom resources because of errors")
 				// We need to replay all these resources.
 				c.store.SecretsProcessed = map[string]struct{}{}
 				c.store.BackendsProcessed = map[string]store.BackendOwner{}
@@ -360,6 +363,7 @@ func (c *HAProxyController) clean(failedSync bool) {
 	c.haproxy.Clean()
 	// Need to do that even if transaction failed otherwise at fix time, they won't be reprocessed.
 	c.store.BackendsProcessed = map[string]store.BackendOwner{}
+	c.store.BackendsFromCR = map[string]string{}
 	c.store.RoutesProcessedByMapFile = map[string]map[string]store.RouteOwner{}
 	logger.Error(c.setupHAProxyRules())
 	if !failedSync {
