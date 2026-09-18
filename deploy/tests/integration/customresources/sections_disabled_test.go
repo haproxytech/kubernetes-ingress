@@ -27,6 +27,7 @@ import (
 const (
 	globalCRName   = "appGlobal"
 	defaultsCRName = "appDefaults"
+	frontendCRName = "appFrontend"
 )
 
 func crMeta(name string, generation int64) metav1.ObjectMeta {
@@ -64,6 +65,18 @@ var disabledCRCases = []struct {
 			}
 		},
 	},
+	{
+		ref:       store.CRRef{Kind: store.CRKindFrontend, Namespace: appNs, Name: frontendCRName},
+		directive: "http-request set-header X-CR ok",
+		event: func(generation int64) k8ssync.SyncDataEvent {
+			return k8ssync.SyncDataEvent{
+				SyncType: k8ssync.CR_FRONTEND, Namespace: appNs, Name: frontendCRName,
+				Data: &v3.Frontend{ObjectMeta: crMeta(frontendCRName, generation), Spec: v3.FrontendSpec{Frontend: models.Frontend{
+					HTTPRequestRuleList: models.HTTPRequestRules{{Type: "set-header", HdrName: "X-CR", HdrFormat: "ok"}},
+				}}},
+			}
+		},
+	},
 }
 
 // TestDisabledCRSections pins the fallback for every custom resource kind once
@@ -74,8 +87,9 @@ func (suite *CustomResourceSuite) TestDisabledCRSections() {
 	suite.StartController()
 	suite.setupApp()
 	configMap := &store.ConfigMap{Namespace: configMapNamespace, Name: configMapName, Status: store.MODIFIED, Annotations: map[string]string{
-		"cr-global":   appNs + "/" + globalCRName,
-		"cr-defaults": appNs + "/" + defaultsCRName,
+		"cr-global":        appNs + "/" + globalCRName,
+		"cr-defaults":      appNs + "/" + defaultsCRName,
+		"cr-frontend-http": appNs + "/" + frontendCRName,
 	}}
 	suite.sync(k8ssync.SyncDataEvent{SyncType: k8ssync.CONFIGMAP, Namespace: configMapNamespace, Name: configMapName, Data: configMap})
 	plainService := appServiceEvent()

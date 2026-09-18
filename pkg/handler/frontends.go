@@ -91,6 +91,7 @@ func (handler *Frontend) manageFrontend(crFrontendAnnotationName string,
 	frontendCRFromAnnotation, _ := annotations.ModelFrontend(crFrontendAnnotationName, "", k, k.ConfigMaps.Main.Annotations)
 	// Get the frontend to amend
 	frontendName := mapFrontendAnnotations[crFrontendAnnotationName]
+	frontendCRFromAnnotation = usableFrontendCR(k, crFrontendAnnotationName, frontendName, frontendCRFromAnnotation)
 	frontend, err := h.FrontendGet(frontendName)
 	if err != nil {
 		return err
@@ -156,6 +157,7 @@ func (handler *Frontend) manageFrontendSSL(k store.K8s, h haproxy.HAProxy,
 	if err != nil {
 		return err
 	}
+	frontendCRFromAnnotation = usableFrontendCR(k, CUSTOM_RESOURCE_ANNOTATION_SSL, frontendName, frontendCRFromAnnotation)
 	differentCRFromAnnotation := (*currentCR != nil && frontendCRFromAnnotation != nil && (!frontendCRFromAnnotation.Equal(**currentCR) || mode != *currentMode)) // we have a CR and it is different
 	switchToNone := (*currentCR != nil && frontendCRFromAnnotation == nil)                                                                                        // or now we switch to none
 	switchToOne := (*currentCR == nil && frontendCRFromAnnotation != nil)                                                                                         // or now we switch to one
@@ -266,4 +268,19 @@ func copyFrontend(original models.Frontend) (*models.Frontend, error) {
 	}
 	errUnmarshal := frontendCopy.UnmarshalBinary(frontendToBeMergedContents)
 	return frontendCopy, errUnmarshal
+}
+
+// usableFrontendCR drops a resource HAProxy rejected, and records which resource
+// amends the frontend otherwise, so a later rejection can be traced back to it.
+func usableFrontendCR(k store.K8s, annotationName, frontendName string, frontendCR *models.Frontend) *models.Frontend {
+	if frontendCR == nil {
+		return nil
+	}
+	ref := annotations.ModelRef(store.CRKindFrontend, annotationName, "", k.ConfigMaps.Main.Annotations)
+	if k.CRDisabled(ref) {
+		logger.Warningf("%s rejected by HAProxy, frontend '%s' is not amended", ref, frontendName)
+		return nil
+	}
+	k.SectionsFromCR[annotations.Section{Kind: annotations.SectionFrontend, Name: frontendName}.Key()] = ref
+	return frontendCR
 }
