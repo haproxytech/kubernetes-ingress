@@ -123,7 +123,7 @@ func (suite *CustomResourceSuite) TestDisabledBackendCR() {
 	suite.ExpectHaproxyConfigContains(backendHeader, 1)
 	suite.ExpectHaproxyConfigContains(crDirective, 1)
 
-	_, ok := testController.Store.DisableBackendCR(appNs, backendCRName)
+	_, ok := testController.Store.DisableCR(store.CRRef{Kind: store.CRKindBackend, Namespace: appNs, Name: backendCRName})
 	suite.Require().True(ok, "the store knows the resource")
 	// Replaying the unchanged resource triggers a sync without a new generation.
 	suite.sync(backendCREvent(1))

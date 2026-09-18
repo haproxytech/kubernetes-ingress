@@ -16,10 +16,12 @@ package store
 
 func (k *K8s) EventTCPCR(namespace, name string, data *TCPs) bool {
 	ns := k.GetNamespace(namespace)
+	ref := CRRef{Kind: CRKindTCP, Namespace: namespace, Name: data.Name}
 
 	updateRequired := false
 	switch data.Status {
 	case MODIFIED:
+		updateRequired = k.trackCR(ref, data.Generation)
 		newTCP := data
 		oldTCP, ok := ns.CRs.TCPsPerCR[data.Name]
 		if !ok {
@@ -47,6 +49,7 @@ func (k *K8s) EventTCPCR(namespace, name string, data *TCPs) bool {
 		k.checkCollisionsAllNamespaces()
 		updateRequired = true
 	case ADDED:
+		updateRequired = k.trackCR(ref, data.Generation)
 		// ADDED received, but we already have it
 		if old, ok := ns.CRs.TCPsPerCR[data.Name]; ok {
 			if old.Status == DELETED {
@@ -70,6 +73,7 @@ func (k *K8s) EventTCPCR(namespace, name string, data *TCPs) bool {
 		k.checkCollisionsAllNamespaces()
 		updateRequired = true
 	case DELETED:
+		k.forgetCR(ref)
 		tcp, ok := ns.CRs.TCPsPerCR[data.Name]
 		if ok {
 			tcp.Status = DELETED

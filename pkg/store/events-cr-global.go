@@ -20,10 +20,13 @@ import (
 
 func (k *K8s) EventGlobalCR(namespace, name string, data *v3.Global) bool {
 	ns := k.GetNamespace(namespace)
+	ref := CRRef{Kind: CRKindGlobal, Namespace: namespace, Name: name}
 	if data == nil {
 		delete(ns.CRs.Global, name)
+		k.forgetCR(ref)
 		return true
 	}
 	ns.CRs.Global[name] = &data.Spec.Global
+	k.trackCR(ref, data.Generation)
 	return true
 }

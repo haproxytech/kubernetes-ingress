@@ -15,29 +15,26 @@
 package controller
 
 import (
-	"strings"
-
 	"github.com/haproxytech/kubernetes-ingress/pkg/annotations"
 )
 
-// disableRejectedBackendCRs disables the Backend custom resources behind the
-// backends HAProxy rejected. dir holds the rejected configuration file.
+// disableRejectedCRs disables the custom resources behind the sections HAProxy
+// rejected. dir holds the rejected configuration file.
 // Returns whether a resource was disabled, so the sync has to be replayed.
-func (c *HAProxyController) disableRejectedBackendCRs(configErr error, dir string) (rerun bool) {
-	backends, err := annotations.BackendsInError(configErr, dir)
+func (c *HAProxyController) disableRejectedCRs(configErr error, dir string) (rerun bool) {
+	sections, err := annotations.SectionsInError(configErr, dir)
 	logger.Error(err)
-	for _, backend := range backends {
-		crKey, fromCR := c.store.BackendsFromCR[backend]
+	for _, section := range sections {
+		ref, fromCR := c.store.SectionsFromCR[section.Key()]
 		if !fromCR {
 			continue
 		}
-		namespace, name, _ := strings.Cut(crKey, "/")
-		generation, ok := c.store.DisableBackendCR(namespace, name)
+		generation, ok := c.store.DisableCR(ref)
 		if !ok {
 			continue
 		}
-		logger.Errorf("backend custom resource '%s' generation %d rejected by HAProxy in backend '%s': disabled until edited",
-			crKey, generation, backend)
+		logger.Errorf("%s generation %d rejected by HAProxy in section '%s': disabled until edited",
+			ref, generation, section.Key())
 		rerun = true
 	}
 	return rerun

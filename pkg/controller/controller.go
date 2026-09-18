@@ -193,7 +193,7 @@ func (c *HAProxyController) updateHAProxy() {
 		logger.Error(err)
 		rerun, errCfgSnippet := annotations.CheckBackendConfigSnippetError(err, c.haproxy.Env.CfgDir)
 		logger.Error(errCfgSnippet)
-		rerun = c.disableRejectedBackendCRs(err, filepath.Join(c.haproxy.Env.CfgDir, "failed")) || rerun
+		rerun = c.disableRejectedCRs(err, filepath.Join(c.haproxy.Env.CfgDir, "failed")) || rerun
 		c.clean(true)
 		if rerun {
 			logger.Debug("disabling some config snippets or custom resources because of errors")
@@ -227,7 +227,7 @@ func (c *HAProxyController) updateHAProxy() {
 			c.prometheusMetricsManager.SetUnableSyncGauge()
 			rerun, errCfgSnippet := annotations.CheckBackendConfigSnippetErrorOnReload(errors.New(msg), c.haproxy.Env.CfgDir)
 			logger.Error(errCfgSnippet)
-			rerun = c.disableRejectedBackendCRs(errors.New(msg), c.haproxy.Env.CfgDir) || rerun
+			rerun = c.disableRejectedCRs(errors.New(msg), c.haproxy.Env.CfgDir) || rerun
 			c.clean(true)
 			if rerun {
 				logger.Debug("disabling some config snippets or custom resources because of errors")
@@ -363,7 +363,7 @@ func (c *HAProxyController) clean(failedSync bool) {
 	c.haproxy.Clean()
 	// Need to do that even if transaction failed otherwise at fix time, they won't be reprocessed.
 	c.store.BackendsProcessed = map[string]store.BackendOwner{}
-	c.store.BackendsFromCR = map[string]string{}
+	c.store.SectionsFromCR = map[string]store.CRRef{}
 	c.store.RoutesProcessedByMapFile = map[string]map[string]store.RouteOwner{}
 	logger.Error(c.setupHAProxyRules())
 	if !failedSync {

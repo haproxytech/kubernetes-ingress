@@ -20,10 +20,13 @@ import (
 
 func (k *K8s) EventDefaultsCR(namespace, name string, data *v3.Defaults) bool {
 	ns := k.GetNamespace(namespace)
+	ref := CRRef{Kind: CRKindDefaults, Namespace: namespace, Name: name}
 	if data == nil {
 		delete(ns.CRs.Defaults, name)
+		k.forgetCR(ref)
 		return true
 	}
 	ns.CRs.Defaults[name] = &data.Spec.Defaults
+	k.trackCR(ref, data.Generation)
 	return true
 }

@@ -70,12 +70,12 @@ type K8s struct {
 	UpdateAllIngresses           bool
 	IngressesByService           map[string]*utils.OrderedSet[string, *Ingress] // service fqn -> ingress name -> ingress
 
-	// BackendCRs tracks each Backend custom resource by "namespace/name".
-	BackendCRs map[string]*BackendCRState
-	// BackendsFromCR records, per backend name, the "namespace/name" of the Backend
-	// custom resource it was built from during the current reconciliation.
+	// CRStates tracks every custom resource the controller renders sections from.
+	CRStates map[CRRef]*CRState
+	// SectionsFromCR records, per rendered section, the custom resource it was built
+	// from during the current reconciliation. Keyed by annotations.Section.Key().
 	// Reset at every reconciliation, like BackendsProcessed.
-	BackendsFromCR map[string]string
+	SectionsFromCR map[string]CRRef
 }
 
 type NamespacesWatch struct {
@@ -118,8 +118,8 @@ func NewK8sStore(args utils.OSArgs) K8s {
 		RoutesProcessedByMapFile:     map[string]map[string]RouteOwner{},
 		GatewayClasses:               map[string]*GatewayClass{},
 		BackendsWithNoConfigSnippets: map[string]struct{}{},
-		BackendCRs:                   map[string]*BackendCRState{},
-		BackendsFromCR:               map[string]string{},
+		CRStates:                     map[CRRef]*CRState{},
+		SectionsFromCR:               map[string]CRRef{},
 		HaProxyPods:                  map[string]struct{}{},
 		FrontendRC:                   rc.NewResourceCounter(),
 		IngressesByService:           map[string]*utils.OrderedSet[string, *Ingress]{},

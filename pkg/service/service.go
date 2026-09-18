@@ -231,23 +231,23 @@ func isServersToEdit(oldBackend models.Backend, newBackend models.Backend) bool 
 }
 
 // getBackendModel checks for a corresponding custom resource before falling back to annotations
-func (s *Service) getBackendModel(store store.K8s, a annotations.Annotations, client api.HAProxyClient) (backend *v3.BackendSpec, err error) {
+func (s *Service) getBackendModel(k store.K8s, a annotations.Annotations, client api.HAProxyClient) (backend *v3.BackendSpec, err error) {
 	// Backend mode
 	mode := "http"
 	if s.modeTCP {
 		mode = "tcp"
 	}
 	// get/create backend Model
-	backend, err = annotations.ModelBackend("cr-backend", s.resource.Namespace, store, s.annotations...)
+	backend, err = annotations.ModelBackend("cr-backend", s.resource.Namespace, k, s.annotations...)
 	logger.Warning(err)
-	var crKey string
+	var crRef *store.CRRef
 	if backend != nil {
-		crNS, crName := annotations.BackendCRPath("cr-backend", s.resource.Namespace, s.annotations...)
-		crKey = crNS + "/" + crName
-		if store.BackendCRDisabled(crNS, crName) {
-			logger.Warningf("service '%s/%s': backend custom resource '%s' rejected by HAProxy, falling back to annotations", s.resource.Namespace, s.resource.Name, crKey)
+		ref := annotations.ModelRef(store.CRKindBackend, "cr-backend", s.resource.Namespace, s.annotations...)
+		crRef = &ref
+		if k.CRDisabled(ref) {
+			logger.Warningf("service '%s/%s': %s rejected by HAProxy, falling back to annotations", s.resource.Namespace, s.resource.Name, ref)
 			backend = nil
-			crKey = ""
+			crRef = nil
 		}
 	}
 	if backend != nil {
@@ -269,8 +269,8 @@ func (s *Service) getBackendModel(store store.K8s, a annotations.Annotations, cl
 				},
 			},
 		}
-		for _, a := range a.Backend(&backend.Backend, store, s.certs) {
-			err = a.Process(store, s.annotations...)
+		for _, a := range a.Backend(&backend.Backend, k, s.certs) {
+			err = a.Process(k, s.annotations...)
 			if err != nil {
 				logger.Errorf("service '%s/%s': annotation '%s': %s", s.resource.Namespace, s.resource.Name, a.GetName(), err)
 			}
@@ -285,7 +285,7 @@ func (s *Service) getBackendModel(store store.K8s, a annotations.Annotations, cl
 		// the DynamicCookieKey block below. Service takes precedence over ConfigMap
 		// (GetValue returns the first source where the key is set).
 		cookieAnn := serviceann.NewCookie("cookie-persistence", &backend.Backend)
-		if cookieErr := cookieAnn.Process(store, s.resource.Annotations, store.ConfigMaps.Main.Annotations); cookieErr != nil {
+		if cookieErr := cookieAnn.Process(k, s.resource.Annotations, k.ConfigMaps.Main.Annotations); cookieErr != nil {
 			logger.Errorf("service '%s/%s': annotation '%s': %s", s.resource.Namespace, s.resource.Name, cookieAnn.GetName(), cookieErr)
 		}
 	}
@@ -296,8 +296,8 @@ func (s *Service) getBackendModel(store store.K8s, a annotations.Annotations, cl
 	if err != nil {
 		return nil, err
 	}
-	if crKey != "" {
-		store.BackendsFromCR[backend.BackendBase.Name] = crKey
+	if crRef != nil {
+		k.SectionsFromCR[annotations.Section{Kind: annotations.SectionBackend, Name: backend.BackendBase.Name}.Key()] = *crRef
 	}
 
 	servers, err := client.BackendServersGet(backend.BackendBase.Name)

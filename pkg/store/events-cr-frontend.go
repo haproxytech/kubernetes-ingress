@@ -20,10 +20,13 @@ import (
 
 func (k *K8s) EventFrontendCR(namespace, name string, data *v3.Frontend) bool {
 	ns := k.GetNamespace(namespace)
+	ref := CRRef{Kind: CRKindFrontend, Namespace: namespace, Name: name}
 	if data == nil {
 		delete(ns.CRs.Frontends, name)
+		k.forgetCR(ref)
 		return true
 	}
 	ns.CRs.Frontends[name] = &data.Spec
+	k.trackCR(ref, data.Generation)
 	return true
 }
