@@ -51,6 +51,7 @@ type tcpcontext struct {
 	k         store.K8s
 	namespace string
 	h         haproxy.HAProxy
+	ref       store.CRRef // the TCP custom resource being reconciled
 }
 
 // var syncIngressClassLog sync.Once
@@ -102,10 +103,19 @@ func (handler TCPCustomResource) Update(k store.K8s, h haproxy.HAProxy, a annota
 			if tcpCR.Status == store.DELETED {
 				continue
 			}
+			ref := store.CRRef{Kind: store.CRKindTCP, Namespace: ns.Name, Name: tcpCR.Name}
+			if k.CRDisabled(ref) {
+				logger.Warningf("%s rejected by HAProxy, its frontends are not configured", ref)
+				for _, atcp := range tcpCR.Items {
+					k.FrontendRC.RemoveOwner(atcp.Owner())
+				}
+				continue
+			}
 			ctx := tcpcontext{
 				k:         k,
 				h:         h,
 				namespace: ns.Name,
+				ref:       ref,
 			}
 			for _, tcp := range tcpCR.Items {
 				if tcp.CollisionStatus == store.ERROR {
@@ -166,6 +176,7 @@ func (handler TCPCustomResource) reconcileFrontend(ctx tcpcontext, owner rc.Owne
 		return errAdd
 	}
 	ctx.k.FrontendRC.AddOwner(rc.HaproxyCfgResourceName(cfgFrontendName), owner)
+	ctx.k.SectionsFromCR[annotations.Section{Kind: annotations.SectionFrontend, Name: cfgFrontendName}.Key()] = ctx.ref
 
 	// Reconcile Binds
 	if errBinds := handler.reconcileBinds(ctx, frontend, tcp.Frontend.Binds, owner); errBinds != nil {

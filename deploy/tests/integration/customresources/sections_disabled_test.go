@@ -28,6 +28,8 @@ const (
 	globalCRName   = "appGlobal"
 	defaultsCRName = "appDefaults"
 	frontendCRName = "appFrontend"
+	tcpCRName      = "appTCP"
+	tcpName        = "echo"
 )
 
 func crMeta(name string, generation int64) metav1.ObjectMeta {
@@ -74,6 +76,26 @@ var disabledCRCases = []struct {
 				Data: &v3.Frontend{ObjectMeta: crMeta(frontendCRName, generation), Spec: v3.FrontendSpec{Frontend: models.Frontend{
 					HTTPRequestRuleList: models.HTTPRequestRules{{Type: "set-header", HdrName: "X-CR", HdrFormat: "ok"}},
 				}}},
+			}
+		},
+	},
+	{
+		ref:       store.CRRef{Kind: store.CRKindTCP, Namespace: appNs, Name: tcpCRName},
+		directive: "frontend tcpcr_" + appNs + "_" + tcpName,
+		event: func(generation int64) k8ssync.SyncDataEvent {
+			return k8ssync.SyncDataEvent{
+				SyncType: k8ssync.CR_TCP, Namespace: appNs, Name: tcpCRName,
+				Data: &store.TCPs{
+					Generation: generation, Status: store.ADDED, Namespace: appNs, Name: tcpCRName,
+					Items: store.TCPResourceList{{Namespace: appNs, ParentName: tcpCRName, TCPModel: v3.TCPModel{
+						Name: tcpName,
+						Frontend: models.Frontend{
+							FrontendBase: models.FrontendBase{Name: tcpName},
+							Binds:        map[string]models.Bind{"b1": {Name: "b1", Address: "0.0.0.0", Port: utils.Ptr(int64(3000))}},
+						},
+						Service: v3.TCPService{Name: serviceName, Port: 443},
+					}}},
+				},
 			}
 		},
 	},
