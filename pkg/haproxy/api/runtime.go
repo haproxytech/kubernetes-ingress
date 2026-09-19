@@ -261,7 +261,7 @@ func (c *clientNative) SyncNewServers(backend *store.RuntimeBackend, endpoints s
 		defaultServer = sectionDefaults.DefaultServer
 	}
 
-	for newRuntimeEndpoint := range endpoints {
+	for _, newRuntimeEndpoint := range store.SortedRuntimeEndpoints(endpoints) {
 		// First check if a server already exists in MAINT, then re-use it and set it to READY
 		newSrvName := newRuntimeEndpoint.ComputeServerName()
 
