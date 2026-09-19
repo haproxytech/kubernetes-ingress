@@ -17,7 +17,7 @@ package store
 import (
 	"fmt"
 	"net/netip"
-	"sort"
+	"slices"
 	"time"
 
 	"github.com/haproxytech/client-native/v6/models"
@@ -105,8 +105,14 @@ func SortedRuntimeEndpoints(endpoints RuntimeEndpoints) []RuntimeEndpoint {
 	for endpoint := range endpoints {
 		sortedEndpoints = append(sortedEndpoints, endpoint)
 	}
-	sort.SliceStable(sortedEndpoints, func(i, j int) bool {
-		return runtimeEndpointLess(sortedEndpoints[i], sortedEndpoints[j])
+	slices.SortStableFunc(sortedEndpoints, func(a, b RuntimeEndpoint) int {
+		if runtimeEndpointLess(a, b) {
+			return -1
+		}
+		if runtimeEndpointLess(b, a) {
+			return 1
+		}
+		return 0
 	})
 	return sortedEndpoints
 }
