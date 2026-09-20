@@ -104,12 +104,12 @@ func (handler TCPServices) parseTCPService(store store.K8s, input string) (p tcp
 	}
 	namespace := svcName[0]
 	service := svcName[1]
-	var ok bool
-	if _, ok = store.Namespaces[namespace]; !ok {
+	ns, ok := store.Namespaces[namespace]
+	if !ok || store.SkipNamespaceInConfig(ns) {
 		err = fmt.Errorf("tcp-services: namespace of service '%s/%s' not found", namespace, service)
 		return p, err
 	}
-	p.service, ok = store.Namespaces[namespace].Services[service]
+	p.service, ok = ns.Services[service]
 	if !ok {
 		err = fmt.Errorf("tcp-services: service '%s/%s' not found", namespace, service)
 		return p, err

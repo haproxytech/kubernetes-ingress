@@ -25,6 +25,8 @@ Image can be run with arguments:
 | [`--gateway-controller-name`](#--gateway-controller-name) |  |
 | [`--namespace-blacklist`](#--namespace-blacklist) |  |
 | [`--namespace-whitelist`](#--namespace-whitelist) |  |
+| [`--namespace-label-selector`](#--namespace-label-selector) |  |
+| [`--namespace-selector-ready-timeout`](#--namespace-selector-ready-timeout) | `30s` |
 | [`--publish-service`](#--publish-service) |  |
 | [`--disable-ipv4`](#--disable-ipv4) | `false` |
 | [`--disable-ipv6`](#--disable-ipv6) | `false` |
@@ -454,6 +456,44 @@ Example:
 
 ```yaml
 --namespace-whitelist=foo --namespace-whitelist=bar
+```
+
+<p align='right'><a href='#haproxy-kubernetes-ingress-controller'>:arrow_up_small: back to top</a></p>
+
+***
+
+### `--namespace-label-selector`
+
+  Kubernetes label selector of namespaces whose resources currently participate in HAProxy configuration. Matching a namespace for the first time starts namespaced resource informers. Removing the label keeps those informers running and updates the store, but drops the namespace from the generated HAProxy configuration until it matches again. Unlabeled namespaces continue to consume watch quota until the Namespace object is deleted. Deleting a namespace stops its informers; the controller accepts a same-name replacement only after that drain completes. Ignored if --namespace-whitelist or --namespace-blacklist is set. Mirroring --namespace-whitelist, the --configmap namespace is always watched, so its Services and Secrets stay readable for the controller's own defaults: the built-in local default backend and an unqualified default certificate work without that namespace carrying the selector labels. Its own Ingresses and Gateways still need the selector labels. Every other namespace whose objects the controller reads through the store must carry the selector labels: the publish-service namespace, the default-backend service namespace, the default certificate namespace, and the namespace of --custom-validation-rules. An unselected flag namespace among those is logged in a startup warning. Service namespaces referenced inside --configmap-tcp-services must also match the selector, but they are only known after the ConfigMap is read and are not part of that startup warning. The ConfigMap namespaces themselves (--configmap, --configmap-tcp-services, --configmap-errorfiles, --configmap-patternfiles) are watched at process level. Since every Namespace carries kubernetes.io/metadata.name=<name>, a selector can also match by name. Keep the selector scoped to namespaces owned by this controller. A broad selector increases informer fan-out. Unlabeled namespaces keep their store data and informer caches until the Namespace object is deleted; there is no idle eviction. A namespace that fails to start is logged and retried on the next sync; it does not terminate the controller.
+
+
+Possible values:
+
+- A Kubernetes label selector, for example app=watch or env in (prod,staging)
+
+Example:
+
+```yaml
+--namespace-label-selector=app=watch
+```
+
+<p align='right'><a href='#haproxy-kubernetes-ingress-controller'>:arrow_up_small: back to top</a></p>
+
+***
+
+### `--namespace-selector-ready-timeout`
+
+  How long bootstrap waits for selected namespaces to become ready before the first HAProxy config sync. Namespaces still starting after this timeout stay out of the generated configuration until they become ready. 0 waits indefinitely. Negative values are rejected. Only used with --namespace-label-selector.
+
+
+Possible values:
+
+- A Go duration, for example 30s or 2m. Default: 30s
+
+Example:
+
+```yaml
+--namespace-selector-ready-timeout=1m
 ```
 
 <p align='right'><a href='#haproxy-kubernetes-ingress-controller'>:arrow_up_small: back to top</a></p>

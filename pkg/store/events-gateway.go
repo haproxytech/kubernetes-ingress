@@ -54,6 +54,9 @@ func (k *K8s) EventGatewayClass(data *GatewayClass) (updateRequired bool) {
 }
 
 func (k *K8s) EventGateway(ns *Namespace, data *Gateway) (updateRequired bool) {
+	if k.dropDetachedMutation(ns, data.Status) {
+		return false
+	}
 	switch data.Status {
 	case ADDED:
 		if previous := ns.Gateways[data.Name]; previous != nil {
@@ -89,6 +92,9 @@ func (k *K8s) EventGateway(ns *Namespace, data *Gateway) (updateRequired bool) {
 }
 
 func (k *K8s) EventTCPRoute(ns *Namespace, data *TCPRoute) (updateRequired bool) {
+	if k.dropDetachedMutation(ns, data.Status) {
+		return false
+	}
 	switch data.Status {
 	case ADDED:
 		if previous := ns.TCPRoutes[data.Name]; previous != nil {
@@ -125,6 +131,9 @@ func (k *K8s) EventTCPRoute(ns *Namespace, data *TCPRoute) (updateRequired bool)
 }
 
 func (k *K8s) EventReferenceGrant(ns *Namespace, data *ReferenceGrant) (updateRequired bool) {
+	if k.dropDetachedMutation(ns, data.Status) {
+		return false
+	}
 	switch data.Status {
 	case ADDED:
 		if previous := ns.ReferenceGrants[data.Name]; previous != nil {

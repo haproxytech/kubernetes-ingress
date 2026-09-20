@@ -20,6 +20,11 @@ import (
 
 func (k *K8s) EventBackendCR(namespace, name string, data *v3.Backend) bool {
 	ns := k.GetNamespace(namespace)
+	// Backend CRs have no Status; treat a non-nil object as ADDED so a
+	// detached namespace cannot persist it.
+	if data != nil && k.dropDetachedMutation(ns, ADDED) {
+		return false
+	}
 	if data == nil {
 		delete(ns.CRs.Backends, name)
 		return true

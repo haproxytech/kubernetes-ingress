@@ -70,6 +70,20 @@ type HAProxyController struct {
 	// deterministically selected to provide the frontends' default backend.
 	// Reset before each processIngress() run and consumed by setIngressDefaultBackend().
 	defaultBackend *store.Ingress
+	sessions       NamespaceSessions
+}
+
+// NamespaceSessions is the controller-side view of per-namespace resource
+// watchers. Nil when --namespace-label-selector is not active.
+type NamespaceSessions interface {
+	Start(namespace string) error
+	Drain(namespace string) bool
+	Draining(namespace string) bool
+	FinishDrain(namespace string)
+	Ready(namespace string) bool
+	Accept(namespace string, epoch uint64) bool
+	MarkReady(namespace string, epoch uint64) bool
+	Close()
 }
 
 // Wrapping a Native-Client transaction and commit it.
@@ -400,6 +414,9 @@ func (c *HAProxyController) processIngressesWithMerge() {
 	// so the established ingress has precedence there too. The two go together: reversing
 	// the set without reversing the merge would give precedence to the newest ingress.
 	for _, namespace := range sortedByKey(c.store.Namespaces) {
+		if c.store.SkipNamespaceInConfig(namespace) {
+			continue
+		}
 		c.store.SecretsProcessed = map[string]struct{}{}
 		// Iterate over services
 		for _, service := range sortedByKey(namespace.Services) {
