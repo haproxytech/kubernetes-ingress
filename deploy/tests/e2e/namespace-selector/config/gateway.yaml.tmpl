@@ -1,0 +1,27 @@
+---
+apiVersion: gateway.networking.k8s.io/v1alpha2
+kind: GatewayClass
+metadata:
+  name: {{ .ClassName }}
+spec:
+  controllerName: haproxy.org/gateway-controller
+---
+apiVersion: gateway.networking.k8s.io/v1alpha2
+kind: Gateway
+metadata:
+  name: {{ .GatewayName }}
+spec:
+  gatewayClassName: {{ .ClassName }}
+  listeners:
+    - name: {{ .ListenerName }}
+      port: {{ .Port }}
+      protocol: TCP
+      allowedRoutes:
+        kinds:
+          - group: gateway.networking.k8s.io
+            kind: TCPRoute
+        namespaces:
+          from: Selector
+          selector:
+            matchLabels:
+              routes: allowed

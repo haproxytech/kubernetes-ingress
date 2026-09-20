@@ -37,10 +37,9 @@ func (c *clientNative) BackendCreatePermanently(backend models.BackendBase) {
 }
 
 func (c *clientNative) BackendCreateIfNotExist(backend models.BackendBase) {
-	existingBackend := c.backends[backend.Name]
-	existingBackend.Used = true
-	c.backends[backend.Name] = existingBackend
-	if c.BackendUsed(backend.Name) {
+	if existing, ok := c.backends[backend.Name]; ok {
+		existing.Used = true
+		c.backends[backend.Name] = existing
 		return
 	}
 	c.BackendCreateOrUpdate(backend)

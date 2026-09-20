@@ -198,3 +198,37 @@ jobs:
         run: go test ./... -v --tags=e2e_parallel  --tags=e2e_https
       - name: Run sequential e2e tests
         run: go test ./... -v -p 1 --tags=e2e_sequential
+  e2e-gateway:
+    strategy:
+      matrix:
+        k8s-version: ["v1.34.0"]
+    needs: ["build"]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: "go.mod"
+          check-latest: true
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+      - uses: helm/kind-action@v1
+        with:
+          cluster_name: dev
+          config: deploy/tests/kind-config.yaml
+          node_image: kindest/node:${{ matrix.k8s-version }}
+          version: v0.33.0
+      - name: Setup with Gateway API
+        run: CI_ENV=github EXPERIMENTAL_GWAPI=1 GWAPI_SAMPLE=0 deploy/tests/create.sh
+      - name: Run namespace-selector Gateway e2e
+        run: go test ./deploy/tests/e2e/namespace-selector/ -v -p 1 --tags=e2e_sequential -run 'TestNamespaceSelectorSuite/Test_GatewayAllowedRoutesFollowNamespaceLabel'

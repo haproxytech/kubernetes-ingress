@@ -20,6 +20,9 @@ import (
 
 func (k *K8s) EventFrontendCR(namespace, name string, data *v3.Frontend) bool {
 	ns := k.GetNamespace(namespace)
+	if data != nil && k.dropDetachedMutation(ns, ADDED) {
+		return false
+	}
 	if data == nil {
 		delete(ns.CRs.Frontends, name)
 		return true

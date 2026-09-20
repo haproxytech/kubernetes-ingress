@@ -20,6 +20,9 @@ import (
 
 func (k *K8s) EventGlobalCR(namespace, name string, data *v3.Global) bool {
 	ns := k.GetNamespace(namespace)
+	if data != nil && k.dropDetachedMutation(ns, ADDED) {
+		return false
+	}
 	if data == nil {
 		delete(ns.CRs.Global, name)
 		return true

@@ -214,6 +214,34 @@ image_arguments:
     helm: |-
       helm install haproxy haproxytech/kubernetes-ingress \
         --set-string "controller.extraArgs={--namespace-whitelist=foo}"
+  - argument: --namespace-label-selector
+    description: >
+      Selects namespaces for HAProxy configuration using a Kubernetes label
+      selector. Ignored when --namespace-whitelist or --namespace-blacklist is
+      set.
+    values:
+      - A Kubernetes label selector, for example app=watch or env in (prod,staging)
+    version_min: "3.2"
+    example: --namespace-label-selector=app=watch
+    helm: |-
+      helm install haproxy haproxytech/kubernetes-ingress \
+        --set-string "controller.extraArgs={--namespace-label-selector=app=watch}"
+    related_docs:
+      - ./namespace-selection.md
+  - argument: --namespace-selector-ready-timeout
+    description: >
+      Maximum time to wait for selected namespaces to finish their initial
+      informer synchronization. Only used with --namespace-label-selector.
+    values:
+      - "A Go duration, for example 30s or 2m. Default: 30s"
+    default: 30s
+    version_min: "3.2"
+    example: --namespace-selector-ready-timeout=1m
+    helm: |-
+      helm install haproxy haproxytech/kubernetes-ingress \
+        --set-string "controller.extraArgs={--namespace-selector-ready-timeout=1m}"
+    related_docs:
+      - ./namespace-selection.md
   - argument: --publish-service
     description: Copies the ingress controller's IP address to the 'Address' field in all Ingress objects that the controller manages. This is useful for tools like external-dns, which use this information to create DNS records.
     values:

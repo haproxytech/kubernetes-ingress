@@ -32,6 +32,7 @@ var headerREADME = `
 ### Documentation
 
 - [Controller options](controller.md)
+- [Namespace selection](namespace-selection.md)
 - [Custom resource definitions](custom-resources.md)
 - [Annotations](annotations.md)
 - [Prometheus](prometheus.md)

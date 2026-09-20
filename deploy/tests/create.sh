@@ -81,8 +81,14 @@ if [ "$EXPERIMENTAL_GWAPI" = "1" ]; then
   ####################################################
   kubectl wait --for=condition=ready --timeout=5m pod -l name=gateway-api-admission-server -n gateway-system
   printf %80s |tr " " "="; echo ""
-  kubectl apply -f $DIR/../../deploy/tests/config/experimental/gwapi-resources.yaml
-  kubectl apply -f $DIR/../../deploy/tests/config/experimental/gwapi-echo-app.yaml
+  # Demo Gateway/TCPRoute in default are not required to enable Gateway API.
+  # They race the echo Service (applied later) and can leave a frontend with a
+  # missing default_backend, so the first HAProxy commit fails and the IC never
+  # becomes Ready. Set GWAPI_SAMPLE=1 to install them (make example-experimental-gwapi).
+  if [ "$GWAPI_SAMPLE" = "1" ]; then
+    kubectl apply -f $DIR/../../deploy/tests/config/experimental/gwapi-resources.yaml
+    kubectl apply -f $DIR/../../deploy/tests/config/experimental/gwapi-echo-app.yaml
+  fi
 fi
 
 printf %80s |tr " " "="; echo ""
@@ -119,4 +125,10 @@ while [  $COUNTER -lt 150 ]; do
     fi
 done
 
-time kubectl wait --for=condition=ready --timeout=10m pod -l run=haproxy-ingress -n haproxy-controller
+if ! time kubectl wait --for=condition=ready --timeout=10m pod -l run=haproxy-ingress -n haproxy-controller; then
+  echo "ingress controller not ready"
+  kubectl get pods -A
+  kubectl describe pod -l run=haproxy-ingress -n haproxy-controller
+  kubectl logs -l run=haproxy-ingress -n haproxy-controller --tail=200
+  exit 1
+fi

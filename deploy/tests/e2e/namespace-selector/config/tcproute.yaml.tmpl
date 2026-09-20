@@ -1,0 +1,16 @@
+---
+apiVersion: gateway.networking.k8s.io/v1alpha2
+kind: TCPRoute
+metadata:
+  name: {{ .RouteName }}
+spec:
+  parentRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: {{ .GatewayName }}
+  rules:
+    - backendRefs:
+        - group: ""
+          kind: Service
+          name: http-echo
+          port: 80

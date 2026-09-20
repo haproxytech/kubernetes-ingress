@@ -25,6 +25,8 @@ Image can be run with arguments:
 | [`--gateway-controller-name`](#--gateway-controller-name) |  |
 | [`--namespace-blacklist`](#--namespace-blacklist) |  |
 | [`--namespace-whitelist`](#--namespace-whitelist) |  |
+| [`--namespace-label-selector`](#--namespace-label-selector) |  |
+| [`--namespace-selector-ready-timeout`](#--namespace-selector-ready-timeout) | `30s` |
 | [`--publish-service`](#--publish-service) |  |
 | [`--disable-ipv4`](#--disable-ipv4) | `false` |
 | [`--disable-ipv6`](#--disable-ipv6) | `false` |
@@ -455,6 +457,52 @@ Example:
 ```yaml
 --namespace-whitelist=foo --namespace-whitelist=bar
 ```
+
+<p align='right'><a href='#haproxy-kubernetes-ingress-controller'>:arrow_up_small: back to top</a></p>
+
+***
+
+### `--namespace-label-selector`
+
+  Selects namespaces for HAProxy configuration using a Kubernetes label selector. Ignored when --namespace-whitelist or --namespace-blacklist is set.
+
+
+Possible values:
+
+- A Kubernetes label selector, for example app=watch or env in (prod,staging)
+
+Example:
+
+```yaml
+--namespace-label-selector=app=watch
+```
+
+Related documentation:
+
+- [namespace-selection.md](./namespace-selection.md)
+
+<p align='right'><a href='#haproxy-kubernetes-ingress-controller'>:arrow_up_small: back to top</a></p>
+
+***
+
+### `--namespace-selector-ready-timeout`
+
+  Maximum time to wait for selected namespaces to finish their initial informer synchronization. Only used with --namespace-label-selector.
+
+
+Possible values:
+
+- A Go duration, for example 30s or 2m. Default: 30s
+
+Example:
+
+```yaml
+--namespace-selector-ready-timeout=1m
+```
+
+Related documentation:
+
+- [namespace-selection.md](./namespace-selection.md)
 
 <p align='right'><a href='#haproxy-kubernetes-ingress-controller'>:arrow_up_small: back to top</a></p>
 

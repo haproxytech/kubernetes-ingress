@@ -87,61 +87,21 @@ func (k k8s) RunCRSCreationMonitoring(eventChan chan k8ssync.SyncDataEvent, stop
 		for {
 			select {
 			case groupKind := <-eventCRS:
-				if groupKind.Group == "ingress.v1.haproxy.org" {
-					if _, ok := k.crsV1["ingress.v1.haproxy.org - "+groupKind.Kind]; ok {
-						// we have already created watchers for this CRD
-						continue
-					}
-				}
-				if groupKind.Group == "ingress.v3.haproxy.org" {
-					if _, ok := k.crsV3["ingress.v3.haproxy.org - "+groupKind.Kind]; ok {
-						// we have already created watchers for this CRD
-						continue
-					}
+				if k.crAlreadyWatched(groupKind) {
+					continue
 				}
 				informersSyncedEvent := &[]cache.InformerSynced{}
+				crsV1, crsV3 := lateCRMaps(groupKind, osArgs)
+				if len(crsV1) == 0 && len(crsV3) == 0 {
+					continue
+				}
+				if k.sessions != nil {
+					k.registerSessionCR(groupKind, crsV1, crsV3, eventChan, stop, osArgs)
+					continue
+				}
+				k.rememberLateCR(groupKind, crsV1, crsV3)
 				for _, namespace := range k.whiteListedNS {
-					crsV1 := map[string]CRV1{}
-					crsV3 := map[string]CRV3{}
-					switch groupKind.Group {
-					case "ingress.v1.haproxy.org":
-						switch groupKind.Kind {
-						case "Backend":
-							crsV1[groupKind.Kind] = NewBackendCRV1()
-						case "Defaults":
-							crsV1[groupKind.Kind] = NewDefaultsCRV1()
-						case "Global":
-							crsV1[groupKind.Kind] = NewGlobalCRV1()
-						case "TCP":
-							crsV1[groupKind.Kind] = NewTCPCRV1()
-						}
-						logger.Info("Custom resource definition created, adding CR watcher for " + crsV1[groupKind.Kind].GetKind())
-					case "ingress.v3.haproxy.org":
-						ok := true
-						switch groupKind.Kind {
-						case "Backend":
-							crsV3[groupKind.Kind] = NewBackendCRV3()
-						case "Defaults":
-							crsV3[groupKind.Kind] = NewDefaultsCRV3()
-						case "Global":
-							crsV3[groupKind.Kind] = NewGlobalCRV3()
-						case "TCP":
-							crsV3[groupKind.Kind] = NewTCPCRV3()
-						case "ValidationRules":
-							if osArgs.CustomValidationRules.Name != "" {
-								crsV3[groupKind.Kind] = NewValidationCRV3()
-							} else {
-								ok = false
-							}
-						case "Frontend":
-							crsV3[groupKind.Kind] = NewFrontendCRV3()
-						}
-						if ok {
-							logger.Info("Custom resource definition created, adding CR watcher for " + crsV3[groupKind.Kind].GetKind() + " " + groupKind.Group)
-						}
-					}
-
-					k.runCRInformers(eventChan, stop, namespace, informersSyncedEvent, crsV1, crsV3, osArgs)
+					k.runCRInformers(eventChan, stop, namespace, informersSyncedEvent, crsV1, crsV3, osArgs, true, nil, nil)
 				}
 
 				if !cache.WaitForCacheSync(stop, *informersSyncedEvent...) {
@@ -152,4 +112,147 @@ func (k k8s) RunCRSCreationMonitoring(eventChan chan k8ssync.SyncDataEvent, stop
 			}
 		}
 	}(eventCRS)
+}
+
+// registerSessionCR serializes publication of the CR set with session.run.
+// Placeholders consume the updated set when their construction completes.
+// sessions.mu is only held to snapshot constructed sessions so Accept is not
+// blocked for the duration of factory.Start across every namespace.
+func (k k8s) registerSessionCR(groupKind GroupKind, crsV1 map[string]CRV1, crsV3 map[string]CRV3,
+	eventChan chan k8ssync.SyncDataEvent, stop <-chan struct{}, osArgs utils.OSArgs,
+) {
+	k.sessions.mu.Lock()
+	if k.sessions.closed || k.crAlreadyWatched(groupKind) {
+		k.sessions.mu.Unlock()
+		return
+	}
+	k.rememberLateCR(groupKind, crsV1, crsV3)
+	constructed := make([]*nsSession, 0, len(k.sessions.sessions))
+	for _, sess := range k.sessions.sessions {
+		if sess.constructed {
+			constructed = append(constructed, sess)
+		}
+	}
+	k.sessions.mu.Unlock()
+
+	k.sessions.crRegMu.Lock()
+	defer k.sessions.crRegMu.Unlock()
+	for _, sess := range constructed {
+		select {
+		case <-sess.stopCh:
+			continue
+		default:
+		}
+		var synced []cache.InformerSynced
+		var regs []cache.ResourceEventHandlerRegistration
+		sk := k
+		sk.handlerRegs = &regs
+		sk.runCRInformers(sessionResourceChan(sess, eventChan), sess.stopCh, sess.namespace,
+			&synced, crsV1, crsV3, osArgs, false, sess.crV1, sess.crV3)
+		// Handler sync, rather than just informer sync, guarantees initial
+		// callbacks have sent their events before the FIFO drain.
+		for _, reg := range regs {
+			if reg != nil {
+				synced = append(synced, reg.HasSynced)
+			}
+		}
+		sess.crV1.Start(sess.stopCh)
+		sess.crV3.Start(sess.stopCh)
+		go syncSessionCR(sess, synced, eventChan, stop)
+	}
+}
+
+// Each CRD/session pair waits independently: a failed LIST must not prevent
+// another namespace or a subsequently discovered CRD from starting.
+func syncSessionCR(sess *nsSession, synced []cache.InformerSynced, eventChan chan k8ssync.SyncDataEvent, stop <-chan struct{}) {
+	waitStop := make(chan struct{})
+	done := make(chan struct{})
+	defer close(done)
+	go func() {
+		select {
+		case <-stop:
+		case <-sess.stopCh:
+		case <-done:
+		}
+		close(waitStop)
+	}()
+	if cache.WaitForCacheSync(waitStop, synced...) {
+		drainSessionEvents(sess, eventChan, stop)
+	}
+}
+
+func crMapKey(group, kind string) string {
+	return group + " - " + kind
+}
+
+// crAlreadyWatched reports whether this CRD is already registered.
+func (k k8s) crAlreadyWatched(groupKind GroupKind) bool {
+	if k.crsMu != nil {
+		k.crsMu.RLock()
+		defer k.crsMu.RUnlock()
+	}
+	if groupKind.Group == "ingress.v1.haproxy.org" {
+		_, ok := k.crsV1[crMapKey(groupKind.Group, groupKind.Kind)]
+		return ok
+	}
+	if groupKind.Group == "ingress.v3.haproxy.org" {
+		_, ok := k.crsV3[crMapKey(groupKind.Group, groupKind.Kind)]
+		return ok
+	}
+	return false
+}
+
+func (k k8s) rememberLateCR(groupKind GroupKind, crsV1 map[string]CRV1, crsV3 map[string]CRV3) {
+	if k.crsMu != nil {
+		k.crsMu.Lock()
+		defer k.crsMu.Unlock()
+	}
+	for kind, cr := range crsV1 {
+		k.crsV1[crMapKey(groupKind.Group, kind)] = cr
+	}
+	for kind, cr := range crsV3 {
+		k.crsV3[crMapKey(groupKind.Group, kind)] = cr
+	}
+}
+
+func lateCRMaps(groupKind GroupKind, osArgs utils.OSArgs) (map[string]CRV1, map[string]CRV3) {
+	crsV1 := map[string]CRV1{}
+	crsV3 := map[string]CRV3{}
+	switch groupKind.Group {
+	case "ingress.v1.haproxy.org":
+		switch groupKind.Kind {
+		case "Backend":
+			crsV1[groupKind.Kind] = NewBackendCRV1()
+		case "Defaults":
+			crsV1[groupKind.Kind] = NewDefaultsCRV1()
+		case "Global":
+			crsV1[groupKind.Kind] = NewGlobalCRV1()
+		case "TCP":
+			crsV1[groupKind.Kind] = NewTCPCRV1()
+		}
+		if cr, ok := crsV1[groupKind.Kind]; ok {
+			logger.Info("Custom resource definition created, adding CR watcher for " + cr.GetKind())
+		}
+	case "ingress.v3.haproxy.org":
+		switch groupKind.Kind {
+		case "Backend":
+			crsV3[groupKind.Kind] = NewBackendCRV3()
+		case "Defaults":
+			crsV3[groupKind.Kind] = NewDefaultsCRV3()
+		case "Global":
+			crsV3[groupKind.Kind] = NewGlobalCRV3()
+		case "TCP":
+			crsV3[groupKind.Kind] = NewTCPCRV3()
+		case "ValidationRules":
+			if osArgs.CustomValidationRules.Name != "" {
+				crsV3[groupKind.Kind] = NewValidationCRV3()
+			}
+		case "Frontend":
+			crsV3[groupKind.Kind] = NewFrontendCRV3()
+		}
+		if cr, ok := crsV3[groupKind.Kind]; ok {
+			logger.Info("Custom resource definition created, adding CR watcher for " + cr.GetKind() + " " + groupKind.Group)
+		}
+	}
+	return crsV1, crsV3
 }

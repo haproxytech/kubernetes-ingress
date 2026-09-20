@@ -53,7 +53,7 @@ example-dev: build-dev
 
 .PHONY: example-experimental-gwapi
 example-experimental-gwapi:
-	EXPERIMENTAL_GWAPI=1 deploy/tests/create.sh
+	EXPERIMENTAL_GWAPI=1 GWAPI_SAMPLE=1 deploy/tests/create.sh
 
 .PHONY: example-rebuild
 example-rebuild:

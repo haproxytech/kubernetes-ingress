@@ -20,6 +20,7 @@ import (
 
 	"github.com/haproxytech/client-native/v6/models"
 	v3 "github.com/haproxytech/kubernetes-ingress/crs/api/ingress/v3"
+	"k8s.io/apimachinery/pkg/types"
 )
 
 // ServicePort describes port of a service
@@ -161,6 +162,10 @@ type IngressRule struct {
 // Ingress is useful data from k8s structures about ingress
 type Ingress struct {
 	IngressCore
+	// UID identifies the kubernetes object. It is stable across spec
+	// updates, so synthetic deletes (namespace teardown) can clean
+	// ProcessedResourceVersion entries created from informer events.
+	UID          types.UID
 	Status       Status // Used for store purpose
 	Addresses    []string
 	Ignored      bool // true if resource ignored because of non matching Controller Class

@@ -74,3 +74,19 @@ func TestPopPreviousBackendsWithoutSnapshot(t *testing.T) {
 	require.NoError(t, client.PopPreviousBackends())
 	require.Empty(t, client.backends)
 }
+
+func TestBackendCreateIfNotExistCreatesMissingBackend(t *testing.T) {
+	client := &clientNative{backends: map[string]Backend{}}
+	client.BackendCreateIfNotExist(models.BackendBase{Name: "default_route1", Mode: "tcp"})
+
+	got, err := client.BackendGet("default_route1")
+	require.NoError(t, err)
+	require.Equal(t, "default_route1", got.Name)
+	require.Equal(t, "tcp", got.Mode)
+	require.True(t, client.BackendUsed("default_route1"))
+
+	client.BackendCreateIfNotExist(models.BackendBase{Name: "default_route1", Mode: "http"})
+	got, err = client.BackendGet("default_route1")
+	require.NoError(t, err)
+	require.Equal(t, "tcp", got.Mode, "existing backend must not be rewritten")
+}

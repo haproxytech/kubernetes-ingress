@@ -29,7 +29,11 @@ func NewTCPCRV3() TCPCR {
 	return TCPCR{}
 }
 
-func (c TCPCR) GetInformerV3(eventChan chan k8ssync.SyncDataEvent, factory informersv3.SharedInformerFactory, osArgs utils.OSArgs) cache.SharedIndexInformer { //nolint:ireturn
+func (c TCPCR) GetInformerV3(
+	eventChan chan k8ssync.SyncDataEvent,
+	factory informersv3.SharedInformerFactory,
+	osArgs utils.OSArgs,
+) (cache.SharedIndexInformer, cache.ResourceEventHandlerRegistration) { //nolint:ireturn
 	informer := factory.Ingress().V3().TCPs().Informer()
 
 	sendToChannel := func(eventChan chan k8ssync.SyncDataEvent, newObject interface{}, status store.Status) {
@@ -53,7 +57,7 @@ func (c TCPCR) GetInformerV3(eventChan chan k8ssync.SyncDataEvent, factory infor
 		go logger.Debug("Global CR informer error: %s", err)
 	})
 	logger.Error(errW)
-	_, err := informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+	reg, err := informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			sendToChannel(eventChan, obj, store.ADDED)
 		},
@@ -65,7 +69,7 @@ func (c TCPCR) GetInformerV3(eventChan chan k8ssync.SyncDataEvent, factory infor
 		},
 	})
 	logger.Error(err)
-	return informer
+	return informer, reg
 }
 
 func (c TCPCR) GetKind() string {
@@ -73,6 +77,9 @@ func (c TCPCR) GetKind() string {
 }
 
 func convertToStoreTCP(k8sData interface{}, status store.Status) *store.TCPs {
+	if tombstone, ok := k8sData.(cache.DeletedFinalStateUnknown); ok {
+		k8sData = tombstone.Obj
+	}
 	data, ok := k8sData.(*v3.TCP)
 	if !ok {
 		logger.Warning(CRSGroupVersionV3 + ": type mismatch with TCP CR kind")

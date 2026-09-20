@@ -120,11 +120,7 @@ func (q *Quic) Update(k store.K8s, h haproxy.HAProxy, a annotations.Annotations)
 		ipv4Func = ipv4DeleteFunc
 		ipv6Func = ipv6DeleteFunc
 	} else {
-		namespaceSslCertificate := k.Namespaces[nsSslCertificateAnn]
-		var sslSecret *store.Secret
-		if namespaceSslCertificate != nil {
-			sslSecret = namespaceSslCertificate.Secret[nameSslCertificateAnn]
-		}
+		sslSecret, _ := k.GetSecret(nsSslCertificateAnn, nameSslCertificateAnn)
 
 		if sslSecret == nil || sslSecret.Status == store.DELETED {
 			ipv4Func = ipv4DeleteFunc

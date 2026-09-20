@@ -20,6 +20,9 @@ import (
 
 func (k *K8s) EventDefaultsCR(namespace, name string, data *v3.Defaults) bool {
 	ns := k.GetNamespace(namespace)
+	if data != nil && k.dropDetachedMutation(ns, ADDED) {
+		return false
+	}
 	if data == nil {
 		delete(ns.CRs.Defaults, name)
 		return true
