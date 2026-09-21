@@ -14,8 +14,19 @@ const (
 	ObjectServer  = "server"
 )
 
+// RejectedCustomResource is a custom resource HAProxy refused, with the rejected generation.
+type RejectedCustomResource struct {
+	Kind       string
+	Namespace  string
+	Name       string
+	Generation int64
+}
+
 type PrometheusMetricsManager struct {
 	unableToSyncGauge prometheus.Gauge
+
+	// custom resources set aside after HAProxy rejected them
+	rejectedCRGaugeVec *prometheus.GaugeVec
 
 	// reload
 	reloadsCounterVec *prometheus.CounterVec
@@ -54,10 +65,20 @@ func New() PrometheusMetricsManager {
 			Help: "1 = there's a pending haproxy configuration that is not valid so not applicable, 0 = haproxy configuration applied",
 		})
 
+		rejectedCRGauge := promauto.NewGaugeVec(
+			prometheus.GaugeOpts{
+				Name: "haproxy_rejected_custom_resource_generation",
+				Help: "The generation of a custom resource HAProxy rejected and the controller set aside, partitioned by kind, namespace and name; " +
+					"the series disappears once the resource is edited or deleted",
+			},
+			[]string{"kind", "namespace", "name"},
+		)
+
 		pmm = PrometheusMetricsManager{
 			reloadsCounterVec:       reloadCounter,
 			runtimeSocketCounterVec: runtimeSocketCounter,
 			unableToSyncGauge:       unableToSyncGauge,
+			rejectedCRGaugeVec:      rejectedCRGauge,
 		}
 	})
 	return pmm
@@ -85,4 +106,12 @@ func (pmm PrometheusMetricsManager) SetUnableSyncGauge() {
 
 func (pmm PrometheusMetricsManager) UnsetUnableSyncGauge() {
 	pmm.unableToSyncGauge.Set(float64(0))
+}
+
+// SetRejectedCustomResources replaces the published set of rejected custom resources.
+func (pmm PrometheusMetricsManager) SetRejectedCustomResources(rejected []RejectedCustomResource) {
+	pmm.rejectedCRGaugeVec.Reset()
+	for _, r := range rejected {
+		pmm.rejectedCRGaugeVec.WithLabelValues(r.Kind, r.Namespace, r.Name).Set(float64(r.Generation))
+	}
 }

@@ -229,7 +229,7 @@ HAProxy checks the whole configuration at once. A custom resource holding a dire
 
 - the rejected lines are traced back to the section they belong to and to the custom resource that section was built from,
 - the current generation of that resource is set aside, and the configuration is applied again without it,
-- an error naming the resource and its generation is logged.
+- an error naming the resource and its generation is logged, and the resource is reported by the `haproxy_rejected_custom_resource_generation` [metric](prometheus.md) until it is edited or deleted.
 
 While a resource is set aside, the configuration is rendered as if the resource was not referenced: the global and defaults sections come from the configmap annotations, a frontend is left unamended, a backend is built from the service and ingress annotations, and the frontends of a [TCP resource](custom-resource-tcp.md) are not configured.
 

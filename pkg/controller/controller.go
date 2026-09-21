@@ -137,6 +137,7 @@ func (c *HAProxyController) updateHAProxy() {
 		c.haproxy.APIDisposeTransaction()
 		instance.Reset()
 		rutracker.GetRuntimeUpdateTracker().Reset()
+		c.publishRejectedCRs()
 	}()
 	// First log here that will contain the "transactionID" field (added in APIStartTransaction)
 	// All subsequent log line will contain the "transactionID" field.

@@ -16,6 +16,7 @@ package controller
 
 import (
 	"github.com/haproxytech/kubernetes-ingress/pkg/annotations"
+	"github.com/haproxytech/kubernetes-ingress/pkg/metrics"
 )
 
 // disableRejectedCRs disables the custom resources behind the sections HAProxy
@@ -38,4 +39,16 @@ func (c *HAProxyController) disableRejectedCRs(configErr error, dir string) (rer
 		rerun = true
 	}
 	return rerun
+}
+
+// publishRejectedCRs exposes the resources currently set aside as a gauge, one series each.
+func (c *HAProxyController) publishRejectedCRs() {
+	rejected := c.store.RejectedCRs()
+	series := make([]metrics.RejectedCustomResource, 0, len(rejected))
+	for ref, generation := range rejected {
+		series = append(series, metrics.RejectedCustomResource{
+			Kind: string(ref.Kind), Namespace: ref.Namespace, Name: ref.Name, Generation: generation,
+		})
+	}
+	c.prometheusMetricsManager.SetRejectedCustomResources(series)
 }

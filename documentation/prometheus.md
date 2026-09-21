@@ -21,12 +21,13 @@ prometheus-endpoint-auth-secret: haproxy-controller/prometheus-credentials
 
 ## Metrics
 
-On top of the prometheus provided metrics, we added these three ones:
+On top of the prometheus provided metrics, we added these ones:
 ```
 haproxy_reloads_total: The number of haproxy reloads partitioned by result (success/failure)
 haproxy_restarts_total: The number of haproxy restarts partitioned by result (success/failure)
 haproxy_runtime_socket_connections_total: The number of haproxy runtime socket connections partitioned by object (server/map) and result (success/failure)
 haproxy_unable_to_sync_configuration 1 = there's a pending haproxy configuration that is not valid so not applicable, 0 = haproxy configuration applied
+haproxy_rejected_custom_resource_generation: The generation of a custom resource HAProxy rejected and the controller set aside, partitioned by kind, namespace and name; the series disappears once the resource is edited or deleted
 ```
 
 
@@ -50,4 +51,7 @@ haproxy_runtime_socket_connections_total{object="server",result="success"} 50
 # HELP haproxy_unable_to_sync_configuration 1 = there's a pending haproxy configuration that is not valid so not applicable, 0 = haproxy configuration applied
 # TYPE haproxy_unable_to_sync_configuration gauge
 haproxy_unable_to_sync_configuration 1
+# HELP haproxy_rejected_custom_resource_generation The generation of a custom resource HAProxy rejected and the controller set aside, partitioned by kind, namespace and name; the series disappears once the resource is edited or deleted
+# TYPE haproxy_rejected_custom_resource_generation gauge
+haproxy_rejected_custom_resource_generation{kind="Backend",name="api",namespace="default"} 3
 ```

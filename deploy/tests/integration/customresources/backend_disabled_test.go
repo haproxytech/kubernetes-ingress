@@ -16,6 +16,7 @@ package customresources
 
 import (
 	"github.com/haproxytech/client-native/v6/models"
+	"github.com/prometheus/client_golang/prometheus"
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -129,10 +130,32 @@ func (suite *CustomResourceSuite) TestDisabledBackendCR() {
 	suite.sync(backendCREvent(1))
 	suite.ExpectHaproxyConfigContains(backendHeader, 1)
 	suite.ExpectHaproxyConfigContains(crDirective, 0)
+	suite.Equal(map[string]float64{"Backend/" + appNs + "/" + backendCRName: 1}, rejectedCRSeries(suite))
 
 	suite.sync(backendCREvent(2))
 	suite.ExpectHaproxyConfigContains(backendHeader, 1)
 	suite.ExpectHaproxyConfigContains(crDirective, 1)
+	suite.Empty(rejectedCRSeries(suite), "an edited resource is no longer reported as rejected")
 
 	suite.StopController()
+}
+
+// rejectedCRSeries reads the rejected resources gauge as "kind/namespace/name" -> generation.
+func rejectedCRSeries(suite *CustomResourceSuite) map[string]float64 {
+	families, err := prometheus.DefaultGatherer.Gather()
+	suite.Require().NoError(err)
+	series := map[string]float64{}
+	for _, family := range families {
+		if family.GetName() != "haproxy_rejected_custom_resource_generation" {
+			continue
+		}
+		for _, metric := range family.GetMetric() {
+			labels := map[string]string{}
+			for _, label := range metric.GetLabel() {
+				labels[label.GetName()] = label.GetValue()
+			}
+			series[labels["kind"]+"/"+labels["namespace"]+"/"+labels["name"]] = metric.GetGauge().GetValue()
+		}
+	}
+	return series
 }

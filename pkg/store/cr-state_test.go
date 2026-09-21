@@ -136,3 +136,12 @@ func TestTCPCRReplayedAsAddedWithANewGenerationRequiresASync(t *testing.T) {
 	require.True(t, k.EventTCPCR("ns", "cr", &TCPs{Status: ADDED, Namespace: "ns", Name: "cr", Generation: 2}))
 	require.False(t, k.CRDisabled(ref))
 }
+
+func TestRejectedCRsListsOnlyDisabledResources(t *testing.T) {
+	k := NewK8sStore(utils.OSArgs{})
+	k.EventBackendCR("ns", "bad", backendCR(2))
+	k.EventBackendCR("ns", "good", &v3.Backend{ObjectMeta: metav1.ObjectMeta{Namespace: "ns", Name: "good", Generation: 5}})
+	k.DisableCR(CRRef{Kind: CRKindBackend, Namespace: "ns", Name: "bad"})
+
+	require.Equal(t, map[CRRef]int64{{Kind: CRKindBackend, Namespace: "ns", Name: "bad"}: 2}, k.RejectedCRs())
+}

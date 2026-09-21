@@ -84,3 +84,14 @@ func (k *K8s) CRDisabled(ref CRRef) bool {
 	state, known := k.CRStates[ref]
 	return known && state.Disabled
 }
+
+// RejectedCRs lists the custom resources currently set aside, with the rejected generation.
+func (k *K8s) RejectedCRs() map[CRRef]int64 {
+	rejected := map[CRRef]int64{}
+	for ref, state := range k.CRStates {
+		if state.Disabled {
+			rejected[ref] = state.Generation
+		}
+	}
+	return rejected
+}
