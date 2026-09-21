@@ -222,3 +222,15 @@ data:
   cr-frontend-ssl: default/test:prepend
 ```
 
+
+## When HAProxy rejects a custom resource
+
+HAProxy checks the whole configuration at once. A custom resource holding a directive HAProxy refuses, a missing file for instance, would therefore block every other change until it is fixed. Instead, the controller sets the resource aside:
+
+- the rejected lines are traced back to the section they belong to and to the custom resource that section was built from,
+- the current generation of that resource is set aside, and the configuration is applied again without it,
+- an error naming the resource and its generation is logged.
+
+While a resource is set aside, the configuration is rendered as if the resource was not referenced: the global and defaults sections come from the configmap annotations, a frontend is left unamended, a backend is built from the service and ingress annotations, and the frontends of a [TCP resource](custom-resource-tcp.md) are not configured.
+
+Editing the resource bumps its generation and puts it back under test; nothing is written back to the cluster. The attribution is per section, so a rejected line the resource did not produce, such as a server line in a backend, sets the resource aside as well; the replay then fails the same way and HAProxy keeps its previous configuration, as it did before.
