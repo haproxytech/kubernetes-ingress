@@ -13,7 +13,7 @@ require (
 	github.com/google/cel-go v0.31.0
 	github.com/google/go-cmp v0.7.0
 	github.com/google/renameio/v2 v2.0.2
-	github.com/haproxytech/client-native/v5 v5.1.16-0.20241206145631-acb903fd9ec2
+	github.com/haproxytech/client-native/v5 v5.1.28
 	github.com/haproxytech/client-native/v6 v6.4.2
 	github.com/haproxytech/go-method-gen v0.1.4
 	github.com/jessevdk/go-flags v1.4.0
