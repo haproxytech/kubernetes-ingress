@@ -163,6 +163,7 @@ func (n ingressNetworkingV1Strategy) ConvertIngress(enableUserAnnotations bool) 
 			CreationTime: n.ig.CreationTimestamp.Time,
 		},
 	}
+	ing.UID = n.ig.GetUID()
 	addresses := []string{}
 	for _, ingLoadBalancer := range n.ig.Status.LoadBalancer.Ingress {
 		address := ingLoadBalancer.IP

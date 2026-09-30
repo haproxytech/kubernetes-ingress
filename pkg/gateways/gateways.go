@@ -470,6 +470,10 @@ func (gm GatewayManagerImpl) getOurListenersFromTCPRoute(tcproute store.TCPRoute
 			errors.Add(fmt.Errorf("gwapi: unexisting namespace '%s' in parentRef number '%d' from tcp route '%s/%s'", gatewayNs, i, tcproute.Namespace, tcproute.Name))
 			continue
 		}
+		if gm.k8sStore.SkipNamespaceInConfig(ns) {
+			errors.Add(fmt.Errorf("gwapi: unavailable namespace '%s' in parentRef number '%d' from tcp route '%s/%s'", gatewayNs, i, tcproute.Namespace, tcproute.Name))
+			continue
+		}
 		gw, found := ns.Gateways[parentRef.Name]
 		if !found || gw == nil {
 			errors.Add(fmt.Errorf("gwapi: unexisting gateway in parentRef '%s' from tcp route '%s/%s'", parentRef.Name, tcproute.Namespace, tcproute.Name))

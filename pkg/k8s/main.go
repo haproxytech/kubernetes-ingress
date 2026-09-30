@@ -17,10 +17,12 @@ package k8s
 import (
 	"context"
 	"errors"
+	"maps"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	k8sinformers "k8s.io/client-go/informers"
@@ -64,6 +66,19 @@ type K8s interface {
 	GetClientset() *k8sclientset.Clientset
 	MonitorChanges(eventChan chan k8ssync.SyncDataEvent, stop chan struct{}, osArgs utils.OSArgs, gatewayAPIInstalled bool)
 	IsGatewayAPIInstalled(gatewayControllerName string) bool
+	NewSessionManager(eventChan chan k8ssync.SyncDataEvent, gatewayAPI bool) NamespaceSessions
+}
+
+// NamespaceSessions is the watch lifecycle for --namespace-label-selector.
+type NamespaceSessions interface {
+	Start(namespace string) error
+	Drain(namespace string) bool
+	Draining(namespace string) bool
+	FinishDrain(namespace string)
+	Ready(namespace string) bool
+	Accept(namespace string, epoch uint64) bool
+	MarkReady(namespace string, epoch uint64) bool
+	Close()
 }
 
 // A Custom Resource interface
@@ -74,35 +89,45 @@ type CRKind interface {
 }
 type CRV1 interface {
 	CRKind
-	GetInformerV1(chan k8ssync.SyncDataEvent, crinformersv1.SharedInformerFactory) cache.SharedIndexInformer //nolint:inamedparam
+	GetInformerV1(chan k8ssync.SyncDataEvent, crinformersv1.SharedInformerFactory) (cache.SharedIndexInformer, cache.ResourceEventHandlerRegistration) //nolint:inamedparam
 }
 
 type CRV3 interface {
 	CRKind
-	GetInformerV3(chan k8ssync.SyncDataEvent, crinformersv3.SharedInformerFactory, utils.OSArgs) cache.SharedIndexInformer //nolint:inamedparam
+	GetInformerV3(chan k8ssync.SyncDataEvent, crinformersv3.SharedInformerFactory, utils.OSArgs) (cache.SharedIndexInformer, cache.ResourceEventHandlerRegistration) //nolint:inamedparam
 }
 
 // k8s is structure with all data required to synchronize with k8s
 type k8s struct {
-	gatewayRestClient      client.Client
-	crsV1                  map[string]CRV1
-	crsV3                  map[string]CRV3
-	crsRegisteredOnStart   map[string]struct{}
-	builtInClient          *k8sclientset.Clientset
-	crClientV1             *crclientsetv1.Clientset
-	crClientV3             *crclientsetv3.Clientset
-	apiExtensionsClient    *crdclientset.Clientset
-	publishSvc             *utils.NamespaceValue
-	gatewayClient          *gatewayclientset.Clientset
-	crdClient              *crdclientset.Clientset
-	podPrefix              string
-	podNamespace           string
-	whiteListedNS          []string
-	syncPeriod             time.Duration
-	initialSyncPeriod      time.Duration
-	cacheResyncPeriod      time.Duration
-	disableSvcExternalName bool // CVE-2021-25740
-	cmMain                 types.NamespacedName
+	gatewayRestClient         client.Client
+	crsV1                     map[string]CRV1
+	crsV3                     map[string]CRV3
+	crsRegisteredOnStart      map[string]struct{}
+	builtInClient             *k8sclientset.Clientset
+	crClientV1                *crclientsetv1.Clientset
+	crClientV3                *crclientsetv3.Clientset
+	apiExtensionsClient       *crdclientset.Clientset
+	publishSvc                *utils.NamespaceValue
+	gatewayClient             *gatewayclientset.Clientset
+	crdClient                 *crdclientset.Clientset
+	podPrefix                 string
+	podNamespace              string
+	whiteListedNS             []string
+	syncPeriod                time.Duration
+	initialSyncPeriod         time.Duration
+	cacheResyncPeriod         time.Duration
+	disableSvcExternalName    bool // CVE-2021-25740
+	hasEndpointSliceMirroring bool
+	// builtInAPIs caches discovery only for dynamic namespace sessions.
+	// Nil preserves the original discovery path when the selector is inactive.
+	builtInAPIs *builtInAPIs
+	cmMain      types.NamespacedName
+	osArgs      utils.OSArgs
+	eventEpoch  uint64
+	handlerRegs *[]cache.ResourceEventHandlerRegistration
+	sessions    *sessionManager
+	gatewayAPI  bool
+	crsMu       *sync.RWMutex
 }
 
 func New(osArgs utils.OSArgs, whitelist map[string]struct{}, publishSvc *utils.NamespaceValue) K8s { //nolint:ireturn
@@ -110,10 +135,18 @@ func New(osArgs utils.OSArgs, whitelist map[string]struct{}, publishSvc *utils.N
 	restconfig, err := GetRestConfig(osArgs)
 	logger.Panic(err)
 	builtInClient := k8sclientset.NewForConfigOrDie(restconfig)
+	var hasEndpointSliceMirroring bool
 	if k8sVersion, errVer := builtInClient.Discovery().ServerVersion(); errVer != nil {
 		logger.Panicf("Unable to get Kubernetes version: %v\n", errVer)
 	} else {
 		logger.Printf("Running on Kubernetes version: %s %s", k8sVersion.String(), k8sVersion.Platform)
+		if osArgs.NamespaceLabelSelectorActive() {
+			hasEndpointSliceMirroring = supportsEndpointSliceMirroring(k8sVersion.Major, k8sVersion.Minor)
+		}
+	}
+	var discoveredAPIs *builtInAPIs
+	if osArgs.NamespaceLabelSelectorActive() {
+		discoveredAPIs = resolveBuiltInAPIs(builtInClient)
 	}
 
 	gatewayClient, err := gatewayclientset.NewForConfig(restconfig)
@@ -133,29 +166,35 @@ func New(osArgs utils.OSArgs, whitelist map[string]struct{}, publishSvc *utils.N
 	}
 
 	prefix, _ := utils.GetPodPrefix(os.Getenv("POD_NAME"))
-	k := k8s{
-		builtInClient:          builtInClient,
-		crClientV1:             crclientsetv1.NewForConfigOrDie(restconfig),
-		crClientV3:             crclientsetv3.NewForConfigOrDie(restconfig),
-		apiExtensionsClient:    crdclientset.NewForConfigOrDie(restconfig),
-		crsV1:                  map[string]CRV1{},
-		crsV3:                  map[string]CRV3{},
-		crsRegisteredOnStart:   map[string]struct{}{},
-		whiteListedNS:          getWhitelistedNS(whitelist, osArgs.ConfigMap.Namespace),
-		publishSvc:             publishSvc,
-		podNamespace:           os.Getenv("POD_NAMESPACE"),
-		podPrefix:              prefix,
-		syncPeriod:             osArgs.SyncPeriod,
-		initialSyncPeriod:      osArgs.InitialSyncPeriod,
-		cacheResyncPeriod:      osArgs.CacheResyncPeriod,
-		disableSvcExternalName: osArgs.DisableServiceExternalName,
-		gatewayClient:          gatewayClient,
-		gatewayRestClient:      gatewayRestClient,
-		crdClient:              crdClient,
+	k := &k8s{
+		builtInClient:             builtInClient,
+		crClientV1:                crclientsetv1.NewForConfigOrDie(restconfig),
+		crClientV3:                crclientsetv3.NewForConfigOrDie(restconfig),
+		apiExtensionsClient:       crdclientset.NewForConfigOrDie(restconfig),
+		crsV1:                     map[string]CRV1{},
+		crsV3:                     map[string]CRV3{},
+		crsRegisteredOnStart:      map[string]struct{}{},
+		whiteListedNS:             getWhitelistedNS(whitelist, osArgs.ConfigMap.Namespace),
+		publishSvc:                publishSvc,
+		podNamespace:              os.Getenv("POD_NAMESPACE"),
+		podPrefix:                 prefix,
+		syncPeriod:                osArgs.SyncPeriod,
+		initialSyncPeriod:         osArgs.InitialSyncPeriod,
+		cacheResyncPeriod:         osArgs.CacheResyncPeriod,
+		disableSvcExternalName:    osArgs.DisableServiceExternalName,
+		hasEndpointSliceMirroring: hasEndpointSliceMirroring,
+		builtInAPIs:               discoveredAPIs,
+		gatewayClient:             gatewayClient,
+		gatewayRestClient:         gatewayRestClient,
+		crdClient:                 crdClient,
 		cmMain: types.NamespacedName{
 			Name:      osArgs.ConfigMap.Name,
 			Namespace: osArgs.ConfigMap.Namespace,
 		},
+		osArgs: osArgs,
+	}
+	if osArgs.NamespaceLabelSelectorActive() {
+		k.crsMu = &sync.RWMutex{}
 	}
 
 	// ingress/v1 is deprecated
@@ -182,12 +221,30 @@ func (k k8s) GetClientset() *k8sclientset.Clientset {
 	return k.builtInClient
 }
 
+func (k k8s) send(ch chan k8ssync.SyncDataEvent, ev k8ssync.SyncDataEvent) {
+	if k.eventEpoch != 0 {
+		ev.NamespaceEpoch = k.eventEpoch
+	}
+	ch <- ev
+}
+
+func (k k8s) noteReg(reg cache.ResourceEventHandlerRegistration, err error) {
+	logger.Error(err)
+	if k.handlerRegs != nil && reg != nil {
+		*k.handlerRegs = append(*k.handlerRegs, reg)
+	}
+}
+
 func (k k8s) MonitorChanges(eventChan chan k8ssync.SyncDataEvent, stop chan struct{}, osArgs utils.OSArgs, gatewayAPIInstalled bool) {
 	informersSynced := &[]cache.InformerSynced{}
 	k.runPodInformer(eventChan, stop, informersSynced)
+	if osArgs.NamespaceLabelSelectorActive() {
+		k.watchNamespacesByLabel(eventChan, stop, osArgs, gatewayAPIInstalled)
+		return
+	}
 	for _, namespace := range k.whiteListedNS {
 		k.runInformers(eventChan, stop, namespace, informersSynced, osArgs)
-		k.runCRInformers(eventChan, stop, namespace, informersSynced, k.crsV1, k.crsV3, osArgs)
+		k.runCRInformers(eventChan, stop, namespace, informersSynced, k.crsV1, k.crsV3, osArgs, true, nil, nil)
 		if gatewayAPIInstalled {
 			k.runInformersGwAPI(eventChan, stop, namespace, informersSynced)
 		}
@@ -227,8 +284,14 @@ func (k k8s) registerCoreCRV1(cr CRV1) {
 	groupVersion = strings.Split(resources.GroupVersion, "/")[0]
 	for _, resource := range resources.APIResources {
 		if resource.Kind == kindName {
+			if k.crsMu != nil {
+				k.crsMu.Lock()
+			}
 			k.crsV1[groupVersion+" - "+kindName] = cr
 			k.crsRegisteredOnStart[groupVersion+" - "+kindName] = struct{}{}
+			if k.crsMu != nil {
+				k.crsMu.Unlock()
+			}
 			logger.Infof("%s CR defined in API %s", kindName, resources.GroupVersion)
 			break
 		}
@@ -246,8 +309,14 @@ func (k k8s) registerCoreCRV3(cr CRV3) {
 	groupVersion = strings.Split(resources.GroupVersion, "/")[0]
 	for _, resource := range resources.APIResources {
 		if resource.Kind == kindName {
+			if k.crsMu != nil {
+				k.crsMu.Lock()
+			}
 			k.crsV3[groupVersion+" - "+kindName] = cr
 			k.crsRegisteredOnStart[groupVersion+" - "+kindName] = struct{}{}
+			if k.crsMu != nil {
+				k.crsMu.Unlock()
+			}
 			logger.Infof("%s CR defined in API %s", kindName, resources.GroupVersion)
 			break
 		}
@@ -256,21 +325,44 @@ func (k k8s) registerCoreCRV3(cr CRV3) {
 
 func (k k8s) runCRInformers(eventChan chan k8ssync.SyncDataEvent, stop chan struct{}, namespace string,
 	informersSynced *[]cache.InformerSynced, crsV1 map[string]CRV1, crsV3 map[string]CRV3,
-	osArgs utils.OSArgs,
+	osArgs utils.OSArgs, startEach bool, informerFactoryV1 crinformersv1.SharedInformerFactory, informerFactoryV3 crinformersv3.SharedInformerFactory,
 ) {
-	informerFactoryV3 := crinformersv3.NewSharedInformerFactoryWithOptions(k.crClientV3, k.cacheResyncPeriod, crinformersv3.WithNamespace(namespace))
-	informerFactoryV1 := crinformersv1.NewSharedInformerFactoryWithOptions(k.crClientV1, k.cacheResyncPeriod, crinformersv1.WithNamespace(namespace))
+	if informerFactoryV3 == nil {
+		informerFactoryV3 = crinformersv3.NewSharedInformerFactoryWithOptions(k.crClientV3, k.cacheResyncPeriod, crinformersv3.WithNamespace(namespace))
+	}
+	if informerFactoryV1 == nil {
+		informerFactoryV1 = crinformersv1.NewSharedInformerFactoryWithOptions(k.crClientV1, k.cacheResyncPeriod, crinformersv1.WithNamespace(namespace))
+	}
 
 	for _, cr := range crsV1 {
-		informer := cr.GetInformerV1(eventChan, informerFactoryV1)
-		go informer.Run(stop)
+		informer, reg := cr.GetInformerV1(eventChan, informerFactoryV1)
+		k.noteReg(reg, nil)
+		if startEach {
+			go informer.Run(stop)
+		}
 		*informersSynced = append(*informersSynced, informer.HasSynced)
 	}
 	for _, cr := range crsV3 {
-		informer := cr.GetInformerV3(eventChan, informerFactoryV3, osArgs)
-		go informer.Run(stop)
+		if cr.GetKind() == "ValidationRules" && !startEach &&
+			(osArgs.CustomValidationRules.Name == "" || namespace != osArgs.CustomValidationRules.Namespace) {
+			continue
+		}
+		informer, reg := cr.GetInformerV3(eventChan, informerFactoryV3, osArgs)
+		k.noteReg(reg, nil)
+		if startEach {
+			go informer.Run(stop)
+		}
 		*informersSynced = append(*informersSynced, informer.HasSynced)
 	}
+}
+
+func (k k8s) crsSnapshot() (map[string]CRV1, map[string]CRV3) {
+	if k.crsMu == nil {
+		return k.crsV1, k.crsV3
+	}
+	k.crsMu.RLock()
+	defer k.crsMu.RUnlock()
+	return maps.Clone(k.crsV1), maps.Clone(k.crsV3)
 }
 
 func (k k8s) runConfigMapInformers(eventChan chan k8ssync.SyncDataEvent, stop chan struct{}, informersSynced *[]cache.InformerSynced, configMap utils.NamespaceValue) {
@@ -322,7 +414,11 @@ func (k k8s) runInformers(eventChan chan k8ssync.SyncDataEvent, stop chan struct
 		go epsi.Run(stop)
 		*informersSynced = append(*informersSynced, epsi.HasSynced)
 	}
-	if epsi == nil || !k.endpointsMirroring() {
+	endpointSliceMirroring := k.hasEndpointSliceMirroring
+	if k.builtInAPIs == nil {
+		endpointSliceMirroring = k.endpointsMirroring()
+	}
+	if epsi == nil || !endpointSliceMirroring {
 		epi := k.getEndpointsInformer(eventChan, factory)
 		go epi.Run(stop)
 		*informersSynced = append(*informersSynced, epi.HasSynced)
@@ -361,27 +457,74 @@ func (k k8s) runPodInformer(eventChan chan k8ssync.SyncDataEvent, stop chan stru
 	}
 }
 
+// builtInAPIs holds the built-in resources the controller needs, resolved once
+// from discovery at startup instead of on every per-namespace session creation.
+type builtInAPIs struct {
+	ingress              bool
+	ingressClass         bool
+	endpointSliceVersion string // "v1", "v1beta1" or "" when unavailable
+}
+
+// resolveBuiltInAPIs performs the built-in discovery lookups once. It replaces
+// the per-session ServerResourcesForGroupVersion calls that used to run on the
+// SyncData event loop and were serialized through the client-go rate limiter.
+// A failed networking.k8s.io/v1 probe returns nil so callers keep the live
+// discovery path instead of caching "API absent" for the process lifetime.
+func resolveBuiltInAPIs(client *k8sclientset.Clientset) *builtInAPIs {
+	apis := &builtInAPIs{}
+	resources, err := client.ServerResourcesForGroupVersion("networking.k8s.io/v1")
+	if err != nil {
+		logger.Errorf("unable to discover networking.k8s.io/v1 resources: %s", err)
+		return nil
+	}
+	for _, rs := range resources.APIResources {
+		switch rs.Name {
+		case "ingresses":
+			apis.ingress = true
+		case "ingressclasses":
+			apis.ingressClass = true
+		}
+	}
+	for _, groupVersion := range []string{"discovery.k8s.io/v1", "discovery.k8s.io/v1beta1"} {
+		resources, err := client.ServerResourcesForGroupVersion(groupVersion)
+		if err != nil {
+			continue
+		}
+		for _, rs := range resources.APIResources {
+			if rs.Name == "endpointslices" {
+				apis.endpointSliceVersion = strings.TrimPrefix(groupVersion, "discovery.k8s.io/")
+				break
+			}
+		}
+		if apis.endpointSliceVersion != "" {
+			break
+		}
+	}
+	return apis
+}
+
 // if EndpointSliceMirroring is supported we can just watch endpointSlices
 // Ref: https://github.com/kubernetes/enhancements/tree/master/keps/sig-network/0752-endpointslices#endpointslicemirroring-controller
 func (k k8s) endpointsMirroring() bool {
-	var major, minor int
-	var err error
 	version, _ := k.builtInClient.ServerVersion()
 	if version == nil {
 		return false
 	}
-	major, err = strconv.Atoi(version.Major)
+	return supportsEndpointSliceMirroring(version.Major, version.Minor)
+}
+
+// supportsEndpointSliceMirroring reports whether Kubernetes mirrors Endpoints into EndpointSlices.
+// Ref: https://github.com/kubernetes/enhancements/tree/master/keps/sig-network/0752-endpointslicemirroring-controller
+func supportsEndpointSliceMirroring(majorVersion, minorVersion string) bool {
+	major, err := strconv.Atoi(majorVersion)
 	if err != nil {
 		return false
 	}
-	minor, err = strconv.Atoi(version.Minor)
+	minor, err := strconv.Atoi(minorVersion)
 	if err != nil {
 		return false
 	}
-	if major == 1 && minor < 19 {
-		return false
-	}
-	return true
+	return major != 1 || minor >= 19
 }
 
 func GetRestConfig(osArgs utils.OSArgs) (restConfig *rest.Config, err error) {

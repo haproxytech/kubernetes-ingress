@@ -76,6 +76,16 @@ func (handler TCPCustomResource) Update(k store.K8s, h haproxy.HAProxy, a annota
 	var errs utils.Errors
 
 	for _, ns := range k.Namespaces {
+		if k.SkipNamespaceInConfig(ns) {
+			if ns.CRs != nil {
+				for _, tcpCR := range ns.CRs.TCPsPerCR {
+					for _, atcp := range tcpCR.Items {
+						k.FrontendRC.RemoveOwner(atcp.Owner())
+					}
+				}
+			}
+			continue
+		}
 		for _, tcpCR := range ns.CRs.TCPsPerCR {
 			// ----------------------------------
 			// ingress.class migration
