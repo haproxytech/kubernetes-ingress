@@ -83,7 +83,7 @@ func (s *Service) scaleHAProxySrvs(backend *store.RuntimeBackend) {
 	if backend.HAProxySrvs == nil {
 		backend.HAProxySrvs = make(map[string]*store.HAProxySrv)
 	}
-	for runtimeEndpoint := range backend.Endpoints {
+	for _, runtimeEndpoint := range store.SortedRuntimeEndpoints(backend.Endpoints) {
 		srv := &store.HAProxySrv{
 			Name:     runtimeEndpoint.ComputeServerName(),
 			Address:  runtimeEndpoint.Address,
