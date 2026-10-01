@@ -27,8 +27,8 @@ import (
 // rule on its own: httpsRedirect.Process creates it when an ingress carries TLS secrets,
 // with no annotation involved.
 func withTLS(ing *store.Ingress, host string) *store.Ingress {
-	ing.TLS = map[string]*store.IngressTLS{
-		host: {Host: host, SecretName: "example-ingress-tls"},
+	ing.TLS = []*store.IngressTLS{
+		{Hosts: []string{host}, SecretName: "example-ingress-tls"},
 	}
 	return ing
 }
