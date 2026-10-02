@@ -3,6 +3,7 @@ package rules
 import (
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/haproxytech/client-native/v6/models"
 
@@ -12,10 +13,11 @@ import (
 )
 
 type ReqTrack struct {
-	TableName   string
-	TablePeriod *int64
-	TableSize   *int64
-	TrackKey    string
+	TableName      string
+	TablePeriod    *int64
+	TableSize      *int64
+	TrackKey       string
+	ExcludePathEnd []string // Path suffixes excluded from request tracking
 }
 
 const (
@@ -59,7 +61,21 @@ func (r ReqTrack) Create(client api.HAProxyClient, frontend *models.Frontend, in
 		TrackScKey:          r.TrackKey,
 		TrackScTable:        r.TableName,
 	}
+	if condTest := r.condTest(); condTest != "" {
+		httpRule.Cond = "if"
+		httpRule.CondTest = condTest
+	}
 	return client.FrontendHTTPRequestRuleCreate(0, frontend.Name, httpRule, ingressACL)
+}
+
+// condTest builds the HAProxy condition of the track-sc rule. Requests
+// whose path ends with an excluded suffix are not tracked at all, so they
+// never increment the http_req_rate counter the deny rule reads.
+func (r ReqTrack) condTest() string {
+	if len(r.ExcludePathEnd) == 0 {
+		return ""
+	}
+	return fmt.Sprintf("!{ path_end %s }", strings.Join(r.ExcludePathEnd, " "))
 }
 
 func (r *ReqTrack) applyDefaults() error {

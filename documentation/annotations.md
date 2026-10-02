@@ -65,6 +65,7 @@ more info about custom annotations can be found in [annotations-custom.md](annot
 | [rate-limit-requests](#rate-limit) | number |  |  |:large_blue_circle:|:large_blue_circle:|:white_circle:|
 | [rate-limit-size](#rate-limit) | string | "100k" | rate-limit |:large_blue_circle:|:large_blue_circle:|:white_circle:|
 | [rate-limit-whitelist](#rate-limit) | IPs/CIDRs or pattern file |  |  |:large_blue_circle:|:large_blue_circle:|:white_circle:|
+| [rate-limit-exclude-path-end](#rate-limit) | path suffixes |  | rate-limit-requests |:large_blue_circle:|:large_blue_circle:|:white_circle:|
 | [request-capture](#request-capture) | [sample expression](#sample-expression) |  |  |:large_blue_circle:|:large_blue_circle:|:white_circle:|
 | [request-capture-len](#request-capture) | number | 128 |  |:large_blue_circle:|:large_blue_circle:|:white_circle:|
 | [request-set-header](#request-set-header) | string |  |  |:large_blue_circle:|:large_blue_circle:|:white_circle:|
@@ -1517,6 +1518,27 @@ rate-limit-period: "10s"
 rate-limit-requests: 1200
 rate-limit-status-code: "429"
 rate-limit-whitelist: "10.0.0.0/8, 192.168.1.100"
+
+```
+
+##### `rate-limit-exclude-path-end`
+
+  Defines a list of path suffixes (e.g. static asset extensions) that are excluded from rate limiting. Matching requests are neither counted against the rate nor denied, so an asset-heavy page load does not consume the limit and can never be partially blocked.
+
+  Available on:  `configmap`  `ingress`
+
+  :information_source: Matching uses HAProxy `path_end` and is case-sensitive.
+
+Possible values:
+
+- Comma- and/or space-separated list of path suffixes (e.g., `.css, .js, robots.txt`). Allowed characters are `A-Z a-z 0-9 . _ / -`
+- Prefix the value with `+` to extend the ConfigMap default instead of replacing it (e.g., `+.pdf .zip` on an Ingress adds two suffixes to the ConfigMap list)
+
+Example:
+
+```yaml
+rate-limit-requests: 20
+rate-limit-exclude-path-end: ".css .js .png .jpg .svg .woff2 robots.txt"
 
 ```
 

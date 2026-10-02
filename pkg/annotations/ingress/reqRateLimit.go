@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -13,6 +14,11 @@ import (
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
 )
+
+// excludePathEndEntry validates path suffixes passed to
+// rate-limit-exclude-path-end so annotation values cannot inject arbitrary
+// HAProxy configuration into the generated ACL conditions.
+var excludePathEndEntry = regexp.MustCompile(`^[A-Za-z0-9._/-]+$`)
 
 type ReqRateLimit struct {
 	limit *rules.ReqRateLimit
@@ -118,6 +124,41 @@ func (a ReqRateLimitAnn) Process(k store.K8s, annotations ...map[string]string) 
 
 		// Store pattern file references
 		a.parent.limit.WhitelistMaps = patterns
+	case "rate-limit-exclude-path-end":
+		if a.parent.limit == nil || a.parent.track == nil {
+			return errors.New("rate-limit-exclude-path-end requires rate-limit-requests to be set")
+		}
+
+		var values []string
+		for _, source := range annotations {
+			value, found := source[a.name]
+			if !found || value == "" {
+				continue
+			}
+			if extended := strings.TrimPrefix(value, "+"); extended != value {
+				values = append(values, extended)
+				continue
+			}
+			values = append(values, value)
+			break
+		}
+		input = strings.Join(values, " ")
+
+		var suffixes []string
+		for _, entry := range strings.FieldsFunc(input, func(r rune) bool { return r == ',' || r == ' ' }) {
+			if !excludePathEndEntry.MatchString(entry) {
+				return fmt.Errorf("incorrect path suffix '%s' in %s annotation", entry, a.name)
+			}
+			suffixes = append(suffixes, entry)
+		}
+		if len(suffixes) == 0 {
+			return fmt.Errorf("no path suffixes in %s annotation", a.name)
+		}
+
+		// Excluded requests are neither tracked nor denied: they don't
+		// increment the rate counter and are never rate limited.
+		a.parent.track.ExcludePathEnd = suffixes
+		a.parent.limit.ExcludePathEnd = suffixes
 	default:
 		err = fmt.Errorf("unknown rate-limit annotation '%s'", a.name)
 	}
