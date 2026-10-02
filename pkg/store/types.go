@@ -170,7 +170,7 @@ type Ingress struct {
 
 // IngressTLS describes the transport layer security associated with an Ingress.
 type IngressTLS struct {
-	Host       string
+	Hosts      []string
 	SecretName string
 }
 
@@ -202,7 +202,7 @@ type IngressCore struct {
 	Annotations    map[string]string
 	Rules          map[string]*IngressRule
 	DefaultBackend *IngressPath
-	TLS            map[string]*IngressTLS
+	TLS            []*IngressTLS
 	APIVersion     string // Required for K8s.UpdateIngressStatus to select proper versioned Client Set
 	Namespace      string
 	Name           string
