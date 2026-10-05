@@ -22,7 +22,6 @@ Image can be run with arguments:
 | [`--default-ssl-certificate`](#--default-ssl-certificate) |  |
 | [`--ingress.class`](#--ingressclass) |  |
 | [`--empty-ingress-class`](#--empty-ingress-class) | `false` |
-| [`--gateway-controller-name`](#--gateway-controller-name) |  |
 | [`--namespace-blacklist`](#--namespace-blacklist) |  |
 | [`--namespace-whitelist`](#--namespace-whitelist) |  |
 | [`--publish-service`](#--publish-service) |  |
@@ -54,10 +53,7 @@ Image can be run with arguments:
 | [`--disable-service-external-name`](#--disable-service-external-name) | `false` |
 | [`--localpeer-port`](#--localpeer-port) | `10000` |
 | [`--with-gopherd`](#--with-gopherd) |  |
-| [`--with-pebble`](#--with-pebble) |  |
-| [`--with-s6-overlay`](#--with-s6-overlay) |  |
 | [`--channel-size`](#--channel-size) | `600` |
-| [`--disable-config-snippets`](#--disable-config-snippets) |  |
 | [`--disable-quic`](#--disable-quic) | `false` |
 | [`--quic-announce-port`](#--quic-announce-port) |  |
 | [`--quic-bind-port`](#--quic-bind-port) |  |
@@ -395,24 +391,6 @@ Example:
 
 ```yaml
 --empty-ingress-class
-```
-
-<p align='right'><a href='#haproxy-kubernetes-ingress-controller'>:arrow_up_small: back to top</a></p>
-
-***
-
-### `--gateway-controller-name`
-
-  Removed, Gateway API support is no longer provided and the flag is ignored. Available up to version 3.2.
-
-Possible values:
-
-- The name of the controllerName in GatewayClass
-
-Example:
-
-```yaml
---gateway-controller-name=haproxy.org/gateway-controller
 ```
 
 <p align='right'><a href='#haproxy-kubernetes-ingress-controller'>:arrow_up_small: back to top</a></p>
@@ -1008,50 +986,6 @@ Related documentation:
 
 ***
 
-### `--with-pebble`
-
-  Deprecated, use --with-gopherd instead. Use pebble to start/stop/reload HAProxy. A deprecation warning is logged and support will be removed in a future release.
-
-Possible values:
-
-- this is boolean flag
-
-Example:
-
-```yaml
---with-pebble
-```
-
-Related documentation:
-
-- [gopherd.md](./gopherd.md)
-
-<p align='right'><a href='#haproxy-kubernetes-ingress-controller'>:arrow_up_small: back to top</a></p>
-
-***
-
-### `--with-s6-overlay`
-
-  Deprecated, use --with-gopherd instead. Use s6 overlay to start/stop/reload HAProxy. A deprecation warning is logged and support will be removed in a future release.
-
-Possible values:
-
-- this is boolean flag
-
-Example:
-
-```yaml
---with-s6-overlay
-```
-
-Related documentation:
-
-- [gopherd.md](./gopherd.md)
-
-<p align='right'><a href='#haproxy-kubernetes-ingress-controller'>:arrow_up_small: back to top</a></p>
-
-***
-
 ### `--channel-size`
 
   Sets the size of controller buffers used to receive and send k8s events.
@@ -1066,26 +1000,6 @@ Example:
 
 ```yaml
 --channel-size=10000
-```
-
-<p align='right'><a href='#haproxy-kubernetes-ingress-controller'>:arrow_up_small: back to top</a></p>
-
-***
-
-### `--disable-config-snippets`
-
-  Allow to disable one or several of the following config snippets: backend, frontend, global.
-
-Possible values:
-
-- Comma separated list of the kind of config snippets to disable. Possible values in the list are
-- backend,frontend,global,all
-- If 'all' is present then all (backend, frontend, global) config snippets are disabled.
-
-Example:
-
-```yaml
---disable-config-snippets=backend,frontend
 ```
 
 <p align='right'><a href='#haproxy-kubernetes-ingress-controller'>:arrow_up_small: back to top</a></p>

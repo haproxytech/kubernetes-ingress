@@ -40,7 +40,7 @@ func (c *Conf) generateReadmeController() {
 	buff.WriteString(headerController)
 
 	for _, ann := range c.Arguments {
-		if !ann.VersionMax.LowerOrEqual(c.ActiveVersion) {
+		if !ann.VersionMax.Undefined() && ann.VersionMax.LowerOrEqual(c.ActiveVersion) {
 			continue
 		}
 		dev := ""
@@ -63,7 +63,7 @@ func (c *Conf) generateReadmeController() {
 	buff.WriteString("\n\n")
 
 	for _, ann := range c.Arguments {
-		if !ann.VersionMax.LowerOrEqual(c.ActiveVersion) {
+		if !ann.VersionMax.Undefined() && ann.VersionMax.LowerOrEqual(c.ActiveVersion) {
 			continue
 		}
 		buff.WriteString(fmt.Sprintf("### `%s`\n\n", ann.Argument))
