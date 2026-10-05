@@ -7,7 +7,7 @@
 # Builds libblock_secrets.so and runs block_secrets_test.c under LD_PRELOAD.
 # Designed to run inside the musl/alpine build image so the test exercises the
 # same libc as production. Usage:
-#   docker run --rm -v "$PWD/pkg/protection":/p:ro haproxytech/haproxy-alpine:3.2 \
+#   docker run --rm -v "$PWD/pkg/protection":/p:ro haproxytech/haproxy-alpine:3.4 \
 #       sh -c 'apk add --no-cache build-base >/dev/null && cp /p/* /tmp && /tmp/block_secrets_test.sh'
 set -eu
 

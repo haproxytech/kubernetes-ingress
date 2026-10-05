@@ -17,7 +17,7 @@ FROM golang:1.27-alpine AS builder-go
 ARG GOPHERD_VERSION
 RUN go install -trimpath -ldflags="-s" github.com/haproxytech/gopherd@v${GOPHERD_VERSION}
 
-FROM haproxytech/haproxy-alpine:3.2 AS builder-c
+FROM haproxytech/haproxy-alpine:3.4 AS builder-c
 RUN apk add --no-cache build-base gcc musl-dev
 WORKDIR /src
 COPY pkg/protection/block_secrets.c .
@@ -41,7 +41,7 @@ RUN gcc -O3 -std=c11 -pipe \
     -Wl,-z,relro -Wl,-z,now -Wl,-z,noexecstack -Wl,--as-needed \
     -o haproxy_wrapper haproxy_wrapper.c
 
-FROM haproxytech/haproxy-alpine:3.2
+FROM haproxytech/haproxy-alpine:3.4
 
 COPY /fs /
 COPY --from=builder-c /src/libblock_secrets.so /usr/local/lib/libblock_secrets.so

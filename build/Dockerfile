@@ -14,7 +14,7 @@
 
 ARG GOPHERD_VERSION=1.3.0
 
-FROM haproxytech/haproxy-alpine:3.2 AS builder-c
+FROM haproxytech/haproxy-alpine:3.4 AS builder-c
 RUN apk add --no-cache build-base gcc musl-dev
 WORKDIR /src
 
@@ -60,7 +60,7 @@ RUN mkdir -p /var/run/vars && \
         -ldflags "-s -X github.com/haproxytech/kubernetes-ingress/pkg/version.GitTag=$(cat /var/run/vars/GIT_LAST_TAG)" \
         -o fs/haproxy-ingress-controller .
 
-FROM haproxytech/haproxy-alpine:3.2
+FROM haproxytech/haproxy-alpine:3.4
 
 COPY /fs /
 COPY --from=builder-c /src/libblock_secrets.so /usr/local/lib/libblock_secrets.so
