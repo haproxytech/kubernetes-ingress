@@ -86,7 +86,6 @@ type OSArgs struct {
 	HTTPBindThread                    string         `long:"http-bind-thread" description:"default http service bind thread params eg: 1-1" default:""`
 	HTTPSBindThread                   string         `long:"https-bind-thread" description:"default https service bind thread params eg: 1-1" default:""`
 	HealthzBindThread                 string         `long:"healthz-bind-thread" description:"default healthz service bind thread params eg: 1-1" default:""`
-	DisableConfigSnippets             string         `long:"disable-config-snippets" description:"Allow to disable config snippets. List of comma separated values (possible values: all/global/backend/frontend)"`
 	Version                           []bool         `short:"v" long:"version" description:"version"`
 	NamespaceWhitelist                []string       `long:"namespace-whitelist" description:"whitelisted namespaces"`
 	NamespaceBlacklist                []string       `long:"namespace-blacklist" description:"blacklisted namespaces"`

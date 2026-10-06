@@ -1,0 +1,12 @@
+# Backend CR the test ingress binds through its cr-backend annotation. Its
+# after-response rule consumes the pattern files the patternfiles ConfigMap
+# provides, so the suite can check the files land in HAProxy and hot-update.
+apiVersion: ingress.v3.haproxy.org/v3
+kind: Backend
+metadata:
+  name: patternfiles-be
+spec:
+  http_after_response_rule_list:
+    - type: set-header
+      hdr_name: result
+      hdr_format: "%[var(txn.path),ltrim(/),map(patterns/mapping)]"

@@ -46,7 +46,7 @@ type HAProxyClient interface { //nolint:interfacebloat
 	BackendCreateOrUpdate(backend models.BackendBase) (map[string][]interface{}, bool)
 	BackendDelete(backendName string)
 	BackendDeleteAllUnnecessary() ([]string, error)
-	BackendCfgSnippetSet(backendName string, value []string) error
+	BackendCustomAnnotationsSet(backendName string, value []string) error
 	BackendRuleDeleteAll(backend string)
 	BackendServerDeleteAll(backendName string) error
 	BackendServerCreate(backendName string, data models.Server) error
@@ -62,8 +62,8 @@ type HAProxyClient interface { //nolint:interfacebloat
 	DefaultsPushConfiguration(models.Defaults) error
 	ExecuteRaw(command string) (result string, err error)
 	Filter
-	FrontendCfgSnippetSet(frontendName string, value []string) error
-	FrontendCfgSnippetApply() error
+	FrontendCustomAnnotationsSet(frontendName string, value []string) error
+	FrontendCustomAnnotationsApply() error
 	FrontendCreate(frontend models.FrontendBase) error
 	FrontendDelete(frontendName string) error
 	FrontendDeletePending() error
@@ -81,7 +81,6 @@ type HAProxyClient interface { //nolint:interfacebloat
 	GlobalPushLogTargets(models.LogTargets) error
 	GlobalGetConfiguration() (*models.Global, error)
 	GlobalPushConfiguration(models.Global) error
-	GlobalCfgSnippet(snippet []string) error
 	GetMap(mapFile string) (*models.Map, error)
 	HTTPRequestRule
 	HTTPResponseRule
@@ -129,9 +128,9 @@ type CertAuth interface {
 
 type Backend struct { // use same names as in client native v6
 	models.Backend
-	ConfigSnippets []string
-	Permanent      bool
-	Used           bool
+	CustomAnnotations []string
+	Permanent         bool
+	Used              bool
 }
 
 // backendSnapshot is the serialization form of Backend, used to save and restore
@@ -144,27 +143,27 @@ type Backend struct { // use same names as in client native v6
 // field the controller owns. Referencing the model through a named field keeps
 // the promoted methods scoped to it and makes the round-trip lossless.
 type backendSnapshot struct {
-	Backend        models.Backend `json:"backend"`
-	ConfigSnippets []string       `json:"config_snippets,omitempty"`
-	Permanent      bool           `json:"permanent"`
-	Used           bool           `json:"used"`
+	Backend           models.Backend `json:"backend"`
+	CustomAnnotations []string       `json:"custom_annotations,omitempty"`
+	Permanent         bool           `json:"permanent"`
+	Used              bool           `json:"used"`
 }
 
 func newBackendSnapshot(backend Backend) backendSnapshot {
 	return backendSnapshot{
-		Backend:        backend.Backend,
-		ConfigSnippets: backend.ConfigSnippets,
-		Permanent:      backend.Permanent,
-		Used:           backend.Used,
+		Backend:           backend.Backend,
+		CustomAnnotations: backend.CustomAnnotations,
+		Permanent:         backend.Permanent,
+		Used:              backend.Used,
 	}
 }
 
 func (snapshot backendSnapshot) toBackend() Backend {
 	return Backend{
-		Backend:        snapshot.Backend,
-		ConfigSnippets: snapshot.ConfigSnippets,
-		Permanent:      snapshot.Permanent,
-		Used:           snapshot.Used,
+		Backend:           snapshot.Backend,
+		CustomAnnotations: snapshot.CustomAnnotations,
+		Permanent:         snapshot.Permanent,
+		Used:              snapshot.Used,
 	}
 }
 
@@ -280,7 +279,7 @@ type TCPCheck interface {
 
 type Frontend struct {
 	models.Frontend
-	ConfigSnippets []string
+	CustomAnnotations []string
 }
 
 type clientNative struct {
@@ -404,7 +403,7 @@ func (c *clientNative) APIFinalCommitTransaction() error {
 	for backendName, backend := range c.backends {
 		errs.Add(c.processBackend(&backend.Backend, configuration))
 		errs.AddErrors(c.processServers(backendName, configuration))
-		errs.Add(c.processConfigSnippets(backendName, backend.ConfigSnippets, configuration))
+		errs.Add(c.processCustomAnnotations(backendName, backend.CustomAnnotations, configuration))
 		errs.AddErrors(c.processACLs(backendName, backend.ACLList, configuration))
 		errs.AddErrors(c.processHTTPRequestRules(backendName, backend.HTTPRequestRuleList, configuration))
 		errs.AddErrors(c.processHTTPResponseRules(backendName, backend.HTTPResponseRuleList, configuration))
@@ -497,14 +496,14 @@ func (c *clientNative) processServers(backendName string, configuration configur
 	return errs
 }
 
-func (c *clientNative) processConfigSnippets(backendName string, configSnippets []string, configuration configuration.Configuration) error {
-	// Same for backend configsnippets.
+func (c *clientNative) processCustomAnnotations(backendName string, customAnnotations []string, configuration configuration.Configuration) error {
+	// Client-native has no structured model for custom annotations: they go through the config-snippet parser directive.
 	config, err := configuration.GetParser(c.activeTransaction)
 	if err != nil {
 		return err
 	}
-	if len(configSnippets) > 0 {
-		return config.Set("backend", backendName, "config-snippet", types.StringSliceC{Value: configSnippets})
+	if len(customAnnotations) > 0 {
+		return config.Set("backend", backendName, "config-snippet", types.StringSliceC{Value: customAnnotations})
 	}
 	return config.Set("backend", backendName, "config-snippet", nil)
 }

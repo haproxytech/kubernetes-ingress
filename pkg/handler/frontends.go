@@ -58,7 +58,7 @@ func (handler *Frontend) Update(k store.K8s, h haproxy.HAProxy, a annotations.An
 		handler.manageFrontend(CUSTOM_RESOURCE_ANNOTATION_HTTPS, k, h, &handler.crFrontendHTTPS),
 		handler.manageFrontend(CUSTOM_RESOURCE_ANNOTATION_STATS, k, h, &handler.crFrontendStats),
 		handler.manageFrontendSSL(k, h, &handler.crFrontendSSL, &handler.crFrontendSSLMode),
-		h.FrontendCfgSnippetApply(),
+		h.FrontendCustomAnnotationsApply(),
 		h.FrontendDeletePending(),
 	)
 

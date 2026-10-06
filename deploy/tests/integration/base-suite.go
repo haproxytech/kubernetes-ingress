@@ -93,7 +93,7 @@ type BaseSuite struct {
 //
 // To customize the controller start parameters, refer (as example) to
 //
-//	func (suite *DisableConfigSnippetSuite) BeforeTest(suiteName, testName string) {
+//	func (suite *PodMaxConnSuite) BeforeTest(suiteName, testName string) {
 func (suite *BaseSuite) BeforeTest(suiteName, testName string) {
 	tempDir, err := os.MkdirTemp("", "tnr-"+testName+"-*")
 	if err != nil {
@@ -149,8 +149,7 @@ func (suite *BaseSuite) StartController() {
 		WithUpdateStatusManager(&updateStatusManager{}).
 		WithArgs(testController.OSArgs).Build()
 
-	annotations.InitCfgSnippet()
-	annotations.DisableConfigSnippets(testController.OSArgs.DisableConfigSnippets)
+	annotations.InitCustomAnnotations()
 
 	go testController.Controller.Start()
 }
@@ -159,7 +158,7 @@ func (suite *BaseSuite) StopController() {
 	testController := suite.TestControllers[suite.T().Name()]
 	testController.Controller.Stop()
 	testController.Store.Clean()
-	annotations.Clean()
+	annotations.CleanCustomAnnotations()
 	close(testController.EventChan)
 }
 

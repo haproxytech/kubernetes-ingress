@@ -55,8 +55,6 @@ metadata:
   annotations:
     {{- if .NotReady}}
     check: "false"
-    backend-config-snippet: |
-      http-request return status 503 if !{ nbsrv() eq 2 }
     {{- end}}
 spec:
   ingressClassName: haproxy

@@ -25,7 +25,7 @@ import (
 // backends state lost around a failed transaction: Backend embeds models.Backend,
 // which brings its own MarshalJSON/UnmarshalJSON. Those promoted methods used to
 // serialize only the model, so Push/Pop silently reset Permanent, Used and
-// ConfigSnippets to their zero value. A permanent backend restored as
+// CustomAnnotations to their zero value. A permanent backend restored as
 // non-permanent is then deleted by BackendDeleteAllUnnecessary even though the
 // configuration still references it.
 func TestPreviousBackendsRoundTripKeepsControllerState(t *testing.T) {
@@ -38,9 +38,9 @@ func TestPreviousBackendsRoundTripKeepsControllerState(t *testing.T) {
 						"https": {Name: "https", Address: "unix@/run/ssl-frontend.sock"},
 					},
 				},
-				ConfigSnippets: []string{"tcp-request inspect-delay 5s"},
-				Permanent:      true,
-				Used:           true,
+				CustomAnnotations: []string{"tcp-request inspect-delay 5s"},
+				Permanent:         true,
+				Used:              true,
 			},
 		},
 	}
@@ -55,8 +55,8 @@ func TestPreviousBackendsRoundTripKeepsControllerState(t *testing.T) {
 	require.True(t, restored.Permanent,
 		"a permanent backend must stay permanent across a failed transaction, else it gets garbage-collected while still referenced")
 	require.True(t, restored.Used, "the used flag must survive the snapshot round-trip")
-	require.Equal(t, []string{"tcp-request inspect-delay 5s"}, restored.ConfigSnippets,
-		"config snippets must survive the snapshot round-trip")
+	require.Equal(t, []string{"tcp-request inspect-delay 5s"}, restored.CustomAnnotations,
+		"custom annotations must survive the snapshot round-trip")
 	// The embedded model must keep round-tripping as before.
 	require.Equal(t, "tcp", restored.Mode)
 	require.Contains(t, restored.Servers, "https")

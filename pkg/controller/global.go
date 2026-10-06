@@ -111,7 +111,7 @@ func (c *HAProxyController) globalCfg() {
 		logger.Error(err)
 		instance.Reload("Global log targets updated: %+v", utils.JSONDiff(diff))
 	}
-	c.globalCfgSnipp()
+	c.frontendCustomAnnotations()
 }
 
 func normalizeTuneOptions(global *models.Global) {
@@ -119,23 +119,18 @@ func normalizeTuneOptions(global *models.Global) {
 	global.TuneSslOptions = utils.NilIfZero(global.TuneSslOptions)
 }
 
-func (c *HAProxyController) globalCfgSnipp() {
+func (c *HAProxyController) frontendCustomAnnotations() {
 	var err error
-	for _, a := range c.annotations.GlobalCfgSnipp() {
+	for _, a := range c.annotations.FrontendCustomAnnotations() {
 		err = a.Process(c.store, c.store.ConfigMaps.Main.Annotations)
 		if err != nil {
 			logger.Errorf("annotation %s: %s", a.GetName(), err)
 		}
 	}
-	updatedSnipp, errSnipp := annotations.UpdateGlobalCfgSnippet(c.haproxy)
-	logger.Error(errSnipp)
-	instance.ReloadIf(len(updatedSnipp) != 0,
-		"Global config-snippet updated: %s", strings.Join(updatedSnipp, "\n"))
-
-	updatedSnipp, errSnipp = annotations.UpdateFrontendCfgSnippet(c.haproxy, "http", "https", "stats")
-	logger.Error(errSnipp)
-	instance.ReloadIf(len(updatedSnipp) != 0,
-		"Frontend config-snippet updated: %s", strings.Join(updatedSnipp, "\n"))
+	updated, errUpdated := annotations.UpdateFrontendCustomAnnotations(c.haproxy, "http", "https", "stats")
+	logger.Error(errUpdated)
+	instance.ReloadIf(len(updated) != 0,
+		"Frontend custom annotations updated: %s", strings.Join(updated, "\n"))
 }
 
 func (c *HAProxyController) defaultsCfg() {

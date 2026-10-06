@@ -73,13 +73,13 @@ func (c *clientNative) BackendDelete(backendName string) {
 	c.backends[backendName] = backend
 }
 
-func (c *clientNative) BackendCfgSnippetSet(backendName string, value []string) error {
+func (c *clientNative) BackendCustomAnnotationsSet(backendName string, value []string) error {
 	backend, exists := c.backends[backendName]
 	if !exists {
 		return fmt.Errorf("backend %s : %w", backendName, ErrNotFound)
 	}
 
-	backend.ConfigSnippets = value
+	backend.CustomAnnotations = value
 	c.backends[backendName] = backend
 	return nil
 }

@@ -202,16 +202,16 @@ func (s *Service) HandleBackend(storeK8s store.K8s, client api.HAProxyClient, a 
 	// TCP checks
 	tcpchecks.PopulateBackend(client, newBackend.BackendBase.Name, newBackend.TCPCheckRuleList)
 
-	// config-snippet: backend
-	backendCfgSnippetHandler := annotations.NewCfgSnippet(
-		annotations.ConfigSnippetOptions{
-			Name:    "backend-config-snippet",
+	// custom annotations: backend
+	backendCustomAnnotations := annotations.NewCustomAnnotations(
+		annotations.CustomAnnotationsOptions{
+			Name:    "backend-custom-annotations",
 			Backend: utils.PtrString(newBackend.BackendBase.Name),
 			Ingress: s.ingress,
 		},
 	)
-	backendCfgSnippetHandler.SetService(s.resource)
-	logger.Error(backendCfgSnippetHandler.Process(storeK8s, s.annotations...))
+	backendCustomAnnotations.SetService(s.resource)
+	logger.Error(backendCustomAnnotations.Process(storeK8s, s.annotations...))
 	return err
 }
 

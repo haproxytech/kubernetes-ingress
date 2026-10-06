@@ -57,6 +57,11 @@ func (suite *RejectedGlobalSuite) Test_CR_Global_Rejected() {
 	suite.test.AddTearDown(func() error {
 		return suite.test.Delete(secondIngressPath)
 	})
+	// Restore the base global resource the configmap references: it provides the
+	// runtime API socket the other suites of the shard query.
+	suite.test.AddTearDown(func() error {
+		return suite.test.Apply("../../config/2.1.global.yaml", "", nil)
+	})
 	secondClient, err := e2e.NewHTTPClient(suite.tmplData.SecondHost)
 	suite.Require().NoError(err)
 	suite.Require().Eventually(func() bool {

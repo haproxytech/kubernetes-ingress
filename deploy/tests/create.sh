@@ -95,6 +95,7 @@ if [ "$EXPERIMENTAL_GWAPI" = "1" ]; then
   printf %80s |tr " " "="; echo ""
 fi
 kubectl apply -f $DIR/config/2.configmap.yaml
+kubectl apply -f $DIR/config/2.1.global.yaml
 kubectl apply -f $DIR/config/2.2.ingressclass.yaml
 
 if [ "$EXPERIMENTAL_GWAPI" = "1" ]; then

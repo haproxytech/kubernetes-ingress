@@ -1,0 +1,18 @@
+# Base global configuration of the test controller, referenced by the main
+# configmap through the cr-global annotation. It exposes the runtime API on
+# TCP 31024 for the e2e suites that query it through the kind host port.
+apiVersion: ingress.v3.haproxy.org/v3
+kind: Global
+metadata:
+  name: global-full
+  namespace: haproxy-controller
+spec:
+  config:
+    maxconn: 1000
+    runtime_apis:
+      - address: "0.0.0.0:31024"
+        level: "admin"
+  log_targets:
+    - address: "stdout"
+      facility: "daemon"
+      format: "raw"

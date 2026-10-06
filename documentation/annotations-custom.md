@@ -10,9 +10,9 @@ HAProxy has extensive number of powerful options to tweak load balancing: [docs.
 
 They are pretty similar, both have validation and can potentially add almost everything HAProxy can offer. Main difference with CRDs is, that CRDs do not have granularity like we can have with custom defined annotations.
 
-## What is the main difference compared to config snippets
+## What is the main difference compared to custom resources
 
-In short reliability, validation and security. While snippets allow really high customization, experience over time has shown that a lot of times they also bring a lot of confusion, typos and potential to do misconfiguration.
+In short granularity. Both have validation and can add almost everything HAProxy can offer, but an annotation can target one service or ingress while a custom resource is bound at the backend or frontend level.
 
 ## What is the difference compared to regular annotations ?
 
@@ -128,7 +128,7 @@ backend default_svc_http-echo_http
   ...
 ```
 
-we can see that a config snippet was added, but compared to regular snippet, our annotation has full validation that we defined (and also it is limiting what we can put)
+we can see that the annotation was rendered, and unlike raw free-form configuration it carries the full validation we defined (which also limits what we can put)
 
 what happens if we try to add value that is not accepted ?
 
