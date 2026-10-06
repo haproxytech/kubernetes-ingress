@@ -6,12 +6,12 @@ metadata:
   name: global-full
   namespace: haproxy-controller
 spec:
-  config:
+  performance_options:
     maxconn: 1111
-    runtime_apis:
-      - address: "0.0.0.0:31024"
-        level: "admin"
-  log_targets:
+  log_target_list:
     - address: "stdout"
       facility: "daemon"
       format: "raw"
+  runtime_apis:
+    - address: "0.0.0.0:31024"
+      level: "admin"
