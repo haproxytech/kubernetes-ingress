@@ -169,7 +169,8 @@ func (t *Test) TearDown() error {
 	if devMode {
 		return nil
 	}
-	_ = os.RemoveAll(t.templateDir)
+	// Teardown functions render templates into the dir: remove it only after they ran.
+	defer os.RemoveAll(t.templateDir)
 	for _, f := range t.tearDownFuncs {
 		if err := f(); err != nil {
 			return err

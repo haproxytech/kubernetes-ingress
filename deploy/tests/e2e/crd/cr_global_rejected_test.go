@@ -48,19 +48,16 @@ func (suite *RejectedGlobalSuite) Test_CR_Global_Rejected() {
 	suite.tmplData.GlobalLuaFile = "/nonexistent.lua"
 
 	suite.Require().NoError(suite.test.Apply(globalCRPath, controllerNS, suite.tmplData))
+	// Applying the base resource at teardown replaces the tested one and gives the
+	// following suites of the shard back the runtime API socket it exposes.
 	suite.test.AddTearDown(func() error {
-		return suite.test.DeleteInNamespace(globalCRPath, controllerNS, suite.tmplData)
+		return suite.test.Apply("../../config/2.1.global.yaml", "", nil)
 	})
 
 	// An unrelated change must still be applied while the resource is disabled.
 	suite.Require().NoError(suite.test.Apply(secondIngressPath, suite.test.GetNS(), suite.tmplData))
 	suite.test.AddTearDown(func() error {
 		return suite.test.Delete(secondIngressPath)
-	})
-	// Restore the base global resource the configmap references: it provides the
-	// runtime API socket the other suites of the shard query.
-	suite.test.AddTearDown(func() error {
-		return suite.test.Apply("../../config/2.1.global.yaml", "", nil)
 	})
 	secondClient, err := e2e.NewHTTPClient(suite.tmplData.SecondHost)
 	suite.Require().NoError(err)
