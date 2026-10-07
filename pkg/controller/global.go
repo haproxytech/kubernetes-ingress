@@ -67,6 +67,15 @@ func (c *HAProxyController) globalCfg() {
 	if err != nil {
 		logger.Errorf("Global logging: %s", err)
 	}
+	if newGlobal != nil {
+		ref := annotations.ModelRef(store.CRKindGlobal, "cr-global", c.podNamespace, c.store.ConfigMaps.Main.Annotations)
+		if c.store.CRDisabled(ref) {
+			logger.Warningf("%s rejected by HAProxy, falling back to annotations", ref)
+			newGlobal, newLg = nil, nil
+		} else {
+			c.store.SectionsFromCR[annotations.Section{Kind: annotations.SectionGlobal}.Key()] = ref
+		}
+	}
 	if newGlobal == nil {
 		newGlobal = &models.Global{
 			GlobalBase: models.GlobalBase{},
@@ -139,6 +148,15 @@ func (c *HAProxyController) defaultsCfg() {
 	newDefaults, err = annotations.ModelDefaults("cr-defaults", c.podNamespace, c.store, c.store.ConfigMaps.Main.Annotations)
 	if err != nil {
 		logger.Errorf("Defaults config: %s", err)
+	}
+	if newDefaults != nil {
+		ref := annotations.ModelRef(store.CRKindDefaults, "cr-defaults", c.podNamespace, c.store.ConfigMaps.Main.Annotations)
+		if c.store.CRDisabled(ref) {
+			logger.Warningf("%s rejected by HAProxy, falling back to annotations", ref)
+			newDefaults = nil
+		} else {
+			c.store.SectionsFromCR[annotations.Section{Kind: annotations.SectionDefaults, Name: constants.DefaultsSectionName}.Key()] = ref
+		}
 	}
 	if newDefaults == nil {
 		newDefaults = &models.Defaults{}

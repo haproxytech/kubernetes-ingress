@@ -35,6 +35,17 @@ func ModelBackend(name, defaultNS string, k store.K8s, annotations ...map[string
 	return backend, err
 }
 
+// ModelRef identifies the custom resource of the given kind an annotation points to.
+// A ":mode" suffix, as cr-frontend-ssl accepts, is not part of the name.
+func ModelRef(kind store.CRKind, name, defaultNS string, annotations ...map[string]string) store.CRRef {
+	path, _, _ := strings.Cut(common.GetValue(name, annotations...), ":")
+	crNS, crName, _ := common.GetNamespaceAndName(path)
+	if crNS == "" {
+		crNS = defaultNS
+	}
+	return store.CRRef{Kind: kind, Namespace: crNS, Name: crName}
+}
+
 // ModelDefaults takes an annotation holding the path of a defaults cr and returns corresponding Defaults model
 func ModelDefaults(name, defaultNS string, k store.K8s, annotations ...map[string]string) (defaults *models.Defaults, err error) {
 	d, modelErr := model(name, defaultNS, 2, k, annotations...)

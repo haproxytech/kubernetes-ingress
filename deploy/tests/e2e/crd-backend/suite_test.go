@@ -37,11 +37,13 @@ type CRDBackendSuite struct {
 
 type tmplData struct {
 	Host        string
+	SecondHost  string
 	BackendName string
 	HeaderName  string
 	HeaderValue string
 	HealthURI   string
 	LogAddress  string
+	ErrorFile   string
 }
 
 func (suite *CRDBackendSuite) SetupSuite() {
@@ -53,6 +55,7 @@ func (suite *CRDBackendSuite) SetupSuite() {
 	// with "<namespace>_svc_<service>_<port>" — see GetBackendName.
 	suite.tmplData = tmplData{
 		Host:        suite.test.GetNS() + ".test",
+		SecondHost:  suite.test.GetNS() + "-second.test",
 		BackendName: suite.test.GetNS() + "_svc_http-echo_http",
 	}
 	suite.client, err = e2e.NewHTTPClient(suite.tmplData.Host)

@@ -1,0 +1,17 @@
+kind: Ingress
+apiVersion: networking.k8s.io/v1
+metadata:
+  name: http-echo-second
+spec:
+  ingressClassName: haproxy
+  rules:
+    - host: {{ .SecondHost }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: http-echo
+                port:
+                  name: http

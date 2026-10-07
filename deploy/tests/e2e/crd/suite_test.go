@@ -36,7 +36,11 @@ type CRDSuite struct {
 
 type tmplData struct {
 	Host           string
+	SecondHost     string
 	IngAnnotations []struct{ Key, Value string }
+	// Global resource the configmap references, for the rejection test
+	GlobalDescription string
+	GlobalLuaFile     string
 	// Templace 1 field in global, 1 field in default and 1 field in backend
 	// Backend
 	BackendHashTypeFunction string // spec.config.hashType.function, marker for enum
@@ -51,7 +55,7 @@ func (suite *CRDSuite) SetupSuite() {
 	var err error
 	suite.test, err = e2e.NewTest()
 	suite.Require().NoError(err)
-	suite.tmplData = tmplData{Host: suite.test.GetNS() + ".test"}
+	suite.tmplData = tmplData{Host: suite.test.GetNS() + ".test", SecondHost: suite.test.GetNS() + "-second.test"}
 	suite.client, err = e2e.NewHTTPClient(suite.tmplData.Host)
 	suite.Require().NoError(err)
 	suite.Require().NoError(suite.test.Apply("config/deploy.yaml", suite.test.GetNS(), nil))

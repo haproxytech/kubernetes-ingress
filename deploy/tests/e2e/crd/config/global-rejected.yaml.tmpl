@@ -1,0 +1,11 @@
+apiVersion: ingress.v3.haproxy.org/v3
+kind: Global
+metadata:
+  name: global-full
+spec:
+  description: {{ .GlobalDescription }}
+  {{- if .GlobalLuaFile }}
+  lua_options:
+    loads:
+      - file: {{ .GlobalLuaFile }}
+  {{- end }}

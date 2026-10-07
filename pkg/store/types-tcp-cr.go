@@ -47,6 +47,7 @@ type TCPResource struct {
 type TCPResourceList []*TCPResource
 
 type TCPs struct {
+	Generation   int64           `json:"generation,omitempty"`
 	Status       Status          `json:"status,omitempty"`
 	IngressClass string          `json:"ingress_class,omitempty"`
 	Namespace    string          `json:"namespace,omitempty"`

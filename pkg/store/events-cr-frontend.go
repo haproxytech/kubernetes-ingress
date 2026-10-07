@@ -20,6 +20,7 @@ import (
 
 func (k *K8s) EventFrontendCR(namespace, name string, data *v3.Frontend) bool {
 	ns := k.GetNamespace(namespace)
+	ref := CRRef{Kind: CRKindFrontend, Namespace: namespace, Name: name}
 	// Frontend CRs have no Status; treat a non-nil object as ADDED so a
 	// detached namespace cannot persist it.
 	if data != nil && k.dropDetachedMutation(ns, ADDED) {
@@ -27,8 +28,10 @@ func (k *K8s) EventFrontendCR(namespace, name string, data *v3.Frontend) bool {
 	}
 	if data == nil {
 		delete(ns.CRs.Frontends, name)
+		k.forgetCR(ref)
 		return true
 	}
 	ns.CRs.Frontends[name] = &data.Spec
+	k.trackCR(ref, data.Generation)
 	return true
 }
