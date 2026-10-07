@@ -289,7 +289,7 @@ func (s *Service) getBackendModel(k store.K8s, a annotations.Annotations, client
 			logger.Errorf("service '%s/%s': annotation '%s': %s", s.resource.Namespace, s.resource.Name, cookieAnn.GetName(), cookieErr)
 		}
 		sourceIPAnn := serviceann.NewSourceIPPersistence("source-ip-persistence", &backend.Backend)
-		if sourceIPErr := sourceIPAnn.Process(store, s.resource.Annotations, store.ConfigMaps.Main.Annotations); sourceIPErr != nil {
+		if sourceIPErr := sourceIPAnn.Process(k, s.resource.Annotations, k.ConfigMaps.Main.Annotations); sourceIPErr != nil {
 			logger.Errorf("service '%s/%s': annotation '%s': %s", s.resource.Namespace, s.resource.Name, sourceIPAnn.GetName(), sourceIPErr)
 		}
 	}
