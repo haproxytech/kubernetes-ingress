@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    haproxy.org/client-native: v6.2.18
+    haproxy.org/client-native: v6.2.19
   name: tcps.ingress.v3.haproxy.org
 spec:
   group: ingress.v3.haproxy.org
