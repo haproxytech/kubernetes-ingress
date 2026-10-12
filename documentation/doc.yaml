@@ -1560,6 +1560,36 @@ annotations:
       - In this example, most clients can make up to 1200 requests per 10 seconds.
         Clients from `10.0.0.0/8` or IP `192.168.1.100` are never rate limited. When
         the limit is exceeded for non-whitelisted IPs, a 429 status code is returned.
+  - title: rate-limit-exclude-path-end
+    type: path suffixes
+    group: rate-limit
+    dependencies: rate-limit-requests
+    default: ""
+    description:
+      - Defines a list of path suffixes (e.g. static asset extensions) that are
+        excluded from rate limiting. Matching requests are neither counted
+        against the rate nor denied, so an asset-heavy page load does not
+        consume the limit and can never be partially blocked.
+    tip:
+      - Matching uses HAProxy `path_end` and is case-sensitive.
+    values:
+      - Comma- and/or space-separated list of path suffixes (e.g., `.css, .js,
+        robots.txt`). Allowed characters are `A-Z a-z 0-9 . _ / -`
+      - Prefix the value with `+` to extend the ConfigMap default instead of
+        replacing it (e.g., `+.pdf .zip` on an Ingress adds two suffixes to the
+        ConfigMap list)
+    applies_to:
+      - configmap
+      - ingress
+    version_min: "3.2"
+    example:
+      - |
+        rate-limit-requests: 20
+        rate-limit-exclude-path-end: ".css .js .png .jpg .svg .woff2 robots.txt"
+    example_notes:
+      - In this example, clients can make up to 20 non-asset requests per second.
+        Requests for the listed static suffixes are never counted or denied, so
+        page loads with many assets are not affected by the limit.
   - title: request-capture
     type: "[sample expression](#sample-expression)"
     group: request-capture
