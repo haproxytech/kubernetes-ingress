@@ -65,8 +65,7 @@ func updateConfigSnippet(api api.HAProxyClient, configmapCfgSnippetValue []strin
 			}
 		}
 		// If any configmap config snippet insert it at top level of config snippet.
-		cfgSnippetvalue := append([]string{}, configmapCfgSnippetValue...)
-		cfgSnippetvalue = append(cfgSnippetvalue, serviceCfgSnippetValue...)
+		cfgSnippetvalue := slices.Concat(configmapCfgSnippetValue, serviceCfgSnippetValue)
 		// Then we can iterate over each config snippet coming from different origin.
 		// but first, we need to sort them by orderPriority
 		type originWithPriority struct {
