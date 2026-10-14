@@ -108,7 +108,8 @@ func (suite *ACLSuite) UseACLFixture() (eventChan chan k8ssync.SyncDataEvent) {
 		WithUpdateStatusManager(&FakeUpdateSatusManager{}).
 		WithArgs(osArgs).Build()
 
-	go controller.Start()
+	controller.Start()
+	go controller.SyncData()
 
 	backend := v3.Backend{
 		ObjectMeta: metav1.ObjectMeta{

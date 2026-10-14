@@ -151,7 +151,8 @@ func (suite *BaseSuite) StartController() {
 
 	annotations.InitCustomAnnotations()
 
-	go testController.Controller.Start()
+	testController.Controller.Start()
+	go testController.Controller.SyncData()
 }
 
 func (suite *BaseSuite) StopController() {
