@@ -57,6 +57,7 @@ Image can be run with arguments:
 | [`--with-pebble`](#--with-pebble) |  |
 | [`--with-s6-overlay`](#--with-s6-overlay) |  |
 | [`--channel-size`](#--channel-size) | `600` |
+| [`--disable-config-snippets`](#--disable-config-snippets) |  |
 | [`--disable-quic`](#--disable-quic) | `false` |
 | [`--quic-announce-port`](#--quic-announce-port) |  |
 | [`--quic-bind-port`](#--quic-bind-port) |  |
@@ -1069,6 +1070,26 @@ Example:
 
 ```yaml
 --channel-size=10000
+```
+
+<p align='right'><a href='#haproxy-kubernetes-ingress-controller'>:arrow_up_small: back to top</a></p>
+
+***
+
+### `--disable-config-snippets`
+
+  Allow to disable one or several of the following config snippets: backend, frontend, global.
+
+Possible values:
+
+- Comma separated list of the kind of config snippets to disable. Possible values in the list are
+- backend,frontend,global,all
+- If 'all' is present then all (backend, frontend, global) config snippets are disabled.
+
+Example:
+
+```yaml
+--disable-config-snippets=backend,frontend
 ```
 
 <p align='right'><a href='#haproxy-kubernetes-ingress-controller'>:arrow_up_small: back to top</a></p>
