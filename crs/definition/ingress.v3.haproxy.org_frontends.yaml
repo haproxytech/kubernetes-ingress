@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    haproxy.org/client-native: v6.4.2
+    haproxy.org/client-native: v6.4.3
   name: frontends.ingress.v3.haproxy.org
 spec:
   group: ingress.v3.haproxy.org
@@ -203,7 +203,8 @@ spec:
                       description: crt ignore err
                       type: string
                     crt_list:
-                      description: crt list
+                      description: All of the certificate list files delimited by
+                        ':' as mentioned as a crt-list on the bind line.
                       type: string
                     curves:
                       description: curves
@@ -1091,40 +1092,6 @@ spec:
                       type: string
                   required:
                   - type
-                  type: object
-                type: array
-              filter_sequence_list:
-                description: filter sequence list
-                items:
-                  description: |-
-                    FilterSequence Filter Sequence
-
-                    Specifies in which order filters declared on the proxy should be executed
-                    for the request or response path. Corresponds to the HAProxy filter-sequence directive.
-
-                    swagger:model filter_sequence
-                  properties:
-                    direction:
-                      description: |-
-                        direction
-                        Required: true
-                        Enum: ["request","response"]
-                      enum:
-                      - request
-                      - response
-                      type: string
-                    filters:
-                      description: |-
-                        filters
-                        Required: true
-                      items:
-                        type: string
-                      type: array
-                    metadata:
-                      x-kubernetes-preserve-unknown-fields: true
-                  required:
-                  - direction
-                  - filters
                   type: object
                 type: array
               force_be_switch_list:

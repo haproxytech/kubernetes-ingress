@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    haproxy.org/client-native: v6.4.2
+    haproxy.org/client-native: v6.4.3
   name: globals.ingress.v3.haproxy.org
 spec:
   group: ingress.v3.haproxy.org
@@ -826,6 +826,10 @@ spec:
                       by the zlib
                     format: int64
                     type: integer
+                  no_memory_trimming:
+                    description: Disables memory trimming (malloc_trim) on memory
+                      shortage or reload
+                    type: boolean
                   noepoll:
                     description: Disable the use of the "epoll" event polling system
                       on Linux
@@ -967,7 +971,8 @@ spec:
                       description: crt ignore err
                       type: string
                     crt_list:
-                      description: crt list
+                      description: All of the certificate list files delimited by
+                        ':' as mentioned as a crt-list on the bind line.
                       type: string
                     curves:
                       description: curves
@@ -1490,6 +1495,11 @@ spec:
                   issuers_chain_path:
                     description: issuers chain path
                     type: string
+                  load_extra_del_ext:
+                    description: Remove the certificate file extension before appending
+                      the extra file extension (foobar.crt loads foobar.key instead
+                      of foobar.crt.key)
+                    type: boolean
                   load_extra_files:
                     description: load extra files
                     type: string
@@ -2083,10 +2093,6 @@ spec:
               tune_quic_options:
                 description: tune quic options
                 properties:
-                  frontend_conn_tx_buffers_limit:
-                    description: frontend conn tx buffers limit
-                    format: int64
-                    type: integer
                   frontend_max_idle_timeout:
                     description: |-
                       frontend max idle timeout

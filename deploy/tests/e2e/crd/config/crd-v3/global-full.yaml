@@ -111,7 +111,6 @@ spec:
     stick_counters: 0
     epoll_mask_events: []
   tune_quic_options:
-    frontend_conn_tx_buffers_limit: 7
     frontend_max_idle_timeout: 0
     frontend_max_streams_bidi: 8
     max_frame_loss: 10

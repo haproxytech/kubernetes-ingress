@@ -24,7 +24,7 @@ import (
 
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-// +kubebuilder:metadata:annotations="haproxy.org/client-native=v6.4.2"
+// +kubebuilder:metadata:annotations="haproxy.org/client-native=v6.4.3"
 
 // TCP is a specification for a TCP resource
 type TCP struct {

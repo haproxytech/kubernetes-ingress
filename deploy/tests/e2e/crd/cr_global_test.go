@@ -202,7 +202,6 @@ func (suite *GlobalSuite) Test_CR_Global() {
 		suite.checkGlobalParam(p, "tune.buffers.reserve", &types.Int64C{Value: 3})
 		suite.checkGlobalParam(p, "tune.http.maxhdr", &types.Int64C{Value: 100})
 		suite.checkGlobalParam(p, "tune.listener.default-shards", &types.StringC{Value: "by-process"})
-		suite.checkGlobalParam(p, "tune.quic.frontend.conn-tx-buffers.limit", &types.Int64C{Value: 7})
 		suite.checkGlobalParam(p, "tune.quic.frontend.max-streams-bidi", &types.Int64C{Value: 8})
 		suite.checkGlobalParam(p, "tune.quic.max-frame-loss", &types.Int64C{Value: 10})
 		suite.checkGlobalParam(p, "tune.quic.retry-threshold", &types.Int64C{Value: 10})

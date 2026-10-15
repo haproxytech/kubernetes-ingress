@@ -276,7 +276,6 @@ spec:
       pipesize: 0
       pool_high_fd_ratio: 0
       pool_low_fd_ratio: 0
-      quic_frontend_conn_tx_buffers_limit: 7
       quic_frontend_max_idle_timeout: 0
       quic_frontend_max_streams_bidi: 8
       quic_max_frame_loss: 10
