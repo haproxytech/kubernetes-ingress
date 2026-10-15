@@ -60,10 +60,6 @@ func newControllerPodMatcher(ctx context.Context, client k8sclientset.Interface,
 	return matcher
 }
 
-func (m controllerPodMatcher) enabled() bool {
-	return m.owner.kind != "" || m.fallbackPrefix != ""
-}
-
 func (m controllerPodMatcher) matches(pod *corev1.Pod) bool {
 	if pod == nil {
 		return false
