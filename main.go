@@ -169,14 +169,9 @@ func main() {
 		WithEventChan(eventChan).
 		WithStore(s).
 		WithClientSet(k.GetClientset()).
-		WithRestClientSet(k.GetRestClientset()).
 		WithArgs(osArgs).Build()
 
-	isGatewayAPIInstalled := k.IsGatewayAPIInstalled(osArgs.GatewayControllerName)
-
-	c.SetGatewayAPIInstalled(isGatewayAPIInstalled)
-
-	go k.MonitorChanges(eventChan, stop, osArgs, isGatewayAPIInstalled)
+	go k.MonitorChanges(eventChan, stop, osArgs)
 	go c.Start()
 	// Catch QUIT signals
 	signalC := make(chan os.Signal, 1)
@@ -213,10 +208,6 @@ func logInfo(logger utils.Logger, osArgs utils.OSArgs) bool {
 	logger.Printf("ConfigMap: %s", osArgs.ConfigMap)
 	logger.Printf("Ingress class: %s", osArgs.IngressClass)
 	logger.Printf("Empty Ingress class: %t", osArgs.EmptyIngressClass)
-	if osArgs.GatewayControllerName != "" {
-		// display log message only if Gateway API is used
-		logger.Printf("Gateway API controller name: %s", osArgs.GatewayControllerName)
-	}
 	logger.Printf("Publish service: %s", osArgs.PublishService)
 	if osArgs.DefaultBackendService.String() != "" {
 		logger.Printf("Default backend service: %s", osArgs.DefaultBackendService)

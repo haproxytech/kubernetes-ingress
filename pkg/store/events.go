@@ -27,15 +27,8 @@ func (k *K8s) EventNamespace(ns *Namespace, data *Namespace) (updateRequired boo
 	updateRequired = false
 	switch data.Status {
 	case ADDED:
-		nsStore := k.GetNamespace(data.Name)
-		nsStore.Labels = utils.CopyMap(data.Labels)
+		k.GetNamespace(data.Name)
 		updateRequired = true
-	case MODIFIED:
-		nsStore := k.GetNamespace(data.Name)
-		updateRequired = !utils.EqualMap(nsStore.Labels, data.Labels)
-		if updateRequired {
-			nsStore.Labels = utils.CopyMap(data.Labels)
-		}
 	case DELETED:
 		_, ok := k.Namespaces[data.Name]
 		if ok {

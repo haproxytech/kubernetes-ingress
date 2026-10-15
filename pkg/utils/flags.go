@@ -75,7 +75,6 @@ type OSArgs struct {
 	DefaultCertificate                NamespaceValue `long:"default-ssl-certificate" default:"" description:"secret name of the certificate"`
 	ConfigMap                         NamespaceValue `long:"configmap" description:"configmap designated for HAProxy" default:""`
 	IPV6BindAddr                      string         `long:"ipv6-bind-address" default:"::" description:"IPv6 address the Ingress Controller listens on (if enabled)"`
-	GatewayControllerName             string         `long:"gateway-controller-name" description:"sets the controller name of gatewayclass managed by the controller"`
 	IPV4BindAddr                      string         `long:"ipv4-bind-address" default:"0.0.0.0" description:"IPv4 address the Ingress Controller listens on (if enabled)"`
 	RuntimeDir                        string         `long:"runtime-dir" description:"path to HAProxy runtime directory. NOTE: works only in External mode"`
 	IngressClass                      string         `long:"ingress.class" default:"" description:"ingress.class to monitor in multiple controllers environment"`

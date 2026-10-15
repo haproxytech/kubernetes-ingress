@@ -54,7 +54,6 @@ allowed:
   - backports
   - alpn
   - SNI
-  - gwapi
   - init
   - svc
   - frontent

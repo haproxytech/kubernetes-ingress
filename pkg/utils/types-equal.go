@@ -36,26 +36,6 @@ func EqualSlice[T Equalizer[T]](sliceA, sliceB []T, opt ...eqdiff.GoMethodGenOpt
 	return true
 }
 
-func EqualSliceComparable[T comparable](sliceA, sliceB []T) bool {
-	if len(sliceA) != len(sliceB) {
-		return false
-	}
-	for i, value := range sliceA {
-		if value != sliceB[i] {
-			return false
-		}
-	}
-	return true
-}
-
-type Literal interface {
-	~int | ~uint | ~float32 | ~float64 | ~complex64 | ~complex128 | ~int32 | ~int64 | ~string | ~bool
-}
-
-func EqualPointers[P Literal](a, b *P) bool {
-	return (a == nil && b == nil) || (a != nil && b != nil) && *a == *b
-}
-
 func EqualPointersEqualizer[P Equalizer[P]](a, b *P, opt ...eqdiff.GoMethodGenOptions) bool {
 	return (a == nil && b == nil) || ((a != nil && b != nil) && (*a).Equal(*b, opt...))
 }
@@ -67,22 +47,4 @@ func NilIfZero[T any](p *T) *T {
 		return nil
 	}
 	return p
-}
-
-func EqualMap[T, V Literal](mapA, mapB map[T]V) bool {
-	if mapA == nil && mapB == nil {
-		return true
-	}
-	if mapA == nil || mapB == nil {
-		return false
-	}
-	if len(mapA) != len(mapB) {
-		return false
-	}
-	for k, v := range mapA {
-		if mapB[k] != v {
-			return false
-		}
-	}
-	return true
 }

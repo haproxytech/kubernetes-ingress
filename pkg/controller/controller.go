@@ -29,7 +29,6 @@ import (
 	"github.com/haproxytech/client-native/v6/models"
 	"github.com/haproxytech/kubernetes-ingress/pkg/annotations"
 	"github.com/haproxytech/kubernetes-ingress/pkg/fs"
-	gateway "github.com/haproxytech/kubernetes-ingress/pkg/gateways"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/instance"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/maps"
@@ -50,7 +49,6 @@ var logger = utils.GetLogger()
 type HAProxyController struct {
 	store                    store.K8s
 	prometheusMetricsManager metrics.PrometheusMetricsManager
-	gatewayManager           gateway.GatewayManager
 	annotations              annotations.Annotations
 	updateStatusManager      status.UpdateStatusManager
 	eventChan                chan k8ssync.SyncDataEvent
@@ -164,8 +162,6 @@ func (c *HAProxyController) updateHAProxy() {
 		route.CurentCustomRoutes = route.CustomRoutes
 		instance.Reload("Custom Routes changed: %s", strings.Join(updated, "\n"))
 	}
-
-	c.gatewayManager.ManageGateway()
 
 	if !c.ready {
 		c.setToReady()
@@ -357,10 +353,6 @@ func (c *HAProxyController) clean(failedSync bool) {
 		c.store.Clean()
 		annotations.CleanCustomAnnotations()
 	}
-}
-
-func (c *HAProxyController) SetGatewayAPIInstalled(gatewayAPIInstalled bool) {
-	c.gatewayManager.SetGatewayAPIInstalled(gatewayAPIInstalled)
 }
 
 func (c *HAProxyController) manageIngress(ing *store.Ingress) {

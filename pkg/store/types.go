@@ -114,10 +114,6 @@ type Namespace struct {
 	HAProxyRuntime           map[string]map[string]*RuntimeBackend            // service -> portName -> Backend
 	HAProxyRuntimeStandalone map[string]map[string]map[string]*RuntimeBackend // service -> portName -> backendName -> Backend
 	CRs                      *CustomResources
-	Gateways                 map[string]*Gateway
-	TCPRoutes                map[string]*TCPRoute
-	ReferenceGrants          map[string]*ReferenceGrant
-	Labels                   map[string]string
 	Name                     string
 	Status                   Status
 	Relevant                 bool
@@ -208,108 +204,6 @@ type IngressCore struct {
 	Name           string
 	Class          string
 	CreationTime   time.Time
-}
-
-type GatewayClass struct {
-	Description    *string
-	Name           string
-	ControllerName string
-	Status         Status
-	Generation     int64
-}
-
-type Gateway struct {
-	Namespace        string
-	Name             string
-	GatewayClassName string
-	Status           Status
-	Listeners        []Listener
-	Generation       int64
-}
-type Listener struct {
-	Hostname      *string
-	AllowedRoutes *AllowedRoutes
-	Name          string
-	Protocol      string
-	GwNamespace   string
-	GwName        string
-	Port          int32
-}
-
-type AllowedRoutes struct {
-	Namespaces *RouteNamespaces
-	Kinds      []RouteGroupKind
-}
-
-type RouteGroupKind struct {
-	Group *string
-	Kind  string
-}
-
-type RouteNamespaces struct {
-	From     *string
-	Selector *LabelSelector
-}
-
-type TCPRoute struct {
-	CreationTime time.Time
-	Name         string
-	Namespace    string
-	Status       Status
-	BackendRefs  []BackendRef
-	ParentRefs   []ParentRef
-	Generation   int64
-}
-
-type BackendRef struct {
-	Namespace *string
-	Port      *int32
-	Weight    *int32
-	Group     *string
-	Kind      *string
-	Name      string
-}
-type LabelSelector struct {
-	MatchLabels      map[string]string
-	MatchExpressions []LabelSelectorRequirement
-}
-
-type LabelSelectorRequirement struct {
-	Key      string
-	Operator string
-	Values   []string
-}
-
-type TCPRoutes []TCPRoute
-
-type ParentRef struct {
-	Namespace   *string
-	SectionName *string
-	Port        *int32
-	Group       string
-	Kind        string
-	Name        string
-}
-
-type ReferenceGrant struct {
-	Namespace  string
-	Name       string
-	Status     Status
-	From       []ReferenceGrantFrom
-	To         []ReferenceGrantTo
-	Generation int64
-}
-
-type ReferenceGrantFrom struct {
-	Group     string
-	Kind      string
-	Namespace string
-}
-
-type ReferenceGrantTo struct {
-	Name  *string
-	Group string
-	Kind  string
 }
 
 // BackendOwner records which ingress constituted a backend during the current

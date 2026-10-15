@@ -185,16 +185,12 @@ image_arguments:
       helm install haproxy haproxytech/kubernetes-ingress \
         --set-string "controller.extraArgs={--empty-ingress-class}"
   - argument: --gateway-controller-name
-    description: identifier of your controller to know which gatewayclass it will handle
+    description: "Removed, Gateway API support is no longer provided and the flag is ignored. Available up to version 3.2."
     values:
       - The name of the controllerName in GatewayClass
     version_min: "1.10"
+    version_max: "3.2"
     example: --gateway-controller-name=haproxy.org/gateway-controller
-    helm: |-
-      helm install intranet haproxytech/kubernetes-ingress \
-        --set controller.gatewayControllerName=haproxy.org/gateway-controller
-    related_docs:
-      - ./gateway-api.md
   - argument: --namespace-blacklist
     description: Namespaces that the ingress controller should not monitor for changes to pods and services.
     values:

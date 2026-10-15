@@ -61,10 +61,8 @@ type K8s struct {
 	// Nesting per map file rather than joining the two into one string is what avoids reserving
 	// a separator that cannot appear in a host or a path.
 	RoutesProcessedByMapFile map[string]map[string]RouteOwner
-	GatewayClasses           map[string]*GatewayClass
 	HaProxyPods              map[string]struct{}
 	FrontendRC               *rc.ResourceCounter
-	GatewayControllerName    string
 	PublishServiceAddresses  []string
 	UpdateAllIngresses       bool
 	IngressesByService       map[string]*utils.OrderedSet[string, *Ingress] // service fqn -> ingress name -> ingress
@@ -115,12 +113,12 @@ func NewK8sStore(args utils.OSArgs) K8s {
 		SecretsProcessed:         map[string]struct{}{},
 		BackendsProcessed:        map[string]BackendOwner{},
 		RoutesProcessedByMapFile: map[string]map[string]RouteOwner{},
-		GatewayClasses:           map[string]*GatewayClass{},
-		CRStates:                 map[CRRef]*CRState{},
-		SectionsFromCR:           map[string]CRRef{},
-		HaProxyPods:              map[string]struct{}{},
-		FrontendRC:               rc.NewResourceCounter(),
-		IngressesByService:       map[string]*utils.OrderedSet[string, *Ingress]{},
+
+		CRStates:           map[CRRef]*CRState{},
+		SectionsFromCR:     map[string]CRRef{},
+		HaProxyPods:        map[string]struct{}{},
+		FrontendRC:         rc.NewResourceCounter(),
+		IngressesByService: map[string]*utils.OrderedSet[string, *Ingress]{},
 	}
 	for _, namespace := range args.NamespaceWhitelist {
 		store.NamespacesAccess.Whitelist[namespace] = struct{}{}
@@ -226,11 +224,7 @@ func (k K8s) GetNamespace(name string) *Namespace {
 			TCPsPerCR: make(map[string]*TCPs),
 			Frontends: make(map[string]*v3.FrontendSpec),
 		},
-		Gateways:        make(map[string]*Gateway),
-		TCPRoutes:       make(map[string]*TCPRoute),
-		ReferenceGrants: make(map[string]*ReferenceGrant),
-		Labels:          make(map[string]string),
-		Status:          ADDED,
+		Status: ADDED,
 	}
 	k.Namespaces[name] = newNamespace
 	return newNamespace

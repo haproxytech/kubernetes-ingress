@@ -32,11 +32,9 @@ import (
 	"github.com/valyala/fasthttp/fasthttpadaptor"
 	"github.com/valyala/fasthttp/pprofhandler"
 	"k8s.io/client-go/kubernetes"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/haproxytech/kubernetes-ingress/pkg/annotations"
 	"github.com/haproxytech/kubernetes-ingress/pkg/controller/constants"
-	gateway "github.com/haproxytech/kubernetes-ingress/pkg/gateways"
 	"github.com/haproxytech/kubernetes-ingress/pkg/handler"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/api"
@@ -55,10 +53,8 @@ type Builder struct {
 	store                    store.K8s
 	annotations              annotations.Annotations
 	haproxyClient            api.HAProxyClient
-	gatewayManager           gateway.GatewayManager
 	haproxyProcess           process.Process
 	haproxyRules             rules.Rules
-	restClientSet            client.Client
 	updateStatusManager      status.UpdateStatusManager
 	updatePublishServiceFunc func(ingresses []*ingress.Ingress, publishServiceAddresses []string)
 	eventChan                chan k8ssync.SyncDataEvent
@@ -140,16 +136,6 @@ func (builder *Builder) WithClientSet(clientSet *kubernetes.Clientset) *Builder 
 	return builder
 }
 
-func (builder *Builder) WithRestClientSet(restClientSet client.Client) *Builder {
-	builder.restClientSet = restClientSet
-	return builder
-}
-
-func (builder *Builder) WithGatewayManager(gatewayManager gateway.GatewayManager) *Builder {
-	builder.gatewayManager = gatewayManager
-	return builder
-}
-
 func (builder *Builder) WithUpdateStatusManager(updateStatusManager status.UpdateStatusManager) *Builder {
 	builder.updateStatusManager = updateStatusManager
 	return builder
@@ -181,11 +167,6 @@ func (builder *Builder) Build() *HAProxyController {
 	prefix, errPrefix := utils.GetPodPrefix(os.Getenv("POD_NAME"))
 	logger.Error(errPrefix)
 
-	builder.store.GatewayControllerName = builder.osArgs.GatewayControllerName
-	gatewayManager := builder.gatewayManager
-	if gatewayManager == nil {
-		gatewayManager = gateway.New(builder.store, haproxy.HAProxyClient, builder.osArgs, builder.restClientSet)
-	}
 	updateStatusManager := builder.updateStatusManager
 	if updateStatusManager == nil {
 		updateStatusManager = status.New(builder.clientSet, builder.osArgs.IngressClass, builder.osArgs.EmptyIngressClass, builder.osArgs.DisableIngressStatusUpdate)
@@ -205,7 +186,6 @@ func (builder *Builder) Build() *HAProxyController {
 		annotations:              builder.annotations,
 		chShutdown:               chShutdown,
 		updatePublishServiceFunc: builder.updatePublishServiceFunc,
-		gatewayManager:           gatewayManager,
 		updateStatusManager:      updateStatusManager,
 		prometheusMetricsManager: metrics.New(),
 		PodIP:                    podIP,

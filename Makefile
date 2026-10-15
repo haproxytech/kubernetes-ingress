@@ -51,10 +51,6 @@ example:
 example-dev: build-dev
 	CUSTOMDOCKERFILE=build/Dockerfile.dev deploy/tests/create.sh
 
-.PHONY: example-experimental-gwapi
-example-experimental-gwapi:
-	EXPERIMENTAL_GWAPI=1 deploy/tests/create.sh
-
 .PHONY: example-rebuild
 example-rebuild:
 	deploy/tests/rebuild.sh

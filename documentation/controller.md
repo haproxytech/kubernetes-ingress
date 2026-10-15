@@ -403,7 +403,7 @@ Example:
 
 ### `--gateway-controller-name`
 
-  identifier of your controller to know which gatewayclass it will handle
+  Removed, Gateway API support is no longer provided and the flag is ignored. Available up to version 3.2.
 
 Possible values:
 
@@ -414,10 +414,6 @@ Example:
 ```yaml
 --gateway-controller-name=haproxy.org/gateway-controller
 ```
-
-Related documentation:
-
-- [gateway-api.md](./gateway-api.md)
 
 <p align='right'><a href='#haproxy-kubernetes-ingress-controller'>:arrow_up_small: back to top</a></p>
 

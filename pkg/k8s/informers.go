@@ -22,9 +22,6 @@ import (
 	k8stransform "github.com/haproxytech/kubernetes-ingress/pkg/k8s/transform"
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
-	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
-	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
-	gatewaynetworking "sigs.k8s.io/gateway-api/pkg/client/informers/externalversions"
 )
 
 func (k k8s) getNamespaceInfomer(eventChan chan k8ssync.SyncDataEvent, factory informers.SharedInformerFactory) cache.SharedIndexInformer { //nolint:ireturn
@@ -61,11 +58,7 @@ func (k k8s) getNamespaceInfomer(eventChan chan k8ssync.SyncDataEvent, factory i
 						Backends:  make(map[string]*v3.BackendSpec),
 						Frontends: make(map[string]*v3.FrontendSpec),
 					},
-					Gateways:        make(map[string]*store.Gateway),
-					TCPRoutes:       make(map[string]*store.TCPRoute),
-					ReferenceGrants: make(map[string]*store.ReferenceGrant),
-					Labels:          utils.CopyMap(data.Labels),
-					Status:          status,
+					Status: status,
 				}
 				logIncomingK8sEvent(logger, item, data.UID, data.ResourceVersion)
 				eventChan <- ToSyncDataEvent(item, item, data.UID, data.ResourceVersion)
@@ -91,11 +84,7 @@ func (k k8s) getNamespaceInfomer(eventChan chan k8ssync.SyncDataEvent, factory i
 						Backends:  make(map[string]*v3.BackendSpec),
 						Frontends: make(map[string]*v3.FrontendSpec),
 					},
-					Gateways:        make(map[string]*store.Gateway),
-					TCPRoutes:       make(map[string]*store.TCPRoute),
-					ReferenceGrants: make(map[string]*store.ReferenceGrant),
-					Labels:          utils.CopyMap(data.Labels),
-					Status:          status,
+					Status: status,
 				}
 				logIncomingK8sEvent(logger, item, data.UID, data.ResourceVersion)
 				eventChan <- ToSyncDataEvent(item, item, data.UID, data.ResourceVersion)
@@ -116,7 +105,6 @@ func (k k8s) getNamespaceInfomer(eventChan chan k8ssync.SyncDataEvent, factory i
 				item2 := &store.Namespace{
 					Name:   data2.GetName(),
 					Status: status,
-					Labels: utils.CopyMap(data2.Labels),
 				}
 				logIncomingK8sEvent(logger, item2, data2.UID, data2.ResourceVersion)
 				eventChan <- ToSyncDataEvent(item2, item2, data2.UID, data2.ResourceVersion)
@@ -869,213 +857,4 @@ func getServiceAddresses(service *corev1.Service) (addresses []string) {
 		addresses = []string{}
 	}
 	return addresses
-}
-
-type InformerGetter interface {
-	Informer() cache.SharedIndexInformer
-}
-
-type GatewayRelatedType interface {
-	*gatewayv1beta1.GatewayClass | *gatewayv1beta1.Gateway | *gatewayv1alpha2.TCPRoute | *gatewayv1alpha2.ReferenceGrant
-}
-
-type GatewayInformerFunc[GWType GatewayRelatedType] func(gwObj GWType, eventChan chan k8ssync.SyncDataEvent, status store.Status)
-
-func manageGatewayClass(gatewayclass *gatewayv1beta1.GatewayClass, eventChan chan k8ssync.SyncDataEvent, status store.Status) {
-	logger.Infof("gwapi: gatewayclass: informers: got '%s'", gatewayclass.Name)
-	item := store.GatewayClass{
-		Name:           gatewayclass.Name,
-		ControllerName: string(gatewayclass.Spec.ControllerName),
-		Description:    gatewayclass.Spec.Description,
-		Generation:     gatewayclass.Generation,
-		Status:         status,
-	}
-	logger.Tracef("[RUNTIME] [K8s] %s %s: %s", k8ssync.GATEWAYCLASS, item.Status, item.Name)
-	eventChan <- k8ssync.SyncDataEvent{SyncType: k8ssync.GATEWAYCLASS, Data: &item}
-}
-
-func manageGateway(gateway *gatewayv1beta1.Gateway, eventChan chan k8ssync.SyncDataEvent, status store.Status) {
-	logger.Infof("gwapi: gateway: informers: got '%s/%s'", gateway.Namespace, gateway.Name)
-	listeners := make([]store.Listener, len(gateway.Spec.Listeners))
-	for i, listener := range gateway.Spec.Listeners {
-		listeners[i] = store.Listener{
-			Name:        string(listener.Name),
-			Port:        int32(listener.Port),
-			Protocol:    string(listener.Protocol),
-			Hostname:    (*string)(listener.Hostname),
-			GwNamespace: gateway.Namespace,
-			GwName:      gateway.Name,
-		}
-		if listener.AllowedRoutes != nil {
-			listeners[i].AllowedRoutes = &store.AllowedRoutes{}
-			if listener.AllowedRoutes.Namespaces != nil {
-				var from *string
-				if listener.AllowedRoutes.Namespaces.From != nil {
-					tmpFrom := string(*listener.AllowedRoutes.Namespaces.From)
-					from = &tmpFrom
-				}
-				listeners[i].AllowedRoutes.Namespaces = &store.RouteNamespaces{
-					From:     from,
-					Selector: ConvertFromK8SLabelSelector(listener.AllowedRoutes.Namespaces.Selector),
-				}
-			}
-			rgks := make([]store.RouteGroupKind, len(listener.AllowedRoutes.Kinds))
-			for j, rgk := range listener.AllowedRoutes.Kinds {
-				rgks[j] = store.RouteGroupKind{
-					Group: (*string)(rgk.Group),
-					Kind:  string(rgk.Kind),
-				}
-			}
-			listeners[i].AllowedRoutes.Kinds = rgks
-		}
-	}
-	item := store.Gateway{
-		Name:             gateway.Name,
-		Namespace:        gateway.Namespace,
-		GatewayClassName: string(gateway.Spec.GatewayClassName),
-		Listeners:        listeners,
-		Generation:       gateway.Generation,
-		Status:           status,
-	}
-	logger.Tracef("[RUNTIME] [K8s] %s %s: %s", k8ssync.GATEWAY, item.Status, item.Name)
-	eventChan <- k8ssync.SyncDataEvent{SyncType: k8ssync.GATEWAY, Namespace: item.Namespace, Data: &item}
-}
-
-func manageTCPRoute(tcproute *gatewayv1alpha2.TCPRoute, eventChan chan k8ssync.SyncDataEvent, status store.Status) {
-	logger.Debugf("gwapi: tcproute: informers: got '%s/%s'", tcproute.Namespace, tcproute.Name)
-	backendRefs := []store.BackendRef{}
-	for _, rule := range tcproute.Spec.Rules {
-		for _, backendref := range rule.BackendRefs {
-			backendRefs = append(backendRefs, store.BackendRef{
-				Name: string(backendref.Name),
-				Namespace: func() *string {
-					if backendref.Namespace != nil {
-						return (*string)(backendref.Namespace)
-					}
-					return nil
-				}(),
-				Port:   (*int32)(backendref.Port),
-				Group:  (*string)(backendref.Group),
-				Kind:   (*string)(backendref.Kind),
-				Weight: backendref.Weight,
-			})
-		}
-	}
-	parentRefs := make([]store.ParentRef, 0, len(tcproute.Spec.ParentRefs))
-	for _, parentRefSpec := range tcproute.Spec.ParentRefs {
-		// Ensure ParentRefs is only about Gateway resources.
-		parentRefGroup := "gateway.networking.k8s.io"
-		if parentRefSpec.Group != nil {
-			parentRefGroup = *(*string)(parentRefSpec.Group)
-		}
-		parentRefKind := "Gateway"
-		if parentRefSpec.Kind != nil {
-			parentRefKind = *(*string)(parentRefSpec.Kind)
-		}
-		if parentRefGroup != "gateway.networking.k8s.io" || parentRefKind != "Gateway" {
-			logger.Errorf("invalid parent reference in tcproute '%s/%s': parent reference must of kind 'Gateway' from group 'gateway.networking.k8s.io'", tcproute.Namespace, tcproute.Name)
-			continue
-		}
-		parentRefNs := (*string)(parentRefSpec.Namespace)
-		if parentRefNs == nil {
-			parentRefNs = &tcproute.Namespace
-		}
-		parentRef := store.ParentRef{
-			Namespace:   parentRefNs,
-			Name:        string(parentRefSpec.Name),
-			SectionName: (*string)(parentRefSpec.SectionName),
-			Port:        (*int32)(parentRefSpec.Port),
-			Group:       parentRefGroup,
-			Kind:        parentRefKind,
-		}
-		parentRefs = append(parentRefs, parentRef)
-	}
-
-	item := store.TCPRoute{
-		Name:         tcproute.Name,
-		Namespace:    tcproute.Namespace,
-		BackendRefs:  backendRefs,
-		ParentRefs:   parentRefs,
-		CreationTime: tcproute.CreationTimestamp.Time,
-		Generation:   tcproute.Generation,
-		Status:       status,
-	}
-	logger.Tracef("[RUNTIME] [K8s] %s %s: %s", k8ssync.TCPROUTE, item.Status, item.Name)
-	eventChan <- k8ssync.SyncDataEvent{SyncType: k8ssync.TCPROUTE, Namespace: item.Namespace, Data: &item}
-}
-
-func (k k8s) getGatewayClassesInformer(eventChan chan k8ssync.SyncDataEvent, factory gatewaynetworking.SharedInformerFactory) cache.SharedIndexInformer {
-	informer := factory.Gateway().V1beta1().GatewayClasses()
-	PopulateInformer(eventChan, informer, GatewayInformerFunc[*gatewayv1beta1.GatewayClass](manageGatewayClass))
-	return informer.Informer()
-}
-
-func (k k8s) getGatewayInformer(eventChan chan k8ssync.SyncDataEvent, factory gatewaynetworking.SharedInformerFactory) cache.SharedIndexInformer {
-	informer := factory.Gateway().V1beta1().Gateways()
-	PopulateInformer(eventChan, informer, GatewayInformerFunc[*gatewayv1beta1.Gateway](manageGateway))
-	return informer.Informer()
-}
-
-func (k k8s) getTCPRouteInformer(eventChan chan k8ssync.SyncDataEvent, factory gatewaynetworking.SharedInformerFactory) cache.SharedIndexInformer {
-	informer := factory.Gateway().V1alpha2().TCPRoutes()
-	PopulateInformer(eventChan, informer, GatewayInformerFunc[*gatewayv1alpha2.TCPRoute](manageTCPRoute))
-	return informer.Informer()
-}
-
-func PopulateInformer[IT InformerGetter, GWType GatewayRelatedType, GWF GatewayInformerFunc[GWType]](eventChan chan k8ssync.SyncDataEvent, informer IT, handler GWF) cache.SharedIndexInformer {
-	//revive:disable:unchecked-type-assertion
-	_, err := informer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc: func(obj interface{}) {
-			gatewaytype := obj.(GWType)
-			handler(gatewaytype, eventChan, store.ADDED)
-		},
-		UpdateFunc: func(oldObj, newObj interface{}) {
-			gatewaytype := newObj.(GWType)
-			handler(gatewaytype, eventChan, store.MODIFIED)
-		},
-		DeleteFunc: func(obj interface{}) {
-			gatewaytype := obj.(GWType)
-			handler(gatewaytype, eventChan, store.DELETED)
-		},
-	})
-	//revive:enable:unchecked-type-assertion
-	logger.Error(err)
-	return informer.Informer()
-}
-
-func (k k8s) getReferenceGrantInformer(eventChan chan k8ssync.SyncDataEvent, factory gatewaynetworking.SharedInformerFactory) cache.SharedIndexInformer {
-	informer := factory.Gateway().V1alpha2().ReferenceGrants()
-	PopulateInformer(eventChan, informer, GatewayInformerFunc[*gatewayv1alpha2.ReferenceGrant](manageReferenceGrant))
-	return informer.Informer()
-}
-
-func manageReferenceGrant(referenceGrant *gatewayv1alpha2.ReferenceGrant, eventChan chan k8ssync.SyncDataEvent, status store.Status) {
-	logger.Debugf("gwapi: referencegrant: informers: got '%s/%s'", referenceGrant.Namespace, referenceGrant.Name)
-	item := store.ReferenceGrant{
-		Name:       referenceGrant.Name,
-		Namespace:  referenceGrant.Namespace,
-		Generation: referenceGrant.Generation,
-		Status:     status,
-	}
-	item.From = make([]store.ReferenceGrantFrom, len(referenceGrant.Spec.From))
-	item.To = make([]store.ReferenceGrantTo, len(referenceGrant.Spec.To))
-
-	for i, from := range referenceGrant.Spec.From {
-		item.From[i] = store.ReferenceGrantFrom{
-			Group:     string(from.Group),
-			Kind:      string(from.Kind),
-			Namespace: string(from.Namespace),
-		}
-	}
-
-	for i, to := range referenceGrant.Spec.To {
-		item.To[i] = store.ReferenceGrantTo{
-			Group: string(to.Group),
-			Kind:  string(to.Kind),
-			Name:  (*string)(to.Name),
-		}
-	}
-
-	logger.Tracef("[RUNTIME] [K8s] %s %s: %s", k8ssync.REFERENCEGRANT, item.Status, item.Name)
-	eventChan <- k8ssync.SyncDataEvent{SyncType: k8ssync.REFERENCEGRANT, Namespace: item.Namespace, Data: &item}
 }
