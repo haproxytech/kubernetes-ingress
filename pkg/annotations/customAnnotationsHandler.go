@@ -1,9 +1,6 @@
 package annotations
 
 import (
-	"slices"
-	"strings"
-
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/api"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/instance"
@@ -28,35 +25,20 @@ func updateCustomAnnotations(api api.HAProxyClient) (err error) {
 			continue
 		}
 		// We need to sort origins by orderPriority
-		type originWithPriority struct {
-			origin        string
-			orderPriority int
-		}
-		var originsWithPriority []originWithPriority
-		for origin, annotationData := range annotationDataByOrigin {
-			originsWithPriority = append(originsWithPriority, originWithPriority{origin: origin, orderPriority: annotationData.orderPriority})
-		}
-		// Sort by orderPriority descending
-		slices.SortFunc(originsWithPriority, func(a, b originWithPriority) int {
-			if a.orderPriority == b.orderPriority {
-				return strings.Compare(a.origin, b.origin)
-			}
-			return b.orderPriority - a.orderPriority
-		})
 		values := []string{}
-		for _, origin := range originsWithPriority {
-			annotationData := annotationDataByOrigin[origin.origin]
+		for _, origin := range sortedOrigins(annotationDataByOrigin) {
+			annotationData := annotationDataByOrigin[origin]
 			instance.ReloadIf(annotationData.status != store.EMPTY,
-				"custom annotations from %s has been created/modified/deleted", origin.origin)
+				"custom annotations from %s has been created/modified/deleted", origin)
 
 			// The entry has not been reseen so delete it.
 			if annotationData.status == store.DELETED {
-				delete(customAnnotationState.backends[backend], origin.origin)
+				delete(customAnnotationState.backends[backend], origin)
 				continue
 			}
 
 			instance.ReloadIf(len(annotationData.updated) > 0,
-				"custom annotations from %s has been updated", origin.origin)
+				"custom annotations from %s has been updated", origin)
 
 			values = append(values, annotationData.value...)
 			annotationData.updated = nil

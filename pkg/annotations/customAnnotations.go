@@ -2,6 +2,7 @@ package annotations
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/go-test/deep"
@@ -131,6 +132,31 @@ func (a *CustomAnnotations) Process(k store.K8s, annotations ...map[string]strin
 	return nil
 }
 
+type originWithPriority struct {
+	origin        string
+	orderPriority int
+}
+
+// sortedOrigins orders annotation origins by descending orderPriority,
+// then by origin name, so rendered configuration does not depend on map order.
+func sortedOrigins(data map[string]*annotationData) []string {
+	originsWithPriority := make([]originWithPriority, 0, len(data))
+	for origin, annotationData := range data {
+		originsWithPriority = append(originsWithPriority, originWithPriority{origin: origin, orderPriority: annotationData.orderPriority})
+	}
+	slices.SortFunc(originsWithPriority, func(a, b originWithPriority) int {
+		if a.orderPriority == b.orderPriority {
+			return strings.Compare(a.origin, b.origin)
+		}
+		return b.orderPriority - a.orderPriority
+	})
+	origins := make([]string, len(originsWithPriority))
+	for i, o := range originsWithPriority {
+		origins[i] = o.origin
+	}
+	return origins
+}
+
 func UpdateFrontendCustomAnnotations(api api.HAProxyClient, frontends ...string) (updated []string, err error) {
 	for _, ft := range frontends {
 		customData, okCustom := customAnnotationState.frontendsCustom[ft]
@@ -139,10 +165,11 @@ func UpdateFrontendCustomAnnotations(api api.HAProxyClient, frontends ...string)
 		}
 		deleted := []string{}
 		newData := make([]string, 0)
-		for k, v := range customData {
+		for _, origin := range sortedOrigins(customData) {
+			v := customData[origin]
 			if v.status == store.DELETED {
-				updated = append(updated, "DELETED: "+k)
-				deleted = append(deleted, k)
+				updated = append(updated, "DELETED: "+origin)
+				deleted = append(deleted, origin)
 				continue
 			}
 			newData = append(newData, v.value...)
