@@ -15,6 +15,7 @@
 package k8s
 
 import (
+	"context"
 	"errors"
 	"os"
 	"path/filepath"
