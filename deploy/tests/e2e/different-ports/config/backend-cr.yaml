@@ -1,0 +1,9 @@
+# The controller overrides name and mode when it binds this crd to a
+# service backend; only the balancing algorithm matters here.
+apiVersion: ingress.v3.haproxy.org/v3
+kind: Backend
+metadata:
+  name: be-roundrobin
+spec:
+  balance:
+    algorithm: roundrobin

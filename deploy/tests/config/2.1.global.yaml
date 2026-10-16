@@ -7,6 +7,9 @@ metadata:
   name: global-full
   namespace: haproxy-controller
 spec:
+  # Thread groups keep independent round-robin cursors; the suites that
+  # check an even distribution over every pod need a single one.
+  nbthread: 1
   performance_options:
     maxconn: 1000
   log_target_list:

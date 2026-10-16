@@ -51,6 +51,9 @@ func (suite *DifferentPortsSuite) SetupSuite() {
 		Host:      suite.test.GetNS() + ".test",
 		Instances: []instanceTmplData{{Port: 8000, Replicas: 1}},
 	}
+	// The service template binds this backend crd, which pins round-robin
+	// balancing for HAProxy 3.3 and later.
+	suite.Require().NoError(suite.test.Apply("config/backend-cr.yaml", suite.test.GetNS(), nil))
 	suite.client, err = e2e.NewHTTPClient(suite.tmplData.Host)
 	suite.Require().NoError(err)
 	suite.Require().NoError(suite.test.Apply("config/deploy.yaml.tmpl", suite.test.GetNS(), suite.tmplData))

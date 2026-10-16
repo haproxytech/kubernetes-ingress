@@ -33,6 +33,11 @@ kind: Service
 apiVersion: v1
 metadata:
   name: http-echo
+  annotations:
+    # HAProxy 3.3 and later default to "random" balancing; the suite expects
+    # an even distribution over every pod, so bind a backend crd asking for
+    # round-robin.
+    cr-backend: be-roundrobin
 spec:
   ipFamilyPolicy: RequireDualStack
   ports:

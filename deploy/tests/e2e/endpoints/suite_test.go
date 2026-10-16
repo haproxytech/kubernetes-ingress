@@ -45,6 +45,9 @@ func (suite *EndpointsSuite) SetupSuite() {
 	suite.tmplData = tmplData{
 		Host: suite.test.GetNS() + ".test",
 	}
+	// The service template binds this backend crd, which pins round-robin
+	// balancing for HAProxy 3.3 and later.
+	suite.Require().NoError(suite.test.Apply("config/backend-cr.yaml", suite.test.GetNS(), nil))
 }
 
 func (suite *EndpointsSuite) TearDownSuite() {
