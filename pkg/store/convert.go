@@ -148,15 +148,13 @@ func (n ingressNetworkingV1Strategy) ConvertIngress(enableUserAnnotations bool) 
 				}
 				return ingPath
 			}(n.ig.Spec.DefaultBackend),
-			TLS: func(ingressTLS []networkingv1.IngressTLS) map[string]*IngressTLS {
-				tls := make(map[string]*IngressTLS)
+			TLS: func(ingressTLS []networkingv1.IngressTLS) []*IngressTLS {
+				tls := make([]*IngressTLS, 0, len(ingressTLS))
 				for _, k8sTLS := range ingressTLS {
-					for _, host := range k8sTLS.Hosts {
-						tls[host] = &IngressTLS{
-							Host:       host,
-							SecretName: k8sTLS.SecretName,
-						}
-					}
+					tls = append(tls, &IngressTLS{
+						Hosts:      k8sTLS.Hosts,
+						SecretName: k8sTLS.SecretName,
+					})
 				}
 				return tls
 			}(n.ig.Spec.TLS),
