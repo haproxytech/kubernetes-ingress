@@ -321,6 +321,15 @@ config
   timeout tarpit 5s
 ```
 
+### Absent, empty and false values
+
+- an annotation that is not set renders nothing for that rule;
+- setting an annotation to an empty value removes the lines it rendered before, so a value can be cleared for a service, an ingress or the configmap;
+- a rule whose template renders nothing (for example when a value means "disabled") is treated like an empty value: nothing is added, and lines rendered before are removed;
+- a value defined at several levels resolves to the first level that defines it, even when it is empty. An empty value on a service therefore hides the value set on its ingress or on the configmap.
+
+Defaults are deployment data: the value that should apply everywhere goes in the configmap annotations.
+
 ### All Options
 
 ```yaml

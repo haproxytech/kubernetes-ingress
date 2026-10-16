@@ -157,6 +157,19 @@ func sortedOrigins(data map[string]*annotationData) []string {
 	return origins
 }
 
+// dropUnseen marks the entries that were not rendered in this pass as deleted,
+// so their lines are removed instead of lingering after the value is gone.
+func dropUnseen(entries map[string]*annotationData, seen map[string]struct{}) {
+	for origin, entry := range entries {
+		if _, ok := seen[origin]; ok {
+			continue
+		}
+		entry.status = store.DELETED
+		entry.value = []string{}
+		entry.updated = []string{}
+	}
+}
+
 func UpdateFrontendCustomAnnotations(api api.HAProxyClient, frontends ...string) (updated []string, err error) {
 	for _, ft := range frontends {
 		customData, okCustom := customAnnotationState.frontendsCustom[ft]
