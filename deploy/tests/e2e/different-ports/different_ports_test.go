@@ -66,6 +66,7 @@ func (suite *DifferentPortsSuite) everyReplicaReachable() bool {
 			res, cls, err := suite.client.Do()
 			if err != nil {
 				suite.T().Log(err.Error())
+				return
 			}
 			defer cls()
 			if res.StatusCode == 200 {
