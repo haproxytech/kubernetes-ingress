@@ -95,14 +95,23 @@ func CRDRefresh(log utils.Logger, osArgs utils.OSArgs) error {
 				needUpgrade = true
 				log.Error(err.Error())
 			}
-			log.Infof("CRD %s exists as v1, CN[v%s]", crdName, vK8s.String())
-			if needUpgrade || vNew.GreaterThan(vK8s) {
+			if vK8s != nil && vNew != nil {
+				log.Infof("CRD %s exists as v1, CN[v%s]", crdName, vK8s.String())
+				if vNew.GreaterThan(vK8s) {
+					needUpgrade = true
+				}
+			}
+			if needUpgrade {
 				// Upgrade the CRDl
 				_, err = clientset.ApiextensionsV1().CustomResourceDefinitions().Update(context.Background(), &crd, metav1.UpdateOptions{})
 				if err != nil {
 					return err
 				}
-				log.Infof("CRD %s updated, CN[v%s] -> CN[v%s]", crdName, vK8s.String(), vNew.String())
+				if vK8s != nil && vNew != nil {
+					log.Infof("CRD %s updated, CN[v%s] -> CN[v%s]", crdName, vK8s.String(), vNew.String())
+				} else {
+					log.Infof("CRD %s updated", crdName)
+				}
 			}
 			continue
 		}
