@@ -37,6 +37,9 @@ validation_rules:
     section: frontend
     type: duration
     rule: "value > duration('1s') && value < duration('10s')"
+  duration-rule-days:
+    type: duration
+    rule: "value >= duration('1s') && value <= duration('48h')"
   int-rule:
     type: int
     rule: "value > 1 && value < 10"
@@ -46,6 +49,9 @@ validation_rules:
   bool-rule:
     type: bool
     rule: "value == true"
+  bool-rule-either:
+    type: bool
+    rule: "value == true || value == false"
   string-rule:
     type: string
     rule: "value.startsWith('foo')"
@@ -75,6 +81,10 @@ validation_rules:
 		{"duration-valid-frontend", "duration-rule-frontend", "5s", "frontend", false},
 		{"duration-invalid-frontend", "duration-rule-frontend", "1s", "frontend", true},
 		{"duration-invalid-format", "duration-rule", "foo", "backend", true},
+		// Duration syntax accepted by the built-in annotations
+		{"duration-valid-days", "duration-rule-days", "1d", "backend", false},
+		{"duration-valid-bare-milliseconds", "duration-rule-days", "1000", "backend", false},
+		{"duration-invalid-days-too-short", "duration-rule-days", "0", "backend", true},
 		// Int
 		{"int-valid", "int-rule", "5", "backend", false},
 		{"int-invalid", "int-rule", "1", "backend", true},
@@ -87,6 +97,12 @@ validation_rules:
 		{"bool-valid", "bool-rule", "true", "backend", false},
 		{"bool-invalid", "bool-rule", "false", "backend", true},
 		{"bool-invalid-format", "bool-rule", "foo", "backend", true},
+		// Boolean spellings accepted by the built-in annotations
+		{"bool-valid-on", "bool-rule-either", "on", "backend", false},
+		{"bool-valid-enabled", "bool-rule-either", "enabled", "backend", false},
+		{"bool-valid-off", "bool-rule-either", "off", "backend", false},
+		{"bool-valid-disabled", "bool-rule-either", "disabled", "backend", false},
+		{"bool-invalid-spelling", "bool-rule-either", "maybe", "backend", true},
 		// String
 		{"string-valid", "string-rule", "foobar", "backend", false},
 		{"string-invalid", "string-rule", "bar", "backend", true},

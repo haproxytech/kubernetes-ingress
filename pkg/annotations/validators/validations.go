@@ -18,6 +18,8 @@ import (
 	"github.com/google/cel-go/common/types"
 	durationpb "google.golang.org/protobuf/types/known/durationpb"
 	"gopkg.in/yaml.v3"
+
+	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
 )
 
 // AnnType defines the type of annotation used in the validation rules.
@@ -199,6 +201,28 @@ func (v *Validator) Set(prefix string, config Config) error {
 	return nil
 }
 
+// parseDuration accepts the same duration syntax as the built-in annotation
+// parsers: Go durations, plus a trailing 'd' and a bare value read as milliseconds.
+func parseDuration(rawValue string) (time.Duration, error) {
+	if d, err := time.ParseDuration(rawValue); err == nil {
+		return d, nil
+	}
+	milliseconds, err := utils.ParseTime(rawValue)
+	if err != nil {
+		return 0, err
+	}
+	return time.Duration(*milliseconds) * time.Millisecond, nil
+}
+
+// parseBool accepts the boolean spellings the built-in annotations accept,
+// including the deprecated on/off and enabled/disabled forms.
+func parseBool(rawValue, name string) (bool, error) {
+	if b, err := strconv.ParseBool(rawValue); err == nil {
+		return b, nil
+	}
+	return utils.GetBoolValue(rawValue, name)
+}
+
 // ValidateInput takes a rule name and a raw string value,
 // parses the value according to the rule's type,
 // and evaluates it against the corresponding CEL expression.
@@ -232,7 +256,7 @@ func (v *Validator) ValidateInput(ruleName string, rawValue string, section stri
 	switch rule.Type {
 	case DurationType:
 		// Parse the string into a Go time.Duration.
-		goDuration, parseErr := time.ParseDuration(rawValue)
+		goDuration, parseErr := parseDuration(rawValue)
 		if parseErr != nil {
 			return fmt.Errorf("invalid duration format for '%s': %w", rawValue, parseErr)
 		}
@@ -256,7 +280,7 @@ func (v *Validator) ValidateInput(ruleName string, rawValue string, section stri
 		celValue = types.Uint(uintValue)
 	case BoolType:
 		// Parse the string into a boolean.
-		boolValue, parseErr := strconv.ParseBool(rawValue)
+		boolValue, parseErr := parseBool(rawValue, ruleName)
 		if parseErr != nil {
 			return fmt.Errorf("invalid boolean format for '%s': %w", rawValue, parseErr)
 		}

@@ -169,6 +169,8 @@ backend.example.com/maxconn: "1000"
 
 ⚠ `duration`, `int`, `uint`, `bool` and `float` values needs to be defined as strings in annotation value. This is limitation of k8s for annotation values. If using type `json` normal number and boolean values can be used.
 
+`duration` accepts the same forms as the built-in annotations: `ms`, `s`, `m`, `h`, `d`, or a bare value read as milliseconds. `bool` also accepts `on`/`off` and `enabled`/`disabled`.
+
 **invalid**
 ```yaml
 backend.example.com/maxconn: 1000
