@@ -122,7 +122,7 @@ func (c *HAProxyController) SyncData() {
 		case k8ssync.ENDPOINTS:
 			//revive:disable-next-line:unchecked-type-assertion
 			ep := job.Data.(*store.Endpoints)
-			if c.store.SkipNamespaceInConfig(ns) {
+			if !c.namespaceEventInConfig(ns, job.SyncType) {
 				_ = c.store.EventEndpoints(ns, ep, func(*store.RuntimeBackend) error { return nil })
 				change = false
 				break
@@ -161,16 +161,39 @@ func (c *HAProxyController) SyncData() {
 			}
 			change = c.store.EventTCPCR(job.Namespace, job.Name, data)
 		}
-		// Dormant/Starting namespaces keep Store fresh but must not schedule
-		// updateHAProxy: that path always rebuilds global/defaults and used to
-		// reload HAProxy on every sync when the global diff never converged.
-		if change && k8ssync.IsNamespacedSessionEvent(job.SyncType) && c.store.SkipNamespaceInConfig(ns) {
+		// Keep Dormant/Starting stores fresh without scheduling configuration,
+		// except for ready, always-watched controller configuration dependencies.
+		if change && k8ssync.IsNamespacedSessionEvent(job.SyncType) && !c.namespaceEventInConfig(ns, job.SyncType) {
 			change = false
 		}
 		hadChanges = hadChanges || change
 		if job.EventProcessed != nil {
 			close(job.EventProcessed)
 		}
+	}
+}
+
+// namespaceEventInConfig keeps business eligibility separate from the
+// always-watched configmap namespace's controller configuration dependencies.
+func (c *HAProxyController) namespaceEventInConfig(ns *store.Namespace, kind k8ssync.SyncType) bool {
+	if !c.store.SkipNamespaceInConfig(ns) {
+		return true
+	}
+	if ns == nil || !c.store.NamespaceAlwaysSelected(ns.Name) {
+		return false
+	}
+	// AlwaysSelected means watched, not ready. Initial list events must not
+	// schedule configuration or runtime updates before the session is synced.
+	if c.sessions == nil || !c.sessions.Ready(ns.Name) {
+		return false
+	}
+	switch kind {
+	case k8ssync.SECRET, k8ssync.SERVICE, k8ssync.ENDPOINTS,
+		k8ssync.CR_GLOBAL, k8ssync.CR_DEFAULTS, k8ssync.CR_BACKEND, k8ssync.CR_FRONTEND,
+		k8ssync.PUBLISH_SERVICE:
+		return true
+	default:
+		return false
 	}
 }
 
