@@ -119,6 +119,80 @@ func TestSessionManagerStartStopEpoch(t *testing.T) {
 	}
 }
 
+func TestSessionManagerNamespaceReplacementEpoch(t *testing.T) {
+	t.Parallel()
+	events := make(chan k8ssync.SyncDataEvent, 8)
+	shutdownStarted := make(chan struct{})
+	releaseShutdown := make(chan struct{})
+	var releaseOnce sync.Once
+	release := func() { releaseOnce.Do(func() { close(releaseShutdown) }) }
+	defer release()
+	m := newSessionManager(events, func(namespace string, epoch uint64, stopCh chan struct{}) (*nsSession, error) {
+		return &nsSession{stopCh: stopCh, shutdown: func() {
+			if epoch == 1 {
+				close(shutdownStarted)
+				<-releaseShutdown
+			}
+		}}, nil
+	})
+	defer m.Close()
+	next := func(kind k8ssync.SyncType, epoch uint64) k8ssync.SyncDataEvent {
+		t.Helper()
+		select {
+		case ev := <-events:
+			if ev.SyncType != kind || ev.Namespace != "app" || ev.NamespaceEpoch != epoch {
+				t.Fatalf("event = %#v, want %s for epoch %d", ev, kind, epoch)
+			}
+			return ev
+		case <-time.After(2 * time.Second):
+			t.Fatalf("missing %s for epoch %d", kind, epoch)
+			return k8ssync.SyncDataEvent{}
+		}
+	}
+	if err := m.Start("app"); err != nil {
+		t.Fatal(err)
+	}
+	ready := next(k8ssync.NAMESPACE_SESSION_READY, 1)
+	close(ready.EventProcessed)
+	if !m.WaitAllReady(nil, 2*time.Second) || !m.Ready("app") {
+		t.Fatal("initial generation must become ready")
+	}
+	if err := m.Start("app"); err != nil || !m.Accept("app", 1) || m.Accept("app", 2) {
+		t.Fatal("sticky Start must preserve the current epoch")
+	}
+	if !m.Drain("app") || m.Accept("app", 1) || m.Ready("app") {
+		t.Fatal("Drain must immediately reject the old epoch")
+	}
+	select {
+	case <-shutdownStarted:
+	case <-time.After(2 * time.Second):
+		t.Fatal("Drain did not begin shutdown")
+	}
+	if err := m.Start("app"); err != nil || m.Accept("app", 2) || !m.Draining("app") {
+		t.Fatal("replacement must not start before the old watch is retired")
+	}
+	select {
+	case ev := <-events:
+		t.Fatalf("event overtook old watch shutdown: %#v", ev)
+	default:
+	}
+	release()
+	retired := next(k8ssync.NAMESPACE_WATCH_RETIRED, 1)
+	m.FinishDrain("app")
+	close(retired.EventProcessed)
+	if err := m.Start("app"); err != nil {
+		t.Fatal(err)
+	}
+	ready = next(k8ssync.NAMESPACE_SESSION_READY, 2)
+	if m.Accept("app", 1) || m.MarkReady("app", 1) || !m.Accept("app", 2) || !m.MarkReady("app", 2) {
+		t.Fatal("only the fresh epoch may mutate the store or become ready")
+	}
+	close(ready.EventProcessed)
+	if !m.WaitAllReady(nil, 2*time.Second) || !m.Ready("app") {
+		t.Fatal("replacement must become ready after its own READY acknowledgement")
+	}
+}
+
 func TestStartPublishesSessionBeforeInformersRun(t *testing.T) {
 	t.Parallel()
 	ch := make(chan k8ssync.SyncDataEvent, 8)

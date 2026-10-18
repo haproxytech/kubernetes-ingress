@@ -302,7 +302,17 @@ func (k k8s) getSelectorNamespaceInformer(eventChan chan k8ssync.SyncDataEvent, 
 			k.send(eventChan, ToSyncDataEvent(item, item, "", ""))
 		},
 		UpdateFunc: func(oldObj, newObj interface{}) {
-			item := namespaceStoreItem(newObj, store.MODIFIED)
+			status := store.MODIFIED
+			oldNS, oldOK := oldObj.(*corev1.Namespace)
+			newNS, newOK := newObj.(*corev1.Namespace)
+			if oldOK && newOK && oldNS.UID != newNS.UID {
+				// A relist can replace a namespace without a preceding Delete.
+				// Retire its old session before admitting the new generation.
+				oldItem := namespaceStoreItem(oldNS, store.DELETED)
+				k.send(eventChan, ToSyncDataEvent(oldItem, oldItem, "", ""))
+				status = store.ADDED
+			}
+			item := namespaceStoreItem(newObj, status)
 			if item == nil {
 				return
 			}
