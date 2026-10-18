@@ -98,6 +98,14 @@ func (c *HAProxyController) SyncData() {
 				break
 			}
 			change = c.store.MarkNamespaceReady(job.Namespace)
+			// The configmap namespace stays watched when its labels do not match.
+			// Its Secret, Service, Endpoints and controller CRs are listed while
+			// the session is still Starting, and those events are not scheduled.
+			// Ready has to schedule once, or the default certificate and the
+			// other controller dependencies stay out of HAProxy.
+			if !change && c.store.NamespaceAlwaysSelected(job.Namespace) {
+				change = true
+			}
 			hadChanges = hadChanges || change
 			if job.EventProcessed != nil {
 				close(job.EventProcessed)

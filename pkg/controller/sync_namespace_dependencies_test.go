@@ -356,6 +356,65 @@ func checkDependencyConsumer(t *testing.T, st store.K8s, ev k8ssync.SyncDataEven
 	}
 }
 
+func TestSyncDataAlwaysSelectedReadyRendersStartingDependencies(t *testing.T) {
+	c, probe := dependencyController(t, true, false, true)
+	secret := &store.Secret{
+		Namespace: "base", Name: "default-cert", Status: store.ADDED,
+		Data: map[string][]byte{"tls.crt": []byte("cert")},
+	}
+	waitProcessed(t, c.eventChan, k8ssync.SyncDataEvent{
+		SyncType: k8ssync.SECRET, Namespace: "base", NamespaceEpoch: 1, Data: secret,
+	})
+	waitProcessed(t, c.eventChan, k8ssync.SyncDataEvent{SyncType: k8ssync.COMMAND})
+	if probe.starts != 0 || c.store.Namespaces["base"].Secret["default-cert"] != secret {
+		t.Fatal("starting must store the default certificate without scheduling")
+	}
+
+	// Real sessions flip to Ready only after this event is processed.
+	c.sessions.(*mockSessions).ready = true
+	waitProcessed(t, c.eventChan, k8ssync.SyncDataEvent{
+		SyncType: k8ssync.NAMESPACE_SESSION_READY, Namespace: "base", NamespaceEpoch: 1,
+	})
+	waitProcessed(t, c.eventChan, k8ssync.SyncDataEvent{SyncType: k8ssync.COMMAND})
+	if probe.starts != 1 {
+		t.Fatalf("ready always-watched namespace transactions = %d, want 1", probe.starts)
+	}
+	if c.store.Namespaces["base"].Relevant || !c.store.SkipNamespaceInConfig(c.store.Namespaces["base"]) {
+		t.Fatal("ready must not make an unlabeled always-watched namespace Relevant")
+	}
+}
+
+func TestSyncDataOrdinaryNamespaceReadyDoesNotScheduleDependencies(t *testing.T) {
+	c, probe := dependencyController(t, false, false, true)
+	secret := &store.Secret{
+		Namespace: "base", Name: "default-cert", Status: store.ADDED,
+		Data: map[string][]byte{"tls.crt": []byte("cert")},
+	}
+	waitProcessed(t, c.eventChan, k8ssync.SyncDataEvent{
+		SyncType: k8ssync.SECRET, Namespace: "base", NamespaceEpoch: 1, Data: secret,
+	})
+	c.sessions.(*mockSessions).ready = true
+	waitProcessed(t, c.eventChan, k8ssync.SyncDataEvent{
+		SyncType: k8ssync.NAMESPACE_SESSION_READY, Namespace: "base", NamespaceEpoch: 1,
+	})
+	waitProcessed(t, c.eventChan, k8ssync.SyncDataEvent{SyncType: k8ssync.COMMAND})
+	if probe.starts != 0 {
+		t.Fatalf("ordinary dormant ready transactions = %d, want 0", probe.starts)
+	}
+}
+
+func TestSyncDataStaleAlwaysSelectedReadyDoesNotSchedule(t *testing.T) {
+	c, probe := dependencyController(t, true, false, true)
+	c.sessions.(*mockSessions).startErr = errors.New("replaced")
+	waitProcessed(t, c.eventChan, k8ssync.SyncDataEvent{
+		SyncType: k8ssync.NAMESPACE_SESSION_READY, Namespace: "base", NamespaceEpoch: 1,
+	})
+	waitProcessed(t, c.eventChan, k8ssync.SyncDataEvent{SyncType: k8ssync.COMMAND})
+	if probe.starts != 0 {
+		t.Fatalf("stale ready transactions = %d, want 0", probe.starts)
+	}
+}
+
 func TestSyncDataAlwaysSelectedConfiguredConfigMap(t *testing.T) {
 	// CONFIGMAP is process-level, not a namespaced session event: even a
 	// Starting session must not change the existing configured ConfigMap path.
