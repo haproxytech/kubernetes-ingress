@@ -116,6 +116,69 @@ func TestResolveBuiltInAPIs(t *testing.T) {
 	}
 }
 
+func TestGetIngressInformersDiscoveryEpoch(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name             string
+		cached           bool
+		eventEpoch       uint64
+		wantIngressClass bool
+	}{
+		{name: "discovery namespace session", eventEpoch: 1},
+		{name: "discovery process watcher", wantIngressClass: true},
+		{name: "cached namespace session", cached: true, eventEpoch: 1},
+		{name: "cached process watcher", cached: true, wantIngressClass: true},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			var discoveryCalls atomic.Int32
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				discoveryCalls.Add(1)
+				if r.URL.Path != "/apis/networking.k8s.io/v1" {
+					http.NotFound(w, r)
+					return
+				}
+				w.Header().Set("Content-Type", "application/json")
+				_, _ = w.Write([]byte(
+					`{"kind":"APIResourceList","groupVersion":"networking.k8s.io/v1",` +
+						`"resources":[{"name":"ingresses","kind":"Ingress","namespaced":true},` +
+						`{"name":"ingressclasses","kind":"IngressClass","namespaced":false}]}`,
+				))
+			}))
+			t.Cleanup(server.Close)
+
+			client := kubernetes.NewForConfigOrDie(&rest.Config{Host: server.URL})
+			k := k8s{
+				builtInClient: client,
+				eventEpoch:    test.eventEpoch,
+				handlerRegs:   &[]cache.ResourceEventHandlerRegistration{},
+			}
+			if test.cached {
+				k.builtInAPIs = &builtInAPIs{ingress: true, ingressClass: true}
+			}
+			eventChan := make(chan k8ssync.SyncDataEvent, 1)
+			factory := informers.NewSharedInformerFactory(client, 0)
+
+			ii, ici := k.getIngressInformers(eventChan, factory, utils.OSArgs{})
+			if ii == nil {
+				t.Error("expected an ingress informer")
+			}
+			if got := ici != nil; got != test.wantIngressClass {
+				t.Errorf("ingressclass informer present = %t, want %t", got, test.wantIngressClass)
+			}
+			var wantDiscoveryCalls int32 = 1
+			if test.cached {
+				wantDiscoveryCalls = 0
+			}
+			if got := discoveryCalls.Load(); got != wantDiscoveryCalls {
+				t.Errorf("discovery calls = %d, want %d", got, wantDiscoveryCalls)
+			}
+		})
+	}
+}
+
 // TestGetInformersUseCachedBuiltInAPIs is the regression test for the session
 // construction blocking SyncData on rate-limited discovery calls: with the
 // cache populated, building the per-namespace informers must not call the API.

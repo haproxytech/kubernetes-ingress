@@ -450,7 +450,7 @@ func (k k8s) getIngressInformers(eventChan chan k8ssync.SyncDataEvent, factory i
 				ii = factory.Networking().V1().Ingresses().Informer()
 				logger.Debugf("watching ingress resources of apiGroup %s:", apiGroup)
 			}
-			if rs.Name == "ingressclasses" {
+			if rs.Name == "ingressclasses" && k.eventEpoch == 0 {
 				ici = factory.Networking().V1().IngressClasses().Informer()
 			}
 		}
