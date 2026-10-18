@@ -109,9 +109,6 @@ func (k *K8s) teardownNamespaceResources(nsStore *Namespace) {
 	clear(nsStore.Endpoints)
 	clear(nsStore.HAProxyRuntime)
 	clear(nsStore.HAProxyRuntimeStandalone)
-	clear(nsStore.Gateways)
-	clear(nsStore.TCPRoutes)
-	clear(nsStore.ReferenceGrants)
 }
 
 func (k *K8s) EventIngressClass(data *IngressClass) (updateRequired bool) {

@@ -29,14 +29,12 @@ import (
 	k8stransform "github.com/haproxytech/kubernetes-ingress/pkg/k8s/transform"
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
-	gatewaynetworking "sigs.k8s.io/gateway-api/pkg/client/informers/externalversions"
 )
 
-func (k *k8s) NewSessionManager(eventChan chan k8ssync.SyncDataEvent, gatewayAPI bool) NamespaceSessions {
+func (k *k8s) NewSessionManager(eventChan chan k8ssync.SyncDataEvent) NamespaceSessions {
 	if k == nil || !k.osArgs.NamespaceLabelSelectorActive() {
 		return nil
 	}
-	k.gatewayAPI = gatewayAPI
 	// Assign k.sessions before taking the startNSSession method value.
 	// A value-receiver method value copies the struct at bind time; binding
 	// before this assignment made every Start fail with "session manager is nil".
@@ -87,27 +85,9 @@ func (k *k8s) startNSSession(namespace string, epoch uint64, stopCh chan struct{
 	crV1 := crinformersv1.NewSharedInformerFactoryWithOptions(k.crClientV1, k.cacheResyncPeriod, crinformersv1.WithNamespace(namespace))
 	crV3 := crinformersv3.NewSharedInformerFactoryWithOptions(k.crClientV3, k.cacheResyncPeriod, crinformersv3.WithNamespace(namespace))
 
-	var gw gatewaynetworking.SharedInformerFactory
-	var gwWait sync.WaitGroup
-	var gwRun []cache.SharedIndexInformer
-	if k.gatewayAPI && k.gatewayClient != nil {
-		gw = gatewaynetworking.NewSharedInformerFactoryWithOptions(k.gatewayClient, k.cacheResyncPeriod, gatewaynetworking.WithNamespace(namespace))
-		for _, inf := range []cache.SharedIndexInformer{
-			sk.getGatewayInformer(proxy, gw),
-			sk.getTCPRouteInformer(proxy, gw),
-			sk.getReferenceGrantInformer(proxy, gw),
-		} {
-			if inf == nil {
-				continue
-			}
-			gwRun = append(gwRun, inf)
-		}
-	}
-
 	sess.handlers = regs
 	sess.crV1 = crV1
 	sess.crV3 = crV3
-	sess.gw = gw
 	sess.proxy = proxy
 	sess.run = func() {
 		// The manager lock serializes this snapshot with late CR registration.
@@ -116,13 +96,6 @@ func (k *k8s) startNSSession(namespace string, epoch uint64, stopCh chan struct{
 		crsV1, crsV3 := k.crsSnapshot()
 		sk.runCRInformers(proxy, stopCh, namespace, &[]cache.InformerSynced{}, crsV1, crsV3, k.osArgs, false, crV1, crV3)
 		sess.handlers = regs
-		for _, inf := range gwRun {
-			gwWait.Add(1)
-			go func(inf cache.SharedIndexInformer) {
-				defer gwWait.Done()
-				inf.Run(stopCh)
-			}(inf)
-		}
 		core.Start(stopCh)
 		crV1.Start(stopCh)
 		crV3.Start(stopCh)
@@ -132,13 +105,12 @@ func (k *k8s) startNSSession(namespace string, epoch uint64, stopCh chan struct{
 			core.Shutdown()
 			crV1.Shutdown()
 			crV3.Shutdown()
-			gwWait.Wait()
 		}, sess, &stampWg)
 	}
 	return sess, nil
 }
 
-func (k k8s) watchNamespacesByLabel(eventChan chan k8ssync.SyncDataEvent, stop chan struct{}, osArgs utils.OSArgs, gatewayAPIInstalled bool) {
+func (k k8s) watchNamespacesByLabel(eventChan chan k8ssync.SyncDataEvent, stop chan struct{}, osArgs utils.OSArgs) {
 	if k.sessions == nil {
 		logger.Panic("namespace-label-selector is active but session manager is nil")
 	}
@@ -150,9 +122,6 @@ func (k k8s) watchNamespacesByLabel(eventChan chan k8ssync.SyncDataEvent, stop c
 	k.runConfigMapInformers(eventChan, stop, informersSynced, osArgs.ConfigMapErrorFiles)
 	k.runConfigMapInformers(eventChan, stop, informersSynced, osArgs.ConfigMapPatternFiles)
 	k.runProcessLevelIngressClass(eventChan, stop, informersSynced)
-	if gatewayAPIInstalled {
-		k.runProcessLevelGatewayClass(eventChan, stop, informersSynced)
-	}
 
 	logger.Infof("namespace-label-selector %q: watching all Namespace objects, matching locally", selector)
 	nsFactory := k8sinformers.NewSharedInformerFactoryWithOptions(k.builtInClient, k.cacheResyncPeriod)
@@ -276,15 +245,6 @@ func (k k8s) runProcessLevelIngressClass(eventChan chan k8ssync.SyncDataEvent, s
 	k.addIngressClassHandlers(eventChan, ici)
 	factory.Start(stop)
 	*informersSynced = append(*informersSynced, ici.HasSynced)
-}
-
-func (k k8s) runProcessLevelGatewayClass(eventChan chan k8ssync.SyncDataEvent, stop chan struct{}, informersSynced *[]cache.InformerSynced) {
-	factory := gatewaynetworking.NewSharedInformerFactory(k.gatewayClient, k.cacheResyncPeriod)
-	gwclassInf := k.getGatewayClassesInformer(eventChan, factory)
-	if gwclassInf != nil {
-		factory.Start(stop)
-		*informersSynced = append(*informersSynced, gwclassInf.HasSynced)
-	}
 }
 
 func (k k8s) getSelectorNamespaceInformer(eventChan chan k8ssync.SyncDataEvent, factory k8sinformers.SharedInformerFactory) cache.SharedIndexInformer {

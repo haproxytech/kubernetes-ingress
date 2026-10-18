@@ -54,14 +54,12 @@ func TestDeclaredBackendAnnotationsEmptyWhenNothingIsLost(t *testing.T) {
 	require.Empty(t, ingressWith(nil).declaredBackendAnnotations())
 }
 
-// TestDeclaredBackendAnnotationsCoversTheUnregisteredOnes covers the two which are not in
-// the Backend() registry, the config snippet being the most consequential of all to lose
-// silently.
+// TestDeclaredBackendAnnotationsCoversTheUnregisteredOnes covers the one which is not in
+// the Backend() registry, and which would be the most consequential to lose silently.
 func TestDeclaredBackendAnnotationsCoversTheUnregisteredOnes(t *testing.T) {
 	i := ingressWith(map[string]string{
-		"backend-config-snippet": "http-request set-header X-Test 1",
-		"cr-backend":             "ns/my-backend",
+		"cr-backend": "ns/my-backend",
 	})
 
-	require.Equal(t, []string{"backend-config-snippet", "cr-backend"}, i.declaredBackendAnnotations())
+	require.Equal(t, []string{"cr-backend"}, i.declaredBackendAnnotations())
 }

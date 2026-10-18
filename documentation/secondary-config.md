@@ -45,9 +45,16 @@ containers:
           name: haproxy-aux-cfg
 ```
 
-The resolvers section can then be referenced for example in the haproxy [default-server](https://www.haproxy.com/documentation/hapee/2-3r1/onepage/#5) directive via a [backend-config-snippet](./README.md#backend-config-snippet):
-```
-backend-config-snippet: default-server init-addr none resolvers mydns
+The resolvers section can then be referenced for example in the haproxy [default-server](https://www.haproxy.com/documentation/hapee/2-3r1/onepage/#5) directive via a [Backend](./custom-resources.md#backend) custom resource bound to the service:
+```yaml
+apiVersion: ingress.v3.haproxy.org/v3
+kind: Backend
+metadata:
+  name: my-backend
+spec:
+  default_server:
+    init-addr: none
+    resolvers: mydns
 ```
 This sets the default DNS resolution behavior for resolving the IP addresses of backend services:
 - They should start in a down state without any valid IP.

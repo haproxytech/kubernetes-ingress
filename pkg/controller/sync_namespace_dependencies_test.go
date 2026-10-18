@@ -92,8 +92,7 @@ func TestSyncDataAlwaysSelectedDependencies(t *testing.T) {
 		k8ssync.PUBLISH_SERVICE,
 	}
 	business := []k8ssync.SyncType{
-		k8ssync.INGRESS, k8ssync.GATEWAY, k8ssync.TCPROUTE,
-		k8ssync.REFERENCEGRANT, k8ssync.CR_TCP, k8ssync.CUSTOM_RESOURCE,
+		k8ssync.INGRESS, k8ssync.CR_TCP, k8ssync.CUSTOM_RESOURCE,
 	}
 	states := []struct {
 		name   string
@@ -265,32 +264,6 @@ func dependencyEventFixture(
 				return ns.Ingresses[ev.Name] == nil
 			}
 			return ns.Ingresses[ev.Name] == data
-		}
-	case k8ssync.GATEWAY:
-		ns.Gateways[ev.Name] = &store.Gateway{Name: ev.Name, Generation: 1}
-		data := &store.Gateway{Namespace: ns.Name, Name: ev.Name, Generation: 2, GatewayClassName: "changed", Status: status}
-		ev.Data = data
-		return ev, func() bool { return ns.Gateways[ev.Name] == data }
-	case k8ssync.TCPROUTE:
-		ns.TCPRoutes[ev.Name] = &store.TCPRoute{Name: ev.Name, Generation: 1}
-		data := &store.TCPRoute{
-			Namespace: ns.Name, Name: ev.Name, Generation: 2, Status: status,
-			BackendRefs: []store.BackendRef{{Name: "changed"}},
-		}
-		ev.Data = data
-		return ev, func() bool { return ns.TCPRoutes[ev.Name] == data }
-	case k8ssync.REFERENCEGRANT:
-		ns.ReferenceGrants[ev.Name] = &store.ReferenceGrant{Name: ev.Name, Generation: 1}
-		data := &store.ReferenceGrant{
-			Namespace: ns.Name, Name: ev.Name, Generation: 2, Status: status,
-			From: []store.ReferenceGrantFrom{{Namespace: "changed"}},
-		}
-		ev.Data = data
-		return ev, func() bool {
-			if deleted {
-				return ns.ReferenceGrants[ev.Name] == nil
-			}
-			return ns.ReferenceGrants[ev.Name] == data
 		}
 	case k8ssync.CR_TCP:
 		ns.CRs.TCPsPerCR[ev.Name] = &store.TCPs{Namespace: ns.Name, Name: ev.Name, Generation: 1}

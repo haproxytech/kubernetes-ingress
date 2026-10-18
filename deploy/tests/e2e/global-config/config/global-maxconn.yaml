@@ -1,0 +1,17 @@
+# Same global resource as the base one (deploy/tests/config/2.1.global.yaml)
+# with maxconn raised, applied by the maxconn test.
+apiVersion: ingress.v3.haproxy.org/v3
+kind: Global
+metadata:
+  name: global-full
+  namespace: haproxy-controller
+spec:
+  performance_options:
+    maxconn: 1111
+  log_target_list:
+    - address: "stdout"
+      facility: "daemon"
+      format: "raw"
+  runtime_apis:
+    - address: "0.0.0.0:31024"
+      level: "admin"

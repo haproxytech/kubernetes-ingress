@@ -7,14 +7,14 @@ func TestIsNamespacedSessionEvent(t *testing.T) {
 	namespaced := []SyncType{
 		SERVICE, SECRET, INGRESS, ENDPOINTS,
 		CR_GLOBAL, CR_DEFAULTS, CR_BACKEND, CR_FRONTEND, CR_TCP,
-		GATEWAY, TCPROUTE, REFERENCEGRANT, PUBLISH_SERVICE, CUSTOM_RESOURCE,
+		PUBLISH_SERVICE, CUSTOM_RESOURCE,
 	}
 	for _, typ := range namespaced {
 		if !IsNamespacedSessionEvent(typ) {
 			t.Errorf("%s should be a namespaced session event", typ)
 		}
 	}
-	for _, typ := range []SyncType{NAMESPACE, BARRIER, COMMAND, CONFIGMAP, POD, INGRESS_CLASS, GATEWAYCLASS, NAMESPACE_SESSION_READY} {
+	for _, typ := range []SyncType{NAMESPACE, BARRIER, COMMAND, CONFIGMAP, POD, INGRESS_CLASS, NAMESPACE_SESSION_READY} {
 		if IsNamespacedSessionEvent(typ) {
 			t.Errorf("%s must not be epoch-checked", typ)
 		}

@@ -17,35 +17,18 @@ type FrontendStructured interface {
 	FrontendCreateStructured(data *models.Frontend) error
 }
 
-// func (c *clientNative) FrontendCfgSnippetSet(frontendName string, value []string) error {
-// 	configuration, err := c.nativeAPI.Configuration()
-// 	if err != nil {
-// 		return err
-// 	}
-// 	config, err := configuration.GetParser(c.activeTransaction)
-// 	if err != nil {
-// 		return err
-// 	}
-// 	if len(value) == 0 {
-// 		err = config.Set(parser.Frontends, frontendName, "config-snippet", nil)
-// 	} else {
-// 		err = config.Set(parser.Frontends, frontendName, "config-snippet", types.StringSliceC{Value: value})
-// 	}
-// 	return err
-// }
-
-func (c *clientNative) FrontendCfgSnippetSet(frontendName string, value []string) error {
+func (c *clientNative) FrontendCustomAnnotationsSet(frontendName string, value []string) error {
 	frontend, exists := c.frontends[frontendName]
 	if !exists {
 		return fmt.Errorf("backend %s : %w", frontendName, ErrNotFound)
 	}
 
-	frontend.ConfigSnippets = value
+	frontend.CustomAnnotations = value
 	c.frontends[frontendName] = frontend
 	return nil
 }
 
-func (c *clientNative) FrontendCfgSnippetApply() error {
+func (c *clientNative) FrontendCustomAnnotationsApply() error {
 	configuration, err := c.nativeAPI.Configuration()
 	if err != nil {
 		return err
@@ -54,13 +37,13 @@ func (c *clientNative) FrontendCfgSnippetApply() error {
 	if err != nil {
 		return err
 	}
-	frontendsConfigSnippets := map[string][]string{
-		"http":  c.frontends["http"].ConfigSnippets,
-		"https": c.frontends["https"].ConfigSnippets,
-		"stats": c.frontends["stats"].ConfigSnippets,
+	frontendsCustomAnnotations := map[string][]string{
+		"http":  c.frontends["http"].CustomAnnotations,
+		"https": c.frontends["https"].CustomAnnotations,
+		"stats": c.frontends["stats"].CustomAnnotations,
 	}
 
-	for frontendName, value := range frontendsConfigSnippets {
+	for frontendName, value := range frontendsCustomAnnotations {
 		if len(value) == 0 {
 			err = config.Set(parser.Frontends, frontendName, "config-snippet", nil)
 		} else {

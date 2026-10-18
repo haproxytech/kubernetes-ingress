@@ -50,10 +50,6 @@ const (
 	CR_TCP          SyncType = "TCP"
 	CR_FRONTEND     SyncType = "Frontend"
 	PUBLISH_SERVICE SyncType = "PUBLISH_SERVICE"
-	GATEWAYCLASS    SyncType = "GATEWAYCLASS"
-	GATEWAY         SyncType = "GATEWAY"
-	TCPROUTE        SyncType = "TCPROUTE"
-	REFERENCEGRANT  SyncType = "REFERENCEGRANT"
 	CUSTOM_RESOURCE SyncType = "CUSTOM_RESOURCE"
 )
 
@@ -69,7 +65,7 @@ func IsNamespacedSessionEvent(t SyncType) bool {
 	switch t {
 	case SERVICE, SECRET, INGRESS, ENDPOINTS,
 		CR_GLOBAL, CR_DEFAULTS, CR_BACKEND, CR_FRONTEND, CR_TCP,
-		GATEWAY, TCPROUTE, REFERENCEGRANT, PUBLISH_SERVICE, CUSTOM_RESOURCE:
+		PUBLISH_SERVICE, CUSTOM_RESOURCE:
 		return true
 	default:
 		return false

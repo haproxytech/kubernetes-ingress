@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	parser "github.com/haproxytech/client-native/v6/config-parser"
-	"github.com/haproxytech/client-native/v6/config-parser/types"
 	cnConfiguration "github.com/haproxytech/client-native/v6/configuration"
 	"github.com/haproxytech/client-native/v6/models"
 
@@ -47,27 +46,6 @@ func (c *clientNative) DefaultsPushConfiguration(defaults models.Defaults) (err 
 	err = configuration.CreateLogTarget(0, string(parser.Defaults), parser.DefaultSectionName, &models.LogTarget{Global: true}, c.activeTransaction, 0)
 	if err != nil {
 		return fmt.Errorf("unable to set 'log global' directive in defaults section: %w", err)
-	}
-	return err
-}
-
-func (c *clientNative) GlobalCfgSnippet(value []string) (err error) {
-	configuration, err := c.nativeAPI.Configuration()
-	if err != nil {
-		return err
-	}
-	var config parser.Parser
-	config, err = configuration.GetParser(c.activeTransaction)
-	if err != nil {
-		return err
-	}
-	if len(value) == 0 {
-		err = config.Set(parser.Global, parser.GlobalSectionName, "config-snippet", nil)
-	} else {
-		err = config.Set(parser.Global, parser.GlobalSectionName, "config-snippet", types.StringSliceC{Value: value})
-	}
-	if err != nil {
-		return fmt.Errorf("unable to update global config snippet: %w", err)
 	}
 	return err
 }

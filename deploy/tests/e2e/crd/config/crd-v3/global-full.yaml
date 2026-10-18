@@ -70,6 +70,8 @@ spec:
       tcp_user_timeout: 0
       thread: all
       verify: optional
+    - address: 0.0.0.0:31024
+      level: admin
   set_var:
     - expr: int(100)
       name: proc.test2

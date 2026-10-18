@@ -25,7 +25,7 @@ type Annotation interface {
 }
 
 type Annotations interface {
-	GlobalCfgSnipp() []Annotation
+	FrontendCustomAnnotations() []Annotation
 	Global(g *models.Global, l *models.LogTargets) []Annotation
 	Defaults(d *models.Defaults) []Annotation
 	Backend(b *models.Backend, s store.K8s, c certs.Certificates) []Annotation
@@ -53,26 +53,24 @@ func (a annImpl) Timeout(name string, annotations ...map[string]string) (out *in
 	return Timeout(name, annotations...)
 }
 
-func (a annImpl) GlobalCfgSnipp() []Annotation {
+func (a annImpl) FrontendCustomAnnotations() []Annotation {
 	return []Annotation{
-		// global
-		NewCfgSnippet(ConfigSnippetOptions{Name: "global-config-snippet"}),
-		// frontend
-		NewCfgSnippet(
-			ConfigSnippetOptions{
-				Name:     "frontend-config-snippet",
+		// custom annotations for the frontends
+		NewCustomAnnotations(
+			CustomAnnotationsOptions{
+				Name:     "frontend-custom-annotations",
 				Frontend: utils.Ptr("http"),
 			},
 		),
-		NewCfgSnippet(
-			ConfigSnippetOptions{
-				Name:     "frontend-config-snippet",
+		NewCustomAnnotations(
+			CustomAnnotationsOptions{
+				Name:     "frontend-custom-annotations",
 				Frontend: utils.Ptr("https"),
 			},
 		),
-		NewCfgSnippet(
-			ConfigSnippetOptions{
-				Name:     "stats-config-snippet",
+		NewCustomAnnotations(
+			CustomAnnotationsOptions{
+				Name:     "stats-custom-annotations",
 				Frontend: utils.Ptr("stats"),
 			},
 		),
@@ -256,9 +254,8 @@ func Timeout(name string, annotations ...map[string]string) (out *int64, err err
 // BackendNames returns the names of every annotation which configures a backend, in
 // registry order so that a message listing them reads the same from one sync to the next.
 //
-// Two of them are not in the Backend() registry and are appended here: the backend config
-// snippet, applied directly by service.HandleBackend, and cr-backend, read by
-// getBackendModel. Both configure a backend and would otherwise be missed.
+// One of them is not in the Backend() registry and is appended here: cr-backend, read by
+// getBackendModel. It configures a backend and would otherwise be missed.
 //
 // The model declares http mode because Backend() only returns check-http and forwarded-for
 // for a backend already in that mode, and this is about the set of names, not about what
@@ -270,17 +267,16 @@ func Timeout(name string, annotations ...map[string]string) (out *int64, err err
 func BackendNames() []string {
 	model := models.Backend{BackendBase: models.BackendBase{Mode: "http"}}
 	registered := annImpl{}.Backend(&model, store.K8s{}, nil)
-	names := make([]string, 0, len(registered)+2)
+	names := make([]string, 0, len(registered)+1)
 	for _, a := range registered {
 		names = append(names, a.GetName())
 	}
-	return append(names, "backend-config-snippet", "cr-backend")
+	return append(names, "cr-backend")
 }
 
 // SpecificAnnotations is a set of annotations that uses rules to produce specific configuration with rule ID in configuration file.
 // These annotations in an ingress can't be merged with other ingresses annotations when these ingresses point to the same service because specific paths must be treated specifically.
 var SpecificAnnotations = map[string]struct{}{
-	"backend-config-snippet":  {},
 	"deny-list":               {},
 	"blacklist":               {},
 	"allow-list":              {},

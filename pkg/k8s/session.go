@@ -25,7 +25,6 @@ import (
 	crinformersv3 "github.com/haproxytech/kubernetes-ingress/crs/generated/api/ingress/v3/informers/externalversions"
 	k8ssync "github.com/haproxytech/kubernetes-ingress/pkg/k8s/sync"
 	"k8s.io/client-go/tools/cache"
-	gatewaynetworking "sigs.k8s.io/gateway-api/pkg/client/informers/externalversions"
 )
 
 type sessionPhase uint8
@@ -47,7 +46,6 @@ type nsSession struct {
 	shutdown     func()
 	crV1         crinformersv1.SharedInformerFactory
 	crV3         crinformersv3.SharedInformerFactory
-	gw           gatewaynetworking.SharedInformerFactory
 	proxy        chan k8ssync.SyncDataEvent
 	// proxyMu coordinates non-informer sends with proxy closure.
 	proxyMu     sync.RWMutex
@@ -481,8 +479,8 @@ func stampSessionEvents(in <-chan k8ssync.SyncDataEvent, out chan<- k8ssync.Sync
 	}
 }
 
-// closeSessionProxyAfter runs wait (factory Shutdown / gateway informer
-// WaitGroup), excludes READY/drain senders, then closes proxy so the stamp
+// closeSessionProxyAfter runs wait (factory Shutdown), excludes READY/drain
+// senders, then closes proxy so the stamp
 // goroutine can exit.
 //
 // wait must return only after informers stop sending. For the client-go shared

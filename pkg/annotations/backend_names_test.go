@@ -20,7 +20,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestBackendNamesCoversWhatIsEasyToMiss pins the four names a naive implementation would
+// TestBackendNamesCoversWhatIsEasyToMiss pins the names a naive implementation would
 // leave out. No count is asserted: adding an annotation to the registry must not break this
 // test, that being the point of deriving the list from it.
 func TestBackendNamesCoversWhatIsEasyToMiss(t *testing.T) {
@@ -29,8 +29,7 @@ func TestBackendNamesCoversWhatIsEasyToMiss(t *testing.T) {
 	// Only returned by Backend() for a backend already in http mode.
 	require.Contains(t, names, "check-http")
 	require.Contains(t, names, "forwarded-for")
-	// Not in the registry at all: applied by service.HandleBackend and getBackendModel.
-	require.Contains(t, names, "backend-config-snippet")
+	// Not in the registry at all: read by getBackendModel.
 	require.Contains(t, names, "cr-backend")
 	// A plain registry entry, to catch a list which would have lost its base.
 	require.Contains(t, names, "load-balance")

@@ -14,9 +14,6 @@
 
 - [Lifecycle](lifecycle.md)
 
-#### Experimental
-- [Gateway API](gateway-api.md)
-
 #### Additional
 - [Supervisor](gopherd.md)
 

@@ -77,7 +77,6 @@ type OSArgs struct {
 	DefaultCertificate                NamespaceValue `long:"default-ssl-certificate" default:"" description:"secret name of the certificate"`
 	ConfigMap                         NamespaceValue `long:"configmap" description:"configmap designated for HAProxy" default:""`
 	IPV6BindAddr                      string         `long:"ipv6-bind-address" default:"::" description:"IPv6 address the Ingress Controller listens on (if enabled)"`
-	GatewayControllerName             string         `long:"gateway-controller-name" description:"sets the controller name of gatewayclass managed by the controller"`
 	IPV4BindAddr                      string         `long:"ipv4-bind-address" default:"0.0.0.0" description:"IPv4 address the Ingress Controller listens on (if enabled)"`
 	RuntimeDir                        string         `long:"runtime-dir" description:"path to HAProxy runtime directory. NOTE: works only in External mode"`
 	IngressClass                      string         `long:"ingress.class" default:"" description:"ingress.class to monitor in multiple controllers environment"`
@@ -88,7 +87,6 @@ type OSArgs struct {
 	HTTPBindThread                    string         `long:"http-bind-thread" description:"default http service bind thread params eg: 1-1" default:""`
 	HTTPSBindThread                   string         `long:"https-bind-thread" description:"default https service bind thread params eg: 1-1" default:""`
 	HealthzBindThread                 string         `long:"healthz-bind-thread" description:"default healthz service bind thread params eg: 1-1" default:""`
-	DisableConfigSnippets             string         `long:"disable-config-snippets" description:"Allow to disable config snippets. List of comma separated values (possible values: all/global/backend/frontend)"`
 	Version                           []bool         `short:"v" long:"version" description:"version"`
 	NamespaceWhitelist                []string       `long:"namespace-whitelist" description:"whitelisted namespaces"`
 	NamespaceBlacklist                []string       `long:"namespace-blacklist" description:"blacklisted namespaces"`

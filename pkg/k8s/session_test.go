@@ -61,7 +61,7 @@ func TestNewSessionManagerBindsStarterAfterSessions(t *testing.T) {
 	t.Parallel()
 	k := &k8s{osArgs: utils.OSArgs{NamespaceLabelSelector: "app=watch"}}
 	ch := make(chan k8ssync.SyncDataEvent, 1)
-	got := k.NewSessionManager(ch, false)
+	got := k.NewSessionManager(ch)
 	if got == nil {
 		t.Fatal("selector-only NewSessionManager must return a manager")
 	}
@@ -566,14 +566,14 @@ func TestCloseSessionProxyAfterWaitsBeforeClose(t *testing.T) {
 	}()
 	sent := make(chan struct{})
 	wait := func() {
-		proxy <- k8ssync.SyncDataEvent{SyncType: k8ssync.GATEWAY, Namespace: "app"}
+		proxy <- k8ssync.SyncDataEvent{SyncType: k8ssync.INGRESS, Namespace: "app"}
 		close(sent)
 	}
 	closeSessionProxyAfter(wait, &nsSession{proxy: proxy}, &stampWg)
 	select {
 	case <-sent:
 	default:
-		t.Fatal("proxy was closed before gateway wait returned")
+		t.Fatal("proxy was closed before wait returned")
 	}
 }
 

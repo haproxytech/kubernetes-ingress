@@ -15,7 +15,6 @@
 package k8s
 
 import (
-	"context"
 	"errors"
 	"maps"
 	"os"
@@ -42,31 +41,23 @@ import (
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/types"
 
-	errGw "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	gatewayclientset "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
-	scheme "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned/scheme"
-	gatewaynetworking "sigs.k8s.io/gateway-api/pkg/client/informers/externalversions"
 )
 
 var logger = utils.GetK8sLogger()
 
 // TRACE_API outputs all k8s events received from k8s API
 const (
-	CRSGroupVersionV1   = "ingress.v1.haproxy.org/v1"
-	CRSGroupVersionV3   = "ingress.v3.haproxy.org/v3"
-	GATEWAY_API_VERSION = "v0.5.1" //nolint:golint,stylecheck
+	CRSGroupVersionV1 = "ingress.v1.haproxy.org/v1"
+	CRSGroupVersionV3 = "ingress.v3.haproxy.org/v3"
 )
 
 var ErrIgnored = errors.New("ignored resource")
 
 type K8s interface {
-	GetRestClientset() client.Client
 	GetClientset() *k8sclientset.Clientset
-	MonitorChanges(eventChan chan k8ssync.SyncDataEvent, stop chan struct{}, osArgs utils.OSArgs, gatewayAPIInstalled bool)
-	IsGatewayAPIInstalled(gatewayControllerName string) bool
-	NewSessionManager(eventChan chan k8ssync.SyncDataEvent, gatewayAPI bool) NamespaceSessions
+	MonitorChanges(eventChan chan k8ssync.SyncDataEvent, stop chan struct{}, osArgs utils.OSArgs)
+	NewSessionManager(eventChan chan k8ssync.SyncDataEvent) NamespaceSessions
 }
 
 // NamespaceSessions is the watch lifecycle for --namespace-label-selector.
@@ -99,7 +90,6 @@ type CRV3 interface {
 
 // k8s is structure with all data required to synchronize with k8s
 type k8s struct {
-	gatewayRestClient         client.Client
 	crsV1                     map[string]CRV1
 	crsV3                     map[string]CRV3
 	crsRegisteredOnStart      map[string]struct{}
@@ -108,8 +98,6 @@ type k8s struct {
 	crClientV3                *crclientsetv3.Clientset
 	apiExtensionsClient       *crdclientset.Clientset
 	publishSvc                *utils.NamespaceValue
-	gatewayClient             *gatewayclientset.Clientset
-	crdClient                 *crdclientset.Clientset
 	podPrefix                 string
 	podNamespace              string
 	whiteListedNS             []string
@@ -126,7 +114,6 @@ type k8s struct {
 	eventEpoch  uint64
 	handlerRegs *[]cache.ResourceEventHandlerRegistration
 	sessions    *sessionManager
-	gatewayAPI  bool
 	crsMu       *sync.RWMutex
 }
 
@@ -149,22 +136,6 @@ func New(osArgs utils.OSArgs, whitelist map[string]struct{}, publishSvc *utils.N
 		discoveredAPIs = resolveBuiltInAPIs(builtInClient)
 	}
 
-	gatewayClient, err := gatewayclientset.NewForConfig(restconfig)
-	if err != nil {
-		logger.Print("Gateway API not present")
-	}
-	gatewayRestClient, err := client.New(restconfig, client.Options{
-		Scheme: scheme.Scheme,
-	})
-	if err != nil {
-		logger.Print("Gateway API not present")
-	}
-
-	crdClient, err := crdclientset.NewForConfig(restconfig)
-	if err != nil {
-		logger.Error("CRD API client not present")
-	}
-
 	prefix, _ := utils.GetPodPrefix(os.Getenv("POD_NAME"))
 	k := &k8s{
 		builtInClient:             builtInClient,
@@ -184,9 +155,6 @@ func New(osArgs utils.OSArgs, whitelist map[string]struct{}, publishSvc *utils.N
 		disableSvcExternalName:    osArgs.DisableServiceExternalName,
 		hasEndpointSliceMirroring: hasEndpointSliceMirroring,
 		builtInAPIs:               discoveredAPIs,
-		gatewayClient:             gatewayClient,
-		gatewayRestClient:         gatewayRestClient,
-		crdClient:                 crdClient,
 		cmMain: types.NamespacedName{
 			Name:      osArgs.ConfigMap.Name,
 			Namespace: osArgs.ConfigMap.Namespace,
@@ -213,10 +181,6 @@ func New(osArgs utils.OSArgs, whitelist map[string]struct{}, publishSvc *utils.N
 	return k
 }
 
-func (k k8s) GetRestClientset() client.Client {
-	return k.gatewayRestClient
-}
-
 func (k k8s) GetClientset() *k8sclientset.Clientset {
 	return k.builtInClient
 }
@@ -235,19 +199,16 @@ func (k k8s) noteReg(reg cache.ResourceEventHandlerRegistration, err error) {
 	}
 }
 
-func (k k8s) MonitorChanges(eventChan chan k8ssync.SyncDataEvent, stop chan struct{}, osArgs utils.OSArgs, gatewayAPIInstalled bool) {
+func (k k8s) MonitorChanges(eventChan chan k8ssync.SyncDataEvent, stop chan struct{}, osArgs utils.OSArgs) {
 	informersSynced := &[]cache.InformerSynced{}
 	k.runPodInformer(eventChan, stop, informersSynced)
 	if osArgs.NamespaceLabelSelectorActive() {
-		k.watchNamespacesByLabel(eventChan, stop, osArgs, gatewayAPIInstalled)
+		k.watchNamespacesByLabel(eventChan, stop, osArgs)
 		return
 	}
 	for _, namespace := range k.whiteListedNS {
 		k.runInformers(eventChan, stop, namespace, informersSynced, osArgs)
 		k.runCRInformers(eventChan, stop, namespace, informersSynced, k.crsV1, k.crsV3, osArgs, true, nil, nil)
-		if gatewayAPIInstalled {
-			k.runInformersGwAPI(eventChan, stop, namespace, informersSynced)
-		}
 	}
 	// check if we need to also watch CRS creation (in case not all alpha2 definitions are already installed)
 	k.RunCRSCreationMonitoring(eventChan, stop, osArgs)
@@ -425,30 +386,6 @@ func (k k8s) runInformers(eventChan chan k8ssync.SyncDataEvent, stop chan struct
 	}
 }
 
-func (k k8s) runInformersGwAPI(eventChan chan k8ssync.SyncDataEvent, stop chan struct{}, namespace string, informersSynced *[]cache.InformerSynced) {
-	factory := gatewaynetworking.NewSharedInformerFactoryWithOptions(k.gatewayClient, k.cacheResyncPeriod, gatewaynetworking.WithNamespace(namespace))
-	gwclassInf := k.getGatewayClassesInformer(eventChan, factory)
-	if gwclassInf != nil {
-		go gwclassInf.Run(stop)
-		*informersSynced = append(*informersSynced, gwclassInf.HasSynced)
-	}
-	gwInf := k.getGatewayInformer(eventChan, factory)
-	if gwInf != nil {
-		go gwInf.Run(stop)
-		*informersSynced = append(*informersSynced, gwInf.HasSynced)
-	}
-	tcprouteInf := k.getTCPRouteInformer(eventChan, factory)
-	if tcprouteInf != nil {
-		go tcprouteInf.Run(stop)
-		*informersSynced = append(*informersSynced, tcprouteInf.HasSynced)
-	}
-	referenceGrantInf := k.getReferenceGrantInformer(eventChan, factory)
-	if referenceGrantInf != nil {
-		go referenceGrantInf.Run(stop)
-		*informersSynced = append(*informersSynced, referenceGrantInf.HasSynced)
-	}
-}
-
 func (k k8s) runPodInformer(eventChan chan k8ssync.SyncDataEvent, stop chan struct{}, informersSynced *[]cache.InformerSynced) {
 	if k.podPrefix != "" {
 		pi := k.getPodInformer(k.podNamespace, k.podPrefix, k.cacheResyncPeriod, eventChan)
@@ -559,41 +496,4 @@ func getWhitelistedNS(whitelist map[string]struct{}, cfgMapNS string) []string {
 	}
 	logger.Infof("Whitelisted Namespaces: %s", namespaces)
 	return namespaces
-}
-
-func (k k8s) IsGatewayAPIInstalled(gatewayControllerName string) (installed bool) {
-	installed = true
-	gatewayCrd, err := k.crdClient.ApiextensionsV1().CustomResourceDefinitions().Get(context.Background(), "gateways.gateway.networking.k8s.io", metav1.GetOptions{})
-	if err != nil {
-		// Missing CRD (404) or no RBAC to read CRDs (403) both mean Gateway API is unavailable.
-		if errGw.IsForbidden(err) {
-			logger.Warningf("Gateway API support disabled, missing RBAC to read CustomResourceDefinitions: %s", err)
-		} else if !errGw.IsNotFound(err) {
-			logger.Error(err)
-		}
-		return false
-	}
-
-	if gatewayCrd.Name == "" {
-		return false
-	}
-
-	log := logger.Warningf
-	if gatewayControllerName != "" {
-		log = logger.Errorf
-	}
-
-	version := gatewayCrd.Annotations["gateway.networking.k8s.io/bundle-version"]
-	if version != GATEWAY_API_VERSION {
-		log("Unsupported version '%s' of gateway api is installed, please install experimental yaml version %s", version, GATEWAY_API_VERSION)
-		installed = false
-	}
-
-	// gatewayCrd is not nil so gateway API is present
-	tcprouteCrd, err := k.crdClient.ApiextensionsV1().CustomResourceDefinitions().Get(context.Background(), "tcproutes.gateway.networking.k8s.io", metav1.GetOptions{})
-	if tcprouteCrd == nil || err != nil {
-		log("No tcproute crd is installed, please install experimental yaml version %s", GATEWAY_API_VERSION)
-		installed = false
-	}
-	return installed
 }

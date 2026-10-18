@@ -174,6 +174,8 @@ spec:
       v4v6: false
       v6only: false
       verify: "optional"
+    - address: "0.0.0.0:31024"
+      level: "admin"
     server_state_base: "ssb_word"
     #server_state_file: "ssf_word" # no file exists
     set_dumpable: false

@@ -37,10 +37,6 @@ more info about custom annotations can be found in [annotations-custom.md](annot
 | [cors-allow-headers](#CORS) | string | "*" | cors-enable |:large_blue_circle:|:large_blue_circle:|:white_circle:|
 | [cors-max-age](#CORS) | [time](#time) | "5s" | cors-enable |:large_blue_circle:|:large_blue_circle:|:white_circle:|
 | [cors-respond-to-options](#CORS) | [bool](#bool) | "false" | cors-enable |:large_blue_circle:|:large_blue_circle:|:white_circle:|
-| [global-config-snippet](#config-snippet) | string |  |  |:large_blue_circle:|:white_circle:|:white_circle:|
-| [frontend-config-snippet](#config-snippet) | string |  |  |:large_blue_circle:|:white_circle:|:white_circle:|
-| [stats-config-snippet](#config-snippet) | string |  |  |:large_blue_circle:|:white_circle:|:white_circle:|
-| [backend-config-snippet](#config-snippet) | string |  |  |:large_blue_circle:|:large_blue_circle:|:large_blue_circle:|
 | [cookie-persistence](#cookie-persistence) | string |  |  |:large_blue_circle:|:white_circle:|:large_blue_circle:|
 | [cookie-persistence-no-dynamic](#cookie-persistence-no-dynamic) | string |  |  |:large_blue_circle:|:white_circle:|:large_blue_circle:|
 | [dontlognull](#logging) | [bool](#bool) | "true" |  |:large_blue_circle:|:white_circle:|:white_circle:|
@@ -611,96 +607,6 @@ Example:
 
 ```yaml
 clean-certs: "false"
-```
-
-<p align='right'><a href='#available-annotations'>:arrow_up_small: back to top</a></p>
-
-***
-
-#### Config Snippet
-
-- Insert raw HAProxy configuration in specific HAProxy config sections.
-- There is **no data validation** done by Ingress Controller. If input is incorrect, HAProxy will fail to apply new configuration.
-- It is possible to use [pattern files](controller.md/#--configmap-patternfiles) inside config snippets.
-
-##### `global-config-snippet`
-
-  Defines a group of configuration directives to insert the HAProxy global section.
-
-  Available on:  `configmap`
-
-Possible values:
-
-- One or more valid HAProxy directives
-
-Example:
-
-```yaml
-global-config-snippet: |
-  ssl-default-bind-options no-sslv3 no-tlsv10 no-tlsv11
-  ssl-default-bind-ciphers TLS13-AES-256-GCM-SHA384:TLS13-AES-128-GCM-SHA256:TLS13-CHACHA20-POLY1305-SHA256:EECDH+AESGCM:EECDH+CHACHA20
-  tune.ssl.default-dh-param 2048
-  tune.bufsize 32768
-```
-
-##### `frontend-config-snippet`
-
-  Defines a group of configuration directives to insert in the main HTTP/HTTPS frontends.
-
-  Available on:  `configmap`
-
-  :information_source: Because frontend-config-snippet is inserted in the main http/https frontends it will apply to all traffic. To apply configuration by Ingress, annotations should be privileged.
-
-  :information_source: Ingress Controller logic is inserted in the main frontends before any config-snippet configuration so controller configuration will be **evaluated first**.
-
-  :information_source: It is safer to privilege [backend-config-snippet](#backend-config-snippet) when possible to avoid conflicts with controller configuration.
-
-Possible values:
-
-- One or more valid HAProxy directives
-
-Example:
-
-```yaml
-frontend-config-snippet: |
-  unique-id-format %{+X}o\ %ci:%cp_%fi:%fp_%Ts_%rt:%pid
-  unique-id-header X-Unique-ID
-```
-
-##### `stats-config-snippet`
-
-  Defines a group of configuration directives to insert in the stats frontend.
-
-  Available on:  `configmap`
-
-Possible values:
-
-- One or more valid HAProxy directives
-
-Example:
-
-```yaml
-stats-config-snippet: |
-  stats auth foo:test
-```
-
-##### `backend-config-snippet`
-
-  Defines a group of configuration directives to add directly to a HAProxy backend section.
-
-  Available on:  `configmap`  `ingress`  `service`
-
-Possible values:
-
-- One or more valid HAProxy directives
-
-Example:
-
-```yaml
-backend-config-snippet: |
-      http-send-name-header x-dst-server
-      stick-table type string len 32 size 100k expire 30m
-      stick on req.cook(sessionid)
 ```
 
 <p align='right'><a href='#available-annotations'>:arrow_up_small: back to top</a></p>

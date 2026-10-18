@@ -4,8 +4,6 @@ metadata:
   name: haproxy-kubernetes-ingress
   namespace: haproxy-controller
 data:
-  global-config-snippet: |
-    stats socket 0.0.0.0:31024
   syslog-server: |
     address: stdout, format: raw, facility:daemon
   maxconn: "1000"

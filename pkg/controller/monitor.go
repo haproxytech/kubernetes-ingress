@@ -151,14 +151,6 @@ func (c *HAProxyController) SyncData() {
 		case k8ssync.PUBLISH_SERVICE:
 			//revive:disable-next-line:unchecked-type-assertion
 			change = c.store.EventPublishService(ns, job.Data.(*store.Service))
-		case k8ssync.GATEWAYCLASS:
-			change = c.store.EventGatewayClass(job.Data.(*store.GatewayClass))
-		case k8ssync.GATEWAY:
-			change = c.store.EventGateway(ns, job.Data.(*store.Gateway))
-		case k8ssync.TCPROUTE:
-			change = c.store.EventTCPRoute(ns, job.Data.(*store.TCPRoute))
-		case k8ssync.REFERENCEGRANT:
-			change = c.store.EventReferenceGrant(ns, job.Data.(*store.ReferenceGrant))
 		case k8ssync.CUSTOM_RESOURCE:
 			change = true
 		case k8ssync.CR_TCP:

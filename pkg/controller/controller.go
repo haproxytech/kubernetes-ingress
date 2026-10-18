@@ -29,7 +29,6 @@ import (
 	"github.com/haproxytech/client-native/v6/models"
 	"github.com/haproxytech/kubernetes-ingress/pkg/annotations"
 	"github.com/haproxytech/kubernetes-ingress/pkg/fs"
-	gateway "github.com/haproxytech/kubernetes-ingress/pkg/gateways"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/instance"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/maps"
@@ -50,7 +49,6 @@ var logger = utils.GetLogger()
 type HAProxyController struct {
 	store                    store.K8s
 	prometheusMetricsManager metrics.PrometheusMetricsManager
-	gatewayManager           gateway.GatewayManager
 	annotations              annotations.Annotations
 	updateStatusManager      status.UpdateStatusManager
 	eventChan                chan k8ssync.SyncDataEvent
@@ -163,16 +161,6 @@ func (c *HAProxyController) updateHAProxy() {
 		logger.Error(route.CustomRoutesReset(c.haproxy))
 	}
 
-	// global config-snippet
-	logger.Error(annotations.NewCfgSnippet(
-		annotations.ConfigSnippetOptions{
-			Name:    "backend-config-snippet",
-			Backend: utils.Ptr("configmap"),
-			Ingress: nil,
-		},
-	).
-		Process(c.store, c.store.ConfigMaps.Main.Annotations))
-
 	for _, handler := range c.beforeUpdateHandlers {
 		err = handler.Update(c.store, c.haproxy, c.annotations)
 		logger.Error(err)
@@ -189,8 +177,6 @@ func (c *HAProxyController) updateHAProxy() {
 		instance.Reload("Custom Routes changed: %s", strings.Join(updated, "\n"))
 	}
 
-	c.gatewayManager.ManageGateway()
-
 	if !c.ready {
 		c.setToReady()
 	}
@@ -206,12 +192,10 @@ func (c *HAProxyController) updateHAProxy() {
 		c.prometheusMetricsManager.SetUnableSyncGauge()
 		logger.Error("unable to Sync HAProxy configuration !!")
 		logger.Error(err)
-		rerun, errCfgSnippet := annotations.CheckBackendConfigSnippetError(err, c.haproxy.Env.CfgDir)
-		logger.Error(errCfgSnippet)
-		rerun = c.disableRejectedCRs(err, filepath.Join(c.haproxy.Env.CfgDir, "failed")) || rerun
+		rerun := c.disableRejectedCRs(err, filepath.Join(c.haproxy.Env.CfgDir, "failed"))
 		c.clean(true)
 		if rerun {
-			logger.Debug("disabling some config snippets or custom resources because of errors")
+			logger.Debug("disabling some custom resources because of errors")
 			// We need to replay all these resources.
 			c.store.SecretsProcessed = map[string]struct{}{}
 			c.store.BackendsProcessed = map[string]store.BackendOwner{}
@@ -219,7 +203,7 @@ func (c *HAProxyController) updateHAProxy() {
 			c.updateHAProxy()
 			return
 		}
-		// If any error not from config snippet then pop the previous state of backends
+		// If any error not from a custom resource then pop the previous state of backends
 		logger.Error(c.haproxy.PopPreviousBackends())
 		return
 	}
@@ -240,12 +224,10 @@ func (c *HAProxyController) updateHAProxy() {
 			}
 
 			c.prometheusMetricsManager.SetUnableSyncGauge()
-			rerun, errCfgSnippet := annotations.CheckBackendConfigSnippetErrorOnReload(errors.New(msg), c.haproxy.Env.CfgDir)
-			logger.Error(errCfgSnippet)
-			rerun = c.disableRejectedCRs(errors.New(msg), c.haproxy.Env.CfgDir) || rerun
+			rerun := c.disableRejectedCRs(errors.New(msg), c.haproxy.Env.CfgDir)
 			c.clean(true)
 			if rerun {
-				logger.Debug("disabling some config snippets or custom resources because of errors")
+				logger.Debug("disabling some custom resources because of errors")
 				// We need to replay all these resources.
 				c.store.SecretsProcessed = map[string]struct{}{}
 				c.store.BackendsProcessed = map[string]store.BackendOwner{}
@@ -253,7 +235,7 @@ func (c *HAProxyController) updateHAProxy() {
 				c.updateHAProxy()
 				return
 			}
-			// If any error not from config snippet then pop the previous state of backends
+			// If any error not from a custom resource then pop the previous state of backends
 			logger.Error(c.haproxy.PopPreviousBackends())
 		} else {
 			logger.Info("HAProxy reloaded")
@@ -383,12 +365,8 @@ func (c *HAProxyController) clean(failedSync bool) {
 	logger.Error(c.setupHAProxyRules())
 	if !failedSync {
 		c.store.Clean()
-		annotations.Clean()
+		annotations.CleanCustomAnnotations()
 	}
-}
-
-func (c *HAProxyController) SetGatewayAPIInstalled(gatewayAPIInstalled bool) {
-	c.gatewayManager.SetGatewayAPIInstalled(gatewayAPIInstalled)
 }
 
 func (c *HAProxyController) manageIngress(ing *store.Ingress) {

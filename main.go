@@ -130,8 +130,6 @@ func main() {
 	}
 	logger.ShowFilename(true)
 
-	annotations.DisableConfigSnippets(osArgs.DisableConfigSnippets)
-
 	// backwards compatibility with 1.7
 	if osArgs.PprofEnabled && osArgs.ControllerPort == 0 {
 		osArgs.ControllerPort = 6060
@@ -175,28 +173,24 @@ func main() {
 		logger.Warning("--namespace-label-selector is ignored because --namespace-whitelist or --namespace-blacklist is set")
 	}
 
-	isGatewayAPIInstalled := k.IsGatewayAPIInstalled(osArgs.GatewayControllerName)
-	sessions := k.NewSessionManager(eventChan, isGatewayAPIInstalled)
+	sessions := k.NewSessionManager(eventChan)
 
 	c := controller.NewBuilder().
 		WithHaproxyCfgFile(haproxyConf).
 		WithEventChan(eventChan).
 		WithStore(s).
 		WithClientSet(k.GetClientset()).
-		WithRestClientSet(k.GetRestClientset()).
 		WithArgs(osArgs).
 		WithNamespaceSessions(sessions).
 		Build()
 
-	c.SetGatewayAPIInstalled(isGatewayAPIInstalled)
-
 	if sessions == nil {
-		go k.MonitorChanges(eventChan, stop, osArgs, isGatewayAPIInstalled)
+		go k.MonitorChanges(eventChan, stop, osArgs)
 		go c.Start()
 	} else {
 		// Dynamic sessions bootstrap through the controller event loop.
 		go c.Start()
-		go k.MonitorChanges(eventChan, stop, osArgs, isGatewayAPIInstalled)
+		go k.MonitorChanges(eventChan, stop, osArgs)
 	}
 	// Catch QUIT signals
 	signalC := make(chan os.Signal, 1)
@@ -236,10 +230,6 @@ func logInfo(logger utils.Logger, osArgs utils.OSArgs) bool {
 	logger.Printf("ConfigMap: %s", osArgs.ConfigMap)
 	logger.Printf("Ingress class: %s", osArgs.IngressClass)
 	logger.Printf("Empty Ingress class: %t", osArgs.EmptyIngressClass)
-	if osArgs.GatewayControllerName != "" {
-		// display log message only if Gateway API is used
-		logger.Printf("Gateway API controller name: %s", osArgs.GatewayControllerName)
-	}
 	logger.Printf("Publish service: %s", osArgs.PublishService)
 	if osArgs.DefaultBackendService.String() != "" {
 		logger.Printf("Default backend service: %s", osArgs.DefaultBackendService)
@@ -273,9 +263,6 @@ func logInfo(logger utils.Logger, osArgs utils.OSArgs) bool {
 	}
 	if osArgs.ConfigMapPatternFiles.Name != "" {
 		logger.Printf("Pattern files provided in '%s'", osArgs.ConfigMapPatternFiles)
-	}
-	if osArgs.DisableConfigSnippets != "" {
-		logger.Printf("Disabling config snippets for [%s]", osArgs.DisableConfigSnippets)
 	}
 	if osArgs.DisableDelayedWritingOnlyIfReload {
 		logger.Print("Disabling the delayed writing of files to disk only in case of haproxy reload (write to disk even if no reload)")

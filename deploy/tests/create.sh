@@ -59,50 +59,14 @@ kubectl apply -f $DIR/../../deploy/tests/config/crd/rbac.yaml
 kubectl apply -f $DIR/../../deploy/tests/config/crd/job-crd.yaml
 kubectl wait --for=condition=complete --timeout=60s job/haproxy-ingress-crd -n haproxy-controller
 
-if [ "$EXPERIMENTAL_GWAPI" = "1" ]; then
-  printf %80s |tr " " "="; echo ""
-  echo "Install experimental GWAPI ..."
-  kubectl apply -f $DIR/../../deploy/tests/config/experimental/gwapi.experimental.yaml
-  printf %80s |tr " " "="; echo ""
-  echo "Install GWAPI resources..."
-  echo "kubectl wait --for=condition=ready --timeout=5m pod -l name=gateway-api-admission-server -n gateway-system"
-  ####################################################
-  COUNTER=0
-  while [  $COUNTER -lt 150 ]; do
-      FAILED_GWAPI=0
-      kubectl wait --for=condition=ready --timeout=5m pod -l name=gateway-api-admission-server -n gateway-system || FAILED_GWAPI=1
-      if [ "$FAILED_GWAPI" = "1" ]; then
-        COUNTER=`expr $COUNTER + 1`
-        sleep 1
-      else
-        COUNTER=151
-      fi
-  done
-  ####################################################
-  kubectl wait --for=condition=ready --timeout=5m pod -l name=gateway-api-admission-server -n gateway-system
-  printf %80s |tr " " "="; echo ""
-  kubectl apply -f $DIR/../../deploy/tests/config/experimental/gwapi-resources.yaml
-  kubectl apply -f $DIR/../../deploy/tests/config/experimental/gwapi-echo-app.yaml
-fi
-
 printf %80s |tr " " "="; echo ""
 echo "deploying Ingress Controller ..."
 kubectl apply -f $DIR/config/1.rbac.yaml
-if [ "$EXPERIMENTAL_GWAPI" = "1" ]; then
-  printf %80s |tr " " "="; echo ""
-  echo "Install GWAPI resources..."
-  kubectl apply -f deploy/tests/config/experimental/gwapi-rbac.yaml
-  printf %80s |tr " " "="; echo ""
-fi
 kubectl apply -f $DIR/config/2.configmap.yaml
+kubectl apply -f $DIR/config/2.1.global.yaml
 kubectl apply -f $DIR/config/2.2.ingressclass.yaml
 
-if [ "$EXPERIMENTAL_GWAPI" = "1" ]; then
-  echo "Adding gateway-controller-name to IC config"
-  cat deploy/tests/config/3.ingress-controller.yaml | sed 's#ingress.class=haproxy#&\n            - --gateway-controller-name=haproxy.org/gateway-controller#g' | kubectl apply -f -
-else
-  kubectl apply -f $DIR/config/3.ingress-controller.yaml
-fi
+kubectl apply -f $DIR/config/3.ingress-controller.yaml
 kubectl apply -f $DIR//config/echo-app.yaml
 printf %80s |tr " " "="; echo ""
 

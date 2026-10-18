@@ -4,17 +4,13 @@ import (
 	"strings"
 
 	"github.com/haproxytech/kubernetes-ingress/pkg/annotations/validators"
-	"github.com/haproxytech/kubernetes-ingress/pkg/store"
 )
 
-func processCustomAnnotationsFrontend(customAnnotations map[string]string, a *CfgSnippet, validator *validators.Validator) error {
+func renderFrontendCustomAnnotations(customAnnotations map[string]string, a *CustomAnnotations, validator *validators.Validator) error {
 	haproxySection := "frontend"
-	_, ok := cfgSnippet.frontendsCustom[a.frontend]
+	_, ok := customAnnotationState.frontendsCustom[a.frontend]
 	if !ok {
-		cfgSnippet.frontendsCustom[a.frontend] = map[string]*cfgData{}
-	}
-	if len(customAnnotations) == 0 {
-		return nil
+		customAnnotationState.frontendsCustom[a.frontend] = map[string]*annotationData{}
 	}
 	// We have custom annotations, so we process them. in alphabetical order
 	// to avoid issues with the order of processing.
@@ -30,6 +26,7 @@ func processCustomAnnotationsFrontend(customAnnotations map[string]string, a *Cf
 		customAnnotations, filterValues,
 	)
 
+	seen := make(map[string]struct{}, len(keys))
 	for index, k := range keys {
 		customAnnotationValue := customAnnotations[k]
 		// If the custom annotation value is empty, we skip it.
@@ -48,8 +45,6 @@ func processCustomAnnotationsFrontend(customAnnotations map[string]string, a *Cf
 			prefix = "# value:"
 		}
 
-		// check if this is fine for snippet removal
-		// comment := "### " + a.backend + ":" + origin + COMMENT_ENDING
 		comment := "### " + origin + COMMENT_ENDING
 		rdata := []string{comment}
 		if validationErr != "" {
@@ -57,13 +52,17 @@ func processCustomAnnotationsFrontend(customAnnotations map[string]string, a *Cf
 		}
 		if customAnnotationValue != "" {
 			result := ""
+			var err error
 			if prefix == "" {
-				var err error
 				result, err = validator.GetResult(k, customAnnotationValue, env)
 				if err != nil {
 					logger.Errorf("failed to get result for custom annotation '%s' for backend '%s': %s", k, a.backend, err.Error())
 					rdata = append(rdata, "# ERROR: "+strings.ReplaceAll(err.Error(), "\n", "\n  # "))
 				}
+			}
+			// A template may legitimately render nothing: treat that like an empty value.
+			if err == nil && result == "" {
+				continue
 			}
 			if strings.HasPrefix(result, "#") {
 				rdata = append(rdata, result)
@@ -71,25 +70,20 @@ func processCustomAnnotationsFrontend(customAnnotations map[string]string, a *Cf
 				rdata = append(rdata, prefix+result)
 			}
 		}
-		processConfigSnippetFrontendCustom(a.frontend, origin, rdata, len(keys)-index+1)
+		seen[origin] = struct{}{}
+		recordFrontendCustomAnnotation(a.frontend, origin, rdata, len(keys)-index+1)
 	}
-	if len(keys) == 0 && len(cfgSnippet.frontendsCustom[a.frontend]) != 0 {
-		// go through cfgSnippet.frontendsCustom[a.frontend] and mark them as deleted
-		for _, value := range cfgSnippet.frontendsCustom[a.frontend] {
-			value.status = store.DELETED
-			value.value = []string{}
-			value.updated = []string{}
-		}
-	}
+	// Annotations that are no longer rendered must not keep their lines.
+	dropUnseen(customAnnotationState.frontendsCustom[a.frontend], seen)
 
 	return nil
 }
 
-func processCustomAnnotationsBackend(customAnnotations map[string]string, a *CfgSnippet, validator *validators.Validator) {
+func renderBackendCustomAnnotations(customAnnotations map[string]string, a *CustomAnnotations, validator *validators.Validator) {
 	haproxySection := "backend"
-	_, ok := cfgSnippet.backends[a.backend]
+	_, ok := customAnnotationState.backends[a.backend]
 	if !ok {
-		cfgSnippet.backends[a.backend] = map[string]*cfgData{}
+		customAnnotationState.backends[a.backend] = map[string]*annotationData{}
 	}
 	if len(customAnnotations) == 0 {
 		return
@@ -138,8 +132,6 @@ func processCustomAnnotationsBackend(customAnnotations map[string]string, a *Cfg
 			prefix = "# value:"
 		}
 
-		// check if this is fine for snippet removal
-		// comment := "### " + a.backend + ":" + origin + COMMENT_ENDING
 		comment := "### " + origin + COMMENT_ENDING
 		rdata := []string{comment}
 		if validationErr != "" {
@@ -147,13 +139,17 @@ func processCustomAnnotationsBackend(customAnnotations map[string]string, a *Cfg
 		}
 		if customAnnotationValue != "" {
 			result := ""
+			var err error
 			if prefix == "" {
-				var err error
 				result, err = validator.GetResult(k, customAnnotationValue, env)
 				if err != nil {
 					logger.Errorf("failed to get result for custom annotation '%s' for backend '%s': %s", k, a.backend, err.Error())
 					rdata = append(rdata, "# ERROR: "+strings.ReplaceAll(err.Error(), "\n", "\n  # "))
 				}
+			}
+			// A template may legitimately render nothing: treat that like an empty value.
+			if err == nil && result == "" {
+				continue
 			}
 			if strings.HasPrefix(result, "#") {
 				rdata = append(rdata, result)
@@ -161,6 +157,6 @@ func processCustomAnnotationsBackend(customAnnotations map[string]string, a *Cfg
 				rdata = append(rdata, prefix+result)
 			}
 		}
-		processConfigSnippet(a.backend, origin, rdata, len(keys)-index+1)
+		recordBackendCustomAnnotation(a.backend, origin, rdata, len(keys)-index+1)
 	}
 }

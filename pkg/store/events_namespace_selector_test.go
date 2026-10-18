@@ -187,46 +187,8 @@ func TestSelectorLateEventsAfterUnmatchDoNotStick(t *testing.T) {
 	if k.EventTCPCR("app", "tcp", &TCPs{Name: "tcp", Namespace: "app", Status: ADDED}) {
 		t.Fatal("late TCP CR ADDED must be dropped")
 	}
-	for _, status := range []Status{ADDED, MODIFIED} {
-		if k.EventGateway(detached, &Gateway{Namespace: "app", Name: "gateway", Status: status}) {
-			t.Fatalf("late Gateway %s on detached ns must be dropped", status)
-		}
-		if k.EventTCPRoute(detached, &TCPRoute{Namespace: "app", Name: "route", Status: status}) {
-			t.Fatalf("late TCPRoute %s on detached ns must be dropped", status)
-		}
-		if k.EventReferenceGrant(detached, &ReferenceGrant{Namespace: "app", Name: "grant", Status: status}) {
-			t.Fatalf("late ReferenceGrant %s on detached ns must be dropped", status)
-		}
-	}
-	if len(detached.Gateways) != 0 || len(detached.TCPRoutes) != 0 || len(detached.ReferenceGrants) != 0 {
-		t.Fatal("late Gateway API events must leave detached namespace maps untouched")
-	}
 	if _, ok := k.Namespaces["app"]; ok {
-		t.Fatal("late Gateway API events must not resurrect namespace")
-	}
-}
-
-func TestSelectorGatewayEventsPreserveDeletesForPersistedNamespace(t *testing.T) {
-	k := selectorStore()
-	ns := addSelectedNamespace(&k, "app")
-	k.EventGateway(ns, &Gateway{Namespace: "app", Name: "gateway", Status: ADDED})
-	k.EventTCPRoute(ns, &TCPRoute{Namespace: "app", Name: "route", Status: ADDED})
-	k.EventReferenceGrant(ns, &ReferenceGrant{Namespace: "app", Name: "grant", Status: ADDED})
-
-	if !k.EventGateway(ns, &Gateway{Namespace: "app", Name: "gateway", Status: DELETED}) {
-		t.Fatal("Gateway DELETE in a persisted namespace must be retained")
-	}
-	if !k.EventTCPRoute(ns, &TCPRoute{Namespace: "app", Name: "route", Status: DELETED}) {
-		t.Fatal("TCPRoute DELETE in a persisted namespace must be retained")
-	}
-	if !k.EventReferenceGrant(ns, &ReferenceGrant{Namespace: "app", Name: "grant", Status: DELETED}) {
-		t.Fatal("ReferenceGrant DELETE in a persisted namespace must be retained")
-	}
-	if ns.Gateways["gateway"].Status != DELETED || ns.TCPRoutes["route"].Status != DELETED {
-		t.Fatal("Gateway and TCPRoute deletes must remain available for reconciliation")
-	}
-	if _, ok := ns.ReferenceGrants["grant"]; ok {
-		t.Fatal("ReferenceGrant DELETE must remove the stored grant")
+		t.Fatal("late events must not resurrect namespace")
 	}
 }
 

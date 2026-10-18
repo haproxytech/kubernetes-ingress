@@ -62,17 +62,14 @@ type K8s struct {
 	//
 	// Nesting per map file rather than joining the two into one string is what avoids reserving
 	// a separator that cannot appear in a host or a path.
-	RoutesProcessedByMapFile     map[string]map[string]RouteOwner
-	GatewayClasses               map[string]*GatewayClass
-	HaProxyPods                  map[string]struct{}
-	BackendsWithNoConfigSnippets map[string]struct{}
-	FrontendRC                   *rc.ResourceCounter
-	GatewayControllerName        string
-	PublishServiceAddresses      []string
-	publishServiceNS             string
-	publishServiceName           string
-	UpdateAllIngresses           bool
-	IngressesByService           map[string]*utils.OrderedSet[string, *Ingress] // service fqn -> ingress name -> ingress
+	RoutesProcessedByMapFile map[string]map[string]RouteOwner
+	HaProxyPods              map[string]struct{}
+	FrontendRC               *rc.ResourceCounter
+	PublishServiceAddresses  []string
+	publishServiceNS         string
+	publishServiceName       string
+	UpdateAllIngresses       bool
+	IngressesByService       map[string]*utils.OrderedSet[string, *Ingress] // service fqn -> ingress name -> ingress
 
 	// CRStates tracks every custom resource the controller renders sections from.
 	CRStates map[CRRef]*CRState
@@ -122,16 +119,15 @@ func NewK8sStore(args utils.OSArgs) K8s {
 				Name:      args.ConfigMapPatternFiles.Name,
 			},
 		},
-		SecretsProcessed:             map[string]struct{}{},
-		BackendsProcessed:            map[string]BackendOwner{},
-		RoutesProcessedByMapFile:     map[string]map[string]RouteOwner{},
-		GatewayClasses:               map[string]*GatewayClass{},
-		BackendsWithNoConfigSnippets: map[string]struct{}{},
-		CRStates:                     map[CRRef]*CRState{},
-		SectionsFromCR:               map[string]CRRef{},
-		HaProxyPods:                  map[string]struct{}{},
-		FrontendRC:                   rc.NewResourceCounter(),
-		IngressesByService:           map[string]*utils.OrderedSet[string, *Ingress]{},
+		SecretsProcessed:         map[string]struct{}{},
+		BackendsProcessed:        map[string]BackendOwner{},
+		RoutesProcessedByMapFile: map[string]map[string]RouteOwner{},
+
+		CRStates:           map[CRRef]*CRState{},
+		SectionsFromCR:     map[string]CRRef{},
+		HaProxyPods:        map[string]struct{}{},
+		FrontendRC:         rc.NewResourceCounter(),
+		IngressesByService: map[string]*utils.OrderedSet[string, *Ingress]{},
 	}
 	for _, namespace := range args.NamespaceWhitelist {
 		store.NamespacesAccess.Whitelist[namespace] = struct{}{}
@@ -255,11 +251,8 @@ func newEmptyNamespace(name string, relevant bool) *Namespace {
 			TCPsPerCR: make(map[string]*TCPs),
 			Frontends: make(map[string]*v3.FrontendSpec),
 		},
-		Gateways:        make(map[string]*Gateway),
-		TCPRoutes:       make(map[string]*TCPRoute),
-		ReferenceGrants: make(map[string]*ReferenceGrant),
-		Labels:          make(map[string]string),
-		Status:          ADDED,
+		Labels: make(map[string]string),
+		Status: ADDED,
 	}
 }
 

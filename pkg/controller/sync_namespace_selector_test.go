@@ -463,7 +463,7 @@ func TestSyncSelectorNamespaceMatchingLabelChangeReportsChange(t *testing.T) {
 		Labels: map[string]string{"watch": "true", "routes": "denied"},
 	})
 	if !st.MarkNamespaceReady("app") {
-		t.Fatal("fixture must be ready so label changes can affect Gateway AllowedRoutes")
+		t.Fatal("fixture must be ready before a matching label change")
 	}
 	c := &HAProxyController{store: st, sessions: &mockSessions{allow: true, ready: true}}
 	change := c.syncSelectorNamespace(&store.Namespace{

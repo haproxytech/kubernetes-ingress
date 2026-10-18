@@ -6,8 +6,7 @@ metadata:
 data:
   cr-frontend-ssl: default/test-ssl{{ .Suffix }}
   # Mandatory config
-  global-config-snippet: |
-    stats socket 0.0.0.0:31024
+  cr-global: haproxy-controller/global-full
   syslog-server: |
     address: stdout, format: raw, facility:daemon
   maxconn: "1000"

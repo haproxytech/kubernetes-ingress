@@ -171,6 +171,15 @@ func (suite *GlobalSuite) Test_CR_Global() {
 					},
 				},
 			},
+			{
+				Path: "0.0.0.0:31024",
+				Params: []params.BindOption{
+					&params.BindOptionValue{
+						Name:  "level",
+						Value: "admin",
+					},
+				},
+			},
 		})
 		suite.checkGlobalParam(p, "set-var", []types.SetVar{
 			{
@@ -207,7 +216,9 @@ func (suite *GlobalSuite) Test_CR_Global() {
 			MinLevel: "debug",
 		})
 
-		suite.Require().NoError(suite.test.Delete(crdPath))
+		// Restore the base global resource the configmap references: it provides the
+		// runtime API socket the other suites of the shard query.
+		suite.Require().NoError(suite.test.Apply("../../config/2.1.global.yaml", "", nil))
 	})
 }
 

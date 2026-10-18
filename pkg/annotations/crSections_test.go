@@ -10,7 +10,7 @@ import (
 )
 
 // Mirrors the layout client-native renders: section headers at column 0,
-// directives indented, config snippets fenced by BEGIN/END comments.
+// directives indented, custom annotation content fenced by BEGIN/END comments.
 const failedCfg = `global
   daemon
 
@@ -55,7 +55,7 @@ func TestSectionsInErrorNamesTheFrontendSection(t *testing.T) {
 	require.Equal(t, []Section{{Kind: SectionFrontend, Name: "http"}}, sectionsInError(failedCfg, []int{9}))
 }
 
-func TestSectionsInErrorSkipsLinesInsideConfigSnippets(t *testing.T) {
+func TestSectionsInErrorSkipsLinesInsideCustomAnnotations(t *testing.T) {
 	require.Empty(t, sectionsInError(failedCfg, []int{17}))
 }
 

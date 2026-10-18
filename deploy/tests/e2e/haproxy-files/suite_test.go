@@ -43,6 +43,7 @@ func (suite *HAProxyFilesSuite) SetupSuite() {
 	suite.client, err = e2e.NewHTTPClient(suite.tmplData.Host)
 	suite.Require().NoError(err)
 	suite.Require().NoError(suite.test.Apply("config/patternfiles-1.yaml", "", nil))
+	suite.Require().NoError(suite.test.Apply("config/backend.yaml", suite.test.GetNS(), nil))
 	suite.Require().NoError(suite.test.Apply("config/deploy.yaml.tmpl", suite.test.GetNS(), suite.tmplData))
 }
 

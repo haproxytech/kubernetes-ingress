@@ -28,10 +28,6 @@ import (
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
 )
 
-const (
-	TCPProtocolType string = "TCP"
-)
-
 type TCPResource struct {
 	CreationTimestamp time.Time `json:"creation_timestamp" yaml:"creation_timestamp"`
 	// ParentName is the name of TCP CR containing this TCP resource
