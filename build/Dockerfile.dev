@@ -11,12 +11,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-ARG GOPHERD_VERSION=1.3.0
-
-FROM golang:1.27-alpine AS builder-go
-ARG GOPHERD_VERSION
-RUN go install -trimpath -ldflags="-s" github.com/haproxytech/gopherd@v${GOPHERD_VERSION}
-
 FROM haproxytech/haproxy-alpine:3.2 AS builder-c
 RUN apk add --no-cache build-base gcc musl-dev
 WORKDIR /src
@@ -46,7 +40,7 @@ FROM haproxytech/haproxy-alpine:3.2
 COPY /fs /
 COPY --from=builder-c /src/libblock_secrets.so /usr/local/lib/libblock_secrets.so
 COPY --from=builder-c /src/haproxy_wrapper /usr/local/sbin/haproxy_wrapper
-COPY --from=builder-go /go/bin/gopherd /usr/local/sbin/gopherd
+COPY --from=haproxytech/gopherd:latest /usr/local/sbin/gopherd /usr/local/sbin/gopherd
 
 RUN apk --no-cache add socat openssl util-linux htop tzdata curl libcap && \
     rm -f /usr/local/bin/dataplaneapi /usr/bin/dataplaneapi /etc/haproxy/dataplaneapi.yml && \
