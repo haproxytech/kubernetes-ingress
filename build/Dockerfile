@@ -12,8 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-ARG GOPHERD_VERSION=1.3.0
-
 FROM haproxytech/haproxy-alpine:3.4 AS builder-c
 RUN apk add --no-cache build-base gcc musl-dev
 WORKDIR /src
@@ -41,14 +39,11 @@ RUN gcc -O3 -std=c11 -pipe \
 
 FROM golang:1.27-alpine AS builder
 ENV GOTOOLCHAIN=auto
-ARG GOPHERD_VERSION
 RUN apk --no-cache add git openssh
 
 COPY /go.mod /src/go.mod
 COPY /go.sum /src/go.sum
 RUN cd /src && go mod download
-
-RUN go install -trimpath -ldflags="-s" github.com/haproxytech/gopherd@v${GOPHERD_VERSION}
 
 COPY / /src
 
@@ -65,7 +60,7 @@ FROM haproxytech/haproxy-alpine:3.4
 COPY /fs /
 COPY --from=builder-c /src/libblock_secrets.so /usr/local/lib/libblock_secrets.so
 COPY --from=builder-c /src/haproxy_wrapper /usr/local/sbin/haproxy_wrapper
-COPY --from=builder /go/bin/gopherd /usr/local/sbin/gopherd
+COPY --from=haproxytech/gopherd:latest /usr/local/sbin/gopherd /usr/local/sbin/gopherd
 
 RUN apk --no-cache add socat openssl util-linux htop tzdata curl libcap && \
     rm -f /usr/local/bin/dataplaneapi /usr/bin/dataplaneapi /etc/haproxy/dataplaneapi.yml && \
