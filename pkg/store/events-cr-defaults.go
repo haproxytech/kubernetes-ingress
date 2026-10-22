@@ -21,6 +21,11 @@ import (
 func (k *K8s) EventDefaultsCR(namespace, name string, data *v3.Defaults) bool {
 	ns := k.GetNamespace(namespace)
 	ref := CRRef{Kind: CRKindDefaults, Namespace: namespace, Name: name}
+	// Defaults CRs have no Status; treat a non-nil object as ADDED so a
+	// detached namespace cannot persist it.
+	if data != nil && k.dropDetachedMutation(ns, ADDED) {
+		return false
+	}
 	if data == nil {
 		delete(ns.CRs.Defaults, name)
 		k.forgetCR(ref)

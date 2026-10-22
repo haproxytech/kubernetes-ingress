@@ -1,0 +1,16 @@
+apiVersion: ingress.v1.haproxy.org/v1
+kind: TCP
+metadata:
+  name: namespace-selector-late-tcp
+  annotations:
+    ingress.class: haproxy
+spec:
+  - name: {{ .Namespace }}-late-http
+    frontend:
+      name: {{ .Namespace }}-late-http
+      binds:
+        - name: v4
+          port: {{ .Port }}
+    service:
+      name: http-echo
+      port: 80

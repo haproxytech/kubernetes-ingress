@@ -122,7 +122,7 @@ func (q *Quic) Update(k store.K8s, h haproxy.HAProxy, a annotations.Annotations)
 	} else {
 		namespaceSslCertificate := k.Namespaces[nsSslCertificateAnn]
 		var sslSecret *store.Secret
-		if namespaceSslCertificate != nil {
+		if namespaceSslCertificate != nil && (!k.SkipNamespaceInConfig(namespaceSslCertificate) || k.NamespaceAlwaysSelected(nsSslCertificateAnn)) {
 			sslSecret = namespaceSslCertificate.Secret[nameSslCertificateAnn]
 		}
 
