@@ -3,6 +3,7 @@ package instance
 import (
 	"fmt"
 	"runtime"
+	"sync/atomic"
 
 	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
 )
@@ -27,7 +28,9 @@ func Reset() {
 
 type configurationManagerImpl struct {
 	logger utils.Logger
-	reload bool
+	// Map and certificate files are written by parallel goroutines that each
+	// mark the configuration as needing a reload, so the flag must be atomic.
+	reload atomic.Bool
 }
 
 func NewConfigurationManager() *configurationManagerImpl {
@@ -37,7 +40,7 @@ func NewConfigurationManager() *configurationManagerImpl {
 }
 
 func (cmi *configurationManagerImpl) SetReload(reason string, args ...any) {
-	cmi.reload = true
+	cmi.reload.Store(true)
 	if !cmi.validReason(reason) {
 		return
 	}
@@ -45,18 +48,18 @@ func (cmi *configurationManagerImpl) SetReload(reason string, args ...any) {
 }
 
 func (cmi *configurationManagerImpl) Reset() {
-	cmi.reload = false
+	cmi.reload.Store(false)
 }
 
 func (cmi *configurationManagerImpl) NeedReload() bool {
-	return cmi.reload
+	return cmi.reload.Load()
 }
 
 func (cmi *configurationManagerImpl) SetReloadIf(reload bool, reason string, args ...any) {
 	if !reload {
 		return
 	}
-	cmi.reload = true
+	cmi.reload.Store(true)
 	if !cmi.validReason(reason) {
 		return
 	}
