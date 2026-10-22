@@ -70,6 +70,11 @@ func (k *K8s) EventIngress(ns *Namespace, data *Ingress, uid types.UID, resource
 				updateRequired = false
 				data.Status = EMPTY
 			}
+			// Keep a pending create until a successful sync consumes it.
+			if oldIngress.Status == ADDED {
+				data.Status = ADDED
+				updateRequired = true
+			}
 			for _, update := range updated {
 				if strings.HasPrefix(update, "Class:") {
 					data.ClassUpdated = true
