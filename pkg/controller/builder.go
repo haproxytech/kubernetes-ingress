@@ -64,7 +64,12 @@ type Builder struct {
 	osArgs                   utils.OSArgs
 }
 
-var defaultEnv = env.Env{
+// DefaultEnv is the environment a containerized controller runs with, where
+// neither the HAProxy binary nor the configuration directory can be moved (see
+// build/Dockerfile and fs/etc/gopherd/gopherd.yml). Tests checking the
+// configuration a deployed controller produces take the paths from here rather
+// than repeating them.
+var DefaultEnv = env.Env{
 	Binary:      "/usr/local/sbin/haproxy",
 	MainCFGFile: "/etc/haproxy/haproxy.cfg",
 	CfgDir:      "/etc/haproxy/",
@@ -80,7 +85,7 @@ var defaultEnv = env.Env{
 
 func NewBuilder() *Builder {
 	return &Builder{
-		haproxyEnv:   defaultEnv,
+		haproxyEnv:   DefaultEnv,
 		annotations:  annotations.New(),
 		haproxyRules: rules.New(),
 	}

@@ -73,6 +73,28 @@ func TestDefaultsCfgConvergesWithoutConfig(t *testing.T) {
 		"steady-state defaultsCfg must not request a reload when nothing changed")
 }
 
+// TestGlobalCfgDefaultPathIsOrigin pins the default-path policy written to
+// haproxy.cfg: relative paths must be resolved from the configuration
+// directory, and not from the directory of whichever file HAProxy is parsing.
+// With "config", a nested configuration file parsed on the way, such as a spoe
+// configuration file placed in a subdirectory, moves the process there for the
+// rest of the parsing, so every relative path used further down haproxy.cfg
+// (patterns/..., maps/...) stops resolving and the configuration is rejected.
+func TestGlobalCfgDefaultPathIsOrigin(t *testing.T) {
+	c := buildGlobalTestController(t)
+
+	require.NoError(t, c.haproxy.APIStartTransaction())
+	c.globalCfg()
+	require.NoError(t, c.haproxy.APICommitTransaction())
+	c.haproxy.APIDisposeTransaction()
+
+	cfg, err := os.ReadFile(c.haproxy.Env.MainCFGFile)
+	require.NoError(t, err)
+	require.Contains(t, string(cfg),
+		"default-path origin "+c.haproxy.Env.CfgDir,
+		"the generated configuration must resolve relative paths from its own directory")
+}
+
 func buildGlobalTestController(t *testing.T) *HAProxyController {
 	t.Helper()
 	tempDir := t.TempDir()

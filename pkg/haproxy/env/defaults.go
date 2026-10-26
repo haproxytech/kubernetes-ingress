@@ -57,8 +57,19 @@ func SetGlobal(global *models.Global, logTargets *models.LogTargets, env Env) {
 	if global.HardStopAfter == nil {
 		global.HardStopAfter = utils.PtrInt64(1800000) // 30m
 	}
+	// Resolve the paths that are relative in the generated configuration
+	// (patterns/, maps/, errorfiles/) from the configuration directory
+	// itself, instead of letting HAProxy derive that directory from each
+	// file it parses. Both policies designate the same directory here, but
+	// "config" is implemented with a chdir() to the directory of the file
+	// being parsed, and HAProxy stays there when a nested configuration file
+	// is parsed on the way, as in "filter spoe <name> config <dir>/spoe.cfg"
+	// with a spoe.cfg in a subdirectory. Every relative path used further
+	// down haproxy.cfg is then resolved from that subdirectory and the whole
+	// configuration fails to load.
 	global.DefaultPath = &models.GlobalDefaultPath{
-		Type: "config",
+		Type: "origin",
+		Path: env.CfgDir,
 	}
 	global.LimitedQuic = true
 }

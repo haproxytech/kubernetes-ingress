@@ -27,6 +27,7 @@ import (
 	"github.com/haproxytech/client-native/v6/config-parser/params"
 	"github.com/haproxytech/client-native/v6/config-parser/types"
 	"github.com/haproxytech/kubernetes-ingress/deploy/tests/e2e"
+	c "github.com/haproxytech/kubernetes-ingress/pkg/controller"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -52,13 +53,16 @@ func (suite *GlobalSuite) Test_CR_Global() {
 		}, e2e.WaitDuration, e2e.TickDuration)
 
 		// Get updated config and do all neede param checks
-		cfg, err := suite.test.GetIngressControllerFile("/etc/haproxy/haproxy.cfg")
+		cfg, err := suite.test.GetIngressControllerFile(c.DefaultEnv.MainCFGFile)
 		suite.Require().NoError(err, "Could not get Haproxy config")
 		reader := strings.NewReader(cfg)
 		p, err := parser.New(options.Reader(reader))
 		suite.Require().NoError(err, "Could not get Haproxy config parser")
+		// Relative paths are resolved from the configuration directory the
+		// controller runs with, which is what the deployed pod reports here.
 		suite.checkGlobalParam(p, "default-path", &types.DefaultPath{
-			Type: "config",
+			Type: "origin",
+			Path: c.DefaultEnv.CfgDir,
 		})
 		suite.checkGlobalParam(p, "cpu-map", []types.CPUMap{
 			{
