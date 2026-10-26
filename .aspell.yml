@@ -15,6 +15,7 @@ allowed:
   - failsafe
   - golang
   - mkdir
+  - chdir
   - WORKDIR
   - apk
   - ENTRYPOINT
@@ -65,6 +66,7 @@ allowed:
   - async
   - params
   - configmap
+  - subdirectory
   - junit
   - healthz
   - liveness
