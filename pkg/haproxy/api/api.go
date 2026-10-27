@@ -122,6 +122,8 @@ type CertAuth interface {
 	CertAuthEntryCreate(filename string) error
 	CertAuthEntrySet(filename string, payload []byte) error
 	CertAuthEntryCommit(filename string) error
+	CertAuthEntryAbort(filename string) error
+	CertAuthEntryDelete(filename string) error
 	CertEntryAbort(filename string) error
 	CertEntryDelete(filename string) error
 }

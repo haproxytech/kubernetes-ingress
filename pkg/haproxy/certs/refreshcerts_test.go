@@ -15,6 +15,7 @@
 package certs
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -32,8 +33,10 @@ import (
 // fakeAPI records the runtime commands instead of sending them.
 type fakeAPI struct {
 	api.HAProxyClient
-	mu    sync.Mutex
-	calls []string
+	mu          sync.Mutex
+	calls       []string
+	caInUse     bool
+	commitCAErr error
 }
 
 func (f *fakeAPI) record(format string, args ...any) error {
@@ -67,6 +70,35 @@ func (f *fakeAPI) CertEntryAbort(filename string) error {
 
 func (f *fakeAPI) CertEntryDelete(filename string) error {
 	return f.record("del ssl cert %s", filename)
+}
+
+func (f *fakeAPI) CertAuthEntryCreate(filename string) error {
+	return f.record("new ssl ca-file %s", filename)
+}
+
+func (f *fakeAPI) CertAuthEntrySet(filename string, _ []byte) error {
+	return f.record("set ssl ca-file %s", filename)
+}
+
+func (f *fakeAPI) CertAuthEntryCommit(filename string) error {
+	if err := f.record("commit ssl ca-file %s", filename); err != nil {
+		return err
+	}
+	return f.commitCAErr
+}
+
+func (f *fakeAPI) CertAuthEntryAbort(filename string) error {
+	return f.record("abort ssl ca-file %s", filename)
+}
+
+func (f *fakeAPI) CertAuthEntryDelete(filename string) error {
+	if err := f.record("del ssl ca-file %s", filename); err != nil {
+		return err
+	}
+	if f.caInUse {
+		return errors.New("CA file is in use, can't be deleted")
+	}
+	return nil
 }
 
 func (f *fakeAPI) CrtListEntryAdd(crtList string, entry runtime.CrtListEntry) error {
@@ -166,4 +198,63 @@ func TestUpdateRuntimeDoesNotAddToAMissingCrtList(t *testing.T) {
 		"commit ssl cert " + certPath,
 	}, commands.recorded())
 	require.False(t, instance.NeedReload(), "committing a certificate needs no reload")
+}
+
+// TestRefreshCertsDeletesCAFilesWithTheCACommands checks that a CA file is addressed by the
+// CA file commands: the certificate store holds no CA, so the certificate commands cannot
+// delete one.
+func TestRefreshCertsDeletesCAFilesWithTheCACommands(t *testing.T) {
+	c, commands := newTestRepository(t)
+	instance.Reset()
+
+	caPath := filepath.Join(env.CaDir, "web_client-ca.pem")
+	require.NoError(t, os.WriteFile(caPath, []byte("pem"), 0o600))
+	c.ca["web_client-ca"] = &cert{name: "web/client-ca", path: caPath, ca: true}
+
+	c.refreshCerts(c.ca, env.CaDir)
+
+	require.Equal(t, []string{"del ssl ca-file " + caPath}, commands.recorded())
+	require.False(t, instance.NeedReload(), "the runtime API did the deletion, no reload is needed")
+	require.NotContains(t, c.ca, "web_client-ca")
+}
+
+// TestRefreshCertsLeavesACAFileInUseToTheReload covers what the runtime API refuses: a CA
+// file the configuration still names can only be dropped by the reload which loads a
+// configuration without it, so the failure is expected and must not ask for a reload.
+func TestRefreshCertsLeavesACAFileInUseToTheReload(t *testing.T) {
+	c, commands := newTestRepository(t)
+	commands.caInUse = true
+	instance.Reset()
+
+	caPath := filepath.Join(env.CaDir, "web_client-ca.pem")
+	require.NoError(t, os.WriteFile(caPath, []byte("pem"), 0o600))
+	c.ca["web_client-ca"] = &cert{name: "web/client-ca", path: caPath, ca: true}
+
+	c.refreshCerts(c.ca, env.CaDir)
+
+	require.Equal(t, []string{"del ssl ca-file " + caPath}, commands.recorded())
+	require.False(t, instance.NeedReload(), "a CA file in use is expected, the reload handles it")
+
+	fs.RunDelayedFuncs()
+	_, err := os.Stat(caPath)
+	require.True(t, os.IsNotExist(err), "the file is removed for the reload to come")
+}
+
+// TestUpdateRuntimeAbortsACAFileWithTheCACommand checks the transaction cleanup: aborting a
+// CA file transaction with the certificate command would leave it half opened.
+func TestUpdateRuntimeAbortsACAFileWithTheCACommand(t *testing.T) {
+	c, commands := newTestRepository(t)
+	instance.Reset()
+	commands.commitCAErr = errors.New("commit failed")
+
+	caPath := filepath.Join(env.CaDir, "web_client-ca.pem")
+	_, err := c.updateRuntime(caPath, []byte("pem"), true)
+	require.ErrorContains(t, err, "commit failed")
+
+	require.Equal(t, []string{
+		"new ssl ca-file " + caPath,
+		"set ssl ca-file " + caPath,
+		"commit ssl ca-file " + caPath,
+		"abort ssl ca-file " + caPath,
+	}, commands.recorded())
 }

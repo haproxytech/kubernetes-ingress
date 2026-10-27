@@ -168,10 +168,12 @@ func (c *certs) updateRuntime(filename string, payload []byte, isCa bool) (bool,
 	entryCreate := c.client.CertEntryCreate
 	entrySet := c.client.CertEntrySet
 	entryCommit := c.client.CertEntryCommit
+	entryAbort := c.client.CertEntryAbort
 	if isCa {
 		entryCreate = c.client.CertAuthEntryCreate
 		entrySet = c.client.CertAuthEntrySet
 		entryCommit = c.client.CertAuthEntryCommit
+		entryAbort = c.client.CertAuthEntryAbort
 		certType = "ca"
 	}
 
@@ -201,7 +203,7 @@ func (c *certs) updateRuntime(filename string, payload []byte, isCa bool) (bool,
 	err = entryCommit(filename)
 	if err != nil {
 		// Abort transaction
-		errAbort := c.client.CertEntryAbort(filename)
+		errAbort := entryAbort(filename)
 		// If error, just log it
 		// a Reload will follow, transaction will be gone no matter what
 		if errAbort != nil {
@@ -213,7 +215,7 @@ func (c *certs) updateRuntime(filename string, payload []byte, isCa bool) (bool,
 	updated = true
 	utils.GetLogger().Debugf("`commit ssl %s` ok [%s]", certType, filename)
 
-	if !alreadyExists && !isCa && crtListDir(filepath.Dir(filename)) {
+	if !alreadyExists && dirKindOf(filepath.Dir(filename)) == dirCrtList {
 		dirPath := filepath.Dir(filename)
 		err = c.client.CrtListEntryAdd(dirPath,
 			runtime.CrtListEntry{
@@ -298,14 +300,37 @@ func (c *certs) CertsUpdated() (reload bool) {
 	return reload
 }
 
-// crtListDir reports whether the generated configuration hands the whole
-// directory to "crt". HAProxy then exposes that directory as a crt-list, the
-// only form the runtime API can add a certificate to or delete one from. The
-// certificates of the other directories are referenced one by one, as
-// "crt <file>" for a TCP custom resource or "ca-file <file>" for a CA: they
-// belong to no crt-list, and only a reload can drop them.
-func crtListDir(dir string) bool {
-	return dir == env.FrontendDir
+// dirKind tells how the generated configuration references the certificates a
+// directory holds, and therefore how the runtime API can remove one.
+type dirKind int
+
+const (
+	// dirFiles: the configuration names each certificate file, as "crt <file>"
+	// for the bind of a TCP custom resource or "ssl crt <file>" for the client
+	// certificate of a backend. No crt-list exists for them, and the runtime
+	// API refuses to delete a certificate the configuration still names, so a
+	// reload loading a configuration without it is the only way to drop it.
+	dirFiles dirKind = iota
+	// dirCrtList: the whole directory is handed to "crt", which HAProxy exposes
+	// as a crt-list: the one container the runtime API can add entries to and
+	// delete entries from, without a reload.
+	dirCrtList
+	// dirCAFiles: CA files, referenced as "ca-file <file>". They have their own
+	// runtime commands, and deleting one requires it to be unused.
+	dirCAFiles
+)
+
+// dirKindOf maps a certificate directory to the way the generated configuration
+// references what it holds.
+func dirKindOf(dir string) dirKind {
+	switch dir {
+	case env.FrontendDir:
+		return dirCrtList
+	case env.CaDir:
+		return dirCAFiles
+	default:
+		return dirFiles
+	}
 }
 
 func (c *certs) refreshCerts(certs map[string]*cert, certDir string) {
@@ -330,18 +355,32 @@ func (c *certs) refreshCerts(certs map[string]*cert, certDir string) {
 			continue
 		}
 		if !crtOk || !crt.inUse {
-			// The certificate is not referenced by the configuration anymore. A
-			// crt-list is the only form the runtime API can delete from; for the
-			// other directories the certificate is referenced as a file, its
-			// deletion has to wait for a reload loading a configuration which
-			// does not name it.
-			if crtListDir(certDir) {
+			// The certificate is not referenced by the configuration anymore.
+			switch dirKindOf(certDir) {
+			case dirCrtList:
+				// The directory is the crt-list of a bind: the runtime API detaches
+				// the certificate from the frontends, no reload is needed for it.
 				err := c.deleteRuntime(certDir, filename)
 				if err != nil {
 					instance.Reload("Runtime delete of cert file '%s' failed : %s", filename, certErrorForLog(err))
 				} else {
 					utils.GetLogger().Debugf("Runtime delete of cert ok [%s]", filename)
 				}
+			case dirCAFiles:
+				// A CA file has its own commands, and the runtime API only accepts
+				// an unused one: while a bind names it, the reload which loads the
+				// configuration without it is what drops the entry. A failure
+				// here is expected and must not ask for a reload.
+				caFile := path.Join(certDir, filename)
+				if err := c.client.CertAuthEntryDelete(caFile); err != nil {
+					utils.GetLogger().Debugf("Runtime delete of CA file '%s' left to the reload: %s", filename, certErrorForLog(err))
+				} else {
+					utils.GetLogger().Debugf("Runtime delete of CA file ok [%s]", filename)
+				}
+			case dirFiles:
+				// The configuration names the certificate file itself: no runtime
+				// command can detach it, only the reload which loads a
+				// configuration that does not name it.
 			}
 			fs.AddDelayedFunc(filename, func() {
 				logger.Error(os.Remove(path.Join(certDir, filename)))
