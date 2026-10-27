@@ -213,7 +213,7 @@ func (c *certs) updateRuntime(filename string, payload []byte, isCa bool) (bool,
 	updated = true
 	utils.GetLogger().Debugf("`commit ssl %s` ok [%s]", certType, filename)
 
-	if !alreadyExists && !isCa {
+	if !alreadyExists && !isCa && crtListDir(filepath.Dir(filename)) {
 		dirPath := filepath.Dir(filename)
 		err = c.client.CrtListEntryAdd(dirPath,
 			runtime.CrtListEntry{
@@ -298,6 +298,16 @@ func (c *certs) CertsUpdated() (reload bool) {
 	return reload
 }
 
+// crtListDir reports whether the generated configuration hands the whole
+// directory to "crt". HAProxy then exposes that directory as a crt-list, the
+// only form the runtime API can add a certificate to or delete one from. The
+// certificates of the other directories are referenced one by one, as
+// "crt <file>" for a TCP custom resource or "ca-file <file>" for a CA: they
+// belong to no crt-list, and only a reload can drop them.
+func crtListDir(dir string) bool {
+	return dir == env.FrontendDir
+}
+
 func (c *certs) refreshCerts(certs map[string]*cert, certDir string) {
 	files, err := os.ReadDir(certDir)
 	if err != nil {
@@ -320,11 +330,18 @@ func (c *certs) refreshCerts(certs map[string]*cert, certDir string) {
 			continue
 		}
 		if !crtOk || !crt.inUse {
-			err := c.deleteRuntime(certDir, filename)
-			if err != nil {
-				instance.Reload("Runtime delete of cert file '%s' failed : %s", filename, certErrorForLog(err))
-			} else {
-				utils.GetLogger().Debugf("Runtime delete of cert ok [%s]", filename)
+			// The certificate is not referenced by the configuration anymore. A
+			// crt-list is the only form the runtime API can delete from; for the
+			// other directories the certificate is referenced as a file, its
+			// deletion has to wait for a reload loading a configuration which
+			// does not name it.
+			if crtListDir(certDir) {
+				err := c.deleteRuntime(certDir, filename)
+				if err != nil {
+					instance.Reload("Runtime delete of cert file '%s' failed : %s", filename, certErrorForLog(err))
+				} else {
+					utils.GetLogger().Debugf("Runtime delete of cert ok [%s]", filename)
+				}
 			}
 			fs.AddDelayedFunc(filename, func() {
 				logger.Error(os.Remove(path.Join(certDir, filename)))
