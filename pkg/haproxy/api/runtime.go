@@ -390,3 +390,11 @@ func (c *clientNative) CertAuthEntryAbort(filename string) error {
 	}
 	return runtime.AbortCAFile(filename)
 }
+
+func (c *clientNative) CertAuthEntryDelete(filename string) error {
+	runtime, err := c.nativeAPI.Runtime()
+	if err != nil {
+		return err
+	}
+	return runtime.DeleteCAFile(filename)
+}
