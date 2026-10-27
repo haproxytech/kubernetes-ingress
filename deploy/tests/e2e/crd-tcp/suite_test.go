@@ -43,6 +43,7 @@ type CRDTCPSuite struct {
 type tmplData struct {
 	Host               string
 	Host2              string
+	HostShared         string
 	BackendCrNamespace string
 	BackendCrName      string
 	EchoAppIndex       int
@@ -53,8 +54,9 @@ func (suite *CRDTCPSuite) SetupSuite() {
 	suite.test, err = e2e.NewTest()
 	suite.Require().NoError(err)
 	suite.tmplData = tmplData{
-		Host:  suite.test.GetNS() + ".test",
-		Host2: suite.test.GetNS() + ".test2",
+		Host:       suite.test.GetNS() + ".test",
+		Host2:      suite.test.GetNS() + ".test2",
+		HostShared: suite.test.GetNS() + ".shared",
 	}
 	suite.tmplData.BackendCrNamespace = suite.test.GetNS()
 	suite.client, err = e2e.NewHTTPClient(suite.tmplData.Host)
