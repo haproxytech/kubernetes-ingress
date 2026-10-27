@@ -246,10 +246,15 @@ func (handler TCPCustomResource) applyBindOverride(ctx tcpcontext, bind *models.
 				OwnerType:  secret.OWNERTYPE_TCP_CR,
 				OwnerName:  string(owner.Key()),
 			}
-			if _, err := secret.Add(ctx.k, ctx.h.Certificates, sec); err != nil {
-				logger.Error(err)
+			certPath, err := secret.Add(ctx.k, ctx.h.Certificates, sec)
+			if err != nil {
+				// Do not point the bind at the internal path of a certificate that was not
+				// written: HAProxy refuses the whole configuration when the file is missing.
+				// The value stays as the resource declared it, so the failure names it.
+				logger.Errorf("TCP custom resource %s: %s", owner.Key(), err)
+				return
 			}
-			bind.SslCertificate = ctx.h.Certs.TCPCRDir + fmt.Sprintf("/%s_%s", ctx.namespace, certName) + ".pem"
+			bind.SslCertificate = certPath
 		}
 		// If not a secret name
 		// We take what ever is in bind.SslCertificate and use it (it it's a file, it has to be the complete path to the file)
