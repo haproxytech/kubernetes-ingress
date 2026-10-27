@@ -15,27 +15,12 @@
 package secret
 
 import (
-	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy"
+	"fmt"
+
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/certs"
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
-	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
 	"k8s.io/apimachinery/pkg/types"
 )
-
-type Manager struct {
-	store   store.K8s
-	haproxy haproxy.HAProxy
-}
-
-type Secret struct {
-	Name       types.NamespacedName
-	OwnerType  OwnerType
-	OwnerName  string
-	SecretType certs.SecretType
-}
-
-// module logger
-var logger = utils.GetLogger()
 
 type OwnerType string
 
@@ -45,23 +30,30 @@ const (
 	OWNERTYPE_TCP_CR  OwnerType = "TCP_CR"
 )
 
-func NewManager(store store.K8s, h haproxy.HAProxy) *Manager {
-	return &Manager{
-		store:   store,
-		haproxy: h,
-	}
+type Secret struct {
+	Name       types.NamespacedName
+	OwnerType  OwnerType
+	OwnerName  string
+	SecretType certs.SecretType
 }
 
-func (s Manager) Store(sec Secret) {
-	if _, ok := s.store.SecretsProcessed[sec.Name.String()]; ok {
-		return
+// Add writes the certificate sec asks for and returns the path it was written
+// to.
+//
+// The same Secret can be needed twice at the same time, as the certificate of
+// an Ingress and as the one of a TCP custom resource: the kind of certificate
+// is what tells them apart, each copy going to its own directory. The
+// certificate manager writes a Secret once per kind, and leaves it alone when
+// its certificate is already there and the Secret did not change, so a caller
+// can ask for the Secrets it depends on as many times as it meets them.
+//
+// The caller has to report the error: advertising a certificate that was not
+// written makes HAProxy reject the whole configuration.
+func Add(k store.K8s, c certs.Certificates, sec Secret) (certPath string, err error) {
+	secret, errGet := k.GetSecret(sec.Name.Namespace, sec.Name.Name)
+	if errGet != nil {
+		// The error from the store already names the Secret.
+		return "", fmt.Errorf("%s '%s': %w", sec.OwnerType, sec.OwnerName, errGet)
 	}
-	secret, secErr := s.store.GetSecret(sec.Name.Namespace, sec.Name.Name)
-	if secErr != nil {
-		logger.Warningf("%s '%s/%s': %s", sec.OwnerType, sec.Name.Namespace, sec.OwnerName, secErr)
-		return
-	}
-	s.store.SecretsProcessed[sec.Name.String()] = struct{}{}
-	_, err := s.haproxy.AddSecret(secret, sec.SecretType)
-	logger.Error(err)
+	return c.AddSecret(secret, sec.SecretType)
 }

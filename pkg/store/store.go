@@ -34,7 +34,6 @@ type K8s struct {
 	NamespacesAccess  NamespacesWatch
 	Namespaces        map[string]*Namespace
 	IngressClasses    map[string]*IngressClass
-	SecretsProcessed  map[string]struct{}
 	BackendsProcessed map[string]BackendOwner // backend name -> ingress which built it
 	// RoutesProcessedByMapFile records, per map file, which ingress declared each of its keys
 	// during the current reconciliation. Reset at every reconciliation, like BackendsProcessed.
@@ -110,7 +109,6 @@ func NewK8sStore(args utils.OSArgs) K8s {
 				Name:      args.ConfigMapPatternFiles.Name,
 			},
 		},
-		SecretsProcessed:         map[string]struct{}{},
 		BackendsProcessed:        map[string]BackendOwner{},
 		RoutesProcessedByMapFile: map[string]map[string]RouteOwner{},
 
@@ -192,7 +190,6 @@ func (k *K8s) Clean() {
 			cm.Status = EMPTY
 		}
 	}
-	k.SecretsProcessed = map[string]struct{}{}
 	// Same nature as the Status fields above: a publish service event raises it to ask for
 	// every ingress to be published again, and the sync which did it has consumed it. It
 	// cannot be reset by the status manager, which receives the store by value.

@@ -320,7 +320,6 @@ func (i *Ingress) Update(k store.K8s, h haproxy.HAProxy, a annotations.Annotatio
 	// deterministic in HAProxyController.setIngressDefaultBackend.
 	// Ingress secrets
 	logger.Tracef("Ingress '%s/%s': processing secrets...", i.resource.Namespace, i.resource.Name)
-	secretManager := secret.NewManager(k, h)
 	for _, tls := range i.resource.TLS {
 		if tls.SecretName == "" {
 			continue
@@ -331,7 +330,9 @@ func (i *Ingress) Update(k store.K8s, h haproxy.HAProxy, a annotations.Annotatio
 			OwnerType:  secret.OWNERTYPE_INGRESS,
 			OwnerName:  i.resource.Name,
 		}
-		secretManager.Store(sec)
+		if _, err := secret.Add(k, h.Certificates, sec); err != nil {
+			logger.Warning(err)
+		}
 	}
 	// Ingress annotations
 	if len(i.resource.Rules) == 0 {
