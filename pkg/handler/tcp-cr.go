@@ -234,7 +234,6 @@ func applyFrontendOverride(namespace string, fe *models.Frontend) {
 func (handler TCPCustomResource) applyBindOverride(ctx tcpcontext, bind *models.Bind, owner rc.Owner) {
 	if bind.Ssl {
 		// Does a secret with bind.SSlCertificate exists ?
-		secretManager := secret.NewManager(ctx.k, ctx.h)
 		certName := bind.SslCertificate
 		// It might contain: a secret name (same namespace as the TCP CR) or a folder or a file.
 		// If the a secret with the bind.SSlCertificate name is found in the same namespace as the TCP CR:
@@ -247,7 +246,9 @@ func (handler TCPCustomResource) applyBindOverride(ctx tcpcontext, bind *models.
 				OwnerType:  secret.OWNERTYPE_TCP_CR,
 				OwnerName:  string(owner.Key()),
 			}
-			secretManager.Store(sec)
+			if _, err := secret.Add(ctx.k, ctx.h.Certificates, sec); err != nil {
+				logger.Error(err)
+			}
 			bind.SslCertificate = ctx.h.Certs.TCPCRDir + fmt.Sprintf("/%s_%s", ctx.namespace, certName) + ".pem"
 		}
 		// If not a secret name

@@ -194,7 +194,6 @@ func (c *HAProxyController) updateHAProxy() {
 		if rerun {
 			logger.Debug("disabling some config snippets because of errors")
 			// We need to replay all these resources.
-			c.store.SecretsProcessed = map[string]struct{}{}
 			c.store.BackendsProcessed = map[string]store.BackendOwner{}
 			c.store.RoutesProcessedByMapFile = map[string]map[string]store.RouteOwner{}
 			c.updateHAProxy()
@@ -227,7 +226,6 @@ func (c *HAProxyController) updateHAProxy() {
 			if rerun {
 				logger.Debug("disabling some config snippets because of errors")
 				// We need to replay all these resources.
-				c.store.SecretsProcessed = map[string]struct{}{}
 				c.store.BackendsProcessed = map[string]store.BackendOwner{}
 				c.store.RoutesProcessedByMapFile = map[string]map[string]store.RouteOwner{}
 				c.updateHAProxy()
@@ -398,7 +396,6 @@ func (c *HAProxyController) processIngressesWithMerge() {
 	// so the established ingress has precedence there too. The two go together: reversing
 	// the set without reversing the merge would give precedence to the newest ingress.
 	for _, namespace := range sortedByKey(c.store.Namespaces) {
-		c.store.SecretsProcessed = map[string]struct{}{}
 		// Iterate over services
 		for _, service := range sortedByKey(namespace.Services) {
 			ingressesOrderedList := c.store.IngressesByService[service.Namespace+"/"+service.Name]
@@ -538,7 +535,6 @@ func (c *HAProxyController) processIngressesDefaultImplementation() {
 	// Sorting does not resolve the conflict — Ingress.claimBackendMode reports it — but
 	// it makes the outcome reproducible and diagnosable.
 	for _, namespace := range sortedByKey(c.store.Namespaces) {
-		c.store.SecretsProcessed = map[string]struct{}{}
 		for _, ingResource := range sortedIngresses(namespace.Ingresses) {
 			if !namespace.Relevant && !ingResource.Faked {
 				// As we watch only for white-listed namespaces, we should not worry about iterating over
