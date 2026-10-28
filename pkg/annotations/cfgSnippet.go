@@ -311,12 +311,16 @@ func UpdateFrontendCfgSnippet(api api.HAProxyClient, frontends ...string) (updat
 			return updated, err
 		}
 
+		// Collect the frontend-config-snippet changes before the check below, otherwise
+		// a snippet set only in the ConfigMap is written to the file without a reload.
+		if ok {
+			updated = append(updated, cfgSnippet.frontends[ft].updated...)
+			cfgSnippet.frontends[ft].updated = nil
+		}
 		if len(updated) == 0 {
 			continue
 		}
 
-		updated = append(updated, data.updated...)
-		data.updated = nil
 		cfgSnippet.frontends[ft] = data
 		for k, v := range cfgSnippet.frontendsCustom[ft] {
 			v.updated = nil
