@@ -281,46 +281,44 @@ func UpdateFrontendCfgSnippet(api api.HAProxyClient, frontends ...string) (updat
 		if !ok && !okCustom {
 			continue
 		}
-		deleted := []string{}
-		if okCustom {
-			newData := make([]string, 0)
-			for k, v := range customData {
-				if v.status == store.DELETED {
-					updated = append(updated, "DELETED: "+k)
-					deleted = append(deleted, k)
-					continue
-				}
-				newData = append(newData, v.value...)
-				updated = append(updated, v.updated...)
+		// Changes are tracked per frontend, and the stored configmap snippet is
+		// never replaced by the merged value: it must keep its own update state.
+		var value, ftUpdated []string
+		for k, v := range customData {
+			if v.status == store.DELETED {
+				ftUpdated = append(ftUpdated, "DELETED: "+k)
+				continue
 			}
-
-			if len(newData) > 0 {
-				newData = append(newData, "### custom annotations end ###")
-			}
-			if data != nil && len(data.value) > 0 {
-				data = &cfgData{value: append(newData, data.value...)}
-			} else {
-				data = &cfgData{value: newData}
-			}
+			value = append(value, v.value...)
+			ftUpdated = append(ftUpdated, v.updated...)
 		}
-		if len(deleted) == 0 && (data == nil || len(data.value) == 0) {
+		if len(value) > 0 {
+			value = append(value, "### custom annotations end ###")
+		}
+		if data != nil {
+			value = append(value, data.value...)
+			ftUpdated = append(ftUpdated, data.updated...)
+		}
+		// An empty value is still pushed when something changed, so that a
+		// removed snippet is removed from the frontend.
+		if len(value) == 0 && len(ftUpdated) == 0 {
 			continue
 		}
-		err = api.FrontendCfgSnippetSet(ft, data.value)
+		err = api.FrontendCfgSnippetSet(ft, value)
 		if err != nil {
 			return updated, err
 		}
 
-		if len(updated) == 0 {
+		if len(ftUpdated) == 0 {
 			continue
 		}
 
-		updated = append(updated, data.updated...)
-		data.updated = nil
-		cfgSnippet.frontends[ft] = data
-		for k, v := range cfgSnippet.frontendsCustom[ft] {
+		updated = append(updated, ftUpdated...)
+		if data != nil {
+			data.updated = nil
+		}
+		for _, v := range customData {
 			v.updated = nil
-			cfgSnippet.frontendsCustom[ft][k] = v
 		}
 	}
 	return updated, err
