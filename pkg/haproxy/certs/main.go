@@ -9,6 +9,7 @@ import (
 	"regexp"
 	"strings"
 	"sync"
+	"sync/atomic"
 
 	"github.com/google/renameio/v2"
 	"github.com/haproxytech/client-native/v6/runtime"
@@ -43,10 +44,11 @@ type Certificates interface {
 }
 
 type cert struct {
-	name    string
-	path    string
-	inUse   bool
-	updated bool
+	name  string
+	path  string
+	inUse bool
+	// updated is set by the writer goroutine and read by the sync goroutine.
+	updated atomic.Bool
 	ca      bool
 }
 
@@ -255,19 +257,19 @@ func (c *certs) deleteRuntime(crtList, filename string) error {
 func (c *certs) CleanCerts() {
 	for i := range c.frontend {
 		c.frontend[i].inUse = false
-		c.frontend[i].updated = false
+		c.frontend[i].updated.Store(false)
 	}
 	for i := range c.backend {
 		c.backend[i].inUse = false
-		c.backend[i].updated = false
+		c.backend[i].updated.Store(false)
 	}
 	for i := range c.ca {
 		c.ca[i].inUse = false
-		c.ca[i].updated = false
+		c.ca[i].updated.Store(false)
 	}
 	for i := range c.TCPCR {
 		c.TCPCR[i].inUse = false
-		c.TCPCR[i].updated = false
+		c.TCPCR[i].updated.Store(false)
 	}
 }
 
@@ -289,9 +291,12 @@ func (c *certs) RefreshCerts(api api.HAProxyClient) {
 }
 
 func (c *certs) CertsUpdated() (reload bool) {
+	// The certificates are updated by writer goroutines. Without waiting for
+	// them, a slow runtime update is not seen and no reload is requested.
+	fs.Writer.WaitUntilWritesDone()
 	for _, certs := range []map[string]*cert{c.frontend, c.backend, c.ca, c.TCPCR} {
 		for _, crt := range certs {
-			if crt.updated {
+			if crt.updated.Load() {
 				logger.Debugf("Secret '%s' was updated", crt.name)
 				reload = true
 			}
@@ -451,7 +456,7 @@ func (c *certs) writeCert(cert *cert, filename string, content []byte, isCa bool
 			instance.Reload("Runtime update of cert file '%s' failed : %s", filename, certErrorForLog(err))
 		} else if updated {
 			utils.GetLogger().Debugf("Runtime update of cert ok [%s]", filename)
-			cert.updated = true
+			cert.updated.Store(true)
 		}
 
 		// In runtime failed or did succeed, it needs to be written on disk.
