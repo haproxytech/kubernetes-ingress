@@ -127,7 +127,7 @@ func ModelFrontendSSL(name, defaultNS string, k store.K8s, annotations ...map[st
 		crNS = defaultNS
 	}
 	ns, nsOk := k.Namespaces[crNS]
-	if !nsOk {
+	if !nsOk || (k.SkipNamespaceInConfig(ns) && !k.NamespaceAlwaysSelected(crNS)) {
 		return nil, "", fmt.Errorf("annotation '%s': custom resource '%s/%s' does not exist, namespace not found", name, crNS, crName)
 	}
 	cr, crOk := ns.CRs.Frontends[crName]
@@ -151,7 +151,7 @@ func model(name, defaultNS string, crType int, k store.K8s, annotations ...map[s
 		crNS = defaultNS
 	}
 	ns, nsOk := k.Namespaces[crNS]
-	if !nsOk {
+	if !nsOk || (k.SkipNamespaceInConfig(ns) && !k.NamespaceAlwaysSelected(crNS)) {
 		return nil, fmt.Errorf("annotation %s: custom resource '%s/%s' does not exist, namespace not found", name, crNS, crName)
 	}
 	switch crType {

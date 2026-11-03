@@ -21,6 +21,11 @@ import (
 func (k *K8s) EventGlobalCR(namespace, name string, data *v3.Global) bool {
 	ns := k.GetNamespace(namespace)
 	ref := CRRef{Kind: CRKindGlobal, Namespace: namespace, Name: name}
+	// Global CRs have no Status; treat a non-nil object as ADDED so a
+	// detached namespace cannot persist it.
+	if data != nil && k.dropDetachedMutation(ns, ADDED) {
+		return false
+	}
 	if data == nil {
 		delete(ns.CRs.Global, name)
 		k.forgetCR(ref)

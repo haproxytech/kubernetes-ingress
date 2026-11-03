@@ -29,6 +29,7 @@ type SyncDataEvent struct {
 	Name            string
 	UID             types.UID
 	ResourceVersion string
+	NamespaceEpoch  uint64
 }
 
 //nolint:golint,stylecheck
@@ -51,3 +52,22 @@ const (
 	PUBLISH_SERVICE SyncType = "PUBLISH_SERVICE"
 	CUSTOM_RESOURCE SyncType = "CUSTOM_RESOURCE"
 )
+
+const (
+	BARRIER                 SyncType = "BARRIER"
+	NAMESPACE_SESSION_READY SyncType = "NAMESPACE_SESSION_READY"
+	NAMESPACE_WATCH_RETIRED SyncType = "NAMESPACE_WATCH_RETIRED"
+)
+
+// IsNamespacedSessionEvent reports whether the event is emitted by a
+// per-namespace session and must be epoch-checked in selector mode.
+func IsNamespacedSessionEvent(t SyncType) bool {
+	switch t {
+	case SERVICE, SECRET, INGRESS, ENDPOINTS,
+		CR_GLOBAL, CR_DEFAULTS, CR_BACKEND, CR_FRONTEND, CR_TCP,
+		PUBLISH_SERVICE, CUSTOM_RESOURCE:
+		return true
+	default:
+		return false
+	}
+}

@@ -125,3 +125,36 @@ func TestModelFrontendSSL(t *testing.T) {
 		})
 	}
 }
+
+func TestModelFrontendSSLStartingNamespace(t *testing.T) {
+	k := frontendSSLTestStore()
+	k.NamespacesAccess.LabelSelectorActive = true
+	k.Namespaces["default"].Relevant = false
+
+	frontend, _, err := ModelFrontendSSL(
+		"cr-frontend-ssl",
+		"",
+		k,
+		map[string]string{"cr-frontend-ssl": "default/test"},
+	)
+	if err == nil {
+		t.Fatal("expected an error for a namespace that is not ready")
+	}
+	if frontend != nil {
+		t.Fatalf("expected no frontend model, got %v", frontend)
+	}
+
+	k.NamespacesAccess.AlwaysSelected = map[string]struct{}{"default": {}}
+	frontend, _, err = ModelFrontendSSL(
+		"cr-frontend-ssl",
+		"",
+		k,
+		map[string]string{"cr-frontend-ssl": "default/test"},
+	)
+	if err != nil {
+		t.Fatalf("always-selected namespace must remain available: %v", err)
+	}
+	if frontend == nil {
+		t.Fatal("expected a frontend model from the always-selected namespace")
+	}
+}

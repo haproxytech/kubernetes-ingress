@@ -30,7 +30,7 @@ func (k k8s) getNamespaceInfomer(eventChan chan k8ssync.SyncDataEvent, factory i
 		go logger.Debug("Namespace informer error: %s", err)
 	})
 	logger.Error(errW)
-	_, err := informer.AddEventHandler(
+	k.noteReg(informer.AddEventHandler(
 		cache.ResourceEventHandlerFuncs{
 			AddFunc: func(obj interface{}) {
 				data, ok := obj.(*corev1.Namespace)
@@ -58,6 +58,7 @@ func (k k8s) getNamespaceInfomer(eventChan chan k8ssync.SyncDataEvent, factory i
 						Backends:  make(map[string]*v3.BackendSpec),
 						Frontends: make(map[string]*v3.FrontendSpec),
 					},
+					Labels: utils.CopyMap(data.Labels),
 					Status: status,
 				}
 				logIncomingK8sEvent(logger, item, data.UID, data.ResourceVersion)
@@ -84,6 +85,7 @@ func (k k8s) getNamespaceInfomer(eventChan chan k8ssync.SyncDataEvent, factory i
 						Backends:  make(map[string]*v3.BackendSpec),
 						Frontends: make(map[string]*v3.FrontendSpec),
 					},
+					Labels: utils.CopyMap(data.Labels),
 					Status: status,
 				}
 				logIncomingK8sEvent(logger, item, data.UID, data.ResourceVersion)
@@ -105,16 +107,16 @@ func (k k8s) getNamespaceInfomer(eventChan chan k8ssync.SyncDataEvent, factory i
 				item2 := &store.Namespace{
 					Name:   data2.GetName(),
 					Status: status,
+					Labels: utils.CopyMap(data2.Labels),
 				}
 				logIncomingK8sEvent(logger, item2, data2.UID, data2.ResourceVersion)
 				eventChan <- ToSyncDataEvent(item2, item2, data2.UID, data2.ResourceVersion)
 			},
 		},
-	)
-	logger.Error(err)
+	))
 
 	// Use TransformFunc to modify/filter objects before passing them to handlers
-	err = informer.SetTransform(k8stransform.TransformNamespace)
+	err := informer.SetTransform(k8stransform.TransformNamespace)
 	logger.Error(err)
 	return informer
 }
@@ -125,7 +127,7 @@ func (k k8s) getServiceInformer(eventChan chan k8ssync.SyncDataEvent, factory in
 		go logger.Debug("Service informer error: %s", err)
 	})
 	logger.Error(errW)
-	_, err := informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+	k.noteReg(informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			data, ok := obj.(*corev1.Service)
 			if !ok {
@@ -259,11 +261,10 @@ func (k k8s) getServiceInformer(eventChan chan k8ssync.SyncDataEvent, factory in
 				}
 			}
 		},
-	})
-	logger.Error(err)
+	}))
 
 	// Use TransformFunc to modify/filter objects before passing them to handlers
-	err = informer.SetTransform(k8stransform.TransformService)
+	err := informer.SetTransform(k8stransform.TransformService)
 	logger.Error(err)
 	return informer
 }
@@ -274,7 +275,7 @@ func (k k8s) getSecretInformer(eventChan chan k8ssync.SyncDataEvent, factory inf
 		go logger.Debug("Secret informer error: %s", err)
 	})
 	logger.Error(errW)
-	_, err := informer.AddEventHandler(
+	k.noteReg(informer.AddEventHandler(
 		cache.ResourceEventHandlerFuncs{
 			AddFunc: func(obj interface{}) {
 				data, ok := obj.(*corev1.Secret)
@@ -336,11 +337,10 @@ func (k k8s) getSecretInformer(eventChan chan k8ssync.SyncDataEvent, factory inf
 				eventChan <- ToSyncDataEvent(item2, item2, data2.UID, data2.ResourceVersion)
 			},
 		},
-	)
-	logger.Error(err)
+	))
 
 	// Use TransformFunc to modify/filter objects before passing them to handlers
-	err = informer.SetTransform(k8stransform.TransformSecret)
+	err := informer.SetTransform(k8stransform.TransformSecret)
 	logger.Error(err)
 	return informer
 }
@@ -351,7 +351,7 @@ func (k k8s) getConfigMapInformer(eventChan chan k8ssync.SyncDataEvent, factory 
 		go logger.Debug("ConfigMap informer error: %s", err)
 	})
 	logger.Error(errW)
-	_, err := informer.AddEventHandler(
+	k.noteReg(informer.AddEventHandler(
 		cache.ResourceEventHandlerFuncs{
 			AddFunc: func(obj interface{}) {
 				data, ok := obj.(*corev1.ConfigMap)
@@ -420,30 +420,37 @@ func (k k8s) getConfigMapInformer(eventChan chan k8ssync.SyncDataEvent, factory 
 				eventChan <- ToSyncDataEvent(item2, item2, data2.UID, data2.ResourceVersion)
 			},
 		},
-	)
-	logger.Error(err)
+	))
 
 	// Use TransformFunc to modify/filter objects before passing them to handlers
-	err = informer.SetTransform(k8stransform.TransformConfigmap)
+	err := informer.SetTransform(k8stransform.TransformConfigmap)
 	logger.Error(err)
 	return informer
 }
 
 func (k k8s) getIngressInformers(eventChan chan k8ssync.SyncDataEvent, factory informers.SharedInformerFactory, osArgs utils.OSArgs) (ii, ici cache.SharedIndexInformer) { //nolint:ireturn
-	apiGroup := "networking.k8s.io/v1"
+	const apiGroup = "networking.k8s.io/v1"
 
-	resources, err := k.builtInClient.ServerResourcesForGroupVersion(apiGroup)
-	if err != nil {
-		return ii, ici
+	if k.builtInAPIs == nil {
+		resources, err := k.builtInClient.ServerResourcesForGroupVersion(apiGroup)
+		if err != nil {
+			return ii, ici
+		}
+		for _, rs := range resources.APIResources {
+			if rs.Name == "ingresses" {
+				ii = factory.Networking().V1().Ingresses().Informer()
+				logger.Debugf("watching ingress resources of apiGroup %s:", apiGroup)
+			}
+			if rs.Name == "ingressclasses" && k.eventEpoch == 0 {
+				ici = factory.Networking().V1().IngressClasses().Informer()
+			}
+		}
+	} else if k.builtInAPIs.ingress {
+		ii = factory.Networking().V1().Ingresses().Informer()
+		logger.Debugf("watching ingress resources of apiGroup %s:", apiGroup)
 	}
-	for _, rs := range resources.APIResources {
-		if rs.Name == "ingresses" {
-			ii = factory.Networking().V1().Ingresses().Informer()
-			logger.Debugf("watching ingress resources of apiGroup %s:", apiGroup)
-		}
-		if rs.Name == "ingressclasses" {
-			ici = factory.Networking().V1().IngressClasses().Informer()
-		}
+	if k.builtInAPIs != nil && k.builtInAPIs.ingressClass && k.eventEpoch == 0 {
+		ici = factory.Networking().V1().IngressClasses().Informer()
 	}
 	if ii != nil {
 		k.addIngressHandlers(eventChan, ii, osArgs)
@@ -456,14 +463,16 @@ func (k k8s) getIngressInformers(eventChan chan k8ssync.SyncDataEvent, factory i
 }
 
 func (k k8s) getEndpointSliceInformer(eventChan chan k8ssync.SyncDataEvent, factory informers.SharedInformerFactory) cache.SharedIndexInformer { //nolint:ireturn
-	for i, apiGroup := range []string{"discovery.k8s.io/v1", "discovery.k8s.io/v1beta1"} {
-		resources, err := k.builtInClient.ServerResourcesForGroupVersion(apiGroup)
-		if err != nil {
-			continue
-		}
-
-		for _, rs := range resources.APIResources {
-			if rs.Name == "endpointslices" {
+	if k.builtInAPIs == nil {
+		for i, apiGroup := range []string{"discovery.k8s.io/v1", "discovery.k8s.io/v1beta1"} {
+			resources, err := k.builtInClient.ServerResourcesForGroupVersion(apiGroup)
+			if err != nil {
+				continue
+			}
+			for _, rs := range resources.APIResources {
+				if rs.Name != "endpointslices" {
+					continue
+				}
 				var informer cache.SharedIndexInformer
 				switch i {
 				case 0:
@@ -477,6 +486,19 @@ func (k k8s) getEndpointSliceInformer(eventChan chan k8ssync.SyncDataEvent, fact
 				return informer
 			}
 		}
+		return nil
+	}
+	switch k.builtInAPIs.endpointSliceVersion {
+	case "v1":
+		logger.Debug("Using discovery.k8s.io/v1 endpointslices")
+		informer := factory.Discovery().V1().EndpointSlices().Informer()
+		k.addEndpointSliceHandlers(eventChan, informer)
+		return informer
+	case "v1beta1":
+		logger.Debug("Using discovery.k8s.io/v1beta1 endpointslices")
+		informer := factory.Discovery().V1beta1().EndpointSlices().Informer()
+		k.addEndpointSliceHandlers(eventChan, informer)
+		return informer
 	}
 	return nil
 }
@@ -487,7 +509,7 @@ func (k k8s) getEndpointsInformer(eventChan chan k8ssync.SyncDataEvent, factory 
 		go logger.Debug("Endpoints informer error: %s", err)
 	})
 	logger.Error(errW)
-	_, err := informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+	k.noteReg(informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			item, err := k.convertToEndpoints(obj, store.ADDED)
 			if errors.Is(err, ErrIgnored) {
@@ -520,11 +542,10 @@ func (k k8s) getEndpointsInformer(eventChan chan k8ssync.SyncDataEvent, factory 
 			logIncomingK8sEvent(logger, item2, uid, resourceVersion)
 			eventChan <- ToSyncDataEvent(item2, item2, uid, resourceVersion)
 		},
-	})
-	logger.Error(err)
+	}))
 
 	// Use TransformFunc to modify/filter objects before passing them to handlers
-	err = informer.SetTransform(k8stransform.TransformEndpoints)
+	err := informer.SetTransform(k8stransform.TransformEndpoints)
 	logger.Error(err)
 	return informer
 }
@@ -579,7 +600,7 @@ func (k k8s) addIngressClassHandlers(eventChan chan k8ssync.SyncDataEvent, infor
 		go logger.Debug("IngressClass informer error: %s", err)
 	})
 	logger.Error(errW)
-	_, err := informer.AddEventHandler(
+	k.noteReg(informer.AddEventHandler(
 		cache.ResourceEventHandlerFuncs{
 			AddFunc: func(obj interface{}) {
 				item, err := store.ConvertToIngressClass(obj)
@@ -617,11 +638,10 @@ func (k k8s) addIngressClassHandlers(eventChan chan k8ssync.SyncDataEvent, infor
 				eventChan <- ToSyncDataEvent(item, item, uid, resourceVersion)
 			},
 		},
-	)
-	logger.Error(err)
+	))
 
 	// Use TransformFunc to modify/filter objects before passing them to handlers
-	err = informer.SetTransform(k8stransform.TransformIngressClass)
+	err := informer.SetTransform(k8stransform.TransformIngressClass)
 	logger.Error(err)
 }
 
@@ -630,7 +650,7 @@ func (k k8s) addIngressHandlers(eventChan chan k8ssync.SyncDataEvent, informer c
 		go logger.Debug("Ingress informer error: %s", err)
 	})
 	logger.Error(errW)
-	_, err := informer.AddEventHandler(
+	k.noteReg(informer.AddEventHandler(
 		cache.ResourceEventHandlerFuncs{
 			AddFunc: func(obj interface{}) {
 				item, err := store.ConvertToIngress(obj, osArgs.EnableCustomAnnotationsOnIngress)
@@ -673,11 +693,10 @@ func (k k8s) addIngressHandlers(eventChan chan k8ssync.SyncDataEvent, informer c
 				eventChan <- ToSyncDataEvent(item, item, uid, resourceVersion)
 			},
 		},
-	)
-	logger.Error(err)
+	))
 
 	// Use TransformFunc to modify/filter objects before passing them to handlers
-	err = informer.SetTransform(k8stransform.TransformIngress)
+	err := informer.SetTransform(k8stransform.TransformIngress)
 	logger.Error(err)
 }
 
@@ -686,7 +705,7 @@ func (k k8s) addEndpointSliceHandlers(eventChan chan k8ssync.SyncDataEvent, info
 		go logger.Debug("EndpoitSlice informer error: %s", err)
 	})
 	logger.Error(errW)
-	_, err := informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+	k.noteReg(informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			item, err := k.convertToEndpoints(obj, store.ADDED)
 			if errors.Is(err, ErrIgnored) {
@@ -719,11 +738,10 @@ func (k k8s) addEndpointSliceHandlers(eventChan chan k8ssync.SyncDataEvent, info
 			logIncomingK8sEvent(logger, item2, uid, resourceVersion)
 			eventChan <- ToSyncDataEvent(item2, item2, uid, resourceVersion)
 		},
-	})
-	logger.Error(err)
+	}))
 
 	// Use TransformFunc to modify/filter objects before passing them to handlers
-	err = informer.SetTransform(k8stransform.TransformEndpoints)
+	err := informer.SetTransform(k8stransform.TransformEndpoints)
 	logger.Error(err)
 }
 

@@ -48,3 +48,23 @@ func NilIfZero[T any](p *T) *T {
 	}
 	return p
 }
+
+// EqualMap reports whether two maps have the same keys and values.
+// A nil map is not equal to an empty map.
+func EqualMap[K, V comparable](mapA, mapB map[K]V) bool {
+	if mapA == nil && mapB == nil {
+		return true
+	}
+	if mapA == nil || mapB == nil {
+		return false
+	}
+	if len(mapA) != len(mapB) {
+		return false
+	}
+	for k, v := range mapA {
+		if mapB[k] != v {
+			return false
+		}
+	}
+	return true
+}
