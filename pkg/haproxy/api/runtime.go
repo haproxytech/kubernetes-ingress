@@ -152,13 +152,14 @@ func (c *clientNative) SyncBackendSrvs(backend *store.RuntimeBackend) error {
 	// Dynamically updates HAProxy backend servers  with HAProxySrvs content
 	// Updates the addresses and put them in MAINT or READY
 	runtimeServerData := make([]RuntimeServerData, 0, len(haproxySrvs))
+	retiringServerData := make([]RuntimeServerData, 0)
 	for _, srv := range haproxySrvs {
 		if !srv.Modified || srv.Deleted {
 			continue
 		}
 		if srv.Address == "" {
 			logger.Debugf("[RUNTIME] [BACKEND] [SERVER] [SOCKET] backend %s: server '%s' changed status to %v", backend.Name, srv.Name, "maint")
-			runtimeServerData = append(runtimeServerData, RuntimeServerData{
+			retiringServerData = append(retiringServerData, RuntimeServerData{
 				BackendName: backend.Name,
 				ServerName:  srv.Name,
 				IP:          "127.0.0.1",
@@ -177,6 +178,12 @@ func (c *clientNative) SyncBackendSrvs(backend *store.RuntimeBackend) error {
 		}
 	}
 	err := c.SetServerAddrAndState(runtimeServerData)
+	if err != nil {
+		backend.DynUpdateFailed = true
+		return err
+	}
+	// Activate returning endpoints before retiring the last working server.
+	err = c.SetServerAddrAndState(retiringServerData)
 	if err != nil {
 		backend.DynUpdateFailed = true
 		return err
