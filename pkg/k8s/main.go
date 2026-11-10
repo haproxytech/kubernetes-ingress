@@ -15,6 +15,7 @@
 package k8s
 
 import (
+	"context"
 	"errors"
 	"os"
 	"path/filepath"
@@ -293,7 +294,8 @@ func (k k8s) runInformers(eventChan chan k8ssync.SyncDataEvent, stop chan struct
 
 func (k k8s) runPodInformer(eventChan chan k8ssync.SyncDataEvent, stop chan struct{}, informersSynced *[]cache.InformerSynced) {
 	if k.podPrefix != "" {
-		pi := k.getPodInformer(k.podNamespace, k.podPrefix, k.cacheResyncPeriod, eventChan)
+		podMatcher := newControllerPodMatcher(context.Background(), k.builtInClient, k.podNamespace, os.Getenv("POD_NAME"), k.podPrefix)
+		pi := k.getPodInformer(k.podNamespace, podMatcher, k.cacheResyncPeriod, eventChan)
 		go pi.Run(stop)
 		*informersSynced = append(*informersSynced, pi.HasSynced)
 	}

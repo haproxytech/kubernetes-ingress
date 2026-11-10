@@ -17,6 +17,7 @@
 package cookiepersistence
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"regexp"
@@ -51,6 +52,7 @@ func TestCookiePersistenceTestSuite(t *testing.T) {
 func (suite *CookiePersistenceTestSuite) Test_CookiePersistence_Dynamic() {
 	//------------------------
 	// First step : Dynamic
+	suite.resetTemplateData()
 	suite.tmplData.CookiePersistenceDynamic = true
 	suite.tmplData.CookiePersistenceNoDynamic = false
 	suite.Require().NoError(suite.test.Apply("config/deploy.yml.tmpl", suite.test.GetNS(), suite.tmplData))
@@ -136,6 +138,7 @@ func (suite *CookiePersistenceTestSuite) Test_CookiePersistence_Dynamic() {
 //   ...
 
 func (suite *CookiePersistenceTestSuite) Test_CookiePersistence_No_Dynamic() {
+	suite.resetTemplateData()
 	suite.tmplData.CookiePersistenceNoDynamic = true
 	suite.tmplData.CookiePersistenceDynamic = false
 	suite.Require().NoError(suite.test.Apply("config/deploy.yml.tmpl", suite.test.GetNS(), suite.tmplData))
@@ -240,6 +243,7 @@ func (suite *CookiePersistenceTestSuite) Test_CookiePersistence_No_Dynamic() {
 func (suite *CookiePersistenceTestSuite) Test_CookiePersistence_Switch() {
 	//---------------------------
 	// Step 1 : Dynamic
+	suite.resetTemplateData()
 	suite.tmplData.CookiePersistenceDynamic = true
 	suite.tmplData.CookiePersistenceNoDynamic = false
 	suite.Require().NoError(suite.test.Apply("config/deploy.yml.tmpl", suite.test.GetNS(), suite.tmplData))
@@ -431,4 +435,94 @@ func cookieServer(cookies []string) string {
 		}
 	}
 	return ""
+}
+
+// Expected backend
+// backend e2e-tests-cookie-persistence_svc_http-echo_http
+//
+//	...
+//	balance source
+//	stick-table type ip size 1m expire 30m peers localinstance
+//	stick on src
+//	...
+func (suite *CookiePersistenceTestSuite) Test_SourceIPPersistence_WithSourceHash() {
+	suite.resetTemplateData()
+	suite.tmplData.Replicas = 3
+	suite.tmplData.SourceIPPersistence = true
+	suite.tmplData.LoadBalance = "source"
+	suite.Require().NoError(suite.test.Apply("config/deploy.yml.tmpl", suite.test.GetNS(), suite.tmplData))
+
+	var firstHostname string
+	suite.Eventually(func() bool {
+		hostname, ok := suite.echoHostname()
+		if !ok {
+			return false
+		}
+		firstHostname = hostname
+		return true
+	}, e2e.WaitDuration, e2e.TickDuration)
+
+	for range 10 {
+		hostname, ok := suite.echoHostname()
+		suite.Require().True(ok)
+		suite.Require().Equal(firstHostname, hostname)
+	}
+
+	suite.Eventually(func() bool {
+		cfg, err := suite.test.GetIngressControllerFile("/etc/haproxy/haproxy.cfg")
+		if err != nil {
+			suite.T().Logf("Could not get Haproxy config: %v", err)
+			return false
+		}
+		return suite.hasSourceIPPersistenceConfig(cfg)
+	}, e2e.WaitDuration, e2e.TickDuration)
+}
+
+func (suite *CookiePersistenceTestSuite) hasSourceIPPersistenceConfig(cfg string) bool {
+	if !strings.Contains(cfg, "balance source") || !strings.Contains(cfg, "stick on src") {
+		return false
+	}
+	reader := strings.NewReader(cfg)
+	p, err := parser.New(options.Reader(reader))
+	if err != nil {
+		suite.T().Logf("Could not get Haproxy config parser: %v", err)
+		return false
+	}
+	beName := suite.test.GetNS() + "_svc_http-echo_http"
+	rawTable, err := p.Get(parser.Backends, beName, "stick-table")
+	if err != nil {
+		suite.T().Logf("Could not get stick-table for backend %s: %v", beName, err)
+		return false
+	}
+	table, ok := rawTable.(*types.StickTable)
+	if !ok {
+		suite.T().Logf("Unexpected stick-table type %T", rawTable)
+		return false
+	}
+	return table.Type == "ip" &&
+		table.Size == "1m" &&
+		(table.Expire == "30m" || table.Expire == "1800000") &&
+		table.Peers == "localinstance"
+}
+
+func (suite *CookiePersistenceTestSuite) echoHostname() (string, bool) {
+	res, cls, err := suite.client.Do()
+	if res == nil {
+		suite.T().Log(err)
+		return "", false
+	}
+	defer cls()
+	if res.StatusCode != http.StatusOK {
+		return "", false
+	}
+	var body struct {
+		OS struct {
+			Hostname string `json:"hostname"`
+		} `json:"os"`
+	}
+	if err := json.NewDecoder(res.Body).Decode(&body); err != nil {
+		suite.T().Log(err)
+		return "", false
+	}
+	return body.OS.Hostname, body.OS.Hostname != ""
 }
