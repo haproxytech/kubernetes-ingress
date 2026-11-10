@@ -18,6 +18,8 @@ Then point the controller to this secret by adding the `prometheus-endpoint-auth
 prometheus-endpoint-auth-secret: haproxy-controller/prometheus-credentials
 ```
 
+The hash is mandatory: a password stored in clear text is refused, the user is skipped with an error in the controller logs, and the endpoint keeps answering `401` for them. The other users of the secret are unaffected.
+
 
 ## Metrics
 
