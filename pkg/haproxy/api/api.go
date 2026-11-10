@@ -447,6 +447,13 @@ func (c *clientNative) APIFinalCommitTransaction() error {
 }
 
 func (c *clientNative) APIDisposeTransaction() {
+	if c.activeTransaction != "" {
+		configuration, err := c.nativeAPI.Configuration()
+		if err == nil {
+			err = configuration.DeleteTransaction(c.activeTransaction)
+		}
+		logger.Error(err)
+	}
 	logger.ResetFields()
 	c.activeTransaction = ""
 }

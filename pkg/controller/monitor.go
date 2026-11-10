@@ -35,8 +35,7 @@ func (c *HAProxyController) SyncData() {
 			c.auxCfgManager()
 			// create a NeedAction function.
 			if hadChanges || instance.NeedReload() {
-				c.updateHAProxy()
-				hadChanges = false
+				hadChanges = c.updateHAProxy() != nil
 				if job.EventProcessed != nil {
 					close(job.EventProcessed)
 				}

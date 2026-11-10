@@ -121,19 +121,19 @@ func (c *HAProxyController) Stop() {
 }
 
 // updateHAProxy is the control loop syncing HAProxy configuration
-func (c *HAProxyController) updateHAProxy() {
+func (c *HAProxyController) updateHAProxy() error {
 	var err error
 	logger.Trace("HAProxy config sync started")
 	c.prometheusMetricsManager.UnsetUnableSyncGauge()
 
 	err = c.haproxy.APIStartTransaction()
 	if err != nil {
+		c.prometheusMetricsManager.SetUnableSyncGauge()
 		logger.Error(err)
-		return
+		return err
 	}
 	defer func() {
 		c.haproxy.APIDisposeTransaction()
-		instance.Reset()
 		rutracker.GetRuntimeUpdateTracker().Reset()
 		c.publishRejectedCRs()
 	}()
@@ -185,18 +185,19 @@ func (c *HAProxyController) updateHAProxy() {
 			// We need to replay all these resources.
 			c.store.BackendsProcessed = map[string]store.BackendOwner{}
 			c.store.RoutesProcessedByMapFile = map[string]map[string]store.RouteOwner{}
-			c.updateHAProxy()
-			return
+			c.haproxy.APIDisposeTransaction()
+			return c.updateHAProxy()
 		}
 		// If any error not from a custom resource then pop the previous state of backends
 		logger.Error(c.haproxy.PopPreviousBackends())
-		return
+		return err
 	}
 
-	if instance.NeedReload() {
+	if instance.ConsumeReload() {
 		fs.RunDelayedFuncs()
 		var msg string
 		if msg, err = c.haproxy.Service("reload"); err != nil {
+			instance.Reload("previous reload failed")
 			logger.Error(err)
 			c.prometheusMetricsManager.UpdateReloadMetrics(err)
 			errLines := strings.Split(msg, "\n")
@@ -216,11 +217,12 @@ func (c *HAProxyController) updateHAProxy() {
 				// We need to replay all these resources.
 				c.store.BackendsProcessed = map[string]store.BackendOwner{}
 				c.store.RoutesProcessedByMapFile = map[string]map[string]store.RouteOwner{}
-				c.updateHAProxy()
-				return
+				c.haproxy.APIDisposeTransaction()
+				return c.updateHAProxy()
 			}
 			// If any error not from a custom resource then pop the previous state of backends
 			logger.Error(c.haproxy.PopPreviousBackends())
+			return err
 		} else {
 			logger.Info("HAProxy reloaded")
 			c.prometheusMetricsManager.UpdateReloadMetrics(err)
@@ -234,6 +236,7 @@ func (c *HAProxyController) updateHAProxy() {
 	// If transaction succeeds thenpush backends state for any future recover.
 	logger.Error(c.haproxy.PushPreviousBackends())
 	logger.Trace("HAProxy config sync ended")
+	return nil
 }
 
 // setToRready exposes readiness endpoint
