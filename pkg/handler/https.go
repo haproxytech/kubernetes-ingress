@@ -17,6 +17,7 @@ package handler
 import (
 	"errors"
 	"fmt"
+	"os"
 	"path"
 
 	"github.com/haproxytech/client-native/v6/models"
@@ -47,6 +48,7 @@ type HTTPS struct {
 	IPv6                       bool
 	strictSNI                  bool
 	generateCertificatesSigner string
+	tlsTicketKeys              string
 }
 
 //nolint:golint, stylecheck
@@ -269,9 +271,66 @@ func (handler *HTTPS) Update(k store.K8s, h haproxy.HAProxy, a annotations.Annot
 		instance.Reload("SSLPassthrough disabled")
 	}
 
+	// tls-ticket-keys: applied last, since toggling ssl-passthrough above recreates the binds.
+	handler.tlsTicketKeys = handler.resolveTLSTicketKeys(a.String("tls-ticket-keys", k.ConfigMaps.Main.Annotations))
+	errs.Add(handler.syncTLSTicketKeys(h))
+
 	instance.ReloadIf(h.CertsUpdated(), "certificates updated")
 
 	return errs.Result()
+}
+
+// resolveTLSTicketKeys returns the ticket keys file to set on the ssl binds, or ""
+// when unset or unreadable: HAProxy refuses to start on a missing keys file, so a
+// bad path must not reach the configuration.
+func (handler *HTTPS) resolveTLSTicketKeys(path string) string {
+	if path == "" {
+		return ""
+	}
+	f, err := os.Open(path)
+	if err != nil {
+		logger.Errorf("tls-ticket-keys: ignoring %q: %s", path, err)
+		return ""
+	}
+	_ = f.Close()
+	return path
+}
+
+// syncTLSTicketKeys sets the tls-ticket-keys file on every ssl bind of the https
+// frontend, so that all instances sharing the file resume each other's sessions.
+func (handler *HTTPS) syncTLSTicketKeys(h haproxy.HAProxy) error {
+	binds, err := h.FrontendBindsGet(h.FrontHTTPS)
+	if err != nil {
+		return fmt.Errorf("tls-ticket-keys: %w", err)
+	}
+	changed := tlsTicketKeysChanges(binds, handler.tlsTicketKeys)
+	for _, bind := range changed {
+		if err = h.FrontendBindEdit(h.FrontHTTPS, *bind); err != nil {
+			return fmt.Errorf("tls-ticket-keys: %w", err)
+		}
+	}
+	instance.ReloadIf(len(changed) > 0, "tls-ticket-keys updated")
+	return nil
+}
+
+// tlsTicketKeysChanges sets keysFile on the ssl binds this handler owns (the quic
+// ones are managed elsewhere), clears it on the others, and returns the binds it changed.
+func tlsTicketKeysChanges(binds models.Binds, keysFile string) (changed models.Binds) {
+	for _, bind := range binds {
+		if bind.Name != BIND_IP_V4 && bind.Name != BIND_IP_V6 && bind.Name != BIND_UNIX_SOCKET {
+			continue
+		}
+		want := ""
+		if bind.Ssl {
+			want = keysFile
+		}
+		if bind.TLSTicketKeys == want {
+			continue
+		}
+		bind.TLSTicketKeys = want
+		changed = append(changed, bind)
+	}
+	return changed
 }
 
 func (handler *HTTPS) enableSSLPassthrough(h haproxy.HAProxy) (err error) {

@@ -891,6 +891,25 @@ annotations:
     version_min: "3.2"
     example:
       - 'generate-certificates-signer: "default/ca-signing-cert"'
+  - title: tls-ticket-keys
+    type: string
+    group: ssl-offloading
+    dependencies: ""
+    default: ""
+    description:
+      - Path of a file holding the TLS session ticket keys, set as tls-ticket-keys on the binds of the HTTPS frontend when SSL offload is enabled.
+      - Instances sharing the same file resume each other's TLS sessions, and the keys survive reloads, so clients spread over several replicas avoid a full handshake.
+      - The file holds base64 encoded keys, one per line (80 bytes each for AES-256 tickets), at least three. HAProxy encrypts with the second to last key and decrypts with the last three, so a rotation drops the first line and appends a new key.
+    tip:
+      - Mount the file from a Secret. The controller ignores a path it cannot read, since HAProxy would refuse the configuration.
+      - The controller watches the file and pushes a rotated key through the runtime API (set ssl tls-key), without a reload. It reloads only when the runtime update fails. The keys kept from the previous file keep the tickets already issued valid.
+    values:
+      - Absolute path of the keys file inside the controller container
+    applies_to:
+      - configmap
+    version_min: "3.3"
+    example:
+      - 'tls-ticket-keys: "/etc/haproxy/tls-ticket-keys/tls-ticket-keys"'
   - title: cors-enable
     type: bool
     group: CORS

@@ -33,6 +33,7 @@ func (c *HAProxyController) SyncData() {
 		switch job.SyncType {
 		case k8ssync.COMMAND:
 			c.auxCfgManager()
+			c.tlsTicketKeysManager()
 			// create a NeedAction function.
 			if hadChanges || instance.NeedReload() {
 				c.updateHAProxy()

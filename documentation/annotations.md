@@ -30,6 +30,7 @@ more info about custom annotations can be found in [annotations-custom.md](annot
 | [client-crt-optional](#authentication) | [bool](#bool) | "false" | client-ca |:large_blue_circle:|:white_circle:|:white_circle:|
 | [client-strict-sni](#ssl-offloading) | [bool](#bool) | "false" | client-ca |:large_blue_circle:|:white_circle:|:white_circle:|
 | [generate-certificates-signer](#ssl-offloading) | string |  |  |:large_blue_circle:|:white_circle:|:white_circle:|
+| [tls-ticket-keys](#ssl-offloading) :construction:(dev) | string |  |  |:large_blue_circle:|:white_circle:|:white_circle:|
 | [cors-enable](#CORS) | [bool](#bool) | "false" |  |:large_blue_circle:|:large_blue_circle:|:white_circle:|
 | [cors-allow-origin](#CORS) | string | "*" | cors-enable |:large_blue_circle:|:large_blue_circle:|:white_circle:|
 | [cors-allow-methods](#CORS) | string | "*" | cors-enable |:large_blue_circle:|:large_blue_circle:|:white_circle:|
@@ -1849,6 +1850,31 @@ Example:
 
 ```yaml
 generate-certificates-signer: "default/ca-signing-cert"
+```
+
+##### `tls-ticket-keys`
+
+
+  > :construction: this is only available from next version, currently available in dev build
+
+  Path of a file holding the TLS session ticket keys, set as tls-ticket-keys on the binds of the HTTPS frontend when SSL offload is enabled.
+  Instances sharing the same file resume each other's TLS sessions, and the keys survive reloads, so clients spread over several replicas avoid a full handshake.
+  The file holds base64 encoded keys, one per line (80 bytes each for AES-256 tickets), at least three. HAProxy encrypts with the second to last key and decrypts with the last three, so a rotation drops the first line and appends a new key.
+
+  Available on:  `configmap`
+
+  :information_source: Mount the file from a Secret. The controller ignores a path it cannot read, since HAProxy would refuse the configuration.
+
+  :information_source: The controller watches the file and pushes a rotated key through the runtime API (set ssl tls-key), without a reload. It reloads only when the runtime update fails. The keys kept from the previous file keep the tickets already issued valid.
+
+Possible values:
+
+- Absolute path of the keys file inside the controller container
+
+Example:
+
+```yaml
+tls-ticket-keys: "/etc/haproxy/tls-ticket-keys/tls-ticket-keys"
 ```
 
 ##### `ssl-certificate`

@@ -63,6 +63,7 @@ type HAProxyController struct {
 	haproxy                  haproxy.HAProxy
 	osArgs                   utils.OSArgs
 	auxCfgModTime            int64
+	tlsTicketKeysSum         [32]byte
 	ready                    bool
 	processIngress           func()
 	// defaultBackend holds, for the current reconciliation pass, the ingress
