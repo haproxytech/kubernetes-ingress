@@ -58,16 +58,19 @@ func (c *clientNative) SetServerAddrAndState(servers []RuntimeServerData) error 
 		cmdBuilder.WriteString(server.BackendName)
 		cmdBuilder.WriteString("/")
 		cmdBuilder.WriteString(server.ServerName)
-		cmdBuilder.WriteString(" addr ")
-		cmdBuilder.WriteString(server.IP)
-		if server.Port > 0 {
-			cmdBuilder.WriteString(" port ")
-			cmdBuilder.WriteString(strconv.Itoa(server.Port))
+		// Keep the destination of already assigned streams when retiring a server.
+		if server.State != "maint" {
+			cmdBuilder.WriteString(" addr ")
+			cmdBuilder.WriteString(server.IP)
+			if server.Port > 0 {
+				cmdBuilder.WriteString(" port ")
+				cmdBuilder.WriteString(strconv.Itoa(server.Port))
+			}
+			cmdBuilder.WriteString(";set server ")
+			cmdBuilder.WriteString(server.BackendName)
+			cmdBuilder.WriteString("/")
+			cmdBuilder.WriteString(server.ServerName)
 		}
-		cmdBuilder.WriteString(";set server ")
-		cmdBuilder.WriteString(server.BackendName)
-		cmdBuilder.WriteString("/")
-		cmdBuilder.WriteString(server.ServerName)
 		cmdBuilder.WriteString(" state ")
 		cmdBuilder.WriteString(server.State)
 		cmdBuilder.WriteString(";")
