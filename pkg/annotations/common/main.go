@@ -19,16 +19,22 @@ var multiLineAnnotations = map[string]struct{}{
 }
 
 // GetValue returns value by checking in multiple annotations.
-// A value holding CR or LF is discarded for annotations that take a single line:
-// one line of tenant input must never become several HAProxy directives.
+// A value holding '#' is discarded for every annotation: HAProxy starts a
+// comment there even mid-token, which would absorb the scope condition
+// appended after the rule. A value holding CR or LF is discarded for
+// annotations that take a single line.
 func GetValue(annotationName string, annotations ...map[string]string) string {
 	for _, a := range annotations {
 		val, ok := a[annotationName]
 		if !ok {
 			continue
 		}
-		if _, multiLine := multiLineAnnotations[annotationName]; !multiLine && strings.ContainsAny(val, "\r\n") {
-			logger.Warningf("annotation %q: multiline value discarded, this annotation takes a single line", annotationName)
+		if HasCommentChar(val) {
+			logger.Warningf("annotation %q: '#' is not allowed, value discarded", annotationName)
+			return DefaultValues[annotationName]
+		}
+		if _, multiLine := multiLineAnnotations[annotationName]; !multiLine && HasControlChar(val) {
+			logger.Warningf("annotation %q: control character is not allowed, value discarded", annotationName)
 			return DefaultValues[annotationName]
 		}
 		return val
