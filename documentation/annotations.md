@@ -118,6 +118,10 @@ more info about custom annotations can be found in [annotations-custom.md](annot
 > - global  annotations can only be used in Configmap
 > - ingress annotations can be used in Ingress and ConfigMap (to configure all ingress resources in use)
 > - service annotations can be used in Service, Ingress (to configure all services used in Ingress) and ConfigMap (to configure all services in use)
+>
+> Annotation values cannot contain `#`.
+> Single-line values containing control characters fall back to their defaults.
+> Invalid access-control lists deny access instead.
 
 
 ### Options
@@ -155,6 +159,10 @@ cors-enable: "true"
   Available on:  `configmap`  `ingress`
 
   :information_source: With "regex" value, it is possible to allow a list of origins. If one of them matches the request Origin header it will be returned to the client.
+
+  :information_source: The regex must be one token without spaces or quotes. It cannot start with `-` or end with a backslash.
+
+  :information_source: A `\x` escape must have two hexadecimal digits and must not encode a brace or a control character.
 
 Possible values:
 
@@ -269,6 +277,9 @@ cors-respond-to-options: "true"
 
 - Access control is disabled by default
 - Access control can be set for all traffic (annotation on configmap) or for a set of hosts (annotation on ingress)
+- An invalid non-empty access-control list denies the affected route. An invalid main ConfigMap list denies access globally.
+- Pattern references require a key in the ConfigMap configured by `--configmap-patternfiles`.
+- Each non-empty, non-comment pattern line must contain a valid IP address or CIDR.
 
 ##### `blacklist`
 
@@ -282,7 +293,7 @@ cors-respond-to-options: "true"
 Possible values:
 
 - Comma-separated list of IP addresses and/or CIDR ranges
-- Path to a pattern file, e.g. `pattern/ips`
+- Path to a pattern file, e.g. `patterns/ips`
 
 Example:
 
@@ -301,7 +312,7 @@ blacklist: "192.168.1.0/24, 192.168.2.100"
 Possible values:
 
 - Comma-separated list of IP addresses and/or CIDR ranges
-- Path to a pattern file, e.g. `pattern/ips`
+- Path to a pattern file, e.g. `patterns/ips`
 
 Example:
 
@@ -321,7 +332,7 @@ deny-list: "192.168.1.0/24, 192.168.2.100"
 Possible values:
 
 - Comma-separated list of IP addresses and/or CIDR ranges
-- Path to a pattern file, e.g. `pattern/ips`
+- Path to a pattern file, e.g. `patterns/ips`
 
 Example:
 
@@ -340,7 +351,7 @@ whitelist: "192.168.1.0/24, 192.168.2.100"
 Possible values:
 
 - Comma-separated list of IP addresses and/or CIDR ranges
-- Path to a pattern file, e.g. `pattern/ips`
+- Path to a pattern file, e.g. `patterns/ips`
 
 Example:
 
@@ -381,6 +392,12 @@ auth-secret: default/haproxy-credentials
 
   :information_source: Unencrypted passwords (used with HAProxy [insecure-password](https://docs.haproxy.org/2.8/configuration.html#3.4-user) ) **are not accepted**.
 
+  :information_source: Usernames and passwords cannot contain spaces, control characters, `#`, quotes, or backslashes. Invalid credentials are ignored.
+
+  :information_source: One trailing LF in a password is removed for compatibility. Additional trailing control characters are invalid.
+
+  :information_source: Outside an Ingress, the Secret path must include its namespace.
+
 Possible values:
 
 - The annotation format is a secret path *namespace/secretName*. If the namespace is omitted (path is only *secretName*) then the ingress namespace will be used.
@@ -412,6 +429,8 @@ auth-secret: default/haproxy-credentials
   Provides the HTTP Authentication Realm
 
   Available on:  `configmap`  `ingress`
+
+  :information_source: The realm cannot contain quotes, braces, backslashes, or `$`.
 
 Possible values:
 
@@ -645,6 +664,8 @@ clean-certs: "false"
 #### Config Snippet
 
 - Insert raw HAProxy configuration in specific HAProxy config sections.
+- Config snippets can contain `#` for HAProxy comments. Ordinary annotation values cannot contain `#`.
+- The controller discards single-line annotation values containing control characters. Invalid access-control lists deny access instead.
 - There is **no data validation** done by Ingress Controller. If input is incorrect, HAProxy will fail to apply new configuration.
 - It is possible to use [pattern files](controller.md/#--configmap-patternfiles) inside config snippets.
 
@@ -1327,6 +1348,10 @@ nbthread: "8"
 
   Available on:  `configmap`  `ingress`
 
+  :information_source: Each parameter must be one word without quotes and must not end with a backslash.
+
+  :information_source: A `\x` escape must have two hexadecimal digits and must not encode a control character.
+
 Possible values:
 
 - A single path, such as "/", to turn any path into "/"
@@ -1528,6 +1553,8 @@ rate-limit-size: 1000000
 
   :information_source: When both rate limiting and a whitelist are configured, only clients NOT in the whitelist will be subject to rate limiting.
 
+  :information_source: Pattern references require a declared `--configmap-patternfiles` ConfigMap key with valid IP or CIDR lines.
+
 Possible values:
 
 - Comma-separated list of IP addresses and/or CIDR ranges (e.g., `10.0.0.0/8, 192.168.1.100`)
@@ -1556,6 +1583,10 @@ rate-limit-whitelist: "10.0.0.0/8, 192.168.1.100"
   Available on:  `configmap`  `ingress`
 
   :information_source: Captures samples of the request using [sample expression](#sample-expression) and log them in HAProxy traffic logs.
+
+  :information_source: The controller rejects sample expressions containing unsafe syntax.
+
+  :information_source: Expressions cannot contain quotes, and arguments cannot contain spaces.
 
   :information_source: **Important**: When capturing headers that may contain commas (like `User-Agent`), use `req.fhdr(header-name)` instead of `hdr(header-name)`. The `hdr()` function splits values on commas, which can result in truncated or malformed log entries. The `req.fhdr()` function returns the full header value without splitting on commas.
 
@@ -1624,6 +1655,8 @@ request-capture-len: 350
 
   :information_source: Port alone is not allowed.
 
+  :information_source: The value must be one token without spaces, braces, quotes, or backslashes.
+
 Possible values:
 
 - host
@@ -1666,6 +1699,8 @@ request-redirect-code: "303"
 
   :information_source: This sets header before HAProxy does any service/backend dispatch. So in the case you want to change the Host header this will impact HAProxy decision on which service/backend to use (based on matching Host against ingress rules). In order to set the Host header after service selection, use [set-host](#set-host) annotation.
 
+  :information_source: Header values cannot be empty or contain backslashes, `$`, or control characters.
+
 Possible values:
 
 - The name of the field, following by its value, e.g. Ingress-ID abcd123
@@ -1706,6 +1741,8 @@ haproxy.org/request-set-header: |
   Sets an HTTP header in the response before it is passed to the client.
 
   Available on:  `configmap`  `ingress`
+
+  :information_source: Header values cannot be empty or contain backslashes, `$`, or control characters.
 
 Possible values:
 
@@ -1749,6 +1786,12 @@ haproxy.org/response-set-header: |
   Available on:  `service`
 
   :information_source: In order for the service to be handled by the Ingress Controller, it is still mandatory to put it in an ingress rule. Using only `route-acl` won't be enough.
+
+  :information_source: The ACL cannot contain braces, quotes, `#`, or control characters. It cannot end with a flag or a backslash.
+
+  :information_source: A `\x` escape must have two hexadecimal digits and must not encode a brace or a control character.
+
+  :information_source: Ingress paths routed with this annotation cannot contain spaces, quotes, or invalid backslash escapes.
 
   :information_source: Note that this annotation is not compatible with an Ingress having multiple paths that will match a request.
 Without this annotation, the precedence  is given first to the longest matching path.
@@ -1882,6 +1925,8 @@ server-ssl: "true"
 
   Available on:  `configmap`  `ingress`
 
+  :information_source: The value must be one token without spaces, braces, quotes, or backslashes.
+
 Possible values:
 
 - The value of the Host header
@@ -1904,9 +1949,11 @@ set-host: "example.local"
 
   Available on:  `configmap`  `ingress`
 
+  :information_source: The name must be a valid HTTP header field name without quotes or `$`.
+
 Possible values:
 
-- any header name
+- HTTP header name
 
 Example:
 

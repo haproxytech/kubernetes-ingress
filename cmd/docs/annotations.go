@@ -53,6 +53,10 @@ var tableFooter = `
 > - global  annotations can only be used in Configmap
 > - ingress annotations can be used in Ingress and ConfigMap (to configure all ingress resources in use)
 > - service annotations can be used in Service, Ingress (to configure all services used in Ingress) and ConfigMap (to configure all services in use)
+>
+> Annotation values cannot contain ` + "`#`" + `.
+> Single-line values containing control characters fall back to their defaults.
+> Invalid access-control lists deny access instead.
 
 
 ### Options
