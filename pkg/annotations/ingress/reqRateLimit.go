@@ -101,7 +101,11 @@ func (a ReqRateLimitAnn) Process(k store.K8s, annotations ...map[string]string) 
 
 			// Check if it's a pattern file reference
 			if strings.HasPrefix(entry, "patterns/") {
-				patterns = append(patterns, maps.Path(entry))
+				pattern, errPat := patternPath(k, a.name, entry)
+				if errPat != nil {
+					return errPat
+				}
+				patterns = append(patterns, pattern)
 			} else {
 				// Validate it's a valid IP or CIDR
 				if ip := net.ParseIP(entry); ip == nil {

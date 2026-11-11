@@ -50,8 +50,9 @@ type ruleset struct {
 
 // ruleInfo holds information about a HAProxy rule
 type ruleInfo struct {
-	state   ruleState
-	ingress bool
+	state           ruleState
+	ingress         bool
+	previousIngress bool
 }
 
 // ruleState describes Rule creation
@@ -90,15 +91,15 @@ func (r SectionRules) AddRule(frontend string, rule Rule, ingressRule bool) erro
 	ruleID := GetID(rule)
 	ruleInf, ok := ftRuleSet.meta[ruleID]
 	if ok && ruleInf.state == TO_DELETE {
-		// rule already created and planned to be deleted
+		// Recompute scope from the declarations in this reconciliation.
 		ruleInf.state = CREATED
+		ruleInf.ingress = ingressRule
 	} else if !ok {
 		ftRuleSet.rules[ruleType] = append(ftRuleSet.rules[ruleType], rule)
-		ftRuleSet.meta[ruleID] = &ruleInfo{state: TO_CREATE}
-	}
-
-	if ingressRule {
-		ftRuleSet.meta[ruleID].ingress = true
+		ftRuleSet.meta[ruleID] = &ruleInfo{state: TO_CREATE, ingress: ingressRule}
+	} else {
+		// Global declarations must cover requests without a route ID.
+		ruleInf.ingress = ruleInf.ingress && ingressRule
 	}
 	return nil
 }
@@ -111,6 +112,7 @@ func (r SectionRules) CleanRules() {
 	for frontend := range r {
 		if ftRuleSet, ok := r[frontend]; ok {
 			for id := range ftRuleSet.meta {
+				ftRuleSet.meta[id].previousIngress = ftRuleSet.meta[id].ingress
 				ftRuleSet.meta[id].state = TO_DELETE
 			}
 		}
@@ -164,8 +166,8 @@ func (r SectionRules) refreshRule(client api.HAProxyClient, ruleType Type, i int
 		return
 	}
 	instance.ReloadIf(
-		frontendRuleSet.meta[id].state == TO_CREATE,
-		"New HAProxy rule '%s' created", constLookup[ruleType],
+		frontendRuleSet.meta[id].state == TO_CREATE || frontendRuleSet.meta[id].ingress != frontendRuleSet.meta[id].previousIngress,
+		"HAProxy rule '%s' created or scope changed", constLookup[ruleType],
 	)
 }
 

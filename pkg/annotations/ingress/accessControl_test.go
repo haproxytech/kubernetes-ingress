@@ -23,7 +23,6 @@ import (
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/api"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/maps"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/rules"
-	"github.com/haproxytech/kubernetes-ingress/pkg/store"
 )
 
 // recordingMaps implements maps.Maps and records appended rows so tests can
@@ -161,6 +160,55 @@ func TestAccessControl_Process(t *testing.T) {
 			value:       "patterns/allowlist",
 			wantMapPath: "patterns/allowlist",
 		},
+		{
+			name:       "patterns traversal",
+			annotation: "allow-list",
+			value:      "patterns/../etc/passwd",
+			wantErr:    true,
+		},
+		{
+			name:       "patterns undeclared file",
+			annotation: "allow-list",
+			value:      "patterns/missing",
+			wantErr:    true,
+		},
+		{
+			name:        "pattern reference whitespace",
+			annotation:  "allow-list",
+			value:       " patterns/allowlist ",
+			wantMapPath: "patterns/allowlist",
+		},
+		{
+			name:       "pattern with non-IP contents",
+			annotation: "allow-list",
+			value:      "patterns/names",
+			wantErr:    true,
+		},
+		{
+			name:       "deny-list with non-IP contents",
+			annotation: "deny-list",
+			value:      "patterns/names",
+			denyList:   true,
+			wantErr:    true,
+		},
+		{
+			name:       "deprecated name with invalid pattern",
+			annotation: "whitelist",
+			value:      "patterns/missing",
+			wantErr:    true,
+		},
+		{
+			name:       "comment marker cannot remove protection",
+			annotation: "allow-list",
+			value:      "patterns/allowlist#",
+			wantErr:    true,
+		},
+		{
+			name:       "newline cannot remove protection",
+			annotation: "allow-list",
+			value:      "patterns/allowlist\n",
+			wantErr:    true,
+		},
 	}
 
 	for _, tt := range tests {
@@ -175,11 +223,15 @@ func TestAccessControl_Process(t *testing.T) {
 				accessControl = NewAllowList(tt.annotation, rulesList, mockMaps)
 			}
 
-			err := accessControl.Process(store.K8s{}, map[string]string{tt.annotation: tt.value})
+			k := testPatternFilesStore("allowlist")
+			k.ConfigMaps.PatternFiles.Annotations["names"] = "example.invalid\n"
+			err := accessControl.Process(k, map[string]string{tt.annotation: tt.value})
 
 			if tt.wantErr {
-				assert.Error(t, err)
-				assert.Empty(t, *rulesList)
+				assert.ErrorContains(t, err, "denying access")
+				require.Len(t, *rulesList, 1)
+				assert.Equal(t, &rules.ReqDeny{}, (*rulesList)[0])
+				assert.Empty(t, mockMaps.allEntries())
 				return
 			}
 
@@ -201,6 +253,77 @@ func TestAccessControl_Process(t *testing.T) {
 			}
 
 			assert.ElementsMatch(t, tt.wantEntries, mockMaps.allEntries())
+		})
+	}
+}
+
+func TestAccessControlRejectsSharedInvalidList(t *testing.T) {
+	m := newRecordingMaps()
+	for range 2 {
+		list := &rules.List{}
+		ann := NewAllowList("allow-list", list, m)
+		err := ann.Process(testPatternFilesStore(), map[string]string{"allow-list": "10.0.0.1,invalid"})
+		require.Error(t, err)
+		require.Equal(t, rules.List{&rules.ReqDeny{}}, *list)
+		require.Empty(t, m.allEntries())
+	}
+}
+
+func TestAccessControlPatternUpdate(t *testing.T) {
+	k := testPatternFilesStore("ips")
+	annotations := map[string]string{"allow-list": "patterns/ips"}
+	for _, content := range []string{"10.0.0.1\n", "not-an-ip\n", "::1\n"} {
+		k.ConfigMaps.PatternFiles.Annotations["ips"] = content
+		list := &rules.List{}
+		ann := NewAllowList("allow-list", list, newRecordingMaps())
+		err := ann.Process(k, annotations)
+		require.Len(t, *list, 1)
+		if content == "not-an-ip\n" {
+			require.Error(t, err)
+			assert.Equal(t, &rules.ReqDeny{}, (*list)[0])
+			continue
+		}
+		require.NoError(t, err)
+		assert.Equal(t, &rules.ReqDeny{SrcIPsMap: "patterns/ips", AllowList: true}, (*list)[0])
+	}
+}
+
+func TestAccessControlValuePrecedence(t *testing.T) {
+	tests := []struct {
+		name        string
+		annotations []map[string]string
+		want        string
+	}{
+		{name: "absent"},
+		{
+			name:        "new name beats deprecated name",
+			annotations: []map[string]string{{"whitelist": "10.0.0.1"}, {"allow-list": "10.0.0.2"}},
+			want:        "10.0.0.2",
+		},
+		{
+			name:        "first map wins",
+			annotations: []map[string]string{{"allow-list": "10.0.0.1"}, {"allow-list": "10.0.0.2"}},
+			want:        "10.0.0.1",
+		},
+		{
+			name:        "empty value masks inherited value",
+			annotations: []map[string]string{{"allow-list": ""}, {"allow-list": "10.0.0.2"}},
+		},
+		{
+			name:        "empty new name falls back to deprecated name",
+			annotations: []map[string]string{{"allow-list": "", "whitelist": "10.0.0.1"}},
+			want:        "10.0.0.1",
+		},
+		{
+			name:        "invalid new name cannot fall back to deprecated name",
+			annotations: []map[string]string{{"allow-list": "bad#value", "whitelist": "10.0.0.1"}},
+			want:        "bad#value",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ann := NewAllowList("allow-list", &rules.List{}, newRecordingMaps())
+			assert.Equal(t, tt.want, ann.GetAnnotationValue(tt.annotations...))
 		})
 	}
 }

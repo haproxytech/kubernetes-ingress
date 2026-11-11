@@ -111,6 +111,24 @@ func TestReqRateLimit_Whitelist(t *testing.T) {
 			wantMapEntries:   2, // 2 IPs/CIDRs
 		},
 		{
+			name: "whitelist with patterns traversal",
+			annotations: map[string]string{
+				"rate-limit-requests":  "100",
+				"rate-limit-whitelist": "patterns/../etc/passwd",
+			},
+			wantErr:          true,
+			wantWhitelistMap: false,
+		},
+		{
+			name: "whitelist with undeclared pattern",
+			annotations: map[string]string{
+				"rate-limit-requests":  "100",
+				"rate-limit-whitelist": "patterns/missing",
+			},
+			wantErr:          true,
+			wantWhitelistMap: false,
+		},
+		{
 			name: "whitelist without rate-limit-requests",
 			annotations: map[string]string{
 				"rate-limit-whitelist": "192.168.1.1",
@@ -168,10 +186,14 @@ func TestReqRateLimit_Whitelist(t *testing.T) {
 
 			// Process rate-limit-whitelist annotation
 			ann := reqRateLimit.NewAnnotation("rate-limit-whitelist")
-			err = ann.Process(store.K8s{}, tt.annotations)
+			err = ann.Process(testPatternFilesStore("whitelist", "whitelist1", "whitelist2"), tt.annotations)
 
 			if tt.wantErr {
 				assert.Error(t, err)
+				if reqRateLimit.limit != nil {
+					assert.Empty(t, reqRateLimit.limit.WhitelistIPs)
+					assert.Empty(t, reqRateLimit.limit.WhitelistMaps)
+				}
 				return
 			}
 
@@ -193,6 +215,23 @@ func TestReqRateLimit_Whitelist(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestRateLimitRejectsInvalidPatternContents(t *testing.T) {
+	k := testPatternFilesStore("ips", "names")
+	k.ConfigMaps.PatternFiles.Annotations["names"] = "not-an-ip\n"
+	list := &rules.List{}
+	rateLimit := NewReqRateLimit(list, newRecordingMaps())
+	annotations := map[string]string{
+		"rate-limit-requests":  "100",
+		"rate-limit-whitelist": "10.0.0.1, patterns/ips, patterns/names",
+	}
+	require.NoError(t, rateLimit.NewAnnotation("rate-limit-requests").Process(k, annotations))
+	require.Error(t, rateLimit.NewAnnotation("rate-limit-whitelist").Process(k, annotations))
+	assert.Len(t, *list, 2)
+	assert.Equal(t, int64(100), rateLimit.limit.ReqsLimit)
+	assert.Empty(t, rateLimit.limit.WhitelistIPs)
+	assert.Empty(t, rateLimit.limit.WhitelistMaps)
 }
 
 // TestReqRateLimit_WhitelistWithPeriod tests the integration of rate-limit-whitelist with rate-limit-period.
