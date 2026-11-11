@@ -30,6 +30,10 @@ The most important difference is security part of it. With custom annotations th
 
 Custom annotations have validation. [Common Expression language](https://github.com/google/cel-spec) is used to write rules. Rules can be simple or strict. The more strict rule is there is less chance of accidental mistake.
 
+Custom annotation string values cannot contain `#` or control characters.
+This restriction also applies recursively to JSON object keys and string values, including strings inside arrays.
+JSON formatting and administrator-defined templates can span multiple lines.
+
 ### Speed of delivery
 
 While number of annotations have grown over time in this project, no two deployments are the same. Company A needs different customization than Company B. While purpose of this project is to cover all possible ideas and setups our users might need, it is not possible to cover all use cases with (in the end) limited number of resources and time. With custom annotation there is no need to wait until new annotation is accepted, developed and released, we can simply create a new one, deploy it and start using it immediately after we deploy it.
@@ -347,6 +351,11 @@ Defaults are deployment data: the value that should apply everywhere goes in the
       type: duration # expected data type for conversion (duration;int;uint;bool;string;float;json;)
       rule: "value > duration('42s') && value <= duration('42m')" # CEL expression
 ```
+
+A namespace-restricted rule matches a backend using the Ingress namespace.
+If no Ingress exists, it uses the Service namespace.
+If neither namespace is available, the rule does not match.
+Frontend annotations have no namespace context, so namespace-restricted rules do not match them.
 
 ## How do I create frontend annotations ?
 
