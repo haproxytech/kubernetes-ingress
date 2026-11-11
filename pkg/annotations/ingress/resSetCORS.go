@@ -70,6 +70,11 @@ func (a ResSetCORSAnn) Process(k store.K8s, annotations ...map[string]string) (e
 		if a.parent.acl == "" {
 			return err
 		}
+		input = strings.TrimSpace(input)
+		// A leading '-' is an ACL flag that can swallow the closing brace.
+		if word, ok := common.UnquotedWord(input); !ok || word == "{" || word == "}" || strings.HasPrefix(word, "-") {
+			return fmt.Errorf("incorrect value in %s annotation: expected one regex token", a.name)
+		}
 		// Access-Control-Allow-Origin = *
 		origin := "*"
 		if input != "*" {
@@ -112,6 +117,11 @@ func (a ResSetCORSAnn) Process(k store.K8s, annotations ...map[string]string) (e
 			return err
 		}
 		input = strings.Join(strings.Fields(input), "") // strip spaces
+		for _, header := range strings.Split(input, ",") {
+			if !common.ValidHeaderName(header) || strings.ContainsAny(header, "'$#") {
+				return fmt.Errorf("incorrect header name in %s annotation", a.name)
+			}
+		}
 		a.parent.rules.Add(rules.SetHdr{
 			HdrName:       "Access-Control-Allow-Headers",
 			HdrFormat:     common.EnsureQuoted(input),
