@@ -345,6 +345,10 @@ validation_rules:
     type: json
     rule: "true"
     template: "http-request set-header X-{{.key}} {{.value}}"
+  comment-template:
+    type: string
+    rule: "true"
+    template: "# comment\nhttp-request set-header X-Custom {{.value}}"
 `)
 	v, err := validators.Get()
 	assert.NoError(t, err)
@@ -377,6 +381,48 @@ validation_rules:
 			ruleName: "json-template",
 			value:    `{"key": "MyKey", "value": "MyValue"}`,
 			expected: "http-request set-header X-MyKey MyValue",
+		},
+		{
+			name:     "Multiline JSON document",
+			ruleName: "json-template",
+			value:    "{\n  \"key\": \"MyKey\",\n  \"value\": \"MyValue\"\n}",
+			expected: "http-request set-header X-MyKey MyValue",
+		},
+		{
+			name:     "Comment in template",
+			ruleName: "comment-template",
+			value:    "bar",
+			expected: "# comment\nhttp-request set-header X-Custom bar",
+		},
+		{
+			name:     "Comment in string value",
+			ruleName: "with-template",
+			value:    "bar #",
+			wantErr:  true,
+		},
+		{
+			name:     "Comment in no-template value",
+			ruleName: "no-template",
+			value:    "foo #",
+			wantErr:  true,
+		},
+		{
+			name:     "Newline in string value",
+			ruleName: "with-template",
+			value:    "bar\nhttp-request deny",
+			wantErr:  true,
+		},
+		{
+			name:     "Comment in JSON field",
+			ruleName: "json-template",
+			value:    `{"key": "MyKey", "value": "a #"}`,
+			wantErr:  true,
+		},
+		{
+			name:     "Newline in JSON field",
+			ruleName: "json-template",
+			value:    `{"key": "MyKey", "value": "a\nb"}`,
+			wantErr:  true,
 		},
 		{
 			name:     "Rule not found",
