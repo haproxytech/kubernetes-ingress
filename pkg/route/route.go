@@ -21,6 +21,7 @@ import (
 
 	"github.com/haproxytech/client-native/v6/models"
 
+	"github.com/haproxytech/kubernetes-ingress/pkg/annotations/common"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/api"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/maps"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/rules"
@@ -75,6 +76,10 @@ func (r Row) Line() string {
 func MapRows(route Route) ([]Row, error) {
 	if route.BackendName == "" {
 		return nil, errors.New("backendName missing")
+	}
+	// Map files end a key at a blank and a row at a newline.
+	if strings.ContainsFunc(route.Path.Path, func(r rune) bool { return r <= ' ' || r == 0x7f }) {
+		return nil, fmt.Errorf("path %q contains a blank or control character", route.Path.Path)
 	}
 	// Wildcard host
 	if route.Host != "" && route.Host[0] == '*' {
@@ -135,6 +140,12 @@ func AddHostPathRoute(route Route, mapFiles maps.Maps) error {
 
 // AddCustomRoute adds an ingress route with specific ACL via use_backend haproxy directive
 func AddCustomRoute(route Route, routeACLAnn string, api api.HAProxyClient) (err error) {
+	if err = validateRouteACL(routeACLAnn); err != nil {
+		return err
+	}
+	if _, ok := common.UnquotedWord(route.Path.Path); route.Path.Path != "" && !ok {
+		return fmt.Errorf("path %q cannot be used with route-acl", route.Path.Path)
+	}
 	var routeCond string
 	if route.Host != "" {
 		if route.Host[0] == '*' {
@@ -172,6 +183,31 @@ func AddCustomRoute(route Route, routeACLAnn string, api api.HAProxyClient) (err
 
 	CustomRoutes = append(CustomRoutes, routeCond)
 	return err
+}
+
+// validateRouteACL rejects text that could close the wrapped ACL block and
+// replace the generated host/path scope with a condition of its own.
+func validateRouteACL(value string) error {
+	if strings.ContainsAny(value, "{}") {
+		return fmt.Errorf("incorrect route-acl value %q: braces are not allowed", value)
+	}
+	if strings.ContainsAny(value, `"'`) {
+		return fmt.Errorf("incorrect route-acl value %q: quotes are not allowed", value)
+	}
+	if common.HasCommentChar(value) || common.HasControlChar(value) {
+		return fmt.Errorf("incorrect route-acl value %q: comment and control characters are not allowed", value)
+	}
+	words := strings.FieldsFunc(value, func(r rune) bool { return r == ' ' })
+	for _, word := range words {
+		if decoded, ok := common.UnquotedWord(word); !ok || decoded == "{" || decoded == "}" {
+			return fmt.Errorf("incorrect route-acl value %q: invalid escape sequence", value)
+		}
+	}
+	// A trailing flag would take the closing brace as its argument.
+	if len(words) > 0 && strings.HasPrefix(words[len(words)-1], "-") {
+		return fmt.Errorf("incorrect route-acl value %q: it cannot end with a flag", value)
+	}
+	return nil
 }
 
 func CustomRoutesReset(api api.HAProxyClient) (err error) {
