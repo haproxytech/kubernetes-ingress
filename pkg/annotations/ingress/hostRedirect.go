@@ -49,6 +49,10 @@ func (a HostRedirectAnn) Process(k store.K8s, annotations ...map[string]string) 
 
 	switch a.name {
 	case "request-redirect":
+		input = strings.TrimSpace(input)
+		if input == "" || strings.ContainsAny(input, " {}\"'\\") {
+			return fmt.Errorf("incorrect value in %s annotation: expected one unquoted token", a.name)
+		}
 		a.parent.redirect = &rules.RequestRedirect{Host: input}
 		switch {
 		case strings.HasPrefix(input, HTTPS_PREFIX):

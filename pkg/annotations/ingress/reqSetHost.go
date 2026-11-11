@@ -1,6 +1,9 @@
 package ingress
 
 import (
+	"fmt"
+	"strings"
+
 	"github.com/haproxytech/kubernetes-ingress/pkg/annotations/common"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/rules"
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
@@ -23,6 +26,10 @@ func (a *ReqSetHost) Process(k store.K8s, annotations ...map[string]string) (err
 	input := common.GetValue(a.GetName(), annotations...)
 	if input == "" {
 		return err
+	}
+	input = strings.TrimSpace(input)
+	if input == "" || strings.ContainsAny(input, " {}\"'\\") {
+		return fmt.Errorf("incorrect value in %s annotation: expected one unquoted token", a.name)
 	}
 	a.rules.Add(&rules.SetHdr{
 		HdrName:   "Host",
