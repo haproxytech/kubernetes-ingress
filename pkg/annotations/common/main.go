@@ -3,15 +3,35 @@ package common
 import (
 	"errors"
 	"strings"
+
+	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
 )
 
+var logger = utils.GetLogger()
+
+// multiLineAnnotations are the annotations whose value is split into lines.
+var multiLineAnnotations = map[string]struct{}{
+	"path-rewrite":        {},
+	"request-capture":     {},
+	"request-set-header":  {},
+	"response-set-header": {},
+	"syslog-server":       {},
+}
+
 // GetValue returns value by checking in multiple annotations.
+// A value holding CR or LF is discarded for annotations that take a single line:
+// one line of tenant input must never become several HAProxy directives.
 func GetValue(annotationName string, annotations ...map[string]string) string {
 	for _, a := range annotations {
 		val, ok := a[annotationName]
-		if ok {
-			return val
+		if !ok {
+			continue
 		}
+		if _, multiLine := multiLineAnnotations[annotationName]; !multiLine && strings.ContainsAny(val, "\r\n") {
+			logger.Warningf("annotation %q: multiline value discarded, this annotation takes a single line", annotationName)
+			return DefaultValues[annotationName]
+		}
+		return val
 	}
 	return DefaultValues[annotationName]
 }

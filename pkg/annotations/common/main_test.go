@@ -27,3 +27,22 @@ func TestIsSet(t *testing.T) {
 	require.False(t, IsSet("load-balance", annotations), "absent annotation is not set")
 	require.False(t, IsSet("check"), "no maps means nothing is set")
 }
+
+func TestGetValueMultiline(t *testing.T) {
+	annotations := map[string]string{
+		"check":            "true\nhttp-request deny",
+		"set-host":         "evil.local\r\nhttp-request deny",
+		"path-rewrite":     "/foo/(.*) /\\1\n/bar/(.*) /baz/\\1",
+		"syslog-server":    "address:127.0.0.1, port:514\naddress:127.0.0.2, port:514",
+		"load-balance":     "roundrobin",
+		"request-redirect": "example.com\n",
+		"request-capture":  "hdr(Host)\nhdr(User-Agent)",
+	}
+	require.Equal(t, "true", GetValue("check", annotations), "multiline value falls back to the default")
+	require.Equal(t, "", GetValue("set-host", annotations), "CR is discarded too")
+	require.Equal(t, "", GetValue("request-redirect", annotations), "trailing LF is discarded")
+	require.Equal(t, "roundrobin", GetValue("load-balance", annotations), "single-line value is kept")
+	require.Equal(t, annotations["path-rewrite"], GetValue("path-rewrite", annotations), "path-rewrite takes multiple lines")
+	require.Equal(t, annotations["request-capture"], GetValue("request-capture", annotations), "request-capture takes multiple lines")
+	require.Equal(t, annotations["syslog-server"], GetValue("syslog-server", annotations), "syslog-server takes multiple lines")
+}
