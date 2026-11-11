@@ -35,6 +35,11 @@ func (a *ReqPathRewrite) Process(k store.K8s, annotations ...map[string]string) 
 	}
 	for _, rule := range strings.Split(input, "\n") {
 		parts := strings.Fields(strings.TrimSpace(rule))
+		for _, part := range parts {
+			if _, ok := common.UnquotedWord(part); !ok {
+				return fmt.Errorf("incorrect value '%s' in %s annotation", part, a.GetName())
+			}
+		}
 
 		var rewrite *rules.ReqPathRewrite
 		switch len(parts) {
