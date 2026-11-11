@@ -264,6 +264,14 @@ validation_rules:
 			expected: []string{},
 		},
 		{
+			name: "Namespace specific rule, empty namespace",
+			annotations: map[string]string{
+				"namespace-specific-rule": "foo",
+			},
+			filters:  validators.FilterValues{Section: "backend"},
+			expected: []string{},
+		},
+		{
 			name: "Ingress specific rule, matching",
 			annotations: map[string]string{
 				"ingress-specific-rule": "foo",
