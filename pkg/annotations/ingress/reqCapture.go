@@ -2,6 +2,7 @@ package ingress
 
 import (
 	"fmt"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -35,6 +36,22 @@ func (a ReqCaptureAnn) GetName() string {
 	return a.name
 }
 
+var captureExpression = regexp.MustCompile(`^[A-Za-z0-9_.+-]+(?:\(.*\))?(?:,[A-Za-z0-9_.+-]+(?:\(.*\))?)*$`)
+
+func validCaptureExpression(sample string) bool {
+	words := strings.FieldsFunc(sample, func(r rune) bool { return r == ' ' })
+	for i, word := range words {
+		if _, ok := common.UnquotedWord(word); !ok || !captureExpression.MatchString(word) {
+			return false
+		}
+		// Later words must not become capture or condition directives.
+		if i > 0 && (word == "len" || word == "id" || word == "if" || word == "unless") {
+			return false
+		}
+	}
+	return len(words) > 0
+}
+
 func (a ReqCaptureAnn) Process(k store.K8s, annotations ...map[string]string) (err error) {
 	input := common.GetValue(a.GetName(), annotations...)
 	if input == "" {
@@ -43,16 +60,19 @@ func (a ReqCaptureAnn) Process(k store.K8s, annotations ...map[string]string) (e
 
 	switch a.name {
 	case "request-capture":
-		var reqCapture *rules.ReqCapture
+		var captures []*rules.ReqCapture
 		for _, sample := range strings.Split(input, "\n") {
 			if sample == "" {
 				continue
 			}
-			reqCapture = &rules.ReqCapture{
-				Expression: sample,
+			if !validCaptureExpression(sample) {
+				return fmt.Errorf("incorrect value '%s' in %s annotation", sample, a.GetName())
 			}
-			a.parent.capture = append(a.parent.capture, reqCapture)
-			a.parent.rules.Add(reqCapture)
+			captures = append(captures, &rules.ReqCapture{Expression: sample})
+		}
+		for _, capture := range captures {
+			a.parent.capture = append(a.parent.capture, capture)
+			a.parent.rules.Add(capture)
 		}
 	case "request-capture-len":
 		if len(a.parent.capture) == 0 {

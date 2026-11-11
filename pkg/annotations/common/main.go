@@ -36,6 +36,22 @@ func GetValue(annotationName string, annotations ...map[string]string) string {
 	return DefaultValues[annotationName]
 }
 
+// HasCommentChar reports whether s holds '#'; HAProxy starts a comment there
+// even mid-token, which would absorb the scope condition appended after it.
+func HasCommentChar(s string) bool {
+	return strings.ContainsRune(s, '#')
+}
+
+// HasControlChar reports whether s holds a control character.
+func HasControlChar(s string) bool {
+	for _, r := range s {
+		if r < 0x20 || r == 0x7f {
+			return true
+		}
+	}
+	return false
+}
+
 // GetMatch returns all matches of the annotation prefix name in the provided annotations.
 func GetMatch(annotationPrefix string, annotations ...map[string]string) map[string]string {
 	result := map[string]string{}

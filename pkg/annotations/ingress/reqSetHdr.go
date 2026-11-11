@@ -38,13 +38,34 @@ func (a *SetHdr) Process(k store.K8s, annotations ...map[string]string) (err err
 		}
 		indexSpace := strings.IndexByte(param, ' ')
 		if indexSpace == -1 {
-			return fmt.Errorf("incorrect value '%s' in request-set-header annotation", param)
+			return fmt.Errorf("incorrect value in %s annotation", a.name)
+		}
+		hdrName, hdrValue := param[:indexSpace], param[indexSpace+1:]
+		if !common.ValidHeaderName(hdrName) || strings.ContainsAny(hdrName, "'$#") {
+			return fmt.Errorf("incorrect header name '%s' in %s annotation", hdrName, a.name)
+		}
+		if !safeHeaderValue(hdrValue) {
+			return fmt.Errorf("incorrect value for header '%s' in %s annotation", hdrName, a.name)
 		}
 		a.rules.Add(&rules.SetHdr{
-			HdrName:   param[:indexSpace],
-			HdrFormat: common.EnsureQuoted(param[indexSpace+1:]),
+			HdrName:   hdrName,
+			HdrFormat: common.EnsureQuoted(hdrValue),
 			Response:  a.response,
 		})
 	}
 	return err
+}
+
+// safeHeaderValue reports whether EnsureQuoted keeps the value in one
+// non-empty quoted token. Inside quotes, '\' escapes, '$' expands the
+// environment, and an embedded quote ends the token early.
+func safeHeaderValue(value string) bool {
+	if common.HasControlChar(value) || strings.ContainsAny(value, `\$`) {
+		return false
+	}
+	if len(value) >= 2 && value[0] == '"' && value[len(value)-1] == '"' {
+		value = value[1 : len(value)-1]
+	}
+	// HAProxy reads an empty quoted argument as the end of the line.
+	return value != "" && !strings.ContainsRune(value, '"')
 }
