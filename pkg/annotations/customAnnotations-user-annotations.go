@@ -101,14 +101,17 @@ func renderBackendCustomAnnotations(customAnnotations map[string]string, a *Cust
 		"FRONTEND": a.frontend,
 	}
 	if a.ingress != nil {
-		env["NAMESPACE"] = a.ingress.Namespace
 		env["INGRESS"] = a.ingress.Name
-		filterValues.Namespace = a.ingress.Namespace
 		filterValues.Ingress = a.ingress.Name
 	}
 	if a.service != nil {
 		env["SERVICE"] = a.service.Name
 		filterValues.Service = a.service.Name
+	}
+	// TCP services and the default backend are not owned by an ingress.
+	if ns := snippetNamespace(a); ns != "" {
+		env["NAMESPACE"] = ns
+		filterValues.Namespace = ns
 	}
 	keys := validator.GetSortedAnnotationKeys(
 		customAnnotations, filterValues,
@@ -159,4 +162,15 @@ func renderBackendCustomAnnotations(customAnnotations map[string]string, a *Cust
 		}
 		recordBackendCustomAnnotation(a.backend, origin, rdata, len(keys)-index+1)
 	}
+}
+
+// snippetNamespace returns the ingress namespace, falling back to the service one.
+func snippetNamespace(a *CustomAnnotations) string {
+	if a.ingress != nil {
+		return a.ingress.Namespace
+	}
+	if a.service != nil {
+		return a.service.Namespace
+	}
+	return ""
 }
