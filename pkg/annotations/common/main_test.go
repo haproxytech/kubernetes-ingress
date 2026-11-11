@@ -33,6 +33,25 @@ func TestHasControlChar(t *testing.T) {
 	require.False(t, HasControlChar("bar baz"))
 }
 
+func TestGetValueCommentChar(t *testing.T) {
+	annotations := map[string]string{
+		"set-host":                "evil.local #",
+		"auth-realm":              "realm #",
+		"check":                   "true #",
+		"log-format":              "%ci # %cp",
+		"path-rewrite":            "(.*) /foo#bar",
+		"request-set-header":      `X-Foo "bar#baz"`,
+		"frontend-config-snippet": "unique-id-header X-Unique-ID # comment",
+	}
+	require.Equal(t, "", GetValue("set-host", annotations), "'#' would comment out the scope guard")
+	require.Equal(t, "Protected Content", GetValue("auth-realm", annotations), "'#' falls back to the default realm")
+	require.Equal(t, "true", GetValue("check", annotations), "'#' falls back to the default")
+	require.Equal(t, "", GetValue("log-format", annotations), "'#' is rejected in single-line annotations")
+	require.Equal(t, "", GetValue("path-rewrite", annotations), "'#' is rejected in multiline annotations too")
+	require.Equal(t, "", GetValue("request-set-header", annotations), "'#' is rejected even inside quotes")
+	require.Equal(t, annotations["frontend-config-snippet"], GetValue("frontend-config-snippet", annotations), "snippets carry HAProxy config where '#' is a comment")
+}
+
 func TestGetValueMultiline(t *testing.T) {
 	annotations := map[string]string{
 		"check":            "true\nhttp-request deny",
@@ -50,4 +69,18 @@ func TestGetValueMultiline(t *testing.T) {
 	require.Equal(t, annotations["path-rewrite"], GetValue("path-rewrite", annotations), "path-rewrite takes multiple lines")
 	require.Equal(t, annotations["request-capture"], GetValue("request-capture", annotations), "request-capture takes multiple lines")
 	require.Equal(t, annotations["syslog-server"], GetValue("syslog-server", annotations), "syslog-server takes multiple lines")
+}
+
+func TestGetValueRejectsSingleLineControls(t *testing.T) {
+	for control := rune(0); control <= 0x7f; control++ {
+		if control >= 0x20 && control != 0x7f {
+			continue
+		}
+		values := map[string]string{
+			"set-host":   "host" + string(control) + "if TRUE",
+			"auth-realm": "realm" + string(control) + "if TRUE",
+		}
+		require.Empty(t, GetValue("set-host", values), "control %#x", control)
+		require.Equal(t, DefaultValues["auth-realm"], GetValue("auth-realm", values), "control %#x", control)
+	}
 }
