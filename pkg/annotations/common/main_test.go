@@ -28,6 +28,19 @@ func TestIsSet(t *testing.T) {
 	require.False(t, IsSet("check"), "no maps means nothing is set")
 }
 
+func TestHasCommentChar(t *testing.T) {
+	require.True(t, HasCommentChar("bar#baz"), "mid-token '#' starts a comment")
+	require.True(t, HasCommentChar("#"))
+	require.False(t, HasCommentChar("bar baz"))
+}
+
+func TestHasControlChar(t *testing.T) {
+	require.True(t, HasControlChar("bar\r"))
+	require.True(t, HasControlChar("bar\tbaz"))
+	require.True(t, HasControlChar("bar\x7f"))
+	require.False(t, HasControlChar("bar baz"))
+}
+
 func TestGetValueMultiline(t *testing.T) {
 	annotations := map[string]string{
 		"check":            "true\nhttp-request deny",

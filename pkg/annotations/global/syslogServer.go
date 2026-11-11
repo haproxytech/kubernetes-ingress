@@ -58,6 +58,9 @@ func (a *SyslogServers) Process(k store.K8s, annotations ...map[string]string) e
 			if len(parts) != 2 {
 				return fmt.Errorf("incorrect syslog param: '%s' in '%s'", param, syslogLine)
 			}
+			if common.HasCommentChar(parts[1]) || common.HasControlChar(parts[1]) {
+				return fmt.Errorf("incorrect syslog param: '%s' in '%s'", param, syslogLine)
+			}
 			logParams[parts[0]] = parts[1]
 		}
 		// populate annotation data
