@@ -586,6 +586,9 @@ groups:
     header: |-
       - Access control is disabled by default
       - Access control can be set for all traffic (annotation on configmap) or for a set of hosts (annotation on ingress)
+      - An invalid non-empty access-control list denies the affected route. An invalid main ConfigMap list denies access globally.
+      - Pattern references require a key in the ConfigMap configured by `--configmap-patternfiles`.
+      - Each non-empty, non-comment pattern line must contain a valid IP address or CIDR.
   config-snippet:
     header: |-
       - Insert raw HAProxy configuration in specific HAProxy config sections.
@@ -653,6 +656,9 @@ annotations:
     tip:
       - Encrypted passwords are evaluated using the crypt(3) function, so depending on the system's capabilities, different algorithms are supported.
       - Unencrypted passwords (used with HAProxy [insecure-password](https://docs.haproxy.org/2.8/configuration.html#3.4-user) ) **are not accepted**.
+      - Usernames and passwords cannot contain spaces, control characters, `#`, quotes, or backslashes. Invalid credentials are ignored.
+      - One trailing LF in a password is removed for compatibility. Additional trailing control characters are invalid.
+      - Outside an Ingress, the Secret path must include its namespace.
     values:
       - |-
         The annotation format is a secret path *namespace/secretName*. If the namespace is omitted (path is only *secretName*) then the ingress namespace will be used.
@@ -685,7 +691,8 @@ annotations:
     default: "Protected Content"
     description:
       - Provides the HTTP Authentication Realm
-    tip: []
+    tip:
+      - The realm cannot contain quotes, braces, backslashes, or `$`.
     values:
       - Realm name
     applies_to:
@@ -705,7 +712,7 @@ annotations:
       - The value is treated as a pattern file (see `--configmap-patternfiles`) if it starts with `patterns/`. It should consist of a list of IPs or CIDRs, one per line.
     values:
       - Comma-separated list of IP addresses and/or CIDR ranges
-      - Path to a pattern file, e.g. `pattern/ips`
+      - Path to a pattern file, e.g. `patterns/ips`
     applies_to:
       - configmap
       - ingress
@@ -722,7 +729,7 @@ annotations:
       - The value is treated as a pattern file (see `--configmap-patternfiles`) if it starts with `patterns/`. It should consist of a list of IPs or CIDRs, one per line.
     values:
       - Comma-separated list of IP addresses and/or CIDR ranges
-      - Path to a pattern file, e.g. `pattern/ips`
+      - Path to a pattern file, e.g. `patterns/ips`
     applies_to:
       - configmap
       - ingress
@@ -917,6 +924,8 @@ annotations:
       - Sets the `Access-Control-Allow-Origin` response header to tell browsers which origin is allowed to access the requested resource.
     tip:
       - With "regex" value, it is possible to allow a list of origins. If one of them matches the request Origin header it will be returned to the client.
+      - The regex must be one token without spaces or quotes. It cannot start with `-` or end with a backslash.
+      - A `\x` escape must have two hexadecimal digits and must not encode a brace or a control character.
     values:
       - Wildcard `*`, allow access form any origin.
       - Regex, regex should match an origin (request Origin header) in the format `<scheme> "://" <hostname> [ ":" <port> ]` if the origin is matched then it will be the value of `Access-Control-Allow-Origin`.
@@ -1156,9 +1165,10 @@ annotations:
     default: "null"
     description:
       - Set the source IP from a header rather than the L3 connection.
-    tip: []
+    tip:
+      - The name must be a valid HTTP header field name without quotes or `$`.
     values:
-      - "any header name"
+      - "HTTP header name"
     applies_to:
       - configmap
       - ingress
@@ -1386,7 +1396,9 @@ annotations:
     default: ""
     description:
       - Replaces the entire URL path with the given value.
-    tip: []
+    tip:
+      - Each parameter must be one word without quotes and must not end with a backslash.
+      - A `\x` escape must have two hexadecimal digits and must not encode a control character.
     values:
       - A single path, such as "/", to turn any path into "/"
       - Two parameters. A regular expression to match and a path to replace it with.
@@ -1542,6 +1554,7 @@ annotations:
     tip:
       - When both rate limiting and a whitelist are configured, only clients NOT in
         the whitelist will be subject to rate limiting.
+      - Pattern references require a declared `--configmap-patternfiles` ConfigMap key with valid IP or CIDR lines.
     values:
       - Comma-separated list of IP addresses and/or CIDR ranges (e.g., `10.0.0.0/8,
         192.168.1.100`)
@@ -1573,6 +1586,8 @@ annotations:
     tip:
       - Captures samples of the request using [sample expression](#sample-expression)
         and log them in HAProxy traffic logs.
+      - The controller rejects sample expressions containing unsafe syntax.
+      - Expressions cannot contain quotes, and arguments cannot contain spaces.
       - '**Important**: When capturing headers that may contain commas (like `User-Agent`),
         use `req.fhdr(header-name)` instead of `hdr(header-name)`. The `hdr()` function
         splits values on commas, which can result in truncated or malformed log entries.
@@ -1633,6 +1648,7 @@ annotations:
         you want to change the Host header this will impact HAProxy decision on which
         service/backend to use (based on matching Host against ingress rules). In order
         to set the Host header after service selection, use [set-host](#set-host) annotation.
+      - Header values cannot be empty or contain backslashes, `$`, or control characters.
     values:
       - The name of the field, following by its value, e.g. Ingress-ID abcd123
       - Multiple headers can be set using a multiline YAML string
@@ -1666,6 +1682,7 @@ annotations:
     tip:
       - HTTP redirection code is settable with `request-redirect-code` annotation.
       - Port alone is not allowed.
+      - The value must be one token without spaces, braces, quotes, or backslashes.
     values:
       - host
       - host:port
@@ -1697,7 +1714,8 @@ annotations:
     default: ""
     description:
       - Sets an HTTP header in the response before it is passed to the client.
-    tip: []
+    tip:
+      - Header values cannot be empty or contain backslashes, `$`, or control characters.
     values:
       - The name of the field, following by its value, e.g. Cache-Control "no-store,no-cache,private"
       - Multiple headers can be set using a multiline YAML string
@@ -1730,6 +1748,9 @@ annotations:
       - Insert a custom route (use_backend rule) to route ingress traffic to the annotated service based on the provided ACL.
     tip:
       - In order for the service to be handled by the Ingress Controller, it is still mandatory to put it in an ingress rule. Using only `route-acl` won't be enough.
+      - The ACL cannot contain braces, quotes, `#`, or control characters. It cannot end with a flag or a backslash.
+      - A `\x` escape must have two hexadecimal digits and must not encode a brace or a control character.
+      - Ingress paths routed with this annotation cannot contain spaces, quotes, or invalid backslash escapes.
       - |
           Note that this annotation is not compatible with an Ingress having multiple paths that will match a request.
           Without this annotation, the precedence  is given first to the longest matching path.
@@ -1844,7 +1865,8 @@ annotations:
     default: ""
     description:
       - Sets the Host header to send to backend services.
-    tip: []
+    tip:
+      - The value must be one token without spaces, braces, quotes, or backslashes.
     values:
       - The value of the Host header
     applies_to:
@@ -2339,7 +2361,7 @@ annotations:
       - The value is treated as a pattern file (see `--configmap-patternfiles`) if it starts with `patterns/`. It should consist of a list of IPs or CIDRs, one per line.
     values:
       - Comma-separated list of IP addresses and/or CIDR ranges
-      - Path to a pattern file, e.g. `pattern/ips`
+      - Path to a pattern file, e.g. `patterns/ips`
     applies_to:
       - configmap
       - ingress
@@ -2356,7 +2378,7 @@ annotations:
       - The value is treated as a pattern file (see `--configmap-patternfiles`) if it starts with `patterns/`. It should consist of a list of IPs or CIDRs, one per line.
     values:
       - Comma-separated list of IP addresses and/or CIDR ranges
-      - Path to a pattern file, e.g. `pattern/ips`
+      - Path to a pattern file, e.g. `patterns/ips`
     applies_to:
       - configmap
       - ingress
