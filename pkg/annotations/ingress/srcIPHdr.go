@@ -1,6 +1,9 @@
 package ingress
 
 import (
+	"fmt"
+	"strings"
+
 	"github.com/haproxytech/kubernetes-ingress/pkg/annotations/common"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/rules"
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
@@ -29,6 +32,10 @@ func (a *SrcIPHdr) Process(k store.K8s, annotations ...map[string]string) (err e
 	input := common.GetValue(a.GetName(), annotations...)
 	if input == "" {
 		return err
+	}
+	input = strings.TrimSpace(input)
+	if !common.ValidHeaderName(input) || strings.ContainsAny(input, "'$#") {
+		return fmt.Errorf("incorrect header name in %s annotation", a.name)
 	}
 	a.rules.Add(&rules.ReqSetSrc{
 		HeaderName: input,
