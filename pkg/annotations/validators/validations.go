@@ -18,6 +18,8 @@ import (
 	"github.com/google/cel-go/common/types"
 	durationpb "google.golang.org/protobuf/types/known/durationpb"
 	"gopkg.in/yaml.v3"
+
+	"github.com/haproxytech/kubernetes-ingress/pkg/annotations/common"
 )
 
 // AnnType defines the type of annotation used in the validation rules.
@@ -333,6 +335,9 @@ func (v *Validator) GetResult(ruleName string, value string, envValues map[strin
 	if !ok {
 		return "", fmt.Errorf("no validation rule found for '%s'", ruleName)
 	}
+	if err := checkRuleValue(rule.Type, value); err != nil {
+		return "", fmt.Errorf("rule '%s': %w", ruleName, err)
+	}
 	// Check if the rule has a pattern defined
 	if rule.Template == "" {
 		return ruleName + " " + value, nil
@@ -387,6 +392,51 @@ func (v *Validator) GetResult(ruleName string, value string, envValues map[strin
 	return result.String(), nil
 }
 
+// checkRuleValue rejects tenant input that would break out of the rendered
+// directive: HAProxy starts a comment at '#' even mid-token, and CR/LF split
+// the value into several directives. A JSON document may span lines, only its
+// string fields are checked.
+func checkRuleValue(ruleType AnnType, value string) error {
+	if ruleType != JSONType {
+		return checkTenantString(value)
+	}
+	var jsonData map[string]any
+	if err := json.Unmarshal([]byte(value), &jsonData); err != nil {
+		return nil // GetResult reports the malformed JSON
+	}
+	return checkTenantValue(jsonData)
+}
+
+func checkTenantValue(value any) error {
+	switch v := value.(type) {
+	case string:
+		return checkTenantString(v)
+	case []any:
+		for _, item := range v {
+			if err := checkTenantValue(item); err != nil {
+				return err
+			}
+		}
+	case map[string]any:
+		for key, item := range v {
+			if err := checkTenantString(key); err != nil {
+				return err
+			}
+			if err := checkTenantValue(item); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func checkTenantString(value string) error {
+	if common.HasCommentChar(value) || common.HasControlChar(value) {
+		return fmt.Errorf("value %q contains '#' or a control character", value)
+	}
+	return nil
+}
+
 // FilterValues is a struct that holds the filter values for the GetSortedAnnotationKeys method
 type FilterValues struct {
 	Section   string
@@ -432,9 +482,8 @@ func (v *Validator) GetSortedAnnotationKeys(annotations map[string]string, filte
 			}
 		}
 
-		if len(rule.Namespaces) > 0 && filters.Namespace != "" {
-			found := slices.Contains(rule.Namespaces, filters.Namespace)
-			if !found {
+		if len(rule.Namespaces) > 0 {
+			if filters.Namespace == "" || !slices.Contains(rule.Namespaces, filters.Namespace) {
 				continue
 			}
 		}
