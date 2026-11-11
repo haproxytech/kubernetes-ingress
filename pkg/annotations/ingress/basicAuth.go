@@ -1,6 +1,7 @@
 package ingress
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
@@ -56,6 +57,9 @@ func (a ReqAuthAnn) Process(k store.K8s, annotations ...map[string]string) (err 
 		if a.parent.authRule == nil {
 			return err
 		}
+		if common.HasControlChar(input) || strings.ContainsAny(input, `"'\{}$`) {
+			return errors.New("incorrect auth-realm value")
+		}
 		a.parent.authRule.AuthRealm = strings.ReplaceAll(input, " ", "-")
 	case "auth-secret":
 		if a.parent.authRule == nil {
@@ -68,6 +72,10 @@ func (a ReqAuthAnn) Process(k store.K8s, annotations ...map[string]string) (err 
 			return err
 		}
 		if ns == "" {
+			if a.parent.ingress == nil {
+				err = fmt.Errorf("auth-secret '%s' has no namespace outside an ingress", name)
+				return err
+			}
 			ns = a.parent.ingress.Namespace
 		}
 		secret, _ = k.GetSecret(ns, name)
@@ -80,8 +88,11 @@ func (a ReqAuthAnn) Process(k store.K8s, annotations ...map[string]string) (err 
 			// This is not a valid setting
 			if len(pwd) > 0 {
 				if pwd[len(pwd)-1] == '\n' {
-					// logger.Warningf("Ingress %s/%s: basic-auth: password for user %s ends with '\\n'. Ignoring last character.", ingress.Namespace, ingress.Name, u)
 					pwd = pwd[:len(pwd)-1]
+				}
+				if errCred := credentialError(u, pwd); errCred != nil {
+					logger.Warningf("Secret '%s/%s': auth-secret: ignoring user '%s': %s", ns, name, u, errCred)
+					continue
 				}
 				a.parent.authRule.Credentials[u] = pwd
 			}
@@ -90,4 +101,28 @@ func (a ReqAuthAnn) Process(k store.K8s, annotations ...map[string]string) (err 
 		err = fmt.Errorf("unknown auth-type annotation '%s'", a.name)
 	}
 	return err
+}
+
+// badCredentialChar rejects separators the unescaped userlist line would interpret.
+func badCredentialChar(s string) (rune, bool) {
+	for _, r := range s {
+		if r <= ' ' || r == 0x7f || r == '#' || r == '"' || r == '\'' || r == '\\' {
+			return r, true
+		}
+	}
+	return 0, false
+}
+
+// credentialError names the field whose value would break the userlist line.
+func credentialError(name string, pwd []byte) error {
+	if len(pwd) == 0 {
+		return errors.New("empty password")
+	}
+	if r, bad := badCredentialChar(name); bad {
+		return fmt.Errorf("invalid character %q in user name", r)
+	}
+	if r, bad := badCredentialChar(string(pwd)); bad {
+		return fmt.Errorf("invalid character %q in password", r)
+	}
+	return nil
 }
