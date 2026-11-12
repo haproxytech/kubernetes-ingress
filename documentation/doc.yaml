@@ -937,6 +937,7 @@ annotations:
       - With "regex" value, it is possible to allow a list of origins. If one of them matches the request Origin header it will be returned to the client.
       - The regex must be one token without spaces or quotes. It cannot start with `-` or end with a backslash.
       - A `\x` escape must have two hexadecimal digits and must not encode a brace or a control character.
+      - The controller asks HAProxy to compile the regex. It ignores the annotation when HAProxy rejects the regex.
     values:
       - Wildcard `*`, allow access form any origin.
       - Regex, regex should match an origin (request Origin header) in the format `<scheme> "://" <hostname> [ ":" <port> ]` if the origin is matched then it will be the value of `Access-Control-Allow-Origin`.
@@ -1407,6 +1408,7 @@ annotations:
     tip:
       - Each parameter must be one word without quotes and must not end with a backslash.
       - A `\x` escape must have two hexadecimal digits and must not encode a control character.
+      - The controller asks HAProxy to compile the regular expression. It ignores the annotation when HAProxy rejects it.
     values:
       - A single path, such as "/", to turn any path into "/"
       - Two parameters. A regular expression to match and a path to replace it with.
@@ -1759,6 +1761,7 @@ annotations:
       - The ACL cannot contain braces, quotes, `#`, or control characters. It cannot end with a flag or a backslash.
       - A `\x` escape must have two hexadecimal digits and must not encode a brace or a control character.
       - Ingress paths routed with this annotation cannot contain spaces, quotes, or invalid backslash escapes.
+      - A path that is not `Exact` is used as a regular expression. The controller skips the route when HAProxy rejects it.
       - |
           Note that this annotation is not compatible with an Ingress having multiple paths that will match a request.
           Without this annotation, the precedence  is given first to the longest matching path.

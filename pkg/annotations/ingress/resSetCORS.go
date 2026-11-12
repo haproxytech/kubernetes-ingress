@@ -73,6 +73,9 @@ func (a ResSetCORSAnn) Process(k store.K8s, annotations ...map[string]string) (e
 		// Access-Control-Allow-Origin = *
 		origin := "*"
 		if input != "*" {
+			if !common.ValidRegex(common.RegexACL, input) {
+				return fmt.Errorf("incorrect value in %s annotation: HAProxy rejects the regex", a.name)
+			}
 			// Access-Control-Allow-Origin = <origin>
 			// only origins in the annotation
 			a.parent.acl = fmt.Sprintf("{ var(txn.%s) -m reg %s }", corsVarName, input)

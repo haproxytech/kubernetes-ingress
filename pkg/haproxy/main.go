@@ -7,6 +7,7 @@ import (
 
 	"github.com/google/renameio/v2"
 
+	"github.com/haproxytech/kubernetes-ingress/pkg/annotations/common"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/api"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/certs"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/env"
@@ -79,6 +80,7 @@ func New(osArgs utils.OSArgs, env env.Env, cfgFile []byte, p process.Process, cl
 	h.Rules = rules
 	if !osArgs.Test {
 		logVersion(h.Binary)
+		common.SetRegexBinary(h.Binary)
 	}
 	return h, err
 }
