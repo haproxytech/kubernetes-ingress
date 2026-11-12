@@ -69,6 +69,9 @@ func (a HTTPSRedirectAnn) Process(k store.K8s, annotations ...map[string]string)
 		if err != nil {
 			return err
 		}
+		if port < 1 || port > 65535 {
+			return fmt.Errorf("incorrect value '%s' in %s annotation: not a port number", input, a.name)
+		}
 		a.parent.redirect.RedirectPort = port
 	case "ssl-redirect-code":
 		if a.parent.redirect == nil {
@@ -78,6 +81,9 @@ func (a HTTPSRedirectAnn) Process(k store.K8s, annotations ...map[string]string)
 		code, err = strconv.ParseInt(input, 10, 64)
 		if err != nil {
 			return err
+		}
+		if !validRedirectCode(code) {
+			return fmt.Errorf("incorrect value '%s' in %s annotation: HAProxy rejects the redirect code", input, a.name)
 		}
 		a.parent.redirect.RedirectCode = code
 	default:

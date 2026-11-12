@@ -16,6 +16,7 @@ package route
 
 import (
 	"os"
+	"os/exec"
 	"path/filepath"
 	"testing"
 
@@ -97,17 +98,43 @@ func TestRoutePathKeepsScope(t *testing.T) {
 }
 
 func TestRoutePathRefusedRegex(t *testing.T) {
-	// The fake HAProxy refuses every rule except the startup probe.
+	// The fake HAProxy refuses rules holding the word REFUSED.
 	binary := filepath.Join(t.TempDir(), "haproxy")
-	script := "#!/bin/sh\nif grep -q probe; then exit 0; fi\nexit 1\n"
+	script := "#!/bin/sh\nif grep -q REFUSED; then exit 1; fi\nexit 0\n"
 	require.NoError(t, os.WriteFile(binary, []byte(script), 0o700)) //nolint:gosec
-	t.Cleanup(func() { common.SetRegexBinary("") })
-	common.SetRegexBinary(binary)
+	t.Cleanup(func() { common.SetHAProxyBinary("") })
+	common.SetHAProxyBinary(binary)
 
 	route := Route{
 		Host:        "example.com",
-		Path:        &store.IngressPath{Path: "/a(", PathTypeMatch: store.PATH_TYPE_PREFIX},
+		Path:        &store.IngressPath{Path: "/REFUSED(", PathTypeMatch: store.PATH_TYPE_PREFIX},
 		BackendName: "ns_svc_http",
 	}
+	require.ErrorContains(t, AddCustomRoute(route, "path_beg /x", nil), "regex")
+
+	route.Path.Path = "/ok"
+	require.ErrorContains(t, AddCustomRoute(route, "REFUSED_fetch -m found", nil), "rejects the ACL")
+}
+
+func TestRouteACLRefusedByHAProxy(t *testing.T) {
+	binary, err := exec.LookPath("haproxy")
+	if err != nil {
+		t.Skip("haproxy is not installed")
+	}
+	t.Cleanup(func() { common.SetHAProxyBinary("") })
+	common.SetHAProxyBinary(binary)
+
+	route := Route{Host: "example.com", Path: &store.IngressPath{Path: "/a"}, BackendName: "ns_svc_http"}
+	for _, acl := range []string{
+		"bogus_fetch /x",
+		"path,bogus /x",
+		"src not-an-address",
+		"path -m bogus /x",
+		"req.hdr(x) -m int abc",
+		"nbsrv(missing_backend) gt 0",
+	} {
+		require.ErrorContains(t, AddCustomRoute(route, acl, nil), "rejects the ACL", acl)
+	}
+	route.Path.Path = "/a("
 	require.ErrorContains(t, AddCustomRoute(route, "path_beg /x", nil), "regex")
 }

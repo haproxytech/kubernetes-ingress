@@ -18,8 +18,8 @@ func refuseRegex(t *testing.T) {
 	binary := filepath.Join(t.TempDir(), "haproxy")
 	script := "#!/bin/sh\nif grep -q REFUSED; then exit 1; fi\nexit 0\n"
 	require.NoError(t, os.WriteFile(binary, []byte(script), 0o700)) //nolint:gosec
-	t.Cleanup(func() { common.SetRegexBinary("") })
-	common.SetRegexBinary(binary)
+	t.Cleanup(func() { common.SetHAProxyBinary("") })
+	common.SetHAProxyBinary(binary)
 }
 
 func TestCORSOriginRefusedRegex(t *testing.T) {

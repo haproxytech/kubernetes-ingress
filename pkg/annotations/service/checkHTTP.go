@@ -32,6 +32,9 @@ func (a *CheckHTTP) Process(k store.K8s, annotations ...map[string]string) error
 	}
 	var params *models.HttpchkParams
 	checkHTTPParams := strings.Fields(strings.TrimSpace(input))
+	if len(checkHTTPParams) > 0 && !common.ValidRule(common.BackendRule, "option httpchk "+strings.Join(checkHTTPParams, " ")) {
+		return errors.New("httpchk option: HAProxy rejects the value")
+	}
 	switch len(checkHTTPParams) {
 	case 0:
 		return errors.New("httpchk option: incorrect number of params")

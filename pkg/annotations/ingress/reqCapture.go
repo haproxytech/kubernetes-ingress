@@ -68,6 +68,9 @@ func (a ReqCaptureAnn) Process(k store.K8s, annotations ...map[string]string) (e
 			if !validCaptureExpression(sample) {
 				return fmt.Errorf("incorrect value '%s' in %s annotation", sample, a.GetName())
 			}
+			if !common.ValidRule(common.FrontendRule, "http-request capture "+sample+" len 1") {
+				return fmt.Errorf("incorrect value '%s' in %s annotation: HAProxy rejects the expression", sample, a.GetName())
+			}
 			captures = append(captures, &rules.ReqCapture{Expression: sample})
 		}
 		for _, capture := range captures {
@@ -82,6 +85,9 @@ func (a ReqCaptureAnn) Process(k store.K8s, annotations ...map[string]string) (e
 		captureLen, err = strconv.ParseInt(input, 10, 64)
 		if err != nil {
 			return err
+		}
+		if !common.ValidRule(common.FrontendRule, fmt.Sprintf("http-request capture src len %d", captureLen)) {
+			return fmt.Errorf("incorrect value '%s' in %s annotation: HAProxy rejects the length", input, a.GetName())
 		}
 		for _, rule := range a.parent.capture {
 			rule.CaptureLen = captureLen
