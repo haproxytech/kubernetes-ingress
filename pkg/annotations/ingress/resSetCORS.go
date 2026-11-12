@@ -125,6 +125,11 @@ func (a ResSetCORSAnn) Process(k store.K8s, annotations ...map[string]string) (e
 				return fmt.Errorf("incorrect header name in %s annotation", a.name)
 			}
 		}
+		// A header name may hold '%', which starts a format expression.
+		if strings.ContainsRune(input, '%') &&
+			!common.ValidRule(common.FrontendRule, "http-after-response set-header Access-Control-Allow-Headers "+common.EnsureQuoted(input)) {
+			return fmt.Errorf("incorrect header name in %s annotation: HAProxy rejects the value", a.name)
+		}
 		a.parent.rules.Add(rules.SetHdr{
 			HdrName:       "Access-Control-Allow-Headers",
 			HdrFormat:     common.EnsureQuoted(input),

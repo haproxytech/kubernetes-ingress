@@ -80,7 +80,7 @@ func New(osArgs utils.OSArgs, env env.Env, cfgFile []byte, p process.Process, cl
 	h.Rules = rules
 	if !osArgs.Test {
 		logVersion(h.Binary)
-		common.SetRegexBinary(h.Binary)
+		common.SetHAProxyBinary(h.Binary)
 	}
 	return h, err
 }

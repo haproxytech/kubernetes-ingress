@@ -53,9 +53,18 @@ func (a *SetHdr) Process(k store.K8s, annotations ...map[string]string) (err err
 		if !safeHeaderValue(hdrValue) {
 			return fmt.Errorf("incorrect value for header '%s' in %s annotation", hdrName, a.name)
 		}
+		hdrFormat := common.EnsureQuoted(hdrValue)
+		direction := "http-request"
+		if a.response {
+			direction = "http-response"
+		}
+		// Only a format expression can make HAProxy refuse the value.
+		if strings.ContainsRune(hdrFormat, '%') && !common.ValidRule(common.FrontendRule, direction+" set-header "+hdrName+" "+hdrFormat) {
+			return fmt.Errorf("incorrect value for header '%s' in %s annotation: HAProxy rejects the expression", hdrName, a.name)
+		}
 		a.rules.Add(&rules.SetHdr{
 			HdrName:   hdrName,
-			HdrFormat: common.EnsureQuoted(hdrValue),
+			HdrFormat: hdrFormat,
 			Response:  a.response,
 		})
 	}

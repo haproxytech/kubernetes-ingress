@@ -117,6 +117,10 @@ more info about custom annotations can be found in [annotations-custom.md](annot
 > Annotation values cannot contain `#`.
 > Single-line values containing control characters fall back to their defaults.
 > Invalid access-control lists deny access instead.
+>
+> The controller asks HAProxy to check expressions, regular expressions, status codes and timers before it uses them.
+> It ignores an annotation when HAProxy rejects its value, and logs a warning.
+> HAProxy checks each value alone. A value cannot name a backend, a stick table or a userlist.
 
 
 ### Options

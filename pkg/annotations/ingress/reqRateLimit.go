@@ -57,6 +57,12 @@ func (a ReqRateLimitAnn) Process(k store.K8s, annotations ...map[string]string) 
 		// Enable Ratelimiting
 		var value int64
 		value, err = strconv.ParseInt(input, 10, 64)
+		if err == nil && value < 0 {
+			err = fmt.Errorf("incorrect value '%s' in %s annotation", input, a.name)
+		}
+		if err != nil {
+			return err
+		}
 		a.parent.limit = &rules.ReqRateLimit{ReqsLimit: value}
 		a.parent.track = &rules.ReqTrack{TrackKey: "src"}
 		// 1s default period, rate-limit-period overrides it.
@@ -72,6 +78,9 @@ func (a ReqRateLimitAnn) Process(k store.K8s, annotations ...map[string]string) 
 		if err != nil {
 			return err
 		}
+		if !common.ValidRule(common.BackendRule, fmt.Sprintf("stick-table type ip size 1 store http_req_rate(%d)", *value)) {
+			return fmt.Errorf("incorrect value '%s' in %s annotation: HAProxy rejects the period", input, a.name)
+		}
 		a.parent.setPeriod(value)
 	case "rate-limit-size":
 		if a.parent.limit == nil || a.parent.track == nil {
@@ -79,6 +88,12 @@ func (a ReqRateLimitAnn) Process(k store.K8s, annotations ...map[string]string) 
 		}
 		var value *int64
 		value, err = utils.ParseSize(input)
+		if err != nil {
+			return err
+		}
+		if !common.ValidRule(common.BackendRule, fmt.Sprintf("stick-table type ip size %d store http_req_rate(1000)", *value)) {
+			return fmt.Errorf("incorrect value '%s' in %s annotation: HAProxy rejects the size", input, a.name)
+		}
 		a.parent.track.TableSize = value
 	case "rate-limit-status-code":
 		if a.parent.limit == nil || a.parent.track == nil {
@@ -86,6 +101,12 @@ func (a ReqRateLimitAnn) Process(k store.K8s, annotations ...map[string]string) 
 		}
 		var value int64
 		value, err = utils.ParseInt(input)
+		if err != nil {
+			return err
+		}
+		if !common.ValidRule(common.FrontendRule, fmt.Sprintf("http-request deny deny_status %d", value)) {
+			return fmt.Errorf("incorrect value '%s' in %s annotation: HAProxy rejects the status code", input, a.name)
+		}
 		a.parent.limit.DenyStatusCode = value
 	case "rate-limit-whitelist":
 		if a.parent.limit == nil || a.parent.track == nil {

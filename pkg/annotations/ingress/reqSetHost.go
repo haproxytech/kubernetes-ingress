@@ -37,6 +37,10 @@ func (a *ReqSetHost) Process(k store.K8s, annotations ...map[string]string) (err
 	if input == "" || strings.ContainsAny(input, " {}\"'\\") {
 		return fmt.Errorf("incorrect value in %s annotation: expected one unquoted token", a.name)
 	}
+	// Only a format expression can make HAProxy refuse the value.
+	if strings.ContainsRune(input, '%') && !common.ValidRule(common.FrontendRule, "http-request set-header Host "+input) {
+		return fmt.Errorf("incorrect value in %s annotation: HAProxy rejects the expression", a.name)
+	}
 	a.rules.Add(&rules.SetHdr{
 		HdrName:   "Host",
 		HdrFormat: input,
