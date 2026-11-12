@@ -124,5 +124,5 @@ func credentialError(name string, pwd []byte) error {
 	if r, bad := badCredentialChar(string(pwd)); bad {
 		return fmt.Errorf("invalid character %q in password", r)
 	}
-	return nil
+	return passwordHashError(string(pwd))
 }
