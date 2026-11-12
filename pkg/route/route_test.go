@@ -15,10 +15,13 @@
 package route
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/haproxytech/kubernetes-ingress/pkg/annotations/common"
 	"github.com/haproxytech/kubernetes-ingress/pkg/store"
 )
 
@@ -91,4 +94,20 @@ func TestRoutePathKeepsScope(t *testing.T) {
 		route := Route{Path: &store.IngressPath{Path: path}, BackendName: "ns_svc_http"}
 		require.Error(t, AddCustomRoute(route, "path_beg /x", nil), path)
 	}
+}
+
+func TestRoutePathRefusedRegex(t *testing.T) {
+	// The fake HAProxy refuses every rule except the startup probe.
+	binary := filepath.Join(t.TempDir(), "haproxy")
+	script := "#!/bin/sh\nif grep -q probe; then exit 0; fi\nexit 1\n"
+	require.NoError(t, os.WriteFile(binary, []byte(script), 0o700)) //nolint:gosec
+	t.Cleanup(func() { common.SetRegexBinary("") })
+	common.SetRegexBinary(binary)
+
+	route := Route{
+		Host:        "example.com",
+		Path:        &store.IngressPath{Path: "/a(", PathTypeMatch: store.PATH_TYPE_PREFIX},
+		BackendName: "ns_svc_http",
+	}
+	require.ErrorContains(t, AddCustomRoute(route, "path_beg /x", nil), "regex")
 }

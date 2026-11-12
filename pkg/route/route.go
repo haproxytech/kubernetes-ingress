@@ -163,8 +163,11 @@ func AddCustomRoute(route Route, routeACLAnn string, api api.HAProxyClient) (err
 			if route.Path.Path == "/" {
 				routeCond = fmt.Sprintf("%s{ path -m beg %s }", routeCond, route.Path.Path)
 			} else {
-				path := strings.TrimSuffix(route.Path.Path, "/")
-				routeCond = fmt.Sprintf("%s{ path -m reg ^%s($|/) }", routeCond, path)
+				pathRegex := "^" + strings.TrimSuffix(route.Path.Path, "/") + "($|/)"
+				if !common.ValidRegex(common.RegexACL, pathRegex) {
+					return fmt.Errorf("path %q cannot be used with route-acl: HAProxy rejects it as a regex", route.Path.Path)
+				}
+				routeCond = fmt.Sprintf("%s{ path -m reg %s }", routeCond, pathRegex)
 			}
 		}
 	}
