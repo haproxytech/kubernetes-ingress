@@ -383,13 +383,23 @@ auth-secret: default/haproxy-credentials
 
   Available on:  `configmap`  `ingress`
 
-  :information_source: Encrypted passwords are evaluated using the crypt(3) function, so depending on the system's capabilities, different algorithms are supported.
+  :information_source: HAProxy evaluates encrypted passwords with the crypt(3) function.
 
   :information_source: Unencrypted passwords (used with HAProxy [insecure-password](https://docs.haproxy.org/2.8/configuration.html#3.4-user) ) **are not accepted**.
 
   :information_source: Usernames and passwords cannot contain spaces, control characters, `#`, quotes, or backslashes. Invalid credentials are ignored.
 
   :information_source: One trailing LF in a password is removed for compatibility. Additional trailing control characters are invalid.
+
+  :information_source: Accepted password formats are DES (13 characters), MD5 (`$1$`), SHA-256 (`$5$`), SHA-512 (`$6$`) and bcrypt (`$2a$`, `$2b$`, `$2y$`).
+
+  :information_source: The controller ignores users with any other format and logs a warning.
+
+  :information_source: yescrypt (`$y$`) is **not accepted**. Some `mkpasswd` versions use it by default. Use `mkpasswd -m sha-512` or `openssl passwd -6`.
+
+  :information_source: SHA-256 and SHA-512 accept `rounds=` from 1000 to 1000000. bcrypt accepts a cost from 4 to 12.
+
+  :information_source: The controller ignores users whose hash is outside these limits. Such a hash would stall every configuration update.
 
   :information_source: Outside an Ingress, the Secret path must include its namespace.
 

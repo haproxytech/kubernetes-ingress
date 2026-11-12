@@ -34,20 +34,21 @@ func TestCredentialError(t *testing.T) {
 		pwd     string
 		wantErr bool
 	}{
-		{name: "valid", user: "alice", pwd: "wonderland"},
+		{name: "valid", user: "alice", pwd: "mskYxuygva2Ys"},
 		{name: "empty password", user: "alice", wantErr: true},
 		{name: "backslash in password", user: "alice", pwd: `back\slash`, wantErr: true},
-		{name: "backslash in user name", user: `ali\ce`, pwd: "wonderland", wantErr: true},
+		{name: "backslash in user name", user: `ali\ce`, pwd: "mskYxuygva2Ys", wantErr: true},
 		{name: "single quote in password", user: "alice", pwd: "pass'word", wantErr: true},
-		{name: "single quote in user name", user: "ali'ce", pwd: "wonderland", wantErr: true},
-		{name: "dollar in password", user: "alice", pwd: "$2a$hash"},
+		{name: "single quote in user name", user: "ali'ce", pwd: "mskYxuygva2Ys", wantErr: true},
+		{name: "dollar in password", user: "alice", pwd: "$1$oGq7nTAf$rS1vV2Gu8dEGKhTvRKRoC/"},
 		{name: "comment", user: "alice", pwd: "wonder#land", wantErr: true},
 		{name: "newline", user: "alice", pwd: "wonder\nland", wantErr: true},
 		{name: "carriage return", user: "alice", pwd: "wonder\rland", wantErr: true},
 		{name: "tab", user: "alice", pwd: "wonder\tland", wantErr: true},
 		{name: "space", user: "alice", pwd: "wonder land", wantErr: true},
 		{name: "quote", user: "alice", pwd: `wonder"land`, wantErr: true},
-		{name: "user name", user: "ali\nce", pwd: "wonderland", wantErr: true},
+		{name: "not a hash", user: "alice", pwd: "wonderland", wantErr: true},
+		{name: "user name", user: "ali\nce", pwd: "mskYxuygva2Ys", wantErr: true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -77,13 +78,13 @@ func newAuthTestReqs(t *testing.T, ingress *store.Ingress, secret *store.Secret)
 
 func TestAuthSecretKeepsValidUsersOnly(t *testing.T) {
 	secret := &store.Secret{Status: store.ADDED, Data: map[string][]byte{
-		"alice": []byte("wonderland"),
+		"alice": []byte("mskYxuygva2Ys"),
 		"bob":   []byte("bad#password"),
 		"carol": []byte("line\nbreak"),
 		"dave":  []byte("with space"),
 		"eve":   []byte(`quo"te`),
 		"frank": []byte(`back\slash`),
-		"grace": []byte("trailing\n"),
+		"grace": []byte("mskYxuygva2Yt\n"),
 		"heidi": []byte("\n"),
 	}}
 	ingress := &store.Ingress{IngressCore: store.IngressCore{Namespace: "ns", Name: "ing"}}
@@ -93,8 +94,8 @@ func TestAuthSecretKeepsValidUsersOnly(t *testing.T) {
 	// The rule stays, so the invalid users cannot leave the route unauthenticated.
 	assert.Len(t, *list, 1)
 	assert.Equal(t, map[string][]byte{
-		"alice": []byte("wonderland"),
-		"grace": []byte("trailing"),
+		"alice": []byte("mskYxuygva2Ys"),
+		"grace": []byte("mskYxuygva2Yt"),
 	}, reqAuth.authRule.Credentials)
 }
 
@@ -169,7 +170,7 @@ func TestAuthRealm(t *testing.T) {
 }
 
 func TestAuthSecretWithoutNamespace(t *testing.T) {
-	secret := &store.Secret{Status: store.ADDED, Data: map[string][]byte{"alice": []byte("wonderland")}}
+	secret := &store.Secret{Status: store.ADDED, Data: map[string][]byte{"alice": []byte("mskYxuygva2Ys")}}
 	list := &rules.List{}
 	reqAuth := NewReqAuth(list, nil)
 	k := store.K8s{Namespaces: map[string]*store.Namespace{
