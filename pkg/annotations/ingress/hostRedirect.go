@@ -59,6 +59,12 @@ func (a HostRedirectAnn) Process(k store.K8s, annotations ...map[string]string) 
 		if input == "" || strings.ContainsAny(input, " {}\"'\\") {
 			return fmt.Errorf("incorrect value in %s annotation: expected one unquoted token", a.name)
 		}
+		host := strings.TrimPrefix(strings.TrimPrefix(input, HTTPS_PREFIX), HTTP_PREFIX)
+		// Only a format expression can make HAProxy refuse the value.
+		if strings.ContainsRune(host, '%') &&
+			!common.ValidRule(common.FrontendRule, "http-request redirect location http://"+host+"%[capture.req.uri] code 302") {
+			return fmt.Errorf("incorrect value in %s annotation: HAProxy rejects the expression", a.name)
+		}
 		a.parent.redirect = &rules.RequestRedirect{Host: input}
 		switch {
 		case strings.HasPrefix(input, HTTPS_PREFIX):
@@ -79,9 +85,17 @@ func (a HostRedirectAnn) Process(k store.K8s, annotations ...map[string]string) 
 		if err != nil {
 			return err
 		}
+		if !validRedirectCode(code) {
+			return fmt.Errorf("incorrect value '%s' in %s annotation: HAProxy rejects the redirect code", input, a.name)
+		}
 		a.parent.redirect.RedirectCode = code
 	default:
 		err = fmt.Errorf("unknown redirect-redirect annotation '%s'", a.name)
 	}
 	return err
+}
+
+// validRedirectCode asks HAProxy, since the accepted codes depend on its version.
+func validRedirectCode(code int64) bool {
+	return common.ValidRule(common.FrontendRule, fmt.Sprintf("http-request redirect location / code %d", code))
 }

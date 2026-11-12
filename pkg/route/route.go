@@ -143,6 +143,9 @@ func AddCustomRoute(route Route, routeACLAnn string, api api.HAProxyClient) (err
 	if err = validateRouteACL(routeACLAnn); err != nil {
 		return err
 	}
+	if !common.ValidRule(common.FrontendRule, "use_backend "+common.CheckBackend+" if { "+routeACLAnn+" }") {
+		return fmt.Errorf("incorrect route-acl value %q: HAProxy rejects the ACL", routeACLAnn)
+	}
 	if _, ok := common.UnquotedWord(route.Path.Path); route.Path.Path != "" && !ok {
 		return fmt.Errorf("path %q cannot be used with route-acl", route.Path.Path)
 	}

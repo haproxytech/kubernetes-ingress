@@ -1,6 +1,8 @@
 package service
 
 import (
+	"fmt"
+
 	"github.com/haproxytech/client-native/v6/models"
 
 	"github.com/haproxytech/kubernetes-ingress/pkg/annotations/common"
@@ -37,6 +39,9 @@ func (a *CheckInter) Process(k store.K8s, annotations ...map[string]string) erro
 	value, err := utils.ParseTime(input)
 	if err != nil {
 		return err
+	}
+	if !common.ValidRule(common.BackendRule, fmt.Sprintf("default-server inter %d", *value)) {
+		return fmt.Errorf("%s: HAProxy rejects the value '%s'", a.GetName(), input)
 	}
 	if a.backend.DefaultServer == nil {
 		a.backend.DefaultServer = &models.DefaultServer{}

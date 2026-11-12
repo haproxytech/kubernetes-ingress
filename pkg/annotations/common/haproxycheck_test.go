@@ -18,7 +18,7 @@ func fakeHAProxy(t *testing.T) (binary, counter string) {
 	counter = filepath.Join(dir, "runs")
 	script := "#!/bin/sh\necho run >> " + counter + "\nif grep -q REFUSED; then exit 1; fi\nexit 0\n"
 	require.NoError(t, os.WriteFile(binary, []byte(script), 0o700)) //nolint:gosec
-	t.Cleanup(func() { SetRegexBinary("") })
+	t.Cleanup(func() { SetHAProxyBinary("") })
 	return binary, counter
 }
 
@@ -33,14 +33,14 @@ func runCount(t *testing.T, counter string) int {
 }
 
 func TestValidRegexWithoutBinary(t *testing.T) {
-	SetRegexBinary("")
+	SetHAProxyBinary("")
 	assert.True(t, ValidRegex(RegexACL, "("))
 	assert.False(t, ValidRegex(RegexACL, "two words"), "a value that is not one word is never valid")
 }
 
 func TestValidRegexAsksTheBinary(t *testing.T) {
 	binary, counter := fakeHAProxy(t)
-	SetRegexBinary(binary)
+	SetHAProxyBinary(binary)
 	probeRuns := runCount(t, counter)
 	require.Equal(t, 1, probeRuns)
 
@@ -57,7 +57,7 @@ func TestValidRegexAsksTheBinary(t *testing.T) {
 
 func TestValidRegexNeverRunsUnsafeWords(t *testing.T) {
 	binary, counter := fakeHAProxy(t)
-	SetRegexBinary(binary)
+	SetHAProxyBinary(binary)
 	runs := runCount(t, counter)
 	for _, word := range []string{"a b", "a\nb", "a#b", `a"b`, `a\`, "-u", "{", "}"} {
 		assert.False(t, ValidRegex(RegexACL, word), word)
@@ -70,14 +70,14 @@ func TestValidRegexDisabledWhenProbeFails(t *testing.T) {
 	dir := t.TempDir()
 	binary := filepath.Join(dir, "haproxy")
 	require.NoError(t, os.WriteFile(binary, []byte("#!/bin/sh\nexit 1\n"), 0o700)) //nolint:gosec
-	t.Cleanup(func() { SetRegexBinary("") })
-	SetRegexBinary(binary)
+	t.Cleanup(func() { SetHAProxyBinary("") })
+	SetHAProxyBinary(binary)
 	assert.True(t, ValidRegex(RegexACL, "("))
 }
 
 func TestValidRegexMissingBinaryAcceptsValues(t *testing.T) {
-	t.Cleanup(func() { SetRegexBinary("") })
-	SetRegexBinary(filepath.Join(t.TempDir(), "missing"))
+	t.Cleanup(func() { SetHAProxyBinary("") })
+	SetHAProxyBinary(filepath.Join(t.TempDir(), "missing"))
 	assert.True(t, ValidRegex(RegexACL, "("))
 }
 
@@ -86,8 +86,8 @@ func TestValidRegexWithHAProxy(t *testing.T) {
 	if err != nil {
 		t.Skip("haproxy is not installed")
 	}
-	t.Cleanup(func() { SetRegexBinary("") })
-	SetRegexBinary(binary)
+	t.Cleanup(func() { SetHAProxyBinary("") })
+	SetHAProxyBinary(binary)
 	tests := []struct {
 		use   RegexUse
 		word  string

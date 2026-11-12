@@ -1,6 +1,8 @@
 package service
 
 import (
+	"fmt"
+
 	"github.com/haproxytech/client-native/v6/models"
 
 	"github.com/haproxytech/kubernetes-ingress/pkg/annotations/common"
@@ -35,6 +37,9 @@ func (a *TimeoutCheck) Process(k store.K8s, annotations ...map[string]string) er
 	timeout, err := utils.ParseTime(input)
 	if err != nil {
 		return err
+	}
+	if !common.ValidRule(common.BackendRule, fmt.Sprintf("timeout check %d", *timeout)) {
+		return fmt.Errorf("%s: HAProxy rejects the value '%s'", a.GetName(), input)
 	}
 	a.backend.CheckTimeout = timeout
 	return nil
