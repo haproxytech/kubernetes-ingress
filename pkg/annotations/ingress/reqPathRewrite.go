@@ -49,6 +49,9 @@ func (a *ReqPathRewrite) Process(k store.K8s, annotations ...map[string]string) 
 				PathFmt:   parts[0],
 			}
 		case 2:
+			if !common.ValidRegex(common.RegexReplacePath, parts[0]) {
+				return fmt.Errorf("incorrect value '%s' in %s annotation: HAProxy rejects the regex", parts[0], a.GetName())
+			}
 			rewrite = &rules.ReqPathRewrite{
 				PathMatch: parts[0],
 				PathFmt:   parts[1],

@@ -159,6 +159,8 @@ cors-enable: "true"
 
   :information_source: A `\x` escape must have two hexadecimal digits and must not encode a brace or a control character.
 
+  :information_source: The controller asks HAProxy to compile the regex. It ignores the annotation when HAProxy rejects the regex.
+
 Possible values:
 
 - Wildcard `*`, allow access form any origin.
@@ -1243,6 +1245,8 @@ nbthread: "8"
 
   :information_source: A `\x` escape must have two hexadecimal digits and must not encode a control character.
 
+  :information_source: The controller asks HAProxy to compile the regular expression. It ignores the annotation when HAProxy rejects it.
+
 Possible values:
 
 - A single path, such as "/", to turn any path into "/"
@@ -1683,6 +1687,8 @@ haproxy.org/response-set-header: |
   :information_source: A `\x` escape must have two hexadecimal digits and must not encode a brace or a control character.
 
   :information_source: Ingress paths routed with this annotation cannot contain spaces, quotes, or invalid backslash escapes.
+
+  :information_source: A path that is not `Exact` is used as a regular expression. The controller skips the route when HAProxy rejects it.
 
   :information_source: Note that this annotation is not compatible with an Ingress having multiple paths that will match a request.
 Without this annotation, the precedence  is given first to the longest matching path.
