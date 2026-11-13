@@ -74,6 +74,9 @@ func (a ReqCaptureAnn) Process(k store.K8s, annotations ...map[string]string) (e
 			if !validCaptureExpression(sample) {
 				return fmt.Errorf("incorrect value '%s' in %s annotation", sample, a.GetName())
 			}
+			if keyword := common.TenantRestrictedKeyword(a.name, sample, annotations...); keyword != "" {
+				return fmt.Errorf("incorrect value '%s' in %s annotation: '%s' is not allowed", sample, a.GetName(), keyword)
+			}
 			if !common.ValidRule(common.FrontendRule, "http-request capture "+sample+" len 1") {
 				return fmt.Errorf("incorrect value '%s' in %s annotation: HAProxy rejects the expression", sample, a.GetName())
 			}

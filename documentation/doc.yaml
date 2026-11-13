@@ -1756,6 +1756,7 @@ annotations:
     tip:
       - In order for the service to be handled by the Ingress Controller, it is still mandatory to put it in an ingress rule. Using only `route-acl` won't be enough.
       - The ACL cannot contain braces, quotes, `#`, or control characters. It cannot end with a flag or a backslash.
+      - The ACL cannot use the `-f` flag, the `env` fetch, a `map` converter, `set-var`, `unset-var` or `dump_all_vars`.
       - A `\x` escape must have two hexadecimal digits and must not encode a brace or a control character.
       - Ingress paths routed with this annotation cannot contain spaces, quotes, or invalid backslash escapes.
       - A path that is not `Exact` is used as a regular expression. The controller skips the route when HAProxy rejects it.
