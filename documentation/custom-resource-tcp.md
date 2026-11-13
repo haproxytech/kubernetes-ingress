@@ -369,6 +369,15 @@ Note that `ssl_certificate` can be:
 
 More details below on both use cases
 
+**Who can create a TCP CR**
+
+The controller does not check the path given in `ssl_certificate`.
+A user who can create or update a TCP CR can use any certificate file the controller Pod can read.
+This includes the certificates of TCP CRs in other namespaces.
+
+Kubernetes does not let namespace users create TCP CRs by default.
+Grant `create`, `update` and `patch` on the `tcps` resource only to users you trust with every certificate.
+
 **1. Using a Kubernetes Secret name**
 
 You can use a Secret name in `ssl_certificate`.
