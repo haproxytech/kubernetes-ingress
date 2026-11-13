@@ -81,6 +81,9 @@ func MapRows(route Route) ([]Row, error) {
 	if strings.ContainsFunc(route.Path.Path, func(r rune) bool { return r <= ' ' || r == 0x7f }) {
 		return nil, fmt.Errorf("path %q contains a blank or control character", route.Path.Path)
 	}
+	if strings.ContainsFunc(route.Host, func(r rune) bool { return r <= ' ' || r == 0x7f }) {
+		return nil, fmt.Errorf("host %q contains a blank or control character", route.Host)
+	}
 	// Wildcard host
 	if route.Host != "" && route.Host[0] == '*' {
 		route.Host = route.Host[1:]
