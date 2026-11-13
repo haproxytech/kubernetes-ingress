@@ -97,6 +97,11 @@ func TestRoutePathKeepsScope(t *testing.T) {
 			require.NoError(t, err)
 		})
 	}
+	for _, host := range []string{"a.com victim_svc_http", "a.com\tb", "a.com\nvictim.com/ victim_svc_http"} {
+		route := Route{Host: host, Path: &store.IngressPath{Path: "/a", PathTypeMatch: store.PATH_TYPE_PREFIX}, BackendName: "ns_svc_http"}
+		_, err := MapRows(route)
+		require.Error(t, err, host)
+	}
 	for _, path := range []string{`/a\`, `/a\xZZ`, `/a"b`, "/a'b", `/a($|/) } || { always_true } { path -m reg ^/a`} {
 		route := Route{Path: &store.IngressPath{Path: path}, BackendName: "ns_svc_http"}
 		require.Error(t, AddCustomRoute(route, "path_beg /x", nil), path)
