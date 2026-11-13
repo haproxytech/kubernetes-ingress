@@ -551,7 +551,7 @@ func (gm GatewayManagerImpl) isTCPRouteAllowedByListener(listener store.Listener
 
 	if listener.AllowedRoutes == nil {
 		// If the listener has no restrictions rules simply checks that the route and the listener (gateway) are in the same namespace.
-		return routeNamespace != gatewayNamespace
+		return routeNamespace == gatewayNamespace
 	}
 
 	gkAllowed := len(listener.AllowedRoutes.Kinds) == 0
