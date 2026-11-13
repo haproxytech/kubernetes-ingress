@@ -202,6 +202,16 @@ func (v *Validator) Set(prefix string, config Config) error {
 	return nil
 }
 
+// Clear drops every rule and the prefix, as before any rules were set.
+func (v *Validator) Clear() {
+	mu.Lock()
+	defer mu.Unlock()
+	validator.config = Config{}
+	validator.prefix = ""
+	validator.prefixes = annotationsPrefixes
+	v.compiledRules = make(map[string]cel.Program)
+}
+
 // parseDuration accepts the same duration syntax as the built-in annotation
 // parsers: Go durations, plus a trailing 'd' and a bare value read as milliseconds.
 func parseDuration(rawValue string) (time.Duration, error) {
