@@ -60,6 +60,15 @@ func (c ValidationCR) GetInformerV3(eventChan chan k8ssync.SyncDataEvent, factor
 			logger.Error("Failed to get validator: %s", err)
 			return
 		}
+		if status == store.DELETED {
+			// A deleted resource must stop granting its annotations.
+			validator.Clear()
+			logger.Infof("ValidationRules %s/%s deleted, rules removed", data.Namespace, data.Name)
+			eventChan <- k8ssync.SyncDataEvent{
+				SyncType: k8ssync.CUSTOM_RESOURCE, Namespace: data.Namespace, Name: data.Name, Data: data,
+			}
+			return
+		}
 		err = validator.Set(data.Spec.Prefix, data.Spec.Config)
 		if err != nil {
 			logger.Error("Failed to set validation rules: %s", err)
@@ -86,6 +95,10 @@ func (c ValidationCR) GetInformerV3(eventChan chan k8ssync.SyncDataEvent, factor
 			sendToChannel(eventChan, newObj, store.MODIFIED)
 		},
 		DeleteFunc: func(obj interface{}) {
+			// A missed delete arrives wrapped in a tombstone.
+			if tombstone, ok := obj.(cache.DeletedFinalStateUnknown); ok {
+				obj = tombstone.Obj
+			}
 			sendToChannel(eventChan, obj, store.DELETED)
 		},
 	})
