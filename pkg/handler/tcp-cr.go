@@ -226,9 +226,22 @@ func applyFrontendOverride(namespace string, fe *models.Frontend) {
 	fe.Name = cfgFrontendName(namespace, *fe)
 	// LogFormat
 	format := strings.TrimSpace(fe.LogFormat)
-	if format != "" {
-		fe.LogFormat = "'" + strings.TrimSpace(fe.LogFormat) + "'"
+	if !validLogFormat(format) {
+		logger.Errorf("TCP custom resource frontend %s: log format holds a quote or a control character, ignoring it", fe.Name)
+		format = ""
 	}
+	fe.LogFormat = format
+	if format != "" {
+		fe.LogFormat = "'" + format + "'"
+	}
+}
+
+// validLogFormat reports whether format stays one single-quoted word.
+// A quote would end the word early, and a line break would start a new line.
+func validLogFormat(format string) bool {
+	return !strings.ContainsFunc(format, func(r rune) bool {
+		return r == '\'' || (r < 0x20 && r != '\t') || r == 0x7f
+	})
 }
 
 func (handler TCPCustomResource) applyBindOverride(ctx tcpcontext, bind *models.Bind, owner rc.Owner) {
