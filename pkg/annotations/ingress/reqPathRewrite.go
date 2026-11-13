@@ -33,6 +33,9 @@ func (a *ReqPathRewrite) Process(k store.K8s, annotations ...map[string]string) 
 			if _, ok := common.UnquotedWord(part); !ok {
 				return fmt.Errorf("incorrect value '%s' in %s annotation", part, a.GetName())
 			}
+			if keyword := common.TenantRestrictedKeyword(a.GetName(), part, annotations...); keyword != "" {
+				return fmt.Errorf("incorrect value '%s' in %s annotation: '%s' is not allowed", part, a.GetName(), keyword)
+			}
 		}
 
 		var rewrite *rules.ReqPathRewrite

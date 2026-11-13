@@ -61,6 +61,10 @@ var tableFooter = `
 > The controller asks HAProxy to check expressions, regular expressions, status codes and timers before it uses them.
 > It ignores an annotation when HAProxy rejects its value, and logs a warning.
 > HAProxy checks each value alone. A value cannot name a backend, a stick table or a userlist.
+>
+> Ingress and Service values cannot read the environment, read local files or change variables.
+> The controller ignores a value that uses ` + "`env`, a `map` converter, `set-var`, `unset-var` or `dump_all_vars`" + `.
+> ConfigMap values can use them.
 
 
 ### Options

@@ -126,6 +126,10 @@ more info about custom annotations can be found in [annotations-custom.md](annot
 > The controller asks HAProxy to check expressions, regular expressions, status codes and timers before it uses them.
 > It ignores an annotation when HAProxy rejects its value, and logs a warning.
 > HAProxy checks each value alone. A value cannot name a backend, a stick table or a userlist.
+>
+> Ingress and Service values cannot read the environment, read local files or change variables.
+> The controller ignores a value that uses `env`, a `map` converter, `set-var`, `unset-var` or `dump_all_vars`.
+> ConfigMap values can use them.
 
 
 ### Options
@@ -1806,6 +1810,8 @@ haproxy.org/response-set-header: |
   :information_source: In order for the service to be handled by the Ingress Controller, it is still mandatory to put it in an ingress rule. Using only `route-acl` won't be enough.
 
   :information_source: The ACL cannot contain braces, quotes, `#`, or control characters. It cannot end with a flag or a backslash.
+
+  :information_source: The ACL cannot use the `-f` flag, the `env` fetch, a `map` converter, `set-var`, `unset-var` or `dump_all_vars`.
 
   :information_source: A `\x` escape must have two hexadecimal digits and must not encode a brace or a control character.
 

@@ -53,6 +53,9 @@ func (a HostRedirectAnn) Process(k store.K8s, annotations ...map[string]string) 
 		if input == "" || strings.ContainsAny(input, " {}\"'\\") {
 			return fmt.Errorf("incorrect value in %s annotation: expected one unquoted token", a.name)
 		}
+		if keyword := common.TenantRestrictedKeyword(a.name, input, annotations...); keyword != "" {
+			return fmt.Errorf("incorrect value in %s annotation: '%s' is not allowed", a.name, keyword)
+		}
 		host := strings.TrimPrefix(strings.TrimPrefix(input, HTTPS_PREFIX), HTTP_PREFIX)
 		// Only a format expression can make HAProxy refuse the value.
 		if strings.ContainsRune(host, '%') &&

@@ -47,6 +47,9 @@ func (a *SetHdr) Process(k store.K8s, annotations ...map[string]string) (err err
 		if !safeHeaderValue(hdrValue) {
 			return fmt.Errorf("incorrect value for header '%s' in %s annotation", hdrName, a.name)
 		}
+		if keyword := common.TenantRestrictedKeyword(a.name, hdrValue, annotations...); keyword != "" {
+			return fmt.Errorf("incorrect value for header '%s' in %s annotation: '%s' is not allowed", hdrName, a.name, keyword)
+		}
 		hdrFormat := common.EnsureQuoted(hdrValue)
 		direction := "http-request"
 		if a.response {

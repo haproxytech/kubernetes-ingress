@@ -50,6 +50,12 @@ func TestValidateRouteACL(t *testing.T) {
 		{name: "single quote", value: "path_beg 'x", wantErr: true},
 		{name: "trailing unique id flag", value: "path -m found -u", wantErr: true},
 		{name: "trailing pattern file flag", value: "path -f", wantErr: true},
+		{name: "pattern file", value: "path -f /etc/passwd", wantErr: true},
+		{name: "pattern file after flag", value: "path -i -f /etc/passwd", wantErr: true},
+		{name: "environment", value: "env(SECRET) -m beg a", wantErr: true},
+		{name: "map file", value: "path,map(/etc/passwd) -m found", wantErr: true},
+		{name: "variable change", value: "str(a),set-var(txn.host) -m found", wantErr: true},
+		{name: "keyword as pattern", value: "path_beg /env /map"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
