@@ -201,6 +201,16 @@ func (v *Validator) Set(prefix string, config Config) error {
 	return nil
 }
 
+// Clear drops every rule and the prefix, as before any rules were set.
+func (v *Validator) Clear() {
+	mu.Lock()
+	defer mu.Unlock()
+	validator.config = Config{}
+	validator.prefix = ""
+	validator.prefixes = annotationsPrefixes
+	v.compiledRules = make(map[string]cel.Program)
+}
+
 // ValidateInput takes a rule name and a raw string value,
 // parses the value according to the rule's type,
 // and evaluates it against the corresponding CEL expression.
