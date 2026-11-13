@@ -58,6 +58,31 @@ int main(void) {
     fclose(fp);
   }
 
+  printf("== security: kernel symlinks to the root do not bypass the block ==\n");
+  static const char *const aliases[] = {"/proc/self/root", "/proc/thread-self/root", "/proc/self/cwd/../../../../../../../../../.."};
+  for (size_t i = 0; i < sizeof(aliases) / sizeof(aliases[0]); i++) {
+    char alias[8192];
+    snprintf(alias, sizeof(alias), "%s%s", aliases[i], blocked_file);
+    errno = 0;
+    fd = open(alias, O_RDONLY);
+    check(fd == -1 && errno == EACCES, alias);
+    if (fd != -1) {
+      close(fd);
+    }
+  }
+  errno = 0;
+  fd = open("/dev/null", O_RDONLY);
+  check(fd >= 0, "open(/dev/null) succeeds");
+  if (fd >= 0) {
+    close(fd);
+  }
+  errno = 0;
+  fd = open("/proc/self/status", O_RDONLY);
+  check(fd >= 0, "open(/proc/self/status) succeeds");
+  if (fd >= 0) {
+    close(fd);
+  }
+
   printf("== regression #818: metadata-only calls are no longer intercepted ==\n");
   errno = 0;
   check(stat(blocked_file, &st) == 0, "stat(blocked) succeeds (not hooked)");

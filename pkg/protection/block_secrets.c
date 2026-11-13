@@ -99,6 +99,13 @@ static inline int is_simple_absolute(const char *p, size_t len) {
   return 1;
 }
 
+/* /proc and /dev hold kernel symlinks to any path, such as
+   /proc/self/root, so a lexical compare proves nothing there. */
+static inline int may_alias_any_path(const char *p, size_t len) {
+  return path_has_prefix(p, len, "/proc", 5) ||
+         path_has_prefix(p, len, "/dev", 4);
+}
+
 /* Fallback when realpath() fails (typically: leaf doesn't exist on a
    create). Canonicalizes the parent and re-attaches the leaf. `out`
    doubles as the realpath() workspace to save a stack frame. */
@@ -175,6 +182,7 @@ static int is_blocked(const char *pathname) {
 
   /* Fast-path: skip realpath when both prefixes obviously miss. */
   if (is_simple_absolute(pathname, plen) &&
+      !may_alias_any_path(pathname, plen) &&
       !path_has_prefix(pathname, plen, text_blocked, text_blocked_len) &&
       (text_canonical_same ||
        !path_has_prefix(pathname, plen, canonical_blocked,
