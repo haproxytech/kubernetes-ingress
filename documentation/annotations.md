@@ -756,6 +756,14 @@ stats-config-snippet: |
 
   Available on:  `configmap`  `ingress`  `service`
 
+  :information_source: The controller writes these directives to the HAProxy configuration without checking them.
+
+  :information_source: Whoever can set this annotation on an Ingress or a Service can read local files. They can also add configuration outside the backend.
+
+  :information_source: Allow this annotation only for users you trust as administrators.
+
+  :information_source: To turn it off, start the controller with `--disable-config-snippets=backend`. This also turns off the ConfigMap value.
+
 Possible values:
 
 - One or more valid HAProxy directives

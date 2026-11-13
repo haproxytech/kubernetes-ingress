@@ -1081,6 +1081,8 @@ Example:
 
   Allow to disable one or several of the following config snippets: backend, frontend, global.
 
+Backend config snippets are also accepted from Ingress and Service resources, and the controller does not check them. Disable them when users who are not administrators can create these resources.
+
 Possible values:
 
 - Comma separated list of the kind of config snippets to disable. Possible values in the list are
