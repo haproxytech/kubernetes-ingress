@@ -209,6 +209,16 @@ func validateRouteACL(value string) error {
 			return fmt.Errorf("incorrect route-acl value %q: invalid escape sequence", value)
 		}
 	}
+	for _, word := range words {
+		// The -f flag loads patterns from a local file.
+		if word == "-f" {
+			return fmt.Errorf("incorrect route-acl value %q: pattern files are not allowed", value)
+		}
+	}
+	// Only a Service sets route-acl, so the value always comes from a tenant.
+	if keyword := common.RestrictedKeyword(value); keyword != "" {
+		return fmt.Errorf("incorrect route-acl value %q: '%s' is not allowed", value, keyword)
+	}
 	// A trailing flag would take the closing brace as its argument.
 	if len(words) > 0 && strings.HasPrefix(words[len(words)-1], "-") {
 		return fmt.Errorf("incorrect route-acl value %q: it cannot end with a flag", value)
