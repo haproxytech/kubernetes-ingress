@@ -92,6 +92,13 @@ func TestSectionsInErrorWithoutErrorReportsNothing(t *testing.T) {
 	require.Empty(t, sections)
 }
 
+func TestSectionsInErrorWithoutFileLocationReportsNothing(t *testing.T) {
+	configErr := errors.New("proxy 'http': unable to find table 'http' referenced by track-sc0")
+	sections, err := SectionsInError(configErr, t.TempDir())
+	require.NoError(t, err)
+	require.Empty(t, sections)
+}
+
 func TestSectionKeyIdentifiesASection(t *testing.T) {
 	require.Equal(t, "global", Section{Kind: SectionGlobal}.Key())
 	require.Equal(t, "backend/app", Section{Kind: SectionBackend, Name: "app"}.Key())

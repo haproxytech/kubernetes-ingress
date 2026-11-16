@@ -48,6 +48,10 @@ func SectionsInError(configErr error, dir string) (sections []Section, err error
 	if err != nil {
 		return nil, err
 	}
+	// Errors without a file location cannot be traced to a section.
+	if file == "" {
+		return nil, nil
+	}
 	contents, err := os.ReadFile(filepath.Join(dir, filepath.Base(file)))
 	if err != nil {
 		return nil, err
