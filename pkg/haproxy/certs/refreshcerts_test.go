@@ -37,6 +37,7 @@ type fakeAPI struct {
 	calls       []string
 	caInUse     bool
 	commitCAErr error
+	loaded      map[string]bool
 }
 
 func (f *fakeAPI) record(format string, args ...any) error {
@@ -53,7 +54,13 @@ func (f *fakeAPI) recorded() []string {
 }
 
 func (f *fakeAPI) CertEntryCreate(filename string) error {
-	return f.record("new ssl cert %s", filename)
+	if err := f.record("new ssl cert %s", filename); err != nil {
+		return err
+	}
+	if f.loaded[filename] {
+		return fmt.Errorf("certificate '%s' already exists", filename)
+	}
+	return nil
 }
 
 func (f *fakeAPI) CertEntrySet(filename string, _ []byte) error {
@@ -188,7 +195,7 @@ func TestUpdateRuntimeDoesNotAddToAMissingCrtList(t *testing.T) {
 	instance.Reset()
 
 	certPath := filepath.Join(env.TCPCRDir, "web_app-tls.pem")
-	updated, err := c.updateRuntime(certPath, []byte("pem"), false)
+	updated, _, err := c.updateRuntime(certPath, []byte("pem"), false)
 	require.NoError(t, err)
 	require.True(t, updated, "the certificate was committed")
 
@@ -248,7 +255,7 @@ func TestUpdateRuntimeAbortsACAFileWithTheCACommand(t *testing.T) {
 	commands.commitCAErr = errors.New("commit failed")
 
 	caPath := filepath.Join(env.CaDir, "web_client-ca.pem")
-	_, err := c.updateRuntime(caPath, []byte("pem"), true)
+	_, _, err := c.updateRuntime(caPath, []byte("pem"), true)
 	require.ErrorContains(t, err, "commit failed")
 
 	require.Equal(t, []string{
@@ -257,4 +264,42 @@ func TestUpdateRuntimeAbortsACAFileWithTheCACommand(t *testing.T) {
 		"commit ssl ca-file " + caPath,
 		"abort ssl ca-file " + caPath,
 	}, commands.recorded())
+}
+
+// TestRenewedCertificateNeedsNoReload covers a certificate renewal: HAProxy already holds
+// the certificate, the runtime API swaps its content in place, and a reload would only
+// close the established connections.
+func TestRenewedCertificateNeedsNoReload(t *testing.T) {
+	c, commands := newTestRepository(t)
+	certPath := filepath.Join(env.FrontendDir, "web_app-tls.pem")
+	require.NoError(t, os.WriteFile(certPath, []byte("old"), 0o600))
+	commands.loaded = map[string]bool{certPath: true}
+	crt := &cert{name: "web/app-tls", path: certPath}
+	c.frontend["web_app-tls"] = crt
+	instance.Reset()
+
+	require.NoError(t, c.writeCert(crt, certPath, []byte("renewed"), false))
+	fs.Writer.WaitUntilWritesDone()
+
+	require.Equal(t, []string{
+		"new ssl cert " + certPath,
+		"set ssl cert " + certPath,
+		"commit ssl cert " + certPath,
+	}, commands.recorded(), "the content is committed, the crt-list is left alone")
+	require.False(t, c.CertsUpdated(), "a renewal committed through the runtime API must not reload")
+	require.False(t, instance.NeedReload())
+}
+
+// TestNewCertificateStillReloads keeps the reload for a certificate HAProxy did not know yet.
+func TestNewCertificateStillReloads(t *testing.T) {
+	c, _ := newTestRepository(t)
+	certPath := filepath.Join(env.FrontendDir, "web_new-tls.pem")
+	crt := &cert{name: "web/new-tls", path: certPath}
+	c.frontend["web_new-tls"] = crt
+	instance.Reset()
+
+	require.NoError(t, c.writeCert(crt, certPath, []byte("pem"), false))
+	fs.Writer.WaitUntilWritesDone()
+
+	require.True(t, c.CertsUpdated(), "a new certificate still asks for a reload")
 }

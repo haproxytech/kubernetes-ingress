@@ -226,7 +226,7 @@ func TestUpdateRuntime_CommitFailure_LogSafeError(t *testing.T) {
 		mu:     &sync.Mutex{},
 	}
 
-	_, err := c.updateRuntime(certPath, payload, false)
+	_, _, err := c.updateRuntime(certPath, payload, false)
 	if err == nil {
 		t.Fatal("expected error from updateRuntime when commit fails, got nil")
 	}
@@ -263,7 +263,7 @@ func TestUpdateRuntime_SetFailure_LogSafeError(t *testing.T) {
 		mu:     &sync.Mutex{},
 	}
 
-	_, err := c.updateRuntime(certPath, payload, false)
+	_, _, err := c.updateRuntime(certPath, payload, false)
 	if err == nil {
 		t.Fatal("expected error from updateRuntime when set fails, got nil")
 	}

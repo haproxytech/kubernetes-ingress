@@ -161,7 +161,9 @@ func (c *certs) AddSecret(secret *store.Secret, secretType SecretType) (certPath
 	return crt.path, nil
 }
 
-func (c *certs) updateRuntime(filename string, payload []byte, isCa bool) (bool, error) {
+// updateRuntime commits the certificate through the runtime API. created reports a
+// certificate HAProxy did not know yet, as opposed to new content for a loaded one.
+func (c *certs) updateRuntime(filename string, payload []byte, isCa bool) (updated, created bool, err error) {
 	// Only 1 transaction in parallel is possible for now in haproxy
 	// Keep this mutex for now to ensure that we perform 1 transaction at a time
 	certType := "cert"
@@ -180,14 +182,13 @@ func (c *certs) updateRuntime(filename string, payload []byte, isCa bool) (bool,
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	var err error
-	var updated, alreadyExists bool
+	var alreadyExists bool
 
 	err = entryCreate(filename)
 	// If already exists
 	if err != nil {
 		if !strings.Contains(err.Error(), "already exists") {
-			return updated, err
+			return updated, created, err
 		}
 		alreadyExists = true
 	} else {
@@ -196,7 +197,7 @@ func (c *certs) updateRuntime(filename string, payload []byte, isCa bool) (bool,
 
 	err = entrySet(filename, payload)
 	if err != nil {
-		return updated, err
+		return updated, created, err
 	}
 	utils.GetLogger().Debugf("`set ssl %s` ok[%s]", certType, filename)
 
@@ -210,9 +211,10 @@ func (c *certs) updateRuntime(filename string, payload []byte, isCa bool) (bool,
 			utils.GetLogger().Error(errAbort)
 		}
 
-		return updated, err
+		return updated, created, err
 	}
 	updated = true
+	created = !alreadyExists
 	utils.GetLogger().Debugf("`commit ssl %s` ok [%s]", certType, filename)
 
 	if !alreadyExists && dirKindOf(filepath.Dir(filename)) == dirCrtList {
@@ -222,12 +224,12 @@ func (c *certs) updateRuntime(filename string, payload []byte, isCa bool) (bool,
 				File: filename,
 			})
 		if err != nil {
-			return false, err
+			return false, false, err
 		}
 		utils.GetLogger().Debugf("`%s-list add` ok [%s] [%s] ", certType, dirPath, filename)
 	}
 
-	return updated, nil
+	return updated, created, nil
 }
 
 func (c *certs) deleteRuntime(crtList, filename string) error {
@@ -446,12 +448,14 @@ func (c *certs) writeCert(cert *cert, filename string, content []byte, isCa bool
 			utils.GetLogger().Debugf("cert written on disk[%s]", filename)
 		}
 
-		updated, err := c.updateRuntime(filename, content, isCa)
+		updated, created, err := c.updateRuntime(filename, content, isCa)
 		if err != nil {
 			instance.Reload("Runtime update of cert file '%s' failed : %s", filename, certErrorForLog(err))
 		} else if updated {
 			utils.GetLogger().Debugf("Runtime update of cert ok [%s]", filename)
-			cert.updated = true
+			// A renewed certificate is live once committed: reloading would only close the
+			// established connections. Only a certificate HAProxy did not know yet asks for one.
+			cert.updated = created
 		}
 
 		// In runtime failed or did succeed, it needs to be written on disk.
