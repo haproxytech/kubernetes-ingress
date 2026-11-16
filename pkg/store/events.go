@@ -373,44 +373,48 @@ func (k *K8s) EventPod(podEvent PodEvent) (updateRequired bool) {
 }
 
 func (k *K8s) EventPublishService(ns *Namespace, data *Service) (updateRequired bool) {
-	updateRequired = false
+	service, ok := ns.Services[data.Name]
 	switch data.Status {
 	case MODIFIED:
-		newService := data
-		oldService, ok := ns.Services[data.Name]
 		if !ok {
 			// It can happen (resync) that we receive an UPDATE on a item that is not yet registered
 			// We should treat it as a CREATE.
 			logger.Warningf("Service '%s' not registered with controller !", data.Name)
+			// TODO: decide if this should be removed
+			// This path doesn't do anything because these are synchronous calls and the only insertion into ns.Services happens
+			// in EventService, meaning ns.Services[data.Name] will not exist on the recursive call either, logging the added error and returning false
+			// This additional call can therefore be safely removed
 			data.Status = ADDED
 			return k.EventPublishService(ns, data)
 		}
-		if oldService.EqualWithAddresses(newService) {
-			return updateRequired
+
+		service.Addresses = data.Addresses
+		if utils.EqualSliceStringsWithoutOrder(k.PublishServiceAddresses, data.Addresses) {
+			return false
 		}
-		oldService.Addresses = newService.Addresses
-		k.PublishServiceAddresses = newService.Addresses
+		k.PublishServiceAddresses = data.Addresses
 		k.UpdateAllIngresses = true
-		updateRequired = true
+		return true
 	case ADDED:
-		if service, ok := ns.Services[data.Name]; ok {
-			k.PublishServiceAddresses = data.Addresses
-			service.Addresses = data.Addresses
-			k.UpdateAllIngresses = true
-			updateRequired = true
-			return updateRequired
+		if !ok {
+			logger.Errorf("Publish service '%s/%s' not found", data.Namespace, data.Name)
+			return false
 		}
-		logger.Errorf("Publish service '%s/%s' not found", data.Namespace, data.Name)
+
+		service.Addresses = data.Addresses
+		k.PublishServiceAddresses = data.Addresses
+		k.UpdateAllIngresses = true
+		return true
 	case DELETED:
-		service, ok := ns.Services[data.Name]
-		if ok {
-			k.PublishServiceAddresses = nil
-			service.Addresses = nil
-			k.UpdateAllIngresses = true
-			updateRequired = true
-		} else {
+		if !ok {
 			logger.Warningf("Publish service '%s/%s' not registered with controller, cannot delete !", data.Namespace, data.Name)
+			return false
 		}
+
+		service.Addresses = nil
+		k.PublishServiceAddresses = nil
+		k.UpdateAllIngresses = true
+		return true
 	}
-	return updateRequired
+	return false
 }

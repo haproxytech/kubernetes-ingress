@@ -207,13 +207,14 @@ func (k k8s) getServiceInformer(eventChan chan k8ssync.SyncDataEvent, factory in
 			logIncomingK8sEvent(logger, item, data.UID, data.ResourceVersion)
 			eventChan <- ToSyncDataEvent(item, item, data.UID, data.ResourceVersion)
 			if k.publishSvc != nil && k.publishSvc.Namespace == item.Namespace && k.publishSvc.Name == item.Name {
-				item.Addresses = getServiceAddresses(data)
+				itemCopy := *item
+				itemCopy.Addresses = getServiceAddresses(data)
 				logger.Tracef("[RUNTIME] [K8s] %s %s: %s", k8ssync.PUBLISH_SERVICE, item.Status, item.Name)
 				eventChan <- k8ssync.SyncDataEvent{
 					SyncType:  k8ssync.PUBLISH_SERVICE,
 					Namespace: data.Namespace,
 					Name:      data.Name,
-					Data:      item,
+					Data:      &itemCopy,
 				}
 			}
 		},
@@ -261,13 +262,14 @@ func (k k8s) getServiceInformer(eventChan chan k8ssync.SyncDataEvent, factory in
 			eventChan <- ToSyncDataEvent(item2, item2, data2.UID, data2.ResourceVersion)
 
 			if k.publishSvc != nil && k.publishSvc.Namespace == item2.Namespace && k.publishSvc.Name == item2.Name {
-				item2.Addresses = getServiceAddresses(data2)
+				item2Copy := *item2
+				item2Copy.Addresses = getServiceAddresses(data2)
 				logger.Tracef("[RUNTIME] [K8s] %s %s: %s", k8ssync.PUBLISH_SERVICE, item2.Status, item2.Name)
 				eventChan <- k8ssync.SyncDataEvent{
 					SyncType:  k8ssync.PUBLISH_SERVICE,
 					Namespace: item2.Namespace,
 					Name:      item2.Name,
-					Data:      item2,
+					Data:      &item2Copy,
 				}
 			}
 		},

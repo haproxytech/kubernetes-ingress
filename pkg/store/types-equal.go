@@ -158,10 +158,6 @@ func (a *PortEndpoints) Equal(b *PortEndpoints) bool {
 	return true
 }
 
-func (a *Service) EqualWithAddresses(b *Service) bool {
-	return utils.EqualSliceStringsWithoutOrder(a.Addresses, b.Addresses)
-}
-
 func (gwc *GatewayClass) Equal(other *GatewayClass) bool {
 	return gwc == nil && other == nil || (NoNilPointer(gwc, other) &&
 		gwc.Name == other.Name &&
