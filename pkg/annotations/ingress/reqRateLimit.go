@@ -59,6 +59,8 @@ func (a ReqRateLimitAnn) Process(k store.K8s, annotations ...map[string]string) 
 		value, err = strconv.ParseInt(input, 10, 64)
 		a.parent.limit = &rules.ReqRateLimit{ReqsLimit: value}
 		a.parent.track = &rules.ReqTrack{TrackKey: "src"}
+		// 1s default period, rate-limit-period overrides it.
+		a.parent.setPeriod(utils.PtrInt64(1000))
 		a.parent.rules.Add(a.parent.limit)
 		a.parent.rules.Add(a.parent.track)
 	case "rate-limit-period":
@@ -67,10 +69,10 @@ func (a ReqRateLimitAnn) Process(k store.K8s, annotations ...map[string]string) 
 		}
 		var value *int64
 		value, err = utils.ParseTime(input)
-		tableName := fmt.Sprintf("RateLimit-%d", *value)
-		a.parent.track.TablePeriod = value
-		a.parent.track.TableName = tableName
-		a.parent.limit.TableName = tableName
+		if err != nil {
+			return err
+		}
+		a.parent.setPeriod(value)
 	case "rate-limit-size":
 		if a.parent.limit == nil || a.parent.track == nil {
 			return errors.New("rate-limit-size requires rate-limit-requests to be set")
@@ -127,4 +129,11 @@ func (a ReqRateLimitAnn) Process(k store.K8s, annotations ...map[string]string) 
 		err = fmt.Errorf("unknown rate-limit annotation '%s'", a.name)
 	}
 	return err
+}
+
+func (p *ReqRateLimit) setPeriod(period *int64) {
+	tableName := fmt.Sprintf("RateLimit-%d", *period)
+	p.track.TablePeriod = period
+	p.track.TableName = tableName
+	p.limit.TableName = tableName
 }
