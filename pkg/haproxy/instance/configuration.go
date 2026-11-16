@@ -22,6 +22,12 @@ func NeedReload() bool {
 	return DefaultConfigurationManager.NeedReload()
 }
 
+// ConsumeReload takes the pending request before a reload attempt. Requests
+// arriving during the attempt remain pending; a failed attempt must re-arm it.
+func ConsumeReload() bool {
+	return DefaultConfigurationManager.ConsumeReload()
+}
+
 func Reset() {
 	DefaultConfigurationManager.Reset()
 }
@@ -53,6 +59,10 @@ func (cmi *configurationManagerImpl) Reset() {
 
 func (cmi *configurationManagerImpl) NeedReload() bool {
 	return cmi.reload.Load()
+}
+
+func (cmi *configurationManagerImpl) ConsumeReload() bool {
+	return cmi.reload.Swap(false)
 }
 
 func (cmi *configurationManagerImpl) SetReloadIf(reload bool, reason string, args ...any) {
