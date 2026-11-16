@@ -18,8 +18,6 @@ package store
 
 import (
 	"bytes"
-
-	"github.com/haproxytech/kubernetes-ingress/pkg/utils"
 )
 
 func (a *ServicePort) Equal(b *ServicePort) bool {
@@ -155,10 +153,6 @@ func (a *PortEndpoints) Equal(b *PortEndpoints) bool {
 		}
 	}
 	return true
-}
-
-func (a *Service) EqualWithAddresses(b *Service) bool {
-	return utils.EqualSliceStringsWithoutOrder(a.Addresses, b.Addresses)
 }
 
 func (a *IngressClass) Equal(b *IngressClass) bool {
