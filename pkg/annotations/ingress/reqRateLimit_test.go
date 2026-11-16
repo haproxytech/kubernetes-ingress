@@ -289,3 +289,13 @@ func TestReqRateLimit_AllAnnotations(t *testing.T) {
 	assert.Contains(t, reqRateLimit.limit.WhitelistIPs, "192.168.1.100")
 	assert.NotNil(t, reqRateLimit.track.TableSize)
 }
+
+// Without rate-limit-period the stick table must still be named, as in 3.2.
+func TestReqRateLimit_DefaultPeriod(t *testing.T) {
+	reqRateLimit := NewReqRateLimit(&rules.List{}, nil)
+	annotations := map[string]string{"rate-limit-requests": "100"}
+	require.NoError(t, reqRateLimit.NewAnnotation("rate-limit-requests").Process(store.K8s{}, annotations))
+	assert.Equal(t, "RateLimit-1000", reqRateLimit.limit.TableName)
+	assert.Equal(t, "RateLimit-1000", reqRateLimit.track.TableName)
+	assert.Equal(t, int64(1000), *reqRateLimit.track.TablePeriod)
+}
