@@ -258,3 +258,26 @@ func TestUpdateRuntimeAbortsACAFileWithTheCACommand(t *testing.T) {
 		"abort ssl ca-file " + caPath,
 	}, commands.recorded())
 }
+
+// TestRefreshCertsRemovesSameNameFromEveryDirectory covers a Secret used as frontend and backend certificate.
+func TestRefreshCertsRemovesSameNameFromEveryDirectory(t *testing.T) {
+	c, _ := newTestRepository(t)
+	instance.Reset()
+
+	paths := []string{
+		filepath.Join(env.FrontendDir, "web_app-tls.pem"),
+		filepath.Join(env.BackendDir, "web_app-tls.pem"),
+	}
+	for _, p := range paths {
+		require.NoError(t, os.WriteFile(p, []byte("pem"), 0o600))
+	}
+
+	c.refreshCerts(c.frontend, env.FrontendDir)
+	c.refreshCerts(c.backend, env.BackendDir)
+	fs.RunDelayedFuncs()
+
+	for _, p := range paths {
+		_, err := os.Stat(p)
+		require.True(t, os.IsNotExist(err), "%s must be removed", p)
+	}
+}

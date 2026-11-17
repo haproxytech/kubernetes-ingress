@@ -382,7 +382,8 @@ func (c *certs) refreshCerts(certs map[string]*cert, certDir string) {
 				// command can detach it, only the reload which loads a
 				// configuration that does not name it.
 			}
-			fs.AddDelayedFunc(filename, func() {
+			// Full path: directories share file names, and writes use the same key.
+			fs.AddDelayedFunc(path.Join(certDir, filename), func() {
 				logger.Error(os.Remove(path.Join(certDir, filename)))
 			})
 			delete(certs, certName)
