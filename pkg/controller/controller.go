@@ -204,8 +204,10 @@ func (c *HAProxyController) updateHAProxy() {
 		return
 	}
 
+	// HAProxy can restart without the controller, then loads maps and certificates from disk.
+	fs.RunDelayedFuncs()
+
 	if instance.NeedReload() {
-		fs.RunDelayedFuncs()
 		var msg string
 		if msg, err = c.haproxy.Service("reload"); err != nil {
 			logger.Error(err)
@@ -237,9 +239,6 @@ func (c *HAProxyController) updateHAProxy() {
 			logger.Info("HAProxy reloaded")
 			c.prometheusMetricsManager.UpdateReloadMetrics(err)
 		}
-	} else if c.osArgs.DisableDelayedWritingOnlyIfReload {
-		// If the osArgs flag is set, then write the files to disk even if there is no reload of haproxy
-		fs.RunDelayedFuncs()
 	}
 
 	c.clean(false)

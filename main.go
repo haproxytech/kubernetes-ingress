@@ -257,7 +257,7 @@ func logInfo(logger utils.Logger, osArgs utils.OSArgs) bool {
 		logger.Printf("Disabling config snippets for [%s]", osArgs.DisableConfigSnippets)
 	}
 	if osArgs.DisableDelayedWritingOnlyIfReload {
-		logger.Print("Disabling the delayed writing of files to disk only in case of haproxy reload (write to disk even if no reload)")
+		logger.Warning("--disable-writing-only-if-reload is DEPRECATED and has no effect: files are always written to disk")
 	}
 	logger.Debugf("Kubernetes Informers resync period: %s", osArgs.CacheResyncPeriod.String())
 	logger.Printf("Controller initial sync period: %s", osArgs.InitialSyncPeriod.String())
