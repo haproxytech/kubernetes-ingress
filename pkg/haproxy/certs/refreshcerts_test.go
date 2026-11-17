@@ -28,6 +28,7 @@ import (
 	"github.com/haproxytech/kubernetes-ingress/pkg/fs"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/api"
 	"github.com/haproxytech/kubernetes-ingress/pkg/haproxy/instance"
+	"github.com/haproxytech/kubernetes-ingress/pkg/store"
 )
 
 // fakeAPI records the runtime commands instead of sending them.
@@ -280,4 +281,24 @@ func TestRefreshCertsRemovesSameNameFromEveryDirectory(t *testing.T) {
 		_, err := os.Stat(p)
 		require.True(t, os.IsNotExist(err), "%s must be removed", p)
 	}
+}
+
+// TestRuntimeCertUpdateDoesNotAskForReload checks a runtime update alone needs no reload.
+func TestRuntimeCertUpdateDoesNotAskForReload(t *testing.T) {
+	c, commands := newTestRepository(t)
+	instance.Reset()
+
+	_, err := c.AddSecret(&store.Secret{
+		Namespace: "web",
+		Name:      "app-tls",
+		Data: map[string][]byte{
+			"tls.crt": []byte("crt"),
+			"tls.key": []byte("key"),
+		},
+	}, FT_CERT)
+	require.NoError(t, err)
+	fs.Writer.WaitUntilWritesDone()
+
+	require.Contains(t, commands.recorded(), "commit ssl cert "+filepath.Join(env.FrontendDir, "web_app-tls.pem"))
+	require.False(t, instance.NeedReload(), "the runtime API applied the certificate")
 }

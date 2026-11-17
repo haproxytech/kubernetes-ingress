@@ -269,8 +269,6 @@ func (handler *HTTPS) Update(k store.K8s, h haproxy.HAProxy, a annotations.Annot
 		instance.Reload("SSLPassthrough disabled")
 	}
 
-	instance.ReloadIf(h.CertsUpdated(), "certificates updated")
-
 	return errs.Result()
 }
 
