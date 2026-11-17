@@ -33,8 +33,6 @@ type Certificates interface {
 	AddSecret(secret *store.Secret, secretType SecretType) (certPath string, err error)
 	// FrontCertsInuse returns true if a frontend certificate is configured.
 	FrontCertsInUse() bool
-	// Updated returns true if there is any updadted/created certificate
-	CertsUpdated() bool
 	// Refresh removes unused certs from HAProxyCertDir
 	RefreshCerts(api api.HAProxyClient)
 	// Clean cleans certificates state
@@ -43,11 +41,10 @@ type Certificates interface {
 }
 
 type cert struct {
-	name    string
-	path    string
-	inUse   bool
-	updated bool
-	ca      bool
+	name  string
+	path  string
+	inUse bool
+	ca    bool
 }
 
 type SecretType int
@@ -255,19 +252,15 @@ func (c *certs) deleteRuntime(crtList, filename string) error {
 func (c *certs) CleanCerts() {
 	for i := range c.frontend {
 		c.frontend[i].inUse = false
-		c.frontend[i].updated = false
 	}
 	for i := range c.backend {
 		c.backend[i].inUse = false
-		c.backend[i].updated = false
 	}
 	for i := range c.ca {
 		c.ca[i].inUse = false
-		c.ca[i].updated = false
 	}
 	for i := range c.TCPCR {
 		c.TCPCR[i].inUse = false
-		c.TCPCR[i].updated = false
 	}
 }
 
@@ -286,18 +279,6 @@ func (c *certs) RefreshCerts(api api.HAProxyClient) {
 	c.refreshCerts(c.backend, env.BackendDir)
 	c.refreshCerts(c.ca, env.CaDir)
 	c.refreshCerts(c.TCPCR, env.TCPCRDir)
-}
-
-func (c *certs) CertsUpdated() (reload bool) {
-	for _, certs := range []map[string]*cert{c.frontend, c.backend, c.ca, c.TCPCR} {
-		for _, crt := range certs {
-			if crt.updated {
-				logger.Debugf("Secret '%s' was updated", crt.name)
-				reload = true
-			}
-		}
-	}
-	return reload
 }
 
 // dirKind tells how the generated configuration references the certificates a
@@ -402,7 +383,7 @@ func (c *certs) writeSecret(secret *store.Secret, cert *cert, isCa bool) (err er
 		}
 		cert.path += ".pem"
 		content := certContent([]byte(""), crtValue)
-		return c.writeCert(cert, cert.path, content, isCa)
+		return c.writeCert(cert.path, content, isCa)
 	}
 	for _, k := range []string{"tls", "rsa", "ecdsa", "dsa"} {
 		keyValue, keyOk = secret.Data[k+".key"]
@@ -415,7 +396,7 @@ func (c *certs) writeSecret(secret *store.Secret, cert *cert, isCa bool) (err er
 				certPath = fmt.Sprintf("%s.%s", certPath, k)
 			}
 			content := certContent(keyValue, crtValue)
-			err = c.writeCert(cert, certPath, content, isCa)
+			err = c.writeCert(certPath, content, isCa)
 			if err != nil {
 				return err
 			}
@@ -428,7 +409,7 @@ func (c *certs) writeSecret(secret *store.Secret, cert *cert, isCa bool) (err er
 	return nil
 }
 
-func (c *certs) writeCert(cert *cert, filename string, content []byte, isCa bool) error {
+func (c *certs) writeCert(filename string, content []byte, isCa bool) error {
 	fs.Writer.Write(func() {
 		if _, err := os.Stat(filename); err != nil {
 			// If file does not exist, contrary to the map files, it's not working to create an empty file.
@@ -451,8 +432,8 @@ func (c *certs) writeCert(cert *cert, filename string, content []byte, isCa bool
 		if err != nil {
 			instance.Reload("Runtime update of cert file '%s' failed : %s", filename, certErrorForLog(err))
 		} else if updated {
+			// The runtime API applied it, so no reload is needed.
 			utils.GetLogger().Debugf("Runtime update of cert ok [%s]", filename)
-			cert.updated = true
 		}
 
 		// In runtime failed or did succeed, it needs to be written on disk.
