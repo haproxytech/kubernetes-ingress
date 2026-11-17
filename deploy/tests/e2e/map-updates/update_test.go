@@ -18,6 +18,7 @@ package mapupdate
 
 import (
 	"strconv"
+	"strings"
 
 	"github.com/haproxytech/kubernetes-ingress/deploy/tests/e2e"
 )
@@ -64,5 +65,20 @@ func (suite *MapUpdateSuite) Test_Update() {
 			suite.T().Logf("oldInfo.Pid(%s) == newInfo.Pid(%s) && additional path-exact.count(%d) == %d && additional path-prefix-exact.count(%d) == %d && additional path-prefix.count(%d) == %d", oldInfo.Pid, newInfo.Pid, numOfAddedEntriesExact, 0, numOfAddedEntriesPrefixExact, n, numOfAddedEntriesPrefix, n)
 			return oldInfo.Pid == newInfo.Pid && numOfAddedEntriesExact == 0 && numOfAddedEntriesPrefixExact == n && numOfAddedEntriesPrefix == n
 		}, e2e.WaitDuration, e2e.TickDuration)
+		// HAProxy can restart without the controller and then reads the maps from disk.
+		suite.Require().Eventually(func() bool {
+			content, err := suite.test.GetIngressControllerFile("/etc/haproxy/maps/path-prefix.map")
+			if err != nil {
+				suite.T().Log(err)
+				return false
+			}
+			count := strings.Count(content, suite.tmplData.Host+"/")
+			suite.T().Logf("path-prefix.map on disk has %d of %d routes", count, n)
+			return count == n
+		}, e2e.WaitDuration, e2e.TickDuration)
+		// A reload would also write the maps, so it must not have happened.
+		newInfo, err := e2e.GetGlobalHAProxyInfo()
+		suite.Require().NoError(err)
+		suite.Require().Equal(oldInfo.Pid, newInfo.Pid)
 	})
 }

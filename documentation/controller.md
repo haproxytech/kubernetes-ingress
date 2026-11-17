@@ -1062,7 +1062,7 @@ args:
 
 ### `--disable-writing-only-if-reload`
 
-  Disable the delayed writing of files to disk ONLY in case of haproxy reload (= write files to disk even if no reload)
+  Deprecated, has no effect. Map and certificate files are always written to disk. HAProxy can restart without the controller, and then loads them from disk.
 
 Possible values:
 
