@@ -22,7 +22,7 @@ require (
 	github.com/stretchr/testify v1.12.1
 	github.com/valyala/fasthttp v1.73.0
 	go.uber.org/automaxprocs v1.6.0
-	golang.org/x/text v0.43.0
+	golang.org/x/text v0.44.0
 	google.golang.org/protobuf v1.36.12
 	gopkg.in/yaml.v3 v3.0.1
 	k8s.io/api v0.37.1
@@ -91,15 +91,15 @@ require (
 	go.uber.org/zap v1.28.0 // indirect
 	go.yaml.in/yaml/v2 v2.4.4 // indirect
 	go.yaml.in/yaml/v3 v3.0.5 // indirect
-	golang.org/x/exp v0.0.0-20261014143641-f0251eb4aa3e // indirect
-	golang.org/x/mod v0.42.0 // indirect
-	golang.org/x/net v0.62.0 // indirect
-	golang.org/x/oauth2 v0.37.0 // indirect
-	golang.org/x/sync v0.24.0 // indirect
-	golang.org/x/sys v0.49.0 // indirect
-	golang.org/x/term v0.47.0 // indirect
+	golang.org/x/exp v0.0.0-20261117202309-7a49493bfd90 // indirect
+	golang.org/x/mod v0.43.0 // indirect
+	golang.org/x/net v0.63.0 // indirect
+	golang.org/x/oauth2 v0.38.0 // indirect
+	golang.org/x/sync v0.25.0 // indirect
+	golang.org/x/sys v0.50.0 // indirect
+	golang.org/x/term v0.48.0 // indirect
 	golang.org/x/time v0.16.0 // indirect
-	golang.org/x/tools v0.52.0 // indirect
+	golang.org/x/tools v0.53.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20261005182115-fad411399dd8 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20261005182115-fad411399dd8 // indirect
 	gopkg.in/evanphx/json-patch.v4 v4.13.0 // indirect
