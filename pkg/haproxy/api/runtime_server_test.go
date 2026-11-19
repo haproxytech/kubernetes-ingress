@@ -47,6 +47,41 @@ func TestBuildAddServerSpecBackendOverridesSection(t *testing.T) {
 	require.NotContains(t, spec.Args, "inter 2s")
 }
 
+func TestBuildAddServerSpecChecksSSLServerOverSSL(t *testing.T) {
+	// server-ssl renders `default-server check ssl ...` without check-ssl. A
+	// static server inherits SSL for its checks, a dynamic one does not.
+	backend := &models.Backend{
+		BackendBase: models.BackendBase{
+			Name:          "be",
+			DefaultServer: &models.DefaultServer{ServerParams: models.ServerParams{Check: "enabled", Ssl: "enabled", Verify: "none"}},
+		},
+	}
+
+	spec, err := buildAddServerSpec(addServerFixture(), backend, nil)
+
+	require.NoError(t, err)
+	require.Contains(t, spec.Args, " ssl")
+	require.Contains(t, spec.Args, " check-ssl")
+}
+
+func TestBuildAddServerSpecKeepsCheckOnSeparatePortInClear(t *testing.T) {
+	// A check on its own port does not inherit SSL from the server, static or
+	// dynamic.
+	backend := &models.Backend{
+		BackendBase: models.BackendBase{
+			Name: "be",
+			DefaultServer: &models.DefaultServer{ServerParams: models.ServerParams{
+				Check: "enabled", Ssl: "enabled", Verify: "none", HealthCheckPort: utils.PtrInt64(8081),
+			}},
+		},
+	}
+
+	spec, err := buildAddServerSpec(addServerFixture(), backend, nil)
+
+	require.NoError(t, err)
+	require.NotContains(t, spec.Args, "check-ssl")
+}
+
 func TestBuildAddServerSpecAddsCookieForStaticPersistence(t *testing.T) {
 	backend := &models.Backend{BackendBase: models.BackendBase{
 		Name:   "be",

@@ -34,6 +34,15 @@ func buildAddServerSpec(server models.Server, backend *models.Backend, sectionDe
 			return addServerSpec{}, fmt.Errorf("merging backend default-server: %w", err)
 		}
 	}
+	// A static server checks over SSL when it uses SSL and the check targets the
+	// server itself. HAProxy does not apply that to dynamic servers: check-ssl
+	// must be explicit.
+	if merged.Ssl == "enabled" &&
+		merged.CheckSsl == "" &&
+		merged.HealthCheckPort == nil &&
+		merged.HealthCheckAddress == "" {
+		merged.CheckSsl = "enabled"
+	}
 
 	var args strings.Builder
 	args.WriteString(server.Address)
