@@ -60,7 +60,7 @@ type K8s struct {
 	// Nesting per map file rather than joining the two into one string is what avoids reserving
 	// a separator that cannot appear in a host or a path.
 	RoutesProcessedByMapFile map[string]map[string]RouteOwner
-	HaProxyPods              map[string]struct{}
+	HaProxyPods              map[string]string
 	FrontendRC               *rc.ResourceCounter
 	PublishServiceAddresses  []string
 	UpdateAllIngresses       bool
@@ -111,12 +111,11 @@ func NewK8sStore(args utils.OSArgs) K8s {
 		},
 		BackendsProcessed:        map[string]BackendOwner{},
 		RoutesProcessedByMapFile: map[string]map[string]RouteOwner{},
-
-		CRStates:           map[CRRef]*CRState{},
-		SectionsFromCR:     map[string]CRRef{},
-		HaProxyPods:        map[string]struct{}{},
-		FrontendRC:         rc.NewResourceCounter(),
-		IngressesByService: map[string]*utils.OrderedSet[string, *Ingress]{},
+		CRStates:                 map[CRRef]*CRState{},
+		SectionsFromCR:           map[string]CRRef{},
+		HaProxyPods:              map[string]string{},
+		FrontendRC:               rc.NewResourceCounter(),
+		IngressesByService:       map[string]*utils.OrderedSet[string, *Ingress]{},
 	}
 	for _, namespace := range args.NamespaceWhitelist {
 		store.NamespacesAccess.Whitelist[namespace] = struct{}{}

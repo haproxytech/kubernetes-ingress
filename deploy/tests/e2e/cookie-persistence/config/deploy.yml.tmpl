@@ -34,6 +34,14 @@ metadata:
 {{ else if .CookiePersistenceNoDynamic }}
     cookie-persistence-no-dynamic: "mycookie"
 {{ end }}
+{{ if .SourceIPPersistence }}
+    source-ip-persistence: "true"
+    source-ip-persistence-size: "{{ .SourceIPPersistenceSize }}"
+    source-ip-persistence-expire: "{{ .SourceIPPersistenceExpire }}"
+{{ end }}
+{{ if .LoadBalance }}
+    load-balance: "{{ .LoadBalance }}"
+{{ end }}
 spec:
   ports:
     - name: http
