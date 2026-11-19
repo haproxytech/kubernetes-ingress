@@ -530,48 +530,61 @@ func (k k8s) getEndpointsInformer(eventChan chan k8ssync.SyncDataEvent, factory 
 }
 
 func (k *k8s) getPodInformer(namespace, podPrefix string, resyncPeriod time.Duration, eventChan chan k8ssync.SyncDataEvent) cache.Controller { //nolint:ireturn
-	var prefix string
 	watchlist := cache.NewListWatchFromClient(k.builtInClient.CoreV1().RESTClient(), "pods", namespace, fields.Nothing())
 	_, eController := cache.NewInformerWithOptions(
 		cache.InformerOptions{
 			ListerWatcher: watchlist,
 			ObjectType:    &corev1.Pod{},
 			ResyncPeriod:  resyncPeriod,
-			Handler: cache.ResourceEventHandlerFuncs{
-				AddFunc: func(obj interface{}) {
-					meta := obj.(*corev1.Pod).ObjectMeta
-					prefix, _ = utils.GetPodPrefix(meta.Name)
-					if prefix != podPrefix {
-						return
-					}
-					item := store.PodEvent{Status: store.ADDED, Name: meta.Name, Namespace: meta.Namespace}
-					eventChan <- ToSyncDataEvent(item, item, meta.UID, meta.ResourceVersion)
-				},
-				DeleteFunc: func(obj interface{}) {
-					//revive:disable-next-line:unchecked-type-assertion
-					meta := obj.(*corev1.Pod).ObjectMeta
-					prefix, _ = utils.GetPodPrefix(meta.Name)
-					if prefix != podPrefix {
-						return
-					}
-					item := store.PodEvent{Status: store.DELETED, Name: meta.Name, Namespace: meta.Namespace}
-					eventChan <- ToSyncDataEvent(item, item, meta.UID, meta.ResourceVersion)
-				},
-				UpdateFunc: func(oldObj, newObj interface{}) {
-					//revive:disable-next-line:unchecked-type-assertion
-					meta := newObj.(*corev1.Pod).ObjectMeta
-					prefix, _ = utils.GetPodPrefix(meta.Name)
-					if prefix != podPrefix {
-						return
-					}
-					item := store.PodEvent{Status: store.MODIFIED, Name: meta.Name, Namespace: meta.Namespace}
-					eventChan <- ToSyncDataEvent(item, item, meta.UID, meta.ResourceVersion)
-				},
-			},
+			Handler:       podEventHandlers(podPrefix, eventChan),
 		},
 	)
 
 	return eController
+}
+
+func podEventHandlers(podPrefix string, eventChan chan k8ssync.SyncDataEvent) cache.ResourceEventHandlerFuncs {
+	var prefix string
+	return cache.ResourceEventHandlerFuncs{
+		AddFunc: func(obj interface{}) {
+			meta := obj.(*corev1.Pod).ObjectMeta
+			prefix, _ = utils.GetPodPrefix(meta.Name)
+			if prefix != podPrefix {
+				return
+			}
+			item := store.PodEvent{Status: store.ADDED, Name: meta.Name, Namespace: meta.Namespace}
+			eventChan <- ToSyncDataEvent(item, item, meta.UID, meta.ResourceVersion)
+		},
+		DeleteFunc: func(obj interface{}) {
+			// When the watch missed the delete, client-go hands over a tombstone with the
+			// last known state of the pod instead of the pod itself.
+			if tombstone, ok := obj.(cache.DeletedFinalStateUnknown); ok {
+				obj = tombstone.Obj
+			}
+			pod, ok := obj.(*corev1.Pod)
+			if !ok {
+				logger.Errorf("%s: Invalid data from k8s api, %s", k8ssync.POD, obj)
+				return
+			}
+			meta := pod.ObjectMeta
+			prefix, _ = utils.GetPodPrefix(meta.Name)
+			if prefix != podPrefix {
+				return
+			}
+			item := store.PodEvent{Status: store.DELETED, Name: meta.Name, Namespace: meta.Namespace}
+			eventChan <- ToSyncDataEvent(item, item, meta.UID, meta.ResourceVersion)
+		},
+		UpdateFunc: func(oldObj, newObj interface{}) {
+			//revive:disable-next-line:unchecked-type-assertion
+			meta := newObj.(*corev1.Pod).ObjectMeta
+			prefix, _ = utils.GetPodPrefix(meta.Name)
+			if prefix != podPrefix {
+				return
+			}
+			item := store.PodEvent{Status: store.MODIFIED, Name: meta.Name, Namespace: meta.Namespace}
+			eventChan <- ToSyncDataEvent(item, item, meta.UID, meta.ResourceVersion)
+		},
+	}
 }
 
 func (k k8s) addIngressClassHandlers(eventChan chan k8ssync.SyncDataEvent, informer cache.SharedIndexInformer) {
