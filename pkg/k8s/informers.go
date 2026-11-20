@@ -147,6 +147,7 @@ func (k k8s) getServiceInformer(eventChan chan k8ssync.SyncDataEvent, factory in
 				Annotations: store.CopyAnnotations(data.ObjectMeta.Annotations),
 				Ports:       []store.ServicePort{},
 				Status:      status,
+				Addresses:   getServiceAddresses(data),
 			}
 			if data.Spec.Type == corev1.ServiceTypeExternalName {
 				item.DNS = data.Spec.ExternalName
@@ -160,18 +161,6 @@ func (k k8s) getServiceInformer(eventChan chan k8ssync.SyncDataEvent, factory in
 			}
 			logIncomingK8sEvent(logger, item, data.UID, data.ResourceVersion)
 			eventChan <- ToSyncDataEvent(item, item, data.UID, data.ResourceVersion)
-			if k.publishSvc != nil && k.publishSvc.Namespace == item.Namespace && k.publishSvc.Name == item.Name {
-				// item copy because of ADDED handler in events.go which must modify the STATUS based solely on addresses
-				itemCopy := *item
-				itemCopy.Addresses = getServiceAddresses(data)
-				logger.Tracef("[RUNTIME] [K8s] %s %s: %s", k8ssync.PUBLISH_SERVICE, item.Status, item.Name)
-				eventChan <- k8ssync.SyncDataEvent{
-					SyncType:  k8ssync.PUBLISH_SERVICE,
-					Namespace: item.Namespace,
-					Name:      item.Name,
-					Data:      &itemCopy,
-				}
-			}
 		},
 		DeleteFunc: func(obj interface{}) {
 			data, ok := obj.(*corev1.Service)
@@ -188,23 +177,13 @@ func (k k8s) getServiceInformer(eventChan chan k8ssync.SyncDataEvent, factory in
 				Name:        data.GetName(),
 				Annotations: store.CopyAnnotations(data.ObjectMeta.Annotations),
 				Status:      status,
+				Addresses:   getServiceAddresses(data),
 			}
 			if data.Spec.Type == corev1.ServiceTypeExternalName {
 				item.DNS = data.Spec.ExternalName
 			}
 			logIncomingK8sEvent(logger, item, data.UID, data.ResourceVersion)
 			eventChan <- ToSyncDataEvent(item, item, data.UID, data.ResourceVersion)
-			if k.publishSvc != nil && k.publishSvc.Namespace == item.Namespace && k.publishSvc.Name == item.Name {
-				itemCopy := *item
-				itemCopy.Addresses = getServiceAddresses(data)
-				logger.Tracef("[RUNTIME] [K8s] %s %s: %s", k8ssync.PUBLISH_SERVICE, item.Status, item.Name)
-				eventChan <- k8ssync.SyncDataEvent{
-					SyncType:  k8ssync.PUBLISH_SERVICE,
-					Namespace: data.Namespace,
-					Name:      data.Name,
-					Data:      &itemCopy,
-				}
-			}
 		},
 		UpdateFunc: func(oldObj, newObj interface{}) {
 			data1, ok := oldObj.(*corev1.Service)
@@ -234,6 +213,7 @@ func (k k8s) getServiceInformer(eventChan chan k8ssync.SyncDataEvent, factory in
 				Annotations: store.CopyAnnotations(data2.ObjectMeta.Annotations),
 				Ports:       []store.ServicePort{},
 				Status:      status,
+				Addresses:   getServiceAddresses(data2),
 			}
 			if data2.Spec.Type == corev1.ServiceTypeExternalName {
 				item2.DNS = data2.Spec.ExternalName
@@ -248,18 +228,6 @@ func (k k8s) getServiceInformer(eventChan chan k8ssync.SyncDataEvent, factory in
 
 			logIncomingK8sEvent(logger, item2, data2.UID, data2.ResourceVersion)
 			eventChan <- ToSyncDataEvent(item2, item2, data2.UID, data2.ResourceVersion)
-
-			if k.publishSvc != nil && k.publishSvc.Namespace == item2.Namespace && k.publishSvc.Name == item2.Name {
-				item2Copy := *item2
-				item2Copy.Addresses = getServiceAddresses(data2)
-				logger.Tracef("[RUNTIME] [K8s] %s %s: %s", k8ssync.PUBLISH_SERVICE, item2.Status, item2.Name)
-				eventChan <- k8ssync.SyncDataEvent{
-					SyncType:  k8ssync.PUBLISH_SERVICE,
-					Namespace: item2.Namespace,
-					Name:      item2.Name,
-					Data:      &item2Copy,
-				}
-			}
 		},
 	})
 	logger.Error(err)

@@ -217,50 +217,68 @@ func (k *K8s) EventEndpoints(ns *Namespace, data *Endpoints, syncHAproxySrvs fun
 	return true
 }
 
-func (k *K8s) EventService(ns *Namespace, data *Service) (updateRequired bool) {
-	updateRequired = false
+func (k *K8s) setService(ns *Namespace, data *Service) bool {
+	service, ok := ns.Services[data.Name]
 	switch data.Status {
-	case MODIFIED:
-		newService := data
-		oldService, ok := ns.Services[data.Name]
+	case MODIFIED, ADDED:
 		if !ok {
-			// It can happen (resync) that we receive an UPDATE on a item that is not yet registered
-			// We should treat it as a CREATE.
-			logger.Warningf("Service '%s' not registered with controller !", data.Name)
-			data.Status = ADDED
-			return k.EventService(ns, data)
-		}
-		if oldService.Equal(newService) {
-			return updateRequired
-		}
-		if oldService.Status == ADDED {
-			newService.Status = ADDED
-		}
-		ns.Services[data.Name] = newService
-		updateRequired = true
-	case ADDED:
-		if old, ok := ns.Services[data.Name]; ok {
-			if old.Status == DELETED {
-				ns.Services[data.Name].Status = ADDED
+			if data.Status == MODIFIED {
+				// It can happen (resync) that we receive an UPDATE on a item that is not yet registered
+				// Treat it as an ADD
+				logger.Warningf("Service '%s' not registered with controller !", data.Name)
+				data.Status = ADDED
 			}
-			if !old.Equal(data) {
-				data.Status = MODIFIED
-				return k.EventService(ns, data)
-			}
-			return updateRequired
+			ns.Services[data.Name] = data
+			return true
 		}
+		if service.Status == DELETED {
+			service.Status = ADDED
+		}
+		if service.Equal(data) {
+			return false
+		}
+		data.Status = MODIFIED
 		ns.Services[data.Name] = data
-		updateRequired = true
+		return true
 	case DELETED:
-		service, ok := ns.Services[data.Name]
-		if ok {
-			service.Status = DELETED
-			updateRequired = true
-		} else {
+		if !ok {
 			logger.Warningf("Service '%s' not registered with controller, cannot delete !", data.Name)
+			return false
 		}
+		service.Status = DELETED
+		return true
 	}
-	return updateRequired
+	return false
+}
+
+func (k *K8s) publishAddresses(ns, name string, status Status, addresses []string) bool {
+	if k.PublishService == nil || k.PublishService.Namespace != ns || k.PublishService.Name != name {
+		return false
+	}
+
+	if status == MODIFIED && utils.EqualSliceStringsWithoutOrder(k.PublishServiceAddresses, addresses) {
+		return false
+	}
+	k.PublishServiceAddresses = addresses
+	k.UpdateAllIngresses = true
+	return true
+}
+
+func (k *K8s) EventService(ns *Namespace, data *Service) (updateRequired bool) {
+	updated := k.setService(ns, data)
+	service, ok := ns.Services[data.Name]
+
+	if !ok {
+		return updated
+	}
+	var addresses []string
+	if data.Status != DELETED {
+		addresses = data.Addresses
+	}
+	service.Addresses = addresses
+
+	published := k.publishAddresses(ns.Name, data.Name, data.Status, addresses)
+	return updated || published
 }
 
 func (k *K8s) EventConfigMap(ns *Namespace, data *ConfigMap) (updateRequired bool) {
@@ -363,51 +381,4 @@ func (k *K8s) EventPod(podEvent PodEvent) (updateRequired bool) {
 	}
 
 	return true
-}
-
-func (k *K8s) EventPublishService(ns *Namespace, data *Service) (updateRequired bool) {
-	service, ok := ns.Services[data.Name]
-	switch data.Status {
-	case MODIFIED:
-		if !ok {
-			// It can happen (resync) that we receive an UPDATE on a item that is not yet registered
-			// We should treat it as a CREATE.
-			logger.Warningf("Service '%s' not registered with controller !", data.Name)
-			// TODO: decide if this should be removed
-			// This path doesn't do anything because these are synchronous calls and the only insertion into ns.Services happens
-			// in EventService, meaning ns.Services[data.Name] will not exist on the recursive call either, logging the added error and returning false
-			// This additional call can therefore be safely removed
-			data.Status = ADDED
-			return k.EventPublishService(ns, data)
-		}
-
-		service.Addresses = data.Addresses
-		if utils.EqualSliceStringsWithoutOrder(k.PublishServiceAddresses, data.Addresses) {
-			return false
-		}
-		k.PublishServiceAddresses = data.Addresses
-		k.UpdateAllIngresses = true
-		return true
-	case ADDED:
-		if !ok {
-			logger.Errorf("Publish service '%s/%s' not found", data.Namespace, data.Name)
-			return false
-		}
-
-		service.Addresses = data.Addresses
-		k.PublishServiceAddresses = data.Addresses
-		k.UpdateAllIngresses = true
-		return true
-	case DELETED:
-		if !ok {
-			logger.Warningf("Publish service '%s/%s' not registered with controller, cannot delete !", data.Namespace, data.Name)
-			return false
-		}
-
-		service.Addresses = nil
-		k.PublishServiceAddresses = nil
-		k.UpdateAllIngresses = true
-		return true
-	}
-	return false
 }

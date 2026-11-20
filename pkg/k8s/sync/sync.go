@@ -48,6 +48,5 @@ const (
 	CR_BACKEND      SyncType = "Backend"
 	CR_TCP          SyncType = "TCP"
 	CR_FRONTEND     SyncType = "Frontend"
-	PUBLISH_SERVICE SyncType = "PUBLISH_SERVICE"
 	CUSTOM_RESOURCE SyncType = "CUSTOM_RESOURCE"
 )

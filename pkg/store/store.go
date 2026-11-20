@@ -62,6 +62,7 @@ type K8s struct {
 	RoutesProcessedByMapFile map[string]map[string]RouteOwner
 	HaProxyPods              map[string]struct{}
 	FrontendRC               *rc.ResourceCounter
+	PublishService           *utils.NamespaceValue
 	PublishServiceAddresses  []string
 	UpdateAllIngresses       bool
 	IngressesByService       map[string]*utils.OrderedSet[string, *Ingress] // service fqn -> ingress name -> ingress
@@ -86,6 +87,7 @@ var logger = utils.GetLogger()
 func NewK8sStore(args utils.OSArgs) K8s {
 	store := K8s{
 		Namespaces:     make(map[string]*Namespace),
+		PublishService: utils.ParseNamespaceValue(args.PublishService),
 		IngressClasses: make(map[string]*IngressClass),
 		NamespacesAccess: NamespacesWatch{
 			Whitelist: map[string]struct{}{},

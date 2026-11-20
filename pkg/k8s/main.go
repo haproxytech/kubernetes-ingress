@@ -82,7 +82,6 @@ type k8s struct {
 	crClientV1             *crclientsetv1.Clientset
 	crClientV3             *crclientsetv3.Clientset
 	apiExtensionsClient    *crdclientset.Clientset
-	publishSvc             *utils.NamespaceValue
 	podPrefix              string
 	podNamespace           string
 	whiteListedNS          []string
@@ -93,7 +92,7 @@ type k8s struct {
 	cmMain                 types.NamespacedName
 }
 
-func New(osArgs utils.OSArgs, whitelist map[string]struct{}, publishSvc *utils.NamespaceValue) K8s { //nolint:ireturn
+func New(osArgs utils.OSArgs, whitelist map[string]struct{}) K8s { //nolint:ireturn
 	logger.SetLevel(osArgs.LogLevel.LogLevel)
 	restconfig, err := GetRestConfig(osArgs)
 	logger.Panic(err)
@@ -114,7 +113,6 @@ func New(osArgs utils.OSArgs, whitelist map[string]struct{}, publishSvc *utils.N
 		crsV3:                  map[string]CRV3{},
 		crsRegisteredOnStart:   map[string]struct{}{},
 		whiteListedNS:          getWhitelistedNS(whitelist, osArgs.ConfigMap.Namespace),
-		publishSvc:             publishSvc,
 		podNamespace:           os.Getenv("POD_NAMESPACE"),
 		podPrefix:              prefix,
 		syncPeriod:             osArgs.SyncPeriod,
