@@ -94,9 +94,6 @@ func (c *HAProxyController) SyncData() {
 		case k8ssync.POD:
 			//revive:disable-next-line:unchecked-type-assertion
 			change = c.store.EventPod(job.Data.(store.PodEvent))
-		case k8ssync.PUBLISH_SERVICE:
-			//revive:disable-next-line:unchecked-type-assertion
-			change = c.store.EventPublishService(ns, job.Data.(*store.Service))
 		case k8ssync.CUSTOM_RESOURCE:
 			change = true
 		case k8ssync.CR_TCP:
