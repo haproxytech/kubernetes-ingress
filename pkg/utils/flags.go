@@ -26,6 +26,14 @@ func (n *NamespaceValue) UnmarshalFlag(value string) error {
 	return nil
 }
 
+func ParseNamespaceValue(value string) *NamespaceValue {
+	nsVal := &NamespaceValue{}
+	if err := nsVal.UnmarshalFlag(value); err != nil {
+		return nil
+	}
+	return nsVal
+}
+
 // MarshalFlag Marshals flag
 func (n NamespaceValue) MarshalFlag() (string, error) {
 	return fmt.Sprintf("%s/%s", n.Namespace, n.Name), nil

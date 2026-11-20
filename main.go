@@ -21,7 +21,6 @@ import (
 	"os"
 	"os/signal"
 	"strconv"
-	"strings"
 	"syscall"
 
 	//nolint:gosec
@@ -153,13 +152,10 @@ func main() {
 	eventChan := make(chan k8ssync.SyncDataEvent, chanSize)
 	stop := make(chan struct{})
 
-	publishService := getNamespaceValue(osArgs.PublishService)
-
 	s := store.NewK8sStore(osArgs)
 	k := k8s.New(
 		osArgs,
 		s.NamespacesAccess.Whitelist,
-		publishService,
 	)
 
 	if osArgs.Test {
@@ -275,16 +271,4 @@ func logInfo(logger utils.Logger, osArgs utils.OSArgs) bool {
 	logger.Error(err)
 	logger.Printf("Running on %s", hostname)
 	return false
-}
-
-func getNamespaceValue(name string) *utils.NamespaceValue {
-	parts := strings.Split(name, "/")
-	var result *utils.NamespaceValue
-	if len(parts) == 2 {
-		result = &utils.NamespaceValue{
-			Namespace: parts[0],
-			Name:      parts[1],
-		}
-	}
-	return result
 }
