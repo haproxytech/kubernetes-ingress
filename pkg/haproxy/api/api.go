@@ -352,6 +352,8 @@ func (c *clientNative) APIStartTransaction() error {
 
 	hash, err := c.computeConfigurationHash(configuration)
 	if err != nil {
+		// Callers only dispose after a successful start.
+		c.APIDisposeTransaction()
 		return err
 	}
 	c.configurationHashAtTransactionStart = hash
@@ -447,6 +449,13 @@ func (c *clientNative) APIFinalCommitTransaction() error {
 }
 
 func (c *clientNative) APIDisposeTransaction() {
+	// A transaction neither committed nor deleted, e.g. after an error, would stay in memory.
+	// Deleting a committed or already deleted transaction is a no-op.
+	if c.activeTransaction != "" {
+		if configuration, err := c.nativeAPI.Configuration(); err == nil {
+			logger.Error(configuration.DeleteTransaction(c.activeTransaction))
+		}
+	}
 	logger.ResetFields()
 	c.activeTransaction = ""
 }
