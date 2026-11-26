@@ -28,8 +28,8 @@ github.com/fsnotify/fsnotify v1.10.1 h1:b0/UzAf9yR5rhf3RPm9gf3ehBPpf0oZKIjtpKrx5
 github.com/fsnotify/fsnotify v1.10.1/go.mod h1:TLheqan6HD6GBK6PrDWyDPBaEV8LspOxvPSjC+bVfgo=
 github.com/fxamacker/cbor/v2 v2.10.0 h1:HVF3T5vYwLqO81ebPirWEPNv2SMrUMD3HLnKgEr6uWE=
 github.com/fxamacker/cbor/v2 v2.10.0/go.mod h1:uSwlToFuT9BZAKRxxVm3qQC8DR4tlWl7D6pf20iRYH4=
-github.com/go-faker/faker/v4 v4.11.0 h1:HeIFTzafXsgrlxKE2QySGGTQocfGdQ8sGqU2CXvs120=
-github.com/go-faker/faker/v4 v4.11.0/go.mod h1:VFIEwWDd16EdYDLF6NJ5gAAzEp7vz5LgKgJ2iZ17Tdg=
+github.com/go-faker/faker/v4 v4.12.0 h1:yZXxuoQjxN+C2PVgYoDSHGiD9wj6dX1/Ful4p7QQV0k=
+github.com/go-faker/faker/v4 v4.12.0/go.mod h1:VFIEwWDd16EdYDLF6NJ5gAAzEp7vz5LgKgJ2iZ17Tdg=
 github.com/go-logr/logr v1.4.4 h1:tG4xh9yMsRCAiodLVTxyrkzSZ9+o0L1Kg/+cPVcbP/8=
 github.com/go-logr/logr v1.4.4/go.mod h1:9T104GzyrTigFIr8wt5mBrctHMim0Nb2HLGrmQ40KvY=
 github.com/go-logr/zapr v1.3.0 h1:XGdV8XW8zdwFiwOA2Dryh1gj2KRQyOOoNmBy4EplIcQ=
@@ -78,8 +78,8 @@ github.com/go-openapi/testify/enable/yaml/v2 v2.8.1 h1:BIMg/qqur4MXPPHLE3nftDfHd
 github.com/go-openapi/testify/enable/yaml/v2 v2.8.1/go.mod h1:74sM7nseyEwJFZ9yRNI77kCQAM5h8nZ4TmXI86voDHs=
 github.com/go-openapi/testify/v2 v2.8.1 h1:zk3S6KaDY1iQW91vsOJc25Ql1xm5bhPrZKdnL930bRQ=
 github.com/go-openapi/testify/v2 v2.8.1/go.mod h1:4gUN8jC+RqOE2qjW/vDmfyTvl5BCht4qL7oca0odrak=
-github.com/go-openapi/validate v1.0.2 h1:zRGDo6Nhrct2AAV1Rb566/oQWEhW4en1dqx39MwoeM4=
-github.com/go-openapi/validate v1.0.2/go.mod h1:BiEiYjD/jl+RVbk6wGF3vy+pQrnQLMBEzBvAoJ1U92o=
+github.com/go-openapi/validate v1.0.3 h1:07+o8E9v1LRSOO9iRxInfwFM8dfq4PKsPrKwj7+pnHM=
+github.com/go-openapi/validate v1.0.3/go.mod h1:BiEiYjD/jl+RVbk6wGF3vy+pQrnQLMBEzBvAoJ1U92o=
 github.com/go-quicktest/qt v1.102.0 h1:HSQxCeh5YZH3EL3W39ixjtyaEhcWSXQHtHnMBzSs474=
 github.com/go-quicktest/qt v1.102.0/go.mod h1:p4lGIVX+8Wa6ZPNDvqcxq36XpUDLh42FLetFU7odllI=
 github.com/go-task/slim-sprig/v3 v3.0.0 h1:sUs3vkvUymDpBKi3qH1YSqBQk9+9D/8M2mN1vB6EwHI=
@@ -105,10 +105,10 @@ github.com/google/renameio/v2 v2.0.2 h1:qKZs+tfn+arruZZhQ7TKC/ergJunuJicWS6gLDt/
 github.com/google/renameio/v2 v2.0.2/go.mod h1:OX+G6WHHpHq3NVj7cAOleLOwJfcQ1s3uUJQCrr78SWo=
 github.com/google/uuid v1.6.0 h1:NIvaJDMOsjHA8n1jAhLSgzrAzy1Hgr+hNrb57e+94F0=
 github.com/google/uuid v1.6.0/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=
-github.com/haproxytech/client-native/v5 v5.1.29 h1:VRD1aZNiZTxGJ0eIUDJVT6Os8NwdGucwPtHH/PWx48s=
-github.com/haproxytech/client-native/v5 v5.1.29/go.mod h1:N5+fpFTThhKX/ufddjJ2QWi+d0NZYz8fKfI6mxeeafc=
-github.com/haproxytech/client-native/v6 v6.2.19 h1:naQN4T/t/OsMY2OTPkvi+jQAu2MXhFSAK7UWI6Gd32w=
-github.com/haproxytech/client-native/v6 v6.2.19/go.mod h1:kz4LCTX7Fu8Oh+lgsR1KFHoU1biJHoQQxj2IhVuA69I=
+github.com/haproxytech/client-native/v5 v5.1.30 h1:M5e0l5PbeP0/dMoxmuUREDas5Thy8g6hIy4am90gZWM=
+github.com/haproxytech/client-native/v5 v5.1.30/go.mod h1:UeKr4ctAynAZYOGAwDqGeq8nhA8b1op4kI8StwqcO/w=
+github.com/haproxytech/client-native/v6 v6.2.21 h1:Uzi9wJEilWd7n686Cf/t2RW4pOQiZ9foLuuuXJcgXHU=
+github.com/haproxytech/client-native/v6 v6.2.21/go.mod h1:M5So+SXUh7td6d/AqhtDiO+mjKG7A4qd6JIyC+fns+M=
 github.com/haproxytech/go-logger v1.1.0 h1:HgGtYaI1ApkvbQdsm7f9AzQQoxTB7w37criTflh7IQE=
 github.com/haproxytech/go-logger v1.1.0/go.mod h1:OekUd8HCb7ubxMplzHUPBTHNxZmddOWfOjWclZsqIeM=
 github.com/haproxytech/go-method-gen v0.1.4 h1:LZgt5aGlHdOAEEYObYf8W5e/ZVVmvm7ViXkeECNQSA4=

@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    haproxy.org/client-native: v6.2.19
+    haproxy.org/client-native: v6.2.21
   name: frontends.ingress.v3.haproxy.org
 spec:
   group: ingress.v3.haproxy.org
@@ -598,6 +598,13 @@ spec:
               client_fin_timeout:
                 description: |-
                   client fin timeout
+                  Minimum: 0
+                format: int64
+                minimum: 0
+                type: integer
+              client_hs_timeout:
+                description: |-
+                  client hs timeout
                   Minimum: 0
                 format: int64
                 minimum: 0
@@ -2554,6 +2561,13 @@ spec:
                 - enabled
                 - disabled
                 type: string
+              max_session_srv_conns:
+                description: |-
+                  max session srv conns
+                  Minimum: 0
+                format: int64
+                minimum: 0
+                type: integer
               maxconn:
                 description: maxconn
                 format: int64
@@ -2661,17 +2675,27 @@ spec:
                       description: |-
                         type
                         Required: true
-                        Enum: ["reject","accept","send-retry","dgram-drop"]
+                        Enum: ["reject","accept","send-retry","dgram-drop","do-log"]
                       enum:
                       - reject
                       - accept
                       - send-retry
                       - dgram-drop
+                      - do-log
                       type: string
                   required:
                   - type
                   type: object
                 type: array
+              rate_limit_sessions:
+                description: |-
+                  rate limit sessions
+                  Maximum: 4.294967295e+09
+                  Minimum: 0
+                format: int64
+                maximum: 4294967295
+                minimum: 0
+                type: integer
               socket_stats:
                 description: |-
                   socket stats
@@ -3012,6 +3036,9 @@ spec:
                 format: int64
                 minimum: 0
                 type: integer
+              tcp_clflog:
+                description: tcp clflog
+                type: boolean
               tcp_request_rule_list:
                 description: TCP request rule list
                 items:

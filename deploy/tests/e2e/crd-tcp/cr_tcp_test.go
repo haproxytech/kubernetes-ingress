@@ -237,7 +237,7 @@ func (suite *TCPSuite) Test_CRD_TCP_SSL() {
 	suite.Require().NoError(err)
 	err = suite.checkFrontend(p, feName443, "log-format", &types.StringC{Value: "'%{+Q}o %t %s'"})
 	suite.Require().NoError(err)
-	err = suite.checkFrontend(p, feName443, "option tcplog", &types.SimpleOption{NoOption: false, Comment: ""})
+	err = suite.checkFrontend(p, feName443, "option tcplog", &types.OptionTCPLog{})
 	suite.Require().NoError(err)
 	err = suite.checkFrontend(p, feName443, "default_backend", &types.StringC{Value: "e2e-tests-crd-tcp_svc_http-echo_https"})
 	suite.Require().NoError(err)
@@ -281,7 +281,7 @@ func (suite *TCPSuite) checkFrontends(p parser.Parser) error {
 	if err != nil {
 		return err
 	}
-	err = suite.checkFrontend(p, feName80, "option tcplog", &types.SimpleOption{NoOption: false, Comment: ""})
+	err = suite.checkFrontend(p, feName80, "option tcplog", &types.OptionTCPLog{})
 	if err != nil {
 		return err
 	}
@@ -318,7 +318,7 @@ func (suite *TCPSuite) checkFrontends(p parser.Parser) error {
 	if err != nil {
 		return err
 	}
-	err = suite.checkFrontend(p, feName444, "option tcplog", &types.SimpleOption{NoOption: false, Comment: ""})
+	err = suite.checkFrontend(p, feName444, "option tcplog", &types.OptionTCPLog{})
 	if err != nil {
 		return err
 	}

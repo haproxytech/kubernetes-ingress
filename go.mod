@@ -1,6 +1,6 @@
 module github.com/haproxytech/kubernetes-ingress
 
-go 1.27
+go 1.27.0
 
 require (
 	dario.cat/mergo v1.0.2
@@ -13,8 +13,8 @@ require (
 	github.com/google/cel-go v0.31.0
 	github.com/google/go-cmp v0.7.0
 	github.com/google/renameio/v2 v2.0.2
-	github.com/haproxytech/client-native/v5 v5.1.29
-	github.com/haproxytech/client-native/v6 v6.2.19
+	github.com/haproxytech/client-native/v5 v5.1.30
+	github.com/haproxytech/client-native/v6 v6.2.21
 	github.com/haproxytech/go-method-gen v0.1.4
 	github.com/jessevdk/go-flags v1.4.0
 	github.com/pires/go-proxyproto v0.16.0
@@ -64,7 +64,7 @@ require (
 	github.com/go-openapi/swag/stringutils v0.29.2 // indirect
 	github.com/go-openapi/swag/typeutils v0.29.2 // indirect
 	github.com/go-openapi/swag/yamlutils v0.29.2 // indirect
-	github.com/go-openapi/validate v1.0.2 // indirect
+	github.com/go-openapi/validate v1.0.3 // indirect
 	github.com/go-viper/mapstructure/v2 v2.5.0 // indirect
 	github.com/gofrs/flock v0.13.2 // indirect
 	github.com/google/gnostic-models v0.7.1 // indirect

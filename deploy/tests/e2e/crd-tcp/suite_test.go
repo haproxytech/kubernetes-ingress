@@ -165,7 +165,7 @@ func (suite *CRDTCPSuite) checkBasicHttpEchoFrontend(p parser.Parser, feName str
 		suite.T().Logf("checkBasicHttpEchoFrontend %s param %s", feName, "log-format")
 		return err
 	}
-	err = suite.checkFrontend(p, feName, "option tcplog", &types.SimpleOption{NoOption: false, Comment: ""})
+	err = suite.checkFrontend(p, feName, "option tcplog", &types.OptionTCPLog{})
 	if err != nil {
 		suite.T().Logf("checkBasicHttpEchoFrontend %s param %s", feName, "option tcplog")
 		return err

@@ -22,7 +22,7 @@ import (
 
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-// +kubebuilder:metadata:annotations="haproxy.org/client-native=v6.2.19"
+// +kubebuilder:metadata:annotations="haproxy.org/client-native=v6.2.21"
 
 // Frontend is a specification for a Frontend resource
 type Frontend struct {
