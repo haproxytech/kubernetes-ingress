@@ -176,7 +176,7 @@ func (suite *TCPSuiteAddtionalServices) checkFrontends(p parser.Parser) error {
 	if err != nil {
 		return err
 	}
-	err = suite.checkFrontend(p, feName, "option tcplog", &types.SimpleOption{NoOption: false, Comment: ""})
+	err = suite.checkFrontend(p, feName, "option tcplog", &types.OptionTCPLog{})
 	if err != nil {
 		return err
 	}
