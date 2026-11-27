@@ -903,6 +903,26 @@ annotations:
     version_min: "3.2"
     example:
       - 'generate-certificates-signer: "default/ca-signing-cert"'
+  - title: tls-ticket-keys
+    type: string
+    group: ssl-offloading
+    dependencies: ""
+    default: ""
+    description:
+      - Name of a Secret holding the TLS session ticket keys. The controller writes them to a file set as tls-ticket-keys on the binds of the HTTPS frontend when SSL offload is enabled.
+      - Instances sharing the same Secret resume each other's TLS sessions, and the keys survive reloads, so clients spread over several replicas avoid a full handshake.
+      - The Secret holds the keys file under its tls-ticket-keys key, as base64 encoded keys, one per line (80 bytes each for AES-256 tickets), at least three. HAProxy encrypts with the second to last key and decrypts with the last three, so a rotation drops the first line and appends a new key.
+    tip:
+      - The secret format should be namespace/secret-name or just secret-name, looked up in the namespace of the ConfigMap. Create it with kubectl create secret generic tls-ticket-keys --from-file=tls-ticket-keys=<keys file>.
+      - The controller ignores a Secret HAProxy would refuse (fewer than three keys, a blank line, invalid base64, keys of different sizes) and keeps the last valid keys in use.
+      - The controller pushes a rotated key through the runtime API (set ssl tls-key), without a reload. It reloads only when the runtime update fails. The keys kept from the previous file keep the tickets already issued valid.
+    values:
+      - Name of Kubernetes secret in format namespace/secret-name
+    applies_to:
+      - configmap
+    version_min: "3.5"
+    example:
+      - 'tls-ticket-keys: "haproxy-controller/tls-ticket-keys"'
   - title: cors-enable
     type: bool
     group: CORS

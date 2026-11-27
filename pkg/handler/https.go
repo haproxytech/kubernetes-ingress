@@ -269,6 +269,9 @@ func (handler *HTTPS) Update(k store.K8s, h haproxy.HAProxy, a annotations.Annot
 		instance.Reload("SSLPassthrough disabled")
 	}
 
+	// tls-ticket-keys: applied last, since toggling ssl-passthrough above recreates the binds.
+	errs.Add(handler.syncTLSTicketKeys(k, h))
+
 	return errs.Result()
 }
 
