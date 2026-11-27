@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/haproxytech/client-native/v6/models"
@@ -60,7 +61,9 @@ func (handler *HTTPS) syncTLSTicketKeys(k store.K8s, h haproxy.HAProxy) error {
 		if errWrite != nil {
 			return fmt.Errorf("tls-ticket-keys: %w", errWrite)
 		}
-		instance.ReloadIf(changed, "tls-ticket-keys updated")
+		if changed {
+			rotateTLSTicketKeys(h, keysFile, string(content))
+		}
 	}
 
 	binds, err := h.FrontendBindsGet(h.FrontHTTPS)
@@ -79,6 +82,82 @@ func (handler *HTTPS) syncTLSTicketKeys(k store.K8s, h haproxy.HAProxy) error {
 		_ = os.Remove(filepath.Join(h.Env.CfgDir, tlsTicketKeysAnnotation))
 	}
 	return nil
+}
+
+// rotateTLSTicketKeys pushes the keys HAProxy is missing through the runtime API, so
+// that a Secret update needs no reload. It reloads instead when HAProxy does not
+// hold the keys file yet or when the runtime update fails.
+func rotateTLSTicketKeys(h haproxy.HAProxy, keysFile, content string) {
+	desired, err := parseTLSTicketKeys(content)
+	if err != nil {
+		instance.Reload("tls-ticket-keys updated")
+		return
+	}
+	list, err := h.ExecuteRaw("show tls-keys")
+	if err != nil || !tlsTicketKeysLoaded(list, keysFile) {
+		instance.Reload("tls-ticket-keys updated")
+		return
+	}
+	dump, err := h.ExecuteRaw("show tls-keys " + keysFile)
+	if err != nil {
+		logger.Errorf("tls-ticket-keys: cannot read the loaded keys, reloading: %s", err)
+		instance.Reload("tls-ticket-keys updated")
+		return
+	}
+	pushed := 0
+	for _, key := range tlsTicketKeysToPush(tlsTicketKeysFromDump(dump), desired) {
+		res, errSet := h.ExecuteRaw(fmt.Sprintf("set ssl tls-key %s %s", keysFile, key))
+		if errSet == nil && !strings.Contains(res, "TLS ticket key updated") {
+			errSet = errors.New(strings.TrimSpace(res))
+		}
+		if errSet != nil {
+			logger.Errorf("tls-ticket-keys: runtime update failed, reloading: %s", errSet)
+			instance.Reload("tls-ticket-keys updated")
+			return
+		}
+		pushed++
+	}
+	logger.Infof("tls-ticket-keys: pushed %d rotated keys through the runtime API", pushed)
+}
+
+// tlsTicketKeysLoaded reports whether "show tls-keys", whose "<id> (<file>)" lines
+// list the keys files set on the binds, holds keysFile.
+func tlsTicketKeysLoaded(list, keysFile string) bool {
+	for _, line := range strings.Split(list, "\n") {
+		if strings.HasPrefix(line, "#") {
+			continue
+		}
+		if _, file, ok := strings.Cut(line, " "); ok && file == "("+keysFile+")" {
+			return true
+		}
+	}
+	return false
+}
+
+// tlsTicketKeysFromDump parses "show tls-keys <file>", whose "<id>.<n> <key>" lines
+// list the loaded keys oldest first, the encryption key being the second to last.
+func tlsTicketKeysFromDump(dump string) []string {
+	var keys []string
+	for _, line := range strings.Split(dump, "\n") {
+		fields := strings.Fields(line)
+		if len(fields) == 2 && !strings.HasPrefix(fields[0], "#") && strings.Contains(fields[0], ".") {
+			keys = append(keys, fields[1])
+		}
+	}
+	return keys
+}
+
+// tlsTicketKeysToPush returns the keys to push, in order, to turn the loaded ring into
+// the desired one. Each push appends a key and drops the oldest, so the keys already
+// at the head of the desired ring are kept: a rotation that appended one key pushes
+// only that key, and one already applied (by a reload in between) pushes nothing.
+func tlsTicketKeysToPush(loaded, desired []string) []string {
+	for kept := min(len(loaded), len(desired)); kept > 0; kept-- {
+		if slices.Equal(loaded[len(loaded)-kept:], desired[:kept]) {
+			return desired[kept:]
+		}
+	}
+	return desired
 }
 
 // tlsTicketKeysFromSecret returns the keys file held by the tls-ticket-keys Secret,

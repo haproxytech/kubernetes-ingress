@@ -149,3 +149,42 @@ func TestWriteTLSTicketKeys(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, os.FileMode(0o600), info.Mode().Perm())
 }
+
+func TestTLSTicketKeysLoaded(t *testing.T) {
+	const keysFile = "/etc/haproxy/tls-ticket-keys"
+	list := "# id (file)\n0 (" + keysFile + ")\n1 (/etc/haproxy/other)\n\n"
+	require.True(t, tlsTicketKeysLoaded(list, keysFile))
+	require.False(t, tlsTicketKeysLoaded(list, "/etc/haproxy"))
+	require.False(t, tlsTicketKeysLoaded("# id (file)\n", keysFile), "no keys file set on the binds")
+}
+
+func TestTLSTicketKeysFromDump(t *testing.T) {
+	dump := "# id secret\n# 0 (/etc/haproxy/tls-ticket-keys)\n0.0 a\n0.1 b\n0.2 c\n\n"
+	require.Equal(t, []string{"a", "b", "c"}, tlsTicketKeysFromDump(dump))
+}
+
+func TestTLSTicketKeysToPush(t *testing.T) {
+	loaded := []string{"a", "b", "c"}
+	tests := []struct {
+		name    string
+		desired []string
+		want    []string
+	}{
+		{"unchanged", []string{"a", "b", "c"}, []string{}},
+		{"one key rotated", []string{"b", "c", "d"}, []string{"d"}},
+		{"two keys rotated", []string{"c", "d", "e"}, []string{"d", "e"}},
+		{"all keys replaced", []string{"x", "y", "z"}, []string{"x", "y", "z"}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tlsTicketKeysToPush(loaded, tt.desired)
+			require.ElementsMatch(t, tt.want, got)
+			// Replaying the pushes on the ring must give the desired ring.
+			ring := append([]string{}, loaded...)
+			for _, k := range got {
+				ring = append(ring[1:], k)
+			}
+			require.Equal(t, tt.desired, ring)
+		})
+	}
+}

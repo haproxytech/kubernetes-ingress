@@ -915,7 +915,7 @@ annotations:
     tip:
       - The secret format should be namespace/secret-name or just secret-name, looked up in the namespace of the ConfigMap. Create it with kubectl create secret generic tls-ticket-keys --from-file=tls-ticket-keys=<keys file>.
       - The controller ignores a Secret HAProxy would refuse (fewer than three keys, a blank line, invalid base64, keys of different sizes) and keeps the last valid keys in use.
-      - Updating the Secret reloads HAProxy, and the keys kept from the previous file keep the tickets already issued valid.
+      - The controller pushes a rotated key through the runtime API (set ssl tls-key), without a reload. It reloads only when the runtime update fails. The keys kept from the previous file keep the tickets already issued valid.
     values:
       - Name of Kubernetes secret in format namespace/secret-name
     applies_to:

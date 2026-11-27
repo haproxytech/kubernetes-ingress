@@ -1938,7 +1938,7 @@ generate-certificates-signer: "default/ca-signing-cert"
 
   :information_source: The controller ignores a Secret HAProxy would refuse (fewer than three keys, a blank line, invalid base64, keys of different sizes) and keeps the last valid keys in use.
 
-  :information_source: Updating the Secret reloads HAProxy, and the keys kept from the previous file keep the tickets already issued valid.
+  :information_source: The controller pushes a rotated key through the runtime API (set ssl tls-key), without a reload. It reloads only when the runtime update fails. The keys kept from the previous file keep the tickets already issued valid.
 
 Possible values:
 
