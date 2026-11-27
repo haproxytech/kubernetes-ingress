@@ -30,6 +30,7 @@ more info about custom annotations can be found in [annotations-custom.md](annot
 | [client-crt-optional](#authentication) | [bool](#bool) | "false" | client-ca |:large_blue_circle:|:white_circle:|:white_circle:|
 | [client-strict-sni](#ssl-offloading) | [bool](#bool) | "false" | client-ca |:large_blue_circle:|:white_circle:|:white_circle:|
 | [generate-certificates-signer](#ssl-offloading) | string |  |  |:large_blue_circle:|:white_circle:|:white_circle:|
+| [tls-ticket-keys](#ssl-offloading) :construction:(dev) | string |  |  |:large_blue_circle:|:white_circle:|:white_circle:|
 | [cors-enable](#CORS) | [bool](#bool) | "false" |  |:large_blue_circle:|:large_blue_circle:|:white_circle:|
 | [cors-allow-origin](#CORS) | string | "*" | cors-enable |:large_blue_circle:|:large_blue_circle:|:white_circle:|
 | [cors-allow-methods](#CORS) | string | "*" | cors-enable |:large_blue_circle:|:large_blue_circle:|:white_circle:|
@@ -1920,6 +1921,33 @@ Example:
 
 ```yaml
 generate-certificates-signer: "default/ca-signing-cert"
+```
+
+##### `tls-ticket-keys`
+
+
+  > :construction: this is only available from next version, currently available in dev build
+
+  Name of a Secret holding the TLS session ticket keys. The controller writes them to a file set as tls-ticket-keys on the binds of the HTTPS frontend when SSL offload is enabled.
+  Instances sharing the same Secret resume each other's TLS sessions, and the keys survive reloads, so clients spread over several replicas avoid a full handshake.
+  The Secret holds the keys file under its tls-ticket-keys key, as base64 encoded keys, one per line (80 bytes each for AES-256 tickets), at least three. HAProxy encrypts with the second to last key and decrypts with the last three, so a rotation drops the first line and appends a new key.
+
+  Available on:  `configmap`
+
+  :information_source: The secret format should be namespace/secret-name or just secret-name, looked up in the namespace of the ConfigMap. Create it with kubectl create secret generic tls-ticket-keys --from-file=tls-ticket-keys=<keys file>.
+
+  :information_source: The controller ignores a Secret HAProxy would refuse (fewer than three keys, a blank line, invalid base64, keys of different sizes) and keeps the last valid keys in use.
+
+  :information_source: Updating the Secret reloads HAProxy, and the keys kept from the previous file keep the tickets already issued valid.
+
+Possible values:
+
+- Name of Kubernetes secret in format namespace/secret-name
+
+Example:
+
+```yaml
+tls-ticket-keys: "haproxy-controller/tls-ticket-keys"
 ```
 
 ##### `ssl-certificate`
